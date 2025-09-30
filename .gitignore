@@ -1,5 +1,5 @@
 /.idea/
-.DS_Store
+**/.DS_Store
 .gradle
 /local.properties
 /build
@@ -7,3 +7,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+app/build
+.idea
+app/google-services.json
+firebase-debug.log
+firestore-debug.log
