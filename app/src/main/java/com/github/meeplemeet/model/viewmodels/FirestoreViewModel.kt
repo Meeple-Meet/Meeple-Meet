@@ -218,7 +218,6 @@ class FirestoreViewModel(
       discussionFlows.getOrPut(discussionId) {
         repository
             .listenDiscussion(discussionId)
-            .map { it as Discussion? }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
