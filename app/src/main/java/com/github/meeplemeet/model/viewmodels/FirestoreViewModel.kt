@@ -1,12 +1,18 @@
 package com.github.meeplemeet.model.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.structures.DiscussionPreview
 import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 class FirestoreViewModel(
     private val repository: FirestoreRepository = FirestoreRepository(Firebase.firestore)
@@ -137,4 +143,41 @@ class FirestoreViewModel(
     return repository.readDiscussionMessages(
         account.uid, discussion.uid, discussion.messages.last())
   }
+
+  private val previewStates = mutableMapOf<String, StateFlow<Map<String, DiscussionPreview>>>()
+
+  fun previewsFlow(accountId: String): StateFlow<Map<String, DiscussionPreview>> =
+      previewStates.getOrPut(accountId) {
+        repository
+            .listenMyPreviews(accountId)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyMap())
+      }
+
+  fun previewFlow(accountId: String, discussionId: String): StateFlow<DiscussionPreview?> =
+      previewsFlow(accountId)
+          .map { it[discussionId] }
+          .stateIn(
+              scope = viewModelScope,
+              started = SharingStarted.WhileSubscribed(5_000),
+              initialValue = previewsFlow(accountId).value[discussionId])
+
+  fun previewRemoveFlow(accountId: String) {
+    if (previewStates.contains(accountId)) previewStates.remove(accountId)
+  }
+
+  private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
+
+  fun discussionFlow(discussionId: String): StateFlow<Discussion?> =
+      discussionFlows.getOrPut(discussionId) {
+        repository
+            .listenDiscussion(discussionId)
+            .map { it as Discussion? }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null)
+      }
 }

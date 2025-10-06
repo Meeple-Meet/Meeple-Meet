@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.AccountNoUid
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionNoUid
+import com.github.meeplemeet.model.structures.DiscussionPreview
 import com.github.meeplemeet.model.structures.DiscussionPreviewNoUid
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.structures.fromNoUid
@@ -13,6 +14,9 @@ import com.github.meeplemeet.model.structures.toNoUid
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 const val ACCOUNT_COLLECTION_PATH = "accounts"
@@ -201,5 +205,44 @@ class FirestoreRepository(db: FirebaseFirestore) {
     else ref.set(DiscussionPreviewNoUid(message.content, message.senderId, message.createdAt, 0))
 
     return getAccount(accountId)
+  }
+
+  fun listenDiscussion(discussionId: String): Flow<Discussion> = callbackFlow {
+    val reg =
+        discussions.document(discussionId).addSnapshotListener { snap, e ->
+          if (e != null) {
+            close(e)
+            return@addSnapshotListener
+          }
+          if (snap != null && snap.exists()) {
+            snap.toObject(DiscussionNoUid::class.java)?.let { trySend(fromNoUid(snap.id, it)) }
+          }
+        }
+
+    awaitClose { reg.remove() }
+  }
+
+  fun listenMyPreviews(accountId: String): Flow<Map<String, DiscussionPreview>> = callbackFlow {
+    val reg =
+        accounts.document(accountId).collection(Account::previews.name).addSnapshotListener { qs, e
+          ->
+          if (e != null) {
+            close(e)
+            return@addSnapshotListener
+          }
+          if (qs != null) {
+            val m =
+                qs.documents.associate { d ->
+                  d.id to
+                      fromNoUid(
+                          d.id,
+                          (d.toObject(DiscussionPreviewNoUid::class.java)
+                              ?: DiscussionPreviewNoUid()))
+                }
+            trySend(m)
+          }
+        }
+
+    awaitClose { reg.remove() }
   }
 }
