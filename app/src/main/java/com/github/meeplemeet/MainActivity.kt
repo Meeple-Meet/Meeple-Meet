@@ -17,11 +17,11 @@ import com.google.firebase.auth.auth
  * Make sure you have an Android emulator running or a physical device connected.
  */
 class MainActivity : ComponentActivity() {
-    private lateinit var auth: FirebaseAuth
+  private lateinit var auth: FirebaseAuth
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        auth = Firebase.auth
-        setContent { Surface(modifier = Modifier.fillMaxSize()) { Text("Hello World") } }
-    }
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    auth = Firebase.auth
+    setContent { Surface(modifier = Modifier.fillMaxSize()) { Text("Hello World") } }
+  }
 }
