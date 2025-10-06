@@ -13,32 +13,93 @@ on:
       - reopened
 
 jobs:
-  meeple-meet-ci:
-    name: CI-Meeple-Meet
+  format-check:
+    name: Format Check
     runs-on: ubuntu-latest
-
-    env:
-      app_name: MeepleMeetDebug
-
-    defaults:
-      run:
-        working-directory: ./${{ env.base_folder }}
-
     steps:
-      # First step : Checkout the repository on the runner
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Retrieve gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: KTFmt Check
+        run: ./gradlew ktfmtCheck
+
+  build-and-test:
+    name: Build and Unit Tests
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of Sonar analysis (if we use Sonar Later)
+          fetch-depth: 0
 
-      # This step removes the current gradle cache to avoid any caching issues
-      - name: Remove current gradle cache
-        run: rm -rf ~/.gradle
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
 
-      # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.
-      #
-      # For the bootcamp, the runners already have KVM enabled, so this step is commented out. But for your projects, you will need to uncomment it.
+      - name: Retrieve gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Assemble and Lint
+        run: ./gradlew assembleDebug lint --parallel --build-cache
+
+      - name: Run Unit Tests
+        run: ./gradlew check --parallel --build-cache
+
+  instrumentation-tests:
+    name: Instrumentation Tests
+    runs-on: ubuntu-latest
+    needs: [format-check, build-and-test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
       - name: Enable KVM group perms
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -51,11 +112,6 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-
-      # Caching is a very useful part of a CI, as a workflow is executed in a clean environement every time,
-      # this means that one would need to re-download and re-process gradle files for every run. Which is very time consuming.
-      #
-      # To avoid that, we cache the the gradle folder to reuse it later.
       - name: Retrieve gradle cache
         uses: actions/cache@v3
         with:
@@ -64,7 +120,6 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      # Load google-services.json and local.properties from the secrets
       - name: Decode secrets
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
@@ -73,50 +128,25 @@ jobs:
           if [ -n "$GOOGLE_SERVICES" ]; then
             echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
           else
-            echo "::warning::GOOGLE_SERVICES secret is not set. google-services.json will not be created. Should be present after B2"
+            echo "::warning::GOOGLE_SERVICES secret is not set."
           fi
-          
           if [ -n "$LOCAL_PROPERTIES" ]; then
             echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
           else
-            echo "::warning::LOCAL_PROPERTIES secret is not set. local.properties will not be created. Should be present after B3"
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
           fi
 
       - name: Grant execute permission for gradlew
-        run: |
-          chmod +x ./gradlew
+        run: chmod +x ./gradlew
 
-      - name: KTFmt Check
-        run: |
-          # To run the CI with debug informations, add --info
-          ./gradlew ktfmtCheck
-
-      # This step runs gradle commands to build the application
-      - name: Assemble
-        run: |
-          # To run the CI with debug information, add --info
-          ./gradlew assembleDebug lint --parallel --build-cache
-
-      - name: Run tests
-        run: |
-          # To run the CI with debug information, add --info
-          ./gradlew check --parallel --build-cache
-
-      # Install Firebase CLI
       - name: Install Firebase CLI
-        run: |
-          npm install -g firebase-tools
+        run: npm install -g firebase-tools
 
-      # Start Firebase emulators for instrumentation tests
       - name: Start Firebase emulators
         run: |
           if [ -e "firebase.json" ] && jq -e '.emulators' firebase.json >/dev/null; then
-            echo "Starting Firebase emulators for instrumentation tests..."
+            echo "Starting Firebase emulators..."
             firebase emulators:start --only auth,firestore --project demo-project > firebase-emulator.log 2>&1 &
-            FIREBASE_PID=$!
-            echo "Firebase PID: $FIREBASE_PID"
-
-            # Wait for emulators to be ready (check both auth and firestore)
             echo "Waiting for Firebase emulators to be ready..."
             for i in {1..30}; do
               if curl -s http://localhost:9099 >/dev/null 2>&1 && curl -s http://localhost:8080 >/dev/null 2>&1; then
@@ -124,15 +154,12 @@ jobs:
                 break
               fi
               if [ $i -eq 30 ]; then
-                echo "Error: Firebase emulators failed to start within 30 seconds"
+                echo "Error: Firebase emulators failed to start"
                 cat firebase-emulator.log
                 exit 1
               fi
-              echo "Attempt $i/30: Emulators not ready yet, waiting..."
               sleep 1
             done
-          else
-            echo "Firebase emulators not configured, skipping emulator startup..."
           fi
 
       - name: Run instrumentation tests
@@ -149,12 +176,16 @@ jobs:
           script: ./gradlew connectedCheck --parallel --build-cache
 
       - name: Generate coverage
-        run: |
-          ./gradlew jacocoTestReport
+        run: ./gradlew jacocoTestReport
 
-      # Upload the various reports to sonar
       - name: Upload report to SonarCloud
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonar --parallel --build-cache
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Coverage report
+          path: app/build/reports/jacoco/jacocoTestReport
