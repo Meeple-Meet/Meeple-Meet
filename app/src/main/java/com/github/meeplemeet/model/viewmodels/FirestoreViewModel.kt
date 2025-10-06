@@ -15,13 +15,17 @@ class FirestoreViewModel(
       name: String,
       description: String,
       creator: Account,
-      participants: List<String> = emptyList()
-  ): Discussion {
+      vararg participants: Account
+  ): Pair<Account, Discussion> {
     return repository.createDiscussion(
-        name.ifBlank { "${creator.name}'s discussion" }, description, creator.uid, participants)
+        name.ifBlank { "${creator.name}'s discussion" },
+        description,
+        creator.uid,
+        participants.map { it.uid })
   }
 
   suspend fun getDiscussion(id: String): Discussion {
+    if (id.isBlank()) throw IllegalArgumentException("Discussion id cannot be blank")
     return repository.getDiscussion(id)
   }
 
@@ -98,6 +102,39 @@ class FirestoreViewModel(
       content: String
   ): Discussion {
     if (content.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
+    readDiscussionMessages(sender, discussion)
     return repository.sendMessageToDiscussion(discussion, sender, content)
+  }
+
+  suspend fun createAccount(name: String): Account {
+    if (name.isBlank()) throw IllegalArgumentException("Account name cannot be blank")
+    return repository.createAccount(name)
+  }
+
+  suspend fun getAccount(id: String): Account {
+    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    return repository.getAccount(id)
+  }
+
+  suspend fun getCurrentAccount(): Account {
+    return repository.getCurrentAccount()
+  }
+
+  suspend fun setAccountName(account: Account, newName: String): Account {
+    if (newName.isBlank()) throw IllegalArgumentException("Account name cannot be blank")
+    return repository.setAccountName(account.uid, newName)
+  }
+
+  suspend fun deleteAccount(account: Account) {
+    repository.deleteAccount(account.uid)
+  }
+
+  suspend fun readDiscussionMessages(account: Account, discussion: Discussion): Account {
+    if (!discussion.participants.contains(account.uid))
+        throw PermissionDeniedException(
+            "Account: ${account.uid} - ${account.name} is not a part of Discussion: ${discussion.uid} - ${discussion.name}")
+    if (discussion.messages.isEmpty()) return account
+    return repository.readDiscussionMessages(
+        account.uid, discussion.uid, discussion.messages.last())
   }
 }
