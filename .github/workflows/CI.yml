@@ -1,24 +1,32 @@
 name: CI - Test Runner
 
+# Run the workflow when commits are pushed on main or when a PR is modified
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+
   pull_request:
-    types: [ opened, synchronize, reopened ]
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
-  setup:
-    name: Setup and Build
+  ci:
+    name: CI
+    # Execute the CI on the course's runners
     runs-on: ubuntu-latest
-    outputs:
-      gradle-cache-key: ${{ steps.gradle-cache.outputs.cache-hit }}
+
     steps:
+      # First step : Checkout the repository on the runner
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of Sonar analysis (if we use Sonar Later)
 
+      # Load google-services.json and local.properties from the secrets
       - name: Decode secrets
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
@@ -26,106 +34,37 @@ jobs:
         run: |
           if [ -n "$GOOGLE_SERVICES" ]; then
             echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set. google-services.json will not be created. Should be present after B2"
           fi
+          
           if [ -n "$LOCAL_PROPERTIES" ]; then
             echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set. local.properties will not be created. Should be present after B3"
           fi
 
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-        id: gradle-cache
-
-      - name: Grant execute permission
-        run: chmod +x ./gradlew
-
-      - name: Assemble
-        run: ./gradlew assemble lint --parallel --build-cache --configuration-cache
-
-  lint-format:
-    name: Lint & Format
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-      - run: ./gradlew ktfmtCheck
-
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-      - name: Start Firebase emulators
-        run: |
-          if [ -e "firebase.json" ] && jq -e '.emulators' firebase.json >/dev/null; then
-            firebase emulators:start --only auth,firestore --project demo-project &
-          fi
-      - run: ./gradlew check --parallel --build-cache
-
-  emulator-tests:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 17 }
-
-      - name: Decode secrets
-        env:
-          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES" ]; then
-            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
-          fi
-          if [ -n "$LOCAL_PROPERTIES" ]; then
-            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
-          fi
-
-      - name: Start Firebase emulators
-        run: |
-          if [ -e "firebase.json" ] && jq -e '.emulators' firebase.json >/dev/null; then
-            firebase emulators:start --only auth,firestore --project demo-project &
-          fi
-
-      # KVM must be enabled in THIS job (jobs are isolated)
+      # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.
       - name: Enable KVM group perms
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - uses: gradle/actions/setup-gradle@v3
-      - run: chmod +x ./gradlew
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
 
-      # Restore/create AVD snapshot for fast reliable boots
+      # Caching is a very useful part of a CI, as a workflow is executed in a clean environment every time,
+      # this means that one would need to re-download and re-process gradle files for every run. Which is very time consuming.
+      #
+      # To avoid that, we cache the the gradle folder to reuse it later.
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      # Cache the Emulator, if the cache does not hit, create the emulator
       - name: AVD cache
         uses: actions/cache@v4
         id: avd-cache
@@ -133,9 +72,9 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-34-google_apis-x86_64
+          key: avd-34
 
-      - name: Create AVD snapshot if cache missed
+      - name: create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -143,42 +82,60 @@ jobs:
           target: google_apis
           arch: x86_64
           force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: echo "Snapshot generated"
+          script: echo "Generated AVD snapshot for caching."
 
-      # Boot emulator and run tests
-      - name: Connected tests
+      - name: Grant execute permission for gradlew
+        run: |
+          chmod +x ./gradlew
+
+      # Check formatting
+      - name: KTFmt Check
+        run: |
+          ./gradlew ktfmtCheck
+
+      # This step runs gradle commands to build the application
+      - name: Assemble
+        run: |
+          # To run the CI with debug information, add --info
+          ./gradlew assemble lint --parallel --build-cache --configuration-cache
+
+      # Run Unit tests
+      - name: Run tests
+        run: |
+          # To run the CI with debug information, add --info
+          ./gradlew check --parallel --build-cache
+
+      - name: Start Firebase emulators
+        run: |
+          if [ -e "firebase.json" ] && jq -e '.emulators' firebase.json >/dev/null; then
+            echo "Starting Firebase emulators for instrumentation tests..."
+            firebase emulators:start --only auth,firestore --project demo-project &
+            echo "Firebase emulators started"
+          else
+            echo "Firebase emulators not configured, skipping emulator startup..."
+          fi
+
+      # Run connected tests on the emulator
+      - name: run tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
           arch: x86_64
-          force-avd-creation: false          # reuse cached AVD
-          emulator-boot-timeout: 1200        # avoid early timeout
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            adb start-server
-            firebase emulators:start --only auth,firestore --project demo-project &
-            ./gradlew connectedCheck --parallel --build-cache
+          script: ./gradlew connectedCheck --parallel --build-cache
 
-  coverage:
-    name: Coverage & Sonar
-    runs-on: ubuntu-latest
-    needs: [ unit-tests, emulator-tests ]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-      - name: Generate Coverage
-        run: ./gradlew jacocoTestReport
-      - name: Upload Sonar
+      # This step generates the coverage report which will be uploaded to sonar
+      - name: Generate Coverage Report
+        run: |
+          ./gradlew jacocoTestReport
+
+      # Upload the various reports to sonar
+      - name: Upload report to SonarCloud
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
