@@ -62,11 +62,14 @@ sealed class Tab(
     val destination: MeepleMeetScreen?,
     val testTag: String
 ) {
-  object SessionsOverview : Tab("Sessions", Icons.Default.Groups, null, "")
+  object SessionsOverview :
+      Tab("Sessions", Icons.Default.Groups, null, NavigationTestTags.SESSIONS_TAB)
 
-  object DiscussionsOverview : Tab("Discussions", Icons.Default.ChatBubbleOutline, null, "")
+  object DiscussionsOverview :
+      Tab("Discussions", Icons.Default.ChatBubbleOutline, null, NavigationTestTags.DISCUSSIONS_TAB)
 
-  object DiscoverSessions : Tab("Discover", Icons.Default.Language, null, "")
+  object DiscoverSessions :
+      Tab("Discover", Icons.Default.Language, null, NavigationTestTags.DISCOVER_TAB)
 }
 
 private val tabs = listOf(Tab.DiscoverSessions, Tab.SessionsOverview, Tab.DiscussionsOverview)
@@ -79,7 +82,7 @@ fun BottomNavigationMenu(
 ) {
   // TODO: Update colors when full MaterialTheme is implemented
   NavigationBar(
-      modifier = modifier.fillMaxWidth().testTag(""),
+      modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
       content = {
         tabs.forEach { tab ->
           NavigationBarItem(
