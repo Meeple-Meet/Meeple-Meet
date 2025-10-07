@@ -78,9 +78,8 @@ class FirestoreRepository(db: FirebaseFirestore) {
   }
 
   /** Delete a discussion document. */
-  suspend fun deleteDiscussion(id: String): Discussion {
+  suspend fun deleteDiscussion(id: String) {
     discussions.document(id).delete().await()
-    return getDiscussion(id)
   }
 
   /** Add a user to the participants array. */

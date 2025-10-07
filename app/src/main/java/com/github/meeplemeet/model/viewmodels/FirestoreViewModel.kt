@@ -24,6 +24,10 @@ class FirestoreViewModel(
     private val repository: FirestoreRepository = FirestoreRepository(Firebase.firestore)
 ) : ViewModel() {
 
+  private fun isAdmin(account: Account, discussion: Discussion): Boolean {
+    return discussion.admins.contains(account.uid)
+  }
+
   /** Create a new discussion. */
   suspend fun createDiscussion(
       name: String,
@@ -50,7 +54,7 @@ class FirestoreViewModel(
       changeRequester: Account,
       name: String
   ): Discussion {
-    if (discussion.admins.contains(changeRequester.uid))
+    if (isAdmin(changeRequester, discussion))
         return repository.setDiscussionName(
             discussion.uid,
             name.ifBlank { "Discussion with: ${discussion.participants.joinToString(", ")}" })
@@ -63,15 +67,16 @@ class FirestoreViewModel(
       changeRequester: Account,
       description: String
   ): Discussion {
-    if (discussion.admins.contains(changeRequester.uid))
+    if (isAdmin(changeRequester, discussion))
         return repository.setDiscussionDescription(discussion.uid, description)
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
 
   /** Delete a discussion (admin-only). */
   suspend fun deleteDiscussion(discussion: Discussion, changeRequester: Account) {
-    if (discussion.admins.contains(changeRequester.uid)) repository.deleteDiscussion(discussion.uid)
-    throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(changeRequester, discussion))
+        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    repository.deleteDiscussion(discussion.uid)
   }
 
   /** Add a user to a discussion (admin-only). */
@@ -80,7 +85,7 @@ class FirestoreViewModel(
       changeRequester: Account,
       user: Account
   ): Discussion {
-    if (discussion.admins.contains(changeRequester.uid))
+    if (isAdmin(changeRequester, discussion))
         return repository.addUserToDiscussion(discussion, user.uid)
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
@@ -91,7 +96,7 @@ class FirestoreViewModel(
       changeRequester: Account,
       vararg users: Account
   ): Discussion {
-    if (discussion.admins.contains(changeRequester.uid))
+    if (isAdmin(changeRequester, discussion))
         return repository.addUsersToDiscussion(discussion, users.map { it.uid })
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
@@ -102,7 +107,7 @@ class FirestoreViewModel(
       changeRequester: Account,
       admin: Account
   ): Discussion {
-    if (discussion.admins.contains(changeRequester.uid))
+    if (isAdmin(changeRequester, discussion))
         return repository.addAdminToDiscussion(discussion, admin.uid)
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
@@ -113,7 +118,7 @@ class FirestoreViewModel(
       changeRequester: Account,
       vararg admins: Account
   ): Discussion {
-    if (discussion.admins.contains(changeRequester.uid))
+    if (isAdmin(changeRequester, discussion))
         return repository.addAdminsToDiscussion(discussion, admins.map { it.uid })
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
