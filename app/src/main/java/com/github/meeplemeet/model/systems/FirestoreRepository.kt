@@ -40,6 +40,7 @@ class FirestoreRepository(db: FirebaseFirestore) {
     val discussion =
         Discussion(
             newDiscussionUID(),
+            creatorId,
             name,
             description,
             emptyList(),
@@ -73,8 +74,8 @@ class FirestoreRepository(db: FirebaseFirestore) {
   }
 
   /** Update a discussion's description. */
-  suspend fun setDiscussionDescription(id: String, name: String): Discussion {
-    discussions.document(id).update(Discussion::description.name, name).await()
+  suspend fun setDiscussionDescription(id: String, description: String): Discussion {
+    discussions.document(id).update(Discussion::description.name, description).await()
     return getDiscussion(id)
   }
 
@@ -92,11 +93,37 @@ class FirestoreRepository(db: FirebaseFirestore) {
     return getDiscussion(discussion.uid)
   }
 
+  /** Remove a user from the participants and admins array */
+  suspend fun removeUserFromDiscussion(discussion: Discussion, userId: String): Discussion {
+    discussions
+        .document(discussion.uid)
+        .update(
+            Discussion::participants.name,
+            FieldValue.arrayRemove(userId),
+            Discussion::admins.name,
+            FieldValue.arrayRemove(userId))
+        .await()
+    return getDiscussion(discussion.uid)
+  }
+
   /** Add multiple users to the participants array. */
   suspend fun addUsersToDiscussion(discussion: Discussion, userIds: List<String>): Discussion {
     discussions
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(*userIds.toTypedArray()))
+        .await()
+    return getDiscussion(discussion.uid)
+  }
+
+  /** Remove multiple users from the participants and admins array. */
+  suspend fun removeUsersFromDiscussion(discussion: Discussion, userIds: List<String>): Discussion {
+    discussions
+        .document(discussion.uid)
+        .update(
+            Discussion::participants.name,
+            FieldValue.arrayRemove(*userIds.toTypedArray()),
+            Discussion::admins.name,
+            FieldValue.arrayRemove(*userIds.toTypedArray()))
         .await()
     return getDiscussion(discussion.uid)
   }
@@ -107,6 +134,15 @@ class FirestoreRepository(db: FirebaseFirestore) {
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayUnion(userId))
+        .await()
+    return getDiscussion(discussion.uid)
+  }
+
+  /** Remove a user from the admins array */
+  suspend fun removeAdminFromDiscussion(discussion: Discussion, userId: String): Discussion {
+    discussions
+        .document(discussion.uid)
+        .update(Discussion::admins.name, FieldValue.arrayRemove(userId))
         .await()
     return getDiscussion(discussion.uid)
   }
@@ -132,6 +168,18 @@ class FirestoreRepository(db: FirebaseFirestore) {
           .await()
     }
 
+    return getDiscussion(discussion.uid)
+  }
+
+  /** Remove multiple users from the admins array. */
+  suspend fun removeAdminsFromDiscussion(
+      discussion: Discussion,
+      userIds: List<String>
+  ): Discussion {
+    discussions
+        .document(discussion.uid)
+        .update(Discussion::admins.name, FieldValue.arrayRemove(*userIds.toTypedArray()))
+        .await()
     return getDiscussion(discussion.uid)
   }
 

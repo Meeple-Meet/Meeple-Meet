@@ -74,8 +74,8 @@ class FirestoreViewModel(
 
   /** Delete a discussion (admin-only). */
   suspend fun deleteDiscussion(discussion: Discussion, changeRequester: Account) {
-    if (!isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (discussion.creatorId != changeRequester.uid)
+        throw PermissionDeniedException("Only discussion owner can perform this operation")
     repository.deleteDiscussion(discussion.uid)
   }
 
@@ -90,6 +90,20 @@ class FirestoreViewModel(
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
 
+  /** Remove a user from a discussion (admin-only). */
+  suspend fun removeUserFromDiscussion(
+      discussion: Discussion,
+      changeRequester: Account,
+      user: Account
+  ): Discussion {
+    if (isAdmin(changeRequester, discussion)) {
+      if (discussion.creatorId != changeRequester.uid)
+          throw PermissionDeniedException("Only discussion owner can perform this operation")
+      return repository.removeUserFromDiscussion(discussion, user.uid)
+    }
+    throw PermissionDeniedException("Only discussion admins can perform this operation")
+  }
+
   /** Add multiple users (admin-only). */
   suspend fun addUsersToDiscussion(
       discussion: Discussion,
@@ -98,6 +112,20 @@ class FirestoreViewModel(
   ): Discussion {
     if (isAdmin(changeRequester, discussion))
         return repository.addUsersToDiscussion(discussion, users.map { it.uid })
+    throw PermissionDeniedException("Only discussion admins can perform this operation")
+  }
+
+  /** Remove multiple users (admin-only). */
+  suspend fun removeUsersFromDiscussion(
+      discussion: Discussion,
+      changeRequester: Account,
+      vararg users: Account
+  ): Discussion {
+    if (isAdmin(changeRequester, discussion)) {
+      if (users.any { user -> discussion.creatorId == user.uid })
+          throw PermissionDeniedException("Only discussion owner can perform this operation")
+      return repository.removeUsersFromDiscussion(discussion, users.map { it.uid })
+    }
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
 
@@ -112,6 +140,17 @@ class FirestoreViewModel(
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
 
+  /** Remove a single admin (admin-only). */
+  suspend fun removeAdminToDiscussion(
+      discussion: Discussion,
+      changeRequester: Account,
+      admin: Account
+  ): Discussion {
+    if (isAdmin(changeRequester, discussion))
+        return repository.removeAdminFromDiscussion(discussion, admin.uid)
+    throw PermissionDeniedException("Only discussion admins can perform this operation")
+  }
+
   /** Add multiple admins (admin-only). */
   suspend fun addAdminsToDiscussion(
       discussion: Discussion,
@@ -120,6 +159,17 @@ class FirestoreViewModel(
   ): Discussion {
     if (isAdmin(changeRequester, discussion))
         return repository.addAdminsToDiscussion(discussion, admins.map { it.uid })
+    throw PermissionDeniedException("Only discussion admins can perform this operation")
+  }
+
+  /** Remove multiple admins (admin-only). */
+  suspend fun removeAdminsToDiscussion(
+      discussion: Discussion,
+      changeRequester: Account,
+      vararg admins: Account
+  ): Discussion {
+    if (isAdmin(changeRequester, discussion))
+        return repository.removeAdminsFromDiscussion(discussion, admins.map { it.uid })
     throw PermissionDeniedException("Only discussion admins can perform this operation")
   }
 
