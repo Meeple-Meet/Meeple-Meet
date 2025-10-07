@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.structures.*
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -143,22 +144,30 @@ class FirestoreRepository(db: FirebaseFirestore) {
       content: String
   ): Discussion {
     val message = Message(sender.uid, content)
-    discussions
-        .document(discussion.uid)
-        .update(Discussion::messages.name, FieldValue.arrayUnion(message))
-        .await()
+    val batch = FirebaseFirestore.getInstance().batch()
 
+    // Append message
+    batch.update(
+        discussions.document(discussion.uid),
+        Discussion::messages.name,
+        FieldValue.arrayUnion(message))
+
+    // Update previews for all participants
     discussion.participants.forEach { userId ->
       val ref =
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
-      val snapshot = ref.get().await()
-      val existing = snapshot.toObject(DiscussionPreviewNoUid::class.java)
-      val nextCount = (existing?.unreadCount ?: 0) + 1 - (if (sender.uid == userId) 1 else 0)
-
-      ref.set(
-          DiscussionPreviewNoUid(message.content, message.senderId, message.createdAt, nextCount))
+      val unreadIncrement = if (userId == sender.uid) 0 else 1
+      batch.set(
+          ref,
+          mapOf(
+              "lastMessage" to message.content,
+              "lastMessageSender" to message.senderId,
+              "lastMessageAt" to message.createdAt,
+              "unreadCount" to FieldValue.increment(unreadIncrement.toLong())),
+          SetOptions.merge())
     }
 
+    batch.commit().await()
     return getDiscussion(discussion.uid)
   }
 
