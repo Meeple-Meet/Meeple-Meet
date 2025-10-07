@@ -3,7 +3,7 @@ package com.github.meeplemeet.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
+import java.util.Calendar
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +42,6 @@ fun DiscussionScreen(
     val listState = rememberLazyListState()
     var isSending by remember { mutableStateOf(false) }
     var discussionName by remember { mutableStateOf("Loading...") }
-
     val userCache = remember { mutableStateMapOf<String, Account>() }
 
     LaunchedEffect(discussionId) {
@@ -67,11 +68,9 @@ fun DiscussionScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Top bar with placeholder avatar
         TopAppBar(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // TODO Placeholder discussion picture
                     Box(
                         modifier = Modifier
                             .size(40.dp)
@@ -87,7 +86,7 @@ fun DiscussionScreen(
                 }
             },
             actions = {
-                IconButton(onClick = { /* TODO search later */ }) {
+                IconButton(onClick = { }) {
                     Icon(Icons.Default.Search, contentDescription = "Search")
                 }
             }
@@ -101,13 +100,21 @@ fun DiscussionScreen(
             contentPadding = PaddingValues(8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(messages) { message ->
+            itemsIndexed(messages) { index, message ->
                 val isMine = message.senderId == currentUser.uid
-                val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else  "You"
+                val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
+
+                val showDateHeader = shouldShowDateHeader(
+                    current = message.createdAt.toDate(),
+                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate()
+                )
+                if (showDateHeader) {
+                    DateSeparator(date = message.createdAt.toDate())
+                }
+
                 ChatBubble(message, isMine, sender)
             }
         }
-
 
         Row(
             modifier = Modifier
@@ -117,9 +124,8 @@ fun DiscussionScreen(
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = {/*TODO ATTACH FILE*/ }) {
-            Icon(Icons.Default.AttachFile, contentDescription = "Attach")
+            IconButton(onClick = { }) {
+                Icon(Icons.Default.AttachFile, contentDescription = "Attach")
             }
             Spacer(Modifier.width(8.dp))
             BasicTextField(
@@ -179,20 +185,19 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
         Column(
             horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
         ) {
-            // The bubble with shadow
             Box(
                 modifier = Modifier
                     .shadow(
-                        elevation = 4.dp, // how “deep” the shadow is
+                        elevation = 4.dp,
                         shape = RoundedCornerShape(12.dp),
-                        clip = false // allows shadow to appear outside bounds
+                        clip = false
                     )
                     .background(
                         color = Color(0xFFe0e0e0),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(10.dp)
-                    .widthIn(max = 250.dp) // optional max width
+                    .widthIn(max = 250.dp)
             ) {
                 Column {
                     if (senderName != null) {
@@ -209,7 +214,6 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
                 }
             }
 
-            // Timestamp aligned to bubble end
             Text(
                 text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
                 style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF888888)),
@@ -228,4 +232,47 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
             )
         }
     }
+}
+
+@Composable
+fun DateSeparator(date: Date) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = formatDateBubble(date),
+            color = Color.White,
+            modifier = Modifier
+                .background(Color(0xFF9E9E9E), shape = RoundedCornerShape(50))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+fun formatDateBubble(date: Date): String {
+    val cal = Calendar.getInstance()
+    val today = Calendar.getInstance()
+    cal.time = date
+
+    return when {
+        isSameDay(cal, today) -> "Today"
+        isSameDay(cal, today.apply { add(Calendar.DAY_OF_YEAR, -1) }) -> "Yesterday"
+        else -> DateFormat.format("MMM dd, yyyy", date).toString()
+    }
+}
+
+fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
+    if (previous == null) return true
+    val calCurrent = Calendar.getInstance().apply { time = current }
+    val calPrev = Calendar.getInstance().apply { time = previous }
+    return !(calCurrent.get(Calendar.YEAR) == calPrev.get(Calendar.YEAR)
+            && calCurrent.get(Calendar.DAY_OF_YEAR) == calPrev.get(Calendar.DAY_OF_YEAR))
+}
+
+fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
