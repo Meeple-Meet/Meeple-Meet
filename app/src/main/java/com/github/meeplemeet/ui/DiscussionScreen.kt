@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,6 +24,8 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
+import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.appShapes
 import java.util.Calendar
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -82,19 +83,27 @@ fun DiscussionScreen(
     }
   }
 
-  Column(modifier = Modifier.fillMaxSize()) {
+  Column(modifier = Modifier.fillMaxSize().background(AppColors.primary)) {
     /** Top bar showing discussion name and navigation back button */
     TopAppBar(
         title = {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(40.dp).background(Color.Gray, shape = CircleShape))
+            Box(
+                modifier =
+                    Modifier.size(40.dp).background(color = Color(0xFF800080), shape = CircleShape))
+            /** TODO: Placeholder for avatar */
             Spacer(Modifier.width(8.dp))
-            Text(text = discussionName, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = discussionName,
+                style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons))
           }
         },
         navigationIcon = {
           IconButton(onClick = { navigation.goBack() }) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = AppColors.textIconsFade)
           }
         },
         actions = {
@@ -128,10 +137,15 @@ fun DiscussionScreen(
         modifier =
             Modifier.fillMaxWidth()
                 .padding(8.dp)
-                .background(Color(0xFFF0F0F0), shape = CircleShape)
+                .background(AppColors.secondary, shape = CircleShape)
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = {}) { Icon(Icons.Default.AttachFile, contentDescription = "Attach") }
+          IconButton(onClick = {}) {
+            Icon(
+                Icons.Default.AttachFile,
+                contentDescription = "Attach",
+                tint = AppColors.textIconsFade)
+          }
           Spacer(Modifier.width(8.dp))
 
           /** Text input field */
@@ -142,7 +156,7 @@ fun DiscussionScreen(
               singleLine = true,
               decorationBox = { innerTextField ->
                 if (messageText.isEmpty()) {
-                  Text("Type something...", color = Color.Gray)
+                  Text("Type something...", color = AppColors.textIconsFade)
                 }
                 innerTextField()
               })
@@ -167,7 +181,10 @@ fun DiscussionScreen(
                 }
               },
               enabled = !isSending) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = AppColors.textIconsFade)
               }
         }
   }
@@ -186,33 +203,36 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
         if (!isMine) {
-          Box(modifier = Modifier.size(32.dp).background(Color.Gray, shape = CircleShape))
+          Box(modifier = Modifier.size(32.dp).background(Color(0xFF800080), shape = CircleShape))
+          /** TODO: Placeholder for avatar */
           Spacer(Modifier.width(6.dp))
         }
 
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
           Box(
               modifier =
-                  Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(12.dp), clip = false)
-                      .background(color = Color(0xFFe0e0e0), shape = RoundedCornerShape(12.dp))
+                  Modifier.shadow(elevation = 4.dp, shape = appShapes.large, clip = false)
+                      .background(color = AppColors.secondary, shape = appShapes.large)
                       .padding(10.dp)
                       .widthIn(max = 250.dp)) {
                 Column {
                   if (senderName != null) {
                     Text(
                         senderName,
-                        style = MaterialTheme.typography.labelSmall.copy(color = Color.Black))
+                        style =
+                            MaterialTheme.typography.labelSmall.copy(
+                                color = AppColors.textIconsFade))
                     Spacer(Modifier.height(2.dp))
                   }
                   Text(
                       message.content,
-                      style = MaterialTheme.typography.bodyMedium.copy(color = Color.Black))
+                      style =
+                          MaterialTheme.typography.bodySmall.copy(color = AppColors.textIconsFade))
                 }
               }
-
           Text(
               text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
-              style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF888888)),
+              style = MaterialTheme.typography.labelSmall.copy(color = AppColors.textIconsFade),
               modifier =
                   Modifier.padding(top = 2.dp)
                       .align(if (isMine) Alignment.End else Alignment.Start))
@@ -220,7 +240,10 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
 
         if (isMine) {
           Spacer(Modifier.width(6.dp))
-          Box(modifier = Modifier.size(32.dp).background(Color.Gray, shape = CircleShape))
+          Box(
+              modifier =
+                  Modifier.size(32.dp).background(color = Color(0xFF800080), shape = CircleShape))
+          /** TODO: Placeholder for avatar */
         }
       }
 }
@@ -231,11 +254,11 @@ fun DateSeparator(date: Date) {
   Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Text(
         text = formatDateBubble(date),
-        color = Color.White,
+        color = AppColors.textIconsFade,
         modifier =
-            Modifier.background(Color(0xFF9E9E9E), shape = RoundedCornerShape(50))
+            Modifier.background(AppColors.divider, shape = CircleShape)
                 .padding(horizontal = 12.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.labelMedium)
+        style = MaterialTheme.typography.labelSmall)
   }
 }
 
