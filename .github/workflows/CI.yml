@@ -87,10 +87,12 @@ jobs:
         run: ./gradlew assembleDebug lintDebug --parallel --build-cache
 
       - name: Upload lint report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lint-report
-          path: app/build/reports/lint-results-debug.xml
+          path: app/build/reports/lint*.xml
+          if-no-files-found: warn
 
   unit-tests:
     name: Unit Tests
@@ -139,10 +141,14 @@ jobs:
         run: ./gradlew check --parallel --build-cache
 
       - name: Upload unit test coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-coverage
-          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
+          path: |
+            app/build/outputs/unit_test_code_coverage/
+            app/build/jacoco/
+          if-no-files-found: warn
 
   android-tests:
     name: Android Tests
@@ -275,12 +281,14 @@ jobs:
 
       - name: Download unit test coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: unit-test-coverage
-          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/
+          path: app/build/
 
       - name: Download lint report
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: lint-report
           path: app/build/reports/
