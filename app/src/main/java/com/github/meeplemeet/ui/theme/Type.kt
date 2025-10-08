@@ -8,7 +8,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.github.meeplemeet.R
 
-val AppFontFamily =
+/**
+ * Font family for the app, using the Inter font since it's the one Figma uses
+ * (https://fonts.google.com/specimen/Inter)
+ */
+val appFontFamily =
     FontFamily(
         fonts =
             listOf(
@@ -17,44 +21,46 @@ val AppFontFamily =
                 Font(R.font.inter_medium, FontWeight.Medium),
                 Font(R.font.inter_semibold, FontWeight.SemiBold)))
 
-// Used for big screen titles, such as the login/signup screen
-val DisplayLarge =
+/** Used for big screen titles, such as the login/signup screen */
+val displayLarge =
     TextStyle(
-        fontFamily = AppFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = appFontFamily,
+        fontWeight = FontWeight.Normal,
         fontSize = 50.sp,
         lineHeight = 56.sp,
         letterSpacing = (-0.5).sp)
 
-// Used for main body text
-val BodyMedium =
+/** Used for main body text */
+val bodyMedium =
     TextStyle(
-        fontFamily = AppFontFamily,
+        fontFamily = appFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 18.sp,
         lineHeight = 24.sp)
 
-// Used for secondary body text, text that is usually less
-// important or that should be read after the main body text
-val BodySmall =
+/**
+ * Used for secondary body text, text that is usually less important or that should be read after
+ * the main body text
+ */
+val bodySmall =
     TextStyle(
-        fontFamily = AppFontFamily,
+        fontFamily = appFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
         lineHeight = 20.sp)
 
-// Used for small text, think of captions
-val LabelSmall =
+/** Used for small text, think of captions */
+val labelSmall =
     TextStyle(
-        fontFamily = AppFontFamily,
+        fontFamily = appFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 13.sp,
         lineHeight = 16.sp)
 
-// Set of Material typography styles to start with
-val Typography =
+/** Set of Material typography styles to start with */
+val appTypography =
     Typography(
-        displayLarge = DisplayLarge,
-        bodyMedium = BodyMedium,
-        bodySmall = BodySmall,
-        labelSmall = LabelSmall)
+        displayLarge = displayLarge,
+        bodyMedium = bodyMedium,
+        bodySmall = bodySmall,
+        labelSmall = labelSmall)

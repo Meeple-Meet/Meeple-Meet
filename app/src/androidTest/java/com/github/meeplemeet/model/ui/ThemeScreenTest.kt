@@ -36,7 +36,7 @@ fun ThemeTestScreen(themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT) {
   Box(Modifier.testTag("themeMode_${resolvedMode.name}")) {}
 
   AppTheme(themeMode = resolvedMode) {
-    Surface(color = AppColors.Primary, modifier = Modifier.fillMaxSize()) {
+    Surface(color = AppColors.primary, modifier = Modifier.fillMaxSize()) {
       Column(
           modifier = Modifier.fillMaxSize().padding(16.dp),
           verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -47,6 +47,7 @@ fun ThemeTestScreen(themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT) {
             MessagesSection()
             MessageInputBar()
             BottomNavBar()
+            WelcomeMessage()
           }
     }
   }
@@ -55,21 +56,21 @@ fun ThemeTestScreen(themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT) {
 @Composable
 private fun ButtonsSection() {
   Column {
-    Text("Buttons", style = MaterialTheme.typography.bodyMedium, color = AppColors.TextIcons)
+    Text("Buttons", style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       Button(
           onClick = {},
           colors =
               ButtonDefaults.buttonColors(
-                  containerColor = AppColors.Neutral, contentColor = AppColors.TextIcons)) {
+                  containerColor = AppColors.neutral, contentColor = AppColors.textIcons)) {
             Text("Label")
           }
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("FAB", color = AppColors.TextIconsFade, style = MaterialTheme.typography.labelSmall)
+        Text("FAB", color = AppColors.textIconsFade, style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(4.dp))
         FloatingActionButton(
-            onClick = {}, containerColor = AppColors.Neutral, contentColor = AppColors.TextIcons) {
+            onClick = {}, containerColor = AppColors.neutral, contentColor = AppColors.textIcons) {
               Icon(Icons.Default.Add, contentDescription = "FAB")
             }
       }
@@ -82,12 +83,12 @@ private fun PaletteSection() {
   Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
     val colors =
         listOf(
-            AppColors.Neutral,
-            AppColors.Affirmative,
-            AppColors.Negative,
-            AppColors.Focus,
-            AppColors.Secondary,
-            AppColors.Divider,
+            AppColors.neutral,
+            AppColors.affirmative,
+            AppColors.negative,
+            AppColors.focus,
+            AppColors.secondary,
+            AppColors.divider,
             Color.Black,
             Color.White)
     colors.forEach { color ->
@@ -102,24 +103,24 @@ private fun TypographySection() {
     Text(
         "Text-Font-Size: 18",
         style = MaterialTheme.typography.bodyMedium,
-        color = AppColors.TextIcons)
+        color = AppColors.textIcons)
     Text(
         "Middle-Font-Size: 15",
         style = MaterialTheme.typography.bodySmall,
-        color = AppColors.TextIconsFade)
+        color = AppColors.textIconsFade)
     Text(
         "SubText-Font-Size: 13",
         style = MaterialTheme.typography.labelSmall,
-        color = AppColors.TextIconsFade)
+        color = AppColors.textIconsFade)
   }
 }
 
 @Composable
 private fun SessionCardSection() {
   Card(
-      colors = CardDefaults.cardColors(containerColor = AppColors.Divider),
+      colors = CardDefaults.cardColors(containerColor = AppColors.divider),
       shape = MaterialTheme.shapes.medium,
-      elevation = CardDefaults.cardElevation(defaultElevation = Elevation.Raised)) {
+      elevation = CardDefaults.cardElevation(defaultElevation = Elevation.raised)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,25 +129,25 @@ private fun SessionCardSection() {
                 Text(
                     "Session name",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.TextIcons)
+                    color = AppColors.textIcons)
                 Text(
                     "0/10",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextIconsFade)
+                    color = AppColors.textIconsFade)
               }
               Column(horizontalAlignment = Alignment.End) {
                 Text(
                     "dd/mm/yy",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextIconsFade)
+                    color = AppColors.textIconsFade)
                 Text(
                     "Host name??",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.Neutral)
+                    color = AppColors.neutral)
                 Text(
                     "location",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextIconsFade)
+                    color = AppColors.textIconsFade)
               }
             }
       }
@@ -166,19 +167,19 @@ private fun MessagesSection() {
       Column(
           modifier =
               Modifier.weight(1f)
-                  .shadow(Elevation.Subtle, MaterialTheme.shapes.medium)
-                  .background(AppColors.Divider, MaterialTheme.shapes.medium)
+                  .shadow(Elevation.subtle, MaterialTheme.shapes.medium)
+                  .background(AppColors.divider, MaterialTheme.shapes.medium)
                   .padding(10.dp)) {
             Text(
                 "user",
                 style = MaterialTheme.typography.labelSmall,
-                color = AppColors.TextIconsFade)
-            Text("Message", style = MaterialTheme.typography.bodySmall, color = AppColors.TextIcons)
+                color = AppColors.textIconsFade)
+            Text("Message", style = MaterialTheme.typography.bodySmall, color = AppColors.textIcons)
             Spacer(Modifier.height(4.dp))
             Text(
                 "Sent at 17:55",
                 style = MaterialTheme.typography.labelSmall,
-                color = AppColors.TextIconsFade)
+                color = AppColors.textIconsFade)
           }
     }
 
@@ -189,22 +190,22 @@ private fun MessagesSection() {
           Column(
               modifier =
                   Modifier.widthIn(max = 250.dp)
-                      .shadow(Elevation.Subtle, MaterialTheme.shapes.medium)
-                      .background(AppColors.Divider, MaterialTheme.shapes.medium)
+                      .shadow(Elevation.subtle, MaterialTheme.shapes.medium)
+                      .background(AppColors.divider, MaterialTheme.shapes.medium)
                       .padding(10.dp)) {
                 Text(
                     "user",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextIconsFade)
+                    color = AppColors.textIconsFade)
                 Text(
                     "Message",
                     style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextIcons)
+                    color = AppColors.textIcons)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Sent at 17:55",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextIconsFade)
+                    color = AppColors.textIconsFade)
               }
 
           Spacer(Modifier.width(8.dp))
@@ -222,21 +223,21 @@ private fun MessageInputBar() {
   Box(
       modifier =
           Modifier.fillMaxWidth()
-              .shadow(Elevation.Subtle, MaterialTheme.shapes.medium)
-              .background(AppColors.Secondary, MaterialTheme.shapes.medium)
+              .shadow(Elevation.subtle, MaterialTheme.shapes.medium)
+              .background(AppColors.secondary, MaterialTheme.shapes.medium)
               .padding(horizontal = 12.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(
               Icons.Default.AttachFile,
               contentDescription = "Attach",
-              tint = AppColors.TextIconsFade)
+              tint = AppColors.textIconsFade)
           Spacer(Modifier.width(8.dp))
           Text(
               "Type something...",
-              color = AppColors.TextIconsFade,
+              color = AppColors.textIconsFade,
               style = MaterialTheme.typography.bodySmall,
               modifier = Modifier.weight(1f))
-          Icon(Icons.Default.Send, contentDescription = "Send", tint = AppColors.TextIcons)
+          Icon(Icons.Default.Send, contentDescription = "Send", tint = AppColors.textIcons)
         }
       }
 }
@@ -244,9 +245,9 @@ private fun MessageInputBar() {
 @Composable
 private fun BottomNavBar() {
   Card(
-      modifier = Modifier.fillMaxWidth().shadow(Elevation.Subtle, MaterialTheme.shapes.large),
+      modifier = Modifier.fillMaxWidth().shadow(Elevation.subtle, MaterialTheme.shapes.large),
       shape = MaterialTheme.shapes.large,
-      colors = CardDefaults.cardColors(containerColor = AppColors.Divider)) {
+      colors = CardDefaults.cardColors(containerColor = AppColors.divider)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -268,20 +269,25 @@ private fun BottomNavBar() {
                           Modifier.height(36.dp)
                               .width(50.dp)
                               .background(
-                                  color = if (selected) AppColors.Focus else Color.Transparent,
+                                  color = if (selected) AppColors.focus else Color.Transparent,
                                   shape = RoundedCornerShape(50)),
                       contentAlignment = Alignment.Center) {
-                        Icon(icon, contentDescription = label, tint = AppColors.TextIcons)
+                        Icon(icon, contentDescription = label, tint = AppColors.textIcons)
                       }
 
                   Spacer(Modifier.height(4.dp))
 
                   Text(
                       label,
-                      color = if (selected) AppColors.TextIcons else AppColors.TextIconsFade,
+                      color = if (selected) AppColors.textIcons else AppColors.textIconsFade,
                       style = MaterialTheme.typography.labelSmall)
                 }
               }
             }
       }
+}
+
+@Composable
+private fun WelcomeMessage() {
+  Text("MeepleMeet!", style = MaterialTheme.typography.displayLarge, color = AppColors.textIcons)
 }
