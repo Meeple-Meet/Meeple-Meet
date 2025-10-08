@@ -84,7 +84,13 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Assemble and Lint
-        run: ./gradlew assembleDebug lint --parallel --build-cache
+        run: ./gradlew assembleDebug lintDebug --parallel --build-cache
+
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.xml
 
   unit-tests:
     name: Unit Tests
@@ -131,6 +137,12 @@ jobs:
 
       - name: Run Unit Tests
         run: ./gradlew check --parallel --build-cache
+
+      - name: Upload unit test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
 
   android-tests:
     name: Android Tests
@@ -260,6 +272,18 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
+
+      - name: Download unit test coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/
+
+      - name: Download lint report
+        uses: actions/download-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/
 
       - name: Generate coverage
         run: ./gradlew jacocoTestReport
