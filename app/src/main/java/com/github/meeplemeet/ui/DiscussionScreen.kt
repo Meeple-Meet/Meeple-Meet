@@ -38,114 +38,126 @@ fun DiscussionScreen(
     currentUser: Account,
     navigation: NavigationActions
 ) {
-  val scope = rememberCoroutineScope()
-  var messageText by remember { mutableStateOf("") }
-  val messages = remember { mutableStateListOf<Message>() }
-  val listState = rememberLazyListState()
-  var isSending by remember { mutableStateOf(false) }
-  var discussionName by remember { mutableStateOf("Loading...") }
-  val userCache = remember { mutableStateMapOf<String, Account>() }
+    val scope = rememberCoroutineScope()
+    var messageText by remember { mutableStateOf("") }
+    val messages = remember { mutableStateListOf<Message>() }
+    val listState = rememberLazyListState()
+    var isSending by remember { mutableStateOf(false) }
+    var discussionName by remember { mutableStateOf("Loading...") }
+    val userCache = remember { mutableStateMapOf<String, Account>() }
 
-  LaunchedEffect(discussionId) {
-    viewModel.discussionFlow(discussionId).collectLatest { discussion ->
-      discussion?.messages?.let { msgs ->
-        messages.clear()
-        messages.addAll(msgs)
-        scope.launch { listState.animateScrollToItem(messages.size) }
-        msgs.forEach { msg ->
-          if (!userCache.containsKey(msg.senderId) && msg.senderId != currentUser.uid) {
-            try {
-              val account = viewModel.getAccount(msg.senderId)
-              userCache[msg.senderId] = account
-            } catch (_: Exception) {}
-          }
-        }
-        discussionName = discussion?.name ?: "Loading..."
-      }
-    }
-  }
+    // Collect the discussion StateFlow
+    val discussion by viewModel.discussionFlow(discussionId).collectAsState()
 
-  Column(modifier = Modifier.fillMaxSize()) {
-    TopAppBar(
-        title = {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(40.dp).background(Color.Gray, shape = CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text(text = discussionName, style = MaterialTheme.typography.titleMedium)
-          }
-        },
-        navigationIcon = {
-          IconButton(onClick = { navigation.goBack() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-          }
-        },
-        actions = {
-          IconButton(onClick = {}) { Icon(Icons.Default.Search, contentDescription = "Search") }
-        })
+    // Update messages and user cache whenever discussion changes
+    LaunchedEffect(discussion) {
+        discussion?.let { disc ->
+            messages.clear()
+            messages.addAll(disc.messages)
+            scope.launch { listState.animateScrollToItem(messages.size) }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.weight(1f).fillMaxWidth(),
-        contentPadding = PaddingValues(8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-          itemsIndexed(messages) { index, message ->
-            val isMine = message.senderId == currentUser.uid
-            val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
-
-            val showDateHeader =
-                shouldShowDateHeader(
-                    current = message.createdAt.toDate(),
-                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
-            if (showDateHeader) {
-              DateSeparator(date = message.createdAt.toDate())
+            disc.messages.forEach { msg ->
+                if (!userCache.containsKey(msg.senderId) && msg.senderId != currentUser.uid) {
+                    try {
+                        viewModel.getOtherAccount(msg.senderId) { account ->
+                            userCache[msg.senderId] = account
+                        }
+                    } catch (_: Exception) {}
+                }
             }
+            discussionName = disc.name
+        }
+    }
 
-            ChatBubble(message, isMine, sender)
-          }
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(40.dp).background(Color.Gray, shape = CircleShape))
+                    Spacer(Modifier.width(8.dp))
+                    Text(text = discussionName, style = MaterialTheme.typography.titleMedium)
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = { navigation.goBack() }) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            actions = {
+                IconButton(onClick = {}) { Icon(Icons.Default.Search, contentDescription = "Search") }
+            }
+        )
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            itemsIndexed(messages) { index, message ->
+                val isMine = message.senderId == currentUser.uid
+                val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
+
+                val showDateHeader = shouldShowDateHeader(
+                    current = message.createdAt.toDate(),
+                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate()
+                )
+                if (showDateHeader) {
+                    DateSeparator(date = message.createdAt.toDate())
+                }
+
+                ChatBubble(message, isMine, sender)
+            }
         }
 
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
+        // Input row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
                 .padding(8.dp)
                 .background(Color(0xFFF0F0F0), shape = CircleShape)
                 .padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = {}) { Icon(Icons.Default.AttachFile, contentDescription = "Attach") }
-          Spacer(Modifier.width(8.dp))
-          BasicTextField(
-              value = messageText,
-              onValueChange = { messageText = it },
-              modifier = Modifier.weight(1f),
-              singleLine = true,
-              decorationBox = { innerTextField ->
-                if (messageText.isEmpty()) {
-                  Text("Type something...", color = Color.Gray)
-                }
-                innerTextField()
-              })
-          Spacer(Modifier.width(8.dp))
-          IconButton(
-              onClick = {
-                if (messageText.isNotBlank() && !isSending) {
-                  scope.launch {
-                    isSending = true
-                    try {
-                      viewModel.sendMessageToDiscussion(
-                          viewModel.getDiscussion(discussionId), currentUser, messageText)
-                      messageText = ""
-                    } finally {
-                      isSending = false
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = {}) { Icon(Icons.Default.AttachFile, contentDescription = "Attach") }
+            Spacer(Modifier.width(8.dp))
+            BasicTextField(
+                value = messageText,
+                onValueChange = { messageText = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                decorationBox = { innerTextField ->
+                    if (messageText.isEmpty()) {
+                        Text("Type something...", color = Color.Gray)
                     }
-                  }
+                    innerTextField()
                 }
-              },
-              enabled = !isSending) {
+            )
+            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = {
+                    discussion?.let { disc ->
+                        if (messageText.isNotBlank() && !isSending) {
+                            scope.launch {
+                                isSending = true
+                                try {
+                                    viewModel.sendMessageToDiscussion(disc, currentUser, messageText)
+                                    messageText = ""
+                                } finally {
+                                    isSending = false
+                                }
+                            }
+                        }
+                    }
+                },
+                enabled = !isSending
+            ) {
                 Icon(Icons.Default.Send, contentDescription = "Send")
-              }
+            }
         }
-  }
+    }
 }
+
 
 @Composable
 fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
