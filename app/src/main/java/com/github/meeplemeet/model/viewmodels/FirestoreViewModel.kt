@@ -233,6 +233,13 @@ class FirestoreViewModel(
     viewModelScope.launch { _account.value = repository.getAccount(id) }
   }
 
+  /** Retrieve an account by ID without changing the current account state. */
+  fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
+    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+
+    viewModelScope.launch { onResult(repository.getAccount(id)) }
+  }
+
   /** Get the current signed-in account. */
   fun getCurrentAccount() {
     if (Firebase.auth.currentUser == null)
