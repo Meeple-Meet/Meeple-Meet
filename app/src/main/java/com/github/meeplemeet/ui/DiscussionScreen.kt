@@ -10,10 +10,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,9 +27,19 @@ import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import java.util.Calendar
 import java.util.Date
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
+/**
+ * Composable screen that displays a discussion (chat) and allows sending messages.
+ *
+ * Messages are collected from [FirestoreViewModel] via a [StateFlow] and displayed in a scrollable
+ * list. Users are cached locally for display purposes.
+ *
+ * @param viewModel FirestoreViewModel for fetching discussion and sending messages
+ * @param discussionId ID of the discussion to display
+ * @param currentUser The currently logged-in user
+ * @param navigation NavigationActions for handling navigation
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(
@@ -38,127 +48,138 @@ fun DiscussionScreen(
     currentUser: Account,
     navigation: NavigationActions
 ) {
-    val scope = rememberCoroutineScope()
-    var messageText by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<Message>() }
-    val listState = rememberLazyListState()
-    var isSending by remember { mutableStateOf(false) }
-    var discussionName by remember { mutableStateOf("Loading...") }
-    val userCache = remember { mutableStateMapOf<String, Account>() }
+  val scope = rememberCoroutineScope()
+  var messageText by remember { mutableStateOf("") }
+  val messages = remember { mutableStateListOf<Message>() }
+  val listState = rememberLazyListState()
+  var isSending by remember { mutableStateOf(false) }
+  var discussionName by remember { mutableStateOf("Loading...") }
+  val userCache = remember { mutableStateMapOf<String, Account>() }
 
-    // Collect the discussion StateFlow
-    val discussion by viewModel.discussionFlow(discussionId).collectAsState()
+  /** Collect the discussion StateFlow as Compose state */
+  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
 
-    // Update messages and user cache whenever discussion changes
-    LaunchedEffect(discussion) {
-        discussion?.let { disc ->
-            messages.clear()
-            messages.addAll(disc.messages)
-            scope.launch { listState.animateScrollToItem(messages.size) }
+  /**
+   * Update messages list and user cache whenever the discussion changes.
+   *
+   * Scrolls to the last message automatically.
+   */
+  LaunchedEffect(discussion) {
+    discussion?.let { disc ->
+      messages.clear()
+      messages.addAll(disc.messages)
+      scope.launch { listState.animateScrollToItem(messages.size) }
 
-            disc.messages.forEach { msg ->
-                if (!userCache.containsKey(msg.senderId) && msg.senderId != currentUser.uid) {
-                    try {
-                        viewModel.getOtherAccount(msg.senderId) { account ->
-                            userCache[msg.senderId] = account
-                        }
-                    } catch (_: Exception) {}
-                }
-            }
-            discussionName = disc.name
+      disc.messages.forEach { msg ->
+        if (!userCache.containsKey(msg.senderId) && msg.senderId != currentUser.uid) {
+          try {
+            viewModel.getOtherAccount(msg.senderId) { account -> userCache[msg.senderId] = account }
+          } catch (_: Exception) {}
         }
+      }
+
+      discussionName = disc.name
     }
+  }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(40.dp).background(Color.Gray, shape = CircleShape))
-                    Spacer(Modifier.width(8.dp))
-                    Text(text = discussionName, style = MaterialTheme.typography.titleMedium)
-                }
-            },
-            navigationIcon = {
-                IconButton(onClick = { navigation.goBack() }) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                }
-            },
-            actions = {
-                IconButton(onClick = {}) { Icon(Icons.Default.Search, contentDescription = "Search") }
-            }
-        )
+  Column(modifier = Modifier.fillMaxSize()) {
+    /** Top bar showing discussion name and navigation back button */
+    TopAppBar(
+        title = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(40.dp).background(Color.Gray, shape = CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text(text = discussionName, style = MaterialTheme.typography.titleMedium)
+          }
+        },
+        navigationIcon = {
+          IconButton(onClick = { navigation.goBack() }) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          }
+        },
+        actions = {
+          IconButton(onClick = {}) { Icon(Icons.Default.Search, contentDescription = "Search") }
+        })
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            itemsIndexed(messages) { index, message ->
-                val isMine = message.senderId == currentUser.uid
-                val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
+    /** LazyColumn showing all messages with optional date separators */
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.weight(1f).fillMaxWidth(),
+        contentPadding = PaddingValues(8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          itemsIndexed(messages) { index, message ->
+            val isMine = message.senderId == currentUser.uid
+            val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
-                val showDateHeader = shouldShowDateHeader(
+            val showDateHeader =
+                shouldShowDateHeader(
                     current = message.createdAt.toDate(),
-                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate()
-                )
-                if (showDateHeader) {
-                    DateSeparator(date = message.createdAt.toDate())
-                }
-
-                ChatBubble(message, isMine, sender)
+                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
+            if (showDateHeader) {
+              DateSeparator(date = message.createdAt.toDate())
             }
+
+            ChatBubble(message, isMine, sender)
+          }
         }
 
-        // Input row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
+    /** Input row at the bottom for typing messages */
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
                 .padding(8.dp)
                 .background(Color(0xFFF0F0F0), shape = CircleShape)
                 .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = {}) { Icon(Icons.Default.AttachFile, contentDescription = "Attach") }
-            Spacer(Modifier.width(8.dp))
-            BasicTextField(
-                value = messageText,
-                onValueChange = { messageText = it },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                decorationBox = { innerTextField ->
-                    if (messageText.isEmpty()) {
-                        Text("Type something...", color = Color.Gray)
-                    }
-                    innerTextField()
+        verticalAlignment = Alignment.CenterVertically) {
+          IconButton(onClick = {}) { Icon(Icons.Default.AttachFile, contentDescription = "Attach") }
+          Spacer(Modifier.width(8.dp))
+
+          /** Text input field */
+          BasicTextField(
+              value = messageText,
+              onValueChange = { messageText = it },
+              modifier = Modifier.weight(1f),
+              singleLine = true,
+              decorationBox = { innerTextField ->
+                if (messageText.isEmpty()) {
+                  Text("Type something...", color = Color.Gray)
                 }
-            )
-            Spacer(Modifier.width(8.dp))
-            IconButton(
-                onClick = {
-                    discussion?.let { disc ->
-                        if (messageText.isNotBlank() && !isSending) {
-                            scope.launch {
-                                isSending = true
-                                try {
-                                    viewModel.sendMessageToDiscussion(disc, currentUser, messageText)
-                                    messageText = ""
-                                } finally {
-                                    isSending = false
-                                }
-                            }
-                        }
+                innerTextField()
+              })
+
+          Spacer(Modifier.width(8.dp))
+
+          /** Send button */
+          IconButton(
+              onClick = {
+                discussion?.let { disc ->
+                  if (messageText.isNotBlank() && !isSending) {
+                    scope.launch {
+                      isSending = true
+                      try {
+                        viewModel.sendMessageToDiscussion(disc, currentUser, messageText)
+                        messageText = ""
+                      } finally {
+                        isSending = false
+                      }
                     }
-                },
-                enabled = !isSending
-            ) {
-                Icon(Icons.Default.Send, contentDescription = "Send")
-            }
+                  }
+                }
+              },
+              enabled = !isSending) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+              }
         }
-    }
+  }
 }
 
-
+/**
+ * A single message bubble in the chat.
+ *
+ * @param message Message to display
+ * @param isMine True if the message belongs to the current user
+ * @param senderName Name of the sender
+ */
 @Composable
 fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
   Row(
@@ -204,6 +225,7 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
       }
 }
 
+/** Shows a date separator between messages. */
 @Composable
 fun DateSeparator(date: Date) {
   Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -217,6 +239,10 @@ fun DateSeparator(date: Date) {
   }
 }
 
+/**
+ * Formats a date for display in a date separator. Returns "Today", "Yesterday", or formatted date
+ * string.
+ */
 fun formatDateBubble(date: Date): String {
   val cal = Calendar.getInstance()
   val today = Calendar.getInstance()
@@ -229,6 +255,7 @@ fun formatDateBubble(date: Date): String {
   }
 }
 
+/** Determines whether a date header should be displayed between messages. */
 fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
   if (previous == null) return true
   val calCurrent = Calendar.getInstance().apply { time = current }
@@ -237,6 +264,7 @@ fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
       calCurrent.get(Calendar.DAY_OF_YEAR) == calPrev.get(Calendar.DAY_OF_YEAR))
 }
 
+/** Checks if two Calendar instances represent the same day. */
 fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
   return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
       cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
