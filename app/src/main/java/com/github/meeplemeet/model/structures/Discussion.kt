@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
  *
  * @property uid Globally unique identifier of the discussion (Firestore document ID).
  * @property name Human-readable title of the discussion.
+ * @property creatorId The unique identifier of the account that created this discussion
  * @property description Optional textual description of the discussion.
  * @property messages Ordered list of messages sent in the discussion.
  * @property participants List of account UIDs participating in this discussion.
@@ -16,6 +17,7 @@ import kotlinx.serialization.Serializable
  */
 data class Discussion(
     val uid: String,
+    val creatorId: String,
     val name: String,
     val description: String = "",
     val messages: List<Message> = emptyList(),
@@ -31,6 +33,7 @@ data class Discussion(
  */
 @Serializable
 data class DiscussionNoUid(
+    val creatorId: String = "",
     val name: String = "",
     val description: String = "",
     val messages: List<Message> = emptyList(),
@@ -47,6 +50,7 @@ data class DiscussionNoUid(
  */
 fun toNoUid(discussion: Discussion): DiscussionNoUid =
     DiscussionNoUid(
+        discussion.creatorId,
         discussion.name,
         discussion.description,
         discussion.messages,
@@ -64,6 +68,7 @@ fun toNoUid(discussion: Discussion): DiscussionNoUid =
 fun fromNoUid(id: String, discussionNoUid: DiscussionNoUid): Discussion =
     Discussion(
         id,
+        discussionNoUid.creatorId,
         discussionNoUid.name,
         discussionNoUid.description,
         discussionNoUid.messages,
