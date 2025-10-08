@@ -68,7 +68,7 @@ fun AddDiscussionScreen(
     }
 
     isSearching = true
-    // Simulated backend search
+    /** Simulated backend search */
     searchResults =
         fakeSearchAccounts(searchQuery).filter {
           it.uid != currentUser.uid && it !in selectedMembers
