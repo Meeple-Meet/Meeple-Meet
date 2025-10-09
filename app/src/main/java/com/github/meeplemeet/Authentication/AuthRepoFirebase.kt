@@ -135,14 +135,27 @@ class AuthRepoFirebase(
 
             // Fetch additional profile data from Firestore (like description)
             val description = fetchUserDescription(firebaseUser.uid)
-
             // Convert FirebaseUser to our custom User object with Firestore data
-            Result.success(firebaseUser.toUser(description))
+            val user = firebaseUser.toUser(description)
+
+            Result.success(user)
         } catch (e: Exception) {
-            // Return failure result with error message
-            Result.failure(
-                IllegalStateException("Login failed: ${e.localizedMessage ?: "Unexpected error."}")
-            )
+            // Return user-friendly error messages for common authentication failures
+            val errorMessage = when {
+                e.message?.contains("password is invalid", ignoreCase = true) == true ||
+                e.message?.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) == true ||
+                e.message?.contains("wrong password", ignoreCase = true) == true ||
+                e.message?.contains("user not found", ignoreCase = true) == true ->
+                    "Invalid email or password"
+                e.message?.contains("badly formatted", ignoreCase = true) == true ||
+                e.message?.contains("invalid email", ignoreCase = true) == true ->
+                    "Invalid email format"
+                e.message?.contains("too many requests", ignoreCase = true) == true ->
+                    "Too many failed attempts. Please try again later."
+                else -> e.localizedMessage ?: "Authentication failed. Please try again."
+            }
+
+            Result.failure(IllegalStateException(errorMessage))
         }
     }
 
