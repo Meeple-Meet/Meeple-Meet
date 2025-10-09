@@ -12,7 +12,11 @@ sonar {
         property("sonar.projectKey", "Meeple-Meet_Meeple-Meet")
         property("sonar.organization", "meeple-meet")
         property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-        property("sonar.androidLint.reportPaths", "app/build/reports/lint-results-debug.xml")
+
+        property("sonar.exclusions", "**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.webp,**/*.ttf,**/*.otf,**/*.woff,**/*.woff2,**/*.ico")
+        property("sonar.sources", "app/src/main/java,app/src/main/kotlin")
+        property("sonar.tests", "app/src/test,app/src/androidTest")
+
+        property("sonar.sourceEncoding", "UTF-8")
     }
 }
