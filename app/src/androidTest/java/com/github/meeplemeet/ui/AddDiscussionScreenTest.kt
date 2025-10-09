@@ -34,8 +34,7 @@ import org.junit.Test
 class AddDiscussionScreenTest {
 
   /** Compose test rule for running Compose UI tests */
-  @get:Rule
-  val compose = createComposeRule()
+  @get:Rule val compose = createComposeRule()
 
   /** Mocked navigation actions */
   private val nav: NavigationActions = mockk(relaxed = true)
@@ -105,7 +104,7 @@ class AddDiscussionScreenTest {
   fun back_arrow_calls_navigation() {
     setContent()
     backBtn().performClick()
-      verify { nav.goBack() }
+    verify { nav.goBack() }
   }
 
   /** Verifies discard button calls navigation.goBack() */
@@ -113,7 +112,7 @@ class AddDiscussionScreenTest {
   fun discard_button_calls_navigation() {
     setContent()
     discardBtn().performClick()
-      verify { nav.goBack() }
+    verify { nav.goBack() }
   }
 
   /** Verifies member search displays results and adds a member */
@@ -189,11 +188,11 @@ class AddDiscussionScreenTest {
    */
   @Test
   fun create_button_calls_viewmodel_createDiscussion() = runTest {
-      coEvery { vm.createDiscussion(any(), any(), any()) } just runs
-      setContent()
-      titleField().performTextInput("New Discussion")
-      createBtn().performClick()
-      coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
+    coEvery { vm.createDiscussion(any(), any(), any()) } just runs
+    setContent()
+    titleField().performTextInput("New Discussion")
+    createBtn().performClick()
+    coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
   }
 
   /**
@@ -202,26 +201,20 @@ class AddDiscussionScreenTest {
    */
   @Test
   fun createButton_shows_error_snackbar_on_failure() = runTest {
-      val failingOnCreate: suspend (String, String, Account, List<Account>) -> Unit =
-          { _, _, _, _ ->
-              throw Exception("Simulated failure")
-          }
+    val failingOnCreate: suspend (String, String, Account, List<Account>) -> Unit = { _, _, _, _ ->
+      throw Exception("Simulated failure")
+    }
 
-      compose.setContent {
-          AddDiscussionScreen(
-              onBack = {},
-              onCreate = failingOnCreate,
-              viewModel = vm,
-              currentUser = me
-          )
-      }
+    compose.setContent {
+      AddDiscussionScreen(onBack = {}, onCreate = failingOnCreate, viewModel = vm, currentUser = me)
+    }
 
-      compose.onNodeWithText("Title", substring = true).performTextInput("Test Discussion")
+    compose.onNodeWithText("Title", substring = true).performTextInput("Test Discussion")
 
-      compose.onNodeWithText("Create Discussion").performClick()
+    compose.onNodeWithText("Create Discussion").performClick()
 
-      compose.waitForIdle()
+    compose.waitForIdle()
 
-      compose.onNodeWithText("Failed to create discussion").assertExists()
+    compose.onNodeWithText("Failed to create discussion").assertExists()
   }
 }
