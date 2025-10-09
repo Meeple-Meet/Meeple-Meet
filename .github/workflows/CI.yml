@@ -13,12 +13,15 @@ on:
       - reopened
 
 jobs:
-  format-check:
-    name: Format Check
+  build-test-analyze:
+    name: Build, Test, and Analyze
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Setup JDK
         uses: actions/setup-java@v3
@@ -34,171 +37,43 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
+          fi
+
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # Step 1: Format Check
       - name: KTFmt Check
         run: ./gradlew ktfmtCheck
 
-  assemble-lint:
-    name: Assemble and Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Setup JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Retrieve gradle cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-      - name: Decode secrets
-        env:
-          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES" ]; then
-            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
-          else
-            echo "::warning::GOOGLE_SERVICES secret is not set."
-          fi
-          if [ -n "$LOCAL_PROPERTIES" ]; then
-            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
-          else
-            echo "::warning::LOCAL_PROPERTIES secret is not set."
-          fi
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
+      # Step 2: Assemble and Lint
       - name: Assemble and Lint
         run: ./gradlew assembleDebug lintDebug --parallel --build-cache
 
-      - name: Upload lint report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-report
-          path: app/build/reports/lint*.xml
-          if-no-files-found: warn
-
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Setup JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Retrieve gradle cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-      - name: Decode secrets
-        env:
-          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES" ]; then
-            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
-          else
-            echo "::warning::GOOGLE_SERVICES secret is not set."
-          fi
-          if [ -n "$LOCAL_PROPERTIES" ]; then
-            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
-          else
-            echo "::warning::LOCAL_PROPERTIES secret is not set."
-          fi
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - name: Run Unit Tests with coverage
+      # Step 3: Run Unit Tests with Coverage
+      - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --parallel --build-cache
 
-      - name: Upload unit test coverage data
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-coverage
-          path: |
-            app/build/jacoco/
-            app/build/outputs/unit_test_code_coverage/
-            app/build/tmp/kotlin-classes/debug/
-          if-no-files-found: warn
-
-  android-tests:
-    name: Android Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
+      # Step 4: Setup for Android Tests
       - name: Enable KVM group perms
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-
-      - name: Setup JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Retrieve gradle cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-      - name: Decode secrets
-        env:
-          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES" ]; then
-            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
-          else
-            echo "::warning::GOOGLE_SERVICES secret is not set."
-          fi
-          if [ -n "$LOCAL_PROPERTIES" ]; then
-            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
-          else
-            echo "::warning::LOCAL_PROPERTIES secret is not set."
-          fi
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
@@ -223,7 +98,8 @@ jobs:
             done
           fi
 
-      - name: Run instrumentation tests with coverage
+      # Step 5: Run Android Instrumentation Tests with Coverage
+      - name: Run Android Instrumentation Tests
         timeout-minutes: 25
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -236,119 +112,53 @@ jobs:
           disable-animations: true
           script: ./gradlew createDebugCoverageReport --parallel --build-cache
 
-      - name: Upload instrumentation test coverage data
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: instrumentation-test-coverage
-          path: |
-            app/build/outputs/code_coverage/
-            app/build/reports/coverage/
-            app/build/tmp/kotlin-classes/debug/
-          if-no-files-found: warn
+      # Step 6: Generate Unified Coverage Report
+      - name: Generate Unified Coverage Report
+        run: ./gradlew jacocoTestReport --parallel --build-cache
 
-  coverage-sonar:
-    name: Test Coverage and SonarCloud
-    runs-on: ubuntu-latest
-    needs: [ format-check, assemble-lint, unit-tests, android-tests ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Setup JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Retrieve gradle cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-      - name: Decode secrets
-        env:
-          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+      # Step 7: Verify Coverage Report
+      - name: Verify Coverage Report
         run: |
-          if [ -n "$GOOGLE_SERVICES" ]; then
-            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
-          else
-            echo "::warning::GOOGLE_SERVICES secret is not set."
-          fi
-          if [ -n "$LOCAL_PROPERTIES" ]; then
-            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
-          else
-            echo "::warning::LOCAL_PROPERTIES secret is not set."
-          fi
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - name: Download unit test coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: unit-test-coverage
-          path: app/build/
-
-      - name: Download instrumentation test coverage
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: instrumentation-test-coverage
-          path: app/build/
-
-      - name: Download lint report
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: lint-report
-          path: app/build/reports/
-
-      - name: Debug - Check downloaded coverage data
-        run: |
-          echo "🔍 Looking for .exec files:"
-          find app/build -name "*.exec" -o -name "*.ec" 2>/dev/null || echo "No execution data files found"
-
-          echo ""
-          echo "📁 Structure of app/build/jacoco:"
-          ls -R app/build/jacoco/ 2>/dev/null || echo "Directory doesn't exist"
-
-          echo ""
-          echo "📁 Structure of app/build/outputs:"
-          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "Directory doesn't exist"
-
-      - name: Generate unified coverage report
-        run: |
-          echo "Generating unified Jacoco coverage report..."
-          ./gradlew jacocoTestReport --info --stacktrace
-
-      - name: Verify coverage report
-        run: |
+          echo "🔍 Checking for coverage report..."
           if [ -f "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml" ]; then
-            echo "✅ Coverage report generated successfully"
+            echo "✅ Coverage report found"
             ls -lh app/build/reports/jacoco/jacocoTestReport/
           else
-            echo "❌ Coverage report not found"
-            echo "Searching for any jacoco reports..."
-            find app/build -path "*/jacoco/*" -name "*.xml" 2>/dev/null || echo "No jacoco XML reports found"
+            echo "⚠️ Coverage report not found at expected location"
+            echo "Searching for jacoco reports..."
+            find app/build -path "*/jacoco/*" -name "*.xml" 2>/dev/null || echo "No jacoco reports found"
           fi
 
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unified-coverage-report
-          path: app/build/reports/jacoco/
-
-      - name: Upload report to SonarCloud
+      # Step 8: Upload to SonarCloud
+      - name: Upload Analysis to SonarCloud
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonar --parallel --build-cache
+        run: ./gradlew :app:sonar --info
+
+      # Upload artifacts for debugging/reference
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+          if-no-files-found: warn
+
+      - name: Upload Lint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint*.xml
+          if-no-files-found: warn
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/
+          if-no-files-found: warn
