@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
  * Navigation is now decoupled using callbacks: [onBack] and [onCreate].
  *
  * @param onBack Lambda called when back/discard is pressed
- * @param onCreate Lambda called with title, description, and members when creating a discussion
+ * @param onCreate Lambda called when creation is successful
  * @param viewModel FirestoreViewModel for creating discussions
  * @param currentUser The currently logged-in user
  */
@@ -39,9 +39,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddDiscussionScreen(
     onBack: () -> Unit,
-    onCreate:
-        suspend (
-            title: String, description: String, creator: Account, members: List<Account>) -> Unit,
+    onCreate: () -> Unit,
     viewModel: FirestoreViewModel,
     currentUser: Account
 ) {
@@ -306,8 +304,10 @@ fun AddDiscussionScreen(
                           scope.launch {
                             try {
                               isCreating = true
-                              onCreate(title, description, currentUser, selectedMembers.toList())
+                              viewModel.createDiscussion(
+                                  title, description, currentUser, *selectedMembers.toTypedArray())
                               isCreating = false
+                              onCreate()
                             } catch (e: Exception) {
                               isCreating = false
                               creationError = "Failed to create discussion"

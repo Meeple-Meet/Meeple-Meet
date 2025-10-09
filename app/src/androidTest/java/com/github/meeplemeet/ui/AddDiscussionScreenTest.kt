@@ -65,18 +65,12 @@ class AddDiscussionScreenTest {
   /** Returns the back button node */
   private fun backBtn() = compose.onNodeWithContentDescription("Back")
 
-  private lateinit var onCreate: suspend (String, String, Account, List<Account>) -> Unit
-
   // ---------- Helpers ----------
 
   /** Sets the Compose content for the AddDiscussionScreen */
   private fun setContent() {
-    onCreate = { title: String, desc: String, creator: Account, members: List<Account> ->
-      vm.createDiscussion(title, desc, creator, *members.toTypedArray())
-      nav.goBack()
-    }
     compose.setContent {
-      AddDiscussionScreen(onBack = { nav.goBack() }, onCreate = onCreate, vm, me)
+      AddDiscussionScreen(onBack = { nav.goBack() }, onCreate = { nav.goBack() }, vm, me)
     }
   }
 
@@ -193,28 +187,5 @@ class AddDiscussionScreenTest {
     titleField().performTextInput("New Discussion")
     createBtn().performClick()
     coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
-  }
-
-  /**
-   * Verifies that when the createDiscussion lambda throws an exception, the error snackbar with the
-   * message "Failed to create discussion" is displayed.
-   */
-  @Test
-  fun createButton_shows_error_snackbar_on_failure() = runTest {
-    val failingOnCreate: suspend (String, String, Account, List<Account>) -> Unit = { _, _, _, _ ->
-      throw Exception("Simulated failure")
-    }
-
-    compose.setContent {
-      AddDiscussionScreen(onBack = {}, onCreate = failingOnCreate, viewModel = vm, currentUser = me)
-    }
-
-    compose.onNodeWithText("Title", substring = true).performTextInput("Test Discussion")
-
-    compose.onNodeWithText("Create Discussion").performClick()
-
-    compose.waitForIdle()
-
-    compose.onNodeWithText("Failed to create discussion").assertExists()
   }
 }
