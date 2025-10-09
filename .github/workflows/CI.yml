@@ -15,7 +15,7 @@ on:
 jobs:
   format-check:
     name: Format Check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -42,7 +42,7 @@ jobs:
 
   assemble-lint:
     name: Assemble and Lint
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -96,7 +96,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -152,7 +152,7 @@ jobs:
 
   android-tests:
     name: Android Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -237,7 +237,7 @@ jobs:
 
   coverage-sonar:
     name: Test Coverage and SonarCloud
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [format-check, assemble-lint, unit-tests, android-tests]
     steps:
       - name: Checkout
