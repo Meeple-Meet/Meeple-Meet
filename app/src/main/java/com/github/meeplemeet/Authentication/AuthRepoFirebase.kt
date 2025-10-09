@@ -170,11 +170,9 @@ class AuthRepoFirebase(
         return try {
             // Verify that we received a Google ID token credential
             if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                Log.d("AuthRepoFirebase", "Received Google ID token credential")
 
                 // Extract the Google ID token from the credential
                 val idToken = helper.extractIdTokenCredential(credential.data).idToken
-                Log.d("AuthRepoFirebase", "Extracted ID token: $idToken")
 
                 // Convert Google ID token to Firebase credential
                 val firebaseCred = helper.toFirebaseCredential(idToken)
