@@ -52,10 +52,10 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 /* ================================================================
  * Variables
  * ================================================================ */
-val MY_MSG_USERNAME = "You"
-val DEFAULT_DISCUSSION_NAME = "Discussion"
-val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
-val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
+const val MY_MSG_USERNAME = "You"
+const val DEFAULT_DISCUSSION_NAME = "Discussion"
+const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
+const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 
 
 
@@ -118,7 +118,7 @@ fun DiscussionsOverviewScreen(
             Box(modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-            ) { emptyDiscussionsListText() }
+            ) { EmptyDiscussionsListText() }
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -155,7 +155,7 @@ fun DiscussionsOverviewScreen(
                         }
                     }
 
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = discussionName,
                         lastMsg = msgText,
                         unreadMsgCount = preview.unreadCount,
@@ -180,7 +180,7 @@ fun DiscussionsOverviewScreen(
  * Composable that displays a message when there are no discussions
  */
 @Composable
-private fun emptyDiscussionsListText() {
+private fun EmptyDiscussionsListText() {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -206,7 +206,7 @@ private fun emptyDiscussionsListText() {
  * @param onClick Function to operate when clicked
  */
 @Composable
-private fun discussionCard(
+private fun DiscussionCard(
     discussionName: String,
     lastMsg: String,
     unreadMsgCount: Int,
@@ -246,7 +246,7 @@ private fun discussionCard(
                         .background(MaterialTheme.colorScheme.inversePrimary, CircleShape)
                 )
                 // MIDDLE: discussion title + last message
-                discussionCardTextSection(discussionName, lastMsg, Modifier.weight(1f))
+                DiscussionCardTextSection(discussionName, lastMsg, Modifier.weight(1f))
             }
 
             // RIGHT: discussion image (placeholder) + unread messages
@@ -291,7 +291,7 @@ private fun discussionCard(
  * @param modifier Optional [Modifier] for this composable
  */
 @Composable
-private fun discussionCardTextSection(
+private fun DiscussionCardTextSection(
     discussionName: String,
     lastMsg: String,
     modifier: Modifier = Modifier
@@ -322,14 +322,14 @@ private fun discussionCardTextSection(
 
 @Preview(showBackground = true, name = "Card – yours")
 @Composable
-private fun discussionCardPreview() {
+private fun DiscussionCardPreview() {
     AppTheme {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            discussionCard(
+            DiscussionCard(
                 discussionName = "Tomorrow party !",
                 lastMsg = "Be on time please",
                 modifier = Modifier.fillMaxWidth(),
@@ -381,7 +381,7 @@ private fun DiscussionsOverviewPreview() {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Catan Crew",
                         lastMsg = "You: I’ll bring wheat 🍞",
                         unreadMsgCount = 0,
@@ -389,7 +389,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Gloomhaven Sunday",
                         lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
                         unreadMsgCount = 3,
@@ -397,7 +397,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Arkham Horror Night",
                         lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
                         unreadMsgCount = 1,
@@ -405,7 +405,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Ticket to Ride: Europe",
                         lastMsg = "(No messages yet)",
                         unreadMsgCount = 0,
@@ -413,7 +413,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Root Tourney",
                         lastMsg = "Clara: Vagabond banned? Also maps—Winter or Lake?",
                         unreadMsgCount = 7,
@@ -421,7 +421,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "D&D One-shot",
                         lastMsg = "You: Long recap incoming… Last session we rescued the baron’s daughter, found the secret cellar, defeated the mimic, AND leveled up! 🎉",
                         unreadMsgCount = 0,
@@ -429,7 +429,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Spirit Island Learners",
                         lastMsg = "Diego: Let’s try Lightning + River synergy; difficulty 3 OK?",
                         unreadMsgCount = 12,
@@ -437,7 +437,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Azul After-work",
                         lastMsg = "Maya: I booked the meeting room 18:30.",
                         unreadMsgCount = 2,
@@ -445,7 +445,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Brass: Birmingham",
                         lastMsg = "You: Anyone mind if I take first player to rush cotton?",
                         unreadMsgCount = 0,
@@ -453,7 +453,7 @@ private fun DiscussionsOverviewPreview() {
                     )
                 }
                 item {
-                    discussionCard(
+                    DiscussionCard(
                         discussionName = "Wingspan Chill",
                         lastMsg = "No messages yet",
                         unreadMsgCount = 0,
