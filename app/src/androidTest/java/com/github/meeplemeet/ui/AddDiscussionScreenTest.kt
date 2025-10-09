@@ -1,13 +1,31 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.filterToOne
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
-import io.mockk.*
-import kotlinx.coroutines.test.*
-import org.junit.*
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
+import org.junit.Rule
+import org.junit.Test
 
 /**
  * Tests for the AddDiscussionScreen UI. Verifies initial state, input behavior, member search, and
@@ -16,7 +34,8 @@ import org.junit.*
 class AddDiscussionScreenTest {
 
   /** Compose test rule for running Compose UI tests */
-  @get:Rule val compose = createComposeRule()
+  @get:Rule
+  val compose = createComposeRule()
 
   /** Mocked navigation actions */
   private val nav: NavigationActions = mockk(relaxed = true)
@@ -86,7 +105,7 @@ class AddDiscussionScreenTest {
   fun back_arrow_calls_navigation() {
     setContent()
     backBtn().performClick()
-    verify { nav.goBack() }
+      verify { nav.goBack() }
   }
 
   /** Verifies discard button calls navigation.goBack() */
@@ -94,7 +113,7 @@ class AddDiscussionScreenTest {
   fun discard_button_calls_navigation() {
     setContent()
     discardBtn().performClick()
-    verify { nav.goBack() }
+      verify { nav.goBack() }
   }
 
   /** Verifies member search displays results and adds a member */
@@ -170,11 +189,11 @@ class AddDiscussionScreenTest {
    */
   @Test
   fun create_button_calls_viewmodel_createDiscussion() = runTest {
-    coEvery { vm.createDiscussion(any(), any(), any()) } just runs
-    setContent()
-    titleField().performTextInput("New Discussion")
-    createBtn().performClick()
-    coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
+      coEvery { vm.createDiscussion(any(), any(), any()) } just runs
+      setContent()
+      titleField().performTextInput("New Discussion")
+      createBtn().performClick()
+      coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
   }
 
   /**
@@ -183,20 +202,26 @@ class AddDiscussionScreenTest {
    */
   @Test
   fun createButton_shows_error_snackbar_on_failure() = runTest {
-    val failingOnCreate: suspend (String, String, Account, List<Account>) -> Unit = { _, _, _, _ ->
-      throw Exception("Simulated failure")
-    }
+      val failingOnCreate: suspend (String, String, Account, List<Account>) -> Unit =
+          { _, _, _, _ ->
+              throw Exception("Simulated failure")
+          }
 
-    compose.setContent {
-      AddDiscussionScreen(onBack = {}, onCreate = failingOnCreate, viewModel = vm, currentUser = me)
-    }
+      compose.setContent {
+          AddDiscussionScreen(
+              onBack = {},
+              onCreate = failingOnCreate,
+              viewModel = vm,
+              currentUser = me
+          )
+      }
 
-    compose.onNodeWithText("Title", substring = true).performTextInput("Test Discussion")
+      compose.onNodeWithText("Title", substring = true).performTextInput("Test Discussion")
 
-    compose.onNodeWithText("Create Discussion").performClick()
+      compose.onNodeWithText("Create Discussion").performClick()
 
-    compose.waitForIdle()
+      compose.waitForIdle()
 
-    compose.onNodeWithText("Failed to create discussion").assertExists()
+      compose.onNodeWithText("Failed to create discussion").assertExists()
   }
 }
