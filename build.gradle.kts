@@ -17,14 +17,13 @@ sonar {
         property("sonar.coverage.jacoco.xmlReportPaths",
             "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
 
-        // Lint configuration
+        // Lint configuration - use pattern to match any lint report
         property("sonar.androidLint.reportPaths",
-            "app/build/reports/lint-results-debug.xml")
+            "app/build/reports/lint-results-debug.xml,app/build/reports/lint-results.xml")
 
-        // Exclude binary and resource files from analysis
+        // Exclude only binary files from analysis (not res/ to allow lint analysis)
         property("sonar.exclusions",
-            "**/res/**," +
-                "**/*.png," +
+            "**/*.png," +
                 "**/*.jpg," +
                 "**/*.jpeg," +
                 "**/*.gif," +
@@ -34,7 +33,10 @@ sonar {
                 "**/*.woff," +
                 "**/*.woff2," +
                 "**/*.eot," +
-                "**/*.svg")
+                "**/*.svg," +
+                "**/res/drawable/**," +
+                "**/res/mipmap*/**," +
+                "**/res/font/**")
 
         // Exclude test files from main analysis
         property("sonar.test.exclusions",

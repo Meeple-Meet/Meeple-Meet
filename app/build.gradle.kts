@@ -199,6 +199,9 @@ dependencies {
 
 }
 
+jacoco {
+  toolVersion = "0.8.11"
+}
 
 tasks.withType<Test> {
     // Configure Jacoco for each tests
@@ -209,35 +212,38 @@ tasks.withType<Test> {
 }
 
 tasks.register("jacocoTestReport", JacocoReport::class) {
-    mustRunAfter("testDebugUnitTest", "connectedDebugAndroidTest")
+  dependsOn("testDebugUnitTest")  // Changed from mustRunAfter to dependsOn
+  mustRunAfter("connectedDebugAndroidTest")
 
-    reports {
-        xml.required = true
-        html.required = true
-    }
+  reports {
+    xml.required = true
+    html.required = true
+  }
 
-    val fileFilter = listOf(
-        "**/R.class",
-        "**/R$*.class",
-        "**/BuildConfig.*",
-        "**/Manifest*.*",
-        "**/*Test*.*",
-        "android/**/*.*",
-        "**/sigchecks/**",
-    )
-    val debugTree = fileTree("${project.buildDir}/tmp/kotlin-classes/debug") {
-        exclude(fileFilter)
-    }
-    val mainSrc = "${project.projectDir}/src/main/java"
+  val fileFilter = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*Test*.*",
+    "android/**/*.*",
+    "**/sigchecks/**",
+  )
+  val debugTree = fileTree("${project.buildDir}/tmp/kotlin-classes/debug") {
+    exclude(fileFilter)
+  }
+  val mainSrc = "${project.projectDir}/src/main/java"
 
-    sourceDirectories.setFrom(files(mainSrc))
-    classDirectories.setFrom(files(debugTree))
-    executionData.setFrom(fileTree(project.buildDir) {
-        include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
-        include("outputs/code_coverage/debugAndroidTest/connected/*/coverage.ec")
-    })
+  sourceDirectories.setFrom(files(mainSrc))
+  classDirectories.setFrom(files(debugTree))
+
+  // Look for execution data in multiple possible locations
+  executionData.setFrom(fileTree(project.buildDir) {
+    include("jacoco/testDebugUnitTest.exec")
+    include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+    include("outputs/code_coverage/debugAndroidTest/connected/*/coverage.ec")
+  })
 }
-
 configurations.forEach { configuration ->
   // Exclude protobuf-lite from all configurations
   // This fixes a fatal exception for tests interacting with Cloud Firestore
