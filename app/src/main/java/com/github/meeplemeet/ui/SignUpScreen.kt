@@ -24,6 +24,29 @@ import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavController
 import androidx.credentials.CredentialManager
 
+/**
+ * SignUpScreen - User registration interface for new users
+ *
+ * This composable provides a complete registration experience with:
+ * - Email/password registration with comprehensive validation
+ * - Password confirmation to ensure accuracy
+ * - Google sign-up integration via Credential Manager
+ * - Real-time client-side validation with error feedback
+ * - Server-side error handling and display
+ * - Loading states during registration operations
+ * - Navigation to sign-in screen for existing users
+ *
+ * The screen features enhanced validation compared to sign-in, including:
+ * - Password strength requirements (minimum 6 characters)
+ * - Password confirmation matching
+ * - Immediate feedback on validation errors
+ *
+ * @param navController Navigation controller for screen transitions
+ * @param viewModel Authentication view model that manages auth state and operations
+ * @param context Android context, used for Credential Manager and other platform services
+ * @param credentialManager Credential manager instance for Google sign-up
+ * @param modifier Modifier for customizing the composable's appearance and behavior
+ */
 @Composable
 fun SignUpScreen(
     navController: NavController = NavController(LocalContext.current),
@@ -32,17 +55,24 @@ fun SignUpScreen(
     credentialManager: CredentialManager = CredentialManager.create(context),
     modifier: Modifier = Modifier
 ) {
+    // Local state management for form inputs and validation
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+    var passwordVisible by remember { mutableStateOf(false) } // Controls password visibility toggle
+    var confirmPasswordVisible by remember { mutableStateOf(false) } // Controls confirm password visibility toggle
+    var emailError by remember { mutableStateOf<String?>(null) } // Client-side email validation errors
+    var passwordError by remember { mutableStateOf<String?>(null) } // Client-side password validation errors
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) } // Password confirmation validation errors
+
+    // Observe authentication state from the ViewModel
     val uiState by viewModel.uiState.collectAsState()
 
-    // Validation functions
+    /**
+     * Validates email format and emptiness
+     * @param email The email string to validate
+     * @return Error message if invalid, null if valid
+     */
     fun validateEmail(email: String): String? {
         return when {
             email.isEmpty() -> "Email cannot be empty"
@@ -51,6 +81,12 @@ fun SignUpScreen(
         }
     }
 
+    /**
+     * Validates password strength and emptiness
+     * Enforces minimum length requirement for security
+     * @param password The password string to validate
+     * @return Error message if invalid, null if valid
+     */
     fun validatePassword(password: String): String? {
         return when {
             password.isEmpty() -> "Password cannot be empty"
@@ -59,6 +95,12 @@ fun SignUpScreen(
         }
     }
 
+    /**
+     * Validates password confirmation matches the original password
+     * @param password The original password
+     * @param confirmPassword The confirmation password to validate
+     * @return Error message if invalid, null if valid
+     */
     fun validateConfirmPassword(password: String, confirmPassword: String): String? {
         return when {
             confirmPassword.isEmpty() -> "Please confirm your password"
@@ -67,6 +109,7 @@ fun SignUpScreen(
         }
     }
 
+    // Main UI layout using Column for vertical arrangement
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -75,28 +118,35 @@ fun SignUpScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        // Top spacing
         Spacer(modifier = Modifier.height(16.dp))
-        // Logo placeholder
+
+        // Placeholder logo/branding area
         Box(modifier = Modifier.size(100.dp)) {
             Surface(color = Color.LightGray, modifier = Modifier.fillMaxSize()) {}
         }
+
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Welcome message
         Text("Welcome!", style = TextStyle(fontSize = 28.sp), modifier = Modifier.padding(bottom = 16.dp))
 
-        // Email field with error handling
+        // Email input field with validation
         OutlinedTextField(
             value = email,
             onValueChange = {
                 email = it
-                emailError = null // Clear error on input
+                emailError = null // Clear validation error when user starts typing
             },
             label = { Text("Email") },
             singleLine = true,
-            isError = emailError != null,
+            isError = emailError != null, // Show error state visually
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("email_field")
+                .testTag("email_field") // For UI testing
         )
+
+        // Display email validation error if present
         if (emailError != null) {
             Text(
                 text = emailError!!,
@@ -110,19 +160,21 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Password field with visibility toggle and error handling
+        // Password input field with visibility toggle and validation
         OutlinedTextField(
             value = password,
             onValueChange = {
                 password = it
-                passwordError = null // Clear error on input
+                passwordError = null // Clear validation error when user starts typing
             },
             label = { Text("Password") },
             singleLine = true,
+            // Toggle between showing/hiding password based on passwordVisible state
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            isError = passwordError != null,
+            isError = passwordError != null, // Show error state visually
             trailingIcon = {
+                // Password visibility toggle button
                 IconButton(
                     onClick = { passwordVisible = !passwordVisible },
                     modifier = Modifier.testTag("password_visibility_toggle")
@@ -135,8 +187,10 @@ fun SignUpScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("password_field")
+                .testTag("password_field") // For UI testing
         )
+
+        // Display password validation error if present
         if (passwordError != null) {
             Text(
                 text = passwordError!!,
@@ -150,19 +204,22 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Confirm password field with visibility toggle and error handling
+        // Password confirmation field with visibility toggle and validation
+        // This ensures users enter their password correctly by requiring them to type it twice
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = {
                 confirmPassword = it
-                confirmPasswordError = null // Clear error on input
+                confirmPasswordError = null // Clear validation error when user starts typing
             },
             label = { Text("Confirm Password") },
             singleLine = true,
+            // Toggle between showing/hiding confirm password based on confirmPasswordVisible state
             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            isError = confirmPasswordError != null,
+            isError = confirmPasswordError != null, // Show error state visually
             trailingIcon = {
+                // Confirm password visibility toggle button
                 IconButton(
                     onClick = { confirmPasswordVisible = !confirmPasswordVisible },
                     modifier = Modifier.testTag("confirm_password_visibility_toggle")
@@ -175,8 +232,10 @@ fun SignUpScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("confirm_password_field")
+                .testTag("confirm_password_field") // For UI testing
         )
+
+        // Display password confirmation validation error if present
         if (confirmPasswordError != null) {
             Text(
                 text = confirmPasswordError!!,
@@ -190,10 +249,10 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Sign up button with loading state and validation
+        // Email/Password Registration Button
         Button(
             onClick = {
-                // Validate all fields before submission
+                // Perform comprehensive client-side validation before submitting
                 val emailValidation = validateEmail(email)
                 val passwordValidation = validatePassword(password)
                 val confirmPasswordValidation = validateConfirmPassword(password, confirmPassword)
@@ -202,16 +261,17 @@ fun SignUpScreen(
                 passwordError = passwordValidation
                 confirmPasswordError = confirmPasswordValidation
 
-                // Only proceed if all validation passes
+                // Only proceed with registration if all validation passes
                 if (emailValidation == null && passwordValidation == null && confirmPasswordValidation == null) {
                     viewModel.registerWithEmail(email, password)
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("sign_up_button"),
-            enabled = !uiState.isLoading
+                .testTag("sign_up_button"), // For UI testing
+            enabled = !uiState.isLoading // Disable button during registration process
         ) {
+            // Show loading indicator during registration
             if (uiState.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier
@@ -224,19 +284,31 @@ fun SignUpScreen(
             Text("Sign Up")
         }
 
+        // Divider between authentication methods
         Spacer(modifier = Modifier.height(12.dp))
         Text("OR", style = TextStyle(fontSize = 16.sp, color = Color.Gray), modifier = Modifier.padding(vertical = 4.dp))
+
+        // Google Sign Up Button
         Button(
-            onClick = { viewModel.googleSignIn(context, credentialManager) },
+            onClick = {
+                // Initiate Google sign-up flow through ViewModel
+                // Note: Google sign-up and sign-in use the same flow - if the account exists, it signs in,
+                // if it doesn't exist, it creates a new account
+                viewModel.googleSignIn(context, credentialManager)
+            },
             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("google_sign_up_button"),
-            enabled = !uiState.isLoading
+                .testTag("google_sign_up_button"), // For UI testing
+            enabled = !uiState.isLoading // Disable during any authentication process
         ) {
             Text("Connect with Google", color = Color.Black)
         }
+
+        // Push navigation link to bottom
         Spacer(modifier = Modifier.weight(1f))
+
+        // Navigation to Sign In screen for existing users
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
@@ -248,19 +320,23 @@ fun SignUpScreen(
                 modifier = Modifier.clickable { navController.navigate("SignInScreen") }
             )
         }
+
+        // Bottom spacing
         Spacer(modifier = Modifier.height(8.dp))
     }
 
-    // Error message display for authentication errors
+    // Server-side error message display for registration errors
+    // This shows errors that come from Firebase Auth during the registration process
     if (uiState.errorMsg != null) {
-        // Display authentication errors that come from the backend
+        // Map common Firebase error codes to user-friendly messages
         val errorMessage = when {
             uiState.errorMsg!!.contains("email-already-in-use") -> "Email already in use"
             uiState.errorMsg!!.contains("weak-password") -> "Password is too weak"
             uiState.errorMsg!!.contains("invalid-email") -> "Invalid email format"
-            else -> uiState.errorMsg!!
+            else -> uiState.errorMsg!! // Show the original error message for other cases
         }
 
+        // Display error in a Snackbar for non-intrusive feedback
         Snackbar(
             modifier = Modifier.padding(8.dp)
         ) {
