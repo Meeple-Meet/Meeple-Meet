@@ -12,7 +12,37 @@ sonar {
         property("sonar.projectKey", "Meeple-Meet_Meeple-Meet")
         property("sonar.organization", "meeple-meet")
         property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-        property("sonar.androidLint.reportPaths", "app/build/reports/lint-results-debug.xml")
+
+        // Coverage configuration
+        property("sonar.coverage.jacoco.xmlReportPaths",
+            "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+
+        // Lint configuration
+        property("sonar.androidLint.reportPaths",
+            "app/build/reports/lint-results-debug.xml")
+
+        // Exclude binary and resource files from analysis
+        property("sonar.exclusions",
+            "**/res/**," +
+                "**/*.png," +
+                "**/*.jpg," +
+                "**/*.jpeg," +
+                "**/*.gif," +
+                "**/*.webp," +
+                "**/*.ttf," +
+                "**/*.otf," +
+                "**/*.woff," +
+                "**/*.woff2," +
+                "**/*.eot," +
+                "**/*.svg")
+
+        // Exclude test files from main analysis
+        property("sonar.test.exclusions",
+            "**/src/androidTest/**," +
+                "**/src/debug/**," +
+                "**/src/test/**")
+
+        // Set source encoding
+        property("sonar.sourceEncoding", "UTF-8")
     }
 }
