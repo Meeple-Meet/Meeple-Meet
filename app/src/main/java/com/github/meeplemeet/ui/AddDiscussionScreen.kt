@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.SnackbarHost
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,24 +22,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
 /**
  * Screen for creating a new discussion with title, description, and selected members.
  *
- * Supports live search for adding members, displays selected members, and allows creating or
- * discarding the discussion.
+ * Navigation is now decoupled using callbacks: [onBack] and [onCreate].
  *
- * @param navigation NavigationActions to handle navigation events
- * @param viewModel FirestoreViewModel for creating discussions and accessing accounts
+ * @param onBack Lambda called when back/discard is pressed
+ * @param onCreate Lambda called with title, description, and members when creating a discussion
+ * @param viewModel FirestoreViewModel for creating discussions
  * @param currentUser The currently logged-in user
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddDiscussionScreen(
-    navigation: NavigationActions,
+    onBack: () -> Unit,
+    onCreate:
+        suspend (
+            title: String, description: String, creator: Account, members: List<Account>) -> Unit,
     viewModel: FirestoreViewModel,
     currentUser: Account
 ) {
@@ -56,34 +60,38 @@ fun AddDiscussionScreen(
   /** List of members selected for the new discussion */
   val selectedMembers = remember { mutableStateListOf<Account>() }
 
-  /**
-   * Handles live search whenever [searchQuery] changes. Filters out the current user and
-   * already-selected members.
-   */
+  var isCreating by remember { mutableStateOf(false) }
+  var creationError by remember { mutableStateOf<String?>(null) }
+
   LaunchedEffect(searchQuery) {
     if (searchQuery.isBlank()) {
       searchResults = emptyList()
       dropdownExpanded = false
       return@LaunchedEffect
     }
-
     isSearching = true
-    /** Simulated backend search */
     searchResults =
         fakeSearchAccounts(searchQuery).filter {
           it.uid != currentUser.uid && it !in selectedMembers
         }
-
     dropdownExpanded = searchResults.isNotEmpty()
     isSearching = false
   }
 
-  /** Main layout scaffold */
+  val scaffoldState = rememberScaffoldState()
+
+  LaunchedEffect(creationError) {
+    creationError?.let {
+      scaffoldState.snackbarHostState.showSnackbar(it)
+      creationError = null
+    }
+  }
+
   Scaffold(
+      snackbarHost = { SnackbarHost(hostState = scaffoldState.snackbarHostState) },
       containerColor = AppColors.primary,
       topBar = {
         Column {
-          /** App bar with title and back button */
           CenterAlignedTopAppBar(
               colors =
                   TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -92,11 +100,10 @@ fun AddDiscussionScreen(
                       navigationIconContentColor = AppColors.textIcons),
               title = { Text(text = "Add Discussion") },
               navigationIcon = {
-                IconButton(onClick = { navigation.goBack() }) {
+                IconButton(onClick = onBack) {
                   Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
               })
-          /** Decorative divider under the top bar */
           HorizontalDivider(
               modifier =
                   Modifier.fillMaxWidth(0.7f)
@@ -297,12 +304,17 @@ fun AddDiscussionScreen(
                     Button(
                         onClick = {
                           scope.launch {
-                            viewModel.createDiscussion(
-                                title, description, currentUser, *selectedMembers.toTypedArray())
-                            navigation.goBack() // TODO: navigate to new discussion screen
+                            try {
+                              isCreating = true
+                              onCreate(title, description, currentUser, selectedMembers.toList())
+                              isCreating = false
+                            } catch (e: Exception) {
+                              isCreating = false
+                              creationError = "Failed to create discussion"
+                            }
                           }
                         },
-                        enabled = title.isNotBlank(),
+                        enabled = title.isNotBlank() && !isCreating,
                         modifier = Modifier.fillMaxWidth(0.5f),
                         shape = CircleShape,
                         colors =
@@ -315,7 +327,7 @@ fun AddDiscussionScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedButton(
-                        onClick = { navigation.goBack() },
+                        onClick = onBack,
                         modifier = Modifier.fillMaxWidth(0.3f),
                         shape = CircleShape,
                         colors =
