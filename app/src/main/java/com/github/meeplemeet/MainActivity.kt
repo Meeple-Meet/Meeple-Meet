@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import com.github.meeplemeet.ui.theme.AppTheme
 
 /**
  * `MainActivity` is the entry point of the application. It sets up the content view with the
@@ -17,6 +18,6 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    setContent { Surface(modifier = Modifier.fillMaxSize()) { Text("Hello World") } }
+    setContent { AppTheme { Surface(modifier = Modifier.fillMaxSize()) { Text("Hello World") } } }
   }
 }
