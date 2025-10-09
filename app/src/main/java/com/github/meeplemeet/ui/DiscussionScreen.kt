@@ -25,8 +25,10 @@ import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -266,14 +268,13 @@ private fun DateSeparator(date: Date) {
  * string.
  */
 fun formatDateBubble(date: Date): String {
-  val cal = Calendar.getInstance()
   val today = Calendar.getInstance()
-  cal.time = date
+  val cal = Calendar.getInstance().apply { time = date }
 
   return when {
     isSameDay(cal, today) -> "Today"
-    isSameDay(cal, today.apply { add(Calendar.DAY_OF_YEAR, -1) }) -> "Yesterday"
-    else -> DateFormat.format("MMM dd, yyyy", date).toString()
+    isSameDay(cal, Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }) -> "Yesterday"
+    else -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(date)
   }
 }
 
