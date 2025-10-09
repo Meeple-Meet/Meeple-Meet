@@ -24,6 +24,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavController
 import androidx.credentials.CredentialManager
 
+object SignUpScreenTestTags {
+    const val EMAIL_FIELD = "email_field"
+    const val PASSWORD_VISIBILITY_TOGGLE = "password_visibility_toggle"
+    const val PASSWORD_FIELD = "password_field"
+    const val SIGN_UP_BUTTON = "sign_up_button"
+    const val GOOGLE_SIGN_UP_BUTTON = "google_sign_up_button"
+    const val LOADING_INDICATOR = "loading_indicator"
+    const val CONFIRM_PASSWORD_FIELD = "confirm_password_field"
+    const val CONFIRM_PASSWORD_VISIBILITY_TOGGLE = "confirm_password_visibility_toggle"
+}
+
 /**
  * SignUpScreen - User registration interface for new users
  *
@@ -75,7 +86,7 @@ fun SignUpScreen(
      */
     fun validateEmail(email: String): String? {
         return when {
-            email.isEmpty() -> "Email cannot be empty"
+            email.isBlank() -> "Email cannot be empty"
             !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email format"
             else -> null
         }
@@ -89,7 +100,7 @@ fun SignUpScreen(
      */
     fun validatePassword(password: String): String? {
         return when {
-            password.isEmpty() -> "Password cannot be empty"
+            password.isBlank() -> "Password cannot be empty"
             password.length < 6 -> "Password is too weak"
             else -> null
         }
@@ -103,7 +114,7 @@ fun SignUpScreen(
      */
     fun validateConfirmPassword(password: String, confirmPassword: String): String? {
         return when {
-            confirmPassword.isEmpty() -> "Please confirm your password"
+            confirmPassword.isBlank() -> "Please confirm your password"
             password != confirmPassword -> "Passwords do not match"
             else -> null
         }
@@ -143,7 +154,7 @@ fun SignUpScreen(
             isError = emailError != null, // Show error state visually
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("email_field") // For UI testing
+                .testTag(SignUpScreenTestTags.EMAIL_FIELD) // For UI testing
         )
 
         // Display email validation error if present
@@ -177,7 +188,7 @@ fun SignUpScreen(
                 // Password visibility toggle button
                 IconButton(
                     onClick = { passwordVisible = !passwordVisible },
-                    modifier = Modifier.testTag("password_visibility_toggle")
+                    modifier = Modifier.testTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE)
                 ) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
@@ -187,7 +198,7 @@ fun SignUpScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("password_field") // For UI testing
+                .testTag(SignUpScreenTestTags.PASSWORD_FIELD) // For UI testing
         )
 
         // Display password validation error if present
@@ -222,7 +233,7 @@ fun SignUpScreen(
                 // Confirm password visibility toggle button
                 IconButton(
                     onClick = { confirmPasswordVisible = !confirmPasswordVisible },
-                    modifier = Modifier.testTag("confirm_password_visibility_toggle")
+                    modifier = Modifier.testTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE)
                 ) {
                     Icon(
                         imageVector = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
@@ -232,7 +243,7 @@ fun SignUpScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("confirm_password_field") // For UI testing
+                .testTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD) // For UI testing
         )
 
         // Display password confirmation validation error if present
@@ -268,7 +279,7 @@ fun SignUpScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("sign_up_button"), // For UI testing
+                .testTag(SignUpScreenTestTags.SIGN_UP_BUTTON), // For UI testing
             enabled = !uiState.isLoading // Disable button during registration process
         ) {
             // Show loading indicator during registration
@@ -276,7 +287,7 @@ fun SignUpScreen(
                 CircularProgressIndicator(
                     modifier = Modifier
                         .size(16.dp)
-                        .testTag("loading_indicator"),
+                        .testTag(SignUpScreenTestTags.LOADING_INDICATOR), // For UI testing
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -299,7 +310,7 @@ fun SignUpScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("google_sign_up_button"), // For UI testing
+                .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON), // For UI testing
             enabled = !uiState.isLoading // Disable during any authentication process
         ) {
             Text("Connect with Google", color = Color.Black)

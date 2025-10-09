@@ -25,6 +25,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 
+object SignInScreenTestTags {
+    const val EMAIL_FIELD = "email_field"
+    const val PASSWORD_VISIBILITY_TOGGLE = "password_visibility_toggle"
+    const val PASSWORD_FIELD = "password_field"
+    const val SIGN_IN_BUTTON = "sign_in_button"
+    const val GOOGLE_SIGN_IN_BUTTON = "google_sign_in_button"
+    const val LOADING_INDICATOR = "loading_indicator"
+}
+
+
 /**
  * SignInScreen - User authentication interface for existing users
  *
@@ -69,7 +79,7 @@ fun SignInScreen(
      */
     fun validateEmail(email: String): String? {
         return when {
-            email.isEmpty() -> "Email cannot be empty"
+            email.isBlank() -> "Email cannot be empty"
             !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email format"
             else -> null
         }
@@ -82,7 +92,7 @@ fun SignInScreen(
      */
     fun validatePassword(password: String): String? {
         return when {
-            password.isEmpty() -> "Password cannot be empty"
+            password.isBlank() -> "Password cannot be empty"
             else -> null
         }
     }
@@ -121,7 +131,7 @@ fun SignInScreen(
             isError = emailError != null, // Show error state visually
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("email_field") // For UI testing
+                .testTag(SignInScreenTestTags.EMAIL_FIELD) // For UI testing
         )
 
         // Display email validation error if present
@@ -155,7 +165,7 @@ fun SignInScreen(
                 // Password visibility toggle button
                 IconButton(
                     onClick = { passwordVisible = !passwordVisible },
-                    modifier = Modifier.testTag("password_visibility_toggle")
+                    modifier = Modifier.testTag(SignInScreenTestTags.PASSWORD_VISIBILITY_TOGGLE)
                 ) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
@@ -165,7 +175,7 @@ fun SignInScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("password_field") // For UI testing
+                .testTag(SignInScreenTestTags.PASSWORD_FIELD) // For UI testing
         )
 
         // Display password validation error if present
@@ -184,7 +194,7 @@ fun SignInScreen(
 
         // Display authentication errors from ViewModel (server-side errors)
         if (uiState.errorMsg != null) {
-            val errorMessage = uiState.errorMsg
+            val errorMessage = uiState.errorMsg ?:"An unknown error occurred"
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -223,7 +233,7 @@ fun SignInScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("sign_in_button"), // For UI testing
+                .testTag(SignInScreenTestTags.SIGN_IN_BUTTON), // For UI testing
             enabled = !uiState.isLoading // Disable button during authentication process
         ) {
             // Show loading indicator during authentication
@@ -231,7 +241,7 @@ fun SignInScreen(
                 CircularProgressIndicator(
                     modifier = Modifier
                         .size(16.dp)
-                        .testTag("loading_indicator"),
+                        .testTag(SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -252,7 +262,7 @@ fun SignInScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("google_sign_in_button"), // For UI testing
+                .testTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON), // For UI testing
             enabled = !uiState.isLoading // Disable during any authentication process
         ) {
             Text("Connect with Google", color = Color.Black)
@@ -270,7 +280,7 @@ fun SignInScreen(
             Text(
                 text = "Sign up.",
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { navController.navigate("SignUpScreen") }
+                modifier = Modifier.clickable { navController.navigate("sign_up") } // Navigate to sign-up screen
             )
         }
 
