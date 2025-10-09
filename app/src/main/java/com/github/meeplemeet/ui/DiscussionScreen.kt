@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
 import java.util.Calendar
@@ -39,7 +38,7 @@ import kotlinx.coroutines.launch
  * @param viewModel FirestoreViewModel for fetching discussion and sending messages
  * @param discussionId ID of the discussion to display
  * @param currentUser The currently logged-in user
- * @param navigation NavigationActions for handling navigation
+ * @param onBack Callback when the back button is pressed
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +46,7 @@ fun DiscussionScreen(
     viewModel: FirestoreViewModel,
     discussionId: String,
     currentUser: Account,
-    navigation: NavigationActions
+    onBack: () -> Unit
 ) {
   val scope = rememberCoroutineScope()
   var messageText by remember { mutableStateOf("") }
@@ -99,7 +98,7 @@ fun DiscussionScreen(
           }
         },
         navigationIcon = {
-          IconButton(onClick = { navigation.goBack() }) {
+          IconButton(onClick = onBack) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
@@ -198,7 +197,7 @@ fun DiscussionScreen(
  * @param senderName Name of the sender
  */
 @Composable
-fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
+private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
   Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
@@ -250,7 +249,7 @@ fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
 
 /** Shows a date separator between messages. */
 @Composable
-fun DateSeparator(date: Date) {
+private fun DateSeparator(date: Date) {
   Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Text(
         text = formatDateBubble(date),
