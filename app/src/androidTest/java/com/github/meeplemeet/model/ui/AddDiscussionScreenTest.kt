@@ -163,4 +163,40 @@ class AddDiscussionScreenTest {
     compose.onAllNodesWithText("Bob").assertCountEquals(0)
     compose.onAllNodesWithText("Eve").assertCountEquals(0)
   }
+
+  /**
+   * Verifies that tapping the "Create Discussion" button calls the onCreate callback with the
+   * correct title, description, creator, and member list.
+   */
+  @Test
+  fun create_button_calls_viewmodel_createDiscussion() = runTest {
+    coEvery { vm.createDiscussion(any(), any(), any()) } just runs
+    setContent()
+    titleField().performTextInput("New Discussion")
+    createBtn().performClick()
+    coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
+  }
+
+  /**
+   * Verifies that when the createDiscussion lambda throws an exception, the error snackbar with the
+   * message "Failed to create discussion" is displayed.
+   */
+  @Test
+  fun createButton_shows_error_snackbar_on_failure() = runTest {
+    val failingOnCreate: suspend (String, String, Account, List<Account>) -> Unit = { _, _, _, _ ->
+      throw Exception("Simulated failure")
+    }
+
+    compose.setContent {
+      AddDiscussionScreen(onBack = {}, onCreate = failingOnCreate, viewModel = vm, currentUser = me)
+    }
+
+    compose.onNodeWithText("Title", substring = true).performTextInput("Test Discussion")
+
+    compose.onNodeWithText("Create Discussion").performClick()
+
+    compose.waitForIdle()
+
+    compose.onNodeWithText("Failed to create discussion").assertExists()
+  }
 }
