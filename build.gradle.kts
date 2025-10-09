@@ -18,7 +18,7 @@ sonar {
 
         property("sonar.pullrequest.provider", "Github")
         property("sonar.sourceEncoding", "UTF-8")
-        
+
         property("sonar.junit.reportPaths", "app/build/test-results/testDebugUnitTest")
         property("sonar.androidtest.reportPaths", "app/build/outputs/androidTest-results/connected")
     }
