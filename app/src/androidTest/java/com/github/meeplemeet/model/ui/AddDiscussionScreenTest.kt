@@ -139,9 +139,7 @@ class AddDiscussionScreenTest {
 
     searchField().performTextInput("ali")
     compose.waitForIdle()
-    compose.onAllNodesWithText("Alice")
-      .filterToOne(hasAnyAncestor(isPopup()))
-      .assertDoesNotExist()
+    compose.onAllNodesWithText("Alice").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
   }
 
   /** Verifies that clearing the search query closes the dropdown */
