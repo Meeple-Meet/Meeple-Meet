@@ -47,11 +47,19 @@ class AddDiscussionScreenTest {
   /** Returns the back button node */
   private fun backBtn() = compose.onNodeWithContentDescription("Back")
 
+  private lateinit var onCreate: suspend (String, String, Account, List<Account>) -> Unit
+
   // ---------- Helpers ----------
 
   /** Sets the Compose content for the AddDiscussionScreen */
   private fun setContent() {
-    compose.setContent { AddDiscussionScreen(nav, vm, me) }
+    onCreate = { title: String, desc: String, creator: Account, members: List<Account> ->
+      vm.createDiscussion(title, desc, creator, *members.toTypedArray())
+      nav.goBack()
+    }
+    compose.setContent {
+      AddDiscussionScreen(onBack = { nav.goBack() }, onCreate = onCreate, vm, me)
+    }
   }
 
   // ---------- Tests ----------
