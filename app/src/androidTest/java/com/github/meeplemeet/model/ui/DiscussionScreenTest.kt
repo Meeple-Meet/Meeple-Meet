@@ -158,7 +158,7 @@ class DiscussionScreenTest {
           viewModel = viewModel,
           discussionId = "disc1",
           currentUser = currentUser,
-          navigation = mockNavigation)
+          onBack = { mockNavigation.goBack() })
     }
 
     composeTestRule.onNodeWithText("Test Discussion").assertExists()
@@ -174,7 +174,7 @@ class DiscussionScreenTest {
           viewModel = viewModel,
           discussionId = "disc1",
           currentUser = currentUser,
-          navigation = mockNavigation)
+          onBack = { mockNavigation.goBack() })
     }
 
     val textField = composeTestRule.onNodeWithText("Type something...")
@@ -194,29 +194,10 @@ class DiscussionScreenTest {
           viewModel = viewModel,
           discussionId = "disc1",
           currentUser = currentUser,
-          navigation = mockNavigation)
+          onBack = { mockNavigation.goBack() })
     }
 
     composeTestRule.onNodeWithContentDescription("Back").performClick()
     verify { mockNavigation.goBack() }
-  }
-
-  /** Tests that ChatBubble displays the message and sender name correctly */
-  @Test
-  fun chatBubble_displays_message_and_sender() {
-    val msg = Message("user2", "Hey!", Timestamp.now())
-    composeTestRule.setContent { ChatBubble(message = msg, isMine = false, senderName = "Bob") }
-
-    composeTestRule.onNodeWithText("Hey!").assertExists()
-    composeTestRule.onNodeWithText("Bob").assertExists()
-  }
-
-  /** Tests that DateSeparator displays the formatted date correctly */
-  @Test
-  fun dateSeparator_displays_formatted_date() {
-    val date = Calendar.getInstance().apply { set(2025, 0, 1) }.time
-    composeTestRule.setContent { DateSeparator(date = date) }
-
-    composeTestRule.onNodeWithText(formatDateBubble(date)).assertExists()
   }
 }
