@@ -187,8 +187,10 @@ fun DiscussionSettingScreen(
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface),
                     singleLine = true,
-                    /** To make the text centered, we use an invisible leading icon to offset the
-                     *  trailing icon */
+                    /**
+                     * To make the text centered, we use an invisible leading icon to offset the
+                     * trailing icon
+                     */
                     leadingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
@@ -242,8 +244,10 @@ fun DiscussionSettingScreen(
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface),
                     singleLine = true,
-                    /** To make the text left-aligned, we use an invisible leading icon to offset the
-                     *  trailing icon */
+                    /**
+                     * To make the text left-aligned, we use an invisible leading icon to offset the
+                     * trailing icon
+                     */
                     trailingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
@@ -423,7 +427,7 @@ fun MemberList(
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold)
 
-    /**  Autocomplete Search Field + Dropdown (only for non-members) */
+    /** Autocomplete Search Field + Dropdown (only for non-members) */
     if (!isMember) {
 
       /** Spacer between title and search field */
@@ -504,9 +508,10 @@ fun MemberList(
     /** --- Members List --- */
     LazyColumn {
       items(selectedMembers) { member ->
-        /** Row is clickable only if the user can manage members.
-         *  Added this for testing since
-         *  disabling clickable still exposes OnClick actions */
+        /**
+         * Row is clickable only if the user can manage members. Added this for testing since
+         * disabling clickable still exposes OnClick actions
+         */
         val clickableModifier =
             if (!isMember && member.uid != currentAccount.uid) {
               Modifier.clickable { selectedMember = member }
