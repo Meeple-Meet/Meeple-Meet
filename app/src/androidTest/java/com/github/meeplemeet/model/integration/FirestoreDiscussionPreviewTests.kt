@@ -56,7 +56,7 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
         Pair(account1, discussion)
-    coEvery { repository.sendMessageToDiscussion(discussion, account1, content) } returns discussion
+    coEvery { repository.sendMessageToDiscussion(discussion, account1, content) } returns Unit
 
     val a1Preview =
         DiscussionPreview(lastMessage = content, lastMessageSender = account1.uid, unreadCount = 0)
@@ -114,7 +114,7 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
         Pair(account1, discussion)
-    coEvery { repository.sendMessageToDiscussion(discussion, account1, any()) } returns discussion
+    coEvery { repository.sendMessageToDiscussion(discussion, account1, any()) } returns Unit
 
     val last = "${base}10"
     val a1Preview =
@@ -174,10 +174,10 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
         Pair(account1, discussion)
-    coEvery { repository.sendMessageToDiscussion(discussion, account1, "Hi") } returns discussion
-    coEvery { repository.sendMessageToDiscussion(discussion, account2, "Hello") } returns discussion
+    coEvery { repository.sendMessageToDiscussion(discussion, account1, "Hi") } returns Unit
+    coEvery { repository.sendMessageToDiscussion(discussion, account2, "Hello") } returns Unit
     coEvery { repository.sendMessageToDiscussion(discussion, account3, "How are you ?") } returns
-        discussion
+        Unit
 
     val last = "How are you ?"
     val a1Preview =

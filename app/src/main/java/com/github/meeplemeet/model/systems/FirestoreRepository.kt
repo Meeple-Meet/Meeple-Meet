@@ -2,7 +2,15 @@ package com.github.meeplemeet.model.systems
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
-import com.github.meeplemeet.model.structures.*
+import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.AccountNoUid
+import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.structures.DiscussionNoUid
+import com.github.meeplemeet.model.structures.DiscussionPreview
+import com.github.meeplemeet.model.structures.DiscussionPreviewNoUid
+import com.github.meeplemeet.model.structures.Message
+import com.github.meeplemeet.model.structures.fromNoUid
+import com.github.meeplemeet.model.structures.toNoUid
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -68,15 +76,13 @@ class FirestoreRepository(db: FirebaseFirestore) {
   }
 
   /** Update a discussion's name. */
-  suspend fun setDiscussionName(id: String, name: String): Discussion {
+  suspend fun setDiscussionName(id: String, name: String) {
     discussions.document(id).update(Discussion::name.name, name).await()
-    return getDiscussion(id)
   }
 
   /** Update a discussion's description. */
-  suspend fun setDiscussionDescription(id: String, description: String): Discussion {
+  suspend fun setDiscussionDescription(id: String, description: String) {
     discussions.document(id).update(Discussion::description.name, description).await()
-    return getDiscussion(id)
   }
 
   /** Delete a discussion document. */
@@ -85,16 +91,15 @@ class FirestoreRepository(db: FirebaseFirestore) {
   }
 
   /** Add a user to the participants array. */
-  suspend fun addUserToDiscussion(discussion: Discussion, userId: String): Discussion {
+  suspend fun addUserToDiscussion(discussion: Discussion, userId: String) {
     discussions
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(userId))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Remove a user from the participants and admins array */
-  suspend fun removeUserFromDiscussion(discussion: Discussion, userId: String): Discussion {
+  suspend fun removeUserFromDiscussion(discussion: Discussion, userId: String) {
     discussions
         .document(discussion.uid)
         .update(
@@ -103,20 +108,18 @@ class FirestoreRepository(db: FirebaseFirestore) {
             Discussion::admins.name,
             FieldValue.arrayRemove(userId))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Add multiple users to the participants array. */
-  suspend fun addUsersToDiscussion(discussion: Discussion, userIds: List<String>): Discussion {
+  suspend fun addUsersToDiscussion(discussion: Discussion, userIds: List<String>) {
     discussions
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(*userIds.toTypedArray()))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Remove multiple users from the participants and admins array. */
-  suspend fun removeUsersFromDiscussion(discussion: Discussion, userIds: List<String>): Discussion {
+  suspend fun removeUsersFromDiscussion(discussion: Discussion, userIds: List<String>) {
     discussions
         .document(discussion.uid)
         .update(
@@ -125,72 +128,54 @@ class FirestoreRepository(db: FirebaseFirestore) {
             Discussion::admins.name,
             FieldValue.arrayRemove(*userIds.toTypedArray()))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Add a user as admin (and participant if missing). */
-  suspend fun addAdminToDiscussion(discussion: Discussion, userId: String): Discussion {
+  suspend fun addAdminToDiscussion(discussion: Discussion, userId: String) {
     if (!discussion.participants.contains(userId)) addUserToDiscussion(discussion, userId)
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayUnion(userId))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Remove a user from the admins array */
-  suspend fun removeAdminFromDiscussion(discussion: Discussion, userId: String): Discussion {
+  suspend fun removeAdminFromDiscussion(discussion: Discussion, userId: String) {
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayRemove(userId))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Add multiple admins (and participants if missing). */
-  suspend fun addAdminsToDiscussion(discussion: Discussion, adminIds: List<String>): Discussion {
+  suspend fun addAdminsToDiscussion(discussion: Discussion, adminIds: List<String>) {
     val current = discussion.participants.toSet()
     val newParticipants = adminIds.filterNot { it in current }
-    if (newParticipants.isNotEmpty()) {
-      discussions
-          .document(discussion.uid)
-          .update(
-              Discussion::participants.name, FieldValue.arrayUnion(*newParticipants.toTypedArray()))
-          .await()
-    }
-
     val currentAdmins = discussion.admins.toSet()
     val newAdmins = adminIds.filterNot { it in currentAdmins }
-    if (newAdmins.isNotEmpty()) {
-      discussions
-          .document(discussion.uid)
-          .update(Discussion::admins.name, FieldValue.arrayUnion(*newAdmins.toTypedArray()))
-          .await()
-    }
 
-    return getDiscussion(discussion.uid)
+    discussions
+        .document(discussion.uid)
+        .update(
+            Discussion::participants.name,
+            FieldValue.arrayUnion(*newParticipants.toTypedArray()),
+            Discussion::admins.name,
+            FieldValue.arrayUnion(*newAdmins.toTypedArray()))
+        .await()
   }
 
   /** Remove multiple users from the admins array. */
-  suspend fun removeAdminsFromDiscussion(
-      discussion: Discussion,
-      userIds: List<String>
-  ): Discussion {
+  suspend fun removeAdminsFromDiscussion(discussion: Discussion, userIds: List<String>) {
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayRemove(*userIds.toTypedArray()))
         .await()
-    return getDiscussion(discussion.uid)
   }
 
   /**
    * Append a new message to the discussion and update unread counts in all participants' previews.
    */
-  suspend fun sendMessageToDiscussion(
-      discussion: Discussion,
-      sender: Account,
-      content: String
-  ): Discussion {
+  suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
     val message = Message(sender.uid, content)
     val batch = FirebaseFirestore.getInstance().batch()
 
@@ -216,7 +201,6 @@ class FirestoreRepository(db: FirebaseFirestore) {
     }
 
     batch.commit().await()
-    return getDiscussion(discussion.uid)
   }
 
   /** Create a new account document. */

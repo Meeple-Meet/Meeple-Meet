@@ -127,7 +127,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val afterAdd = base.copy(participants = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addUserToDiscussion(any(), any()) } returns afterAdd
+    coEvery { repository.addUserToDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns afterAdd
 
     viewModel.createDiscussion("Test", "", account1)
@@ -155,11 +155,11 @@ class FirestoreDiscussionTests : FirestoreTests() {
             creatorId = account1.uid,
             participants = listOf(account1.uid),
             admins = listOf(account1.uid))
-    val withAcc2 = base.copy(participants = listOf(account1.uid, account2.uid))
+    // val withAcc2 = base.copy(participants = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
     coEvery { repository.addUserToDiscussion(any(), any()) } returns
-        withAcc2 andThenThrows
+        Unit andThenThrows
         PermissionDeniedException("")
 
     viewModel.createDiscussion("Test", "", account1)
@@ -185,8 +185,8 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val withAcc2Admin = withAcc2.copy(admins = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addUserToDiscussion(any(), any()) } returns withAcc2
-    coEvery { repository.addAdminToDiscussion(any(), any()) } returns withAcc2Admin
+    coEvery { repository.addUserToDiscussion(any(), any()) } returns Unit
+    coEvery { repository.addAdminToDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns withAcc2Admin
 
     viewModel.createDiscussion("Test", "", account1)
@@ -215,10 +215,10 @@ class FirestoreDiscussionTests : FirestoreTests() {
             creatorId = account1.uid,
             participants = listOf(account1.uid),
             admins = listOf(account1.uid))
-    val withAcc2 = base.copy(participants = listOf(account1.uid, account2.uid))
+    // val withAcc2 = base.copy(participants = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addUserToDiscussion(any(), any()) } returns withAcc2
+    coEvery { repository.addUserToDiscussion(any(), any()) } returns Unit
     coEvery { repository.addAdminToDiscussion(any(), any()) } throws PermissionDeniedException("")
 
     viewModel.createDiscussion("Test", "", account1)
@@ -246,7 +246,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
             admins = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addAdminToDiscussion(any(), any()) } returns withAcc2Admin
+    coEvery { repository.addAdminToDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns withAcc2Admin
 
     viewModel.createDiscussion("Test", "", account1)
@@ -275,7 +275,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val withAcc2Acc3 = base.copy(participants = listOf(account1.uid, account2.uid, account3.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addUsersToDiscussion(any(), any()) } returns withAcc2Acc3
+    coEvery { repository.addUsersToDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns withAcc2Acc3
 
     viewModel.createDiscussion("Test", "", account1)
@@ -306,8 +306,8 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val withAdmins = base.copy(admins = listOf(account1.uid, account2.uid, account3.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addUsersToDiscussion(any(), any()) } returns base
-    coEvery { repository.addAdminsToDiscussion(any(), any()) } returns withAdmins
+    coEvery { repository.addUsersToDiscussion(any(), any()) } returns Unit
+    coEvery { repository.addAdminsToDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns withAdmins
 
     viewModel.createDiscussion("Test", "", account1)
@@ -344,7 +344,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
             admins = listOf(account1.uid, account2.uid, account3.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addAdminsToDiscussion(any(), any()) } returns withBoth
+    coEvery { repository.addAdminsToDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns withBoth
 
     viewModel.createDiscussion("Test", "", account1)
@@ -376,7 +376,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val renamed = base.copy(name = newName)
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.setDiscussionName(any(), any()) } returns renamed
+    coEvery { repository.setDiscussionName(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns renamed
 
     viewModel.createDiscussion("Test", "", account1)
@@ -406,7 +406,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val renamed = base.copy(name = newName)
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.setDiscussionName(any(), any()) } returns renamed
+    coEvery { repository.setDiscussionName(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns renamed
 
     viewModel.createDiscussion("Test", "", account1)
@@ -436,7 +436,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val updated = base.copy() // assume description is handled by ViewModel state
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.setDiscussionDescription(any(), any()) } returns updated
+    coEvery { repository.setDiscussionDescription(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns updated
 
     viewModel.createDiscussion("Test", "", account1)
@@ -489,7 +489,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val withMessage = base.copy(messages = listOf(Message(account2.uid, "Hello")))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.sendMessageToDiscussion(any(), any(), any()) } returns withMessage
+    coEvery { repository.sendMessageToDiscussion(any(), any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns withMessage
 
     viewModel.createDiscussion("Test", "", account1)
@@ -639,7 +639,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val removed = base.copy(participants = listOf(account1.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.removeUserFromDiscussion(any(), any()) } returns removed
+    coEvery { repository.removeUserFromDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns removed
 
     viewModel.createDiscussion("Test", "", account1)
@@ -686,10 +686,10 @@ class FirestoreDiscussionTests : FirestoreTests() {
             creatorId = account1.uid,
             participants = listOf(account1.uid, account2.uid, account3.uid),
             admins = listOf(account1.uid))
-    val withAcc2Admin = base.copy(admins = listOf(account1.uid, account2.uid))
+    // val withAcc2Admin = base.copy(admins = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addAdminToDiscussion(any(), any()) } returns withAcc2Admin
+    coEvery { repository.addAdminToDiscussion(any(), any()) } returns Unit
     coEvery { repository.removeUserFromDiscussion(any(), any()) } throws
         PermissionDeniedException("")
 
@@ -715,7 +715,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val removed = base.copy(participants = listOf(account1.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.removeUsersFromDiscussion(any(), any()) } returns removed
+    coEvery { repository.removeUsersFromDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns removed
 
     viewModel.createDiscussion("Test", "", account1)
@@ -787,7 +787,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val removedAdmin = base.copy(admins = listOf(account1.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.removeAdminFromDiscussion(any(), any()) } returns removedAdmin
+    coEvery { repository.removeAdminFromDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns removedAdmin
 
     viewModel.createDiscussion("Test", "", account1)
@@ -815,7 +815,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
             admins = listOf(account1.uid, account2.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.addAdminToDiscussion(any(), any()) } returns base
+    coEvery { repository.addAdminToDiscussion(any(), any()) } returns Unit
     coEvery { repository.removeAdminFromDiscussion(any(), any()) } throws
         PermissionDeniedException("")
 
@@ -841,7 +841,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val removedAdmins = base.copy(admins = listOf(account1.uid))
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
-    coEvery { repository.removeAdminsFromDiscussion(any(), any()) } returns removedAdmins
+    coEvery { repository.removeAdminsFromDiscussion(any(), any()) } returns Unit
     coEvery { repository.getDiscussion(base.uid) } returns removedAdmins
 
     viewModel.createDiscussion("Test", "", account1)
@@ -873,7 +873,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
         Pair(account1, withAcc2Admin)
-    coEvery { repository.addAdminToDiscussion(any(), any()) } returns withAcc2Admin
+    coEvery { repository.addAdminToDiscussion(any(), any()) } returns Unit
     coEvery { repository.removeAdminsFromDiscussion(any(), any()) } throws
         PermissionDeniedException("")
 
