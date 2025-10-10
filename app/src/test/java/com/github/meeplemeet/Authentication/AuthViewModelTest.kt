@@ -2,7 +2,6 @@ package com.github.meeplemeet.Authentication
 
 import android.app.Activity
 import android.content.Context
-import android.content.res.Resources
 import androidx.credentials.Credential
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -10,19 +9,22 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
 import com.github.meeplemeet.R
-import com.github.meeplemeet.ui.AuthUIState
-import com.github.meeplemeet.ui.AuthViewModel
+import com.github.meeplemeet.model.viewmodels.AuthUIState
+import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 
@@ -43,10 +45,10 @@ class AuthViewModelTest {
   fun `initial state is default`() =
       testScope.runTest {
         val state = viewModel.uiState.value
-        assertEquals(false, state.isLoading)
-        assertEquals(null, state.user)
-        assertEquals(null, state.errorMsg)
-        assertEquals(false, state.signedOut)
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(null, state.user)
+          Assert.assertEquals(null, state.errorMsg)
+          Assert.assertEquals(false, state.signedOut)
       }
 
   @Test
@@ -54,7 +56,7 @@ class AuthViewModelTest {
       testScope.runTest {
         // Set errorMsg manually
         viewModel.clearErrorMsg()
-        assertEquals(null, viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(null, viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -64,9 +66,9 @@ class AuthViewModelTest {
         coEvery { repo.registerWithEmail(any(), any()) } returns Result.success(fakeUser)
         viewModel.registerWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(fakeUser, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        assertEquals(null, viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(fakeUser, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(null, viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -76,9 +78,9 @@ class AuthViewModelTest {
         coEvery { repo.registerWithEmail(any(), any()) } returns Result.failure(error)
         viewModel.registerWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(null, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        assertEquals("Registration failed", viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(null, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals("Registration failed", viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -88,9 +90,9 @@ class AuthViewModelTest {
         coEvery { repo.loginWithEmail(any(), any()) } returns Result.success(fakeUser)
         viewModel.loginWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(fakeUser, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        assertEquals(null, viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(fakeUser, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(null, viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -100,9 +102,9 @@ class AuthViewModelTest {
         coEvery { repo.loginWithEmail(any(), any()) } returns Result.failure(error)
         viewModel.loginWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(null, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        assertEquals("Login failed", viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(null, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals("Login failed", viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -112,12 +114,12 @@ class AuthViewModelTest {
         coEvery { repo.registerWithEmail(any(), any()) } coAnswers
             {
               // Check isLoading is true during suspend
-              assertEquals(true, viewModel.uiState.value.isLoading)
+                Assert.assertEquals(true, viewModel.uiState.value.isLoading)
               Result.success(fakeUser)
             }
         viewModel.registerWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -127,7 +129,7 @@ class AuthViewModelTest {
         val field = viewModel.javaClass.getDeclaredField("_uiState")
         field.isAccessible = true
         val stateFlow =
-            field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<AuthUIState>
+            field.get(viewModel) as MutableStateFlow<AuthUIState>
         stateFlow.value = viewModel.uiState.value.copy(isLoading = true)
 
         // Should not call repo
@@ -144,7 +146,7 @@ class AuthViewModelTest {
         val field = viewModel.javaClass.getDeclaredField("_uiState")
         field.isAccessible = true
         val stateFlow =
-            field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<AuthUIState>
+            field.get(viewModel) as MutableStateFlow<AuthUIState>
         stateFlow.value = viewModel.uiState.value.copy(isLoading = true)
 
         // Should not call repo
@@ -157,17 +159,17 @@ class AuthViewModelTest {
   @Test
   fun `googleSignIn does not proceed if already loading`() =
       testScope.runTest {
-        val context = mockk<android.content.Context>(relaxed = true)
-        val credentialManager = mockk<androidx.credentials.CredentialManager>(relaxed = true)
+        val context = mockk<Context>(relaxed = true)
+        val credentialManager = mockk<CredentialManager>(relaxed = true)
         val viewModel = AuthViewModel(repo)
         val field = viewModel.javaClass.getDeclaredField("_uiState")
         field.isAccessible = true
         val stateFlow =
-            field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<AuthUIState>
+            field.get(viewModel) as MutableStateFlow<AuthUIState>
         stateFlow.value = viewModel.uiState.value.copy(isLoading = true)
         viewModel.googleSignIn(context, credentialManager)
         // No exception means pass, and state does not change
-        assertEquals(true, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(true, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -181,13 +183,13 @@ class AuthViewModelTest {
         val field = viewModel.javaClass.getDeclaredField("_uiState")
         field.isAccessible = true
         val stateFlow =
-            field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<AuthUIState>
+            field.get(viewModel) as MutableStateFlow<AuthUIState>
         stateFlow.value = errorState
         viewModel.clearErrorMsg()
         val newState = viewModel.uiState.value
-        assertEquals(null, newState.errorMsg)
-        assertEquals(true, newState.isLoading)
-        assertEquals(true, newState.signedOut)
+          Assert.assertEquals(null, newState.errorMsg)
+          Assert.assertEquals(true, newState.isLoading)
+          Assert.assertEquals(true, newState.signedOut)
       }
 
   @Test
@@ -197,9 +199,9 @@ class AuthViewModelTest {
         coEvery { repo.loginWithEmail(any(), any()) } returns Result.failure(error)
         viewModel.loginWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals("Login failed", viewModel.uiState.value.errorMsg)
+          Assert.assertEquals("Login failed", viewModel.uiState.value.errorMsg)
         viewModel.clearErrorMsg()
-        assertEquals(null, viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(null, viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -208,10 +210,10 @@ class AuthViewModelTest {
         coEvery { repo.logout() } returns Result.success(Unit)
         viewModel.logout()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(true, viewModel.uiState.value.signedOut)
-        assertEquals(null, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        assertEquals(null, viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(true, viewModel.uiState.value.signedOut)
+          Assert.assertEquals(null, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(null, viewModel.uiState.value.errorMsg)
       }
 
   @Test
@@ -221,9 +223,9 @@ class AuthViewModelTest {
         coEvery { repo.logout() } returns Result.failure(error)
         viewModel.logout()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.signedOut)
-        assertEquals("Logout failed", viewModel.uiState.value.errorMsg)
-        assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(false, viewModel.uiState.value.signedOut)
+          Assert.assertEquals("Logout failed", viewModel.uiState.value.errorMsg)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -233,8 +235,8 @@ class AuthViewModelTest {
         coEvery { repo.getCurrentUser() } returns fakeUser
         viewModel.loadCurrentUser()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(fakeUser, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(fakeUser, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -243,8 +245,8 @@ class AuthViewModelTest {
         coEvery { repo.getCurrentUser() } returns null
         viewModel.loadCurrentUser()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(null, viewModel.uiState.value.user)
-        assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(null, viewModel.uiState.value.user)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -253,12 +255,12 @@ class AuthViewModelTest {
         val fakeUser = mockk<User>()
         coEvery { repo.registerWithEmail(any(), any()) } coAnswers
             {
-              assertEquals(true, viewModel.uiState.value.isLoading)
+              Assert.assertEquals(true, viewModel.uiState.value.isLoading)
               Result.success(fakeUser)
             }
         viewModel.registerWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -267,12 +269,12 @@ class AuthViewModelTest {
         val fakeUser = mockk<User>()
         coEvery { repo.loginWithEmail(any(), any()) } coAnswers
             {
-              assertEquals(true, viewModel.uiState.value.isLoading)
+              Assert.assertEquals(true, viewModel.uiState.value.isLoading)
               Result.success(fakeUser)
             }
         viewModel.loginWithEmail("test@example.com", "password")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.isLoading)
+          Assert.assertEquals(false, viewModel.uiState.value.isLoading)
       }
 
   @Test
@@ -281,7 +283,7 @@ class AuthViewModelTest {
         coEvery { repo.getCurrentUser() } returns null
         viewModel.loadCurrentUser()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(true, viewModel.uiState.value.signedOut)
+          Assert.assertEquals(true, viewModel.uiState.value.signedOut)
       }
 
   @Test
@@ -291,7 +293,7 @@ class AuthViewModelTest {
         coEvery { repo.getCurrentUser() } returns fakeUser
         viewModel.loadCurrentUser()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.signedOut)
+          Assert.assertEquals(false, viewModel.uiState.value.signedOut)
       }
 
   // ==================== ADDITIONAL COMPREHENSIVE TESTS ====================
@@ -311,7 +313,7 @@ class AuthViewModelTest {
         every { mockActivity.getString(R.string.default_web_client_id) } returns "test_client_id"
 
         // Mock Google Play Services availability
-        mockkStatic(GoogleApiAvailability::class)
+          mockkStatic(GoogleApiAvailability::class)
         every { GoogleApiAvailability.getInstance() } returns mockAvailability
         every { mockAvailability.isGooglePlayServicesAvailable(mockActivity) } returns
             ConnectionResult.SUCCESS
@@ -319,7 +321,7 @@ class AuthViewModelTest {
         // Mock credential manager
         every { mockResponse.credential } returns mockCredential
         coEvery {
-          mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+            mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
         } returns mockResponse
 
         // Mock repository success
@@ -329,10 +331,10 @@ class AuthViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(fakeUser, state.user)
-        assertEquals(false, state.isLoading)
-        assertEquals(null, state.errorMsg)
-        assertEquals(false, state.signedOut)
+          Assert.assertEquals(fakeUser, state.user)
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(null, state.errorMsg)
+          Assert.assertEquals(false, state.signedOut)
       }
 
   @Test
@@ -345,10 +347,10 @@ class AuthViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("Google sign-in requires an Activity context.", state.errorMsg)
-        assertEquals(false, state.isLoading)
-        assertEquals(true, state.signedOut)
-        assertEquals(null, state.user)
+          Assert.assertEquals("Google sign-in requires an Activity context.", state.errorMsg)
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(true, state.signedOut)
+          Assert.assertEquals(null, state.user)
       }
 
   @Test
@@ -358,7 +360,7 @@ class AuthViewModelTest {
         val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
         val mockAvailability = mockk<GoogleApiAvailability>(relaxed = true)
 
-        mockkStatic(GoogleApiAvailability::class)
+          mockkStatic(GoogleApiAvailability::class)
         every { GoogleApiAvailability.getInstance() } returns mockAvailability
         every { mockAvailability.isGooglePlayServicesAvailable(mockActivity) } returns
             ConnectionResult.SERVICE_MISSING
@@ -367,10 +369,10 @@ class AuthViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertTrue(state.errorMsg!!.contains("Google Play services not available"))
-        assertEquals(false, state.isLoading)
-        assertEquals(true, state.signedOut)
-        assertEquals(null, state.user)
+          Assert.assertTrue(state.errorMsg!!.contains("Google Play services not available"))
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(true, state.signedOut)
+          Assert.assertEquals(null, state.user)
       }
 
   @Test
@@ -383,24 +385,24 @@ class AuthViewModelTest {
         // Mock direct string resource access for default_web_client_id
         every { mockActivity.getString(R.string.default_web_client_id) } returns "test_client_id"
 
-        mockkStatic(GoogleApiAvailability::class)
+          mockkStatic(GoogleApiAvailability::class)
         every { GoogleApiAvailability.getInstance() } returns mockAvailability
         every { mockAvailability.isGooglePlayServicesAvailable(mockActivity) } returns
             ConnectionResult.SUCCESS
 
         // Mock credential manager to throw cancellation exception
         coEvery {
-          mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+            mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
         } throws GetCredentialCancellationException("User cancelled")
 
         viewModel.googleSignIn(mockActivity, mockCredentialManager)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("Sign-in cancelled", state.errorMsg)
-        assertEquals(false, state.isLoading)
-        assertEquals(true, state.signedOut)
-        assertEquals(null, state.user)
+          Assert.assertEquals("Sign-in cancelled", state.errorMsg)
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(true, state.signedOut)
+          Assert.assertEquals(null, state.user)
       }
 
   @Test
@@ -413,24 +415,24 @@ class AuthViewModelTest {
         // Mock direct string resource access for default_web_client_id
         every { mockActivity.getString(R.string.default_web_client_id) } returns "test_client_id"
 
-        mockkStatic(GoogleApiAvailability::class)
+          mockkStatic(GoogleApiAvailability::class)
         every { GoogleApiAvailability.getInstance() } returns mockAvailability
         every { mockAvailability.isGooglePlayServicesAvailable(mockActivity) } returns
             ConnectionResult.SUCCESS
 
         // Mock credential manager to throw no credential exception
         coEvery {
-          mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+            mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
         } throws NoCredentialException("No credential found")
 
         viewModel.googleSignIn(mockActivity, mockCredentialManager)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertTrue(state.errorMsg!!.contains("No Google account available"))
-        assertEquals(false, state.isLoading)
-        assertEquals(true, state.signedOut)
-        assertEquals(null, state.user)
+          Assert.assertTrue(state.errorMsg!!.contains("No Google account available"))
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(true, state.signedOut)
+          Assert.assertEquals(null, state.user)
       }
 
   @Test
@@ -443,23 +445,23 @@ class AuthViewModelTest {
         // Mock direct string resource access for default_web_client_id
         every { mockActivity.getString(R.string.default_web_client_id) } returns "test_client_id"
 
-        mockkStatic(GoogleApiAvailability::class)
+          mockkStatic(GoogleApiAvailability::class)
         every { GoogleApiAvailability.getInstance() } returns mockAvailability
         every { mockAvailability.isGooglePlayServicesAvailable(mockActivity) } returns
             ConnectionResult.SUCCESS
 
         // Mock credential manager to throw unexpected exception
         coEvery {
-          mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+            mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
         } throws RuntimeException("Unexpected error")
 
         viewModel.googleSignIn(mockActivity, mockCredentialManager)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertTrue(state.errorMsg!!.contains("Unexpected error"))
-        assertEquals(false, state.isLoading)
-        assertEquals(true, state.signedOut)
-        assertEquals(null, state.user)
+          Assert.assertTrue(state.errorMsg!!.contains("Unexpected error"))
+          Assert.assertEquals(false, state.isLoading)
+          Assert.assertEquals(true, state.signedOut)
+          Assert.assertEquals(null, state.user)
       }
 }
