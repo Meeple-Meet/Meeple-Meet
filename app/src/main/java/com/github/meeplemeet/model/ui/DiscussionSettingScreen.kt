@@ -29,24 +29,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 @Composable
 fun DiscussionSettingScreen(
     viewModel: FirestoreViewModel,
     discussionId: String,
-    modifier: Modifier = Modifier,
-    // Optional flow providers for testing
-    accountFlowProvider: () -> StateFlow<Account?> = { viewModel.account },
-    discussionFlowProvider: (String) -> StateFlow<Discussion?> = { viewModel.discussionFlow(it) }
+    modifier: Modifier = Modifier
 ) {
   val coroutineScope = rememberCoroutineScope()
-  val currentAccount by accountFlowProvider().collectAsState()
 
   // --- Data states ---
-  val discussion by discussionFlowProvider(discussionId).collectAsState()
-  val account by accountFlowProvider().collectAsState()
+  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
+  val currentAccount by viewModel.account.collectAsState()
 
   // 🔎 Search state
   var searchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -56,9 +51,9 @@ fun DiscussionSettingScreen(
 
   val selectedMembers = remember { mutableStateListOf<Account>() }
 
-    // delete and leave alert state
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showLeaveDialog by remember { mutableStateOf(false) }
+  // delete and leave alert state
+  var showDeleteDialog by remember { mutableStateOf(false) }
+  var showLeaveDialog by remember { mutableStateOf(false) }
 
   // Populate selectedMembers with current discussion participants
   LaunchedEffect(discussion?.participants) {
@@ -72,7 +67,7 @@ fun DiscussionSettingScreen(
       }
     }
     // Add current account only if not already present
-    account?.let {
+    currentAccount?.let {
       if (selectedMembers.none { member -> member.uid == it.uid }) {
         selectedMembers.add(it)
       }
@@ -123,15 +118,14 @@ fun DiscussionSettingScreen(
           Row(
               modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                /** Delete button only if not member * */
                 OutlinedButton(
                     onClick = { if (!isMember) showDeleteDialog = true },
                     enabled = !isMember,
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("delete_button")) {
+                    modifier = Modifier.weight(1f).testTag("delete_button")) {
                       Icon(
                           imageVector = Icons.Default.Delete,
                           contentDescription = null,
@@ -139,35 +133,39 @@ fun DiscussionSettingScreen(
                       Spacer(modifier = Modifier.width(8.dp))
                       Text("Delete Discussion")
                     }
+                /** Leave button is always enabled * */
                 OutlinedButton(
                     onClick = { showLeaveDialog = true },
                     enabled = true,
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("leave_button")) {
+                    modifier = Modifier.weight(1f).testTag("leave_button")) {
                       Text("Leave Discussion")
                     }
               }
         }) { padding ->
+
+          /** Main Content * */
           Column(
               modifier = modifier.padding(padding).padding(16.dp),
               verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                /** Discussion Icon * */
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
                     contentDescription = "Icon",
                     modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp))
 
+                /** Discussion Name * */
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
                     readOnly = !isAdmin,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .testTag("discussion_name"),
+                    enabled = isAdmin,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .testTag("discussion_name"),
                     colors =
                         TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.background,
@@ -179,8 +177,10 @@ fun DiscussionSettingScreen(
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface),
                     singleLine = true,
-                    // to make the text centered, we use an invisible leading icon to offset the
-                    // trailing icon
+                    /**
+                     * to make the text centered, we use an invisible leading icon to offset the
+                     * trailing icon
+                     */
                     leadingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
@@ -188,6 +188,7 @@ fun DiscussionSettingScreen(
                           tint = MaterialTheme.colorScheme.background // Make it invisible
                           )
                     },
+                    /** Trailing edit icon only if admin * */
                     trailingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
@@ -202,6 +203,7 @@ fun DiscussionSettingScreen(
                             textAlign = TextAlign.Center,
                         ),
                 )
+                /** Discussion Description * */
                 Text(
                     text = "Description:",
                     style =
@@ -209,14 +211,17 @@ fun DiscussionSettingScreen(
                             textDecoration = TextDecoration.Underline),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 )
+                /** Description TextField * */
                 TextField(
                     value = newDesc,
                     onValueChange = { newDesc = it },
                     readOnly = !isAdmin,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 0.dp, end = 6.dp)
-                        .testTag("discussion_description"),
+                    enabled = isAdmin,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(start = 0.dp, end = 6.dp)
+                            .testTag("discussion_description"),
+                    /** Makes the textField look like a line * */
                     colors =
                         TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.background,
@@ -227,6 +232,10 @@ fun DiscussionSettingScreen(
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface),
                     singleLine = true,
+                    /**
+                     * to make the text left-aligned, we use an invisible leading icon to offset the
+                     * trailing icon *
+                     */
                     trailingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
@@ -269,6 +278,7 @@ fun DiscussionSettingScreen(
                   AlertDialog(
                       onDismissRequest = { showDeleteDialog = false },
                       title = { Text("Delete Discussion") },
+                      modifier = Modifier.testTag("delete_discussion_display"),
                       text = {
                         Text(
                             "Are you sure you want to delete ${d.name}? This action cannot be undone.")
@@ -294,6 +304,7 @@ fun DiscussionSettingScreen(
                   AlertDialog(
                       onDismissRequest = { showLeaveDialog = false },
                       title = { Text("Leave Discussion") },
+                      modifier = Modifier.testTag("leave_discussion_display"),
                       text = {
                         Text(
                             "Are you sure you want to leave ${d.name}? You will no longer see messages or members.")
@@ -443,20 +454,29 @@ fun MemberList(
 
   // Selected Members
   var selectedMember by remember { mutableStateOf<Account?>(null) }
+
   if (selectedMembers.isNotEmpty()) {
+
     Spacer(modifier = Modifier.height(4.dp))
     LazyColumn {
       items(selectedMembers) { member ->
+        /**
+         * Row is clickable only if the user can manage members Added this for testing since
+         * disabling clickable still exposes OnClick actions
+         */
+        val clickableModifier =
+            if (!isMember && member.uid != currentAccount.uid) {
+              Modifier.clickable { selectedMember = member }
+            } else {
+              Modifier
+            }
+        /** Each member row * */
         Row(
             modifier =
-                Modifier
+                clickableModifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp, horizontal = 14.dp)
-                    .testTag("member_row_${member.uid}")
-                    .clickable(
-                        enabled = !isMember && member.uid != currentAccount.uid) {
-                          if (member.uid != currentAccount.uid) selectedMember = member
-                        },
+                    .testTag("member_row_${member.uid}"),
             verticalAlignment = Alignment.CenterVertically) {
               Box(
                   modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.LightGray),
@@ -468,6 +488,7 @@ fun MemberList(
                   }
               Spacer(modifier = Modifier.width(12.dp))
               Text(text = member.name, modifier = Modifier.weight(1f), maxLines = 1)
+
               // --- Status Badge ---
               val status =
                   remember(member) {
@@ -485,6 +506,7 @@ fun MemberList(
                     "Admin" -> Color(0xFF1976D2) // Blue
                     else -> Color(0xFFB0BEC5) // Gray
                   }
+              /** Status Badge * */
               Box(
                   modifier =
                       Modifier.padding(end = 8.dp)
@@ -500,6 +522,7 @@ fun MemberList(
             }
       }
       item {
+        /** Divider after the list * */
         HorizontalDivider(
             modifier =
                 modifier
@@ -516,6 +539,7 @@ fun MemberList(
     val selectedIsAdmin = discussion.admins.contains(selectedMember!!.uid)
     val selectedIsOwner = discussion.creatorId == selectedMember!!.uid
 
+    /** Dialog to manage selected member * */
     AlertDialog(
         onDismissRequest = { selectedMember = null },
         title = {
@@ -554,7 +578,7 @@ fun MemberList(
         },
         dismissButton = {
           Row {
-            // Determine if current user can remove selected member
+            /** Determine if current user can remove selected member */
             val canRemove =
                 when {
                   discussion.creatorId == currentAccount.uid -> true // Owner can remove anyone
@@ -564,6 +588,7 @@ fun MemberList(
                   else -> false
                 }
 
+            /** Only owner or admin (with restrictions) can remove members * */
             if (canRemove) {
               TextButton(
                   onClick = {
@@ -580,7 +605,7 @@ fun MemberList(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Only the owner can remove admin privileges
+            /** Only the owner can remove admin privileges */
             if (discussion.creatorId == currentAccount.uid && selectedIsAdmin) {
               TextButton(
                   onClick = {
@@ -600,7 +625,7 @@ fun MemberList(
   }
 }
 
-// Fake search function
+/** Fake search function */
 fun fakeSearchAccounts(query: String): List<Account> {
   val allAccounts =
       listOf(
