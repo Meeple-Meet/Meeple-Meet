@@ -1,10 +1,11 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.model.viewmodels
 
 import android.app.Activity
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -204,7 +205,7 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
         _uiState.update {
           it.copy(isLoading = false, errorMsg = msg, signedOut = true, user = null)
         }
-      } catch (e: androidx.credentials.exceptions.GetCredentialException) {
+      } catch (e: GetCredentialException) {
         // Other credential-related errors
         val msg = "Failed to get credentials: ${e.javaClass.simpleName}: ${e.localizedMessage}"
         _uiState.update {

@@ -11,9 +11,11 @@ plugins {
 
 }
 
+
+
 android {
     namespace = "com.github.meeplemeet"
-    compileSdk = 34
+    compileSdk = 35
 
 
     // Load the API key from local.properties
@@ -116,9 +118,36 @@ android {
             resources.srcDirs("src/testDebug/resources")
         }
     }
-
 }
 
+configurations.all {
+    resolutionStrategy {
+        // Force specific versions to resolve conflicts
+        force("androidx.test.ext:junit:1.1.5")
+        force("androidx.test.espresso:espresso-core:3.5.1")
+        force("androidx.test.espresso:espresso-intents:3.5.1")
+        force("androidx.test.espresso:espresso-web:3.5.1")
+        force("androidx.test.espresso:espresso-contrib:3.5.1")
+
+        // Exclude problematic transitive dependencies
+        eachDependency {
+            when (requested.group) {
+                "androidx.test.ext" -> {
+                    if (requested.name == "junit") {
+                        useVersion("1.1.5")
+                        because("Forced to compatible version for Kaspresso")
+                    }
+                }
+                "androidx.test.espresso" -> {
+                    if (requested.name.startsWith("espresso-")) {
+                        useVersion("3.5.1")
+                        because("Forced to compatible version for Kaspresso")
+                    }
+                }
+            }
+        }
+    }
+}
 
 dependencies {
 
@@ -140,7 +169,10 @@ dependencies {
             implementation(libs.androidx.material3)
             implementation(libs.androidx.navigation.compose)
             implementation(platform(libs.androidx.compose.bom))
-            testImplementation(libs.test.core.ktx)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.navigation.testing)
+    implementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.test.core.ktx)
             debugImplementation(libs.androidx.ui.tooling)
             debugImplementation(libs.androidx.ui.test.manifest)
             implementation(libs.material)
@@ -190,9 +222,9 @@ dependencies {
             androidTestImplementation(libs.mockito.android)
             androidTestImplementation(libs.mockito.kotlin)
             testImplementation(libs.robolectric)
-    androidTestImplementation(libs.kaspresso)
-    androidTestImplementation(libs.kaspresso.allure.support)
-    androidTestImplementation(libs.kaspresso.compose.support)
+     androidTestImplementation(libs.kaspresso)
+     androidTestImplementation(libs.kaspresso.allure.support)
+     androidTestImplementation(libs.kaspresso.compose.support)
 
             testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(kotlin("test"))
