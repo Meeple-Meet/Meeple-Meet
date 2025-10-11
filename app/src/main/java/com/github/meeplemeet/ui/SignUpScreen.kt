@@ -62,7 +62,7 @@ object SignUpScreenTestTags {
 @Composable
 fun SignUpScreen(
     navController: NavController = NavController(LocalContext.current),
-    viewModel: AuthViewModel = AuthViewModel(),
+    viewModel: AuthViewModel,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     modifier: Modifier = Modifier

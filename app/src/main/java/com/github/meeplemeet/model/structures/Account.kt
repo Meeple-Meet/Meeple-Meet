@@ -14,7 +14,10 @@ import kotlinx.serialization.Serializable
 data class Account(
     val uid: String,
     val name: String,
-    val previews: Map<String, DiscussionPreview> = emptyMap()
+    val previews: Map<String, DiscussionPreview> = emptyMap(),
+    val email: String, // Non-nullable since both auth methods provide email
+    var photoUrl: String? = null,
+    var description: String? = null
 )
 
 /**
@@ -35,6 +38,15 @@ data class Account(
 fun fromNoUid(
     id: String,
     accountNoUid: AccountNoUid,
-    previews: Map<String, DiscussionPreviewNoUid> = emptyMap()
+    previews: Map<String, DiscussionPreviewNoUid> = emptyMap(),
+    email: String,
+    photoUrl: String?,
+    description: String?
 ): Account =
-    Account(id, accountNoUid.name, previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) })
+    Account(
+        id,
+        accountNoUid.name,
+        previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
+        email = email,
+        photoUrl = photoUrl,
+        description = description)

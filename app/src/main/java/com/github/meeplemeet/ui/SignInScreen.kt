@@ -33,6 +33,7 @@ object SignInScreenTestTags {
   const val SIGN_IN_BUTTON = "sign_in_button"
   const val GOOGLE_SIGN_IN_BUTTON = "google_sign_in_button"
   const val LOADING_INDICATOR = "loading_indicator"
+  const val SIGN_UP_BUTTON = "sign_up_button"
 }
 
 /**
@@ -57,7 +58,7 @@ object SignInScreenTestTags {
 @Composable
 fun SignInScreen(
     navController: NavController = NavController(LocalContext.current),
-    viewModel: AuthViewModel = AuthViewModel(),
+    viewModel: AuthViewModel,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     modifier: Modifier = Modifier
@@ -277,7 +278,7 @@ fun SignInScreen(
               text = "Sign up.",
               color = MaterialTheme.colorScheme.primary,
               modifier =
-                  Modifier.clickable {
+                  Modifier.testTag(SignInScreenTestTags.SIGN_UP_BUTTON).clickable {
                     navController.navigate("sign_up")
                   } // Navigate to sign-up screen
               )

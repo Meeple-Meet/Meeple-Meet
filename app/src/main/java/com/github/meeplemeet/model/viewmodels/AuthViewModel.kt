@@ -9,10 +9,9 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.meeplemeet.Authentication.AuthRepo
 import com.github.meeplemeet.Authentication.AuthRepoFirebase
-import com.github.meeplemeet.Authentication.User
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.structures.Account
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -38,7 +37,7 @@ import kotlinx.coroutines.launch
  */
 data class AuthUIState(
     val isLoading: Boolean = false,
-    val user: User? = null,
+    val account: Account? = null,
     val errorMsg: String? = null,
     val signedOut: Boolean = false
 )
@@ -58,7 +57,7 @@ data class AuthUIState(
  * @property repository The authentication repository that handles the actual auth operations.
  *   Defaults to AuthRepoFirebase for production use.
  */
-class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : ViewModel() {
+class AuthViewModel(private val repository: AuthRepoFirebase) : ViewModel() {
 
   // Private mutable state flow for internal state management
   private val _uiState = MutableStateFlow(AuthUIState())
@@ -78,15 +77,16 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
    * Creates Google sign-in options for the Credential Manager.
    *
    * This method uses the web client ID from the string resources, which is extracted from
-   * google-services.json. The web client ID is essential for Google sign-in to work properly with Firebase.
+   * google-services.json. The web client ID is essential for Google sign-in to work properly with
+   * Firebase.
    *
    * @param context Android context used to access string resources
    * @return GetSignInWithGoogleOption configured with the appropriate client ID
    */
   private fun getSignInOptions(context: Context) =
-    GetSignInWithGoogleOption.Builder(
-      serverClientId = context.getString(R.string.default_web_client_id)
-    ).build()
+      GetSignInWithGoogleOption.Builder(
+              serverClientId = context.getString(R.string.default_web_client_id))
+          .build()
 
   /**
    * Creates a credential request for the Credential Manager.
@@ -153,7 +153,7 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
               isLoading = false,
               errorMsg = "Google sign-in requires an Activity context.",
               signedOut = true,
-              user = null)
+              account = null)
         }
         return@launch
       }
@@ -164,7 +164,7 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
         val message =
             "Google Play services not available (code $availability). Use a Google Play system image and sign into the device."
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = message, signedOut = true, user = null)
+          it.copy(isLoading = false, errorMsg = message, signedOut = true, account = null)
         }
         return@launch
       }
@@ -181,7 +181,7 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
         repository.loginWithGoogle(credential).fold({ user ->
           // Success: Update UI with authenticated user
           _uiState.update {
-            it.copy(isLoading = false, user = user, errorMsg = null, signedOut = false)
+            it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
           }
         }) { failure ->
           // Repository authentication failed
@@ -190,32 +190,33 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
                 isLoading = false,
                 errorMsg = failure.localizedMessage,
                 signedOut = true,
-                user = null)
+                account = null)
           }
         }
       } catch (e: GetCredentialCancellationException) {
         // User cancelled the sign-in flow
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = "Sign-in cancelled", signedOut = true, user = null)
+          it.copy(
+              isLoading = false, errorMsg = "Sign-in cancelled", signedOut = true, account = null)
         }
       } catch (e: NoCredentialException) {
         // No Google account available on the device
         val msg =
             "No Google account available or no credential found. Add a Google account to the device."
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = msg, signedOut = true, user = null)
+          it.copy(isLoading = false, errorMsg = msg, signedOut = true, account = null)
         }
       } catch (e: GetCredentialException) {
         // Other credential-related errors
         val msg = "Failed to get credentials: ${e.javaClass.simpleName}: ${e.localizedMessage}"
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = msg, signedOut = true, user = null)
+          it.copy(isLoading = false, errorMsg = msg, signedOut = true, account = null)
         }
       } catch (e: Exception) {
         // Unexpected errors
         val msg = "Unexpected error: ${e.javaClass.simpleName}: ${e.localizedMessage}"
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = msg, signedOut = true, user = null)
+          it.copy(isLoading = false, errorMsg = msg, signedOut = true, account = null)
         }
       }
     }
@@ -242,12 +243,12 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
       repository.registerWithEmail(email, password).fold({ user ->
         // Success: Update UI with the new user
         _uiState.update {
-          it.copy(isLoading = false, user = user, errorMsg = null, signedOut = false)
+          it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
         }
       }) { failure ->
         // Registration failed: Show error message
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = failure.localizedMessage, user = null)
+          it.copy(isLoading = false, errorMsg = failure.localizedMessage, account = null)
         }
       }
     }
@@ -274,12 +275,12 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
       repository.loginWithEmail(email, password).fold({ user ->
         // Success: Update UI with authenticated user
         _uiState.update {
-          it.copy(isLoading = false, user = user, errorMsg = null, signedOut = false)
+          it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
         }
       }) { failure ->
         // Login failed: Show error message
         _uiState.update {
-          it.copy(isLoading = false, errorMsg = failure.localizedMessage, user = null)
+          it.copy(isLoading = false, errorMsg = failure.localizedMessage, account = null)
         }
       }
     }
@@ -303,33 +304,11 @@ class AuthViewModel(private val repository: AuthRepo = AuthRepoFirebase()) : Vie
       repository.logout().fold({
         // Success: Update UI to signed-out state
         _uiState.update {
-          it.copy(isLoading = false, user = null, signedOut = true, errorMsg = null)
+          it.copy(isLoading = false, account = null, signedOut = true, errorMsg = null)
         }
       }) { failure ->
         // Logout failed: Show error but keep user signed in
         _uiState.update { it.copy(isLoading = false, errorMsg = failure.localizedMessage) }
-      }
-    }
-  }
-
-  /**
-   * Loads the current user if already signed in.
-   *
-   * This method is typically called when the app starts to check if there's already an
-   * authenticated user and restore the authentication state. It's useful for implementing "remember
-   * me" functionality.
-   */
-  fun loadCurrentUser() {
-    viewModelScope.launch {
-      // Set loading state
-      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
-
-      // Check if there's a current user in the repository
-      val user = repository.getCurrentUser()
-
-      // Update UI state based on whether a user was found
-      _uiState.update {
-        it.copy(isLoading = false, user = user, errorMsg = null, signedOut = user == null)
       }
     }
   }
