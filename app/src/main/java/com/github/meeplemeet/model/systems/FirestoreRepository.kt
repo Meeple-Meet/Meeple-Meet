@@ -223,10 +223,8 @@ class FirestoreRepository(db: FirebaseFirestore) {
   suspend fun createAccount(name: String, email: String, photoUrl: String?): Account {
     val account =
         Account(accountUID(), name, email = email, photoUrl = photoUrl, description = null)
-    accounts
-        .document(account.uid)
-        .set(mapOf("name" to account.name, "email" to email, "photoUrl" to photoUrl))
-        .await()
+    val accountNoUid = AccountNoUid(name, email, photoUrl, description = null)
+    accounts.document(account.uid).set(accountNoUid).await()
     return account
   }
 
@@ -243,14 +241,7 @@ class FirestoreRepository(db: FirebaseFirestore) {
           doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java)!!)
         }
 
-    // Retrieve additional fields from Firestore
-    val email =
-        snapshot.getString("email")
-            ?: throw AccountNotFoundException("Account email not found - data corruption")
-    val photoUrl = snapshot.getString("photoUrl")
-    val description = snapshot.getString("description")
-
-    return fromNoUid(id, account, previews, email, photoUrl, description)
+    return fromNoUid(id, account, previews)
   }
 
   /** Convenience for current signed-in account. */

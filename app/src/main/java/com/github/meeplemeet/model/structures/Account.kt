@@ -25,7 +25,13 @@ data class Account(
  *
  * Firestore stores the UID as the document ID, so it is omitted from the stored object.
  */
-@Serializable data class AccountNoUid(val name: String = "")
+@Serializable
+data class AccountNoUid(
+    val name: String = "",
+    val email: String = "",
+    val photoUrl: String? = null,
+    val description: String? = null
+)
 
 /**
  * Reconstructs a full [Account] object from its Firestore representation.
@@ -38,15 +44,12 @@ data class Account(
 fun fromNoUid(
     id: String,
     accountNoUid: AccountNoUid,
-    previews: Map<String, DiscussionPreviewNoUid> = emptyMap(),
-    email: String,
-    photoUrl: String?,
-    description: String?
+    previews: Map<String, DiscussionPreviewNoUid> = emptyMap()
 ): Account =
     Account(
         id,
         accountNoUid.name,
         previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
-        email = email,
-        photoUrl = photoUrl,
-        description = description)
+        email = accountNoUid.email,
+        photoUrl = accountNoUid.photoUrl,
+        description = accountNoUid.description)
