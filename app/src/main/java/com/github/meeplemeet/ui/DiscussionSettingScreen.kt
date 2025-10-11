@@ -31,6 +31,16 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import kotlinx.coroutines.launch
 
+object UITestTags {
+  const val DELETE_BUTTON = "delete_button"
+  const val LEAVE_BUTTON = "leave_button"
+  const val DISCUSSION_DESCRIPTION = "discussion_description"
+  const val DELETE_DISCUSSION_DISPLAY = "delete_discussion_display"
+  const val LEAVE_DISCUSSION_DISPLAY = "leave_discussion_display"
+  const val MAKE_ADMIN_BUTTON = "make_admin_button"
+  const val DISCUSSION_NAME = "discussion_name"
+}
+
 /**
  * Displays the discussion settings screen, allowing users to view and edit discussion details,
  * manage members, and perform actions such as deleting or leaving the discussion.
@@ -114,7 +124,9 @@ fun DiscussionSettingScreen(
         topBar = {
           TopBar(
               text = "Discussion Settings",
-              /** save Name and Description on back */
+              /**
+               * Save Name and Description on back — this is the only time the DB is updated here
+               */
               onReturn = {
                 viewModel.setDiscussionName(
                     discussion = d, name = newName, changeRequester = currentAccount!!)
@@ -127,6 +139,7 @@ fun DiscussionSettingScreen(
           Row(
               modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                /** The actual deletion happens only after the confirmation dialog */
                 /** Delete button only if not member */
                 OutlinedButton(
                     onClick = { if (!isMember) showDeleteDialog = true },
@@ -134,7 +147,7 @@ fun DiscussionSettingScreen(
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.weight(1f).testTag("delete_button")) {
+                    modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
                       Icon(
                           imageVector = Icons.Default.Delete,
                           contentDescription = null,
@@ -142,6 +155,7 @@ fun DiscussionSettingScreen(
                       Spacer(modifier = Modifier.width(8.dp))
                       Text("Delete Discussion")
                     }
+                /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
                 OutlinedButton(
                     onClick = { showLeaveDialog = true },
@@ -149,7 +163,7 @@ fun DiscussionSettingScreen(
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier.weight(1f).testTag("leave_button")) {
+                    modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
                       Text("Leave Discussion")
                     }
               }
@@ -167,6 +181,7 @@ fun DiscussionSettingScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp))
 
                 /** --- Discussion Name --- */
+                /** These ensure only admins can edit the name field */
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
@@ -175,7 +190,7 @@ fun DiscussionSettingScreen(
                     modifier =
                         Modifier.fillMaxWidth()
                             .padding(horizontal = 12.dp)
-                            .testTag("discussion_name"),
+                            .testTag(UITestTags.DISCUSSION_NAME),
                     colors =
                         TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.background,
@@ -232,7 +247,7 @@ fun DiscussionSettingScreen(
                     modifier =
                         Modifier.fillMaxWidth()
                             .padding(start = 0.dp, end = 6.dp)
-                            .testTag("discussion_description"),
+                            .testTag(UITestTags.DISCUSSION_DESCRIPTION),
                     /** Makes the textField look like a line */
                     colors =
                         TextFieldDefaults.colors(
@@ -292,7 +307,7 @@ fun DiscussionSettingScreen(
                   AlertDialog(
                       onDismissRequest = { showDeleteDialog = false },
                       title = { Text("Delete Discussion") },
-                      modifier = Modifier.testTag("delete_discussion_display"),
+                      modifier = Modifier.testTag(UITestTags.DELETE_DISCUSSION_DISPLAY),
                       text = {
                         Text(
                             "Are you sure you want to delete ${d.name}? This action cannot be undone.")
@@ -319,7 +334,7 @@ fun DiscussionSettingScreen(
                   AlertDialog(
                       onDismissRequest = { showLeaveDialog = false },
                       title = { Text("Leave Discussion") },
-                      modifier = Modifier.testTag("leave_discussion_display"),
+                      modifier = Modifier.testTag(UITestTags.LEAVE_DISCUSSION_DISPLAY),
                       text = {
                         Text(
                             "Are you sure you want to leave ${d.name}? You will no longer see messages or members.")
@@ -634,7 +649,7 @@ fun MemberList(
                       changeRequester = currentAccount)
                   selectedMember = null
                 }) {
-                  Text("Make Admin", modifier = Modifier.testTag("make_admin_button"))
+                  Text("Make Admin", modifier = Modifier.testTag(UITestTags.MAKE_ADMIN_BUTTON))
                 }
           }
         },
