@@ -154,20 +154,10 @@ class AuthRepoFirebase(
         val account = firestoreRepository.getAccount(firebaseUser.uid)
         Result.success(account)
       } catch (firestoreException: Exception) {
-        // Account exists in Firebase Auth but not in Firestore - this suggests a partial
-        // registration
-        // Try to create the missing account document
-        val name = email.substringBefore('@')
-        try {
-          val account =
-              firestoreRepository.createAccount(
-                  name = name, email = email, photoUrl = firebaseUser.photoUrl?.toString())
-          Result.success(account)
-        } catch (createException: Exception) {
-          return Result.failure(
-              IllegalStateException(
-                  "Login failed: User profile not found and could not be created. ${createException.localizedMessage}"))
-        }
+        // Account exists in Firebase Auth but not in Firestore - this is an error condition
+        return Result.failure(
+            IllegalStateException(
+                "Login failed: User profile not found. ${firestoreException.localizedMessage}"))
       }
     } catch (e: Exception) {
       createFailureResult("Login", e)
