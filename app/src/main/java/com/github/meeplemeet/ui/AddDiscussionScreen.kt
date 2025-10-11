@@ -350,13 +350,13 @@ fun AddDiscussionScreen(
 fun fakeSearchAccounts(query: String): List<Account> {
   val allAccounts =
       listOf(
-          Account("1", "Alice"),
-          Account("2", "Bob"),
-          Account("3", "Charlie"),
-          Account("4", "David"),
-          Account("5", "Eve"),
-          Account("6", "Frank"),
-          Account("7", "Grace"),
-          Account("8", "Heidi"))
+          Account("1", "Alice", email = "Alice@example.com"),
+          Account("2", "Bob", email = "Bob@example.com"),
+          Account("3", "Charlie", email = "Alice@example.com"),
+          Account("4", "David", email = "David@example.com"),
+          Account("5", "Eve", email = "Eve@example.com"),
+          Account("6", "Frank", email = "Frank@example.com"),
+          Account("7", "Grace", email = "Grace@example.com"),
+          Account("8", "Heidi", email = "Heidi@example.com"))
   return allAccounts.filter { it.name.contains(query, ignoreCase = true) }
 }

@@ -125,77 +125,77 @@ dependencies {
     // Core
     implementation(libs.core.ktx)
     implementation(libs.androidx.core.ktx)
-            implementation(libs.androidx.lifecycle.runtime.ktx)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.appcompat)
-            implementation(libs.androidx.constraintlayout)
-            implementation(libs.androidx.fragment.ktx)
-            implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.kotlinx.serialization.json)
 
-            // Jetpack Compose UI
-            implementation(libs.androidx.ui)
-            implementation(libs.androidx.ui.tooling.preview)
-            implementation(libs.androidx.ui.graphics)
-            implementation(libs.androidx.material)
-            implementation(libs.androidx.material3)
-            implementation(libs.androidx.navigation.compose)
-            implementation(platform(libs.androidx.compose.bom))
-            testImplementation(libs.test.core.ktx)
-            debugImplementation(libs.androidx.ui.tooling)
-            debugImplementation(libs.androidx.ui.test.manifest)
-            implementation(libs.material)
-            implementation(libs.androidx.material.icons.extended)
+    // Jetpack Compose UI
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.material)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.navigation.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.test.core.ktx)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.material)
+    implementation(libs.androidx.material.icons.extended)
 
-            // Navigation
-            implementation(libs.androidx.navigation.compose)
-            implementation(libs.androidx.navigation.fragment.ktx)
-            implementation(libs.androidx.navigation.ui.ktx)
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
 
-            // Google Service and Maps
-            implementation(libs.play.services.maps)
-            implementation(libs.maps.compose)
-            implementation(libs.maps.compose.utils)
-            implementation(libs.play.services.auth)
+    // Google Service and Maps
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    implementation(libs.maps.compose.utils)
+    implementation(libs.play.services.auth)
 
-            // Firebase
-            implementation(libs.firebase.database.ktx)
-            implementation(libs.firebase.firestore)
-            implementation(libs.firebase.auth.ktx)
-            implementation(libs.firebase.auth)
+    // Firebase
+    implementation(libs.firebase.database.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.auth)
 
-            // Credential Manager (for Google Sign-In)
-            implementation(libs.credentials)
-            implementation(libs.credentials.play.services.auth)
-            implementation(libs.googleid)
+    // Credential Manager (for Google Sign-In)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
 
-            // Networking with OkHttp
-            implementation(libs.okhttp)
+    // Networking with OkHttp
+    implementation(libs.okhttp)
 
-            // Testing Unit
-            testImplementation(libs.junit)
-            androidTestImplementation(libs.mockk)
-            androidTestImplementation(libs.mockk.android)
-            androidTestImplementation(libs.mockk.agent)
-            testImplementation(libs.mockk)
-            testImplementation(libs.json)
+    // Testing Unit
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.mockk.agent)
+    testImplementation(libs.mockk)
+    testImplementation(libs.json)
 
-            // Test UI
+    // Test UI
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-            androidTestImplementation(libs.androidx.espresso.intents)
-            androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.espresso.intents)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(platform(libs.androidx.compose.bom))
-            testImplementation(libs.mockito.core)
-            testImplementation(libs.mockito.kotlin)
-            androidTestImplementation(libs.mockito.android)
-            androidTestImplementation(libs.mockito.kotlin)
-            testImplementation(libs.robolectric)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
+    androidTestImplementation(libs.mockito.android)
+    androidTestImplementation(libs.mockito.kotlin)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.kaspresso)
     androidTestImplementation(libs.kaspresso.allure.support)
     androidTestImplementation(libs.kaspresso.compose.support)
 
-            testImplementation(libs.kotlinx.coroutines.test)
-  testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(kotlin("test"))
 
 }
 
@@ -239,7 +239,7 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
 }
 
 configurations.forEach { configuration ->
-  // Exclude protobuf-lite from all configurations
-  // This fixes a fatal exception for tests interacting with Cloud Firestore
-  configuration.exclude("com.google.protobuf", "protobuf-lite")
+    // Exclude protobuf-lite from all configurations
+    // This fixes a fatal exception for tests interacting with Cloud Firestore
+    configuration.exclude("com.google.protobuf", "protobuf-lite")
 }

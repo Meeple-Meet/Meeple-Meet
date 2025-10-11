@@ -40,9 +40,9 @@ class FirestoreDiscussionTests : FirestoreTests() {
   fun setup() {
     val repo = FirestoreRepository(Firebase.firestore)
     runBlocking {
-      account1 = repo.createAccount("Antoine")
-      account2 = repo.createAccount("Marco")
-      account3 = repo.createAccount("Thomas")
+      account1 = Account(uid = "a1", name = "Antoine", email = "Antoine@example.com")
+      account2 = Account(uid = "a2", name = "Marco", email = "Marco@example.com")
+      account3 = Account(uid = "a3", name = "Thomas", email = "Thomas@example.com")
     }
     Dispatchers.setMain(StandardTestDispatcher())
     viewModel = FirestoreViewModel(repository)
@@ -55,7 +55,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
   @Test
   fun canAddDiscussion() = runTest {
-    val acc = Account(uid = "a1", name = "Alice")
+    val acc = Account(uid = "a1", name = "Alice", email = "Alice@example.com")
     val disc =
         Discussion(
             uid = "d1",

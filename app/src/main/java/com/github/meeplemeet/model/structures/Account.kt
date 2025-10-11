@@ -14,7 +14,10 @@ import kotlinx.serialization.Serializable
 data class Account(
     val uid: String,
     val name: String,
-    val previews: Map<String, DiscussionPreview> = emptyMap()
+    val previews: Map<String, DiscussionPreview> = emptyMap(),
+    val email: String, // Non-nullable since both auth methods provide email
+    var photoUrl: String? = null,
+    var description: String? = null
 )
 
 /**
@@ -22,7 +25,13 @@ data class Account(
  *
  * Firestore stores the UID as the document ID, so it is omitted from the stored object.
  */
-@Serializable data class AccountNoUid(val name: String = "")
+@Serializable
+data class AccountNoUid(
+    val name: String = "",
+    val email: String = "",
+    val photoUrl: String? = null,
+    val description: String? = null
+)
 
 /**
  * Reconstructs a full [Account] object from its Firestore representation.
@@ -37,4 +46,10 @@ fun fromNoUid(
     accountNoUid: AccountNoUid,
     previews: Map<String, DiscussionPreviewNoUid> = emptyMap()
 ): Account =
-    Account(id, accountNoUid.name, previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) })
+    Account(
+        id,
+        accountNoUid.name,
+        previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
+        email = accountNoUid.email,
+        photoUrl = accountNoUid.photoUrl,
+        description = accountNoUid.description)

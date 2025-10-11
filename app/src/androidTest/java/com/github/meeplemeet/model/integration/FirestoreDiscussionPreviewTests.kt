@@ -33,9 +33,9 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
   fun setup() {
     Dispatchers.setMain(StandardTestDispatcher())
     viewModel = FirestoreViewModel(repository)
-    account1 = Account(uid = "a1", name = "Antoine")
-    account2 = Account(uid = "a2", name = "Marco")
-    account3 = Account(uid = "a3", name = "Thomas")
+    account1 = Account(uid = "a1", name = "Antoine", email = "Antoine@example.com")
+    account2 = Account(uid = "a2", name = "Marco", email = "Marco@example.com")
+    account3 = Account(uid = "a3", name = "Thomas", email = "Thomas@example.com")
   }
 
   @After

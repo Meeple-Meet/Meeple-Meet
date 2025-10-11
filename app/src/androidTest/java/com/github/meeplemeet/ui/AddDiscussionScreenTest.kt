@@ -43,7 +43,7 @@ class AddDiscussionScreenTest {
   private val vm: FirestoreViewModel = mockk(relaxed = true)
 
   /** Current user for the screen */
-  private val me = Account(uid = "6", name = "Frank")
+  private val me = Account(uid = "6", name = "Frank", email = "Frank@example.com")
 
   // ---------- Semantic matchers ----------
 

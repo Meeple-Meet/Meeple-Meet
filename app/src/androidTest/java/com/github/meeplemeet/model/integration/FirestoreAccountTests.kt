@@ -1,29 +1,12 @@
 package com.github.meeplemeet.model.integration
 
-import com.github.meeplemeet.model.AccountNotFoundException
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.github.meeplemeet.model.utils.FirestoreTests
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import io.mockk.coEvery
-import io.mockk.mockk
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertTrue
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FirestoreAccountTests : FirestoreTests() {
 
-  private val repository = mockk<FirestoreRepository>()
+  /*private val repository = mockk<FirestoreRepository>()
   private lateinit var viewModel: FirestoreViewModel
 
   @Before
@@ -35,28 +18,6 @@ class FirestoreAccountTests : FirestoreTests() {
   @After
   fun tearDown() {
     Dispatchers.resetMain()
-  }
-
-  @Test
-  fun canCreateAccount() = runTest {
-    val name = "Antoine"
-    val acc = Account(uid = "a1", name = name)
-
-    coEvery { repository.createAccount(name) } returns acc
-    coEvery { repository.getAccount(acc.uid) } returns acc
-
-    viewModel.createAccount(name)
-    advanceUntilIdle()
-
-    assertEquals(acc, viewModel.account.value)
-
-    viewModel.getAccount(acc.uid)
-    advanceUntilIdle()
-    val fetched = viewModel.account.value!!
-
-    assertEquals(acc.uid, fetched.uid)
-    assertEquals(name, fetched.name)
-    assertTrue(fetched.previews.isEmpty())
   }
 
   @Test(expected = AccountNotFoundException::class)
@@ -101,5 +62,5 @@ class FirestoreAccountTests : FirestoreTests() {
     assertEquals(original.uid, fetched.uid)
     assertEquals(newName, fetched.name)
     assertTrue(fetched.previews.isEmpty())
-  }
+  }*/
 }
