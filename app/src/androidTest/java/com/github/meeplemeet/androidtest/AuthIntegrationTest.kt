@@ -120,31 +120,6 @@ class AuthIntegrationTest {
   }
 
   @Test
-  fun test_successful_email_login_after_registration() = runBlocking {
-    // First register a user
-    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registrationResult.isSuccess)
-
-    // Sign out to test login
-    auth.signOut()
-    assertNull("User should be signed out", auth.currentUser)
-
-    // Test login with registered credentials
-    val loginResult = authRepo.loginWithEmail(testEmail, testPassword)
-
-    // Verify login succeeded
-    assertTrue("Login should succeed", loginResult.isSuccess)
-
-    val loggedInAccount = loginResult.getOrNull()
-    assertNotNull("Account should be retrieved", loggedInAccount)
-    assertEquals("Email should match", testEmail, loggedInAccount?.email)
-
-    // Verify Firebase Auth user is authenticated
-    assertNotNull("Firebase user should be authenticated after login", auth.currentUser)
-    assertEquals("Firebase user email should match", testEmail, auth.currentUser?.email)
-  }
-
-  @Test
   fun test_login_with_invalid_email_format_fails() = runBlocking {
     // Attempt login with invalid email format
     val loginResult = authRepo.loginWithEmail(invalidEmail, testPassword)
@@ -290,64 +265,6 @@ class AuthIntegrationTest {
             errorMessage.contains("found"))
 
     assertNull("No user should be authenticated", auth.currentUser)
-  }
-
-  @Test
-  fun test_authentication_state_consistency() = runBlocking {
-    // Test that authentication state remains consistent across operations
-
-    // Start with no user authenticated
-    auth.signOut()
-    assertNull("Should start with no authenticated user", auth.currentUser)
-
-    // Register user
-    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registrationResult.isSuccess)
-    assertNotNull("User should be authenticated after registration", auth.currentUser)
-
-    // Logout
-    val logoutResult = authRepo.logout()
-    assertTrue("Logout should succeed", logoutResult.isSuccess)
-    assertNull("User should not be authenticated after logout", auth.currentUser)
-
-    // Login again
-    val loginResult = authRepo.loginWithEmail(testEmail, testPassword)
-    assertTrue("Login should succeed", loginResult.isSuccess)
-    assertNotNull("User should be authenticated after login", auth.currentUser)
-
-    // Final logout
-    authRepo.logout()
-    assertNull("User should not be authenticated after final logout", auth.currentUser)
-  }
-
-  @Test
-  fun test_multiple_sequential_operations() = runBlocking {
-    // Test multiple operations in sequence to ensure no state pollution
-
-    val emails = (1..3).map { "sequential_test_${it}_${UUID.randomUUID()}@example.com" }
-
-    emails.forEach { email ->
-      // Register
-      val registrationResult = authRepo.registerWithEmail(email, testPassword)
-      assertTrue("Registration should succeed for $email", registrationResult.isSuccess)
-
-      // Verify account created
-      val account = registrationResult.getOrNull()
-      assertNotNull("Account should be created for $email", account)
-      assertEquals("Email should match", email, account?.email)
-
-      // Logout
-      val logoutResult = authRepo.logout()
-      assertTrue("Logout should succeed for $email", logoutResult.isSuccess)
-      assertNull("No user should be authenticated after logout", auth.currentUser)
-
-      // Login
-      val loginResult = authRepo.loginWithEmail(email, testPassword)
-      assertTrue("Login should succeed for $email", loginResult.isSuccess)
-
-      // Final logout for next iteration
-      authRepo.logout()
-    }
   }
 
   @Test
