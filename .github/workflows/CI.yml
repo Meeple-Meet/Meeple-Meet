@@ -252,7 +252,7 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest --parallel --build-cache
+          script: ./gradlew connectedAndroidTest --parallel --build-cache
 
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
@@ -344,9 +344,10 @@ jobs:
         run: |
           REPORT_PATH="app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
           if [ -f "$REPORT_PATH" ]; then
-            # Extract line coverage from the root report counter (first occurrence)
-            MISSED=$(grep -m 1 '<counter type="LINE"' "$REPORT_PATH" | sed -n 's/.*missed="\([0-9]*\)".*/\1/p')
-            COVERED=$(grep -m 1 '<counter type="LINE"' "$REPORT_PATH" | sed -n 's/.*covered="\([0-9]*\)".*/\1/p')
+            # Extract aggregate line coverage (last <counter type="LINE"> before </report>)
+            LAST_LINE=$(grep -o '<counter[^>]*>' "$REPORT_PATH" | grep 'type="LINE"' | tail -1)
+            MISSED=$(echo "$LAST_LINE" | sed -n 's/.*missed="\([0-9]*\)".*/\1/p')
+            COVERED=$(echo "$LAST_LINE" | sed -n 's/.*covered="\([0-9]*\)".*/\1/p')
             TOTAL=$((MISSED + COVERED))
             if [ $TOTAL -gt 0 ]; then
               PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", ($COVERED / $TOTAL) * 100}")
