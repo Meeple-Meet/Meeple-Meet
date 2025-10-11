@@ -1,11 +1,11 @@
 package com.github.meeplemeet.androidtest
 
-import android.util.Log
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.Authentication.AuthRepoFirebase
 import com.github.meeplemeet.MainActivity
+import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -52,7 +52,8 @@ class SignUpTest {
   fun setup() {
     auth = Firebase.auth
     firestore = Firebase.firestore
-    authRepo = AuthRepoFirebase()
+    val firestoreRepo = FirestoreRepository(firestore)
+    authRepo = AuthRepoFirebase(firestoreRepository = firestoreRepo)
 
     // Configure emulators
     try {
@@ -112,85 +113,6 @@ class SignUpTest {
     // Verify user is not authenticated
     assert(auth.currentUser == null)
   }
-
-  /*@Test
-  fun test_sign_up_with_weak_password_shows_error() {
-      navigateToSignUpScreen()
-
-      // Fill in weak password
-      composeTestRule.onNodeWithTag("email_field")
-          .performTextInput(testEmail)
-      composeTestRule.onNodeWithTag("password_field")
-          .performTextInput(weakPassword)
-      composeTestRule.onNodeWithTag("confirm_password_field")
-          .performTextInput(weakPassword)
-
-      // Click sign up button
-      composeTestRule.onNodeWithTag("sign_up_button")
-          .performClick()
-
-      composeTestRule.waitForIdle()
-
-      // Verify error message is displayed
-      composeTestRule.onNodeWithText("Password is too weak", substring = true)
-          .assertIsDisplayed()
-
-      // Verify user is not authenticated
-      assert(auth.currentUser == null)
-  }
-
-  @Test
-  fun test_sign_up_with_password_mismatch_shows_error() {
-      navigateToSignUpScreen()
-
-      // Fill in mismatched passwords
-      composeTestRule.onNodeWithTag("email_field")
-          .performTextInput(testEmail)
-      composeTestRule.onNodeWithTag("password_field")
-          .performTextInput(testPassword)
-      composeTestRule.onNodeWithTag("confirm_password_field")
-          .performTextInput(mismatchPassword)
-
-      // Click sign up button
-      composeTestRule.onNodeWithTag("sign_up_button")
-          .performClick()
-
-      composeTestRule.waitForIdle()
-
-      // Verify error message is displayed
-      composeTestRule.onNodeWithText("Passwords do not match", substring = true)
-          .assertIsDisplayed()
-
-      // Verify user is not authenticated
-      assert(auth.currentUser == null)
-  }
-
-  @Test
-  fun test_sign_up_with_existing_email_shows_error() = runBlocking {
-      // First register a user with the test email
-      authRepo.registerWithEmail(existingEmail, testPassword)
-      auth.signOut()
-
-      navigateToSignUpScreen()
-
-      // Try to register with the same email
-      composeTestRule.onNodeWithTag("email_field")
-          .performTextInput(existingEmail)
-      composeTestRule.onNodeWithTag("password_field")
-          .performTextInput(testPassword)
-      composeTestRule.onNodeWithTag("confirm_password_field")
-          .performTextInput(testPassword)
-
-      // Click sign up button
-      composeTestRule.onNodeWithTag("sign_up_button")
-          .performClick()
-
-      composeTestRule.waitForIdle()
-
-      // Verify error message is displayed
-      composeTestRule.onNodeWithText("Email already in use", substring = true)
-          .assertIsDisplayed()
-  }*/
 
   @Test
   fun test_sign_up_with_empty_fields_shows_validation_errors() {
@@ -325,11 +247,9 @@ class SignUpTest {
   private fun navigateToSignUpScreen() {
     composeTestRule.waitForIdle()
 
-    Log.d("Enes", "Attempting to navigate to sign up screen")
-
     // Try to navigate to sign up screen
     try {
-      composeTestRule.onNodeWithTag("sign_up_nav").performClick()
+      composeTestRule.onNodeWithTag("sign_up_button").performClick()
       composeTestRule.waitForIdle()
     } catch (e: Exception) {
       // If navigation fails, assume we're already on sign up or it's accessible differently

@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.Authentication.AuthRepoFirebase
 import com.github.meeplemeet.MainActivity
+import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -48,7 +49,8 @@ class SignInTest {
   fun setup() {
     auth = Firebase.auth
     firestore = Firebase.firestore
-    authRepo = AuthRepoFirebase()
+    val firestoreRepo = FirestoreRepository(firestore)
+    authRepo = AuthRepoFirebase(firestoreRepository = firestoreRepo)
 
     // Configure emulators
     try {

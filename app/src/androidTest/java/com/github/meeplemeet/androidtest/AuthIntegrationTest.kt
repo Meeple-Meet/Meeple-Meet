@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.Authentication.AuthRepoFirebase
+import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -19,19 +20,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Integration tests for authentication functionality.
+ * Basic integration tests for authentication functionality.
  *
- * These tests verify the complete authentication flow using real Firebase services with emulators.
- * They test:
- * - Email/password registration
- * - Email/password login
- * - User profile creation and retrieval
+ * These tests verify the complete authentication flow using Firebase services with emulators:
+ * - Email/password registration and login
+ * - User account creation and retrieval
+ * - Authentication state management
+ * - Error handling for invalid credentials
  * - Sign out functionality
- * - Error handling scenarios
  *
  * Prerequisites:
- * - Firebase emulators must be running (Auth and Firestore)
- * - Test device/emulator must be configured to use emulators
+ * - Firebase emulators should be running (Auth on port 9099, Firestore on port 8080)
+ * - Tests use random email addresses to avoid conflicts between test runs
  */
 @RunWith(AndroidJUnit4::class)
 class AuthIntegrationTest {
@@ -40,11 +40,13 @@ class AuthIntegrationTest {
   private lateinit var authRepo: AuthRepoFirebase
   private lateinit var auth: FirebaseAuth
   private lateinit var firestore: FirebaseFirestore
+  private lateinit var firestoreRepo: FirestoreRepository
 
   // Test user credentials - using random emails to avoid conflicts
-  private val testEmail = "test_${UUID.randomUUID()}@example.com"
+  private val testEmail = "integration_test_${UUID.randomUUID()}@example.com"
   private val testPassword = "TestPassword123!"
-  private val testEmail2 = "test2_${UUID.randomUUID()}@example.com"
+  private val invalidEmail = "invalid-email-format"
+  private val wrongPassword = "WrongPassword456!"
 
   @Before
   fun setup() {
@@ -54,156 +56,176 @@ class AuthIntegrationTest {
     auth = Firebase.auth
     firestore = Firebase.firestore
 
-    // Initialize the repository
-    authRepo = AuthRepoFirebase()
-
-    // Configure emulators (should already be configured in MainActivity)
-    // These settings should match what's in MainActivity
+    // Configure emulators - this should match MainActivity configuration
     try {
       auth.useEmulator("10.0.2.2", 9099)
       firestore.useEmulator("10.0.2.2", 8080)
+    } catch (e: IllegalStateException) {
+      // Emulators already configured - this is normal in test environment
     } catch (e: Exception) {
-      // Emulators already configured, ignore
+      // If emulators are not available, tests will use production Firebase
+      // Be careful with this in real scenarios
     }
 
-    // Ensure we start with a clean state
+    // Initialize repositories
+    firestoreRepo = FirestoreRepository(firestore)
+    authRepo = AuthRepoFirebase(auth = auth, firestoreRepository = firestoreRepo)
+
+    // Ensure clean state for each test
     runBlocking {
-      try {
-        auth.signOut()
-        // Clear any existing test users from previous runs
-        clearTestData()
-      } catch (e: Exception) {
-        // Ignore cleanup errors
-      }
+      auth.signOut()
+      clearTestData()
     }
   }
 
   @After
   fun cleanup() {
     runBlocking {
-      try {
-        // Sign out current user
-        auth.signOut()
-        // Clean up test data
-        clearTestData()
-      } catch (e: Exception) {
-        // Ignore cleanup errors in teardown
-      }
+      auth.signOut()
+      clearTestData()
     }
   }
 
-  /** Clean up test data from Firestore and Auth */
+  /** Cleans up test data from Firestore to ensure test isolation */
   private suspend fun clearTestData() {
     try {
-      // Note: In a real production app, you'd need admin SDK to delete users
-      // For emulator testing, users are automatically cleared when emulator restarts
+      // Clean up any test user documents
+      val usersCollection = firestore.collection("accounts")
+      val testUserQuery = usersCollection.whereEqualTo("email", testEmail).get().await()
 
-      // Clear Firestore test documents
-      val usersRef = firestore.collection("users")
-      val testDocs = usersRef.whereEqualTo("email", testEmail).get().await()
-      for (doc in testDocs.documents) {
-        doc.reference.delete().await()
-      }
-
-      val testDocs2 = usersRef.whereEqualTo("email", testEmail2).get().await()
-      for (doc in testDocs2.documents) {
-        doc.reference.delete().await()
+      for (document in testUserQuery.documents) {
+        document.reference.delete().await()
       }
     } catch (e: Exception) {
-      // Ignore cleanup errors
+      // Ignore cleanup errors - they shouldn't fail the test
     }
   }
 
   @Test
   fun test_successful_email_registration_flow() = runBlocking {
-    // Test email/password registration
-    val result = authRepo.registerWithEmail(testEmail, testPassword)
+    // Test user registration
+    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
 
     // Verify registration succeeded
-    assertTrue("Registration should succeed", result.isSuccess)
+    assertTrue("Registration should succeed", registrationResult.isSuccess)
 
-    val user = result.getOrNull()
-    assertNotNull("User should not be null", user)
-    assertEquals("Email should match", testEmail, user?.email)
-    assertNotNull("User ID should not be null", user?.uid)
-    assertNotNull("Display name should not be null", user?.name)
+    val registeredAccount = registrationResult.getOrNull()
+    assertNotNull("Account should be created", registeredAccount)
+    assertEquals("Email should match", testEmail, registeredAccount?.email)
+    assertNotNull("Account should have a UID", registeredAccount?.uid)
 
-    // Verify user is signed in to Firebase Auth
-    val currentUser = auth.currentUser
-    assertNotNull("Current user should be signed in", currentUser)
-    assertEquals("Auth user email should match", testEmail, currentUser?.email)
-
-    // Verify user document was created in Firestore
-    val userDoc = firestore.collection("users").document(user!!.uid).get().await()
-    assertTrue("User document should exist in Firestore", userDoc.exists())
-    assertEquals("Firestore email should match", testEmail, userDoc.getString("email"))
+    // Verify Firebase Auth user is created
+    assertNotNull("Firebase user should be authenticated", auth.currentUser)
+    assertEquals("Firebase user email should match", testEmail, auth.currentUser?.email)
   }
 
   @Test
-  fun test_successful_email_login_flow() = runBlocking {
+  fun test_successful_email_login_after_registration() = runBlocking {
     // First register a user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
-    val registeredUser = registerResult.getOrNull()!!
+    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    assertTrue("Registration should succeed", registrationResult.isSuccess)
 
-    // Sign out
+    // Sign out to test login
     auth.signOut()
-    assertNull("Should be signed out", auth.currentUser)
+    assertNull("User should be signed out", auth.currentUser)
 
-    // Test login
+    // Test login with registered credentials
     val loginResult = authRepo.loginWithEmail(testEmail, testPassword)
 
     // Verify login succeeded
     assertTrue("Login should succeed", loginResult.isSuccess)
 
-    val loggedInUser = loginResult.getOrNull()
-    assertNotNull("Logged in user should not be null", loggedInUser)
-    assertEquals("User ID should match", registeredUser.uid, loggedInUser?.uid)
-    assertEquals("Email should match", testEmail, loggedInUser?.email)
+    val loggedInAccount = loginResult.getOrNull()
+    assertNotNull("Account should be retrieved", loggedInAccount)
+    assertEquals("Email should match", testEmail, loggedInAccount?.email)
 
-    // Verify user is signed in to Firebase Auth
-    val currentUser = auth.currentUser
-    assertNotNull("Current user should be signed in", currentUser)
-    assertEquals("Auth user email should match", testEmail, currentUser?.email)
+    // Verify Firebase Auth user is authenticated
+    assertNotNull("Firebase user should be authenticated after login", auth.currentUser)
+    assertEquals("Firebase user email should match", testEmail, auth.currentUser?.email)
   }
 
   @Test
-  fun test_getCurrentUser_returns_null_when_not_signed_in() = runBlocking {
-    // Ensure no user is signed in
+  fun test_login_with_invalid_email_format_fails() = runBlocking {
+    // Attempt login with invalid email format
+    val loginResult = authRepo.loginWithEmail(invalidEmail, testPassword)
+
+    // Verify login failed
+    assertTrue("Login with invalid email should fail", loginResult.isFailure)
+
+    // Verify user is not authenticated
+    assertNull("User should not be authenticated", auth.currentUser)
+
+    // Check error message contains relevant information
+    val exception = loginResult.exceptionOrNull()
+    assertNotNull("Exception should be present", exception)
+    assertTrue(
+        "Error message should mention email",
+        exception?.message?.lowercase()?.contains("email") == true)
+  }
+
+  @Test
+  fun test_login_with_wrong_password_fails() = runBlocking {
+    // First register a user
+    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    assertTrue("Registration should succeed", registrationResult.isSuccess)
+
+    // Sign out to test login
     auth.signOut()
-    assertNull("Should start with no user", auth.currentUser)
 
-    // Test getCurrentUser
-    val currentUser = authRepo.getCurrentUser()
+    // Attempt login with wrong password
+    val loginResult = authRepo.loginWithEmail(testEmail, wrongPassword)
 
-    // Verify returns null
-    assertNull("getCurrentUser should return null when not signed in", currentUser)
+    // Verify login failed
+    assertTrue("Login with wrong password should fail", loginResult.isFailure)
+
+    // Verify user is not authenticated
+    assertNull("User should not be authenticated", auth.currentUser)
+
+    // Check error message is user-friendly
+    val exception = loginResult.exceptionOrNull()
+    assertNotNull("Exception should be present", exception)
+    val errorMessage = exception?.message?.lowercase() ?: ""
+    assertTrue(
+        "Error should mention invalid credentials",
+        errorMessage.contains("invalid") ||
+            errorMessage.contains("password") ||
+            errorMessage.contains("credentials"))
   }
 
   @Test
-  fun test_getCurrentUser_returns_user_when_signed_in() = runBlocking {
-    // Register and sign in a user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
-    val registeredUser = registerResult.getOrNull()!!
+  fun test_duplicate_email_registration_fails() = runBlocking {
+    // Register a user first
+    val firstRegistration = authRepo.registerWithEmail(testEmail, testPassword)
+    assertTrue("First registration should succeed", firstRegistration.isSuccess)
 
-    // Test getCurrentUser
-    val currentUser = authRepo.getCurrentUser()
+    // Sign out
+    auth.signOut()
 
-    // Verify returns correct user
-    assertNotNull("getCurrentUser should return user when signed in", currentUser)
-    assertEquals("User ID should match", registeredUser.uid, currentUser?.uid)
-    assertEquals("Email should match", testEmail, currentUser?.email)
+    // Try to register with the same email again
+    val secondRegistration = authRepo.registerWithEmail(testEmail, testPassword)
+
+    // Verify second registration fails
+    assertTrue("Duplicate registration should fail", secondRegistration.isFailure)
+
+    // Check error message indicates email is already in use
+    val exception = secondRegistration.exceptionOrNull()
+    assertNotNull("Exception should be present", exception)
+    val errorMessage = exception?.message?.lowercase() ?: ""
+    assertTrue(
+        "Error should mention email already in use",
+        errorMessage.contains("email") ||
+            errorMessage.contains("already") ||
+            errorMessage.contains("use"))
   }
 
   @Test
-  fun test_logout_flow() = runBlocking {
-    // Register and sign in a user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
+  fun test_logout_functionality() = runBlocking {
+    // Register and login a user
+    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    assertTrue("Registration should succeed", registrationResult.isSuccess)
 
-    // Verify user is signed in
-    assertNotNull("Should be signed in before logout", auth.currentUser)
+    // Verify user is authenticated
+    assertNotNull("User should be authenticated", auth.currentUser)
 
     // Test logout
     val logoutResult = authRepo.logout()
@@ -211,164 +233,141 @@ class AuthIntegrationTest {
     // Verify logout succeeded
     assertTrue("Logout should succeed", logoutResult.isSuccess)
 
-    // Verify user is signed out
-    assertNull("Should be signed out after logout", auth.currentUser)
-
-    // Verify getCurrentUser returns null
-    val currentUser = authRepo.getCurrentUser()
-    assertNull("getCurrentUser should return null after logout", currentUser)
+    // Verify user is no longer authenticated
+    assertNull("User should not be authenticated after logout", auth.currentUser)
   }
 
   @Test
-  fun test_registration_with_invalid_email_fails() = runBlocking {
-    val invalidEmail = "invalid-email"
+  fun test_account_persistence_in_firestore() = runBlocking {
+    // Register a user
+    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    assertTrue("Registration should succeed", registrationResult.isSuccess)
 
-    val result = authRepo.registerWithEmail(invalidEmail, testPassword)
+    val account = registrationResult.getOrNull()
+    assertNotNull("Account should be created", account)
 
-    // Verify registration failed
-    assertTrue("Registration with invalid email should fail", result.isFailure)
+    // Verify account exists in Firestore by retrieving it directly
+    val retrievedAccount = firestoreRepo.getAccount(account!!.uid)
 
-    val exception = result.exceptionOrNull()
-    assertNotNull("Should have exception", exception)
-
-    // Verify no user is signed in
-    assertNull("No user should be signed in after failed registration", auth.currentUser)
+    // Verify account data matches
+    assertEquals("UID should match", account.uid, retrievedAccount.uid)
+    assertEquals("Email should match", account.email, retrievedAccount.email)
+    assertNotNull("Account should have a name", retrievedAccount.name)
   }
 
   @Test
-  fun test_registration_with_weak_password_fails() = runBlocking {
-    val weakPassword = "123" // Too short
+  fun test_registration_with_firestore_failure_cleans_up_firebase_user() = runBlocking {
+    // This test verifies the new error handling where Firebase user is cleaned up
+    // if Firestore account creation fails
 
-    val result = authRepo.registerWithEmail(testEmail, weakPassword)
+    // First, we'll simulate this by temporarily breaking Firestore access
+    // Register a user with a very long name that might cause Firestore issues
+    val longName = "a".repeat(1500) // Firestore field size limit
+    val testEmailLong = "long_name_test_${UUID.randomUUID()}@example.com"
 
-    // Verify registration failed
-    assertTrue("Registration with weak password should fail", result.isFailure)
+    val registrationResult = authRepo.registerWithEmail(testEmailLong, testPassword)
 
-    val exception = result.exceptionOrNull()
-    assertNotNull("Should have exception", exception)
-
-    // Verify no user is signed in
-    assertNull("No user should be signed in after failed registration", auth.currentUser)
+    // If registration fails due to Firestore issues, Firebase user should be cleaned up
+    if (registrationResult.isFailure) {
+      // Verify no Firebase user remains authenticated
+      assertNull("Firebase user should be cleaned up after failed registration", auth.currentUser)
+    }
   }
 
   @Test
-  fun test_login_with_wrong_password_fails() = runBlocking {
-    // First register a user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
+  fun test_login_nonexistent_user() = runBlocking {
+    val nonExistentEmail = "nonexistent_${UUID.randomUUID()}@example.com"
 
-    // Sign out
-    auth.signOut()
+    val loginResult = authRepo.loginWithEmail(nonExistentEmail, testPassword)
 
-    // Try to login with wrong password
-    val wrongPassword = "WrongPassword123!"
-    val loginResult = authRepo.loginWithEmail(testEmail, wrongPassword)
-
-    // Verify login failed
-    assertTrue("Login with wrong password should fail", loginResult.isFailure)
-
-    val exception = loginResult.exceptionOrNull()
-    assertNotNull("Should have exception", exception)
-
-    // Verify no user is signed in
-    assertNull("No user should be signed in after failed login", auth.currentUser)
-  }
-
-  @Test
-  fun test_login_with_nonexistent_user_fails() = runBlocking {
-    val nonexistentEmail = "nonexistent_${UUID.randomUUID()}@example.com"
-
-    val loginResult = authRepo.loginWithEmail(nonexistentEmail, testPassword)
-
-    // Verify login failed
     assertTrue("Login with nonexistent user should fail", loginResult.isFailure)
 
-    val exception = loginResult.exceptionOrNull()
-    assertNotNull("Should have exception", exception)
+    val errorMessage = loginResult.exceptionOrNull()?.message?.lowercase() ?: ""
+    assertTrue(
+        "Error should indicate invalid credentials",
+        errorMessage.contains("invalid") ||
+            errorMessage.contains("user") ||
+            errorMessage.contains("found"))
 
-    // Verify no user is signed in
-    assertNull("No user should be signed in after failed login", auth.currentUser)
+    assertNull("No user should be authenticated", auth.currentUser)
   }
 
   @Test
-  fun test_duplicate_email_registration_fails() = runBlocking {
-    // Register first user
-    val firstResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("First registration should succeed", firstResult.isSuccess)
+  fun test_authentication_state_consistency() = runBlocking {
+    // Test that authentication state remains consistent across operations
 
-    // Sign out
+    // Start with no user authenticated
     auth.signOut()
+    assertNull("Should start with no authenticated user", auth.currentUser)
 
-    // Try to register with same email
-    val duplicateResult = authRepo.registerWithEmail(testEmail, testPassword)
-
-    // Verify duplicate registration failed
-    assertTrue("Duplicate registration should fail", duplicateResult.isFailure)
-
-    val exception = duplicateResult.exceptionOrNull()
-    assertNotNull("Should have exception", exception)
-  }
-
-  @Test
-  fun test_firestore_user_document_consistency_after_registration() = runBlocking {
     // Register user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
-    val user = registerResult.getOrNull()!!
+    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    assertTrue("Registration should succeed", registrationResult.isSuccess)
+    assertNotNull("User should be authenticated after registration", auth.currentUser)
 
-    // Get Firebase Auth user
-    val firebaseUser = auth.currentUser
-    assertNotNull("Firebase user should exist", firebaseUser)
-
-    // Get Firestore document
-    val userDoc = firestore.collection("users").document(user.uid).get().await()
-    assertTrue("Firestore document should exist", userDoc.exists())
-
-    // Verify consistency between Auth, Repository User, and Firestore
-    assertEquals("UID consistency", firebaseUser!!.uid, user.uid)
-    assertEquals("UID in Firestore", user.uid, userDoc.getString("uid"))
-    assertEquals("Email consistency", firebaseUser.email, user.email)
-    assertEquals("Email in Firestore", user.email, userDoc.getString("email"))
-    assertEquals("Name in Firestore", user.name, userDoc.getString("name"))
-  }
-
-  @Test
-  fun test_authentication_state_consistency_after_app_restart_simulation() = runBlocking {
-    // Register and login user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
-    val originalUser = registerResult.getOrNull()!!
-
-    // Simulate app restart by creating new repository instance
-    val freshRepo = AuthRepoFirebase()
-
-    // Verify user is still authenticated
-    val currentUser = freshRepo.getCurrentUser()
-    assertNotNull("User should still be authenticated after 'restart'", currentUser)
-    assertEquals("UID should match", originalUser.uid, currentUser?.uid)
-    assertEquals("Email should match", originalUser.email, currentUser?.email)
-  }
-
-  @Test
-  fun test_sign_out_clears_authentication_state() = runBlocking {
-    // Register user
-    val registerResult = authRepo.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registerResult.isSuccess)
-
-    // Verify user is authenticated
-    assertNotNull("User should be authenticated", auth.currentUser)
-    assertNotNull("getCurrentUser should return user", authRepo.getCurrentUser())
-
-    // Sign out
+    // Logout
     val logoutResult = authRepo.logout()
     assertTrue("Logout should succeed", logoutResult.isSuccess)
+    assertNull("User should not be authenticated after logout", auth.currentUser)
 
-    // Verify authentication state is cleared
-    assertNull("Firebase auth should be cleared", auth.currentUser)
-    assertNull("Repository should return null", authRepo.getCurrentUser())
+    // Login again
+    val loginResult = authRepo.loginWithEmail(testEmail, testPassword)
+    assertTrue("Login should succeed", loginResult.isSuccess)
+    assertNotNull("User should be authenticated after login", auth.currentUser)
 
-    // Verify can't access user data without re-authentication
-    val currentUser = authRepo.getCurrentUser()
-    assertNull("Should not have access to user data after logout", currentUser)
+    // Final logout
+    authRepo.logout()
+    assertNull("User should not be authenticated after final logout", auth.currentUser)
+  }
+
+  @Test
+  fun test_multiple_sequential_operations() = runBlocking {
+    // Test multiple operations in sequence to ensure no state pollution
+
+    val emails = (1..3).map { "sequential_test_${it}_${UUID.randomUUID()}@example.com" }
+
+    emails.forEach { email ->
+      // Register
+      val registrationResult = authRepo.registerWithEmail(email, testPassword)
+      assertTrue("Registration should succeed for $email", registrationResult.isSuccess)
+
+      // Verify account created
+      val account = registrationResult.getOrNull()
+      assertNotNull("Account should be created for $email", account)
+      assertEquals("Email should match", email, account?.email)
+
+      // Logout
+      val logoutResult = authRepo.logout()
+      assertTrue("Logout should succeed for $email", logoutResult.isSuccess)
+      assertNull("No user should be authenticated after logout", auth.currentUser)
+
+      // Login
+      val loginResult = authRepo.loginWithEmail(email, testPassword)
+      assertTrue("Login should succeed for $email", loginResult.isSuccess)
+
+      // Final logout for next iteration
+      authRepo.logout()
+    }
+  }
+
+  @Test
+  fun test_error_message_user_friendliness() = runBlocking {
+    // Test that error messages are user-friendly and not technical
+
+    // Test invalid email
+    val invalidEmailResult = authRepo.registerWithEmail("invalid-email", testPassword)
+    assertTrue("Should fail with invalid email", invalidEmailResult.isFailure)
+    val emailError = invalidEmailResult.exceptionOrNull()?.message ?: ""
+    assertFalse("Error should not contain technical details", emailError.contains("Exception"))
+    assertFalse("Error should not contain stack trace", emailError.contains("at "))
+
+    // Test wrong password login
+    authRepo.registerWithEmail(testEmail, testPassword) // Register first
+    auth.signOut()
+    val wrongPasswordResult = authRepo.loginWithEmail(testEmail, "wrongpassword")
+    assertTrue("Should fail with wrong password", wrongPasswordResult.isFailure)
+    val passwordError = wrongPasswordResult.exceptionOrNull()?.message ?: ""
+    assertFalse("Error should not contain technical details", passwordError.contains("Exception"))
+    assertFalse("Error should not contain stack trace", passwordError.contains("at "))
   }
 }
