@@ -13,11 +13,15 @@ import com.github.meeplemeet.model.structures.Game
 interface GameRepository {
 
   /**
-   * Retrieves all games available in the repository.
+   * Retrieves a subset of games from the repository, without any filtering criteria.
    *
-   * @return a [List] of all [Game] objects.
+   * This method returns up to [maxResults] games, making it suitable for UI lists, previews, or any
+   * situation where fetching all games is unnecessary.
+   *
+   * @param maxResults the maximum number of games to return (default: 10).
+   * @return a [List] of [Game] objects, containing at most [maxResults] items.
    */
-  suspend fun getAllGames(): List<Game>
+  suspend fun getGames(maxResults: Int = 10): List<Game>
 
   /**
    * Retrieves a [Game] by its unique identifier.
@@ -29,7 +33,7 @@ interface GameRepository {
   suspend fun getGameById(gameID: String): Game
 
   /**
-   * Retrieves a [Game] by its name.
+   * Retrieves a [Game] by its exact name.
    *
    * @param name the exact name of the game to search for.
    * @return the matching [Game] object, or null if no game with the given name exists.
@@ -37,16 +41,19 @@ interface GameRepository {
   suspend fun getGameByName(name: String): Game?
 
   /**
-   * Retrieves all games that are associated with a specific genre.
+   * Retrieves games that include a specific genre ID.
+   *
+   * Returns up to [maxResults] items.
    *
    * @param genreID the ID of the genre to filter by (e.g., corresponding to an internal enum or
    *   tag).
+   * @param maxResults the maximum number of results to return (default: 10).
    * @return a [List] of [Game] objects that include the specified genre.
    */
-  suspend fun getGamesByGenre(genreID: Int): List<Game>
+  suspend fun getGamesByGenre(genreID: Int, maxResults: Int = 10): List<Game>
 
   /**
-   * Retrieves all games that are associated with **all** of the specified genres.
+   * Retrieves games that include **all** of the specified genre IDs.
    *
    * This method performs an **exclusive match**: only games that have every genre ID in [genreIDs]
    * will be returned.
@@ -55,8 +62,34 @@ interface GameRepository {
    * 3 will be included in the result. Games that have only a subset of these genres will not be
    * returned.
    *
+   * Returns up to [maxResults] items.
+   *
    * @param genreIDs a [List] of genre IDs to filter by.
+   * @param maxResults the maximum number of results to return (default: 10).
    * @return a [List] of [Game] objects that match all specified genres.
    */
-  suspend fun getGamesByGenres(genreIDs: List<Int>): List<Game>
+  suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int = 10): List<Game>
+
+  /**
+   * Searches for games whose names contain the specified [query].
+   *
+   * This method performs a substring search on the game names, allowing the caller to choose
+   * whether the comparison should ignore case sensitivity.
+   *
+   * For example, searching for `"cat"` with [ignoreCase] set to `true` will match `"Catan"`, `"Cat
+   * Lady"`, and `"Concatenate"`. When [ignoreCase] is `false`,only exact casing matches are
+   * returned.
+   *
+   * Returns up to [maxResults] results, making it suitable for live search or autocomplete.
+   *
+   * @param query the substring of the game name to search for.
+   * @param maxResults the maximum number of results to return (default: 5).
+   * @param ignoreCase whether to ignore case when matching names (default: true).
+   * @return a [List] of [Game] objects whose names contain the specified substring.
+   */
+  suspend fun searchGamesByNameContains(
+      query: String,
+      maxResults: Int = 10,
+      ignoreCase: Boolean = true
+  ): List<Game>
 }
