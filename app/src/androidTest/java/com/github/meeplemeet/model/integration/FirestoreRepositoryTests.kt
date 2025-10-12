@@ -28,9 +28,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun setup() {
     repository = FirestoreRepository(Firebase.firestore)
     runBlocking {
-      testAccount1 = repository.createAccount("Alice")
-      testAccount2 = repository.createAccount("Bob")
-      testAccount3 = repository.createAccount("Charlie")
+      testAccount1 = repository.createAccount("Alice", email = "Alice@example.com", photoUrl = null)
+      testAccount2 = repository.createAccount("Bob", email = "Bob@example.com", photoUrl = null)
+      testAccount3 =
+          repository.createAccount("Charlie", email = "Charlie@example.com", photoUrl = null)
     }
   }
 
@@ -212,7 +213,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun createAccountCreatesNewAccount() = runBlocking {
-    val account = repository.createAccount("TestUser")
+    val account =
+        repository.createAccount("TestUser", email = "TestUser@example.com", photoUrl = null)
 
     assertNotNull(account.uid)
     assertEquals("TestUser", account.name)
@@ -221,7 +223,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun getAccountRetrievesExistingAccount() = runBlocking {
-    val created = repository.createAccount("TestUser")
+    val created =
+        repository.createAccount("TestUser", email = "TestUser@example.com", photoUrl = null)
 
     val fetched = repository.getAccount(created.uid)
 
@@ -241,7 +244,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun setAccountNameUpdatesName() = runBlocking {
-    val account = repository.createAccount("OldName")
+    val account =
+        repository.createAccount("OldName", email = "OldName@example.com", photoUrl = null)
 
     val updated = repository.setAccountName(account.uid, "NewName")
 
@@ -251,7 +255,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun deleteAccountRemovesAccount() = runBlocking {
-    val account = repository.createAccount("TestUser")
+    val account =
+        repository.createAccount("TestUser", email = "TestUser@example.com", photoUrl = null)
 
     repository.deleteAccount(account.uid)
 

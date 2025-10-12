@@ -221,11 +221,6 @@ class FirestoreViewModel(
     }
   }
 
-  /** Create a new account. */
-  fun createAccount(name: String) {
-    viewModelScope.launch { _account.value = repository.createAccount(name.ifBlank { "~" }) }
-  }
-
   /** Retrieve an account by ID. */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")

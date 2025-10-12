@@ -220,9 +220,11 @@ class FirestoreRepository(db: FirebaseFirestore) {
   }
 
   /** Create a new account document. */
-  suspend fun createAccount(name: String): Account {
-    val account = Account(accountUID(), name)
-    accounts.document(account.uid).set(mapOf("name" to account.name)).await()
+  suspend fun createAccount(name: String, email: String, photoUrl: String?): Account {
+    val account =
+        Account(accountUID(), name, email = email, photoUrl = photoUrl, description = null)
+    val accountNoUid = AccountNoUid(name, email, photoUrl, description = null)
+    accounts.document(account.uid).set(accountNoUid).await()
     return account
   }
 
