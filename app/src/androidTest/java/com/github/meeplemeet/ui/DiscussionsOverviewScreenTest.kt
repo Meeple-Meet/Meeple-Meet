@@ -281,7 +281,7 @@ class DiscussionsOverviewScreenTest {
         DiscussionPreview(
             uid = "d2",
             lastMessage = "See you!",
-            lastMessageSender = "u3", // Zoe
+            lastMessageSender = "u3",
             lastMessageAt = Timestamp.now(),
             unreadCount = 2)
     previewMap[me.uid]!!.value = mapOf("d2" to pKnown)
@@ -494,7 +494,6 @@ class DiscussionsOverviewScreenTest {
 
   @Test
   fun overview_discussion_title_updates_from_default_when_flow_goes_from_null_to_value() {
-    // Prepare a preview d5 with null discussion flow, then later provide a Discussion
     val previewStatesField = vm::class.java.getDeclaredField("previewStates")
     previewStatesField.isAccessible = true
     @Suppress("UNCHECKED_CAST")
@@ -554,7 +553,7 @@ class DiscussionsOverviewScreenTest {
         DiscussionPreview(
             uid = "d1",
             lastMessage = "",
-            lastMessageSender = me.uid, // isMe = true
+            lastMessageSender = me.uid,
             lastMessageAt = Timestamp.now(),
             unreadCount = 4)
     previews[me.uid]!!.value = mapOf("d1" to pBlankMine)
@@ -563,7 +562,6 @@ class DiscussionsOverviewScreenTest {
       AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
     }
     compose.waitForIdle()
-    // Placeholder but NO "You:" prefix anywhere
     compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
     compose.onNodeWithText("You:", substring = true).assertDoesNotExist()
     compose.onNodeWithText("4").assertIsDisplayed()
