@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 
 object SignInScreenTestTags {
@@ -49,7 +48,6 @@ object SignInScreenTestTags {
  * The screen integrates with AuthViewModel to handle authentication logic and displays appropriate
  * UI states based on the authentication status.
  *
- * @param navController Navigation controller for screen transitions
  * @param viewModel Authentication view model that manages auth state and operations
  * @param context Android context, used for Credential Manager and other platform services
  * @param credentialManager Credential manager instance for Google sign-in
@@ -59,9 +57,9 @@ object SignInScreenTestTags {
 fun SignInScreen(
     viewModel: AuthViewModel,
     modifier: Modifier = Modifier,
-    navController: NavController = NavController(LocalContext.current),
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
+    onSignUpClick: () -> Unit = {},
 ) {
   // Local state management for form inputs and validation
   var email by remember { mutableStateOf("") }
@@ -279,7 +277,7 @@ fun SignInScreen(
               color = MaterialTheme.colorScheme.primary,
               modifier =
                   Modifier.testTag(SignInScreenTestTags.SIGN_UP_BUTTON).clickable {
-                    navController.navigate("sign_up")
+                    onSignUpClick()
                   } // Navigate to sign-up screen
               )
         }

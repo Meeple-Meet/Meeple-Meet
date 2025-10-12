@@ -43,7 +43,7 @@ object UITestTags {
 }
 
 /**
- * Displays the discussion settings screen, allowing users to view and edit discussion details,
+ * Displays the discussion infos screen, allowing users to view and edit discussion details,
  * manage members, and perform actions such as deleting or leaving the discussion.
  *
  * @param viewModel The FirestoreViewModel for data operations.
@@ -55,7 +55,10 @@ fun DiscussionSettingScreen(
     viewModel: FirestoreViewModel,
     discussionId: String,
     currentAccount: Account,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
+    onLeave: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
   val coroutineScope = rememberCoroutineScope()
 
@@ -100,6 +103,7 @@ fun DiscussionSettingScreen(
       dropdownExpanded = false
       return@LaunchedEffect
     }
+
     isSearching = true
     viewModel.searchByHandle(searchQuery)
     viewModel.handleSuggestions.collect { list ->
@@ -125,14 +129,12 @@ fun DiscussionSettingScreen(
               /**
                * Save Name and Description on back — this is the only time the DB is updated here
                */
-              /**
-               * Save Name and Description on back — this is the only time the DB is updated here
-               */
               onReturn = {
                 viewModel.setDiscussionName(
                     discussion = d, name = newName, changeRequester = currentAccount)
                 viewModel.setDiscussionDescription(
                     discussion = d, description = newDesc, changeRequester = currentAccount)
+                onBack()
               }
               /*Todo: navigation back*/ )
         },
@@ -310,8 +312,8 @@ fun DiscussionSettingScreen(
                             /** Only owner can delete */
                             onClick = {
                               coroutineScope.launch {
-                                /*Todo: navigation to other screen after deletion*/
                                 viewModel.deleteDiscussion(d, currentAccount)
+                                onDelete()
                               }
                               showDeleteDialog = false
                             }) {
@@ -341,7 +343,7 @@ fun DiscussionSettingScreen(
                                 /** leave discussion */
                                 viewModel.removeUserFromDiscussion(
                                     d, currentAccount, currentAccount)
-                                /*Todo: navigation to next screen after leaving the group*/
+                                onLeave()
                               }
                               showLeaveDialog = false
                             }) {
@@ -558,6 +560,7 @@ fun MemberList(
               Box(
                   modifier = Modifier.size(36.dp).clip(CircleShape).background(AppColors.primary),
                   contentAlignment = Alignment.Center) {
+
                     /** First letter of name or A if name is empty */
                     Text(
                         text = member.name.firstOrNull()?.toString() ?: "A",

@@ -22,7 +22,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
-import androidx.navigation.NavController
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 
 object SignUpScreenTestTags {
@@ -53,7 +52,6 @@ object SignUpScreenTestTags {
  * - Password confirmation matching
  * - Immediate feedback on validation errors
  *
- * @param navController Navigation controller for screen transitions
  * @param viewModel Authentication view model that manages auth state and operations
  * @param context Android context, used for Credential Manager and other platform services
  * @param credentialManager Credential manager instance for Google sign-up
@@ -61,10 +59,10 @@ object SignUpScreenTestTags {
  */
 @Composable
 fun SignUpScreen(
-    navController: NavController = NavController(LocalContext.current),
     viewModel: AuthViewModel,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
+    onLogInClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
   // Local state management for form inputs and validation
@@ -337,7 +335,7 @@ fun SignUpScreen(
           Text(
               text = "Log in.",
               color = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.clickable { navController.navigate("SignInScreen") })
+              modifier = Modifier.clickable { onLogInClick() })
         }
 
         // Bottom spacing

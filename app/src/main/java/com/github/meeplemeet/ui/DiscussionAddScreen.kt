@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
@@ -39,7 +40,7 @@ import kotlinx.coroutines.launch
 @SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddDiscussionScreen(
+fun DiscussionAddScreen(
     onBack: () -> Unit,
     onCreate: () -> Unit,
     viewModel: FirestoreViewModel,
@@ -98,7 +99,7 @@ fun AddDiscussionScreen(
                       containerColor = AppColors.primary,
                       titleContentColor = AppColors.textIcons,
                       navigationIconContentColor = AppColors.textIcons),
-              title = { Text(text = "Add Discussion") },
+              title = { Text(text = MeepleMeetScreen.DiscussionAddScreen.title) },
               navigationIcon = {
                 IconButton(onClick = onBack) {
                   Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

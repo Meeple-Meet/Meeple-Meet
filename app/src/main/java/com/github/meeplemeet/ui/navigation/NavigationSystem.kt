@@ -20,9 +20,7 @@ import androidx.navigation.NavHostController
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
   const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
-  const val GO_BACK_BUTTON = "GoBackButton"
-  const val TOP_BAR_TITLE = "TopBarTitle"
-  const val SESSIONS_TAB = "OverviewTab"
+    const val SESSIONS_TAB = "OverviewTab"
   const val DISCUSSIONS_TAB = "MapTab"
   const val DISCOVER_TAB = "DiscoverTab"
   const val PROFILE_TAB = "ProfileTab"
@@ -129,8 +127,8 @@ enum class MeepleMeetScreen(
       isInBottomBar = false,
       icon = null,
       testTag = null),
-  DiscussionEditScreen(
-      route = "discussion_edit/{discussionId}",
+  DiscussionInfoScreen(
+      route = "discussion_info/{discussionId}",
       title = "Edit Discussion",
       isInBottomBar = false,
       icon = null,
