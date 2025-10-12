@@ -287,7 +287,6 @@ class FirestoreViewModel(
    * Emits a new map whenever any preview changes in Firestore.
    */
   fun previewsFlow(accountId: String): StateFlow<Map<String, DiscussionPreview>> {
-    previewStates.keys.clear()
     return previewStates.getOrPut(accountId) {
       repository
           .listenMyPreviews(accountId)
