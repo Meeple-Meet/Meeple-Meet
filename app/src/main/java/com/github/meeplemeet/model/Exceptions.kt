@@ -11,3 +11,6 @@ class AccountNotFoundException(message: String) : Exception(message)
 
 /** Thrown when a user attempts an action they do not have permission to perform. */
 class PermissionDeniedException(message: String) : Exception(message)
+
+/** Thrown when a game cannot be found in Firestore by the requested ID. */
+class GameNotFoundException(message: String) : Exception(message)
