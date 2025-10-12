@@ -8,8 +8,6 @@ import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.github.meeplemeet.model.utils.FirestoreTests
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.firestore
 import io.mockk.coEvery
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
@@ -38,11 +36,12 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    val repo = FirestoreRepository(Firebase.firestore)
     runBlocking {
-      account1 = Account(uid = "a1", name = "Antoine", email = "Antoine@example.com")
-      account2 = Account(uid = "a2", name = "Marco", email = "Marco@example.com")
-      account3 = Account(uid = "a3", name = "Thomas", email = "Thomas@example.com")
+      account1 =
+          Account(uid = "a1", userHandle = "a1", name = "Antoine", email = "Antoine@example.com")
+      account2 = Account(uid = "a2", userHandle = "a2", name = "Marco", email = "Marco@example.com")
+      account3 =
+          Account(uid = "a3", userHandle = "a3", name = "Thomas", email = "Thomas@example.com")
     }
     Dispatchers.setMain(StandardTestDispatcher())
     viewModel = FirestoreViewModel(repository)
@@ -55,7 +54,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
   @Test
   fun canAddDiscussion() = runTest {
-    val acc = Account(uid = "a1", name = "Alice", email = "Alice@example.com")
+    val acc = Account(uid = "a1", userHandle = "a1", name = "Alice", email = "Alice@example.com")
     val disc =
         Discussion(
             uid = "d1",

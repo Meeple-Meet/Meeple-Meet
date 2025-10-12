@@ -1,4 +1,4 @@
-package com.github.meeplemeet.Authentication
+package com.github.meeplemeet.model.systems
 
 import android.os.Bundle
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential

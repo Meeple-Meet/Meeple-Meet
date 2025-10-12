@@ -14,6 +14,7 @@ import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Before
 import org.junit.Test
@@ -28,10 +29,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun setup() {
     repository = FirestoreRepository(Firebase.firestore)
     runBlocking {
-      testAccount1 = repository.createAccount("Alice", email = "Alice@example.com", photoUrl = null)
-      testAccount2 = repository.createAccount("Bob", email = "Bob@example.com", photoUrl = null)
+      testAccount1 =
+          repository.createAccount("Alice", "Alice", email = "Alice@example.com", photoUrl = null)
+      testAccount2 =
+          repository.createAccount("Bob", "Bob", email = "Bob@example.com", photoUrl = null)
       testAccount3 =
-          repository.createAccount("Charlie", email = "Charlie@example.com", photoUrl = null)
+          repository.createAccount(
+              "Charlie", "Charlie", email = "Charlie@example.com", photoUrl = null)
     }
   }
 
@@ -61,14 +65,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(created.description, fetched.description)
   }
 
-  @Test
-  fun getDiscussionThrowsForNonExistentDiscussion() = runBlocking {
-    try {
-      repository.getDiscussion("nonexistent-id")
-      throw AssertionError("Expected DiscussionNotFoundException")
-    } catch (e: DiscussionNotFoundException) {
-      // Expected
-    }
+  @Test(expected = DiscussionNotFoundException::class)
+  fun getDiscussionThrowsForNonExistentDiscussion() = runTest {
+    repository.getDiscussion("nonexistent-id")
   }
 
   @Test
@@ -91,18 +90,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(discussion.uid, updated.uid)
   }
 
-  @Test
-  fun deleteDiscussionRemovesDiscussion() = runBlocking {
+  @Test(expected = DiscussionNotFoundException::class)
+  fun deleteDiscussionRemovesDiscussion() = runTest {
     val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
     repository.deleteDiscussion(discussion.uid)
-
-    try {
-      repository.getDiscussion(discussion.uid)
-      throw AssertionError("Expected DiscussionNotFoundException")
-    } catch (e: DiscussionNotFoundException) {
-      // Expected
-    }
+    repository.getDiscussion(discussion.uid)
   }
 
   @Test
@@ -214,7 +207,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun createAccountCreatesNewAccount() = runBlocking {
     val account =
-        repository.createAccount("TestUser", email = "TestUser@example.com", photoUrl = null)
+        repository.createAccount(
+            "TestUser", "TestUser", email = "TestUser@example.com", photoUrl = null)
 
     assertNotNull(account.uid)
     assertEquals("TestUser", account.name)
@@ -224,7 +218,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun getAccountRetrievesExistingAccount() = runBlocking {
     val created =
-        repository.createAccount("TestUser", email = "TestUser@example.com", photoUrl = null)
+        repository.createAccount(
+            "TestUser", "TestUser", email = "TestUser@example.com", photoUrl = null)
 
     val fetched = repository.getAccount(created.uid)
 
@@ -232,20 +227,14 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(created.name, fetched.name)
   }
 
-  @Test
-  fun getAccountThrowsForNonExistentAccount() = runBlocking {
-    try {
-      repository.getAccount("nonexistent-id")
-      throw AssertionError("Expected AccountNotFoundException")
-    } catch (e: AccountNotFoundException) {
-      // Expected
-    }
-  }
+  @Test(expected = AccountNotFoundException::class)
+  fun getAccountThrowsForNonExistentAccount() = runTest { repository.getAccount("nonexistent-id") }
 
   @Test
   fun setAccountNameUpdatesName() = runBlocking {
     val account =
-        repository.createAccount("OldName", email = "OldName@example.com", photoUrl = null)
+        repository.createAccount(
+            "OldName", "OldName", email = "OldName@example.com", photoUrl = null)
 
     val updated = repository.setAccountName(account.uid, "NewName")
 
@@ -253,19 +242,14 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(account.uid, updated.uid)
   }
 
-  @Test
-  fun deleteAccountRemovesAccount() = runBlocking {
+  @Test(expected = AccountNotFoundException::class)
+  fun deleteAccountRemovesAccount() = runTest {
     val account =
-        repository.createAccount("TestUser", email = "TestUser@example.com", photoUrl = null)
+        repository.createAccount(
+            "TestUser", "TestUser", email = "TestUser@example.com", photoUrl = null)
 
     repository.deleteAccount(account.uid)
-
-    try {
-      repository.getAccount(account.uid)
-      throw AssertionError("Expected AccountNotFoundException")
-    } catch (e: AccountNotFoundException) {
-      // Expected
-    }
+    repository.getAccount(account.uid)
   }
 
   @Test
@@ -295,7 +279,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun listenMyPreviewsEmitsPreviewUpdates() = runBlocking {
-    val (account, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
     val flow = repository.listenMyPreviews(testAccount1.uid)
     val firstEmission = withTimeout(5000) { flow.first() }

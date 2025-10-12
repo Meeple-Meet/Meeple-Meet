@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.SnackbarHost
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.*
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,17 +76,17 @@ fun AddDiscussionScreen(
     isSearching = false
   }
 
-  val scaffoldState = rememberScaffoldState()
+  val snackbarHostState = remember { SnackbarHostState() }
 
   LaunchedEffect(creationError) {
     creationError?.let {
-      scaffoldState.snackbarHostState.showSnackbar(it)
+      snackbarHostState.showSnackbar(it)
       creationError = null
     }
   }
 
   Scaffold(
-      snackbarHost = { SnackbarHost(hostState = scaffoldState.snackbarHostState) },
+      snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
       containerColor = AppColors.primary,
       topBar = {
         Column {
@@ -308,7 +308,7 @@ fun AddDiscussionScreen(
                                   title, description, currentUser, *selectedMembers.toTypedArray())
                               isCreating = false
                               onCreate()
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                               isCreating = false
                               creationError = "Failed to create discussion"
                             }
@@ -350,13 +350,13 @@ fun AddDiscussionScreen(
 fun fakeSearchAccounts(query: String): List<Account> {
   val allAccounts =
       listOf(
-          Account("1", "Alice", email = "Alice@example.com"),
-          Account("2", "Bob", email = "Bob@example.com"),
-          Account("3", "Charlie", email = "Alice@example.com"),
-          Account("4", "David", email = "David@example.com"),
-          Account("5", "Eve", email = "Eve@example.com"),
-          Account("6", "Frank", email = "Frank@example.com"),
-          Account("7", "Grace", email = "Grace@example.com"),
-          Account("8", "Heidi", email = "Heidi@example.com"))
+          Account("1", "1", "Alice", email = "Alice@example.com"),
+          Account("2", "2", "Bob", email = "Bob@example.com"),
+          Account("3", "3", "Charlie", email = "Alice@example.com"),
+          Account("4", "4", "David", email = "David@example.com"),
+          Account("5", "5", "Eve", email = "Eve@example.com"),
+          Account("6", "6", "Frank", email = "Frank@example.com"),
+          Account("7", "7", "Grace", email = "Grace@example.com"),
+          Account("8", "8", "Heidi", email = "Heidi@example.com"))
   return allAccounts.filter { it.name.contains(query, ignoreCase = true) }
 }

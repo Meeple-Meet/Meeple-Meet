@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /** Firestore data access layer for accounts, discussions, and messages. */
+const val HANDLES_COLLECTION_PATH = "handles"
 const val ACCOUNT_COLLECTION_PATH = "accounts"
 const val DISCUSSIONS_COLLECTION_PATH = "discussions"
 
@@ -25,10 +26,9 @@ const val DISCUSSIONS_COLLECTION_PATH = "discussions"
 class FirestoreRepository(db: FirebaseFirestore) {
   private val accounts = db.collection(ACCOUNT_COLLECTION_PATH)
   private val discussions = db.collection(DISCUSSIONS_COLLECTION_PATH)
+  private val handles = db.collection(HANDLES_COLLECTION_PATH)
 
   private fun newDiscussionUID(): String = discussions.document().id
-
-  private fun accountUID(): String = accounts.document().id // Normally Firebase.auth.uid
 
   /** Create a new discussion and store an empty preview for the creator. */
   suspend fun createDiscussion(
@@ -220,11 +220,18 @@ class FirestoreRepository(db: FirebaseFirestore) {
   }
 
   /** Create a new account document. */
-  suspend fun createAccount(name: String, email: String, photoUrl: String?): Account {
+  suspend fun createAccount(
+      userHandle: String,
+      name: String,
+      email: String,
+      photoUrl: String?
+  ): Account {
     val account =
-        Account(accountUID(), name, email = email, photoUrl = photoUrl, description = null)
-    val accountNoUid = AccountNoUid(name, email, photoUrl, description = null)
+        Account(
+            userHandle, userHandle, name, email = email, photoUrl = photoUrl, description = null)
+    val accountNoUid = AccountNoUid(userHandle, name, email, photoUrl, description = null)
     accounts.document(account.uid).set(accountNoUid).await()
+    handles.document(account.uid).set("").await()
     return account
   }
 
@@ -242,11 +249,6 @@ class FirestoreRepository(db: FirebaseFirestore) {
         }
 
     return fromNoUid(id, account, previews)
-  }
-
-  /** Convenience for current signed-in account. */
-  suspend fun getCurrentAccount(): Account {
-    return getAccount(accountUID())
   }
 
   /** Update account display name. */
