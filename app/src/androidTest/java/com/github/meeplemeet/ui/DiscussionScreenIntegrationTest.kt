@@ -36,7 +36,7 @@ class DiscussionScreenIntegrationTest {
     testScope = TestScope(dispatcher)
     repository = mockk(relaxed = true)
     mockNavigation = mockk(relaxed = true)
-    currentUser = Account(uid = "user1", name = "Alice")
+    currentUser = Account(uid = "user1", name = "Alice", email = "Alice@example.com")
 
     val messages =
         listOf(
