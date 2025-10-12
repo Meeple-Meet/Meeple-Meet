@@ -2,9 +2,9 @@ package com.github.meeplemeet.androidtest
 
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.Authentication.AuthRepoFirebase
 import com.github.meeplemeet.model.systems.FirestoreRepository
+import com.github.meeplemeet.model.utils.FirestoreTests
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
  * - Tests use random email addresses to avoid conflicts between test runs
  */
 @RunWith(AndroidJUnit4::class)
-class AuthIntegrationTest {
+class AuthIntegrationTest : FirestoreTests() {
 
   private lateinit var context: Context
   private lateinit var authRepo: AuthRepoFirebase
@@ -50,22 +50,9 @@ class AuthIntegrationTest {
 
   @Before
   fun setup() {
-    context = InstrumentationRegistry.getInstrumentation().targetContext
-
     // Get Firebase instances
     auth = Firebase.auth
     firestore = Firebase.firestore
-
-    // Configure emulators - this should match MainActivity configuration
-    try {
-      auth.useEmulator("10.0.2.2", 9099)
-      firestore.useEmulator("10.0.2.2", 8080)
-    } catch (e: IllegalStateException) {
-      // Emulators already configured - this is normal in test environment
-    } catch (e: Exception) {
-      // If emulators are not available, tests will use production Firebase
-      // Be careful with this in real scenarios
-    }
 
     // Initialize repositories
     firestoreRepo = FirestoreRepository(firestore)
@@ -237,7 +224,6 @@ class AuthIntegrationTest {
 
     // First, we'll simulate this by temporarily breaking Firestore access
     // Register a user with a very long name that might cause Firestore issues
-    val longName = "a".repeat(1500) // Firestore field size limit
     val testEmailLong = "long_name_test_${UUID.randomUUID()}@example.com"
 
     val registrationResult = authRepo.registerWithEmail(testEmailLong, testPassword)
