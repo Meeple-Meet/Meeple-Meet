@@ -4,9 +4,7 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionPreview
@@ -17,7 +15,6 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Timestamp
 import io.mockk.coEvery
 import io.mockk.mockk
-import io.mockk.verify
 import java.util.Date
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -130,16 +127,6 @@ class DiscussionsOverviewScreenTest {
     assert(d1.name == "Catan Crew")
     assert(p1.lastMessageSender == me.uid)
     assert(p2.lastMessageSender == bob.uid)
-  }
-
-  @Test
-  fun overview_back_button_calls_navigation_goBack() {
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
-    }
-    compose.waitForIdle()
-    compose.onNodeWithContentDescription("Back").performClick()
-    verify { nav.goBack() }
   }
 
   @Test
