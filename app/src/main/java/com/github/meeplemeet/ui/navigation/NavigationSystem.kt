@@ -19,13 +19,13 @@ import androidx.navigation.NavHostController
 
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
-  const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
-  const val GO_BACK_BUTTON = "GoBackButton"
-  const val TOP_BAR_TITLE = "TopBarTitle"
-  const val SESSIONS_TAB = "OverviewTab"
-  const val DISCUSSIONS_TAB = "MapTab"
-  const val DISCOVER_TAB = "DiscoverTab"
-  const val PROFILE_TAB = "ProfileTab"
+    const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
+    const val GO_BACK_BUTTON = "GoBackButton"
+    const val TOP_BAR_TITLE = "TopBarTitle"
+    const val SESSIONS_TAB = "OverviewTab"
+    const val DISCUSSIONS_TAB = "MapTab"
+    const val DISCOVER_TAB = "DiscoverTab"
+    const val PROFILE_TAB = "ProfileTab"
 }
 
 /**
@@ -41,7 +41,7 @@ object NavigationTestTags {
  * - `hasBottomBar`: Whether this screen appears in the bottom navigation bar.
  * - `hasBackButton`: Whether this screen should display a back button in the top bar.
  * - `icon`: The [ImageVector] shown in the bottom navigation bar (if applicable).
- * - `testTag`: The Compose testing tag associated with this screen.
+ * - `testTag`: The Compose testing tag associated with this screen (if applicable).
  *
  * ## Example
  *
@@ -83,36 +83,104 @@ enum class MeepleMeetScreen(
     val hasBottomBar: Boolean,
     val hasBackButton: Boolean,
     val icon: ImageVector?,
-    val testTag: String
+    val testTag: String?
 ) {
-  DiscoverSessions(
-      route = "discover",
-      title = "Discover",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.Language,
-      testTag = NavigationTestTags.DISCOVER_TAB),
-  SessionsOverview(
-      route = "sessions_overview",
-      title = "Sessions",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.Groups,
-      testTag = NavigationTestTags.SESSIONS_TAB),
-  DiscussionsOverview(
-      route = "discussions_overview",
-      title = "Discussions",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.ChatBubbleOutline,
-      testTag = NavigationTestTags.DISCUSSIONS_TAB),
-  ProfileScreen(
-      route = "profile",
-      title = "Profile",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.AccountCircle,
-      testTag = NavigationTestTags.PROFILE_TAB)
+    DiscoverSessions(
+        route = "discover",
+        title = "Discover",
+        hasBottomBar = true,
+        hasBackButton = false,
+        icon = Icons.Default.Language,
+        testTag = NavigationTestTags.DISCOVER_TAB
+    ),
+    SessionsOverview(
+        route = "sessions_overview",
+        title = "Sessions",
+        hasBottomBar = true,
+        hasBackButton = false,
+        icon = Icons.Default.Groups,
+        testTag = NavigationTestTags.SESSIONS_TAB
+    ),
+    SessionScreen(
+        route = "session/{sessionId}",
+        title = "Session",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    ),
+    SessionAddScreen(
+        route = "session_add",
+        title = "Add Session",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    ),
+    SessionEditScreen(
+        route = "session_edit/{sessionId}",
+        title = "Edit Session",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    ),
+    DiscussionsOverview(
+        route = "discussions_overview",
+        title = "Discussions",
+        hasBottomBar = true,
+        hasBackButton = false,
+        icon = Icons.Default.ChatBubbleOutline,
+        testTag = NavigationTestTags.DISCUSSIONS_TAB
+    ),
+    DiscussionScreen(
+        route = "discussion/{discussionId}",
+        title = "Discussion",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    ),
+    DiscussionAddScreen(
+        route = "discussion_add",
+        title = "Add Discussion",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    ),
+    DiscussionEditScreen(
+        route = "discussion_edit/{discussionId}",
+        title = "Edit Discussion",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    ),
+    ProfileScreen(
+        route = "profile",
+        title = "Profile",
+        hasBottomBar = true,
+        hasBackButton = false,
+        icon = Icons.Default.AccountCircle,
+        testTag = NavigationTestTags.PROFILE_TAB
+    ),
+    SignInScreen(
+        route = "sign_in",
+        title = "Sign In",
+        hasBottomBar = false,
+        hasBackButton = false,
+        icon = null,
+        testTag = null
+    ),
+    SignUpScreen(
+        route = "sign_up",
+        title = "Sign Up",
+        hasBottomBar = false,
+        hasBackButton = true,
+        icon = null,
+        testTag = null
+    );
 }
 
 /**
@@ -128,20 +196,24 @@ fun BottomNavigationMenu(
     onTabSelected: (MeepleMeetScreen) -> Unit,
     modifier: Modifier = Modifier
 ) {
-  // TODO: Update colors when full MaterialTheme is implemented
-  NavigationBar(
-      modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
+    // TODO: Update colors when full MaterialTheme is implemented
+    NavigationBar(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+    ) {
         MeepleMeetScreen.entries
             .filter { it.hasBottomBar }
             .forEach { screen ->
-              NavigationBarItem(
-                  icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
-                  label = { Text(screen.title) },
-                  selected = screen == currentScreen,
-                  onClick = { onTabSelected(screen) },
-                  modifier = Modifier.testTag(screen.testTag))
+                NavigationBarItem(
+                    icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
+                    label = { Text(screen.title) },
+                    selected = screen == currentScreen,
+                    onClick = { onTabSelected(screen) },
+                    modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier
+                )
             }
-      }
+    }
 }
 
 /**
@@ -160,46 +232,46 @@ fun BottomNavigationMenu(
  */
 open class NavigationActions(private val navController: NavHostController) {
 
-  /**
-   * Navigates to the specified [screen].
-   *
-   * If the destination is already the current top-level destination (hasBottomBar), this call has
-   * no effect to avoid redundant navigation.
-   *
-   * @param screen The target screen to navigate to.
-   */
-  open fun navigateTo(screen: MeepleMeetScreen) {
-    if (screen.hasBottomBar && currentRoute() == screen.route) {
-      // If the user is already on the top-level destination, do nothing
-      return
+    /**
+     * Navigates to the specified [screen].
+     *
+     * If the destination is already the current top-level destination (hasBottomBar), this call has
+     * no effect to avoid redundant navigation.
+     *
+     * @param screen The target screen to navigate to.
+     */
+    open fun navigateTo(screen: MeepleMeetScreen) {
+        if (screen.hasBottomBar && currentRoute() == screen.route) {
+            // If the user is already on the top-level destination, do nothing
+            return
+        }
+        navController.navigate(screen.route) {
+            if (screen.hasBottomBar) {
+                launchSingleTop = true
+                popUpTo(screen.route) { inclusive = true }
+            }
+
+            restoreState = true
+        }
     }
-    navController.navigate(screen.route) {
-      if (screen.hasBottomBar) {
-        launchSingleTop = true
-        popUpTo(screen.route) { inclusive = true }
-      }
 
-      restoreState = true
+    /** Navigate back to the previous screen. */
+    open fun goBack() {
+        navController.popBackStack()
     }
-  }
 
-  /** Navigate back to the previous screen. */
-  open fun goBack() {
-    navController.popBackStack()
-  }
-
-  /**
-   * Returns the current route displayed by the [NavHostController].
-   *
-   * @return The route of the currently active screen, or an empty string if unknown.
-   */
-  open fun currentRoute(): String {
-    return navController.currentDestination?.route ?: ""
-  }
+    /**
+     * Returns the current route displayed by the [NavHostController].
+     *
+     * @return The route of the currently active screen, or an empty string if unknown.
+     */
+    open fun currentRoute(): String {
+        return navController.currentDestination?.route ?: ""
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun BottomMenuPreview() {
-  BottomNavigationMenu(currentScreen = MeepleMeetScreen.SessionsOverview, onTabSelected = {})
+    BottomNavigationMenu(currentScreen = MeepleMeetScreen.SessionsOverview, onTabSelected = {})
 }
