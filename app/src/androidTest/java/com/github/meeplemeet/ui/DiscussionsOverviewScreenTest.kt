@@ -36,9 +36,9 @@ class DiscussionsOverviewScreenTest {
   private lateinit var nav: NavigationActions
   private lateinit var testScope: TestScope
 
-  private val me = Account(uid = "me", name = "Alice")
-  private val bob = Account(uid = "u2", name = "Bob")
-  private val zoe = Account(uid = "u3", name = "Zoe")
+  private val me = Account(uid = "me", name = "Marco", email="test_marco@epfl.ch")
+  private val bob = Account(uid = "u2", name = "Bob", email="test_bob@epfl.ch")
+  private val zoe = Account(uid = "u3", name = "Zoe", email="test_zow@epfl.ch")
 
   private var d1 =
       Discussion(
@@ -125,7 +125,7 @@ class DiscussionsOverviewScreenTest {
     compose.setContent {
       AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
     }
-    assert(me.name == "Alice")
+    assert(me.name == "Marco")
     assert(bob.name == "Bob")
     assert(d1.name == "Catan Crew")
     assert(p1.lastMessageSender == me.uid)
@@ -401,7 +401,7 @@ class DiscussionsOverviewScreenTest {
 
   @Test
   fun overview_non_me_sender_with_blank_name_has_no_prefix() {
-    coEvery { repo.getAccount("ux") } returns Account(uid = "ux", name = "")
+    coEvery { repo.getAccount("ux") } returns Account(uid = "ux", name = "", email="test@epfl.ch")
 
     val previewStatesField = vm::class.java.getDeclaredField("previewStates")
     previewStatesField.isAccessible = true
