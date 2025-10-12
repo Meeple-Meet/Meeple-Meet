@@ -1,3 +1,5 @@
+// Class done almost all manually except some parts inspired from DiscussionScreen.kt
+// and others were generated or modified using chatGPT-5 Thinking Extended
 package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.background
@@ -21,8 +23,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,8 +50,6 @@ import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Elevation
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CenterAlignedTopAppBar
 
 /* ================================================================
  * Variables
@@ -56,8 +58,6 @@ const val MY_MSG_USERNAME = "You"
 const val DEFAULT_DISCUSSION_NAME = "Discussion"
 const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
 const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
-
-
 
 /* ================================================================
  * Screen: Discussions Overview
@@ -78,122 +78,106 @@ fun DiscussionsOverviewScreen(
     navigation: NavigationActions,
 ) {
 
-    val discussionPreviews by viewModel.previewsFlow(currentUser.uid).collectAsState()
-    val discussionPreviewsSorted = remember(discussionPreviews) {
+  val discussionPreviews by viewModel.previewsFlow(currentUser.uid).collectAsState()
+  val discussionPreviewsSorted =
+      remember(discussionPreviews) {
         discussionPreviews.values.sortedByDescending { it.lastMessageAt.toDate() }
-    }
+      }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = MeepleMeetScreen.DiscussionsOverview.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigation.goBack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                },
-            )
-
-        },
-        bottomBar = {
-            BottomNavigationMenu(
-                currentScreen = MeepleMeetScreen.DiscussionsOverview,
-                onTabSelected = { screen -> navigation.navigateTo(screen) }
-            )
-        }
-    ) { innerPadding ->
+  Scaffold(
+      topBar = {
+        CenterAlignedTopAppBar(
+            title = {
+              Text(
+                  text = MeepleMeetScreen.DiscussionsOverview.title,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onPrimary,
+              )
+            },
+            navigationIcon = {
+              IconButton(onClick = { navigation.goBack() }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onPrimary)
+              }
+            },
+        )
+      },
+      bottomBar = {
+        BottomNavigationMenu(
+            currentScreen = MeepleMeetScreen.DiscussionsOverview,
+            onTabSelected = { screen -> navigation.navigateTo(screen) })
+      }) { innerPadding ->
 
         // Main content:
         if (discussionPreviewsSorted.isEmpty()) {
-            Box(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) { EmptyDiscussionsListText() }
+          Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            EmptyDiscussionsListText()
+          }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
+          LazyColumn(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .background(MaterialTheme.colorScheme.background)
+                      .padding(innerPadding),
+              verticalArrangement = Arrangement.spacedBy(10.dp),
+              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
                 items(discussionPreviewsSorted, key = { it.uid }) { preview ->
-                    val discussion by viewModel.discussionFlow(preview.uid).collectAsState()
-                    val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
+                  val discussion by viewModel.discussionFlow(preview.uid).collectAsState()
+                  val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
 
-                    val senderId = preview.lastMessageSender
-                    val isMe = (senderId == currentUser.uid)
-                    val senderName by produceState<String?>(
-                        key1 = senderId,
-                        initialValue = if (isMe) MY_MSG_USERNAME else null
-                    ) {
-                        if (senderId.isNotBlank() && !isMe) {
-                            viewModel.getOtherAccount(senderId) { acc ->
-                                value = acc.name
+                  val senderId = preview.lastMessageSender
+                  val isMe = (senderId == currentUser.uid)
+                  val senderName by
+                      produceState<String?>(
+                          key1 = senderId, initialValue = if (isMe) MY_MSG_USERNAME else null) {
+                            if (senderId.isNotBlank() && !isMe) {
+                              viewModel.getOtherAccount(senderId) { acc -> value = acc.name }
                             }
-                        }
-                    }
+                          }
 
-                    val msgText = buildString {
-                        if (preview.lastMessage.isBlank()) {
-                            append(NO_MESSAGES_DEFAULT_TEXT)
-                        } else {
-                            if (isMe) append("$MY_MSG_USERNAME: ")
-                            else if (!senderName.isNullOrBlank()) append("$senderName: ")
-                            append(preview.lastMessage)
-                        }
+                  val msgText = buildString {
+                    if (preview.lastMessage.isBlank()) {
+                      append(NO_MESSAGES_DEFAULT_TEXT)
+                    } else {
+                      if (isMe) append("$MY_MSG_USERNAME: ")
+                      else if (!senderName.isNullOrBlank()) append("$senderName: ")
+                      append(preview.lastMessage)
                     }
+                  }
 
-                    DiscussionCard(
-                        discussionName = discussionName,
-                        lastMsg = msgText,
-                        unreadMsgCount = preview.unreadCount,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { /** TODO implement navigation to discussion screen **/ }
-                    )
+                  DiscussionCard(
+                      discussionName = discussionName,
+                      lastMsg = msgText,
+                      unreadMsgCount = preview.unreadCount,
+                      modifier = Modifier.fillMaxWidth(),
+                      onClick = {
+                        /** TODO implement navigation to discussion screen * */
+                      })
                 }
-            }
+              }
         }
-
-    }
+      }
 }
-
-
-
 
 /* ================================================================
  * Composables
  * ================================================================ */
 
-/**
- * Composable that displays a message when there are no discussions
- */
+/** Composable that displays a message when there are no discussions */
 @Composable
 private fun EmptyDiscussionsListText() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
-    ) {
+  Box(
+      modifier =
+          Modifier.fillMaxSize().padding(24.dp).background(MaterialTheme.colorScheme.background),
+      contentAlignment = Alignment.Center) {
         Text(
             text = NO_DISCUSSIONS_DEFAULT_TEXT,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onPrimary,
         )
-    }
+      }
 }
 
 /**
@@ -213,72 +197,59 @@ private fun DiscussionCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val shape = MaterialTheme.shapes.large
-    val rightPaneWidth = 90.dp
+  val shape = MaterialTheme.shapes.large
+  val rightPaneWidth = 90.dp
 
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.outline),
-        shape = shape,
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.raised)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-                .clip(shape)
-        ) {
+  Card(
+      onClick = onClick,
+      modifier = modifier,
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.outline),
+      shape = shape,
+      elevation = CardDefaults.cardElevation(defaultElevation = Elevation.raised)) {
+        Box(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape)) {
 
-            // LEFT + MIDDLE:
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .padding(end = rightPaneWidth),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+          // LEFT + MIDDLE:
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(horizontal = 16.dp, vertical = 12.dp)
+                      .padding(end = rightPaneWidth),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 // LEFT: last message user's image (placeholder)
                 Box(
-                    Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.inversePrimary, CircleShape)
-                )
+                    Modifier.size(40.dp)
+                        .background(MaterialTheme.colorScheme.inversePrimary, CircleShape))
                 // MIDDLE: discussion title + last message
                 DiscussionCardTextSection(discussionName, lastMsg, Modifier.weight(1f))
-            }
+              }
 
-            // RIGHT: discussion image (placeholder) + unread messages
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .width(rightPaneWidth)
-                    .background(MaterialTheme.colorScheme.tertiary)
-            )
+          // RIGHT: discussion image (placeholder) + unread messages
+          Box(
+              modifier =
+                  Modifier.align(Alignment.CenterEnd)
+                      .fillMaxHeight()
+                      .width(rightPaneWidth)
+                      .background(MaterialTheme.colorScheme.tertiary))
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = (-1).dp, y = (-1).dp)
-                    .size(26.dp)
-                    .background(MaterialTheme.colorScheme.inversePrimary, CircleShape)
-                    .border(
-                        width = 1.5.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
+          Box(
+              modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                      .offset(x = (-1).dp, y = (-1).dp)
+                      .size(26.dp)
+                      .background(MaterialTheme.colorScheme.inversePrimary, CircleShape)
+                      .border(
+                          width = 1.5.dp,
+                          color = MaterialTheme.colorScheme.outline,
+                          shape = CircleShape),
+              contentAlignment = Alignment.Center) {
                 Text(
                     text = unreadMsgCount.toString(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
+                    color = MaterialTheme.colorScheme.onPrimary)
+              }
         }
-    }
+      }
 }
 
 /**
@@ -296,24 +267,19 @@ private fun DiscussionCardTextSection(
     lastMsg: String,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = discussionName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = lastMsg,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
-        )
-    }
+  Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
+    Text(
+        text = discussionName,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1)
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = lastMsg,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1)
+  }
 }
 
 /* ================================================================
@@ -323,144 +289,126 @@ private fun DiscussionCardTextSection(
 @Preview(showBackground = true, name = "Card – yours")
 @Composable
 private fun DiscussionCardPreview() {
-    AppTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            DiscussionCard(
-                discussionName = "Tomorrow party !",
-                lastMsg = "Be on time please",
-                modifier = Modifier.fillMaxWidth(),
-                unreadMsgCount = 3,
-            )
-        }
+  AppTheme {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      DiscussionCard(
+          discussionName = "Tomorrow party !",
+          lastMsg = "Be on time please",
+          modifier = Modifier.fillMaxWidth(),
+          unreadMsgCount = 3,
+      )
     }
+  }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, name = "Overview – scaffold mock")
 @Composable
 private fun DiscussionsOverviewPreview() {
-    AppTheme {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = MeepleMeetScreen.DiscussionsOverview.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { /* preview only */ }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    },
-                )
-            },
-            bottomBar = {
-                BottomNavigationMenu(
-                    currentScreen = MeepleMeetScreen.DiscussionsOverview,
-                    onTabSelected = { /* preview only */ }
-                )
-            }
-        ) { inner ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(inner),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
+  AppTheme {
+    Scaffold(
+        topBar = {
+          CenterAlignedTopAppBar(
+              title = {
+                Text(
+                    text = MeepleMeetScreen.DiscussionsOverview.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary)
+              },
+              navigationIcon = {
+                IconButton(onClick = { /* preview only */}) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back",
+                      tint = MaterialTheme.colorScheme.onPrimary)
+                }
+              },
+          )
+        },
+        bottomBar = {
+          BottomNavigationMenu(
+              currentScreen = MeepleMeetScreen.DiscussionsOverview,
+              onTabSelected = { /* preview only */})
+        }) { inner ->
+          LazyColumn(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .background(MaterialTheme.colorScheme.background)
+                      .padding(inner),
+              verticalArrangement = Arrangement.spacedBy(10.dp),
+              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
                 item {
-                    DiscussionCard(
-                        discussionName = "Catan Crew",
-                        lastMsg = "You: I’ll bring wheat 🍞",
-                        unreadMsgCount = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Catan Crew",
+                      lastMsg = "You: I’ll bring wheat 🍞",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Gloomhaven Sunday",
-                        lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
-                        unreadMsgCount = 3,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Gloomhaven Sunday",
+                      lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
+                      unreadMsgCount = 3,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Arkham Horror Night",
-                        lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
-                        unreadMsgCount = 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Arkham Horror Night",
+                      lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
+                      unreadMsgCount = 1,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Ticket to Ride: Europe",
-                        lastMsg = "(No messages yet)",
-                        unreadMsgCount = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Ticket to Ride: Europe",
+                      lastMsg = "(No messages yet)",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Root Tourney",
-                        lastMsg = "Clara: Vagabond banned? Also maps—Winter or Lake?",
-                        unreadMsgCount = 7,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Root Tourney",
+                      lastMsg = "Clara: Vagabond banned? Also maps—Winter or Lake?",
+                      unreadMsgCount = 7,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "D&D One-shot",
-                        lastMsg = "You: Long recap incoming… Last session we rescued the baron’s daughter, found the secret cellar, defeated the mimic, AND leveled up! 🎉",
-                        unreadMsgCount = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "D&D One-shot",
+                      lastMsg =
+                          "You: Long recap incoming… Last session we rescued the baron’s daughter, found the secret cellar, defeated the mimic, AND leveled up! 🎉",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Spirit Island Learners",
-                        lastMsg = "Diego: Let’s try Lightning + River synergy; difficulty 3 OK?",
-                        unreadMsgCount = 12,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Spirit Island Learners",
+                      lastMsg = "Diego: Let’s try Lightning + River synergy; difficulty 3 OK?",
+                      unreadMsgCount = 12,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Azul After-work",
-                        lastMsg = "Maya: I booked the meeting room 18:30.",
-                        unreadMsgCount = 2,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Azul After-work",
+                      lastMsg = "Maya: I booked the meeting room 18:30.",
+                      unreadMsgCount = 2,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Brass: Birmingham",
-                        lastMsg = "You: Anyone mind if I take first player to rush cotton?",
-                        unreadMsgCount = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Brass: Birmingham",
+                      lastMsg = "You: Anyone mind if I take first player to rush cotton?",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
                 }
                 item {
-                    DiscussionCard(
-                        discussionName = "Wingspan Chill",
-                        lastMsg = "No messages yet",
-                        unreadMsgCount = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                  DiscussionCard(
+                      discussionName = "Wingspan Chill",
+                      lastMsg = "No messages yet",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
                 }
-            }
+              }
         }
-    }
+  }
 }
