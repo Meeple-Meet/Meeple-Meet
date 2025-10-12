@@ -10,6 +10,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.systems.AuthRepoFirebase
 import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.google.android.gms.common.ConnectionResult

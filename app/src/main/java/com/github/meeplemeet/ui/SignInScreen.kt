@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 
@@ -57,11 +58,11 @@ object SignInScreenTestTags {
  */
 @Composable
 fun SignInScreen(
-    navController: NavController = NavController(LocalContext.current),
     viewModel: AuthViewModel,
+    modifier: Modifier = Modifier,
+    navController: NavController = NavController(LocalContext.current),
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
-    modifier: Modifier = Modifier
 ) {
   // Local state management for form inputs and validation
   var email by remember { mutableStateOf("") }

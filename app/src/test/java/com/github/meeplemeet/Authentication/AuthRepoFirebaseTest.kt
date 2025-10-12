@@ -1,10 +1,16 @@
-package com.github.meeplemeet.Authentication
+package com.github.meeplemeet.authentication
 
+import android.os.Bundle
+import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.systems.AuthRepoFirebase
 import com.github.meeplemeet.model.systems.FirestoreRepository
+import com.github.meeplemeet.model.systems.GoogleSignInHelper
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -14,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class AuthRepoFirebaseTest {
@@ -62,7 +69,7 @@ class AuthRepoFirebaseTest {
     val email = "test@example.com"
     val password = "password123"
     val uid = "uid123"
-    val expectedAccount = Account(uid, "test", emptyMap(), email, null, null)
+    val expectedAccount = Account(uid, uid, "test", emptyMap(), email, null, null)
 
     whenever(mockAuth.createUserWithEmailAndPassword(email, password))
         .thenReturn(completedTask(mockAuthResult))
@@ -70,7 +77,9 @@ class AuthRepoFirebaseTest {
     whenever(mockUser.uid).thenReturn(uid)
     whenever(mockUser.email).thenReturn(email)
     whenever(mockUser.photoUrl).thenReturn(null)
-    whenever(mockFirestore.createAccount(name = "test", email = email, photoUrl = null))
+    whenever(
+            mockFirestore.createAccount(
+                userHandle = uid, name = "test", email = email, photoUrl = null))
         .thenReturn(expectedAccount)
 
     val repo =
@@ -125,7 +134,7 @@ class AuthRepoFirebaseTest {
     val email = "test@example.com"
     val password = "password123"
     val uid = "uid123"
-    val expectedAccount = Account(uid, "test", emptyMap(), email, null, null)
+    val expectedAccount = Account(uid, uid, "test", emptyMap(), email, null, null)
 
     whenever(mockAuth.signInWithEmailAndPassword(email, password))
         .thenReturn(completedTask(mockAuthResult))
@@ -221,7 +230,7 @@ class AuthRepoFirebaseTest {
         AuthRepoFirebase(auth = mockAuth, helper = mock(), firestoreRepository = mockFirestore)
     repo.logout()
 
-    org.mockito.kotlin.verify(mockAuth).signOut()
+    verify(mockAuth).signOut()
   }
 
   //// Tests for loginWithGoogle ////
@@ -229,7 +238,7 @@ class AuthRepoFirebaseTest {
   fun `loginWithGoogle returns failure for invalid credential type`() = runBlocking {
     val mockAuth = mock<FirebaseAuth>()
     val mockFirestore = mock<FirestoreRepository>()
-    val credential = mock<androidx.credentials.Credential>()
+    val credential = mock<Credential>()
 
     val repo =
         AuthRepoFirebase(auth = mockAuth, helper = mock(), firestoreRepository = mockFirestore)
@@ -242,7 +251,7 @@ class AuthRepoFirebaseTest {
   fun `loginWithGoogle returns failure for CustomCredential with wrong type`() = runBlocking {
     val mockAuth = mock<FirebaseAuth>()
     val mockFirestore = mock<FirestoreRepository>()
-    val credential = mock<androidx.credentials.CustomCredential>()
+    val credential = mock<CustomCredential>()
 
     whenever(credential.type).thenReturn("WRONG_TYPE")
 
@@ -262,16 +271,12 @@ class AuthRepoFirebaseTest {
     val mockAuthResult = mock<AuthResult>()
     val credential =
         CustomCredential(
-            type =
-                com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-                    .TYPE_GOOGLE_ID_TOKEN_CREDENTIAL,
-            data = android.os.Bundle())
-    val mockIdTokenCredential =
-        mock<com.google.android.libraries.identity.googleid.GoogleIdTokenCredential>()
-    val mockFirebaseCredential = mock<com.google.firebase.auth.AuthCredential>()
+            type = GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL, data = Bundle())
+    val mockIdTokenCredential = mock<GoogleIdTokenCredential>()
+    val mockFirebaseCredential = mock<AuthCredential>()
     val uid = "uid123"
     val email = "test@example.com"
-    val expectedAccount = Account(uid, "test", emptyMap(), email, null, null)
+    val expectedAccount = Account(uid, uid, "test", emptyMap(), email, null, null)
 
     whenever(mockHelper.extractIdTokenCredential(any())).thenReturn(mockIdTokenCredential)
     whenever(mockIdTokenCredential.idToken).thenReturn("idtoken")
@@ -301,13 +306,9 @@ class AuthRepoFirebaseTest {
     val mockFirestore = mock<FirestoreRepository>()
     val credential =
         CustomCredential(
-            type =
-                com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-                    .TYPE_GOOGLE_ID_TOKEN_CREDENTIAL,
-            data = android.os.Bundle())
-    val mockIdTokenCredential =
-        mock<com.google.android.libraries.identity.googleid.GoogleIdTokenCredential>()
-    val mockFirebaseCredential = mock<com.google.firebase.auth.AuthCredential>()
+            type = GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL, data = Bundle())
+    val mockIdTokenCredential = mock<GoogleIdTokenCredential>()
+    val mockFirebaseCredential = mock<AuthCredential>()
 
     whenever(mockHelper.extractIdTokenCredential(any())).thenReturn(mockIdTokenCredential)
     whenever(mockIdTokenCredential.idToken).thenReturn("idtoken")
@@ -329,13 +330,9 @@ class AuthRepoFirebaseTest {
     val mockFirestore = mock<FirestoreRepository>()
     val credential =
         CustomCredential(
-            type =
-                com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-                    .TYPE_GOOGLE_ID_TOKEN_CREDENTIAL,
-            data = android.os.Bundle())
-    val mockIdTokenCredential =
-        mock<com.google.android.libraries.identity.googleid.GoogleIdTokenCredential>()
-    val mockFirebaseCredential = mock<com.google.firebase.auth.AuthCredential>()
+            type = GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL, data = Bundle())
+    val mockIdTokenCredential = mock<GoogleIdTokenCredential>()
+    val mockFirebaseCredential = mock<AuthCredential>()
     val mockAuthResult = mock<AuthResult>()
 
     whenever(mockHelper.extractIdTokenCredential(any())).thenReturn(mockIdTokenCredential)
@@ -361,13 +358,9 @@ class AuthRepoFirebaseTest {
     val mockAuthResult = mock<AuthResult>()
     val credential =
         CustomCredential(
-            type =
-                com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-                    .TYPE_GOOGLE_ID_TOKEN_CREDENTIAL,
-            data = android.os.Bundle())
-    val mockIdTokenCredential =
-        mock<com.google.android.libraries.identity.googleid.GoogleIdTokenCredential>()
-    val mockFirebaseCredential = mock<com.google.firebase.auth.AuthCredential>()
+            type = GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL, data = Bundle())
+    val mockIdTokenCredential = mock<GoogleIdTokenCredential>()
+    val mockFirebaseCredential = mock<AuthCredential>()
     val uid = "uid123"
 
     whenever(mockHelper.extractIdTokenCredential(any())).thenReturn(mockIdTokenCredential)

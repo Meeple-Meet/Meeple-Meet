@@ -1,7 +1,7 @@
 package com.github.meeplemeet.androidtest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.Authentication.AuthRepoFirebase
+import com.github.meeplemeet.model.systems.AuthRepoFirebase
 import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.github.meeplemeet.model.utils.FirestoreTests
 import com.google.firebase.Firebase

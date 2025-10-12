@@ -9,9 +9,9 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.meeplemeet.Authentication.AuthRepoFirebase
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.systems.AuthRepoFirebase
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -28,8 +28,8 @@ import kotlinx.coroutines.launch
  *
  * @property isLoading Whether an authentication operation is currently in progress. Used to show
  *   loading indicators and disable buttons during operations.
- * @property user The currently signed-in User object, or null if not authenticated. Contains user
- *   profile information from both Firebase Auth and Firestore.
+ * @property account The currently signed-in User object, or null if not authenticated. Contains
+ *   user profile information from both Firebase Auth and Firestore.
  * @property errorMsg An error message to display to the user, or null if no error. This is shown in
  *   the UI when authentication operations fail.
  * @property signedOut True if a sign-out operation has just completed. Used to reset UI state after
@@ -193,13 +193,13 @@ class AuthViewModel(private val repository: AuthRepoFirebase) : ViewModel() {
                 account = null)
           }
         }
-      } catch (e: GetCredentialCancellationException) {
+      } catch (_: GetCredentialCancellationException) {
         // User cancelled the sign-in flow
         _uiState.update {
           it.copy(
               isLoading = false, errorMsg = "Sign-in cancelled", signedOut = true, account = null)
         }
-      } catch (e: NoCredentialException) {
+      } catch (_: NoCredentialException) {
         // No Google account available on the device
         val msg =
             "No Google account available or no credential found. Add a Google account to the device."
