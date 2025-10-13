@@ -5,10 +5,10 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionPreview
-import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -33,9 +33,9 @@ class DiscussionsOverviewScreenTest {
   private lateinit var nav: NavigationActions
   private lateinit var testScope: TestScope
 
-  private val me = Account(uid = "me", name = "Marco", email = "test_marco@epfl.ch")
-  private val bob = Account(uid = "u2", name = "Bob", email = "test_bob@epfl.ch")
-  private val zoe = Account(uid = "u3", name = "Zoe", email = "test_zow@epfl.ch")
+  private val me = Account(uid = "me", handle = "me", name = "Marco", email = "test_marco@epfl.ch")
+  private val bob = Account(uid = "u2", handle = "u2", name = "Bob", email = "test_bob@epfl.ch")
+  private val zoe = Account(uid = "u3", handle = "u3", name = "Zoe", email = "test_zow@epfl.ch")
 
   private var d1 =
       Discussion(
@@ -194,7 +194,7 @@ class DiscussionsOverviewScreenTest {
     discussionFlowsField.isAccessible = true
     @Suppress("UNCHECKED_CAST")
     val discussionMap = discussionFlowsField.get(vm) as MutableMap<String, StateFlow<Discussion?>>
-    discussionMap["d4"] = MutableStateFlow<Discussion?>(null)
+    discussionMap["d4"] = MutableStateFlow(null)
 
     compose.setContent {
       AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
@@ -388,7 +388,8 @@ class DiscussionsOverviewScreenTest {
 
   @Test
   fun overview_non_me_sender_with_blank_name_has_no_prefix() {
-    coEvery { repo.getAccount("ux") } returns Account(uid = "ux", name = "", email = "test@epfl.ch")
+    coEvery { repo.getAccount("ux") } returns
+        Account(uid = "ux", handle = "ux", name = "", email = "test@epfl.ch")
 
     val previewStatesField = vm::class.java.getDeclaredField("previewStates")
     previewStatesField.isAccessible = true
