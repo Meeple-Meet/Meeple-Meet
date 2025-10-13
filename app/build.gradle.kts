@@ -260,3 +260,11 @@ configurations.forEach { configuration ->
     // This fixes a fatal exception for tests interacting with Cloud Firestore
     configuration.exclude("com.google.protobuf", "protobuf-lite")
 }
+
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.apache.commons" && requested.name == "commons-compress") {
+            useVersion("1.26.1")
+        }
+    }
+}
