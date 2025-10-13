@@ -2,15 +2,15 @@ package com.github.meeplemeet.model.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionPreview
-import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * listeners are exposed as [StateFlow] streams.
  */
 class FirestoreViewModel(
-    private val repository: FirestoreRepository = FirestoreRepository(Firebase.firestore)
+    private val repository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) : ViewModel() {
 
   private val _account = MutableStateFlow<Account?>(null)

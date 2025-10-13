@@ -1,15 +1,13 @@
-package com.github.meeplemeet.model.integration
+package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.PermissionDeniedException
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
-import com.github.meeplemeet.model.systems.FirestoreRepository
-import com.github.meeplemeet.model.utils.FirestoreTests
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.firestore
+import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.coEvery
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
@@ -17,7 +15,6 @@ import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -38,12 +35,9 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    val repo = FirestoreRepository(Firebase.firestore)
-    runBlocking {
-      account1 = Account(uid = "a1", name = "Antoine", email = "Antoine@example.com")
-      account2 = Account(uid = "a2", name = "Marco", email = "Marco@example.com")
-      account3 = Account(uid = "a3", name = "Thomas", email = "Thomas@example.com")
-    }
+    account1 = Account(uid = "a1", handle = "a1", name = "Antoine", email = "Antoine@example.com")
+    account2 = Account(uid = "a2", handle = "a2", name = "Marco", email = "Marco@example.com")
+    account3 = Account(uid = "a3", handle = "a3", name = "Thomas", email = "Thomas@example.com")
     Dispatchers.setMain(StandardTestDispatcher())
     viewModel = FirestoreViewModel(repository)
   }
@@ -55,7 +49,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
   @Test
   fun canAddDiscussion() = runTest {
-    val acc = Account(uid = "a1", name = "Alice", email = "Alice@example.com")
+    val acc = Account(uid = "a1", handle = "a1", name = "Alice", email = "Alice@example.com")
     val disc =
         Discussion(
             uid = "d1",
@@ -110,7 +104,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
   @Test(expected = DiscussionNotFoundException::class)
   fun cannotGetNonExistingDiscussion() = runTest {
-    coEvery { repository.getDiscussion("invalid-id") } throws DiscussionNotFoundException("")
+    coEvery { repository.getDiscussion("invalid-id") } throws DiscussionNotFoundException()
     viewModel.getDiscussion("invalid-id")
     advanceUntilIdle()
   }
@@ -465,7 +459,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns Pair(account1, base)
     coEvery { repository.deleteDiscussion(any()) } returns Unit
-    coEvery { repository.getDiscussion(base.uid) } throws DiscussionNotFoundException("")
+    coEvery { repository.getDiscussion(base.uid) } throws DiscussionNotFoundException()
 
     viewModel.createDiscussion("Test", "", account1)
     advanceUntilIdle()

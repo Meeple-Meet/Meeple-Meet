@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 
@@ -57,11 +57,11 @@ object SignInScreenTestTags {
  */
 @Composable
 fun SignInScreen(
-    navController: NavController = NavController(LocalContext.current),
     viewModel: AuthViewModel,
+    modifier: Modifier = Modifier,
+    navController: NavController = NavController(LocalContext.current),
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
-    modifier: Modifier = Modifier
 ) {
   // Local state management for form inputs and validation
   var email by remember { mutableStateOf("") }
@@ -75,7 +75,7 @@ fun SignInScreen(
   } // Client-side password validation errors
 
   // Observe authentication state from the ViewModel
-  val uiState by viewModel.uiState.collectAsState()
+  val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
   /**
    * Validates email format and emptiness

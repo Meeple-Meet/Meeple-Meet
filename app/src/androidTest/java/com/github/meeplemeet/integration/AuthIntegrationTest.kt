@@ -1,15 +1,10 @@
-package com.github.meeplemeet.androidtest
+package com.github.meeplemeet.integration
 
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.Authentication.AuthRepoFirebase
-import com.github.meeplemeet.model.systems.FirestoreRepository
-import com.github.meeplemeet.model.utils.FirestoreTests
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.firestore
+import com.github.meeplemeet.model.repositories.AuthRepository
+import com.github.meeplemeet.model.repositories.FirestoreRepository
+import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -37,9 +32,7 @@ import org.junit.runner.RunWith
 class AuthIntegrationTest : FirestoreTests() {
 
   private lateinit var context: Context
-  private lateinit var authRepo: AuthRepoFirebase
-  private lateinit var auth: FirebaseAuth
-  private lateinit var firestore: FirebaseFirestore
+  private lateinit var authRepo: AuthRepository
   private lateinit var firestoreRepo: FirestoreRepository
 
   // Test user credentials - using random emails to avoid conflicts
@@ -50,13 +43,9 @@ class AuthIntegrationTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    // Get Firebase instances
-    auth = Firebase.auth
-    firestore = Firebase.firestore
-
     // Initialize repositories
-    firestoreRepo = FirestoreRepository(firestore)
-    authRepo = AuthRepoFirebase(auth = auth, firestoreRepository = firestoreRepo)
+    firestoreRepo = FirestoreRepository(db)
+    authRepo = AuthRepository(auth = auth, firestoreRepository = firestoreRepo)
 
     // Ensure clean state for each test
     runBlocking {
@@ -77,7 +66,7 @@ class AuthIntegrationTest : FirestoreTests() {
   private suspend fun clearTestData() {
     try {
       // Clean up any test user documents
-      val usersCollection = firestore.collection("accounts")
+      val usersCollection = db.collection("accounts")
       val testUserQuery = usersCollection.whereEqualTo("email", testEmail).get().await()
 
       for (document in testUserQuery.documents) {

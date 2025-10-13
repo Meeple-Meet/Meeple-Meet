@@ -34,8 +34,8 @@ import kotlinx.coroutines.launch
 /**
  * Composable screen that displays a discussion (chat) and allows sending messages.
  *
- * Messages are collected from [FirestoreViewModel] via a [StateFlow] and displayed in a scrollable
- * list. Users are cached locally for display purposes.
+ * Messages are collected from [FirestoreViewModel] via a [kotlinx.coroutines.flow.StateFlow] and
+ * displayed in a scrollable list. Users are cached locally for display purposes.
  *
  * @param viewModel FirestoreViewModel for fetching discussion and sending messages
  * @param discussionId ID of the discussion to display

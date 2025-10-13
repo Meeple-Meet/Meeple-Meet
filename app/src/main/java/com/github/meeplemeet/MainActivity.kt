@@ -5,9 +5,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import com.github.meeplemeet.model.repositories.AuthRepository
+import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.ui.SignInScreen
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
+
+object FirebaseProvider {
+  val db: FirebaseFirestore by lazy { Firebase.firestore }
+  val auth: FirebaseAuth by lazy { Firebase.auth }
+}
 
 /**
  * `MainActivity` is the entry point of the application. It sets up the content view with the
@@ -18,6 +30,10 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    setContent { AppTheme { Surface(modifier = Modifier.fillMaxSize()) { Text("Hello World") } } }
+    setContent {
+      AppTheme {
+        Surface(modifier = Modifier.fillMaxSize()) { SignInScreen(AuthViewModel(AuthRepository())) }
+      }
+    }
   }
 }

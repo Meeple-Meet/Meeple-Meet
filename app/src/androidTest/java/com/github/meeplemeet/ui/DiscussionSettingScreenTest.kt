@@ -2,10 +2,10 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
-import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -21,8 +21,7 @@ class DiscussionSettingScreenTest {
   private lateinit var viewModel: FirestoreViewModel
   private lateinit var repository: FirestoreRepository
 
-  private val currentAccount = Account(uid = "user1", name = "Alice", email = "*")
-  private val otherAccount = Account(uid = "user2", name = "Bob", email = "**")
+  private val currentAccount = Account(uid = "user1", handle = "user1", name = "Alice", email = "*")
 
   private val safeDiscussion =
       Discussion(
@@ -41,7 +40,7 @@ class DiscussionSettingScreenTest {
     coEvery { repository.getAccount(any()) } answers
         {
           val uid = firstArg<String>()
-          Account(uid = uid, name = "NameFor$uid", email = "***")
+          Account(uid = uid, handle = uid, name = "NameFor$uid", email = "***")
         }
 
     // Initialize real ViewModel with repository

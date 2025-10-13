@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.ui
+package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -237,7 +238,10 @@ private fun MessageInputBar() {
               color = AppColors.textIconsFade,
               style = MaterialTheme.typography.bodySmall,
               modifier = Modifier.weight(1f))
-          Icon(Icons.Default.Send, contentDescription = "Send", tint = AppColors.textIcons)
+          Icon(
+              Icons.AutoMirrored.Filled.Send,
+              contentDescription = "Send",
+              tint = AppColors.textIcons)
         }
       }
 }

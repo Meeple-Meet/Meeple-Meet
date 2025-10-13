@@ -1,9 +1,9 @@
-package com.github.meeplemeet.Authentication
+package com.github.meeplemeet.model.repositories
 
 import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -21,10 +21,10 @@ import kotlinx.coroutines.tasks.await
  * @param helper Helper for processing Google sign-in credentials
  * @param firestoreRepository Repository for managing account data in Firestore
  */
-class AuthRepoFirebase(
+class AuthRepository(
     private val auth: FirebaseAuth = Firebase.auth,
     private val helper: GoogleSignInHelper = DefaultGoogleSignInHelper(),
-    private val firestoreRepository: FirestoreRepository
+    private val firestoreRepository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) {
 
   companion object {
@@ -80,10 +80,10 @@ class AuthRepoFirebase(
     val userMessage = mapErrorMessage(exception, "$operation failed. Please try again.")
     // Return clean user-friendly message without operation prefix for known error types
     val cleanMessage =
-        when {
-          userMessage == INVALID_CREDENTIALS_MSG -> INVALID_CREDENTIALS_MSG
-          userMessage == INVALID_EMAIL_MSG -> INVALID_EMAIL_MSG
-          userMessage == TOO_MANY_REQUESTS_MSG -> TOO_MANY_REQUESTS_MSG
+        when (userMessage) {
+          INVALID_CREDENTIALS_MSG -> INVALID_CREDENTIALS_MSG
+          INVALID_EMAIL_MSG -> INVALID_EMAIL_MSG
+          TOO_MANY_REQUESTS_MSG -> TOO_MANY_REQUESTS_MSG
           else -> userMessage
         }
     return Result.failure(IllegalStateException(cleanMessage))
@@ -114,16 +114,17 @@ class AuthRepoFirebase(
         // Delegate account creation to FirestoreRepository - this MUST succeed
         val account =
             firestoreRepository.createAccount(
-                name = name, email = email, photoUrl = firebaseUser.photoUrl?.toString())
+                userHandle = firebaseUser.uid,
+                name = name,
+                email = email,
+                photoUrl = firebaseUser.photoUrl?.toString())
         Result.success(account)
       } catch (firestoreException: Exception) {
         // If Firestore account creation fails, delete the Firebase Auth user to maintain
         // consistency
         try {
           firebaseUser.delete().await()
-        } catch (deleteException: Exception) {
-          // Log but don't fail on cleanup error
-        }
+        } catch (_: Exception) {}
         return Result.failure(
             IllegalStateException(
                 "Registration failed: Could not create user profile. ${firestoreException.localizedMessage}"))
@@ -193,11 +194,12 @@ class AuthRepoFirebase(
             try {
               // Try to fetch existing account
               firestoreRepository.getAccount(firebaseUser.uid)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
               // Account doesn't exist - first-time Google sign-in
               val name =
                   firebaseUser.email?.substringBefore('@') ?: firebaseUser.displayName ?: "User"
               firestoreRepository.createAccount(
+                  userHandle = firebaseUser.uid,
                   name = name,
                   email =
                       firebaseUser.email
@@ -222,7 +224,7 @@ class AuthRepoFirebase(
    *
    * @return Result indicating success or failure of the logout operation
    */
-  suspend fun logout(): Result<Unit> {
+  fun logout(): Result<Unit> {
     return try {
       // Sign out from Firebase Auth
       // This clears the current user session
