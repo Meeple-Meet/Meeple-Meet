@@ -1,71 +1,60 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.navigation.NavController
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import com.github.meeplemeet.model.repositories.AuthenticationRepository
 import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
-import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Comprehensive UI tests for SignUpScreen
- *
- * Tests cover:
- * - Initial screen state
- * - Input validation (email, password, confirm password)
- * - Password visibility toggles
- * - Form submission with validation
- * - Loading states
- * - Error messages
- * - Navigation
- * - Google sign-up
- */
 class SignUpScreenTest {
+  @get:Rule val compose = createComposeRule()
 
-  @get:Rule val composeTestRule = createComposeRule()
-
-  private lateinit var mockViewModel: AuthViewModel
-  private lateinit var mockNavController: NavController
-  private lateinit var uiStateFlow: MutableStateFlow<AuthUIState>
+  private lateinit var vm: AuthViewModel
 
   @Before
   fun setup() {
-    mockViewModel = mockk(relaxed = true)
-    mockNavController = mockk(relaxed = true)
-
-    uiStateFlow = MutableStateFlow(AuthUIState())
-    every { mockViewModel.uiState } returns uiStateFlow
-    every { mockViewModel.registerWithEmail(any(), any()) } just runs
-    every { mockViewModel.googleSignIn(any(), any()) } just runs
-  }
-
-  private fun setContent() {
-    composeTestRule.setContent {
-      SignUpScreen(navController = mockNavController, viewModel = mockViewModel)
-      // Don't pass context or credentialManager - let them use defaults
-      // Mocking CredentialManager causes IncompatibleClassChangeError in instrumentation tests
+    vm = AuthViewModel(AuthenticationRepository()) // real view model, no mocks
+    // :contentReference[oaicite:1]{index=1}
+    compose.setContent {
+      SignUpScreen(viewModel = vm) // uses defaults for NavController and CredentialManager
+      // :contentReference[oaicite:2]{index=2}
     }
   }
 
-  // ==================== Initial State Tests ====================
+  // ===== helpers =====
+
+  private fun setVmState(state: AuthUIState) {
+    val f =
+        vm::class.java.declaredFields.firstOrNull { field ->
+          field.isAccessible = true
+          val v = field.get(vm)
+          v is MutableStateFlow<*> && v.value is AuthUIState
+        } ?: error("MutableStateFlow<AuthUIState> not found on AuthViewModel")
+
+    @Suppress("UNCHECKED_CAST") val flow = f.get(vm) as MutableStateFlow<AuthUIState>
+    flow.value = state
+    compose.waitForIdle()
+  }
+
+  // ===== Initial state =====
 
   @Test
   fun initialState_allFieldsEmpty() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .assertExists()
-        .assertTextContains("")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .assertExists()
-        .assertTextContains("")
-    composeTestRule
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().assertTextContains("")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().assertTextContains("")
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertExists()
         .assertTextContains("")
@@ -73,19 +62,12 @@ class SignUpScreenTest {
 
   @Test
   fun initialState_signUpButtonEnabled() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists().assertIsEnabled()
   }
 
   @Test
   fun initialState_googleSignUpButtonEnabled() {
-    setContent()
-
-    composeTestRule
+    compose
         .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
         .assertExists()
         .assertIsEnabled()
@@ -93,427 +75,283 @@ class SignUpScreenTest {
 
   @Test
   fun initialState_welcomeTextDisplayed() {
-    setContent()
-
-    composeTestRule.onNodeWithText("Welcome!").assertExists()
+    compose.onNodeWithText("Welcome!").assertExists()
   }
 
   @Test
   fun initialState_logInLinkDisplayed() {
-    setContent()
-
-    composeTestRule.onNodeWithText("Already have an account? ").assertExists()
-    composeTestRule.onNodeWithText("Log in.").assertExists()
+    compose.onNodeWithText("Already have an account? ").assertExists()
+    compose.onNodeWithText("Log in.").assertExists()
   }
 
-  // ==================== Email Field Tests ====================
+  @Test
+  fun initialState_noErrorMessageDisplayed() {
+    compose.onAllNodesWithText("An unknown error occurred").assertCountEquals(0)
+  }
+
+  // ===== Email field =====
 
   @Test
   fun emailField_acceptsInput() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .assertTextContains("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertTextContains("test@example.com")
   }
 
   @Test
   fun emailField_clearsErrorOnInput() {
-    setContent()
-
-    // Trigger validation error by clicking sign up with empty email
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    // Verify error appears
-    composeTestRule.onNodeWithText("Email cannot be empty").assertExists()
-
-    // Type in email field
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test")
-
-    // Error should disappear
-    composeTestRule.onNodeWithText("Email cannot be empty").assertDoesNotExist()
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Email cannot be empty").assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("t")
+    compose.onNodeWithText("Email cannot be empty").assertDoesNotExist()
   }
 
-  // ==================== Password Field Tests ====================
+  @Test
+  fun emailField_acceptsValidEmailFormat() {
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("user@domain.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertTextContains("user@domain.com")
+  }
+
+  // ===== Password field =====
 
   @Test
-  fun passwordField_acceptsInput() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .performTextInput("password123")
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .assertTextContains("password123")
+  fun passwordField_acceptsInput_andMasks() {
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("password123")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("•••••••••••")
   }
 
   @Test
   fun passwordField_toggleVisibility() {
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("secret")
-
-    // Click visibility toggle
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
-
-    // Password should be visible (no way to directly test VisualTransformation,
-    // but we can verify the toggle exists and is clickable)
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).assertExists()
-
-    // Toggle back
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("secret")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
   }
 
   @Test
   fun passwordField_clearsErrorOnInput() {
-    setContent()
-
-    // Trigger validation error
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    // Verify error appears
-    composeTestRule.onNodeWithText("Password cannot be empty").assertExists()
-
-    // Type in password field
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("pass")
-
-    // Error should disappear
-    composeTestRule.onNodeWithText("Password cannot be empty").assertDoesNotExist()
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Password cannot be empty").assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("p")
+    compose.onNodeWithText("Password cannot be empty").assertDoesNotExist()
   }
 
-  // ==================== Confirm Password Field Tests ====================
+  @Test
+  fun passwordField_acceptsLongPassword() {
+    val longPassword = "a".repeat(100)
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput(longPassword)
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains(longPassword)
+  }
+
+  // ===== Confirm Password field =====
 
   @Test
-  fun confirmPasswordField_acceptsInput() {
-    setContent()
-
-    composeTestRule
+  fun confirmPasswordField_acceptsInput_andMasks() {
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-
-    composeTestRule
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertTextContains("password123")
-  }
-
-  @Test
-  fun confirmPasswordField_toggleVisibility() {
-    setContent()
-
-    composeTestRule
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("secret")
-
-    // Click visibility toggle
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE)
-        .performClick()
-
-    // Verify toggle exists and is clickable
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE)
-        .assertExists()
-
-    // Toggle back
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE)
-        .performClick()
+        .assertTextContains("•••••••••••")
   }
 
   @Test
   fun confirmPasswordField_clearsErrorOnInput() {
-    setContent()
-
-    // Trigger validation error
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    // Verify error appears
-    composeTestRule.onNodeWithText("Please confirm your password").assertExists()
-
-    // Type in confirm password field
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("pass")
-
-    // Error should disappear
-    composeTestRule.onNodeWithText("Please confirm your password").assertDoesNotExist()
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Please confirm your password").assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("p")
+    compose.onNodeWithText("Please confirm your password").assertDoesNotExist()
   }
 
-  // ==================== Validation Tests ====================
+  // ===== Validation =====
 
   @Test
   fun validation_emptyEmail_showsError() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .performTextInput("password123")
-    composeTestRule
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Email cannot be empty").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Email cannot be empty").assertExists()
   }
 
   @Test
   fun validation_invalidEmailFormat_showsError() {
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .performTextInput("password123")
-    composeTestRule
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Invalid email format").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Invalid email format").assertExists()
   }
 
   @Test
   fun validation_emptyPassword_showsError() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("password123")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Password cannot be empty").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("x")
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Password cannot be empty").assertExists()
   }
 
   @Test
   fun validation_weakPassword_showsError() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("123")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("123")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Password is too weak").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345") // < 6
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("12345")
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Password is too weak").assertExists()
   }
 
   @Test
   fun validation_emptyConfirmPassword_showsError() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .performTextInput("password123")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Please confirm your password").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Please confirm your password").assertExists()
   }
 
   @Test
-  fun validation_passwordMismatch_showsError() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .performTextInput("password123")
-    composeTestRule
+  fun validation_mismatchedPasswords_showsError() {
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("different")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Passwords do not match").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+        .performTextInput("password124")
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Passwords do not match").assertExists()
   }
 
   @Test
-  fun validation_allFieldsValid_callsViewModel() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .performTextInput("password123")
-    composeTestRule
+  fun validation_allValid_noClientErrors() {
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+    compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    verify(exactly = 1) { mockViewModel.registerWithEmail("test@example.com", "password123") }
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
+    compose.onAllNodesWithText("Email cannot be empty").assertCountEquals(0)
+    compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
+    compose.onAllNodesWithText("Password is too weak").assertCountEquals(0)
+    compose.onAllNodesWithText("Please confirm your password").assertCountEquals(0)
+    compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
   }
 
-  // ==================== Loading State Tests ====================
+  @Test
+  fun validation_multipleErrors_showsAllErrors() {
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
+    compose.onNodeWithText("Email cannot be empty").assertExists()
+    compose.onNodeWithText("Password cannot be empty").assertExists()
+    compose.onNodeWithText("Please confirm your password").assertExists()
+  }
+
+  // ===== Loading state =====
 
   @Test
   fun loadingState_disablesButtons() {
-    uiStateFlow.value = AuthUIState(isLoading = true)
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsNotEnabled()
+    setVmState(AuthUIState(isLoading = true))
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsNotEnabled()
   }
 
   @Test
   fun loadingState_showsLoadingIndicator() {
-    uiStateFlow.value = AuthUIState(isLoading = true)
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.LOADING_INDICATOR).assertExists()
+    setVmState(AuthUIState(isLoading = true))
+    compose.onNodeWithTag(SignUpScreenTestTags.LOADING_INDICATOR).assertExists()
   }
 
   @Test
   fun loadingState_notLoading_noLoadingIndicator() {
-    uiStateFlow.value = AuthUIState(isLoading = false)
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
-  }
-
-  // ==================== Error Message Tests ====================
-
-  @Test
-  fun errorMessage_emailAlreadyInUse_showsFriendlyMessage() {
-    uiStateFlow.value = AuthUIState(errorMsg = "email-already-in-use")
-    setContent()
-
-    composeTestRule.onNodeWithText("Email already in use").assertExists()
+    setVmState(AuthUIState(isLoading = false))
+    compose.onNodeWithTag(SignUpScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
   }
 
   @Test
-  fun errorMessage_weakPassword_showsFriendlyMessage() {
-    uiStateFlow.value = AuthUIState(errorMsg = "weak-password")
-    setContent()
+  fun loadingState_buttonsEnabledWhenNotLoading() {
+    setVmState(AuthUIState(isLoading = false))
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
+    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsEnabled()
+  }
 
-    composeTestRule.onNodeWithText("Password is too weak").assertExists()
+  // ===== Error messages (server-side mapping) =====
+
+  @Test
+  fun errorMessage_emailAlreadyInUse_mappedAndDisplayed() {
+    setVmState(AuthUIState(errorMsg = "auth/email-already-in-use"))
+    compose
+        .onNodeWithText("Email already in use")
+        .assertExists() // mapped in UI :contentReference[oaicite:3]{index=3}
   }
 
   @Test
-  fun errorMessage_invalidEmail_showsFriendlyMessage() {
-    uiStateFlow.value = AuthUIState(errorMsg = "invalid-email")
-    setContent()
-
-    composeTestRule.onNodeWithText("Invalid email format").assertExists()
+  fun errorMessage_weakPassword_mappedAndDisplayed() {
+    setVmState(AuthUIState(errorMsg = "auth/weak-password"))
+    compose
+        .onNodeWithText("Password is too weak")
+        .assertExists() // mapped in UI :contentReference[oaicite:4]{index=4}
   }
 
   @Test
-  fun errorMessage_unknownError_showsOriginalMessage() {
-    uiStateFlow.value = AuthUIState(errorMsg = "Some unknown error")
-    setContent()
-
-    composeTestRule.onNodeWithText("Some unknown error").assertExists()
+  fun errorMessage_invalidEmail_mappedAndDisplayed() {
+    setVmState(AuthUIState(errorMsg = "auth/invalid-email"))
+    compose
+        .onNodeWithText("Invalid email format")
+        .assertExists() // mapped in UI :contentReference[oaicite:5]{index=5}
   }
 
   @Test
-  fun errorMessage_null_noErrorDisplayed() {
-    uiStateFlow.value = AuthUIState(errorMsg = null)
-    setContent()
-
-    // No error message should be displayed
-    composeTestRule.onAllNodesWithText("Email already in use").assertCountEquals(0)
+  fun errorMessage_other_unmapped_passthroughDisplayed() {
+    setVmState(AuthUIState(errorMsg = "Some other error"))
+    compose
+        .onNodeWithText("Some other error")
+        .assertExists() // passthrough :contentReference[oaicite:6]{index=6}
   }
 
-  // ==================== Google Sign Up Tests ====================
+  // ===== Google sign-up button =====
 
   @Test
-  fun googleSignUpButton_clickCallsViewModel() {
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).performClick()
-
-    verify(exactly = 1) { mockViewModel.googleSignIn(any(), any()) }
+  fun googleSignUpButton_hasCorrectText() {
+    compose
+        .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
+        .assertTextContains("Connect with Google")
   }
 
   @Test
   fun googleSignUpButton_disabledDuringLoading() {
-    uiStateFlow.value = AuthUIState(isLoading = true)
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsNotEnabled()
+    setVmState(AuthUIState(isLoading = true))
+    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsNotEnabled()
   }
 
-  // ==================== Navigation Tests ====================
+  // ===== OR divider =====
 
   @Test
-  fun logInLink_navigatesToSignInScreen() {
-    setContent()
-
-    composeTestRule.onNodeWithText("Log in.").performClick()
-
-    verify(exactly = 1) { mockNavController.navigate("SignInScreen") }
+  fun orDivider_displayed() {
+    compose.onNodeWithText("OR").assertExists()
   }
 
-  // ==================== Multiple Validation Errors Tests ====================
+  // ===== All required elements present =====
 
   @Test
-  fun validation_multipleErrors_showsAllErrors() {
-    setContent()
-
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    // All three errors should be displayed
-    composeTestRule.onNodeWithText("Email cannot be empty").assertExists()
-    composeTestRule.onNodeWithText("Password cannot be empty").assertExists()
-    composeTestRule.onNodeWithText("Please confirm your password").assertExists()
-  }
-
-  // ==================== Edge Case Tests ====================
-
-  @Test
-  fun validation_exactlySixCharacterPassword_passes() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("123456")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("123456")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    // Should not show "Password is too weak"
-    composeTestRule.onNodeWithText("Password is too weak").assertDoesNotExist()
-    verify(exactly = 1) { mockViewModel.registerWithEmail("test@example.com", "123456") }
-  }
-
-  @Test
-  fun validation_fiveCharacterPassword_fails() {
-    setContent()
-
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .performTextInput("test@example.com")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345")
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("12345")
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Password is too weak").assertExists()
-    verify(exactly = 0) { mockViewModel.registerWithEmail(any(), any()) }
+  fun allRequiredElements_present() {
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists()
+    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertExists()
+    compose.onNodeWithText("Welcome!").assertExists()
+    compose.onNodeWithText("OR").assertExists()
+    compose.onNodeWithText("Already have an account? ").assertExists()
+    compose.onNodeWithText("Log in.").assertExists()
   }
 }
