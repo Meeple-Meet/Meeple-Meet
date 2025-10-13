@@ -321,6 +321,12 @@ jobs:
           name: android-test-coverage
           path: app/build/outputs/code_coverage/debugAndroidTest/connected/
 
+      - name: Download lint report
+        uses: actions/download-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/
+
       - name: Generate coverage report
         run: ./gradlew jacocoTestReport --parallel --build-cache
 
