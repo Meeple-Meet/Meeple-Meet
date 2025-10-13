@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
     discussionId: String,
     currentUser: Account,
     onBack: () -> Unit,
@@ -100,19 +101,17 @@ fun DiscussionScreen(
         title = {
           Row(
               verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier.clickable {
-                  discussion?.let { onOpenDiscussionInfo(it) }
+              modifier = Modifier.clickable { discussion?.let { onOpenDiscussionInfo(it) } }) {
+                Box(
+                    modifier =
+                        Modifier.size(40.dp)
+                            .background(color = Color(0xFF800080), shape = CircleShape))
+                /** TODO: Placeholder for avatar */
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = discussionName,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons))
               }
-              ) {
-            Box(
-                modifier =
-                    Modifier.size(40.dp).background(color = Color(0xFF800080), shape = CircleShape))
-            /** TODO: Placeholder for avatar */
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = discussionName,
-                style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons))
-          }
         },
         navigationIcon = {
           IconButton(onClick = onBack) {

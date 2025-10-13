@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
@@ -72,7 +73,7 @@ const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionsOverviewScreen(
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account,
     navigation: NavigationActions,
     onSelectDiscussion: (Discussion) -> Unit = {},
@@ -89,7 +90,7 @@ fun DiscussionsOverviewScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.DiscussionsOverview.title,
+                  text = MeepleMeetScreen.DiscussionsOverview.name,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
               )
@@ -301,7 +302,7 @@ private fun DiscussionsOverviewPreview() {
           CenterAlignedTopAppBar(
               title = {
                 Text(
-                    text = MeepleMeetScreen.DiscussionsOverview.title,
+                    text = MeepleMeetScreen.DiscussionsOverview.name,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary)
               },

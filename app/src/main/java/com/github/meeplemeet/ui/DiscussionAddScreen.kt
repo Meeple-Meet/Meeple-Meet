@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -43,7 +44,7 @@ import kotlinx.coroutines.launch
 fun DiscussionAddScreen(
     onBack: () -> Unit,
     onCreate: () -> Unit,
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account
 ) {
   val scope = rememberCoroutineScope()
@@ -99,7 +100,7 @@ fun DiscussionAddScreen(
                       containerColor = AppColors.primary,
                       titleContentColor = AppColors.textIcons,
                       navigationIconContentColor = AppColors.textIcons),
-              title = { Text(text = MeepleMeetScreen.DiscussionAddScreen.title) },
+              title = { Text(text = MeepleMeetScreen.DiscussionAddScreen.name) },
               navigationIcon = {
                 IconButton(onClick = onBack) {
                   Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

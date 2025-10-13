@@ -60,10 +60,10 @@ object SignUpScreenTestTags {
 @Composable
 fun SignUpScreen(
     viewModel: AuthViewModel,
+    modifier: Modifier = Modifier,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     onLogInClick: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
   // Local state management for form inputs and validation
   var email by remember { mutableStateOf("") }
