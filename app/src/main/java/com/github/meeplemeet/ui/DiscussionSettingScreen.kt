@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
 object UITestTags {
@@ -53,13 +54,13 @@ object UITestTags {
 fun DiscussionSettingScreen(
     viewModel: FirestoreViewModel,
     discussionId: String,
+    currentAccount: Account,
     modifier: Modifier = Modifier
 ) {
   val coroutineScope = rememberCoroutineScope()
 
   /** --- Data states --- */
   val discussion by viewModel.discussionFlow(discussionId).collectAsState()
-  val currentAccount by viewModel.account.collectAsState()
 
   /** --- Search state --- */
   var searchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -85,11 +86,11 @@ fun DiscussionSettingScreen(
       }
     }
     /** Add current account only if not already present */
-    currentAccount?.let {
-      if (selectedMembers.none { member -> member.uid == it.uid }) {
-        selectedMembers.add(it)
+      currentAccount.let {
+          if (selectedMembers.none { member -> member.uid == it.uid }) {
+              selectedMembers.add(it)
+          }
       }
-    }
   }
 
   /** Live search effect */
@@ -104,7 +105,7 @@ fun DiscussionSettingScreen(
     /** Placeholder for backend search */
     searchResults =
         fakeSearchAccounts(searchQuery).filter {
-          it.uid != currentAccount!!.uid && it !in selectedMembers
+          it.uid != currentAccount.uid && it !in selectedMembers
         }
 
     dropdownExpanded = searchResults.isNotEmpty()
@@ -112,8 +113,8 @@ fun DiscussionSettingScreen(
   }
 
   discussion?.let { d ->
-    val isAdmin = d.admins.contains(currentAccount!!.uid)
-    val isOwner = d.creatorId == currentAccount!!.uid
+    val isAdmin = d.admins.contains(currentAccount.uid)
+    val isOwner = d.creatorId == currentAccount.uid
     val isMember = !isAdmin && !isOwner
 
     /** --- Name + Description --- */
@@ -122,16 +123,21 @@ fun DiscussionSettingScreen(
 
     Scaffold(
         topBar = {
-          TopBar(
+          TopBarWithDivider(
               text = "Discussion Settings",
+              /**
+               * Save Name and Description on back — this is the only time the DB is updated here
+               */
               /**
                * Save Name and Description on back — this is the only time the DB is updated here
                */
               onReturn = {
                 viewModel.setDiscussionName(
-                    discussion = d, name = newName, changeRequester = currentAccount!!)
+                    discussion = d, name = newName, changeRequester = currentAccount
+                )
                 viewModel.setDiscussionDescription(
-                    discussion = d, description = newDesc, changeRequester = currentAccount!!)
+                    discussion = d, description = newDesc, changeRequester = currentAccount
+                )
               }
               /*Todo: navigation back*/ )
         },
@@ -146,14 +152,16 @@ fun DiscussionSettingScreen(
                     enabled = !isMember,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error),
+                            containerColor = AppColors.negative
+                        ),
                     modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
                       Icon(
                           imageVector = Icons.Default.Delete,
                           contentDescription = null,
+                          tint = AppColors.textIcons
                       )
                       Spacer(modifier = Modifier.width(8.dp))
-                      Text("Delete Discussion")
+                      Text("Delete Discussion", color = AppColors.textIcons)
                     }
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
@@ -162,9 +170,10 @@ fun DiscussionSettingScreen(
                     enabled = true,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer),
+                            containerColor = AppColors.affirmative
+                        ),
                     modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                      Text("Leave Discussion")
+                      Text("Leave Discussion", color = AppColors.textIcons)
                     }
               }
         }) { padding ->
@@ -178,7 +187,9 @@ fun DiscussionSettingScreen(
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
                     contentDescription = "Icon",
-                    modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp))
+                    modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp),
+                    tint = AppColors.textIcons
+                )
 
                 /** --- Discussion Name --- */
                 /** These ensure only admins can edit the name field */
@@ -193,14 +204,14 @@ fun DiscussionSettingScreen(
                             .testTag(UITestTags.DISCUSSION_NAME),
                     colors =
                         TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.background,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor =
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface),
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = AppColors.textIcons,
+                            unfocusedIndicatorColor = AppColors.textIconsFade,
+                            cursorColor = AppColors.textIcons,
+                            focusedTextColor = AppColors.textIcons,
+                            unfocusedTextColor = AppColors.textIcons
+                        ),
                     singleLine = true,
                     /**
                      * To make the text centered, we use an invisible leading icon to offset the
@@ -210,8 +221,8 @@ fun DiscussionSettingScreen(
                       Icon(
                           imageVector = Icons.Default.Edit,
                           contentDescription = null,
-                          tint = MaterialTheme.colorScheme.background // Make it invisible
-                          )
+                          tint = Color.Transparent // Make it invisible
+                      )
                     },
                     /** Trailing edit icon only if admin */
                     trailingIcon = {
@@ -219,8 +230,8 @@ fun DiscussionSettingScreen(
                           imageVector = Icons.Default.Edit,
                           contentDescription = "Edit",
                           tint =
-                              if (isAdmin) MaterialTheme.colorScheme.onSurface
-                              else MaterialTheme.colorScheme.background)
+                              if (isAdmin) AppColors.textIcons
+                              else Color.Transparent)
                     },
                     textStyle =
                         LocalTextStyle.current.copy(
@@ -236,6 +247,7 @@ fun DiscussionSettingScreen(
                         MaterialTheme.typography.titleLarge.copy(
                             textDecoration = TextDecoration.Underline),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    color = AppColors.textIcons
                 )
 
                 /** --- Description TextField --- */
@@ -251,13 +263,14 @@ fun DiscussionSettingScreen(
                     /** Makes the textField look like a line */
                     colors =
                         TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.background,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.background,
-                            unfocusedIndicatorColor = MaterialTheme.colorScheme.background,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface),
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = AppColors.textIcons,
+                            unfocusedIndicatorColor = AppColors.textIconsFade,
+                            cursorColor = AppColors.textIcons,
+                            focusedTextColor = AppColors.textIcons,
+                            unfocusedTextColor = AppColors.textIcons
+                        ),
                     singleLine = true,
                     /**
                      * To make the text left-aligned, we use an invisible leading icon to offset the
@@ -269,8 +282,8 @@ fun DiscussionSettingScreen(
                           contentDescription = "Edit",
                           modifier = Modifier,
                           tint =
-                              if (isAdmin) MaterialTheme.colorScheme.onSurface
-                              else MaterialTheme.colorScheme.background)
+                              if (isAdmin) AppColors.textIcons
+                              else Color.Transparent)
                     },
                     textStyle =
                         LocalTextStyle.current.copy(
@@ -285,7 +298,8 @@ fun DiscussionSettingScreen(
                             .padding(horizontal = 0.dp)
                             .align(Alignment.CenterHorizontally),
                     thickness = 1.75.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                    color = AppColors.divider
+                )
 
                 /** --- Members List --- */
                 MemberList(
@@ -299,7 +313,7 @@ fun DiscussionSettingScreen(
                     isMember = isMember,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     viewModel = viewModel,
-                    currentAccount = currentAccount!!,
+                    currentAccount = currentAccount,
                     discussion = d)
 
                 /** --- Delete Discussion (confirm dialog) --- */
@@ -318,7 +332,7 @@ fun DiscussionSettingScreen(
                             onClick = {
                               coroutineScope.launch {
                                 /*Todo: navigation to other screen after deletion*/
-                                viewModel.deleteDiscussion(d, currentAccount!!)
+                                viewModel.deleteDiscussion(d, currentAccount)
                               }
                               showDeleteDialog = false
                             }) {
@@ -347,7 +361,8 @@ fun DiscussionSettingScreen(
 
                                 /** leave discussion */
                                 viewModel.removeUserFromDiscussion(
-                                    d, currentAccount!!, currentAccount!!)
+                                    d, currentAccount, currentAccount
+                                )
                                 /*Todo: navigation to next screen after leaving the group*/
                               }
                               showLeaveDialog = false
@@ -372,26 +387,30 @@ fun DiscussionSettingScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar(text: String, onReturn: () -> Unit = {}) {
+fun TopBarWithDivider(
+    text: String,
+    onReturn: () -> Unit = {},
+    trailingIcons: @Composable () -> Unit = {}
+) {
   /** --- Top App Bar --- */
   Column {
     CenterAlignedTopAppBar(
         navigationIcon = {
           IconButton(onClick = { onReturn() }, modifier = Modifier.testTag("back_button")) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = AppColors.textIcons)
           }
         },
         title = {
           Text(
-              text = text,
-              style = MaterialTheme.typography.headlineSmall,
-          )
+              text = text, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
         },
-        actions = { /* Add trailing icons here if needed */},
-        colors =
-            TopAppBarDefaults.mediumTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background),
-    )
+        actions = { /* Add trailing icons here if needed */
+          trailingIcons()
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AppColors.primary))
     /** --- Divider --- */
     HorizontalDivider(
         modifier =
@@ -399,7 +418,7 @@ fun TopBar(text: String, onReturn: () -> Unit = {}) {
                 .padding(horizontal = 0.dp)
                 .align(Alignment.CenterHorizontally),
         thickness = 1.dp,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+        color = AppColors.textIconsFade)
   }
 }
 
@@ -440,7 +459,9 @@ fun MemberList(
     Text(
         text = "Members:",
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold)
+        fontWeight = FontWeight.Bold,
+        color = AppColors.textIcons
+    )
 
     /** Autocomplete Search Field + Dropdown (only for non-members) */
     if (!isMember) {
@@ -453,7 +474,7 @@ fun MemberList(
             value = searchQuery,
             shape = RoundedCornerShape(28.dp),
             onValueChange = onSearchQueryChange,
-            label = { Text("Add Members") },
+            label = { Text("Add Members", color = AppColors.textIconsFade) },
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
               if (searchQuery.isNotBlank()) {
@@ -464,27 +485,39 @@ fun MemberList(
                         Modifier.clickable {
                           onSearchQueryChange("")
                           onDropdownExpandedChange(false)
-                        })
+                        },
+                    tint = AppColors.textIcons
+                )
               }
             },
-            enabled = true)
+            enabled = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = AppColors.textIcons,
+                unfocusedIndicatorColor = AppColors.textIconsFade,
+                cursorColor = AppColors.textIcons,
+                focusedTextColor = AppColors.textIcons,
+                unfocusedTextColor = AppColors.textIcons
+            )
+        )
 
         /** --- Dropdown Menu for search results --- */
         DropdownMenu(
             expanded = dropdownExpanded,
             onDismissRequest = { onDropdownExpandedChange(false) },
-            modifier = Modifier.fillMaxWidth().background(Color.White)) {
+            modifier = Modifier.fillMaxWidth().background(AppColors.secondary)) {
               when {
                 isSearching -> {
-                  DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
+                  DropdownMenuItem(text = { Text("Searching...", color = AppColors.textIconsFade) }, onClick = {})
                 }
                 searchResults.isEmpty() -> {
-                  DropdownMenuItem(text = { Text("No results") }, onClick = {})
+                  DropdownMenuItem(text = { Text("No results", color = AppColors.textIconsFade) }, onClick = {})
                 }
                 else -> {
                   searchResults.forEach { account ->
                     DropdownMenuItem(
-                        text = { Text(account.name) },
+                        text = { Text(account.name, color = AppColors.textIcons) },
                         onClick = {
                           selectedMembers.add(account)
                           onSearchQueryChange("")
@@ -495,11 +528,11 @@ fun MemberList(
                               modifier =
                                   Modifier.size(32.dp)
                                       .clip(CircleShape)
-                                      .background(Color.LightGray),
+                                      .background(AppColors.primary),
                               contentAlignment = Alignment.Center) {
                                 Text(
                                     text = account.name.firstOrNull()?.toString() ?: "A",
-                                    color = Color(0xFFFFA000),
+                                    color = AppColors.affirmative,
                                     fontWeight = FontWeight.Bold)
                               }
                         })
@@ -545,19 +578,23 @@ fun MemberList(
 
               /** --- Avatar Circle --- */
               Box(
-                  modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.LightGray),
+                  modifier = Modifier.size(36.dp).clip(CircleShape).background(AppColors.primary),
                   contentAlignment = Alignment.Center) {
-
                     /** First letter of name or A if name is empty */
                     Text(
                         text = member.name.firstOrNull()?.toString() ?: "A",
-                        color = Color(0xFFFFA000),
+                        color = AppColors.affirmative,
                         fontWeight = FontWeight.Bold)
                   }
               Spacer(modifier = Modifier.width(12.dp))
 
               /** Member name takes up remaining space */
-              Text(text = member.name, modifier = Modifier.weight(1f), maxLines = 1)
+              Text(
+                text = member.name,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                color = AppColors.textIcons
+              )
 
               /** --- Status Badge --- */
               val status =
@@ -572,9 +609,9 @@ fun MemberList(
               /** Badge colors based on status for now */
               val badgeColor =
                   when (status) {
-                    "Owner" -> Color(0xFF4CAF50) // Green
-                    "Admin" -> Color(0xFF1976D2) // Blue
-                    else -> Color(0xFFB0BEC5) // Gray
+                    "Owner" -> AppColors.affirmative
+                    "Admin" -> AppColors.neutral
+                    else -> AppColors.secondary
                   }
               /** --- Status Badge --- */
               Box(
@@ -586,7 +623,7 @@ fun MemberList(
                     /** Badge text */
                     Text(
                         text = status,
-                        color = Color.White,
+                        color = AppColors.textIcons,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold)
                   }
@@ -598,9 +635,10 @@ fun MemberList(
             modifier =
                 modifier
                     .fillMaxWidth()
-                    .padding(start = 60.dp, end = 60.dp), // 70% width to create middle effect
+                    .padding(start = 60.dp, end = 60.dp),
             thickness = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+            color = AppColors.divider
+        )
       }
     }
   }
@@ -620,12 +658,12 @@ fun MemberList(
 
             /** --- Avatar Circle --- */
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.LightGray),
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(AppColors.primary),
                 contentAlignment = Alignment.Center) {
                   /** First letter of name or A if name is empty */
                   Text(
                       text = selectedMember?.name?.firstOrNull()?.toString() ?: "A",
-                      color = Color(0xFFFFA000),
+                      color = AppColors.affirmative,
                       fontWeight = FontWeight.Bold)
                 }
             Spacer(modifier = Modifier.width(12.dp))
@@ -634,7 +672,9 @@ fun MemberList(
                 text = selectedMember?.name ?: "",
                 maxLines = 1,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold)
+                fontWeight = FontWeight.Bold,
+                color = AppColors.textIcons
+            )
           }
         },
         text = {},
@@ -649,7 +689,7 @@ fun MemberList(
                       changeRequester = currentAccount)
                   selectedMember = null
                 }) {
-                  Text("Make Admin", modifier = Modifier.testTag(UITestTags.MAKE_ADMIN_BUTTON))
+                  Text("Make Admin", modifier = Modifier.testTag(UITestTags.MAKE_ADMIN_BUTTON), color = AppColors.textIcons)
                 }
           }
         },
@@ -676,7 +716,7 @@ fun MemberList(
                     selectedMembers.remove(selectedMember!!)
                     selectedMember = null
                   }) {
-                    Text("Remove from Group")
+                    Text("Remove from Group", color = AppColors.negative)
                   }
             }
 
@@ -692,11 +732,11 @@ fun MemberList(
                         changeRequester = currentAccount)
                     selectedMember = null
                   }) {
-                    Text("Remove Admin")
+                    Text("Remove Admin", color = AppColors.negative)
                   }
             }
             /** Cancel button */
-            TextButton(onClick = { selectedMember = null }) { Text("Cancel") }
+            TextButton(onClick = { selectedMember = null }) { Text("Cancel", color = AppColors.textIconsFade) }
           }
         })
   }
