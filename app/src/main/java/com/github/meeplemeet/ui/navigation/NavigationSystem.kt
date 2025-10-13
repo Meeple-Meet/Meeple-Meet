@@ -20,7 +20,7 @@ import androidx.navigation.NavHostController
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
   const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
-    const val SESSIONS_TAB = "OverviewTab"
+  const val SESSIONS_TAB = "OverviewTab"
   const val DISCUSSIONS_TAB = "MapTab"
   const val DISCOVER_TAB = "DiscoverTab"
   const val PROFILE_TAB = "ProfileTab"
@@ -29,120 +29,127 @@ object NavigationTestTags {
 /**
  * Defines all navigation destinations (screens) in the Meeple Meet app.
  *
- * Each entry in this enum represents a screen(or tab) that can be displayed within the app. It
- * centralizes both screen definitions and their metadata, replacing the previous `Tab` and
- * `MeepleMeetScreen` sealed classes.
+ * This sealed class replaces the previous enum approach, supporting both:
+ * 1. Fixed screens (object): top-level destinations or screens without parameters.
+ * 2. Parameterized screens (data class): screens that require dynamic arguments (e.g., IDs).
  *
  * ## Properties
  * - `route`: The unique route string used by the [NavHostController] to identify the screen.
- * - `title`: The human-readable title of the screen, used for display in UI components.
+ * - `name`: The human-readable name of the screen, used for display in UI components.
  * - `isInBottomBar`: Whether this screen appears in the bottom navigation bar.
  * - `icon`: The [ImageVector] shown in the bottom navigation bar (if applicable).
  * - `testTag`: The Compose testing tag associated with this screen (if applicable).
  *
- * ## Example
- *
+ * ## Top-level destinations
+ * Screens that appear in the bottom navigation bar are marked with `isInBottomBar = true`. For
+ * bottom navigation, you can filter:
  * ```kotlin
- * enum class MeepleMeetScreen(
- *     val route: String,
- *     val title: String,
- *     val isInBottomBar: Boolean,
- *     val icon: ImageVector?,
- *     val testTag: String?
- * ) {
- *     DiscoverSessions("discover", "Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
- *     SessionsOverview("sessions_overview", "Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
- *     DiscussionsOverview("discussions_overview", "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB)
- * }
+ * val topLevelScreens = listOf(
+ *     MeepleMeetScreen.DiscoverSessions,
+ *     MeepleMeetScreen.SessionsOverview,
+ *     MeepleMeetScreen.DiscussionsOverview,
+ *     MeepleMeetScreen.ProfileScreen
+ * )
  * ```
  *
+ * ## Parameterized screens
+ * Use `data class` when the screen depends on a dynamic parameter, e.g.:
+ * ```kotlin
+ * val screen = MeepleMeetScreen.DiscussionScreen(discussionId = "abc123")
+ * navigationActions.navigateTo(screen)
+ * ```
+ *
+ * The route will be resolved as `"discussion/abc123"` in the NavController.
+ *
  * ## How to Add a New Screen
- * 1. Add a new entry in this enum with appropriate parameters:
- *     - A unique `route` string.
- *     - A user-facing `title` for display.
- *     - Whether it should appear in the bottom navigation bar (`isInBottomBar`).
- *     - An optional `icon` (if it should appear in the bottom navigation bar) and `testTag` for
- *       Compose UI testing.
- * 2. Add the corresponding composable to your navigation graph (NavHost) using its `route`.
- * 3. If `isInBottomBar` is true, it will automatically appear in [BottomNavigationMenu], which
- *    iterates over [entries] to display all bottom bar items.
+ * 1. Determine if the screen needs parameters:
+ *     - **No parameters** → create an `object` inside the sealed class.
+ *     - **With parameters** → create a `data class` with the required arguments.
+ * 2. Define the screen inside the sealed class: ```kotlin object SignInScreen :
+ *    MeepleMeetScreen("sign_in", "Sign In") data class DiscussionScreen(val discussionId: String) :
+ *    MeepleMeetScreen("discussion/$discussionId", "Discussion") ```
+ * 3. Add the corresponding composable in your NavHost using the screen's `route`: ```kotlin
+ *    composable(MeepleMeetScreen.SignInScreen.route) { SignInScreen() }
+ *    composable("discussion/{discussionId}") { backStackEntry -> val id =
+ *    backStackEntry.arguments?.getString("discussionId")!! DiscussionScreen(discussionId = id)
+ *    } ```
+ * 4. If the screen is a top-level destination (should appear in the bottom navigation bar):
+ *     - Add the **object** (not data class) manually in your BottomNavigationMenu: ```kotlin val
+ *       bottomBarScreens = listOf( MeepleMeetScreen.DiscoverSessions,
+ *       MeepleMeetScreen.SessionsOverview, MeepleMeetScreen.DiscussionsOverview,
+ *       MeepleMeetScreen.ProfileScreen ) ```
  *
  * ## Notes
- * - The enum structure removes the need for manual tab list management.
- * - `route` and `title` should stay aligned for clarity.
- * - Top-level destinations correspond to screens with `isInBottomBar = true`.
+ * - The sealed class allows for safer type-checking and easier management of dynamic routes.
+ * - `route` and `name` should stay aligned for clarity.
  */
-enum class MeepleMeetScreen(
+sealed class MeepleMeetScreen(
     val route: String,
-    val title: String,
-    val isInBottomBar: Boolean,
-    val icon: ImageVector?,
-    val testTag: String?
+    val name: String,
+    val isInBottomBar: Boolean = false,
+    val icon: ImageVector? = null,
+    val testTag: String? = null
 ) {
-  DiscoverSessions(
-      route = "discover",
-      title = "Discover",
-      isInBottomBar = true,
-      icon = Icons.Default.Language,
-      testTag = NavigationTestTags.DISCOVER_TAB),
-  SessionsOverview(
-      route = "sessions_overview",
-      title = "Sessions",
-      isInBottomBar = true,
-      icon = Icons.Default.Groups,
-      testTag = NavigationTestTags.SESSIONS_TAB),
-  SessionScreen(
-      route = "session/{sessionId}",
-      title = "Session",
-      isInBottomBar = false,
-      icon = null,
-      testTag = null),
-  SessionAddScreen(
-      route = "session_add",
-      title = "Add Session",
-      isInBottomBar = false,
-      icon = null,
-      testTag = null),
-  SessionEditScreen(
-      route = "session_edit/{sessionId}",
-      title = "Edit Session",
-      isInBottomBar = false,
-      icon = null,
-      testTag = null),
-  DiscussionsOverview(
-      route = "discussions_overview",
-      title = "Discussions",
-      isInBottomBar = true,
-      icon = Icons.Default.ChatBubbleOutline,
-      testTag = NavigationTestTags.DISCUSSIONS_TAB),
-  DiscussionScreen(
-      route = "discussion/{discussionId}",
-      title = "Discussion",
-      isInBottomBar = false,
-      icon = null,
-      testTag = null),
-  DiscussionAddScreen(
-      route = "discussion_add",
-      title = "Add Discussion",
-      isInBottomBar = false,
-      icon = null,
-      testTag = null),
-  DiscussionInfoScreen(
-      route = "discussion_info/{discussionId}",
-      title = "Edit Discussion",
-      isInBottomBar = false,
-      icon = null,
-      testTag = null),
-  ProfileScreen(
-      route = "profile",
-      title = "Profile",
-      isInBottomBar = true,
-      icon = Icons.Default.AccountCircle,
-      testTag = NavigationTestTags.PROFILE_TAB),
-  SignInScreen(
-      route = "sign_in", title = "Sign In", isInBottomBar = false, icon = null, testTag = null),
-  SignUpScreen(
-      route = "sign_up", title = "Sign Up", isInBottomBar = false, icon = null, testTag = null)
+  /** Top-level destinations */
+  object DiscoverSessions :
+      MeepleMeetScreen(
+          route = "discover",
+          name = "Discover",
+          isInBottomBar = true,
+          icon = Icons.Default.Language,
+          testTag = NavigationTestTags.DISCOVER_TAB)
+
+  object SessionsOverview :
+      MeepleMeetScreen(
+          route = "sessions_overview",
+          name = "Sessions",
+          isInBottomBar = true,
+          icon = Icons.Default.Groups,
+          testTag = NavigationTestTags.SESSIONS_TAB)
+
+  object DiscussionsOverview :
+      MeepleMeetScreen(
+          route = "discussions_overview",
+          name = "Discussions",
+          isInBottomBar = true,
+          icon = Icons.Default.ChatBubbleOutline,
+          testTag = NavigationTestTags.DISCUSSIONS_TAB)
+
+  object ProfileScreen :
+      MeepleMeetScreen(
+          route = "profile",
+          name = "Profile",
+          isInBottomBar = true,
+          icon = Icons.Default.AccountCircle,
+          testTag = NavigationTestTags.PROFILE_TAB)
+
+  /** Authentication screens */
+  object SignInScreen : MeepleMeetScreen(route = "sign_in", name = "Sign In")
+
+  object SignUpScreen : MeepleMeetScreen(route = "sign_up", name = "Sign Up")
+
+  /** Parameterized screens */
+  data class SessionScreen(val sessionId: String) :
+      MeepleMeetScreen(route = "session/$sessionId", name = "Session")
+
+  object SessionAddScreen : MeepleMeetScreen(route = "session_add", name = "Add Session")
+
+  data class SessionInfoScreen(val sessionId: String) :
+      MeepleMeetScreen(route = "session_info/$sessionId", name = "Session Details")
+
+  data class DiscussionScreen(val discussionId: String) :
+      MeepleMeetScreen(route = "discussion/$discussionId", name = "Discussion")
+
+  object DiscussionAddScreen : MeepleMeetScreen(route = "discussion_add", name = "Add Discussion")
+
+  data class DiscussionInfoScreen(val discussionId: String) :
+      MeepleMeetScreen(route = "discussion_info/$discussionId", name = "Discussion Details")
+
+  object Routes {
+    const val SESSION_INFO = "session_info/{sessionId}"
+    const val DISCUSSION = "discussion/{discussionId}"
+    const val DISCUSSION_INFO = "discussion_info/{discussionId}"
+  }
 }
 
 /**
@@ -161,12 +168,15 @@ fun BottomNavigationMenu(
   // TODO: Update colors when full MaterialTheme is implemented
   NavigationBar(
       modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
-        MeepleMeetScreen.entries
-            .filter { it.isInBottomBar }
+        listOf(
+                MeepleMeetScreen.DiscoverSessions,
+                MeepleMeetScreen.SessionsOverview,
+                MeepleMeetScreen.DiscussionsOverview,
+                MeepleMeetScreen.ProfileScreen)
             .forEach { screen ->
               NavigationBarItem(
-                  icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
-                  label = { Text(screen.title) },
+                  icon = { screen.icon?.let { Icon(it, contentDescription = screen.name) } },
+                  label = { Text(screen.name) },
                   selected = screen == currentScreen,
                   onClick = { onTabSelected(screen) },
                   modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)
