@@ -86,11 +86,11 @@ fun DiscussionSettingScreen(
       }
     }
     /** Add current account only if not already present */
-      currentAccount.let {
-          if (selectedMembers.none { member -> member.uid == it.uid }) {
-              selectedMembers.add(it)
-          }
+    currentAccount.let {
+      if (selectedMembers.none { member -> member.uid == it.uid }) {
+        selectedMembers.add(it)
       }
+    }
   }
 
   /** Live search effect */
@@ -133,11 +133,9 @@ fun DiscussionSettingScreen(
                */
               onReturn = {
                 viewModel.setDiscussionName(
-                    discussion = d, name = newName, changeRequester = currentAccount
-                )
+                    discussion = d, name = newName, changeRequester = currentAccount)
                 viewModel.setDiscussionDescription(
-                    discussion = d, description = newDesc, changeRequester = currentAccount
-                )
+                    discussion = d, description = newDesc, changeRequester = currentAccount)
               }
               /*Todo: navigation back*/ )
         },
@@ -150,16 +148,12 @@ fun DiscussionSettingScreen(
                 OutlinedButton(
                     onClick = { if (!isMember) showDeleteDialog = true },
                     enabled = !isMember,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = AppColors.negative
-                        ),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
                     modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
                       Icon(
                           imageVector = Icons.Default.Delete,
                           contentDescription = null,
-                          tint = AppColors.textIcons
-                      )
+                          tint = AppColors.textIcons)
                       Spacer(modifier = Modifier.width(8.dp))
                       Text("Delete Discussion", color = AppColors.textIcons)
                     }
@@ -168,10 +162,7 @@ fun DiscussionSettingScreen(
                 OutlinedButton(
                     onClick = { showLeaveDialog = true },
                     enabled = true,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = AppColors.affirmative
-                        ),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
                     modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
                       Text("Leave Discussion", color = AppColors.textIcons)
                     }
@@ -188,8 +179,7 @@ fun DiscussionSettingScreen(
                     imageVector = Icons.Default.AccountCircle,
                     contentDescription = "Icon",
                     modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp),
-                    tint = AppColors.textIcons
-                )
+                    tint = AppColors.textIcons)
 
                 /** --- Discussion Name --- */
                 /** These ensure only admins can edit the name field */
@@ -210,8 +200,7 @@ fun DiscussionSettingScreen(
                             unfocusedIndicatorColor = AppColors.textIconsFade,
                             cursorColor = AppColors.textIcons,
                             focusedTextColor = AppColors.textIcons,
-                            unfocusedTextColor = AppColors.textIcons
-                        ),
+                            unfocusedTextColor = AppColors.textIcons),
                     singleLine = true,
                     /**
                      * To make the text centered, we use an invisible leading icon to offset the
@@ -222,16 +211,14 @@ fun DiscussionSettingScreen(
                           imageVector = Icons.Default.Edit,
                           contentDescription = null,
                           tint = Color.Transparent // Make it invisible
-                      )
+                          )
                     },
                     /** Trailing edit icon only if admin */
                     trailingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
                           contentDescription = "Edit",
-                          tint =
-                              if (isAdmin) AppColors.textIcons
-                              else Color.Transparent)
+                          tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
                     },
                     textStyle =
                         LocalTextStyle.current.copy(
@@ -247,8 +234,7 @@ fun DiscussionSettingScreen(
                         MaterialTheme.typography.titleLarge.copy(
                             textDecoration = TextDecoration.Underline),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                    color = AppColors.textIcons
-                )
+                    color = AppColors.textIcons)
 
                 /** --- Description TextField --- */
                 TextField(
@@ -269,8 +255,7 @@ fun DiscussionSettingScreen(
                             unfocusedIndicatorColor = AppColors.textIconsFade,
                             cursorColor = AppColors.textIcons,
                             focusedTextColor = AppColors.textIcons,
-                            unfocusedTextColor = AppColors.textIcons
-                        ),
+                            unfocusedTextColor = AppColors.textIcons),
                     singleLine = true,
                     /**
                      * To make the text left-aligned, we use an invisible leading icon to offset the
@@ -281,9 +266,7 @@ fun DiscussionSettingScreen(
                           imageVector = Icons.Default.Edit,
                           contentDescription = "Edit",
                           modifier = Modifier,
-                          tint =
-                              if (isAdmin) AppColors.textIcons
-                              else Color.Transparent)
+                          tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
                     },
                     textStyle =
                         LocalTextStyle.current.copy(
@@ -298,8 +281,7 @@ fun DiscussionSettingScreen(
                             .padding(horizontal = 0.dp)
                             .align(Alignment.CenterHorizontally),
                     thickness = 1.75.dp,
-                    color = AppColors.divider
-                )
+                    color = AppColors.divider)
 
                 /** --- Members List --- */
                 MemberList(
@@ -361,8 +343,7 @@ fun DiscussionSettingScreen(
 
                                 /** leave discussion */
                                 viewModel.removeUserFromDiscussion(
-                                    d, currentAccount, currentAccount
-                                )
+                                    d, currentAccount, currentAccount)
                                 /*Todo: navigation to next screen after leaving the group*/
                               }
                               showLeaveDialog = false
@@ -460,8 +441,7 @@ fun MemberList(
         text = "Members:",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        color = AppColors.textIcons
-    )
+        color = AppColors.textIcons)
 
     /** Autocomplete Search Field + Dropdown (only for non-members) */
     if (!isMember) {
@@ -486,21 +466,19 @@ fun MemberList(
                           onSearchQueryChange("")
                           onDropdownExpandedChange(false)
                         },
-                    tint = AppColors.textIcons
-                )
+                    tint = AppColors.textIcons)
               }
             },
             enabled = true,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = AppColors.textIcons,
-                unfocusedIndicatorColor = AppColors.textIconsFade,
-                cursorColor = AppColors.textIcons,
-                focusedTextColor = AppColors.textIcons,
-                unfocusedTextColor = AppColors.textIcons
-            )
-        )
+            colors =
+                TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = AppColors.textIcons,
+                    unfocusedIndicatorColor = AppColors.textIconsFade,
+                    cursorColor = AppColors.textIcons,
+                    focusedTextColor = AppColors.textIcons,
+                    unfocusedTextColor = AppColors.textIcons))
 
         /** --- Dropdown Menu for search results --- */
         DropdownMenu(
@@ -509,10 +487,13 @@ fun MemberList(
             modifier = Modifier.fillMaxWidth().background(AppColors.secondary)) {
               when {
                 isSearching -> {
-                  DropdownMenuItem(text = { Text("Searching...", color = AppColors.textIconsFade) }, onClick = {})
+                  DropdownMenuItem(
+                      text = { Text("Searching...", color = AppColors.textIconsFade) },
+                      onClick = {})
                 }
                 searchResults.isEmpty() -> {
-                  DropdownMenuItem(text = { Text("No results", color = AppColors.textIconsFade) }, onClick = {})
+                  DropdownMenuItem(
+                      text = { Text("No results", color = AppColors.textIconsFade) }, onClick = {})
                 }
                 else -> {
                   searchResults.forEach { account ->
@@ -590,11 +571,10 @@ fun MemberList(
 
               /** Member name takes up remaining space */
               Text(
-                text = member.name,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                color = AppColors.textIcons
-              )
+                  text = member.name,
+                  modifier = Modifier.weight(1f),
+                  maxLines = 1,
+                  color = AppColors.textIcons)
 
               /** --- Status Badge --- */
               val status =
@@ -632,13 +612,9 @@ fun MemberList(
       item {
         /** --- Divider after the list --- */
         HorizontalDivider(
-            modifier =
-                modifier
-                    .fillMaxWidth()
-                    .padding(start = 60.dp, end = 60.dp),
+            modifier = modifier.fillMaxWidth().padding(start = 60.dp, end = 60.dp),
             thickness = 1.dp,
-            color = AppColors.divider
-        )
+            color = AppColors.divider)
       }
     }
   }
@@ -673,8 +649,7 @@ fun MemberList(
                 maxLines = 1,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = AppColors.textIcons
-            )
+                color = AppColors.textIcons)
           }
         },
         text = {},
@@ -689,7 +664,10 @@ fun MemberList(
                       changeRequester = currentAccount)
                   selectedMember = null
                 }) {
-                  Text("Make Admin", modifier = Modifier.testTag(UITestTags.MAKE_ADMIN_BUTTON), color = AppColors.textIcons)
+                  Text(
+                      "Make Admin",
+                      modifier = Modifier.testTag(UITestTags.MAKE_ADMIN_BUTTON),
+                      color = AppColors.textIcons)
                 }
           }
         },
@@ -736,7 +714,9 @@ fun MemberList(
                   }
             }
             /** Cancel button */
-            TextButton(onClick = { selectedMember = null }) { Text("Cancel", color = AppColors.textIconsFade) }
+            TextButton(onClick = { selectedMember = null }) {
+              Text("Cancel", color = AppColors.textIconsFade)
+            }
           }
         })
   }
