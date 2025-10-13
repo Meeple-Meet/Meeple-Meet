@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,7 +39,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +61,7 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.appShapes
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Calendar
 import kotlin.math.roundToInt
 
 /* =======================================================================
@@ -434,7 +439,7 @@ private fun BadgedIconButton(
           Badge { Text(badgeCount.toString()) }
         }
       }) {
-        IconButton(onClick = { onClick }) {
+        IconButton(onClick = { onClick() }) {
           Icon(icon, contentDescription = contentDescription, tint = AppColors.textIcons)
         }
       }
@@ -482,7 +487,7 @@ fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (String) -> Unit) {
 
 @Composable
 fun DateField(value: String, onValueChange: (String) -> Unit) {
-  var showDialog by remember { mutableStateOf(false) }
+  var showDialogDate by remember { mutableStateOf(false) }
 
   // The text field
   IconTextField(
@@ -490,13 +495,70 @@ fun DateField(value: String, onValueChange: (String) -> Unit) {
       onValueChange = {}, // we control it externally
       placeholder = "Date",
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
-      trailingIcon = { TextButton(onClick = { showDialog = true }) { Text("Pick") } })
+      trailingIcon = { TextButton(onClick = { showDialogDate = true }) { Text("Pick") } })
 
   // The popup
-  if (showDialog) {
+  if (showDialogDate) {
     DatePickerDialog(
-        onDismiss = { showDialog = false },
+        onDismiss = { showDialogDate = false },
         onDateSelected = { selectedDate -> onValueChange(selectedDate) })
+  }
+}
+
+// ---- Add after your DatePickerDialog / DateField ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
+  // initialize state with current time
+  val calendar = Calendar.getInstance()
+  val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
+  val initialMinute = calendar.get(Calendar.MINUTE)
+
+  val timePickerState =
+      rememberTimePickerState(
+          initialHour = initialHour, initialMinute = initialMinute, is24Hour = true)
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      confirmButton = {
+        TextButton(
+            onClick = {
+              val h = timePickerState.hour
+              val m = timePickerState.minute
+              val formatted = String.format("%02d:%02d", h, m)
+              onTimeSelected(formatted)
+              onDismiss()
+            }) {
+              Text("OK")
+            }
+      },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+      text = {
+        // Use the Material3 TimePicker (dial) inside the dialog
+        TimePicker(
+            state = timePickerState,
+            colors =
+                TimePickerDefaults.colors(
+                    // Customize colors to match your theme
+                    ))
+      })
+}
+
+@Composable
+fun TimeField(value: String, onValueChange: (String) -> Unit) {
+  var showDialogTime by remember { mutableStateOf(false) }
+
+  IconTextField(
+      value = value,
+      onValueChange = {}, // controlled externally
+      placeholder = "Time",
+      leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Time") },
+      trailingIcon = { TextButton(onClick = { showDialogTime = true }) { Text("Pick") } })
+
+  if (showDialogTime) {
+    TimePickerDialog(
+        onDismiss = { showDialogTime = false }, onTimeSelected = { sel -> onValueChange(sel) })
   }
 }
 
@@ -528,7 +590,7 @@ private fun Preview_datePicker() {
 private fun CreateSessionPreview() {
   AppTheme {
     SessionViewScreen(
-        currentUser = Account("marcoUID", "marco", email = "marco@epfl.ch"),
+        currentUser = Account("marcoUID", "marco", "marco", email = "marco@epfl.ch"),
         initial =
             SessionForm(
                 title = "Friday Night Meetup",
@@ -683,7 +745,7 @@ private fun Preview_BadgedIconButton() {
 private fun Preview_CreateSession_Full() {
   AppTheme {
     SessionViewScreen(
-        currentUser = Account("marcoUID", "marco", email = "marco@epfl.ch"),
+        currentUser = Account("marcoUID", "marco", "marco", email = "marco@epfl.ch"),
         initial =
             SessionForm(
                 title = "Friday Night Meetup",
