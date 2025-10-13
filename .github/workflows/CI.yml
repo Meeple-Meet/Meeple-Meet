@@ -161,13 +161,15 @@ jobs:
           fi
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --parallel --build-cache
+        run: ./gradlew check --parallel --build-cache
 
-      - name: Upload unit test coverage
+      - name: Upload unit test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-coverage
-          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
+          name: unit-test-results
+          path: app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
 
   android-tests:
     name: Android Instrumentation Tests
@@ -309,11 +311,11 @@ jobs:
       - name: Build debug classes
         run: ./gradlew compileDebugKotlin --parallel --build-cache
 
-      - name: Download unit test coverage
+      - name: Download unit test results
         uses: actions/download-artifact@v4
         with:
-          name: unit-test-coverage
-          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/
+          name: unit-test-results
+          path: app/build/test-results/testDebugUnitTest/
 
       - name: Download android test coverage
         uses: actions/download-artifact@v4
