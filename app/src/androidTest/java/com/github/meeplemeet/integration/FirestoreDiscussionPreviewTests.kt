@@ -1,11 +1,11 @@
-package com.github.meeplemeet.model.integration
+package com.github.meeplemeet.integration
 
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionPreview
-import com.github.meeplemeet.model.systems.FirestoreRepository
-import com.github.meeplemeet.model.utils.FirestoreTests
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.coEvery
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
@@ -33,10 +33,9 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
   fun setup() {
     Dispatchers.setMain(StandardTestDispatcher())
     viewModel = FirestoreViewModel(repository)
-    account1 =
-        Account(uid = "a1", userHandle = "a1", name = "Antoine", email = "Antoine@example.com")
-    account2 = Account(uid = "a2", userHandle = "a2", name = "Marco", email = "Marco@example.com")
-    account3 = Account(uid = "a3", userHandle = "a3", name = "Thomas", email = "Thomas@example.com")
+    account1 = Account(uid = "a1", handle = "a1", name = "Antoine", email = "Antoine@example.com")
+    account2 = Account(uid = "a2", handle = "a2", name = "Marco", email = "Marco@example.com")
+    account3 = Account(uid = "a3", handle = "a3", name = "Thomas", email = "Thomas@example.com")
   }
 
   @After

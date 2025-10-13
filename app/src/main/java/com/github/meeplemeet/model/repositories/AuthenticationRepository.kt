@@ -1,13 +1,13 @@
-package com.github.meeplemeet.model.systems
+package com.github.meeplemeet.model.repositories
 
 import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.structures.Account
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -21,10 +21,10 @@ import kotlinx.coroutines.tasks.await
  * @param helper Helper for processing Google sign-in credentials
  * @param firestoreRepository Repository for managing account data in Firestore
  */
-class AuthRepoFirebase(
+class AuthenticationRepository(
     private val auth: FirebaseAuth = Firebase.auth,
     private val helper: GoogleSignInHelper = DefaultGoogleSignInHelper(),
-    private val firestoreRepository: FirestoreRepository = FirestoreRepository(Firebase.firestore)
+    private val firestoreRepository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) {
 
   companion object {

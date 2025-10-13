@@ -1,8 +1,17 @@
-package com.github.meeplemeet.model.systems
+package com.github.meeplemeet.model.repositories
 
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
-import com.github.meeplemeet.model.structures.*
+import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.AccountNoUid
+import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.structures.DiscussionNoUid
+import com.github.meeplemeet.model.structures.DiscussionPreview
+import com.github.meeplemeet.model.structures.DiscussionPreviewNoUid
+import com.github.meeplemeet.model.structures.Message
+import com.github.meeplemeet.model.structures.fromNoUid
+import com.github.meeplemeet.model.structures.toNoUid
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -13,7 +22,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /** Firestore data access layer for accounts, discussions, and messages. */
-const val HANDLES_COLLECTION_PATH = "handles"
 const val ACCOUNT_COLLECTION_PATH = "accounts"
 const val DISCUSSIONS_COLLECTION_PATH = "discussions"
 
@@ -23,10 +31,9 @@ const val DISCUSSIONS_COLLECTION_PATH = "discussions"
  * Provides suspend functions for one-shot reads/writes and Flow-based listeners for real-time
  * updates.
  */
-class FirestoreRepository(db: FirebaseFirestore) {
+class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val accounts = db.collection(ACCOUNT_COLLECTION_PATH)
   private val discussions = db.collection(DISCUSSIONS_COLLECTION_PATH)
-  private val handles = db.collection(HANDLES_COLLECTION_PATH)
 
   private fun newDiscussionUID(): String = discussions.document().id
 
@@ -64,7 +71,7 @@ class FirestoreRepository(db: FirebaseFirestore) {
     val snapshot = discussions.document(id).get().await()
     val discussion = snapshot.toObject(DiscussionNoUid::class.java)
     if (discussion != null) return fromNoUid(id, discussion)
-    throw DiscussionNotFoundException("Discussion not found.")
+    throw DiscussionNotFoundException()
   }
 
   /** Update a discussion's name. */
@@ -231,16 +238,13 @@ class FirestoreRepository(db: FirebaseFirestore) {
             userHandle, userHandle, name, email = email, photoUrl = photoUrl, description = null)
     val accountNoUid = AccountNoUid(userHandle, name, email, photoUrl, description = null)
     accounts.document(account.uid).set(accountNoUid).await()
-    handles.document(account.uid).set("").await()
     return account
   }
 
   /** Retrieve an account and its discussion previews. */
   suspend fun getAccount(id: String): Account {
     val snapshot = accounts.document(id).get().await()
-    val account =
-        snapshot.toObject(AccountNoUid::class.java)
-            ?: throw AccountNotFoundException("Account not found.")
+    val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
 
     val previewsSnap = accounts.document(id).collection("previews").get().await()
     val previews: Map<String, DiscussionPreviewNoUid> =
