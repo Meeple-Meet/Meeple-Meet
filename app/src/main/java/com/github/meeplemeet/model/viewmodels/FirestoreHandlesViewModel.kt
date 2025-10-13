@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.HandleAlreadyTakenException
+import com.github.meeplemeet.model.InvalidHandleFormatException
 import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
 import com.github.meeplemeet.model.structures.Account
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,8 @@ class FirestoreHandlesViewModel(
 
   fun checkHandleAvailable(handle: String) {
     if (handle.isBlank()) _errorMsg.value = "Handle can not be blank"
+    else if (!repository.validHandle(handle))
+        _errorMsg.value = InvalidHandleFormatException.DEFAULT_MESSAGE
     else
         viewModelScope.launch {
           val exists = repository.checkHandleAvailable(handle)
@@ -46,27 +49,35 @@ class FirestoreHandlesViewModel(
   }
 
   fun createAccountHandle(account: Account, handle: String) {
-    viewModelScope.launch {
-      try {
-        _account.value = repository.createAccountHandle(account.uid, handle)
-      } catch (_: HandleAlreadyTakenException) {
-        _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
-      } catch (_: AccountNotFoundException) {
-        _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
-      }
-    }
+    if (handle.isBlank()) _errorMsg.value = "Handle can not be blank"
+    else if (!repository.validHandle(handle))
+        _errorMsg.value = InvalidHandleFormatException.DEFAULT_MESSAGE
+    else
+        viewModelScope.launch {
+          try {
+            _account.value = repository.createAccountHandle(account.uid, handle)
+          } catch (_: HandleAlreadyTakenException) {
+            _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
+          } catch (_: AccountNotFoundException) {
+            _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
+          }
+        }
   }
 
   fun setAccountHandle(account: Account, newHandle: String) {
-    viewModelScope.launch {
-      try {
-        _account.value = repository.setAccountHandle(account.uid, account.handle, newHandle)
-      } catch (_: HandleAlreadyTakenException) {
-        _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
-      } catch (_: AccountNotFoundException) {
-        _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
-      }
-    }
+    if (newHandle.isBlank()) _errorMsg.value = "Handle can not be blank"
+    else if (!repository.validHandle(newHandle))
+        _errorMsg.value = InvalidHandleFormatException.DEFAULT_MESSAGE
+    else
+        viewModelScope.launch {
+          try {
+            _account.value = repository.setAccountHandle(account.uid, account.handle, newHandle)
+          } catch (_: HandleAlreadyTakenException) {
+            _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
+          } catch (_: AccountNotFoundException) {
+            _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
+          }
+        }
   }
 
   fun deleteAccountHandle(account: Account) {

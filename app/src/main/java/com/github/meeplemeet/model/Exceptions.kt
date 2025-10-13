@@ -26,3 +26,10 @@ class HandleAlreadyTakenException(message: String = DEFAULT_MESSAGE) : Exception
     const val DEFAULT_MESSAGE = "This handle has already been assigned."
   }
 }
+
+/** Throws when an account handle has already been assigned to another user. */
+class InvalidHandleFormatException(message: String = DEFAULT_MESSAGE) : Exception(message) {
+  companion object {
+    const val DEFAULT_MESSAGE = "Handle should only contain letters and digits"
+  }
+}
