@@ -8,7 +8,23 @@ plugins {
     alias(libs.plugins.ktfmt)
 // TODO: Enable Google Services plugin when Firebase services are used
     alias(libs.plugins.gms)
+    alias(libs.plugins.sonar)
+}
 
+sonar {
+    //disable automatic analysis
+    properties {
+        property("sonar.projectName", "seekr")
+        property("sonar.projectKey", "Meeple-Meet_Meeple-Meet")
+        property("sonar.organization", "meeple-meet")
+        property("sonar.host.url", "https://sonarcloud.io")
+        // Comma-separated paths to the various directories containing the *.xml JUnit report files. Each path may be absolute or relative to the project base directory.
+        property("sonar.junit.reportPaths", "${project.layout.buildDirectory.get()}/test-results/testDebugunitTest/")
+        // Paths to xml files with Android Lint issues. If the main flavor is changed, this file will have to be changed too.
+        property("sonar.androidLint.reportPaths", "${project.layout.buildDirectory.get()}/reports/lint-results-debug.xml")
+        // Paths to JaCoCo XML coverage report files.
+        property("sonar.coverage.jacoco.xmlReportPaths", "${project.layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+    }
 }
 
 android {
