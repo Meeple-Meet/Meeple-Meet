@@ -352,10 +352,10 @@ jobs:
         run: |
           REPORT_PATH="app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
           if [ -f "$REPORT_PATH" ]; then
-            # Extract aggregate line coverage (last <counter type="LINE"> before </report>)
-            LAST_LINE=$(grep -o '<counter[^>]*>' "$REPORT_PATH" | grep 'type="LINE"' | tail -1)
-            MISSED=$(echo "$LAST_LINE" | sed -n 's/.*missed="\([0-9]*\)".*/\1/p')
-            COVERED=$(echo "$LAST_LINE" | sed -n 's/.*covered="\([0-9]*\)".*/\1/p')
+            # Extract aggregate instruction coverage (last <counter type="INSTRUCTION"> before </report>)
+            LAST_INSTRUCTION=$(grep -o '<counter[^>]*>' "$REPORT_PATH" | grep 'type="INSTRUCTION"' | tail -1)
+            MISSED=$(echo "$LAST_INSTRUCTION" | sed -n 's/.*missed="\([0-9]*\)".*/\1/p')
+            COVERED=$(echo "$LAST_INSTRUCTION" | sed -n 's/.*covered="\([0-9]*\)".*/\1/p')
             TOTAL=$((MISSED + COVERED))
             if [ $TOTAL -gt 0 ]; then
               PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", ($COVERED / $TOTAL) * 100}")
@@ -363,7 +363,7 @@ jobs:
               PERCENTAGE="0.00"
             fi
             echo "percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
-            echo "Line coverage: $PERCENTAGE%"
+            echo "Instruction coverage: $PERCENTAGE%"
           else
             echo "percentage=N/A" >> $GITHUB_OUTPUT
             echo "Coverage report not found"
@@ -378,7 +378,7 @@ jobs:
         run: |
           COVERAGE="${{ needs.coverage-report.outputs.coverage }}"
           THRESHOLD=80.00
-          echo "Line coverage is $COVERAGE%"
+          echo "Instruction coverage is $COVERAGE%"
           echo "Minimum required coverage is $THRESHOLD%"
 
           # Check if coverage meets threshold

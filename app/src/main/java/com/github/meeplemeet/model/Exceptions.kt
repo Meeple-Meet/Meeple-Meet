@@ -30,6 +30,7 @@ class HandleAlreadyTakenException(message: String = DEFAULT_MESSAGE) : Exception
 /** Throws when an account handle has already been assigned to another user. */
 class InvalidHandleFormatException(message: String = DEFAULT_MESSAGE) : Exception(message) {
   companion object {
-    const val DEFAULT_MESSAGE = "Handle should only contain letters and digits"
+    const val DEFAULT_MESSAGE =
+        "Handle should be of size 4-32 and only contain letters, digits or underscores"
   }
 }

@@ -21,7 +21,7 @@ import kotlinx.coroutines.tasks.await
  * @param helper Helper for processing Google sign-in credentials
  * @param firestoreRepository Repository for managing account data in Firestore
  */
-class AuthenticationRepository(
+class AuthRepository(
     private val auth: FirebaseAuth = Firebase.auth,
     private val helper: GoogleSignInHelper = DefaultGoogleSignInHelper(),
     private val firestoreRepository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)

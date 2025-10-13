@@ -3,8 +3,6 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.utils.FirestoreTests
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.firestore
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.flow.filterNotNull
@@ -23,7 +21,7 @@ class FirestoreListenerTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    repository = FirestoreRepository(Firebase.firestore)
+    repository = FirestoreRepository()
     runBlocking {
       account1 =
           repository.createAccount(

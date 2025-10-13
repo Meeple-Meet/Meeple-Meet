@@ -17,7 +17,9 @@ class FirestoreHandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db
   private val accounts = db.collection(ACCOUNT_COLLECTION_PATH)
 
   fun validHandle(handle: String): Boolean {
-    return handle.all { it.isLetterOrDigit() }
+    return handle.length > 3 &&
+        handle.length < 33 &&
+        handle.all { it.isLetterOrDigit() || it == '_' }
   }
 
   suspend fun handleForAccountExists(accountId: String, handle: String): Boolean {

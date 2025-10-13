@@ -6,8 +6,6 @@ import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.utils.FirestoreTests
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.firestore
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -27,7 +25,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    repository = FirestoreRepository(Firebase.firestore)
+    repository = FirestoreRepository()
     runBlocking {
       testAccount1 =
           repository.createAccount("Alice", "Alice", email = "Alice@example.com", photoUrl = null)

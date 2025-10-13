@@ -8,8 +8,6 @@ import com.github.meeplemeet.model.repositories.HANDLES_COLLECTION_PATH
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.utils.FirestoreTests
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.firestore
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -29,16 +27,16 @@ class FirestoreHandlesTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    handlesRepo = FirestoreHandlesRepository(Firebase.firestore)
+    handlesRepo = FirestoreHandlesRepository()
     handlesVM = FirestoreHandlesViewModel(handlesRepo)
-    accountRepo = FirestoreRepository(Firebase.firestore)
+    accountRepo = FirestoreRepository()
     runBlocking {
       testAccount =
           accountRepo.createAccount(
-              "Alice", "", email = "alice_handles_test@example.com", photoUrl = null)
+              "Alice", "Alice", email = "alice_handles_test@example.com", photoUrl = null)
       testAccount2 =
           accountRepo.createAccount(
-              "Bob", "", email = "bob_handles_test@example.com", photoUrl = null)
+              "Bobs", "Bobs", email = "bob_handles_test@example.com", photoUrl = null)
     }
   }
 
@@ -261,7 +259,7 @@ class FirestoreHandlesTests : FirestoreTests() {
 
   @Test
   fun createAccountHandleWithSpecialCharacters() = runBlocking {
-    val handle = "test_user-123"
+    val handle = "test_user_123"
 
     handlesVM.createAccountHandle(testAccount, handle)
     delay(1000)

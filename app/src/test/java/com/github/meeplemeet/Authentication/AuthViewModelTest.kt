@@ -9,7 +9,7 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.repositories.AuthenticationRepository
+import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
@@ -33,7 +33,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
   private lateinit var viewModel: AuthViewModel
-  private val repo: AuthenticationRepository = mockk(relaxed = true)
+  private val repo: AuthRepository = mockk(relaxed = true)
   private val testDispatcher = StandardTestDispatcher()
   private val testScope = TestScope(testDispatcher)
 
