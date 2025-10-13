@@ -2,8 +2,8 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.*
-import com.github.meeplemeet.model.systems.FirestoreRepository
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.google.firebase.Timestamp
@@ -37,7 +37,7 @@ class DiscussionScreenIntegrationTest {
     repository = mockk(relaxed = true)
     mockNavigation = mockk(relaxed = true)
     currentUser =
-        Account(uid = "user1", userHandle = "user1", name = "Alice", email = "Alice@example.com")
+        Account(uid = "user1", handle = "user1", name = "Alice", email = "Alice@example.com")
 
     val messages =
         listOf(

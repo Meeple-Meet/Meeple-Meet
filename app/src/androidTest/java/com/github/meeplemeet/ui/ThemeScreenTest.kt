@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.ui
+package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

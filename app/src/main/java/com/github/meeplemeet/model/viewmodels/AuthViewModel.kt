@@ -10,8 +10,8 @@ import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.repositories.AuthenticationRepository
 import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.systems.AuthRepoFirebase
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -57,7 +57,7 @@ data class AuthUIState(
  * @property repository The authentication repository that handles the actual auth operations.
  *   Defaults to AuthRepoFirebase for production use.
  */
-class AuthViewModel(private val repository: AuthRepoFirebase) : ViewModel() {
+class AuthViewModel(private val repository: AuthenticationRepository) : ViewModel() {
 
   // Private mutable state flow for internal state management
   private val _uiState = MutableStateFlow(AuthUIState())

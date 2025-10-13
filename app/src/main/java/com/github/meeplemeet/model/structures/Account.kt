@@ -13,10 +13,10 @@ import kotlinx.serialization.Serializable
  */
 data class Account(
     val uid: String,
-    val userHandle: String,
+    val handle: String,
     val name: String,
-    val previews: Map<String, DiscussionPreview> = emptyMap(),
     val email: String,
+    val previews: Map<String, DiscussionPreview> = emptyMap(),
     var photoUrl: String? = null,
     var description: String? = null
 )
@@ -28,7 +28,7 @@ data class Account(
  */
 @Serializable
 data class AccountNoUid(
-    val userHandle: String = "",
+    val handle: String = "",
     val name: String = "",
     val email: String = "",
     val photoUrl: String? = null,
@@ -50,9 +50,9 @@ fun fromNoUid(
 ): Account =
     Account(
         id,
-        accountNoUid.userHandle,
+        accountNoUid.handle,
         accountNoUid.name,
-        previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
         email = accountNoUid.email,
+        previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
         photoUrl = accountNoUid.photoUrl,
         description = accountNoUid.description)

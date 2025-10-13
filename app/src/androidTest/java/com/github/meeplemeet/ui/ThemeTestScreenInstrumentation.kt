@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.ui
+package com.github.meeplemeet.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
