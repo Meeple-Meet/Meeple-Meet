@@ -16,6 +16,9 @@ class FirestoreHandlesViewModel(
   private val _errorMsg = MutableStateFlow("")
   val errorMessage: StateFlow<String> = _errorMsg
 
+  private val _account = MutableStateFlow<Account?>(null)
+  val account: StateFlow<Account?> = _account
+
   fun handleForAccountExists(account: Account) {
     viewModelScope.launch {
       val exists = repository.handleForAccountExists(account.uid, account.handle)
@@ -45,7 +48,7 @@ class FirestoreHandlesViewModel(
   fun createAccountHandle(account: Account, handle: String) {
     viewModelScope.launch {
       try {
-        repository.createAccountHandle(account.uid, handle)
+        _account.value = repository.createAccountHandle(account.uid, handle)
       } catch (_: HandleAlreadyTakenException) {
         _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
       } catch (_: AccountNotFoundException) {
@@ -57,7 +60,7 @@ class FirestoreHandlesViewModel(
   fun setAccountHandle(account: Account, newHandle: String) {
     viewModelScope.launch {
       try {
-        repository.setAccountHandle(account.uid, account.handle, newHandle)
+        _account.value = repository.setAccountHandle(account.uid, account.handle, newHandle)
       } catch (_: HandleAlreadyTakenException) {
         _errorMsg.value = HandleAlreadyTakenException.DEFAULT_MESSAGE
       } catch (_: AccountNotFoundException) {
