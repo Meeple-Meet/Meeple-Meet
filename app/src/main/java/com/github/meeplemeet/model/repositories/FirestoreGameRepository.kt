@@ -24,7 +24,7 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
 
   /** Retrieves all games (within [maxResults]) from Firestore. */
   override suspend fun getGames(maxResults: Int): List<Game> {
-    val snapshot = games.get().await()
+    val snapshot = games.limit(maxResults.toLong()).get().await()
     return mapSnapshotToGames(snapshot.documents)
   }
 

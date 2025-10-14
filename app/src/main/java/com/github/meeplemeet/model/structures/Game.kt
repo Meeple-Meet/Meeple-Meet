@@ -20,10 +20,10 @@ data class Game(
     val name: String,
     val description: String,
     val imageURL: String,
-    val minPlayers: UInt,
-    val maxPlayers: UInt,
-    val recommendedPlayers: UInt?,
-    val averagePlayTime: UInt?,
+    val minPlayers: Int,
+    val maxPlayers: Int,
+    val recommendedPlayers: Int?,
+    val averagePlayTime: Int?,
     val genres: List<Int> = emptyList()
 )
 
@@ -37,10 +37,10 @@ data class GameNoUid(
     val name: String = "",
     val description: String = "",
     val imageURL: String = "",
-    val minPlayers: UInt = 0u,
-    val maxPlayers: UInt = 0u,
-    val recommendedPlayers: UInt? = null,
-    val averagePlayTime: UInt? = null,
+    val minPlayers: Int = 0,
+    val maxPlayers: Int = 0,
+    val recommendedPlayers: Int? = null,
+    val averagePlayTime: Int? = null,
     val genres: List<Int> = emptyList()
 )
 
