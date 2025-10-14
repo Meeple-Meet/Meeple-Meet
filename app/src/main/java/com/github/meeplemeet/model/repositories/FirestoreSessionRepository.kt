@@ -29,9 +29,13 @@ class FirestoreSessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       gameId: String,
       date: Timestamp,
       location: Location,
+      minParticipants: Int,
+      maxParticipants: Int,
       vararg participants: String
   ): Discussion {
-    val session = Session(name, gameId, date, location, participants.toList())
+    val session =
+        Session(
+            name, gameId, date, location, minParticipants, maxParticipants, participants.toList())
     discussions.document(discussionId).update(DiscussionNoUid::session.name, session).await()
     return discussionRepo.getDiscussion(discussionId)
   }
@@ -48,6 +52,8 @@ class FirestoreSessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       gameId: String? = null,
       date: Timestamp? = null,
       location: Location? = null,
+      minParticipants: Int? = null,
+      maxParticipants: Int? = null,
       newParticipantList: List<String>? = null
   ): Discussion {
     val updates = mutableMapOf<String, Any>()
@@ -56,6 +62,12 @@ class FirestoreSessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     gameId?.let { updates["${DiscussionNoUid::session.name}.${Session::gameId.name}"] = it }
     date?.let { updates["${DiscussionNoUid::session.name}.${Session::date.name}"] = it }
     location?.let { updates["${DiscussionNoUid::session.name}.${Session::location.name}"] = it }
+    minParticipants?.let {
+      updates["${DiscussionNoUid::session.name}.${Session::minParticipants.name}"] = it
+    }
+    maxParticipants?.let {
+      updates["${DiscussionNoUid::session.name}.${Session::maxParticipants.name}"] = it
+    }
     newParticipantList?.let {
       updates["${DiscussionNoUid::session.name}.${Session::participants.name}"] = it
     }
