@@ -34,7 +34,7 @@ jobs:
         run: ./gradlew clean assembleRelease
 
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v3
         with:
           name: app-release.apk
           path: app/build/outputs/apk/release/app-release.apk
