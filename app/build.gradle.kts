@@ -11,6 +11,16 @@ plugins {
     alias(libs.plugins.sonar)
 }
 
+// Force newer version of commons-compress for all configurations including sonar
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.apache.commons" && requested.name == "commons-compress") {
+            useVersion("1.26.1")
+            because("Fixes compatibility issue with Gradle and SonarQube plugin")
+        }
+    }
+}
+
 sonar {
     //disable automatic analysis
     properties {
@@ -285,12 +295,4 @@ configurations.forEach { configuration ->
     // Exclude protobuf-lite from all configurations
     // This fixes a fatal exception for tests interacting with Cloud Firestore
     configuration.exclude("com.google.protobuf", "protobuf-lite")
-}
-
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.apache.commons" && requested.name == "commons-compress") {
-            useVersion("1.26.1")
-        }
-    }
 }
