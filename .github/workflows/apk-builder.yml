@@ -3,8 +3,7 @@ name: Release Signed APK
 on:
   push:
     branches:
-      #- main
-      - feat/apk-build-workflow
+      - main
   workflow_dispatch:
 
 jobs:
