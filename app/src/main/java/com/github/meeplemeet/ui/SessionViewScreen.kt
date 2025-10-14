@@ -32,7 +32,6 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SliderDefaults
@@ -50,11 +49,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.components.CountBubble
+import com.github.meeplemeet.ui.components.IconTextField
+import com.github.meeplemeet.ui.components.SectionCard
+import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -79,6 +81,10 @@ object SessionTestTags {
     const val TIME_FIELD = "time_field"
     const val LOCATION_FIELD = "location_field"
     const val QUIT_BUTTON = "quit_button"
+    const val DATE_PICKER_OK_BUTTON = "date_picker_ok_button"
+    const val DATE_PICK_BUTTON = "date_pick_button"
+    const val TIME_PICK_BUTTON = "time_pick_button"
+    const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
 }
 
 /* =======================================================================
@@ -185,14 +191,6 @@ fun SessionViewScreen(
  * Sub-components
  * ======================================================================= */
 
-@Composable
-private fun SectionCard(
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
-    content: @Composable ColumnScope.() -> Unit
-) {
-  Column(modifier = modifier.fillMaxWidth().padding(contentPadding), content = content)
-}
 
 @Composable
 private fun ParticipantsSection(
@@ -201,119 +199,149 @@ private fun ParticipantsSection(
     onRemoveParticipant: (Participant) -> Unit
 ) {
   SectionCard(
-      Modifier.clip(appShapes.extraLarge)
+      modifier = Modifier.clip(appShapes.extraLarge)
           .background(AppColors.primary)
-          .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()) {
-              UnderlinedLabel("Participants:")
-              CountBubble(
-                  count = form.participants.size,
-                  backgroundColor = AppColors.affirmative,
-                  borderColor = AppColors.secondary)
-            }
+          .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)
+  ) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+      UnderlinedLabel(
+        text = "Participants:",
+        textColor = AppColors.textIcons,
+        textStyle = MaterialTheme.typography.titleLarge,
+      )
+        Spacer(Modifier.width(8.dp))
+      CountBubble(
+        count = form.participants.size,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(AppColors.affirmative)
+            .border(1.dp, AppColors.affirmative, CircleShape)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+      )
+    }
 
-        Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(12.dp))
 
-        DiscretePillSlider(
-            title = "Number of players",
-            range = 2f..10f,
-            values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
-            steps = 7,
-            onValuesChange = { min, max -> onFormChange(min, max) })
+    DiscretePillSlider(
+        title = "Number of players",
+        range = 2f..10f,
+        values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
+        steps = 7,
+        onValuesChange = { min, max -> onFormChange(min, max) }
+    )
 
-        // Min/max bubbles of the slider
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-          CountBubble(
-              count = form.minPlayers,
-              backgroundColor = AppColors.primary,
-              borderColor = AppColors.secondary,
-              modifier = Modifier.testTag(SessionTestTags.MIN_PLAYERS))
-          CountBubble(
-              count = form.maxPlayers,
-              backgroundColor = AppColors.primary,
-              borderColor = AppColors.secondary,
-              modifier = Modifier.testTag(SessionTestTags.MAX_PLAYERS))
-        }
-        Spacer(Modifier.height(10.dp))
+    // Min/max bubbles of the slider
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+      CountBubble(
+        count = form.minPlayers,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(AppColors.secondary)
+            .border(1.dp, AppColors.secondary, CircleShape)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .testTag(SessionTestTags.MIN_PLAYERS)
+      )
+      CountBubble(
+        count = form.maxPlayers,
+          modifier = Modifier
+              .clip(CircleShape)
+              .background(AppColors.secondary)
+              .border(1.dp, AppColors.secondary, CircleShape)
+              .padding(horizontal = 10.dp, vertical = 6.dp)
+              .testTag(SessionTestTags.MAX_PLAYERS))
+    }
+    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(12.dp))
 
-        Spacer(Modifier.height(12.dp))
-
-        // Chips
-        UserChipsGrid(
-            participants = form.participants,
-            onRemove = { p -> onRemoveParticipant(p) },
-            modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS)
-        )
-      }
+    // Chips
+    UserChipsGrid(
+      participants = form.participants,
+      onRemove = { p -> onRemoveParticipant(p) },
+      modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS)
+    )
+  }
 }
 
 @Composable
 private fun ProposedGameSection() {
   SectionCard(
-      Modifier.clip(appShapes.extraLarge)
-          .background(AppColors.primary)
-          .border(1.dp, AppColors.primary)) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically) {
-              UnderlinedLabel("Proposed game:")
-              Spacer(Modifier.width(8.dp))
-              // Text for members
-              Text(
-                  "Current Game",
-                  modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = AppColors.textIcons)
-            }
-        Spacer(Modifier.height(10.dp))
-
-        /** TODO: Search field or something for admins and the session creator to propose a game */
-      }
+    modifier = Modifier.clip(appShapes.extraLarge)
+      .background(AppColors.primary)
+      .border(1.dp, AppColors.primary)
+  ) {
+    Row(
+      horizontalArrangement = Arrangement.Center,
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      UnderlinedLabel(
+        text = "Proposed game:",
+        textColor = AppColors.textIcons,
+        textStyle = MaterialTheme.typography.titleLarge
+      )
+      Spacer(Modifier.width(8.dp))
+      // Text for members
+      Text(
+        "Current Game",
+        modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
+        style = MaterialTheme.typography.bodyMedium,
+        color = AppColors.textIcons
+      )
+    }
+    Spacer(Modifier.height(10.dp))
+      /** TODO: Search field or something for admins and the session creator to propose a game */
+  }
 }
 
 @Composable
 private fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) {
   SectionCard(
-      Modifier.clip(appShapes.extraLarge)
-          .background(AppColors.primary)
-          .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
-        UnderlinedLabel("Organisation:")
-        Spacer(Modifier.height(12.dp))
+    modifier = Modifier.clip(appShapes.extraLarge)
+      .background(AppColors.primary)
+      .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge).fillMaxWidth()
+  ) {
+    UnderlinedLabel(
+      text = "Organisation:",
+      textColor = AppColors.textIcons,
+      textStyle = MaterialTheme.typography.titleLarge
+    )
+    Spacer(Modifier.height(12.dp))
 
-        /** TODO: check date format */
-        DateField(
-            value = form.dateText,
-            onValueChange = { onFormChange(form.copy(dateText = it)) },
-            modifier = Modifier.testTag(SessionTestTags.DATE_FIELD)
-        )
 
-        Spacer(Modifier.height(10.dp))
+    /** TODO: check date format */
+    DateField(
+      value = form.dateText,
+      onValueChange = { onFormChange(form.copy(dateText = it)) },
+      modifier = Modifier.fillMaxWidth()
+    )
 
-      /** TODO: check time format */
-      // Time field using the new TimeField composable
-      TimeField(
-          value = form.timeText,
-          onValueChange = { onFormChange(form.copy(timeText = it)) },
-          modifier = Modifier.testTag(SessionTestTags.TIME_FIELD)
-      )
-        Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(10.dp))
 
-        // Location field
-        // could be redone like the bootcamp
-        // using a search field with suggestions and map integration
-        // for now it's just a text field
-        IconTextField(
-            value = form.locationText,
-            onValueChange = { onFormChange(form.copy(locationText = it)) },
-            placeholder = "Location",
-            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
-            modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD)
-        )
-      }
+    /** TODO: check time format */
+    // Time field using the new TimeField composable
+    TimeField(
+      value = form.timeText,
+      onValueChange = { onFormChange(form.copy(timeText = it)) },
+      modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(Modifier.height(10.dp))
+
+    // Location field
+    // could be redone like the bootcamp
+    // using a search field with suggestions and map integration
+    // for now it's just a text field
+    IconTextField(
+      value = form.locationText,
+      onValueChange = { onFormChange(form.copy(locationText = it)) },
+      placeholder = "Location",
+      leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
+      modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD).fillMaxWidth(),
+      textStyle = MaterialTheme.typography.bodySmall,
+    )
+  }
 }
 
 @Composable
@@ -348,51 +376,6 @@ private fun TopRightIcons() {
   }
 }
 
-@Composable
-private fun UnderlinedLabel(text: String) {
-  Text(
-      text = text,
-      style = MaterialTheme.typography.titleLarge,
-      color = AppColors.textIcons,
-      textDecoration = TextDecoration.Underline)
-}
-
-@Composable
-private fun IconTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-  OutlinedTextField(
-      value = value,
-      onValueChange = onValueChange,
-      modifier = modifier.then(Modifier.fillMaxWidth()),
-      leadingIcon = leadingIcon,
-      trailingIcon = trailingIcon,
-      placeholder = { Text(placeholder, color = AppColors.textIconsFade) },
-      textStyle = MaterialTheme.typography.bodySmall.copy(color = AppColors.textIcons))
-}
-
-@Composable
-private fun CountBubble(
-    count: Int,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = AppColors.secondary,
-    borderColor: Color = AppColors.textIconsFade
-) {
-  Box(
-      modifier =
-          modifier
-              .clip(CircleShape)
-              .background(backgroundColor)
-              .border(1.dp, borderColor, CircleShape)
-              .padding(horizontal = 10.dp, vertical = 6.dp)) {
-        Text("$count", style = MaterialTheme.typography.bodySmall, color = AppColors.textIcons)
-      }
-}
 
 @Composable
 private fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) {
@@ -520,7 +503,8 @@ fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (String) -> Unit) {
                 onDateSelected(date)
               }
               onDismiss()
-            }) {
+            },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON)) {
               Text("OK")
             }
       },
@@ -558,8 +542,8 @@ fun DateField(value: String, onValueChange: (String) -> Unit, modifier: Modifier
       onValueChange = {}, // we control it externally
       placeholder = "Date",
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
-      trailingIcon = { TextButton(onClick = { showDialogDate = true }) { Text("Pick") } },
-      modifier = modifier
+      trailingIcon = { TextButton(onClick = { showDialogDate = true }, modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) { Text("Pick") } },
+      modifier = modifier.testTag(SessionTestTags.DATE_FIELD)
   )
 
   // The popup
@@ -596,7 +580,8 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
               val formatted = String.format("%02d:%02d", h, m)
               onTimeSelected(formatted)
               onDismiss()
-            }) {
+            },
+            modifier = Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON)) {
               Text("OK")
             }
       },
@@ -629,8 +614,8 @@ fun TimeField(value: String, onValueChange: (String) -> Unit, modifier: Modifier
       onValueChange = {}, // controlled externally
       placeholder = "Time",
       leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Time") },
-      trailingIcon = { TextButton(onClick = { showDialogTime = true }) { Text("Pick") } },
-      modifier = modifier
+      trailingIcon = { TextButton(onClick = { showDialogTime = true }, modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) { Text("Pick") } },
+      modifier = modifier.testTag(SessionTestTags.TIME_FIELD)
   )
 
   if (showDialogTime) {
@@ -716,17 +701,26 @@ private fun Preview_IconTextField() {
           value = "",
           onValueChange = {},
           placeholder = "Search games",
-          trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) })
+          trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+          textStyle = MaterialTheme.typography.bodySmall,
+          modifier = Modifier
+      )
       IconTextField(
           value = "2025-10-15",
           onValueChange = {},
           placeholder = "Date",
-          leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) })
+          leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+          textStyle = MaterialTheme.typography.bodySmall,
+          modifier = Modifier
+      )
       IconTextField(
           value = "Student Lounge",
           onValueChange = {},
           placeholder = "Location",
-          leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) })
+          leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+          textStyle = MaterialTheme.typography.bodySmall,
+          modifier = Modifier
+      )
     }
   }
 }
@@ -736,9 +730,27 @@ private fun Preview_IconTextField() {
 private fun Preview_CountBubble() {
   AppTheme {
     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      CountBubble(0)
-      CountBubble(3, backgroundColor = AppColors.primary, borderColor = AppColors.secondary)
-      CountBubble(12, backgroundColor = AppColors.affirmative, borderColor = AppColors.secondary)
+        CountBubble(
+            0, modifier = Modifier
+                .clip(CircleShape)
+                .background(AppColors.primary)
+                .border(1.dp, AppColors.secondary, CircleShape)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+        CountBubble(
+            3, modifier = Modifier
+                .clip(CircleShape)
+                .background(AppColors.secondary)
+                .border(1.dp, AppColors.secondary, CircleShape)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+        CountBubble(
+            12, modifier = Modifier
+                .clip(CircleShape)
+                .background(AppColors.affirmative)
+                .border(1.dp, AppColors.secondary, CircleShape)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        )
     }
   }
 }
@@ -812,7 +824,7 @@ private fun Preview_SessionView_Full() {
           dateText = "2025-10-15",
           timeText = "19:00",
           locationText = "Student Lounge")
-  AppTheme {
+  AppTheme{
     Scaffold(
         topBar = {
           TopBarWithDivider(
