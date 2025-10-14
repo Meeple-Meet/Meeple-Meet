@@ -159,7 +159,8 @@ fun MeepleMeetApp(
                 discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
                 onBack = { navigationActions.goBack() },
                 onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-                onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
+                onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                viewModel = firestoreVM)
           }
         }
 
