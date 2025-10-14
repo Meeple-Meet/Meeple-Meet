@@ -3,9 +3,6 @@ package com.github.meeplemeet.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -17,17 +14,20 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionPreview
 import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
-import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsNotDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscoverScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionAddScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionsOverviewIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkProfileScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkSessionsScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignInScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignUpScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.clickOnTab
+import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionScreen
+import com.google.firebase.Timestamp
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -52,26 +52,74 @@ class NavigationTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var vm: AuthViewModel
+    private lateinit var authVM: AuthViewModel
+
+    private val fakeAccount = Account(
+        uid = "fake-uid-123",
+        handle = "fake_handle",
+        name = "Fake User",
+        email = "fake@example.com",
+        previews = emptyMap(),
+        photoUrl = null,
+        description = "Test account"
+    )
+
+    private val fakeDiscussion1 = Discussion(
+        uid = "discussion-1",
+        creatorId = fakeAccount.uid,
+        name = "Fake Discussion 1",
+        description = "Testing navigation from overview",
+        messages = emptyList(),
+        participants = listOf(fakeAccount.uid),
+        admins = listOf(fakeAccount.uid),
+        createdAt = Timestamp.now()
+    )
+
+    private val fakeDiscussion2 = Discussion(
+        uid = "discussion-2",
+        creatorId = fakeAccount.uid,
+        name = "Fake Discussion 2",
+        description = "Testing navigation with multiple discussions",
+        messages = emptyList(),
+        participants = listOf(fakeAccount.uid),
+        admins = listOf(fakeAccount.uid),
+        createdAt = Timestamp.now()
+    )
+
+    private val fakePreview1 = DiscussionPreview(
+        uid = fakeDiscussion1.uid,
+        lastMessage = "Yo!",
+        lastMessageSender = fakeAccount.uid,
+        lastMessageAt = Timestamp.now(),
+        unreadCount = 0
+    )
+
+    private val fakePreview2 = DiscussionPreview(
+        uid = fakeDiscussion2.uid,
+        lastMessage = "Another one!",
+        lastMessageSender = fakeAccount.uid,
+        lastMessageAt = Timestamp.now(),
+        unreadCount = 0
+    )
+
+    private val fakePreviews = mapOf(
+        fakeDiscussion1.uid to fakePreview1,
+        fakeDiscussion2.uid to fakePreview2
+    )
+
+
+    // ---------- Setup ----------
 
     @Before
     fun setUp() {
         // Launch the full app UI
-        vm = AuthViewModel(AuthRepository())
-        composeTestRule.setContent { MeepleMeetApp(authVM = vm) }
-    }
+        authVM = AuthViewModel(AuthRepository())
 
-    // ===== System helpers =====
-    private fun login() {
-        setAuthVMState(vm, AuthUIState(account = fakeAccount))
+        composeTestRule.setContent { MeepleMeetApp(authVM = authVM) }
         composeTestRule.waitForIdle()
     }
 
-    private fun logout() {
-        setAuthVMState(vm, AuthUIState(account = null))
-        composeTestRule.waitForIdle()
-    }
-
+    // ===== VM State helpers =====
     private fun setAuthVMState(vm: AuthViewModel, newState: AuthUIState) {
         val field = vm::class.java.declaredFields
             .firstOrNull { f ->
@@ -84,46 +132,15 @@ class NavigationTest {
         val flow = field.get(vm) as MutableStateFlow<AuthUIState>
         flow.value = newState
     }
+    private fun login() {
+        setAuthVMState(authVM, AuthUIState(account = fakeAccount))
+        composeTestRule.waitForIdle()
+    }
 
-    private val fakeAccount = Account(
-        uid = "fake-uid-123",
-        handle = "fake_handle",
-        name = "Fake User",
-        email = "fake@example.com",
-        previews = emptyMap(),
-        photoUrl = null,
-        description = "Test account"
-    )
-
-    private val fakePreview1 = DiscussionPreview(
-
-    )
-
-    private val fakePreview2 = DiscussionPreview(
-
-    )
-
-    private val fakeDiscussion1 = Discussion(
-        uid = TODO(),
-        creatorId = TODO(),
-        name = TODO(),
-        description = TODO(),
-        messages = TODO(),
-        participants = TODO(),
-        admins = TODO(),
-        createdAt = TODO()
-    )
-
-    private val fakeDiscussion2 = Discussion(
-        uid = TODO(),
-        creatorId = TODO(),
-        name = TODO(),
-        description = TODO(),
-        messages = TODO(),
-        participants = TODO(),
-        admins = TODO(),
-        createdAt = TODO()
-    )
+    private fun logout() {
+        setAuthVMState(authVM, AuthUIState(account = null))
+        composeTestRule.waitForIdle()
+    }
 
     private fun pressSystemBack(shouldTerminate: Boolean = false) {
         composeTestRule.activityRule.scenario.onActivity { activity ->
@@ -246,7 +263,7 @@ class NavigationTest {
         composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
         // Back should terminate app (from top-level)
-        pressSystemBack(shouldTerminate = true)
+        pressSystemBack(shouldTerminate = true)     // FIXME
     }
 
     @Test
@@ -273,11 +290,27 @@ class NavigationTest {
         composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
         // Back again should terminate app
-        pressSystemBack(shouldTerminate = true)
+        pressSystemBack(shouldTerminate = true)     // FIXME
     }
 
 
-    // ---------- DiscussionsOverview navigation ----------
+    // ---------- Discussions navigation ----------
+    @Test
+    fun clickingOnDiscussionPreview_openDiscussionScreen() {
+        login()
+        composeTestRule.checkDiscussionsOverviewIsDisplayed()
+        composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+        composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    }
+
+    @Test
+    fun clickingOnAdd_openDiscussionAddScreen() {
+        login()
+        composeTestRule.checkDiscussionsOverviewIsDisplayed()
+        composeTestRule.onNodeWithTag("Add discussion").assertIsDisplayed().performClick()      // TODO use better tag later
+        composeTestRule.checkDiscussionAddScreenIsDisplayed()
+        composeTestRule.checkBottomBarIsNotDisplayed()
+    }
 
 
 
