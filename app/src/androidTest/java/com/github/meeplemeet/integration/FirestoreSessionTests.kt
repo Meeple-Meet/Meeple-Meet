@@ -958,4 +958,44 @@ class FirestoreSessionTests : FirestoreTests() {
 
     vm.setGameQuery(account3, baseDiscussion, "cat")
   }
+
+  @Test
+  fun getGameFromId_updates_state_when_successful() = runTest {
+    val fakeRepo =
+        FakeGameRepo().apply {
+          returnedGame =
+              Game(
+                  uid = "g_123",
+                  name = "Terraforming Mars",
+                  description = "",
+                  imageURL = "",
+                  minPlayers = 1,
+                  maxPlayers = 5,
+                  recommendedPlayers = null,
+                  averagePlayTime = null,
+                  genres = emptyList())
+        }
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.getGameFromId("g_123")
+    advanceUntilIdle()
+
+    val state = vm.gameUIState.value
+    assertNotNull(state.fetchedGame)
+    assertEquals("g_123", state.fetchedGame?.uid)
+    assertNull(state.gameFetchError)
+  }
+
+  @Test
+  fun getGameFromId_sets_error_state_on_failure() = runTest {
+    val fakeRepo = FakeGameRepo().apply { shouldThrow = true }
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.getGameFromId("g_404")
+    advanceUntilIdle()
+
+    val state = vm.gameUIState.value
+    assertNull(state.fetchedGame)
+    assertEquals("Failed to fetch game details", state.gameFetchError)
+  }
 }

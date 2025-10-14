@@ -25,12 +25,18 @@ import kotlinx.coroutines.launch
  * @property selectedGameUid If a game has been selected, holds its UID (Firestore document id).
  *   Empty string when nothing is selected.
  * @property gameSearchError If a search error occurred, holds the error message. Null otherwise.
+ * @property fetchedGame The last fetched [Game] by ID, or null if none fetched or an error
+ *   occurred.
+ * @property gameFetchError If an error occurred during fetching a game by ID, holds the error
+ *   message.
  */
 data class GameUIState(
     val gameQuery: String = "",
     val gameSuggestions: List<Game> = emptyList(),
     val selectedGameUid: String = "",
-    val gameSearchError: String? = null
+    val gameSearchError: String? = null,
+    val fetchedGame: Game? = null,
+    val gameFetchError: String? = null
 )
 
 /**
@@ -198,6 +204,35 @@ class FirestoreSessionViewModel(
       }
     } else {
       _gameUIState.value = _gameUIState.value.copy(gameSuggestions = emptyList())
+    }
+  }
+
+  /**
+   * Fetches a [Game] by its Firestore document ID and updates the UI state accordingly.
+   *
+   * This method allows the UI layer to retrieve the full [Game] details for a given `gameId`
+   * reference stored in a session.
+   *
+   * The result (if successful) is reflected in [gameUIState]:
+   * - `fetchedGame` is set to the retrieved [Game].
+   * - In case of an error, `gameFetchError` is set.
+   *
+   * @param gameId The Firestore document ID of the game to retrieve.
+   */
+  fun getGameFromId(gameId: String) {
+    viewModelScope.launch {
+      try {
+        val game = gameRepository.getGameById(gameId)
+        _gameUIState.value =
+            _gameUIState.value.copy(
+                fetchedGame = game,
+                gameFetchError = null,
+            )
+      } catch (_: Exception) {
+        _gameUIState.value =
+            _gameUIState.value.copy(
+                fetchedGame = null, gameFetchError = "Failed to fetch game details")
+      }
     }
   }
 }

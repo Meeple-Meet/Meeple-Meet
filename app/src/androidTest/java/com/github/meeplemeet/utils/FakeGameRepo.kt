@@ -7,13 +7,15 @@ class FakeGameRepo() : GameRepository {
   var returnedGames: List<Game> = emptyList()
   var shouldThrow: Boolean = false
   var lastQuery: String? = null
+  var returnedGame: Game? = null
 
   override suspend fun getGames(maxResults: Int): List<Game> {
     TODO("Not used in tests")
   }
 
   override suspend fun getGameById(gameID: String): Game {
-    TODO("Not used in tests")
+    if (shouldThrow) throw RuntimeException("boom")
+    return returnedGame ?: throw NoSuchElementException("No game found")
   }
 
   override suspend fun getGameByName(name: String): Game? {
