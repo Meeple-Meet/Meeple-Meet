@@ -24,6 +24,9 @@ jobs:
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > key-store.keystore
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/app/key-store.keystore
+
 
       - name: Decode Google Services and Local Properties
         env:
