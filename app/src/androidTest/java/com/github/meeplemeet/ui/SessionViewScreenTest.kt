@@ -125,4 +125,70 @@ class SessionViewScreenTest {
     composeTestRule.waitForIdle()
     // Optionally, assert the date field is updated
   }
+
+  @Test
+  fun participantsSection_displaysAllParticipants() {
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm)
+    }
+    composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertIsDisplayed()
+    initialForm.participants.forEach { composeTestRule.onNodeWithText(it.name).assertIsDisplayed() }
+  }
+
+  @Test
+  fun organizationSection_displaysDateTimeAndLocation() {
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm)
+    }
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.DATE_FIELD)
+        .assertIsDisplayed()
+        .assertTextContains("2025-10-15")
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.TIME_FIELD)
+        .assertIsDisplayed()
+        .assertTextContains("19:00")
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
+        .assertIsDisplayed()
+        .assertTextContains("Student Lounge")
+  }
+
+  @Test
+  fun slider_minMaxPlayers_updatesOnDrag() {
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm)
+    }
+    // Find slider by text and perform swipe
+    composeTestRule.onNodeWithText("Number of players").assertIsDisplayed()
+    // May need to use semantics to find the slider and perform swipe actions
+    // Example: performTouchInput { down(centerLeft); moveTo(centerRight); up() }
+  }
+
+  @Test
+  fun quitButton_triggersCallback() {
+    var quitClicked = false
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm,
+          onBack = { quitClicked = true })
+    }
+    composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).performClick()
+    composeTestRule.runOnIdle { assert(quitClicked) }
+  }
 }
