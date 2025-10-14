@@ -10,7 +10,7 @@ class FakeGameRepo() : GameRepository {
   var returnedGame: Game? = null
 
   override suspend fun getGames(maxResults: Int): List<Game> {
-    TODO("Not used in tests")
+    throw NotImplementedError("FakeGameRepo: unused method in this test context")
   }
 
   override suspend fun getGameById(gameID: String): Game {
@@ -19,15 +19,15 @@ class FakeGameRepo() : GameRepository {
   }
 
   override suspend fun getGameByName(name: String): Game? {
-    TODO("Not used in tests")
+    throw NotImplementedError("FakeGameRepo: unused method in this test context")
   }
 
   override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> {
-    TODO("Not used in tests")
+    throw NotImplementedError("FakeGameRepo: unused method in this test context")
   }
 
   override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int): List<Game> {
-    TODO("Not used in tests")
+    throw NotImplementedError("FakeGameRepo: unused method in this test context")
   }
 
   override suspend fun searchGamesByNameContains(
