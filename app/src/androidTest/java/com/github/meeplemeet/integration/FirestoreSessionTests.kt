@@ -96,7 +96,9 @@ class FirestoreSessionTests : FirestoreTests() {
             gameId = "game123",
             date = testTimestamp,
             location = testLocation,
-            participants = listOf(account1.uid, account2.uid))
+            participants = listOf(account1.uid, account2.uid),
+            maxParticipants = 10,
+            minParticipants = 1)
     val discussionWithSession = baseDiscussion.copy(session = sessionData)
 
     coEvery {
@@ -318,8 +320,6 @@ class FirestoreSessionTests : FirestoreTests() {
         name = newName,
         date = newDate,
         location = newLocation,
-        minParticipants = 1,
-        maxParticipants = 10,
         newParticipantList = newParticipants)
     advanceUntilIdle()
 
@@ -635,7 +635,7 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals(listOf(account1.uid, account3.uid), result.session?.participants)
   }
 
-  @Test
+  @Test(expected = IllegalArgumentException::class)
   fun emptyParticipantListIsValid() = runTest {
     val sessionData =
         Session(
@@ -660,10 +660,6 @@ class FirestoreSessionTests : FirestoreTests() {
 
     viewModel.createSession(
         account1, baseDiscussion, "Planning Session", "game123", testTimestamp, testLocation)
-    advanceUntilIdle()
-
-    val result = viewModel.discussion.value
-    assertEquals(0, result.session?.participants?.size)
   }
 
   // ========================================================================

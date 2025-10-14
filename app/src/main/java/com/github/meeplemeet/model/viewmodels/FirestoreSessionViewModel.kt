@@ -81,7 +81,7 @@ class FirestoreSessionViewModel(
 
     viewModelScope.launch {
       _discussion.value =
-          repository.createSession(
+          repository.updateSession(
               discussion.uid,
               name,
               gameId,
@@ -89,7 +89,7 @@ class FirestoreSessionViewModel(
               location,
               minParticipants,
               maxParticipants,
-              *participantsList.toTypedArray())
+              participantsList)
     }
   }
 
