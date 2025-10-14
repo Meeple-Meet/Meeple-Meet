@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -88,18 +87,27 @@ data class SessionForm(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionViewScreen(
-    viewModel: FirestoreViewModel? = null,
+    viewModel: FirestoreViewModel,
     navigation: NavigationActions? = null,
     currentUser: Account,
     initial: SessionForm = SessionForm(),
+    discussionId: String,
     onCreate: (SessionForm) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
   var form by remember { mutableStateOf(initial) }
 
+  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
+
   Scaffold(
       topBar = {
-        TopBarWithDivider(text = "Session View", onReturn = { onBack() }, { TopRightIcons() })
+        TopBarWithDivider(
+            text = "Session View",
+            onReturn = {
+              onBack()
+              /** save the data */
+            },
+            { TopRightIcons() })
       },
   ) { innerPadding ->
     Column(
@@ -119,111 +127,22 @@ fun SessionViewScreen(
 
           // Proposed game section
           // background and border are primary for members since it blends with the screen bg
-          // proposed game is a text for members, it's not in a editable box; admins/session creator
-          // get secondary bg
-          SectionCard(backgroundColor = AppColors.primary, borderColor = AppColors.primary) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically) {
-                  UnderlinedLabel("Proposed game:")
-                  Spacer(Modifier.width(8.dp))
-                  // Text for members
-                  Text(
-                      "Current Game",
-                      modifier = Modifier,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = AppColors.textIcons)
-                }
-            Spacer(Modifier.height(10.dp))
-
-            /**
-             * TODO: Search field or something for admins and the session creator to propose a game
-             */
-          }
+          // proposed game is a text for members, it's not in a editable box
+          ProposedGameSection()
 
           // Participants section
-          SectionCard(backgroundColor = AppColors.primary, borderColor = AppColors.divider) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()) {
-                  UnderlinedLabel("Participants:")
-                  CountBubble(
-                      count = form.participants.size,
-                      backgroundColor = AppColors.affirmative,
-                      borderColor = AppColors.secondary)
-                }
-
-            Spacer(Modifier.height(12.dp))
-
-            DiscretePillSlider(
-                title = "Number of players",
-                range = 2f..10f,
-                values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
-                steps = 7,
-                onValuesChange = { min, max ->
-                  form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
-                })
-
-            // Min/max bubbles of the slider
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-              CountBubble(
-                  count = form.minPlayers,
-                  backgroundColor = AppColors.primary,
-                  borderColor = AppColors.secondary)
-              CountBubble(
-                  count = form.maxPlayers,
-                  backgroundColor = AppColors.primary,
-                  borderColor = AppColors.secondary)
-            }
-            Spacer(Modifier.height(10.dp))
-
-            Spacer(Modifier.height(12.dp))
-
-            // Chips
-            UserChipsGrid(
-                participants = form.participants,
-                onRemove = { p ->
-                  form = form.copy(participants = form.participants.filterNot { it.id == p.id })
-                })
-          }
+          ParticipantsSection(
+              form,
+              onFormChange = { min, max ->
+                form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
+              },
+              onRemoveParticipant = { p ->
+                form = form.copy(participants = form.participants.filterNot { it.id == p.id })
+              })
 
           // Organisation section
           // editable for admins and the session creator, read-only for members
-          SectionCard(backgroundColor = AppColors.primary, borderColor = AppColors.divider) {
-            UnderlinedLabel("Organisation:")
-            Spacer(Modifier.height(12.dp))
-
-            DateField(value = form.dateText, onValueChange = { form = form.copy(dateText = it) })
-
-            Spacer(Modifier.height(10.dp))
-
-            // Time field
-            IconTextField(
-                value = form.timeText,
-                onValueChange = { form = form.copy(timeText = it) },
-                placeholder = "Time",
-                leadingIcon = {
-                  // Using CalendarToday to keep icon set light; replace with alarm icon if you
-                  // prefer.
-                  // opens a date picker for admins and the session creator
-                  Icon(Icons.Default.AccessTime, contentDescription = "Time")
-                },
-                trailingIcon = { TextButton(onClick = { /* open time picker */}) { Text("Pick") } })
-
-            Spacer(Modifier.height(10.dp))
-
-            // Location field
-            // could be redone like the bootcamp
-            // using a search field with suggestions and map integration
-            // for now it's just a text field
-            IconTextField(
-                value = form.locationText,
-                onValueChange = { form = form.copy(locationText = it) },
-                placeholder = "Location",
-                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") })
-          }
+          OrganizationSection(form, onFormChange = { form = it })
 
           Spacer(Modifier.height(4.dp))
 
@@ -249,19 +168,125 @@ fun SessionViewScreen(
 @Composable
 private fun SectionCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = AppColors.secondary,
-    borderColor: Color = AppColors.divider,
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-  Column(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .border(1.dp, borderColor, appShapes.large)
-              .background(backgroundColor, appShapes.large)
-              .padding(contentPadding),
-      content = content)
+  Column(modifier = modifier.fillMaxWidth().padding(contentPadding), content = content)
+}
+
+@Composable
+private fun ParticipantsSection(
+    form: SessionForm,
+    onFormChange: (Float, Float) -> Unit,
+    onRemoveParticipant: (Participant) -> Unit
+) {
+  SectionCard(
+      Modifier.clip(appShapes.extraLarge)
+          .background(AppColors.primary)
+          .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()) {
+              UnderlinedLabel("Participants:")
+              CountBubble(
+                  count = form.participants.size,
+                  backgroundColor = AppColors.affirmative,
+                  borderColor = AppColors.secondary)
+            }
+
+        Spacer(Modifier.height(12.dp))
+
+        DiscretePillSlider(
+            title = "Number of players",
+            range = 2f..10f,
+            values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
+            steps = 7,
+            onValuesChange = { min, max -> onFormChange(min, max) })
+
+        // Min/max bubbles of the slider
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+          CountBubble(
+              count = form.minPlayers,
+              backgroundColor = AppColors.primary,
+              borderColor = AppColors.secondary)
+          CountBubble(
+              count = form.maxPlayers,
+              backgroundColor = AppColors.primary,
+              borderColor = AppColors.secondary)
+        }
+        Spacer(Modifier.height(10.dp))
+
+        Spacer(Modifier.height(12.dp))
+
+        // Chips
+        UserChipsGrid(participants = form.participants, onRemove = { p -> onRemoveParticipant(p) })
+      }
+}
+
+@Composable
+private fun ProposedGameSection() {
+  SectionCard(
+      Modifier.clip(appShapes.extraLarge)
+          .background(AppColors.primary)
+          .border(1.dp, AppColors.primary)) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically) {
+              UnderlinedLabel("Proposed game:")
+              Spacer(Modifier.width(8.dp))
+              // Text for members
+              Text(
+                  "Current Game",
+                  modifier = Modifier,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = AppColors.textIcons)
+            }
+        Spacer(Modifier.height(10.dp))
+
+        /** TODO: Search field or something for admins and the session creator to propose a game */
+      }
+}
+
+@Composable
+private fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) {
+  SectionCard(
+      Modifier.clip(appShapes.extraLarge)
+          .background(AppColors.primary)
+          .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
+        UnderlinedLabel("Organisation:")
+        Spacer(Modifier.height(12.dp))
+
+        DateField(value = form.dateText, onValueChange = { onFormChange(form.copy(dateText = it)) })
+
+        Spacer(Modifier.height(10.dp))
+
+        // Time field
+        IconTextField(
+            value = form.timeText,
+            onValueChange = { onFormChange(form.copy(timeText = it)) },
+            placeholder = "Time",
+            leadingIcon = {
+              // Using CalendarToday to keep icon set light; replace with alarm icon if you
+              // prefer.
+              // opens a date picker for admins and the session creator
+              Icon(Icons.Default.AccessTime, contentDescription = "Time")
+            },
+            trailingIcon = { TextButton(onClick = { /* open time picker */}) { Text("Pick") } })
+
+        Spacer(Modifier.height(10.dp))
+
+        // Location field
+        // could be redone like the bootcamp
+        // using a search field with suggestions and map integration
+        // for now it's just a text field
+        IconTextField(
+            value = form.locationText,
+            onValueChange = { onFormChange(form.copy(locationText = it)) },
+            placeholder = "Location",
+            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") })
+      }
 }
 
 @Composable
@@ -526,6 +551,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
             onClick = {
               val h = timePickerState.hour
               val m = timePickerState.minute
+              /** Todo: fix this if buggy */
               val formatted = String.format("%02d:%02d", h, m)
               onTimeSelected(formatted)
               onDismiss()
@@ -540,8 +566,16 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
             state = timePickerState,
             colors =
                 TimePickerDefaults.colors(
-                    // Customize colors to match your theme
-                    ))
+                    clockDialColor = AppColors.secondary,
+                    clockDialSelectedContentColor = AppColors.primary,
+                    clockDialUnselectedContentColor = AppColors.textIconsFade,
+                    selectorColor = AppColors.neutral,
+                    periodSelectorBorderColor = AppColors.textIconsFade,
+                    periodSelectorSelectedContainerColor = AppColors.secondary,
+                    periodSelectorSelectedContentColor = AppColors.negative,
+                    timeSelectorSelectedContainerColor = AppColors.neutral,
+                    timeSelectorUnselectedContainerColor = AppColors.secondary,
+                ))
       })
 }
 
@@ -565,6 +599,7 @@ fun TimeField(value: String, onValueChange: (String) -> Unit) {
 /* =======================================================================
  * Preview
  * ======================================================================= */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, name = "datePicker")
 @Composable
@@ -585,59 +620,34 @@ private fun Preview_datePicker() {
   }
 }
 
-@Preview(showBackground = true, name = "Create Session – Dark")
-@Composable
-private fun CreateSessionPreview() {
-  AppTheme {
-    SessionViewScreen(
-        currentUser = Account("marcoUID", "marco", "marco", email = "marco@epfl.ch"),
-        initial =
-            SessionForm(
-                title = "Friday Night Meetup",
-                proposedGameQuery = "",
-                minPlayers = 3,
-                maxPlayers = 6,
-                participants =
-                    listOf(
-                        Participant("1", "user1"),
-                        Participant("2", "John Doe"),
-                        Participant("3", "Alice"),
-                        Participant("4", "Bob"),
-                        Participant("5", "Robert")),
-                dateText = "2025-10-15",
-                timeText = "19:00",
-                locationText = "Student Lounge"),
-        viewModel = null,
-        navigation = null,
-    )
-  }
-}
-
 @Preview(showBackground = true, name = "SectionCard")
 @Composable
 private fun Preview_SectionCard() {
   AppTheme {
     Column {
-      SectionCard(backgroundColor = AppColors.primary, borderColor = AppColors.primary) {
-        Row {
-          UnderlinedLabel("Sample section")
-          Spacer(Modifier.height(8.dp))
-          Text(
-              "Any content goes in here; this container uses your theme shapes and borders.",
-              style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.align(Alignment.CenterVertically).padding(start = 8.dp))
-        }
-      }
-      SectionCard {
-        Row {
-          UnderlinedLabel("Sample section")
-          Spacer(Modifier.height(8.dp))
-          Text(
-              "Any content goes in here; this container uses your theme shapes and borders.",
-              style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.align(Alignment.CenterVertically).padding(start = 8.dp))
-        }
-      }
+      SectionCard(
+          Modifier.clip(appShapes.extraLarge)
+              .background(AppColors.primary)
+              .border(1.dp, AppColors.primary, shape = appShapes.extraLarge)) {
+            UnderlinedLabel("Sample section")
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Any content goes in here; this container uses your theme shapes and borders.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp))
+          }
+      Spacer(Modifier.height(12.dp))
+      SectionCard(
+          Modifier.clip(appShapes.extraLarge)
+              .background(AppColors.secondary)
+              .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
+            UnderlinedLabel("Another section")
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "This is a second SectionCard using the main composable.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp))
+          }
     }
   }
 }
@@ -742,25 +752,84 @@ private fun Preview_BadgedIconButton() {
 // Full screen preview (kept separate from the sub-component previews)
 @Preview(showBackground = true, name = "Create Session – Full")
 @Composable
-private fun Preview_CreateSession_Full() {
+private fun Preview_SessionView_Full() {
+  var form =
+      SessionForm(
+          title = "Friday Night Meetup",
+          proposedGameQuery = "",
+          minPlayers = 3,
+          maxPlayers = 6,
+          participants =
+              listOf(
+                  Participant("1", "user1"),
+                  Participant("2", "John Doe"),
+                  Participant("3", "Alice"),
+                  Participant("4", "Bob"),
+                  Participant("5", "Robert")),
+          dateText = "2025-10-15",
+          timeText = "19:00",
+          locationText = "Student Lounge")
   AppTheme {
-    SessionViewScreen(
-        currentUser = Account("marcoUID", "marco", "marco", email = "marco@epfl.ch"),
-        initial =
-            SessionForm(
-                title = "Friday Night Meetup",
-                minPlayers = 3,
-                maxPlayers = 6,
-                participants =
-                    listOf(
-                        Participant("1", "user1"),
-                        Participant("2", "John Doe"),
-                        Participant("3", "Alice"),
-                        Participant("4", "Bob"),
-                        Participant("5", "Robert")),
-                dateText = "2025-10-15",
-                timeText = "19:00",
-                locationText = "Student Lounge"))
+    Scaffold(
+        topBar = {
+          TopBarWithDivider(
+              text = "Session View",
+              onReturn = {
+                {}
+                /** save the data */
+              },
+              { TopRightIcons() })
+        },
+    ) { innerPadding ->
+      Column(
+          modifier =
+              Modifier.fillMaxSize()
+                  .verticalScroll(rememberScrollState())
+                  .background(AppColors.primary)
+                  .padding(innerPadding)
+                  .padding(horizontal = 16.dp, vertical = 8.dp),
+          verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+            // Title
+            Title(
+                text = form.title.ifEmpty { "New Session" },
+                form,
+                modifier = Modifier.align(Alignment.CenterHorizontally))
+
+            // Proposed game section
+            // background and border are primary for members since it blends with the screen bg
+            // proposed game is a text for members, it's not in a editable box
+            ProposedGameSection()
+
+            // Participants section
+            ParticipantsSection(
+                form,
+                onFormChange = { min, max ->
+                  form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
+                },
+                onRemoveParticipant = { p ->
+                  form = form.copy(participants = form.participants.filterNot { it.id == p.id })
+                })
+
+            // Organisation section
+            // editable for admins and the session creator, read-only for members
+            OrganizationSection(form, onFormChange = { form = it })
+
+            Spacer(Modifier.height(4.dp))
+
+            // Quit session button
+            OutlinedButton(
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+                shape = CircleShape,
+                border = BorderStroke(1.5.dp, AppColors.negative),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                  Icon(Icons.Default.Delete, contentDescription = null)
+                  Spacer(Modifier.width(8.dp))
+                  Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
+                }
+          }
+    }
   }
 }
 
@@ -772,88 +841,26 @@ private fun Preview_CreateSession_Full() {
 @Composable
 private fun Preview_Organisation_SingleRows() {
   AppTheme {
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      var date by remember { mutableStateOf("2025-10-15") }
-      var time by remember { mutableStateOf("") }
-      var location by remember { mutableStateOf("EPFL – BC Building") }
-      Spacer(Modifier.height(10.dp))
-
-      DateField(value = date, onValueChange = { date = it })
-
-      Spacer(Modifier.height(10.dp))
-
-      // Time field
-      IconTextField(
-          value = time,
-          onValueChange = { time = it },
-          placeholder = "Time",
-          leadingIcon = {
-            // Using CalendarToday to keep icon set light; replace with alarm icon if you prefer.
-            // opens a date picker for admins and the session creator
-            Icon(Icons.Default.AccessTime, contentDescription = "Time")
-          },
-          trailingIcon = { TextButton(onClick = { /* open time picker */}) { Text("Pick") } })
-      Spacer(Modifier.height(10.dp))
-
-      // Location field
-      // could be redone like the bootcamp
-      // using a search field with suggestions and map integration
-      // for now it's just a text field
-      IconTextField(
-          value = location,
-          onValueChange = { location = it },
-          placeholder = "Location",
-          leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") })
+    var form by remember {
+      mutableStateOf(SessionForm(dateText = "2025-1-16", timeText = "19:30", locationText = "EPFL"))
     }
+    OrganizationSection(form, onFormChange = { form = it })
   }
 }
 
-@Preview(showBackground = true, name = "Create Session – Lower area")
+@Preview(showBackground = true, name = "Session View – Lower area")
 @Composable
-private fun Preview_CreateSession_LowerArea() {
+private fun Preview_Session_LowerArea() {
   AppTheme {
+    var form by remember {
+      mutableStateOf(
+          SessionForm(dateText = "2025-1-16", timeText = "19:30", locationText = "Satellite "))
+    }
     Column(
         modifier = Modifier.fillMaxWidth().background(AppColors.primary).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
-          var date by remember { mutableStateOf("2025-10-15") }
-          var time by remember { mutableStateOf("19:00") }
-          var location by remember { mutableStateOf("Student Lounge") }
-
-          // Organisation section
-          // editable for admins and the session creator, read-only for members
-          SectionCard(backgroundColor = AppColors.primary, borderColor = AppColors.divider) {
-            UnderlinedLabel("Organisation:")
-            Spacer(Modifier.height(12.dp))
-
-            DateField(value = date, onValueChange = { date = it })
-
-            Spacer(Modifier.height(10.dp))
-
-            // Time field
-            IconTextField(
-                value = time,
-                onValueChange = { time = it },
-                placeholder = "Time",
-                leadingIcon = {
-                  // Using CalendarToday to keep icon set light; replace with alarm icon if you
-                  // prefer.
-                  // opens a date picker for admins and the session creator
-                  Icon(Icons.Default.AccessTime, contentDescription = "Time")
-                },
-                trailingIcon = { TextButton(onClick = { /* open time picker */}) { Text("Pick") } })
-
-            Spacer(Modifier.height(10.dp))
-
-            // Location field
-            // could be redone like the bootcamp
-            // using a search field with suggestions and map integration
-            // for now it's just a text field
-            IconTextField(
-                value = location,
-                onValueChange = { location = it },
-                placeholder = "Location",
-                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") })
-          }
+          // Organisation section (reuse composable)
+          OrganizationSection(form, onFormChange = { form = it })
 
           Spacer(Modifier.height(4.dp))
 
@@ -876,7 +883,44 @@ private fun Preview_CreateSession_LowerArea() {
 @Composable
 private fun Preview_DateField_DatePickerDialog() {
   AppTheme {
-    var date by remember { mutableStateOf("2025-10-15") }
+    var date by remember { mutableStateOf("2025-1-16") }
     Column(Modifier.padding(16.dp)) { DateField(value = date, onValueChange = { date = it }) }
+  }
+}
+
+@Preview(showBackground = true, name = "TimeField and TimePickerDialog")
+@Composable
+private fun Preview_TimeField_TimePickerDialog() {
+  AppTheme {
+    var time by remember { mutableStateOf("18:30") }
+    Column(Modifier.padding(16.dp)) { TimeField(value = time, onValueChange = { time = it }) }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, name = "TimePicker")
+@Composable
+private fun Preview_TimePicker() {
+  AppTheme {
+    // Initialize with example time
+    val timePickerState = rememberTimePickerState(is24Hour = false)
+
+    // Place the TimePicker inside a Column to make it visible
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      TimePicker(
+          state = timePickerState,
+          colors =
+              TimePickerDefaults.colors(
+                  clockDialColor = AppColors.secondary,
+                  clockDialSelectedContentColor = AppColors.primary,
+                  clockDialUnselectedContentColor = AppColors.textIconsFade,
+                  selectorColor = AppColors.neutral,
+                  periodSelectorBorderColor = AppColors.textIconsFade,
+                  periodSelectorSelectedContainerColor = AppColors.secondary,
+                  periodSelectorSelectedContentColor = AppColors.negative,
+                  timeSelectorSelectedContainerColor = AppColors.neutral,
+                  timeSelectorUnselectedContainerColor = AppColors.secondary,
+              ))
+    }
   }
 }
