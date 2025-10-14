@@ -1,6 +1,7 @@
 package com.github.meeplemeet.ui
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -282,6 +283,8 @@ fun SignUpScreen(
                   passwordValidation == null &&
                   confirmPasswordValidation == null) {
                 viewModel.registerWithEmail(email, password)
+
+                Log.d("DEBUG", "Ui State Account: ${uiState.account.toString()}")
               }
             },
             modifier =

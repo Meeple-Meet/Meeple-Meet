@@ -57,7 +57,7 @@ data class AuthUIState(
  * @property repository The authentication repository that handles the actual auth operations.
  *   Defaults to AuthRepoFirebase for production use.
  */
-class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
+class AuthViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
 
   // Private mutable state flow for internal state management
   private val _uiState = MutableStateFlow(AuthUIState())

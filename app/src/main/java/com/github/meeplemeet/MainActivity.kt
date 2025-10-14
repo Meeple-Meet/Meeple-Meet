@@ -2,7 +2,6 @@ package com.github.meeplemeet
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -22,7 +21,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.DiscussionAddScreen
@@ -64,25 +62,23 @@ private val startDestination = MeepleMeetScreen.SignInScreen.name
 fun MeepleMeetApp(
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
-    viewModel: FirestoreViewModel = viewModel()
+    authVM: AuthViewModel = viewModel(),
+    firestoreVM: FirestoreViewModel = viewModel()
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
 
-  val currentAccount by viewModel.account.collectAsState()
+  val uiState by authVM.uiState.collectAsState()
+  val currentAccount = uiState.account
 
   /** Fetch current user if already logged in */
   LaunchedEffect(FirebaseAuth.getInstance().currentUser) {
-    FirebaseAuth.getInstance().currentUser?.let { viewModel.getCurrentAccount() }
+    FirebaseAuth.getInstance().currentUser?.let { firestoreVM.getCurrentAccount() }
   }
 
   /** Authentification gate */
   LaunchedEffect(currentAccount) {
-    Log.d("MeepleMeetApp", "currentAccount changed: $currentAccount")
-    currentAccount?.let {
-      Log.d("MeepleMeetApp", "Navigating to DiscussionsOverview")
-      navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-    }
+    currentAccount?.let { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) }
   }
 
   NavHost(navController = navController, startDestination = startDestination) {
@@ -93,13 +89,13 @@ fun MeepleMeetApp(
         route = MeepleMeetScreen.SignInScreen.name) {
           composable(MeepleMeetScreen.SignInScreen.route) {
             SignInScreen(
-                viewModel = AuthViewModel(AuthRepository()),
+                viewModel = authVM,
                 credentialManager = credentialManager,
                 onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUpScreen) })
           }
           composable(MeepleMeetScreen.SignUpScreen.route) {
             SignUpScreen(
-                viewModel = AuthViewModel(AuthRepository()),
+                viewModel = authVM,
                 credentialManager = credentialManager,
                 onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignInScreen) },
             )
@@ -113,7 +109,7 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.DiscussionsOverview.route) {
             if (currentAccount != null) {
               DiscussionsOverviewScreen(
-                  currentUser = currentAccount!!,
+                  currentUser = currentAccount,
                   navigation = navigationActions,
                   onSelectDiscussion = {
                     navigationActions.navigateTo(MeepleMeetScreen.DiscussionScreen(it.uid))
@@ -126,7 +122,7 @@ fun MeepleMeetApp(
             if (currentAccount != null) {
               DiscussionScreen(
                   discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
-                  currentUser = currentAccount!!,
+                  currentUser = currentAccount,
                   onBack = { navigationActions.goBack() },
                   onOpenDiscussionInfo = {
                     navigationActions.navigateTo(MeepleMeetScreen.DiscussionInfoScreen(it.uid))
@@ -140,7 +136,7 @@ fun MeepleMeetApp(
               DiscussionAddScreen(
                   onBack = { navigationActions.goBack() },
                   onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-                  currentUser = currentAccount!!)
+                  currentUser = currentAccount)
             } else {
               LoadingScreen()
             }

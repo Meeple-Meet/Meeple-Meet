@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DiscussionAddScreen(
     onBack: () -> Unit,
-    onCreate: () -> Unit,   // TODO: Pass created discussion ID for better navigation
+    onCreate: () -> Unit, // TODO: Pass created discussion ID for better navigation
     viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account
 ) {
