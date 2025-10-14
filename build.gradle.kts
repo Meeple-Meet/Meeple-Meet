@@ -5,3 +5,11 @@ plugins {
     alias(libs.plugins.ktfmt) apply false
     alias(libs.plugins.gms) apply false
 }
+
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.apache.commons" && requested.name == "commons-compress") {
+            useVersion("1.26.1")
+        }
+    }
+}

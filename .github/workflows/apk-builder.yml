@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/apk-build-workflow
   workflow_dispatch:
 
 jobs:
