@@ -36,4 +36,8 @@ class InvalidHandleFormatException(message: String = DEFAULT_MESSAGE) : Exceptio
 }
 
 /** Thrown when a game cannot be found in Firestore by the requested ID. */
-class GameNotFoundException(message: String) : Exception(message)
+class GameNotFoundException(message: String = DEFAULT_MESSAGE) : Exception(message) {
+  companion object {
+    const val DEFAULT_MESSAGE = "Game does not exist."
+  }
+}

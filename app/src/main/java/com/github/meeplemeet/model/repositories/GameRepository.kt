@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.systems
+package com.github.meeplemeet.model.repositories
 
 import com.github.meeplemeet.model.GameNotFoundException
 import com.github.meeplemeet.model.structures.Game

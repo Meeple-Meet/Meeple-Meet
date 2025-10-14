@@ -53,7 +53,8 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
             emptyList(),
             participants + creatorId,
             listOf(creatorId),
-            Timestamp.now())
+            Timestamp.now(),
+            null)
     discussions.document(discussion.uid).set(toNoUid(discussion)).await()
 
     accounts

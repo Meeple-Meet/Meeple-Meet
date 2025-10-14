@@ -1,5 +1,6 @@
-package com.github.meeplemeet.model.systems
+package com.github.meeplemeet.model.repositories
 
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.GameNotFoundException
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.GameNoUid
@@ -9,7 +10,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
 /** * Firestore collection path for storing and retrieving [Game] documents. */
-const val GAMES_COLLECTION_PATH = "gamesCollection"
+const val GAMES_COLLECTION_PATH = "games"
 
 /**
  * Implementation of [GameRepository] backed by Firestore.
@@ -18,21 +19,20 @@ const val GAMES_COLLECTION_PATH = "gamesCollection"
  * Firestore. Each document in Firestore represents a [GameNoUid], with its document ID used as the
  * [Game.uid].
  */
-class GameRepositoryFirestore(db: FirebaseFirestore) : GameRepository {
-
-  private val gamesCollection = db.collection(GAMES_COLLECTION_PATH)
+class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : GameRepository {
+  private val games = db.collection(GAMES_COLLECTION_PATH)
 
   /** Retrieves all games (within [maxResults]) from Firestore. */
   override suspend fun getGames(maxResults: Int): List<Game> {
-    val snapshot = gamesCollection.get().await()
+    val snapshot = games.get().await()
     return mapSnapshotToGames(snapshot.documents)
   }
 
   /** Retrieves a single game by its Firestore document ID. */
   override suspend fun getGameById(gameID: String): Game {
-    val snapshot = gamesCollection.document(gameID).get().await()
+    val snapshot = games.document(gameID).get().await()
     val game = snapshot.toObject(GameNoUid::class.java)
-    return game?.let { fromNoUid(gameID, it) } ?: throw GameNotFoundException("Game not found")
+    return game?.let { fromNoUid(gameID, it) } ?: throw GameNotFoundException()
   }
 
   /**
@@ -41,7 +41,7 @@ class GameRepositoryFirestore(db: FirebaseFirestore) : GameRepository {
    * This performs a case-sensitive search in Firestore.
    */
   override suspend fun getGameByName(name: String): Game? {
-    val query = gamesCollection.whereEqualTo("name", name).get().await()
+    val query = games.whereEqualTo("name", name).get().await()
     val results = mapSnapshotToGames(query.documents)
     return results.firstOrNull()
   }
@@ -52,12 +52,7 @@ class GameRepositoryFirestore(db: FirebaseFirestore) : GameRepository {
    * This uses Firestore's `array-contains` query operator.
    */
   override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> {
-    val query =
-        gamesCollection
-            .whereArrayContains("genres", genreID)
-            .limit(maxResults.toLong())
-            .get()
-            .await()
+    val query = games.whereArrayContains("genres", genreID).limit(maxResults.toLong()).get().await()
     return mapSnapshotToGames(query.documents)
   }
 
@@ -73,7 +68,7 @@ class GameRepositoryFirestore(db: FirebaseFirestore) : GameRepository {
     // Fetch all games that match at least one of the genres (no multiple array-contains allowed on
     // Firestore)
     val firstGenre = genreIDs.first()
-    val initialQuery = gamesCollection.whereArrayContains("genres", firstGenre).get().await()
+    val initialQuery = games.whereArrayContains("genres", firstGenre).get().await()
     val initialGames = mapSnapshotToGames(initialQuery.documents)
 
     // Filter locally to include only games that have all the specified genres
@@ -93,7 +88,7 @@ class GameRepositoryFirestore(db: FirebaseFirestore) : GameRepository {
   ): List<Game> {
     if (query.isBlank()) return emptyList()
 
-    val snapshot = gamesCollection.get().await()
+    val snapshot = games.get().await()
     val allGames = mapSnapshotToGames(snapshot.documents)
 
     // Filter games based on whether their names contain the query
