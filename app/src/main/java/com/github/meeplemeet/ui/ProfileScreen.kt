@@ -1,0 +1,37 @@
+package com.github.meeplemeet.ui
+
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileScreen(navigation: NavigationActions) {
+  Scaffold(
+      topBar = {
+        CenterAlignedTopAppBar(
+            title = {
+              Text(
+                  text = MeepleMeetScreen.ProfileScreen.name,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onPrimary,
+              )
+            },
+        )
+      },
+      bottomBar = {
+        BottomNavigationMenu(
+            currentScreen = MeepleMeetScreen.ProfileScreen,
+            onTabSelected = { screen -> navigation.navigateTo(screen) })
+      }) { innerPadding ->
+        Text("WIP", modifier = Modifier.padding(innerPadding))
+      }
+}
