@@ -63,10 +63,10 @@ private val startDestination = MeepleMeetScreen.SignInScreen.name
 
 @Composable
 fun MeepleMeetApp(
-  context: Context = LocalContext.current,
-  credentialManager: CredentialManager = CredentialManager.create(context),
-  authVM: AuthViewModel = viewModel(),
-  firestoreVM: FirestoreViewModel = viewModel()
+    context: Context = LocalContext.current,
+    credentialManager: CredentialManager = CredentialManager.create(context),
+    authVM: AuthViewModel = viewModel(),
+    firestoreVM: FirestoreViewModel = viewModel()
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
@@ -95,114 +95,105 @@ fun MeepleMeetApp(
 
     /** Auth graph */
     navigation(
-      startDestination = MeepleMeetScreen.SignInScreen.route,
-      route = MeepleMeetScreen.SignInScreen.name
-    ) {
-      composable(MeepleMeetScreen.SignInScreen.route) {
-        SignInScreen(
-          viewModel = authVM,
-          credentialManager = credentialManager,
-          onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUpScreen) })
-      }
-      composable(MeepleMeetScreen.SignUpScreen.route) {
-        SignUpScreen(
-          viewModel = authVM,
-          credentialManager = credentialManager,
-          onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignInScreen) },
-        )
-      }
-    }
+        startDestination = MeepleMeetScreen.SignInScreen.route,
+        route = MeepleMeetScreen.SignInScreen.name) {
+          composable(MeepleMeetScreen.SignInScreen.route) {
+            SignInScreen(
+                viewModel = authVM,
+                credentialManager = credentialManager,
+                onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUpScreen) })
+          }
+          composable(MeepleMeetScreen.SignUpScreen.route) {
+            SignUpScreen(
+                viewModel = authVM,
+                credentialManager = credentialManager,
+                onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignInScreen) },
+            )
+          }
+        }
 
     /** Discussions graph */
     navigation(
-      startDestination = MeepleMeetScreen.DiscussionsOverview.route,
-      route = MeepleMeetScreen.DiscussionsOverview.name
-    ) {
-      composable(MeepleMeetScreen.DiscussionsOverview.route) {
-        if (currentAccount != null) {
-          DiscussionsOverviewScreen(
-            currentUser = currentAccount!!,
-            navigation = navigationActions,
-            onClickAddDiscussion = {
-              navigationActions.navigateTo(MeepleMeetScreen.DiscussionAddScreen)
-            },
-            onSelectDiscussion = {
-              navigationActions.navigateTo(MeepleMeetScreen.DiscussionScreen(it.uid))
-            },
-            viewModel = firestoreVM
-          )
-        } else {
-          LoadingScreen()
+        startDestination = MeepleMeetScreen.DiscussionsOverview.route,
+        route = MeepleMeetScreen.DiscussionsOverview.name) {
+          composable(MeepleMeetScreen.DiscussionsOverview.route) {
+            if (currentAccount != null) {
+              DiscussionsOverviewScreen(
+                  currentUser = currentAccount!!,
+                  navigation = navigationActions,
+                  onClickAddDiscussion = {
+                    navigationActions.navigateTo(MeepleMeetScreen.DiscussionAddScreen)
+                  },
+                  onSelectDiscussion = {
+                    navigationActions.navigateTo(MeepleMeetScreen.DiscussionScreen(it.uid))
+                  },
+                  viewModel = firestoreVM)
+            } else {
+              LoadingScreen()
+            }
+          }
+          composable(MeepleMeetScreen.Routes.DISCUSSION) { backStackEntry ->
+            if (currentAccount != null) {
+              DiscussionScreen(
+                  discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
+                  currentUser = currentAccount!!,
+                  onBack = { navigationActions.goBack() },
+                  onOpenDiscussionInfo = {
+                    navigationActions.navigateTo(MeepleMeetScreen.DiscussionInfoScreen(it.uid))
+                  },
+                  viewModel = firestoreVM)
+            } else {
+              LoadingScreen()
+            }
+          }
+          composable(MeepleMeetScreen.DiscussionAddScreen.route) {
+            if (currentAccount != null) {
+              DiscussionAddScreen(
+                  onBack = { navigationActions.goBack() },
+                  onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                  currentUser = currentAccount!!,
+                  viewModel = firestoreVM)
+            } else {
+              LoadingScreen()
+            }
+          }
+          composable(MeepleMeetScreen.Routes.DISCUSSION_INFO) { backStackEntry ->
+            DiscussionInfoScreen(
+                discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
+                onBack = { navigationActions.goBack() },
+                onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                viewModel = firestoreVM)
+          }
         }
-      }
-      composable(MeepleMeetScreen.Routes.DISCUSSION) { backStackEntry ->
-        if (currentAccount != null) {
-          DiscussionScreen(
-            discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
-            currentUser = currentAccount!!,
-            onBack = { navigationActions.goBack() },
-            onOpenDiscussionInfo = {
-              navigationActions.navigateTo(MeepleMeetScreen.DiscussionInfoScreen(it.uid))
-            },
-            viewModel = firestoreVM
-          )
-        } else {
-          LoadingScreen()
-        }
-      }
-      composable(MeepleMeetScreen.DiscussionAddScreen.route) {
-        if (currentAccount != null) {
-          DiscussionAddScreen(
-            onBack = { navigationActions.goBack() },
-            onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-            currentUser = currentAccount!!,
-            viewModel = firestoreVM
-          )
-        } else {
-          LoadingScreen()
-        }
-      }
-      composable(MeepleMeetScreen.Routes.DISCUSSION_INFO) { backStackEntry ->
-        DiscussionInfoScreen(
-          discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
-          onBack = { navigationActions.goBack() },
-          onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-          onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-          viewModel = firestoreVM
-        )
-      }
-    }
 
     /** Sessions graph */
     // TODO: Add sessions graph here when screens are implemented
     navigation(
-      startDestination = MeepleMeetScreen.SessionsOverview.route,
-      route = MeepleMeetScreen.SessionsOverview.name
-    ) {
-      composable(MeepleMeetScreen.SessionsOverview.route) {
-        SessionsOverviewScreen(navigation = navigationActions)
-      }
-    }
+        startDestination = MeepleMeetScreen.SessionsOverview.route,
+        route = MeepleMeetScreen.SessionsOverview.name) {
+          composable(MeepleMeetScreen.SessionsOverview.route) {
+            SessionsOverviewScreen(navigation = navigationActions)
+          }
+        }
 
     /** Discover graph */
     navigation(
-      startDestination = MeepleMeetScreen.DiscoverSessions.route,
-      route = MeepleMeetScreen.DiscoverSessions.name
-    ) {
-      composable(MeepleMeetScreen.DiscoverSessions.route) {
-        DiscoverSessionsScreen(navigation = navigationActions)
-      }
-    }
+        startDestination = MeepleMeetScreen.DiscoverSessions.route,
+        route = MeepleMeetScreen.DiscoverSessions.name) {
+          composable(MeepleMeetScreen.DiscoverSessions.route) {
+            DiscoverSessionsScreen(navigation = navigationActions)
+          }
+        }
 
     /** Profile graph */
     navigation(
-      startDestination = MeepleMeetScreen.ProfileScreen.route,
-      route = MeepleMeetScreen.ProfileScreen.name
-    ) {
-      composable(MeepleMeetScreen.ProfileScreen.route) {
-        ProfileScreen(navigation = navigationActions)
-      }
-    }
+        startDestination = MeepleMeetScreen.ProfileScreen.route,
+        route = MeepleMeetScreen.ProfileScreen.name) {
+          composable(MeepleMeetScreen.ProfileScreen.route) {
+            ProfileScreen(navigation = navigationActions)
+          }
+        }
   }
 }
 

@@ -82,8 +82,8 @@ fun DiscussionsOverviewScreen(
     viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account,
     navigation: NavigationActions,
-    onClickAddDiscussion: () -> Unit,
-    onSelectDiscussion: (Discussion) -> Unit,
+    onClickAddDiscussion: () -> Unit = {},
+    onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
 
   val discussionPreviews by viewModel.previewsFlow(currentUser.uid).collectAsState()

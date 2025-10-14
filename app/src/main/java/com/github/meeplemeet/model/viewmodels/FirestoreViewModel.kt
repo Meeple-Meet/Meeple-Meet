@@ -108,7 +108,7 @@ class FirestoreViewModel(
         throw PermissionDeniedException("Only discussion owner can perform this operation")
 
     viewModelScope.launch {
-      repository.deleteDiscussion(discussion.uid)
+      repository.deleteDiscussion(discussion)
       _discussion.value = null
     }
   }
