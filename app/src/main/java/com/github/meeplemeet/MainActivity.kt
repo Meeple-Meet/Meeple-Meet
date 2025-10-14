@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -150,8 +151,19 @@ fun MeepleMeetApp(
           }
         }
 
-    /** Sessions graph */
-    // TODO: Add sessions graph here when screens are implemented
+      /** Sessions graph */
+      // TODO: Add sessions graph here when screens are implemented
+
+      /** Placeholder screens to avoid navigation crashes */
+      composable(MeepleMeetScreen.SessionsOverview.route) {
+          PlaceholderScreen("Sessions Overview")
+      }
+      composable(MeepleMeetScreen.DiscoverSessions.route) {
+          PlaceholderScreen("Discover Sessions")
+      }
+      composable(MeepleMeetScreen.ProfileScreen.route) {
+          PlaceholderScreen("Profile")
+      }
   }
 }
 
@@ -160,4 +172,9 @@ private fun LoadingScreen() {
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
     CircularProgressIndicator()
   }
+}
+
+@Composable
+fun PlaceholderScreen(name: String) {
+    Text(text = "🚧 $name screen coming soon")
 }
