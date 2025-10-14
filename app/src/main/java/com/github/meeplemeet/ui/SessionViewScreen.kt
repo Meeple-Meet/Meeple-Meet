@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,6 +63,23 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.roundToInt
+
+/* =======================================================================
+ * Test tags for UI tests
+ * ======================================================================= */
+
+
+object SessionTestTags {
+    const val TITLE = "session_title"
+    const val PROPOSED_GAME = "proposed_game"
+    const val MIN_PLAYERS = "min_players"
+    const val MAX_PLAYERS = "max_players"
+    const val PARTICIPANT_CHIPS = "participant_chips"
+    const val DATE_FIELD = "date_field"
+    const val TIME_FIELD = "time_field"
+    const val LOCATION_FIELD = "location_field"
+    const val QUIT_BUTTON = "quit_button"
+}
 
 /* =======================================================================
  * Models
@@ -123,7 +141,8 @@ fun SessionViewScreen(
           Title(
               text = form.title.ifEmpty { "New Session" },
               form,
-              modifier = Modifier.align(Alignment.CenterHorizontally))
+              modifier = Modifier.align(Alignment.CenterHorizontally)
+                  .then(Modifier.testTag(SessionTestTags.TITLE)))
 
           // Proposed game section
           // background and border are primary for members since it blends with the screen bg
@@ -148,8 +167,9 @@ fun SessionViewScreen(
 
           // Quit session button
           OutlinedButton(
-              onClick = onBack,
-              modifier = Modifier.fillMaxWidth(),
+              onClick = onBack /** TODO: remove currentAccount from the session */,
+              modifier = Modifier.fillMaxWidth()
+                  .then(Modifier.testTag(SessionTestTags.QUIT_BUTTON)),
               shape = CircleShape,
               border = BorderStroke(1.5.dp, AppColors.negative),
               colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
@@ -209,18 +229,24 @@ private fun ParticipantsSection(
           CountBubble(
               count = form.minPlayers,
               backgroundColor = AppColors.primary,
-              borderColor = AppColors.secondary)
+              borderColor = AppColors.secondary,
+              modifier = Modifier.testTag(SessionTestTags.MIN_PLAYERS))
           CountBubble(
               count = form.maxPlayers,
               backgroundColor = AppColors.primary,
-              borderColor = AppColors.secondary)
+              borderColor = AppColors.secondary,
+              modifier = Modifier.testTag(SessionTestTags.MAX_PLAYERS))
         }
         Spacer(Modifier.height(10.dp))
 
         Spacer(Modifier.height(12.dp))
 
         // Chips
-        UserChipsGrid(participants = form.participants, onRemove = { p -> onRemoveParticipant(p) })
+        UserChipsGrid(
+            participants = form.participants,
+            onRemove = { p -> onRemoveParticipant(p) },
+            modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS)
+        )
       }
 }
 
@@ -239,7 +265,7 @@ private fun ProposedGameSection() {
               // Text for members
               Text(
                   "Current Game",
-                  modifier = Modifier,
+                  modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
                   style = MaterialTheme.typography.bodyMedium,
                   color = AppColors.textIcons)
             }
@@ -258,23 +284,22 @@ private fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -
         UnderlinedLabel("Organisation:")
         Spacer(Modifier.height(12.dp))
 
-        DateField(value = form.dateText, onValueChange = { onFormChange(form.copy(dateText = it)) })
+        /** TODO: check date format */
+        DateField(
+            value = form.dateText,
+            onValueChange = { onFormChange(form.copy(dateText = it)) },
+            modifier = Modifier.testTag(SessionTestTags.DATE_FIELD)
+        )
 
         Spacer(Modifier.height(10.dp))
 
-        // Time field
-        IconTextField(
-            value = form.timeText,
-            onValueChange = { onFormChange(form.copy(timeText = it)) },
-            placeholder = "Time",
-            leadingIcon = {
-              // Using CalendarToday to keep icon set light; replace with alarm icon if you
-              // prefer.
-              // opens a date picker for admins and the session creator
-              Icon(Icons.Default.AccessTime, contentDescription = "Time")
-            },
-            trailingIcon = { TextButton(onClick = { /* open time picker */}) { Text("Pick") } })
-
+      /** TODO: check time format */
+      // Time field using the new TimeField composable
+      TimeField(
+          value = form.timeText,
+          onValueChange = { onFormChange(form.copy(timeText = it)) },
+          modifier = Modifier.testTag(SessionTestTags.TIME_FIELD)
+      )
         Spacer(Modifier.height(10.dp))
 
         // Location field
@@ -285,7 +310,9 @@ private fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -
             value = form.locationText,
             onValueChange = { onFormChange(form.copy(locationText = it)) },
             placeholder = "Location",
-            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") })
+            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
+            modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD)
+        )
       }
 }
 
@@ -337,11 +364,12 @@ private fun IconTextField(
     placeholder: String,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
   OutlinedTextField(
       value = value,
       onValueChange = onValueChange,
-      modifier = Modifier.fillMaxWidth(),
+      modifier = modifier.then(Modifier.fillMaxWidth()),
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       placeholder = { Text(placeholder, color = AppColors.textIconsFade) },
@@ -403,11 +431,12 @@ private fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Mo
 private fun UserChipsGrid(
     participants: List<Participant>,
     onRemove: (Participant) -> Unit,
+    modifier: Modifier = Modifier
 ) {
   FlowRow(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth()) {
+      modifier = modifier.then(Modifier.fillMaxWidth())) {
         participants.forEach { p -> UserChip(name = p.name, onRemove = { onRemove(p) }) }
 
         // Add button chip (to add new participants)
@@ -476,6 +505,7 @@ fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (String) -> Unit) {
   val datePickerState = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
 
   AlertDialog(
+      containerColor = AppColors.primary,
       onDismissRequest = onDismiss,
       confirmButton = {
         TextButton(
@@ -496,22 +526,30 @@ fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (String) -> Unit) {
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
       text = {
-
-        // The date picker itself
-        DatePicker(
-            state = datePickerState,
-            colors =
-                DatePickerDefaults.colors(
-                    containerColor = AppColors.primary,
-                    titleContentColor = AppColors.textIconsFade,
-                    headlineContentColor = AppColors.textIcons,
-                    selectedDayContentColor = AppColors.neutral,
-                ))
+        // Wrap DatePicker in a Box with fillMaxWidth and padding to avoid cropping
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+          DatePicker(
+              state = datePickerState,
+              modifier = Modifier.fillMaxWidth(),
+              colors =
+                  DatePickerDefaults.colors(
+                      containerColor = AppColors.primary,
+                      titleContentColor = AppColors.textIconsFade,
+                      headlineContentColor = AppColors.textIcons,
+                      selectedDayContentColor = AppColors.primary,
+                      selectedDayContainerColor = AppColors.neutral
+                  )
+          )
+        }
       })
 }
 
 @Composable
-fun DateField(value: String, onValueChange: (String) -> Unit) {
+fun DateField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
   var showDialogDate by remember { mutableStateOf(false) }
 
   // The text field
@@ -520,7 +558,9 @@ fun DateField(value: String, onValueChange: (String) -> Unit) {
       onValueChange = {}, // we control it externally
       placeholder = "Date",
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
-      trailingIcon = { TextButton(onClick = { showDialogDate = true }) { Text("Pick") } })
+      trailingIcon = { TextButton(onClick = { showDialogDate = true }) { Text("Pick") } },
+      modifier = modifier
+  )
 
   // The popup
   if (showDialogDate) {
@@ -546,6 +586,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
 
   AlertDialog(
       onDismissRequest = onDismiss,
+      containerColor = AppColors.primary,
       confirmButton = {
         TextButton(
             onClick = {
@@ -580,7 +621,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
 }
 
 @Composable
-fun TimeField(value: String, onValueChange: (String) -> Unit) {
+fun TimeField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
   var showDialogTime by remember { mutableStateOf(false) }
 
   IconTextField(
@@ -588,7 +629,9 @@ fun TimeField(value: String, onValueChange: (String) -> Unit) {
       onValueChange = {}, // controlled externally
       placeholder = "Time",
       leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Time") },
-      trailingIcon = { TextButton(onClick = { showDialogTime = true }) { Text("Pick") } })
+      trailingIcon = { TextButton(onClick = { showDialogTime = true }) { Text("Pick") } },
+      modifier = modifier
+  )
 
   if (showDialogTime) {
     TimePickerDialog(
