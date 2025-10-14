@@ -63,7 +63,9 @@ class DiscussionSettingScreenTest {
 
   @Test
   fun screen_displaysDiscussionName_andButtons() {
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
 
@@ -84,7 +86,9 @@ class DiscussionSettingScreenTest {
 
   @Test
   fun clickingDeleteButton_showsDeleteDialog() {
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
     compose.onNodeWithTag("delete_button").performClick()
@@ -96,7 +100,9 @@ class DiscussionSettingScreenTest {
 
   @Test
   fun clickingLeaveButton_showsLeaveDialog() {
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
     compose.onNodeWithTag("leave_button").performClick()
@@ -108,7 +114,9 @@ class DiscussionSettingScreenTest {
 
   @Test
   fun memberList_displaysMembersWithBadges() {
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
 
@@ -120,7 +128,9 @@ class DiscussionSettingScreenTest {
 
   @Test
   fun backButton_savesChanges() {
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
 
@@ -143,7 +153,9 @@ class DiscussionSettingScreenTest {
         discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
     map["disc1"] = MutableStateFlow(participantDiscussion)
 
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
 
@@ -172,7 +184,9 @@ class DiscussionSettingScreenTest {
         discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
     map["disc1"] = MutableStateFlow(adminDiscussion)
 
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
 
@@ -196,7 +210,9 @@ class DiscussionSettingScreenTest {
         discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
     map["disc1"] = MutableStateFlow(ownerDiscussion)
 
-    compose.setContent { DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1") }
+    compose.setContent {
+      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+    }
 
     compose.waitForIdle()
 
