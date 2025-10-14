@@ -23,10 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -78,7 +82,8 @@ fun DiscussionsOverviewScreen(
     viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account,
     navigation: NavigationActions,
-    onSelectDiscussion: (Discussion) -> Unit = {},
+    onClickAddDiscussion: () -> Unit,
+    onSelectDiscussion: (Discussion) -> Unit,
 ) {
 
   val discussionPreviews by viewModel.previewsFlow(currentUser.uid).collectAsState()
@@ -88,6 +93,11 @@ fun DiscussionsOverviewScreen(
       }
 
   Scaffold(
+      floatingActionButton = {
+        FloatingActionButton(onClick = onClickAddDiscussion, modifier = Modifier.testTag("")) {
+          Icon(Icons.Default.Add, contentDescription = "Create")
+        }
+      },
       topBar = {
         CenterAlignedTopAppBar(
             title = {

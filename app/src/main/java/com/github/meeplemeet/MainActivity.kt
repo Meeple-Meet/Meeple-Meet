@@ -114,6 +114,9 @@ fun MeepleMeetApp(
               DiscussionsOverviewScreen(
                   currentUser = currentAccount,
                   navigation = navigationActions,
+                  onClickAddDiscussion = {
+                    navigationActions.navigateTo(MeepleMeetScreen.DiscussionAddScreen)
+                  },
                   onSelectDiscussion = {
                     navigationActions.navigateTo(MeepleMeetScreen.DiscussionScreen(it.uid))
                   })

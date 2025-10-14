@@ -171,9 +171,9 @@ fun BottomNavigationMenu(
   NavigationBar(
       modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
         listOf(
-                MeepleMeetScreen.DiscoverSessions,
-                MeepleMeetScreen.SessionsOverview,
                 MeepleMeetScreen.DiscussionsOverview,
+                MeepleMeetScreen.SessionsOverview,
+                MeepleMeetScreen.DiscoverSessions,
                 MeepleMeetScreen.ProfileScreen)
             .forEach { screen ->
               NavigationBarItem(
