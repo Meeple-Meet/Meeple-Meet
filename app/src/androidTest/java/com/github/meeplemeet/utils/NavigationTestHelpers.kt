@@ -78,4 +78,12 @@ object NavigationTestHelpers {
     fun ComposeTestRule.clickOnTab(tag: String) {
         onNodeWithTag(tag).assertIsDisplayed().performClick()
     }
+
+    fun ComposeTestRule.navigateToDiscussionScreen(discussionName: String) {
+        onNodeWithTag("Discussion/$discussionName").assertIsDisplayed().performClick()
+    }
+
+    fun ComposeTestRule.navigateToDiscussionInfoScreen(discussionName: String) {
+        onNodeWithTag("DiscussionInfo/$discussionName").assertIsDisplayed().performClick()
+    }
 }

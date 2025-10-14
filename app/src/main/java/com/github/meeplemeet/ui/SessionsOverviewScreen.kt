@@ -25,9 +25,9 @@ fun SessionsOverviewScreen(navigation: NavigationActions) {
                   text = MeepleMeetScreen.SessionsOverview.name,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE)
               )
-            },
-            modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE)
+            }
         )
       },
       bottomBar = {

@@ -95,9 +95,9 @@ fun DiscussionsOverviewScreen(
                   text = MeepleMeetScreen.DiscussionsOverview.name,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE)
               )
-            },
-            modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE)
+            }
         )
       },
       bottomBar = {
@@ -147,7 +147,7 @@ fun DiscussionsOverviewScreen(
                       discussionName = discussionName,
                       lastMsg = msgText,
                       unreadMsgCount = preview.unreadCount,
-                      modifier = Modifier.fillMaxWidth(),
+                      modifier = Modifier.fillMaxWidth().testTag("Discussion/$discussionName"),     // TODO better test tag
                       onClick = { discussion?.let { onSelectDiscussion(it) } })
                 }
               }

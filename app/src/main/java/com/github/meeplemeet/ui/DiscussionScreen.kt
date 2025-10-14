@@ -103,7 +103,7 @@ fun DiscussionScreen(
         title = {
           Row(
               verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier.clickable { discussion?.let { onOpenDiscussionInfo(it) } }) {
+              modifier = Modifier.testTag("DiscussionInfo/${discussion?.name}").clickable { discussion?.let { onOpenDiscussionInfo(it) } }) {
                 Box(
                     modifier =
                         Modifier.size(40.dp)
