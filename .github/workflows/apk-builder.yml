@@ -23,7 +23,9 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > key-store.keystore
+          mkdir -p app
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/key-store.keystore
+          echo "KEYSTORE_PATH=$PWD/app/key-store.keystore" >> $GITHUB_ENV
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/app/key-store.keystore
 
