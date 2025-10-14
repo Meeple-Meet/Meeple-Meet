@@ -20,12 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
 import java.text.SimpleDateFormat
@@ -110,7 +112,8 @@ fun DiscussionScreen(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = discussionName,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons))
+                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons),
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               }
         },
         navigationIcon = {
@@ -118,7 +121,8 @@ fun DiscussionScreen(
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = AppColors.textIconsFade)
+                tint = AppColors.textIconsFade,
+                modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
           }
         },
         actions = {

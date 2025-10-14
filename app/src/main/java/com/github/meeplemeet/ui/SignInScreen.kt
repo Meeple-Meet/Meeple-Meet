@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 
 object SignInScreenTestTags {
   const val EMAIL_FIELD = "email_field"
@@ -122,7 +123,7 @@ fun SignInScreen(
         Text(
             "Welcome!",
             style = TextStyle(fontSize = 28.sp),
-            modifier = Modifier.padding(bottom = 16.dp))
+            modifier = Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
         // Email input field with validation
         OutlinedTextField(

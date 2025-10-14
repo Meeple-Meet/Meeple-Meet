@@ -8,9 +8,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +27,7 @@ fun ProfileScreen(navigation: NavigationActions) {
                   color = MaterialTheme.colorScheme.onPrimary,
               )
             },
+            modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE)
         )
       },
       bottomBar = {

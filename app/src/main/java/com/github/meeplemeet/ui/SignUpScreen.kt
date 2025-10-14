@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 
 object SignUpScreenTestTags {
   const val EMAIL_FIELD = "email_field"
@@ -34,6 +35,7 @@ object SignUpScreenTestTags {
   const val LOADING_INDICATOR = "loading_indicator"
   const val CONFIRM_PASSWORD_FIELD = "confirm_password_field"
   const val CONFIRM_PASSWORD_VISIBILITY_TOGGLE = "confirm_password_visibility_toggle"
+  const val SIGN_IN_BUTTON = "sign_in_button"
 }
 
 /**
@@ -150,7 +152,7 @@ fun SignUpScreen(
         Text(
             "Welcome!",
             style = TextStyle(fontSize = 28.sp),
-            modifier = Modifier.padding(bottom = 16.dp))
+            modifier = Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
         // Email input field with validation
         OutlinedTextField(
@@ -338,7 +340,7 @@ fun SignUpScreen(
           Text(
               text = "Log in.",
               color = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.clickable { onLogInClick() })
+              modifier = Modifier.testTag(SignUpScreenTestTags.SIGN_IN_BUTTON).clickable { onLogInClick() })
         }
 
         // Bottom spacing

@@ -19,12 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
@@ -100,10 +102,12 @@ fun DiscussionAddScreen(
                       containerColor = AppColors.primary,
                       titleContentColor = AppColors.textIcons,
                       navigationIconContentColor = AppColors.textIcons),
-              title = { Text(text = MeepleMeetScreen.DiscussionAddScreen.name) },
+              title = { Text(text = MeepleMeetScreen.DiscussionAddScreen.name, modifier = Modifier.testTag(
+                  NavigationTestTags.SCREEN_TITLE)) },
               navigationIcon = {
                 IconButton(onClick = onBack) {
-                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.testTag(
+                      NavigationTestTags.GO_BACK_BUTTON))
                 }
               })
           HorizontalDivider(

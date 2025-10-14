@@ -20,6 +20,8 @@ import androidx.navigation.NavHostController
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
   const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
+  const val SCREEN_TITLE = "ScreenTitle"
+  const val GO_BACK_BUTTON = "GoBackButton"
   const val SESSIONS_TAB = "OverviewTab"
   const val DISCUSSIONS_TAB = "MapTab"
   const val DISCOVER_TAB = "DiscoverTab"
