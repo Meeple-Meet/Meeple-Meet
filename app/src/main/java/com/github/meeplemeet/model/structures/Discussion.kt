@@ -24,6 +24,7 @@ data class Discussion(
     val participants: List<String> = emptyList(),
     val admins: List<String> = emptyList(),
     val createdAt: Timestamp = Timestamp.now(),
+    val session: Session? = null
 )
 
 /**
@@ -40,6 +41,7 @@ data class DiscussionNoUid(
     val participants: List<String> = emptyList(),
     val admins: List<String> = emptyList(),
     val createdAt: Timestamp = Timestamp.now(),
+    val session: Session? = null
 )
 
 /**
@@ -56,7 +58,8 @@ fun toNoUid(discussion: Discussion): DiscussionNoUid =
         discussion.messages,
         discussion.participants,
         discussion.admins,
-        discussion.createdAt)
+        discussion.createdAt,
+        discussion.session)
 
 /**
  * Reconstructs a full [Discussion] object from its Firestore representation.
@@ -74,4 +77,5 @@ fun fromNoUid(id: String, discussionNoUid: DiscussionNoUid): Discussion =
         discussionNoUid.messages,
         discussionNoUid.participants,
         discussionNoUid.admins,
-        discussionNoUid.createdAt)
+        discussionNoUid.createdAt,
+        discussionNoUid.session)

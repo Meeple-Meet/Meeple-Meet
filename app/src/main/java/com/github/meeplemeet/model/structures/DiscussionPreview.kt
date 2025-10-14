@@ -36,19 +36,6 @@ data class DiscussionPreviewNoUid(
 )
 
 /**
- * Converts a full [DiscussionPreview] into its Firestore-storable form [DiscussionPreviewNoUid].
- *
- * @param discussionPreview The preview instance to convert.
- * @return The stripped-down form without UID for storage.
- */
-fun toNoUid(discussionPreview: DiscussionPreview): DiscussionPreviewNoUid =
-    DiscussionPreviewNoUid(
-        discussionPreview.lastMessage,
-        discussionPreview.lastMessageSender,
-        discussionPreview.lastMessageAt,
-        discussionPreview.unreadCount)
-
-/**
  * Reconstructs a full [DiscussionPreview] from its Firestore representation.
  *
  * @param id The discussion UID (document ID in Firestore).
