@@ -19,11 +19,21 @@ import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsNotDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscoverScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionsOverviewIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkProfileScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkSessionsScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignInScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignUpScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.clickOnTab
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+
 
 /**
  * Integration UI tests for MeepleMeetApp navigation.
@@ -115,80 +125,12 @@ class NavigationTest {
         createdAt = TODO()
     )
 
-
-    // ===== Check helpers =====
     private fun pressSystemBack(shouldTerminate: Boolean = false) {
         composeTestRule.activityRule.scenario.onActivity { activity ->
             activity.onBackPressedDispatcher.onBackPressed()
         }
         composeTestRule.waitUntil { composeTestRule.activity.isFinishing == shouldTerminate }
         assertEquals(shouldTerminate, composeTestRule.activity.isFinishing)
-    }
-
-    private fun ComposeTestRule.checkScreenIsDisplayed(screenTitle: String) {
-        onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
-            .assertIsDisplayed()
-            .assertTextContains(screenTitle, substring = true, ignoreCase = true)
-    }
-
-    private fun ComposeTestRule.checkSignInScreenIsDisplayed() {
-        checkScreenIsDisplayed("Welcome!")
-    }
-
-    private fun ComposeTestRule.checkSignUpScreenIsDisplayed() {
-        checkScreenIsDisplayed("Welcome!")
-    }
-
-    private fun ComposeTestRule.checkDiscussionsOverviewIsDisplayed() {
-        checkScreenIsDisplayed(MeepleMeetScreen.DiscussionsOverview.name)
-    }
-
-    private fun ComposeTestRule.checkDiscoverScreenIsDisplayed() {
-        checkScreenIsDisplayed(MeepleMeetScreen.DiscoverSessions.name)
-    }
-
-    private fun ComposeTestRule.checkSessionsScreenIsDisplayed() {
-        checkScreenIsDisplayed(MeepleMeetScreen.SessionsOverview.name)
-    }
-
-    private fun ComposeTestRule.checkProfileScreenIsDisplayed() {
-        checkScreenIsDisplayed(MeepleMeetScreen.ProfileScreen.name)
-    }
-
-    private fun ComposeTestRule.checkDiscussionScreenIsDisplayed(discussionName: String) {
-        checkScreenIsDisplayed(discussionName)
-    }
-
-    private fun ComposeTestRule.checkDiscussionInfoScreenIsDisplayed(discussionName: String) {
-        checkScreenIsDisplayed(discussionName)
-    }
-
-    private fun ComposeTestRule.checkDiscussionAddScreenIsDisplayed() {
-        checkScreenIsDisplayed(MeepleMeetScreen.DiscussionAddScreen.name)
-    }
-
-    fun ComposeTestRule.checkBottomBarIsNotDisplayed() {
-        onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsNotDisplayed()
-        onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertIsNotDisplayed()
-        onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertIsNotDisplayed()
-        onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertIsNotDisplayed()
-        onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertIsNotDisplayed()
-    }
-
-    fun ComposeTestRule.checkBottomBarIsDisplayed() {
-        onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
-        onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertIsDisplayed()
-        onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertIsDisplayed()
-        onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertIsDisplayed()
-        onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertIsDisplayed()
-    }
-
-    fun ComposeTestRule.navigateBack() {
-        onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertIsDisplayed().performClick()
-    }
-
-    fun ComposeTestRule.clickOnTab(tag: String) {
-        onNodeWithTag(tag).assertIsDisplayed().performClick()
     }
 
 
