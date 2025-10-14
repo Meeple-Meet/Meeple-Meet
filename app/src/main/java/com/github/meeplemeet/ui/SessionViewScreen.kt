@@ -70,21 +70,20 @@ import kotlin.math.roundToInt
  * Test tags for UI tests
  * ======================================================================= */
 
-
 object SessionTestTags {
-    const val TITLE = "session_title"
-    const val PROPOSED_GAME = "proposed_game"
-    const val MIN_PLAYERS = "min_players"
-    const val MAX_PLAYERS = "max_players"
-    const val PARTICIPANT_CHIPS = "participant_chips"
-    const val DATE_FIELD = "date_field"
-    const val TIME_FIELD = "time_field"
-    const val LOCATION_FIELD = "location_field"
-    const val QUIT_BUTTON = "quit_button"
-    const val DATE_PICKER_OK_BUTTON = "date_picker_ok_button"
-    const val DATE_PICK_BUTTON = "date_pick_button"
-    const val TIME_PICK_BUTTON = "time_pick_button"
-    const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
+  const val TITLE = "session_title"
+  const val PROPOSED_GAME = "proposed_game"
+  const val MIN_PLAYERS = "min_players"
+  const val MAX_PLAYERS = "max_players"
+  const val PARTICIPANT_CHIPS = "participant_chips"
+  const val DATE_FIELD = "date_field"
+  const val TIME_FIELD = "time_field"
+  const val LOCATION_FIELD = "location_field"
+  const val QUIT_BUTTON = "quit_button"
+  const val DATE_PICKER_OK_BUTTON = "date_picker_ok_button"
+  const val DATE_PICK_BUTTON = "date_pick_button"
+  const val TIME_PICK_BUTTON = "time_pick_button"
+  const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
 }
 
 /* =======================================================================
@@ -147,8 +146,9 @@ fun SessionViewScreen(
           Title(
               text = form.title.ifEmpty { "New Session" },
               form,
-              modifier = Modifier.align(Alignment.CenterHorizontally)
-                  .then(Modifier.testTag(SessionTestTags.TITLE)))
+              modifier =
+                  Modifier.align(Alignment.CenterHorizontally)
+                      .then(Modifier.testTag(SessionTestTags.TITLE)))
 
           // Proposed game section
           // background and border are primary for members since it blends with the screen bg
@@ -173,9 +173,11 @@ fun SessionViewScreen(
 
           // Quit session button
           OutlinedButton(
-              onClick = onBack /** TODO: remove currentAccount from the session */,
-              modifier = Modifier.fillMaxWidth()
-                  .then(Modifier.testTag(SessionTestTags.QUIT_BUTTON)),
+              onClick = onBack
+              /** TODO: remove currentAccount from the session */
+              ,
+              modifier =
+                  Modifier.fillMaxWidth().then(Modifier.testTag(SessionTestTags.QUIT_BUTTON)),
               shape = CircleShape,
               border = BorderStroke(1.5.dp, AppColors.negative),
               colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
@@ -191,7 +193,6 @@ fun SessionViewScreen(
  * Sub-components
  * ======================================================================= */
 
-
 @Composable
 private fun ParticipantsSection(
     form: SessionForm,
@@ -199,149 +200,136 @@ private fun ParticipantsSection(
     onRemoveParticipant: (Participant) -> Unit
 ) {
   SectionCard(
-      modifier = Modifier.clip(appShapes.extraLarge)
-          .background(AppColors.primary)
-          .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)
-  ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-      UnderlinedLabel(
-        text = "Participants:",
-        textColor = AppColors.textIcons,
-        textStyle = MaterialTheme.typography.titleLarge,
-      )
-        Spacer(Modifier.width(8.dp))
-      CountBubble(
-        count = form.participants.size,
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(AppColors.affirmative)
-            .border(1.dp, AppColors.affirmative, CircleShape)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-      )
-    }
+      modifier =
+          Modifier.clip(appShapes.extraLarge)
+              .background(AppColors.primary)
+              .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          UnderlinedLabel(
+              text = "Participants:",
+              textColor = AppColors.textIcons,
+              textStyle = MaterialTheme.typography.titleLarge,
+          )
+          Spacer(Modifier.width(8.dp))
+          CountBubble(
+              count = form.participants.size,
+              modifier =
+                  Modifier.clip(CircleShape)
+                      .background(AppColors.affirmative)
+                      .border(1.dp, AppColors.affirmative, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp))
+        }
 
-    Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
-    DiscretePillSlider(
-        title = "Number of players",
-        range = 2f..10f,
-        values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
-        steps = 7,
-        onValuesChange = { min, max -> onFormChange(min, max) }
-    )
+        DiscretePillSlider(
+            title = "Number of players",
+            range = 2f..10f,
+            values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
+            steps = 7,
+            onValuesChange = { min, max -> onFormChange(min, max) })
 
-    // Min/max bubbles of the slider
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-      CountBubble(
-        count = form.minPlayers,
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(AppColors.secondary)
-            .border(1.dp, AppColors.secondary, CircleShape)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-            .testTag(SessionTestTags.MIN_PLAYERS)
-      )
-      CountBubble(
-        count = form.maxPlayers,
-          modifier = Modifier
-              .clip(CircleShape)
-              .background(AppColors.secondary)
-              .border(1.dp, AppColors.secondary, CircleShape)
-              .padding(horizontal = 10.dp, vertical = 6.dp)
-              .testTag(SessionTestTags.MAX_PLAYERS))
-    }
-    Spacer(Modifier.height(10.dp))
-    Spacer(Modifier.height(12.dp))
+        // Min/max bubbles of the slider
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+          CountBubble(
+              count = form.minPlayers,
+              modifier =
+                  Modifier.clip(CircleShape)
+                      .background(AppColors.secondary)
+                      .border(1.dp, AppColors.secondary, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp)
+                      .testTag(SessionTestTags.MIN_PLAYERS))
+          CountBubble(
+              count = form.maxPlayers,
+              modifier =
+                  Modifier.clip(CircleShape)
+                      .background(AppColors.secondary)
+                      .border(1.dp, AppColors.secondary, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp)
+                      .testTag(SessionTestTags.MAX_PLAYERS))
+        }
+        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
-    // Chips
-    UserChipsGrid(
-      participants = form.participants,
-      onRemove = { p -> onRemoveParticipant(p) },
-      modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS)
-    )
-  }
+        // Chips
+        UserChipsGrid(
+            participants = form.participants,
+            onRemove = { p -> onRemoveParticipant(p) },
+            modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
+      }
 }
 
 @Composable
 private fun ProposedGameSection() {
   SectionCard(
-    modifier = Modifier.clip(appShapes.extraLarge)
-      .background(AppColors.primary)
-      .border(1.dp, AppColors.primary)
-  ) {
-    Row(
-      horizontalArrangement = Arrangement.Center,
-      modifier = Modifier.fillMaxWidth(),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      UnderlinedLabel(
-        text = "Proposed game:",
-        textColor = AppColors.textIcons,
-        textStyle = MaterialTheme.typography.titleLarge
-      )
-      Spacer(Modifier.width(8.dp))
-      // Text for members
-      Text(
-        "Current Game",
-        modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
-        style = MaterialTheme.typography.bodyMedium,
-        color = AppColors.textIcons
-      )
-    }
-    Spacer(Modifier.height(10.dp))
-      /** TODO: Search field or something for admins and the session creator to propose a game */
-  }
+      modifier =
+          Modifier.clip(appShapes.extraLarge)
+              .background(AppColors.primary)
+              .border(1.dp, AppColors.primary)) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically) {
+              UnderlinedLabel(
+                  text = "Proposed game:",
+                  textColor = AppColors.textIcons,
+                  textStyle = MaterialTheme.typography.titleLarge)
+              Spacer(Modifier.width(8.dp))
+              // Text for members
+              Text(
+                  "Current Game",
+                  modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = AppColors.textIcons)
+            }
+        Spacer(Modifier.height(10.dp))
+        /** TODO: Search field or something for admins and the session creator to propose a game */
+      }
 }
 
 @Composable
 private fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) {
   SectionCard(
-    modifier = Modifier.clip(appShapes.extraLarge)
-      .background(AppColors.primary)
-      .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge).fillMaxWidth()
-  ) {
-    UnderlinedLabel(
-      text = "Organisation:",
-      textColor = AppColors.textIcons,
-      textStyle = MaterialTheme.typography.titleLarge
-    )
-    Spacer(Modifier.height(12.dp))
+      modifier =
+          Modifier.clip(appShapes.extraLarge)
+              .background(AppColors.primary)
+              .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)
+              .fillMaxWidth()) {
+        UnderlinedLabel(
+            text = "Organisation:",
+            textColor = AppColors.textIcons,
+            textStyle = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
 
+        /** TODO: check date format */
+        DateField(
+            value = form.dateText,
+            onValueChange = { onFormChange(form.copy(dateText = it)) },
+            modifier = Modifier.fillMaxWidth())
 
-    /** TODO: check date format */
-    DateField(
-      value = form.dateText,
-      onValueChange = { onFormChange(form.copy(dateText = it)) },
-      modifier = Modifier.fillMaxWidth()
-    )
+        Spacer(Modifier.height(10.dp))
 
-    Spacer(Modifier.height(10.dp))
+        /** TODO: check time format */
+        // Time field using the new TimeField composable
+        TimeField(
+            value = form.timeText,
+            onValueChange = { onFormChange(form.copy(timeText = it)) },
+            modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(10.dp))
 
-    /** TODO: check time format */
-    // Time field using the new TimeField composable
-    TimeField(
-      value = form.timeText,
-      onValueChange = { onFormChange(form.copy(timeText = it)) },
-      modifier = Modifier.fillMaxWidth()
-    )
-    Spacer(Modifier.height(10.dp))
-
-    // Location field
-    // could be redone like the bootcamp
-    // using a search field with suggestions and map integration
-    // for now it's just a text field
-    IconTextField(
-      value = form.locationText,
-      onValueChange = { onFormChange(form.copy(locationText = it)) },
-      placeholder = "Location",
-      leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
-      modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD).fillMaxWidth(),
-      textStyle = MaterialTheme.typography.bodySmall,
-    )
-  }
+        // Location field
+        // could be redone like the bootcamp
+        // using a search field with suggestions and map integration
+        // for now it's just a text field
+        IconTextField(
+            value = form.locationText,
+            onValueChange = { onFormChange(form.copy(locationText = it)) },
+            placeholder = "Location",
+            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
+            modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD).fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodySmall,
+        )
+      }
 }
 
 @Composable
@@ -375,7 +363,6 @@ private fun TopRightIcons() {
         onClick = { /* TODO: navigates to the discussion*/})
   }
 }
-
 
 @Composable
 private fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) {
@@ -511,11 +498,7 @@ fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (String) -> Unit) {
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
       text = {
         // Wrap DatePicker in a Box with fillMaxWidth and padding to avoid cropping
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
           DatePicker(
               state = datePickerState,
               modifier = Modifier.fillMaxWidth(),
@@ -525,9 +508,7 @@ fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (String) -> Unit) {
                       titleContentColor = AppColors.textIconsFade,
                       headlineContentColor = AppColors.textIcons,
                       selectedDayContentColor = AppColors.primary,
-                      selectedDayContainerColor = AppColors.neutral
-                  )
-          )
+                      selectedDayContainerColor = AppColors.neutral))
         }
       })
 }
@@ -542,9 +523,14 @@ fun DateField(value: String, onValueChange: (String) -> Unit, modifier: Modifier
       onValueChange = {}, // we control it externally
       placeholder = "Date",
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
-      trailingIcon = { TextButton(onClick = { showDialogDate = true }, modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) { Text("Pick") } },
-      modifier = modifier.testTag(SessionTestTags.DATE_FIELD)
-  )
+      trailingIcon = {
+        TextButton(
+            onClick = { showDialogDate = true },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+              Text("Pick")
+            }
+      },
+      modifier = modifier.testTag(SessionTestTags.DATE_FIELD))
 
   // The popup
   if (showDialogDate) {
@@ -614,9 +600,14 @@ fun TimeField(value: String, onValueChange: (String) -> Unit, modifier: Modifier
       onValueChange = {}, // controlled externally
       placeholder = "Time",
       leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Time") },
-      trailingIcon = { TextButton(onClick = { showDialogTime = true }, modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) { Text("Pick") } },
-      modifier = modifier.testTag(SessionTestTags.TIME_FIELD)
-  )
+      trailingIcon = {
+        TextButton(
+            onClick = { showDialogTime = true },
+            modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
+              Text("Pick")
+            }
+      },
+      modifier = modifier.testTag(SessionTestTags.TIME_FIELD))
 
   if (showDialogTime) {
     TimePickerDialog(
@@ -703,24 +694,21 @@ private fun Preview_IconTextField() {
           placeholder = "Search games",
           trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
           textStyle = MaterialTheme.typography.bodySmall,
-          modifier = Modifier
-      )
+          modifier = Modifier)
       IconTextField(
           value = "2025-10-15",
           onValueChange = {},
           placeholder = "Date",
           leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
           textStyle = MaterialTheme.typography.bodySmall,
-          modifier = Modifier
-      )
+          modifier = Modifier)
       IconTextField(
           value = "Student Lounge",
           onValueChange = {},
           placeholder = "Location",
           leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
           textStyle = MaterialTheme.typography.bodySmall,
-          modifier = Modifier
-      )
+          modifier = Modifier)
     }
   }
 }
@@ -730,27 +718,27 @@ private fun Preview_IconTextField() {
 private fun Preview_CountBubble() {
   AppTheme {
     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CountBubble(
-            0, modifier = Modifier
-                .clip(CircleShape)
-                .background(AppColors.primary)
-                .border(1.dp, AppColors.secondary, CircleShape)
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        )
-        CountBubble(
-            3, modifier = Modifier
-                .clip(CircleShape)
-                .background(AppColors.secondary)
-                .border(1.dp, AppColors.secondary, CircleShape)
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        )
-        CountBubble(
-            12, modifier = Modifier
-                .clip(CircleShape)
-                .background(AppColors.affirmative)
-                .border(1.dp, AppColors.secondary, CircleShape)
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        )
+      CountBubble(
+          0,
+          modifier =
+              Modifier.clip(CircleShape)
+                  .background(AppColors.primary)
+                  .border(1.dp, AppColors.secondary, CircleShape)
+                  .padding(horizontal = 10.dp, vertical = 6.dp))
+      CountBubble(
+          3,
+          modifier =
+              Modifier.clip(CircleShape)
+                  .background(AppColors.secondary)
+                  .border(1.dp, AppColors.secondary, CircleShape)
+                  .padding(horizontal = 10.dp, vertical = 6.dp))
+      CountBubble(
+          12,
+          modifier =
+              Modifier.clip(CircleShape)
+                  .background(AppColors.affirmative)
+                  .border(1.dp, AppColors.secondary, CircleShape)
+                  .padding(horizontal = 10.dp, vertical = 6.dp))
     }
   }
 }
@@ -824,7 +812,7 @@ private fun Preview_SessionView_Full() {
           dateText = "2025-10-15",
           timeText = "19:00",
           locationText = "Student Lounge")
-  AppTheme{
+  AppTheme {
     Scaffold(
         topBar = {
           TopBarWithDivider(
