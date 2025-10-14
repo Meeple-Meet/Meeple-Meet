@@ -228,6 +228,10 @@ class FirestoreViewModel(
     }
   }
 
+  fun signOut() {
+    _account.value = null
+  }
+
   /** Retrieve an account by ID. */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")

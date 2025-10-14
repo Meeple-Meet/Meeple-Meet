@@ -77,9 +77,7 @@ fun MeepleMeetApp(
 
   /** Fetch current user if already logged in */
   LaunchedEffect(FirebaseProvider.auth.currentUser) {
-    FirebaseProvider.auth.currentUser?.let {
-      firestoreVM.getAccount(FirebaseProvider.auth.currentUser!!.uid)
-    }
+    FirebaseProvider.auth.currentUser?.let { firestoreVM.getCurrentAccount() }
   }
 
   /** Authentification gate */
@@ -191,7 +189,11 @@ fun MeepleMeetApp(
         startDestination = MeepleMeetScreen.ProfileScreen.route,
         route = MeepleMeetScreen.ProfileScreen.name) {
           composable(MeepleMeetScreen.ProfileScreen.route) {
-            ProfileScreen(navigation = navigationActions)
+            ProfileScreen(
+                navigation = navigationActions,
+                authViewModel = authVM,
+                firestoreVM,
+                onSignOut = { navigationActions.navigateTo(MeepleMeetScreen.SignUpScreen) })
           }
         }
   }
