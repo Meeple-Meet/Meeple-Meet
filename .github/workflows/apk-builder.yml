@@ -1,0 +1,38 @@
+name: Release Signed APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > key-store.keystore
+
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_PATH: key-store.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew clean assembleRelease
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: app-release.apk
+          path: app/build/outputs/apk/release/app-release.apk
