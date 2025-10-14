@@ -102,12 +102,17 @@ fun DiscussionAddScreen(
                       containerColor = AppColors.primary,
                       titleContentColor = AppColors.textIcons,
                       navigationIconContentColor = AppColors.textIcons),
-              title = { Text(text = MeepleMeetScreen.DiscussionAddScreen.name, modifier = Modifier.testTag(
-                  NavigationTestTags.SCREEN_TITLE)) },
+              title = {
+                Text(
+                    text = MeepleMeetScreen.DiscussionAddScreen.name,
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+              },
               navigationIcon = {
                 IconButton(onClick = onBack) {
-                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.testTag(
-                      NavigationTestTags.GO_BACK_BUTTON))
+                  Icon(
+                      Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back",
+                      modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
                 }
               })
           HorizontalDivider(

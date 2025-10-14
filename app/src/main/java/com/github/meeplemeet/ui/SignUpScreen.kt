@@ -340,7 +340,10 @@ fun SignUpScreen(
           Text(
               text = "Log in.",
               color = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.testTag(SignUpScreenTestTags.SIGN_IN_BUTTON).clickable { onLogInClick() })
+              modifier =
+                  Modifier.testTag(SignUpScreenTestTags.SIGN_IN_BUTTON).clickable {
+                    onLogInClick()
+                  })
         }
 
         // Bottom spacing

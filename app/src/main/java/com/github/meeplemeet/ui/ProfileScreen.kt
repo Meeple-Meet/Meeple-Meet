@@ -25,10 +25,8 @@ fun ProfileScreen(navigation: NavigationActions) {
                   text = MeepleMeetScreen.ProfileScreen.name,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
-                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE)
-              )
-            }
-        )
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+            })
       },
       bottomBar = {
         BottomNavigationMenu(
