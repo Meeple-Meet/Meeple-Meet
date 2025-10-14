@@ -34,3 +34,10 @@ class InvalidHandleFormatException(message: String = DEFAULT_MESSAGE) : Exceptio
         "Handle should be of size 4-32 and only contain letters, digits or underscores"
   }
 }
+
+/** Thrown when a game cannot be found in Firestore by the requested ID. */
+class GameNotFoundException(message: String = DEFAULT_MESSAGE) : Exception(message) {
+  companion object {
+    const val DEFAULT_MESSAGE = "Game does not exist."
+  }
+}
