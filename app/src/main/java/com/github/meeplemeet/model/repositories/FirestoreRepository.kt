@@ -16,7 +16,10 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
@@ -253,6 +256,26 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         }
 
     return fromNoUid(id, account, previews)
+  }
+
+  /** Retrieve an account and its discussion previews. */
+  suspend fun getAccounts(ids: List<String>): List<Account> = coroutineScope {
+    ids.map { id ->
+          async {
+            val accountSnap = accounts.document(id).get().await()
+            val account =
+                accountSnap.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
+
+            val previewsSnap = accounts.document(id).collection("previews").get().await()
+            val previews =
+                previewsSnap.documents.associate { doc ->
+                  doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java)!!)
+                }
+
+            fromNoUid(id, account, previews)
+          }
+        }
+        .awaitAll()
   }
 
   /** Update account display name. */
