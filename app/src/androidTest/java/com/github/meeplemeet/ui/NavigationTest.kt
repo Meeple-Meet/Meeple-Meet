@@ -14,22 +14,32 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionPreview
 import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.NavigationTestHelpers.addDiscussion
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsNotDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscoverScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionAddScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionInfoScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionsOverviewIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkProfileScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkSessionsScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignInScreenIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignUpScreenIsDisplayed
+import com.github.meeplemeet.utils.NavigationTestHelpers.clickOnLogout
 import com.github.meeplemeet.utils.NavigationTestHelpers.clickOnTab
+import com.github.meeplemeet.utils.NavigationTestHelpers.deleteDiscussion
+import com.github.meeplemeet.utils.NavigationTestHelpers.leaveDiscussion
+import com.github.meeplemeet.utils.NavigationTestHelpers.navigateBack
+import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToAddDiscussionScreen
+import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionInfoScreen
 import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionScreen
 import com.google.firebase.Timestamp
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -51,6 +61,7 @@ class NavigationTest {
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private lateinit var authVM: AuthViewModel
+  private lateinit var dbVM: FirestoreViewModel
 
   private val fakeAccount =
       Account(
@@ -107,14 +118,25 @@ class NavigationTest {
 
   @Before
   fun setUp() {
-    // Launch the full app UI
+    // Create ViewModels with logged-out state
     authVM = AuthViewModel(AuthRepository())
+    dbVM = FirestoreViewModel()
 
-    composeTestRule.setContent { MeepleMeetApp(authVM = authVM) }
+    // CRITICAL: Start with BOTH VMs in logged-out state
+    setAuthVMState(authVM, AuthUIState(account = null))
+    setFirestoreVMAccount(dbVM, null)
+
+    // Launch the full app UI
+    composeTestRule.setContent { MeepleMeetApp(authVM = authVM, firestoreVM = dbVM) }
     composeTestRule.waitForIdle()
   }
 
   // ===== VM State helpers =====
+
+  /**
+   * Set the AuthViewModel UI state. Uses reflection to access the private _uiState
+   * MutableStateFlow.
+   */
   private fun setAuthVMState(vm: AuthViewModel, newState: AuthUIState) {
     val field =
         vm::class.java.declaredFields.firstOrNull { f ->
@@ -132,14 +154,69 @@ class NavigationTest {
     flow.value = newState
   }
 
+  /**
+   * Set the FirestoreViewModel account state. Uses reflection to access the private _account
+   * MutableStateFlow.
+   */
+  private fun setFirestoreVMAccount(vm: FirestoreViewModel, account: Account?) {
+    val field = vm::class.java.declaredFields.first { it.name == "_account" }
+    field.isAccessible = true
+
+    @Suppress("UNCHECKED_CAST") val flow = field.get(vm) as MutableStateFlow<Account?>
+    flow.value = account
+  }
+
+  /**
+   * Simulate login by setting both ViewModels to logged-in state. This mimics what happens in the
+   * real app when Firebase auth completes.
+   */
   private fun login() {
+    // Set AuthViewModel account
     setAuthVMState(authVM, AuthUIState(account = fakeAccount))
+
+    // Set FirestoreViewModel account and discussion data
+    populateFirestoreVM(dbVM)
+
+    // Wait for navigation to complete
     composeTestRule.waitForIdle()
   }
 
+  /** Simulate logout by clearing both ViewModels. */
   private fun logout() {
     setAuthVMState(authVM, AuthUIState(account = null))
+    setFirestoreVMAccount(dbVM, null)
     composeTestRule.waitForIdle()
+  }
+
+  /**
+   * Populate FirestoreViewModel with fake data for testing. This sets up the account, discussions,
+   * and previews.
+   */
+  private fun populateFirestoreVM(vm: FirestoreViewModel) {
+    val fields = vm::class.java.declaredFields
+    fields.forEach { it.isAccessible = true }
+
+    val accountField = fields.first { it.name == "_account" }
+    val discussionField = fields.first { it.name == "_discussion" }
+    val previewStatesField = fields.first { it.name == "previewStates" }
+    val discussionFlowsField = fields.first { it.name == "discussionFlows" }
+
+    @Suppress("UNCHECKED_CAST")
+    (accountField.get(vm) as MutableStateFlow<Account?>).value = fakeAccount
+
+    @Suppress("UNCHECKED_CAST")
+    (discussionField.get(vm) as MutableStateFlow<Discussion?>).value = fakeDiscussion1
+
+    @Suppress("UNCHECKED_CAST")
+    val previewStates =
+        previewStatesField.get(vm) as MutableMap<String, StateFlow<Map<String, DiscussionPreview>>>
+
+    @Suppress("UNCHECKED_CAST")
+    val discussionFlows = discussionFlowsField.get(vm) as MutableMap<String, StateFlow<Discussion?>>
+
+    previewStates[fakeAccount.uid] = MutableStateFlow(fakePreviews)
+    discussionFlows[fakeDiscussion1.uid] = MutableStateFlow(fakeDiscussion1)
+    discussionFlows[fakeDiscussion2.uid] = MutableStateFlow(fakeDiscussion2)
   }
 
   private fun pressSystemBack(shouldTerminate: Boolean = false) {
@@ -204,6 +281,7 @@ class NavigationTest {
   }
 
   // ---------- BottomBar navigation ----------
+
   @Test
   fun tabsAreClickable() {
     login()
@@ -237,6 +315,7 @@ class NavigationTest {
     composeTestRule.checkBottomBarIsDisplayed()
   }
 
+  //
   @Test
   fun canNavigateBackUsingSystemBack() {
     login()
@@ -264,7 +343,7 @@ class NavigationTest {
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
     // Back should terminate app (from top-level)
-    pressSystemBack(shouldTerminate = true) // FIXME
+    pressSystemBack(shouldTerminate = true)
   }
 
   @Test
@@ -291,28 +370,189 @@ class NavigationTest {
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
     // Back again should terminate app
-    pressSystemBack(shouldTerminate = true) // FIXME
+    pressSystemBack(shouldTerminate = true)
   }
 
   // ---------- Discussions navigation ----------
+  // DiscussionsOverview navigation
+
   @Test
   fun clickingOnDiscussionPreview_openDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
     composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.checkBottomBarIsNotDisplayed()
   }
 
   @Test
   fun clickingOnAdd_openDiscussionAddScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule
-        .onNodeWithTag("Add discussion")
-        .assertIsDisplayed()
-        .performClick() // TODO use better tag later
+    composeTestRule.navigateToAddDiscussionScreen()
     composeTestRule.checkDiscussionAddScreenIsDisplayed()
     composeTestRule.checkBottomBarIsNotDisplayed()
+  }
+
+  // DiscussionAdd navigation
+
+  @Test
+  fun canGoBack_fromDiscussionAdd_toDiscussionsOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToAddDiscussionScreen()
+    composeTestRule.checkDiscussionAddScreenIsDisplayed()
+
+    // Back to overview
+    pressSystemBack(shouldTerminate = false)
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.checkBottomBarIsDisplayed()
+  }
+
+  @Test
+  fun backButton_fromDiscussionAdd_toDiscussionsOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToAddDiscussionScreen()
+    composeTestRule.checkDiscussionAddScreenIsDisplayed()
+
+    // Back to overview
+    composeTestRule.navigateBack()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.checkBottomBarIsDisplayed()
+  }
+
+  @Test
+  fun createDiscussion_navigateToDiscussionsOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToAddDiscussionScreen()
+    composeTestRule.checkDiscussionAddScreenIsDisplayed()
+
+    // Simulate adding a discussion
+    composeTestRule.addDiscussion()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.checkBottomBarIsDisplayed()
+  }
+
+  // DiscussionScreen navigation
+
+  @Test
+  fun canGoBack_fromDiscussionScreen_toDiscussionsOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Back to overview
+    pressSystemBack(shouldTerminate = false)
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+  }
+
+  @Test
+  fun backButton_fromDiscussionScreen_toDiscussionsOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Back to overview
+    composeTestRule.navigateBack()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+  }
+
+  // DiscussionInfo navigation
+
+  @Test
+  fun clickingOnDiscussionInfo_opensDiscussionInfoScreen() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Open info
+    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.checkBottomBarIsNotDisplayed()
+  }
+
+  @Test
+  fun canGoBack_fromDiscussionInfo_toDiscussionScreen() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Open info
+    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Back to discussion
+    pressSystemBack(shouldTerminate = false)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+  }
+
+  @Test
+  fun backButton_fromDiscussionInfo_toDiscussionScreen() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Open info
+    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Back to discussion
+    composeTestRule.navigateBack()
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+  }
+
+  @Test
+  fun deleteDiscussion_fromInfo_toOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Open info
+    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Simulate delete
+    composeTestRule.deleteDiscussion()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+  }
+
+  @Test
+  fun leaveDiscussion_fromInfo_toOverview() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Open info
+    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+
+    // Simulate leave
+    composeTestRule.leaveDiscussion()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+  }
+
+  // ---------- Discussions navigation ----------
+
+  @Test
+  fun logout_fromProfile_toSignIn() {
+    login()
+    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+
+    composeTestRule.clickOnTab(NavigationTestTags.PROFILE_TAB)
+    composeTestRule.checkProfileScreenIsDisplayed()
+
+    // Simulate logout
+    composeTestRule.clickOnLogout()
+    composeTestRule.checkSignInScreenIsDisplayed()
   }
 
   // ---------- Defensive checks ----------

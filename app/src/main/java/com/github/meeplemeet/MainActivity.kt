@@ -83,10 +83,20 @@ fun MeepleMeetApp(
   /** Authentification gate */
   LaunchedEffect(firestoreVMAccount) {
     currentAccount = firestoreVMAccount
-    currentAccount?.let { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) }
+    currentAccount?.let {
+      navController.navigate(MeepleMeetScreen.DiscussionsOverview.route) {
+        popUpTo(0) { inclusive = true } // Empty stack
+        launchSingleTop = true
+      }
+    }
   }
   LaunchedEffect(currentAccount) {
-    currentAccount?.let { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) }
+    currentAccount?.let {
+      navController.navigate(MeepleMeetScreen.DiscussionsOverview.route) {
+        popUpTo(0) { inclusive = true } // Empty stack
+        launchSingleTop = true
+      }
+    }
   }
 
   NavHost(navController = navController, startDestination = startDestination) {

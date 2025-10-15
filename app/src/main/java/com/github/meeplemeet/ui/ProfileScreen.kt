@@ -55,6 +55,7 @@ fun ProfileScreen(
                     authViewModel.logout()
                     onSignOut()
                   },
+                  modifier = Modifier.testTag("Logout Button"),
                   colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
                     Text("Sign Out", color = Color.White)
                   }

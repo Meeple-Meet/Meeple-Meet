@@ -332,7 +332,7 @@ fun DiscussionAddScreen(
                           }
                         },
                         enabled = title.isNotBlank() && !isCreating,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.testTag("Create Discussion").fillMaxWidth(0.5f),
                         shape = CircleShape,
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {

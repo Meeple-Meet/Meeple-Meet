@@ -94,9 +94,10 @@ fun DiscussionsOverviewScreen(
 
   Scaffold(
       floatingActionButton = {
-        FloatingActionButton(onClick = onClickAddDiscussion, modifier = Modifier.testTag("")) {
-          Icon(Icons.Default.Add, contentDescription = "Create")
-        }
+        FloatingActionButton(
+            onClick = onClickAddDiscussion, modifier = Modifier.testTag("Add Discussion")) {
+              Icon(Icons.Default.Add, contentDescription = "Create")
+            }
       },
       topBar = {
         CenterAlignedTopAppBar(

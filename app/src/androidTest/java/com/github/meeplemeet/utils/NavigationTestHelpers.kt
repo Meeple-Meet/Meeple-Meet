@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import com.github.meeplemeet.ui.UITestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 
@@ -13,10 +14,32 @@ object NavigationTestHelpers {
 
   // ===== Check helpers =====
 
+  /**
+   * Checks if a screen with the given title is displayed. Tries merged tree first (normal case),
+   * then unmerged tree if necessary. This handles cases where testTags are merged with parent
+   * nodes.
+   */
   fun ComposeTestRule.checkScreenIsDisplayed(screenTitle: String) {
-    onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
-        .assertIsDisplayed()
-        .assertTextContains(screenTitle, substring = true, ignoreCase = true)
+    // Wait a bit for navigation to complete
+    waitForIdle()
+
+    // Try to find the node in merged tree first (faster, normal case)
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(NavigationTestTags.SCREEN_TITLE, useUnmergedTree = false)
+              .assertIsDisplayed()
+              .assertTextContains(screenTitle, substring = true, ignoreCase = true)
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    // If not found in merged tree, try unmerged tree
+    if (!foundInMergedTree) {
+      onNodeWithTag(NavigationTestTags.SCREEN_TITLE, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .assertTextContains(screenTitle, substring = true, ignoreCase = true)
+    }
   }
 
   fun ComposeTestRule.checkSignInScreenIsDisplayed() {
@@ -71,19 +94,186 @@ object NavigationTestHelpers {
     onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertIsDisplayed()
   }
 
+  // ===== Navigation helpers =====
+
   fun ComposeTestRule.navigateBack() {
-    onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertIsDisplayed().performClick()
+    waitForIdle()
+
+    // Try merged tree first, then unmerged if necessary
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = false)
+              .assertIsDisplayed()
+              .performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .performClick()
+    }
+
+    waitForIdle()
   }
 
   fun ComposeTestRule.clickOnTab(tag: String) {
-    onNodeWithTag(tag).assertIsDisplayed().performClick()
+    waitForIdle()
+
+    // Try merged tree first, then unmerged if necessary
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().performClick()
+    }
+
+    waitForIdle()
   }
 
   fun ComposeTestRule.navigateToDiscussionScreen(discussionName: String) {
-    onNodeWithTag("Discussion/$discussionName").assertIsDisplayed().performClick()
+    waitForIdle()
+
+    val tag = "Discussion/$discussionName"
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().performClick()
+    }
+
+    waitForIdle()
+  }
+
+  fun ComposeTestRule.navigateToAddDiscussionScreen() {
+    waitForIdle()
+
+    val tag = "Add Discussion" // TODO better tag
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().performClick()
+    }
+
+    waitForIdle()
   }
 
   fun ComposeTestRule.navigateToDiscussionInfoScreen(discussionName: String) {
-    onNodeWithTag("DiscussionInfo/$discussionName").assertIsDisplayed().performClick()
+    waitForIdle()
+
+    val tag = "DiscussionInfo/$discussionName"
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().performClick()
+    }
+
+    waitForIdle()
+  }
+
+  fun ComposeTestRule.leaveDiscussion() {
+    waitForIdle()
+
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(UITestTags.LEAVE_BUTTON, useUnmergedTree = false)
+              .assertIsDisplayed()
+              .performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(UITestTags.LEAVE_BUTTON, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .performClick()
+    }
+
+    waitForIdle()
+  }
+
+  fun ComposeTestRule.deleteDiscussion() {
+    waitForIdle()
+
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(UITestTags.DELETE_BUTTON, useUnmergedTree = false)
+              .assertIsDisplayed()
+              .performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(UITestTags.DELETE_BUTTON, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .performClick()
+    }
+
+    waitForIdle()
+  }
+
+  fun ComposeTestRule.addDiscussion() {
+    waitForIdle()
+
+    val tag = "Create Discussion" // TODO better tag
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().performClick()
+    }
+
+    waitForIdle()
+  }
+
+  fun ComposeTestRule.clickOnLogout() {
+    waitForIdle()
+
+    val tag = "Logout Button" // TODO better tag
+    val foundInMergedTree =
+        try {
+          onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundInMergedTree) {
+      onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().performClick()
+    }
+
+    waitForIdle()
   }
 }
