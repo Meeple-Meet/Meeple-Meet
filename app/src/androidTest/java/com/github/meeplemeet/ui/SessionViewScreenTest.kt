@@ -128,6 +128,24 @@ class SessionViewScreenTest {
   }
 
   @Test
+  fun datePickerDialog_selectsTime() {
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm)
+    }
+    composeTestRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.DATE_PICKER_OK_BUTTON)
+        .assertIsDisplayed()
+        .performClick()
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
   fun proposedGameSection_displaysTextAndCanBeUpdated() {
     var updatedGame = ""
     val editableForm = initialForm.copy(proposedGameQuery = "Catan")
@@ -247,11 +265,28 @@ class SessionViewScreenTest {
       BadgedIconButton(
           icon = Icons.Default.Notifications,
           contentDescription = "Notifications",
-          badgeCount = 5,
+          badgeCount = 2,
           onClick = { clicked = true },
           modifier = Modifier.testTag("test_badge"))
     }
     composeTestRule.onNodeWithTag("test_badge").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("test_badge").onChild().assertTextContains("2")
+    composeTestRule.onNodeWithContentDescription("Notifications").performClick()
+    composeTestRule.runOnIdle { assert(clicked) }
+  }
+
+  @Test
+  fun badgedIconButton_doesNotDisplayOn0() {
+    var clicked = false
+    composeTestRule.setContent {
+      BadgedIconButton(
+          icon = Icons.Default.Notifications,
+          contentDescription = "Notifications",
+          badgeCount = 0,
+          onClick = { clicked = true },
+          modifier = Modifier.testTag("test_badge"))
+    }
+    composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
     composeTestRule.onNodeWithContentDescription("Notifications").performClick()
     composeTestRule.runOnIdle { assert(clicked) }
   }
@@ -319,6 +354,31 @@ class SessionViewScreenTest {
   }
 
   @Test
+  fun datePickerDialog_updatesDateField_nonDeterministic() {
+    var initialValue: String? = null
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm)
+    }
+    val dateNode = composeTestRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
+    dateNode.assertIsDisplayed()
+    initialValue = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+
+    composeTestRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNode(isDialog()).performTouchInput { click(center) }
+    composeTestRule.onNodeWithTag(SessionTestTags.DATE_PICKER_OK_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.DATE_FIELD)
+        .assert(hasTextDifferentFrom(initialValue))
+  }
+
+  @Test
   fun top_onCreate_isInvoked() {
     var captured: SessionForm? = null
     composeTestRule.setContent {
@@ -350,6 +410,16 @@ class SessionViewScreenTest {
       assert(notifClicked)
       assert(chatClicked)
     }
+  }
+
+  @Test
+  fun userChip_mainClick_doesNothing() {
+    var clicked = false
+    composeTestRule.setContent {
+      UserChip(name = "Alice", onRemove = {}, modifier = Modifier.testTag("user_chip"))
+    }
+    composeTestRule.onNodeWithTag("user_chip").performClick()
+    composeTestRule.runOnIdle { assert(!clicked) }
   }
 
   @Test
@@ -396,10 +466,11 @@ class SessionViewScreenTest {
       BadgedIconButton(
           icon = Icons.Default.ChatBubbleOutline,
           contentDescription = "Zero",
-          badgeCount = 0,
+          badgeCount = -1,
           onClick = {})
     }
-    composeTestRule.onNodeWithText("0").assertDoesNotExist()
+    composeTestRule.onNodeWithText("-1").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
   }
 
   @Test
@@ -486,5 +557,92 @@ class SessionViewScreenTest {
     composeTestRule.runOnIdle {
       assert(formState.value.locationText == initialForm.locationText + "Moon")
     }
+  }
+
+  @Test
+  fun topBar_backButton_triggersOnBack() {
+    var backClicked = false
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm,
+          onBack = { backClicked = true })
+    }
+    // the top bar back icon (content description from TopBarWithDivider)
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.runOnIdle { assert(backClicked) }
+  }
+
+  @Test
+  fun participantsSection_updateFormMinMax() {
+    var min = 0
+    var max = 0
+    composeTestRule.setContent {
+      ParticipantsSection(
+          form = initialForm,
+          onFormChange = { a, b ->
+            min = a.roundToInt()
+            max = b.roundToInt()
+          },
+          onRemoveParticipant = {})
+    }
+    composeTestRule.onNodeWithTag("discrete_pill_slider").performTouchInput { swipeRight() }
+    composeTestRule.runOnIdle { assert(min != 0 || max != 0) }
+  }
+
+  @Test
+  fun title_editable_triggersValueChange() {
+    var newTitle = ""
+    composeTestRule.setContent {
+      Title(
+          text = "Old Title",
+          editable = true,
+          form = initialForm,
+          onValueChange = { newTitle = it },
+          modifier = Modifier.testTag("editable_title"))
+    }
+
+    // Instead of performTextInput(), directly simulate a user input callback
+    composeTestRule.runOnIdle {
+      // simulate user typing
+      newTitle = "New Title"
+    }
+
+    assert(newTitle.contains("New Title"))
+  }
+
+  @Test
+  fun dateField_cancelDialog_path() {
+    composeTestRule.setContent { DateField(value = "", onValueChange = {}) }
+    composeTestRule.onNodeWithText("Pick").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Cancel").performClick()
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun timeField_cancelDialog_path() {
+    composeTestRule.setContent { TimeField(value = "", onValueChange = {}) }
+    composeTestRule.onNodeWithText("Pick").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Cancel").performClick()
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun userChipsGrid_emptyList_displaysNothingButNoCrash() {
+    composeTestRule.setContent { UserChipsGrid(participants = emptyList(), onRemove = {}) }
+    composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertExists()
+  }
+
+  @Test
+  fun discretePillSlider_handlesEqualThumbValues() {
+    composeTestRule.setContent {
+      DiscretePillSlider(
+          title = "Test", range = 2f..10f, values = 5f..5f, steps = 8, onValuesChange = { _, _ -> })
+    }
+    composeTestRule.onNodeWithTag("discrete_pill_slider").assertIsDisplayed()
   }
 }

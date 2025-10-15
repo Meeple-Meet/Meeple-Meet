@@ -261,10 +261,7 @@ fun ParticipantsSection(
         Spacer(Modifier.height(12.dp))
 
         // Chips
-        UserChipsGrid(
-            participants = form.participants,
-            onRemove = { p -> onRemoveParticipant(p) },
-            modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
+        UserChipsGrid(participants = form.participants, onRemove = { p -> onRemoveParticipant(p) })
       }
 }
 
@@ -421,12 +418,11 @@ fun UserChipsGrid(
   FlowRow(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = modifier.then(Modifier.fillMaxWidth())) {
+      modifier = modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS).fillMaxWidth()) {
         participants.forEach { p -> UserChip(name = p.name, onRemove = { onRemove(p) }) }
 
         // Add button chip (to add new participants)
         // might be implemented later (users might joining the session themselves)
-        // AddUserChip(onClick = onAddPlaceholder)
       }
 }
 
