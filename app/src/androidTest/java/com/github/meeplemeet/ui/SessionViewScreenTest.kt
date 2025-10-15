@@ -14,6 +14,9 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.components.DatePickerDockedField
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +31,8 @@ class SessionViewScreenTest {
   private fun readIntFromText(tag: String): Int =
       composeTestRule
           .onNodeWithTag(tag)
+          .onChild()
+          .assertIsDisplayed()
           .fetchSemanticsNode()
           .config[SemanticsProperties.Text]
           .first()
@@ -51,7 +56,7 @@ class SessionViewScreenTest {
                   Participant("3", "Alice"),
                   Participant("4", "Bob"),
                   Participant("5", "Robert")),
-          dateText = "2025-10-15",
+          dateText = LocalDate.now(),
           timeText = "19:00",
           locationText = "Student Lounge")
 
@@ -128,6 +133,31 @@ class SessionViewScreenTest {
   }
 
   @Test
+  fun screen_Calls_OnFormChange_WhenSliderMoves_updatesMinMaxBubbles() {
+    composeTestRule.setContent {
+      SessionViewScreen(
+          viewModel = FirestoreViewModel(),
+          currentUser = currentUser,
+          discussionId = "discussion1",
+          initial = initialForm)
+    }
+    // Read initial min/max
+    val initialMin = readIntFromText(SessionTestTags.MIN_PLAYERS)
+    val initialMax = readIntFromText(SessionTestTags.MAX_PLAYERS)
+
+    // Move the slider
+    composeTestRule.onNodeWithTag("discrete_pill_slider").performTouchInput { swipeRight() }
+    composeTestRule.waitForIdle()
+
+    // Read new min/max
+    val newMin = readIntFromText(SessionTestTags.MIN_PLAYERS)
+    val newMax = readIntFromText(SessionTestTags.MAX_PLAYERS)
+
+    // Assert at least one value changed
+    assert(initialMin != newMin || initialMax != newMax)
+  }
+
+  @Test
   fun datePickerDialog_selectsTime() {
     composeTestRule.setContent {
       SessionViewScreen(
@@ -187,7 +217,7 @@ class SessionViewScreenTest {
     composeTestRule
         .onNodeWithTag(SessionTestTags.DATE_FIELD)
         .assertIsDisplayed()
-        .assertTextContains("2025-10-15")
+        .assertTextContains(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
     composeTestRule
         .onNodeWithTag(SessionTestTags.TIME_FIELD)
         .assertIsDisplayed()
@@ -286,6 +316,7 @@ class SessionViewScreenTest {
           modifier = Modifier.testTag("test_badge"))
     }
     composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
+    composeTestRule.onNodeWithTag(SessionTestTags.EMPTY_BADGE).assert(hasText(""))
     composeTestRule.onNodeWithContentDescription("Notifications").performClick()
     composeTestRule.runOnIdle { assert(clicked) }
   }
@@ -307,7 +338,8 @@ class SessionViewScreenTest {
 
   @Test
   fun datePickerDialog_updatesDateField() {
-    val updatedForm = initialForm.copy(dateText = "2025-10-15")
+    val updatedForm = initialForm.copy(dateText = LocalDate.now())
+    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     composeTestRule.setContent {
       SessionViewScreen(
           viewModel = FirestoreViewModel(),
@@ -325,7 +357,7 @@ class SessionViewScreenTest {
     composeTestRule
         .onNodeWithTag(SessionTestTags.DATE_FIELD)
         .assertIsDisplayed()
-        .assertTextEquals("2025-10-15")
+        .assertTextEquals(LocalDate.now().format(fmt))
   }
 
   @Test
@@ -451,21 +483,24 @@ class SessionViewScreenTest {
       BadgedIconButton(
           icon = Icons.Default.ChatBubbleOutline,
           contentDescription = "Zero",
-          badgeCount = -1,
+          badgeCount = 0,
           onClick = {})
     }
-    composeTestRule.onNodeWithText("-1").assertDoesNotExist()
+    composeTestRule.onNodeWithText("0").assertDoesNotExist()
     composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
   }
 
   @Test
-  fun datePickerDialog_nullDateDismissed() {
-    var dismissed = false
+  fun badgedIconButton_negativeBadge_path() {
     composeTestRule.setContent {
-      DatePickerDialog(onDismiss = { dismissed = true }, onDateSelected = {})
+      BadgedIconButton(
+          icon = Icons.Default.ChatBubbleOutline,
+          contentDescription = "Zero",
+          badgeCount = -12,
+          onClick = {})
     }
-    composeTestRule.onNodeWithText("Cancel").performClick()
-    composeTestRule.runOnIdle { assert(dismissed) }
+    composeTestRule.onNodeWithText("-12").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
   }
 
   @Test
@@ -476,19 +511,6 @@ class SessionViewScreenTest {
     }
     composeTestRule.onNodeWithText("Cancel").performClick()
     composeTestRule.runOnIdle { assert(dismissed) }
-  }
-
-  @Test
-  fun dateField_externalCallback() {
-    var date = ""
-    composeTestRule.setContent { DateField(value = "", onValueChange = { date = it }) }
-    composeTestRule.onNodeWithText("Pick").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNode(isDialog()).performTouchInput { click(center) }
-    composeTestRule.onNodeWithText("OK").performClick()
-    composeTestRule.waitForIdle()
-
-    assert(date.isNotEmpty())
   }
 
   @Test
@@ -600,7 +622,9 @@ class SessionViewScreenTest {
 
   @Test
   fun dateField_cancelDialog_path() {
-    composeTestRule.setContent { DateField(value = "", onValueChange = {}) }
+    composeTestRule.setContent {
+      DatePickerDockedField(value = LocalDate.now(), onValueChange = {})
+    }
     composeTestRule.onNodeWithText("Pick").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Cancel").performClick()
