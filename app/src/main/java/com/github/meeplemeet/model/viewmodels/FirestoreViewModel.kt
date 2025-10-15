@@ -235,6 +235,10 @@ class FirestoreViewModel(
     viewModelScope.launch { onResult(repository.getAccount(id)) }
   }
 
+  fun getDiscussionParticipants(discussion: Discussion, onResult: (List<Account>) -> Unit) {
+    viewModelScope.launch { onResult(repository.getAccounts(discussion.participants)) }
+  }
+
   /** Get the current signed-in account. */
   fun getCurrentAccount() {
     if (Firebase.auth.currentUser == null)
