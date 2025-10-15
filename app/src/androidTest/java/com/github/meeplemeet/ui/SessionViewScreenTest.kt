@@ -147,7 +147,6 @@ class SessionViewScreenTest {
 
   @Test
   fun proposedGameSection_displaysTextAndCanBeUpdated() {
-    var updatedGame = ""
     val editableForm = initialForm.copy(proposedGameQuery = "Catan")
     composeTestRule.setContent {
       SessionViewScreen(
@@ -155,7 +154,7 @@ class SessionViewScreenTest {
           currentUser = currentUser,
           discussionId = "discussion1",
           initial = editableForm,
-          onCreate = { form -> updatedGame = form.proposedGameQuery })
+          onBack = {})
     }
     composeTestRule
         .onNodeWithTag(SessionTestTags.PROPOSED_GAME)
@@ -379,20 +378,6 @@ class SessionViewScreenTest {
   }
 
   @Test
-  fun top_onCreate_isInvoked() {
-    var captured: SessionForm? = null
-    composeTestRule.setContent {
-      SessionViewScreen(
-          viewModel = FirestoreViewModel(),
-          currentUser = currentUser,
-          discussionId = "d1",
-          initial = initialForm,
-          onCreate = { captured = it })
-    }
-    composeTestRule.runOnIdle { assert(captured != null) }
-  }
-
-  @Test
   fun topRightIcons_bothClicks() {
     var notifClicked = false
     var chatClicked = false
@@ -440,11 +425,11 @@ class SessionViewScreenTest {
   }
 
   @Test
-  fun discretePillSlider_bothThumbsMoved() {
+  fun pillSliderNoBackground_bothThumbsMoved() {
     var min = 0f
     var max = 0f
     composeTestRule.setContent {
-      DiscretePillSlider(
+      PillSliderNoBackground(
           title = "",
           range = 2f..10f,
           values = 3f..5f,
@@ -640,7 +625,7 @@ class SessionViewScreenTest {
   @Test
   fun discretePillSlider_handlesEqualThumbValues() {
     composeTestRule.setContent {
-      DiscretePillSlider(
+      PillSliderNoBackground(
           title = "Test", range = 2f..10f, values = 5f..5f, steps = 8, onValuesChange = { _, _ -> })
     }
     composeTestRule.onNodeWithTag("discrete_pill_slider").assertIsDisplayed()
