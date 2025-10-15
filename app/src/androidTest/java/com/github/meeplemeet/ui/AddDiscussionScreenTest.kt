@@ -16,16 +16,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * UI tests for [AddDiscussionScreen] using the real [FirestoreViewModel] and a seeded
- * repository. These tests interact with the real ViewModel to verify full UI behavior
- * including search suggestions and member selection.
+ * UI tests for [AddDiscussionScreen] using the real [FirestoreViewModel] and a seeded repository.
+ * These tests interact with the real ViewModel to verify full UI behavior including search
+ * suggestions and member selection.
  */
 @RunWith(AndroidJUnit4::class)
 class AddDiscussionScreenTest {
 
   /** Compose test rule for setting up and interacting with the Compose UI. */
-  @get:Rule
-  val compose = createComposeRule()
+  @get:Rule val compose = createComposeRule()
 
   /** Mocked navigation actions to verify back and create callbacks. */
   private val nav: NavigationActions = mockk(relaxed = true)
@@ -83,11 +82,10 @@ class AddDiscussionScreenTest {
     realVm = FirestoreViewModel(repo)
     compose.setContent {
       AddDiscussionScreen(
-        onBack = { nav.goBack() },
-        onCreate = { nav.goBack() },
-        viewModel = realVm,
-        currentUser = me
-      )
+          onBack = { nav.goBack() },
+          onCreate = { nav.goBack() },
+          viewModel = realVm,
+          currentUser = me)
     }
   }
 
@@ -157,9 +155,7 @@ class AddDiscussionScreenTest {
 
     searchField().performTextInput("ali")
     compose.waitForIdle()
-    compose.onAllNodesWithText("alice")
-      .filterToOne(hasAnyAncestor(isPopup()))
-      .assertDoesNotExist()
+    compose.onAllNodesWithText("alice").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
   }
 
   /** Verifies that clearing the search field closes the suggestion dropdown. */
@@ -177,17 +173,15 @@ class AddDiscussionScreenTest {
   /* ---------- Search-by-handle Tests ---------- */
 
   /**
-   * Tests that entering a search query shows the correct handle suggestions
-   * and excludes unrelated users.
+   * Tests that entering a search query shows the correct handle suggestions and excludes unrelated
+   * users.
    */
   @OptIn(ExperimentalTestApi::class)
   @Test
   fun searchByHandleShowsCorrectHandles() {
     searchField().performTextInput("john")
     compose.waitUntilAtLeastOneExists(
-      hasText("john") and hasAnyAncestor(isPopup()),
-      timeoutMillis = 5_000
-    )
+        hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
 
     compose.onNode(hasText("john") and hasAnyAncestor(isPopup())).assertExists()
     compose.onNode(hasText("johna") and hasAnyAncestor(isPopup())).assertExists()
@@ -209,17 +203,15 @@ class AddDiscussionScreenTest {
   }
 
   /**
-   * Tests selecting a member from the search suggestions.
-   * The selected member should appear in the UI and the search field should reset.
+   * Tests selecting a member from the search suggestions. The selected member should appear in the
+   * UI and the search field should reset.
    */
   @OptIn(ExperimentalTestApi::class)
   @Test
   fun searchByHandleSelectsMember() {
     searchField().performTextInput("jo")
     compose.waitUntilAtLeastOneExists(
-      hasText("john") and hasAnyAncestor(isPopup()),
-      timeoutMillis = 5_000
-    )
+        hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
     compose.waitForIdle()
     compose.onNodeWithText("john").performClick()
 
