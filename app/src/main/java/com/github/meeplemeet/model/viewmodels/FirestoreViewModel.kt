@@ -42,6 +42,8 @@ class FirestoreViewModel(
   /** The currently loaded discussion */
   val discussion: StateFlow<Discussion?> = _discussion
 
+    private val SUGGESTIONS_LIMIT = 30
+
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
     return discussion.admins.contains(account.uid)
   }
@@ -336,7 +338,7 @@ class FirestoreViewModel(
   fun searchByHandle(prefix: String) {
     if (prefix.isBlank()) return
     viewModelScope.launch {
-      repository.searchByHandle(prefix).collect { list -> _handleSuggestions.value = list.take(30) }
+      repository.searchByHandle(prefix).collect { list -> _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT) }
     }
   }
 }
