@@ -29,6 +29,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -82,6 +84,11 @@ fun DiscussionScreen(
 
       discussionName = disc.name
     }
+  }
+
+  LaunchedEffect(discussionId, listState) {
+    snapshotFlow { listState.layoutInfo.totalItemsCount }.filter { it > 0 }.first()
+    listState.scrollToItem(maxOf(0, listState.layoutInfo.totalItemsCount - 1))
   }
 
   Column(modifier = Modifier.fillMaxSize().background(AppColors.primary)) {
