@@ -75,8 +75,6 @@ import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
-import com.github.meeplemeet.ui.SessionTestTags
-import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
