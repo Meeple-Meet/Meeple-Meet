@@ -161,6 +161,9 @@ class FirestoreSessionViewModel(
    *
    * Updates the game UI state with the selected game's UID and name (requires admin privileges).
    *
+   * Note: This method does **not** update the session itself with the selected game. It only
+   * updates the [GameUIState] to reflect the user's current selection in the UI.
+   *
    * @param requester The account requesting to update the session
    * @param discussion The discussion containing the session
    * @param game The [Game] object to select
@@ -172,18 +175,24 @@ class FirestoreSessionViewModel(
   }
 
   /**
-   * Update the game search query and asynchronously fetch suggestions (requires admin privileges).
+   * Updates the game search query and asynchronously fetches suggestions (requires admin
+   * privileges).
    *
    * The UI should call `setGameQuery` whenever the user types into the game search field. This
    * method:
    * - updates the visible `gameQuery` in [GameUIState],
    * - triggers a background search on the injected [GameRepository],
-   * - updates `gameSuggestions` with the results (or empties the list on error or blank query).
-   * - shows any search related error message in `gameSearchError`.
+   * - updates `gameSuggestions` with the results (or empties the list on error or blank query),
+   * - shows any search-related error message in `gameSearchError`.
+   *
+   * Note: If `gameSearchError` is set, it means the search operation itself failed (e.g. network or
+   * repository error), **not** that no matching game was found. For example, if the user searches
+   * for "Catan" and it exists in the database, but the error message appears, it indicates a
+   * failure in the search mechanism, not an absence of results.
    *
    * @param requester The account requesting to update the session
    * @param discussion The discussion containing the session
-   * @param query the substring to search for in game names.
+   * @param query The substring to search for in game names.
    */
   fun setGameQuery(requester: Account, discussion: Discussion, query: String) {
     if (!isAdmin(requester, discussion))
@@ -199,7 +208,8 @@ class FirestoreSessionViewModel(
         } catch (_: Exception) {
           _gameUIState.value =
               _gameUIState.value.copy(
-                  gameSuggestions = emptyList(), gameSearchError = "Game search failed")
+                  gameSuggestions = emptyList(),
+                  gameSearchError = "Game search failed due to a repository error")
         }
       }
     } else {
