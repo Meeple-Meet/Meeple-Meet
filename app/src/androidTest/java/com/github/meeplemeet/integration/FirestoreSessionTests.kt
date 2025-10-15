@@ -8,9 +8,11 @@ import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.repositories.FirestoreSessionRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.model.structures.Session
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
+import com.github.meeplemeet.utils.FakeGameRepo
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import io.mockk.coEvery
@@ -18,6 +20,7 @@ import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -957,5 +960,142 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals("Second Session", secondSession.session?.name)
     assertEquals("game222", secondSession.session?.gameId)
     assertEquals(listOf(account2.uid), secondSession.session?.participants)
+  }
+
+  // ------------------------
+  // Tests for setGame / setGameQuery (FirestoreSessionViewModel)
+  // ------------------------
+
+  @Test
+  fun setGame_updates_selectedGameUid_and_query_when_admin() = runTest {
+    val game =
+        Game(
+            uid = "g_1",
+            name = "Catan",
+            description = "",
+            imageURL = "",
+            minPlayers = 1,
+            maxPlayers = 4,
+            recommendedPlayers = null,
+            averagePlayTime = null,
+            genres = emptyList())
+
+    val fakeRepo = FakeGameRepo()
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.setGame(account1, baseDiscussion, game)
+
+    val state = vm.gameUIState.value
+    assertEquals(game.uid, state.selectedGameUid)
+    assertEquals(game.name, state.gameQuery)
+  }
+
+  @Test(expected = PermissionDeniedException::class)
+  fun setGame_throws_when_not_admin() = runTest {
+    val game =
+        Game(
+            uid = "g_2",
+            name = "Azul",
+            description = "",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 4,
+            recommendedPlayers = null,
+            averagePlayTime = null,
+            genres = emptyList())
+
+    val fakeRepo = FakeGameRepo()
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.setGame(account3, baseDiscussion, game)
+  }
+
+  @Test
+  fun setGameQuery_updates_suggestions_when_admin() = runTest {
+    val game =
+        Game(
+            uid = "g_3",
+            name = "Catan Junior",
+            description = "",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 4,
+            recommendedPlayers = null,
+            averagePlayTime = null,
+            genres = emptyList())
+
+    val fakeRepo = FakeGameRepo().apply { returnedGames = listOf(game) }
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.setGameQuery(account1, baseDiscussion, "cat")
+    advanceUntilIdle()
+
+    val state = vm.gameUIState.value
+    assertEquals("cat", state.gameQuery)
+    assertEquals(1, state.gameSuggestions.size)
+    assertEquals(game.uid, state.gameSuggestions[0].uid)
+    assertNull(state.gameSearchError)
+  }
+
+  @Test
+  fun setGameQuery_sets_error_on_repository_failure() = runTest {
+    val fakeRepo = FakeGameRepo().apply { shouldThrow = true }
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.setGameQuery(account1, baseDiscussion, "cat")
+    advanceUntilIdle()
+
+    val state = vm.gameUIState.value
+    assertEquals("cat", state.gameQuery)
+    assertTrue(state.gameSuggestions.isEmpty())
+    assertNotNull(state.gameSearchError)
+  }
+
+  @Test(expected = PermissionDeniedException::class)
+  fun setGameQuery_throws_when_not_admin() = runTest {
+    val fakeRepo = FakeGameRepo()
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.setGameQuery(account3, baseDiscussion, "cat")
+  }
+
+  @Test
+  fun getGameFromId_updates_state_when_successful() = runTest {
+    val fakeRepo =
+        FakeGameRepo().apply {
+          returnedGame =
+              Game(
+                  uid = "g_123",
+                  name = "Terraforming Mars",
+                  description = "",
+                  imageURL = "",
+                  minPlayers = 1,
+                  maxPlayers = 5,
+                  recommendedPlayers = null,
+                  averagePlayTime = null,
+                  genres = emptyList())
+        }
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.getGameFromId("g_123")
+    advanceUntilIdle()
+
+    val state = vm.gameUIState.value
+    assertNotNull(state.fetchedGame)
+    assertEquals("g_123", state.fetchedGame?.uid)
+    assertNull(state.gameFetchError)
+  }
+
+  @Test
+  fun getGameFromId_sets_error_state_on_failure() = runTest {
+    val fakeRepo = FakeGameRepo().apply { shouldThrow = true }
+    val vm = FirestoreSessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+
+    vm.getGameFromId("g_404")
+    advanceUntilIdle()
+
+    val state = vm.gameUIState.value
+    assertNull(state.fetchedGame)
+    assertEquals("Failed to fetch game details", state.gameFetchError)
   }
 }
