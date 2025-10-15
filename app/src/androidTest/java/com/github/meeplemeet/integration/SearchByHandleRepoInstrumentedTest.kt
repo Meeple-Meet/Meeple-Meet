@@ -74,9 +74,9 @@ class SearchByHandleRepoInstrumentedTest : FirestoreTests() {
    */
   @Test
   fun searchByHandleRespectsLimit30() = runBlocking {
-    repeat(35) { idx -> createAccount("zz$idx", "ZZ $idx", "zz$idx@example.com", null) }
+    repeat(35) { idx -> createAccount("zzz$idx", "ZZ $idx", "zz$idx@example.com", null) }
 
-    val list = withTimeout(5_000) { repo.searchByHandle("zz").first() }
+    val list = withTimeout(5_000) { repo.searchByHandle("zzz").first() }
 
     assert(list.size >= 30) { "Expected ≥ 30, got ${list.size}" }
   }

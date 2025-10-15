@@ -354,10 +354,15 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   fun searchByHandle(handle: String): Flow<List<Account>> = callbackFlow {
+      if (!validHandle(handle)) {
+          trySend(emptyList())
+          close()
+          return@callbackFlow
+      }
     val reg =
         accounts
             .whereGreaterThanOrEqualTo(Account::handle.name, handle)
-            .whereLessThanOrEqualTo(Account::handle.name, handle + '\uf8ff')
+            .whereLessThanOrEqualTo(Account::handle.name, nextString(handle))
             .addSnapshotListener { qs, e ->
               if (e != null) {
                 close(e)
@@ -373,4 +378,14 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
             }
     awaitClose { reg.remove() }
   }
+    private fun nextString(s: String): String {
+        if (s.isEmpty()) return s
+        val lastChar = s.last()
+        val nextChar = lastChar + 1
+        return s.dropLast(1) + nextChar
+    }
+
+    private fun validHandle(handle: String): Boolean {
+        return handle.all { it.isLetterOrDigit() || it == '_' }
+    }
 }
