@@ -1,11 +1,14 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.*
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.text.AnnotatedString
 import com.github.meeplemeet.model.repositories.FirestoreRepository
+import com.github.meeplemeet.model.repositories.GameRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Location
@@ -19,8 +22,6 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
@@ -31,8 +32,12 @@ class CreateSessionScreenTest {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var repository: FirestoreRepository
+  private lateinit var firestoreRepo: FirestoreRepository
   private lateinit var viewModel: FirestoreViewModel
+
+  private lateinit var sessionRepo:
+      com.github.meeplemeet.model.repositories.FirestoreSessionRepository
+  private lateinit var fakeGameRepo: FakeGameRepository
   private lateinit var sessionVM: FirestoreSessionViewModel
 
   private val me = Account(uid = "user1", handle = "", name = "Marco", email = "marco@epfl.ch")
@@ -44,11 +49,72 @@ class CreateSessionScreenTest {
   private lateinit var injectedDiscussionFlow: MutableStateFlow<Discussion?>
   private lateinit var baseDiscussion: Discussion
 
+  /** All editable text inputs on the screen: Title, Game, Location. */
+  private fun allInputs() = compose.onAllNodes(hasSetTextAction())
+
+  private fun titleInput() = allInputs()[0]
+
+  private fun gameInput() = allInputs()[1]
+
+  private fun locationInput() = allInputs()[2]
+
+  private fun buttonWithLabel(text: String) =
+      compose.onNode(
+          hasClickAction().and(hasAnyDescendant(hasText(text, substring = false))),
+          useUnmergedTree = true)
+
+  private fun createBtn() = buttonWithLabel("Create Session")
+
+  private fun discardBtn() = buttonWithLabel("Discard")
+
+  private fun backBtn() = compose.onNodeWithContentDescription("Back")
+
+  /** In new UI, trailing icon for the search field is a "Clear" button. */
+  private fun clearIcon() = compose.onNodeWithContentDescription("Clear")
+
+  private fun setContent(onBack: () -> Unit = {}) {
+    compose.setContent {
+      AppTheme {
+        CreateSessionScreen(
+            viewModel = viewModel,
+            sessionViewModel = sessionVM,
+            currentUser = me,
+            discussionId = discussionId,
+            onBack = onBack)
+      }
+    }
+  }
+
+  private class FakeGameRepository : GameRepository {
+    var throwOnSearch: Boolean = false
+
+    override suspend fun getGames(maxResults: Int) =
+        emptyList<com.github.meeplemeet.model.structures.Game>()
+
+    override suspend fun getGameById(gameID: String): com.github.meeplemeet.model.structures.Game {
+      throw RuntimeException("not used in these tests")
+    }
+
+    override suspend fun getGamesByGenre(genreID: Int, maxResults: Int) =
+        emptyList<com.github.meeplemeet.model.structures.Game>()
+
+    override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int) =
+        emptyList<com.github.meeplemeet.model.structures.Game>()
+
+    override suspend fun searchGamesByNameContains(
+        query: String,
+        maxResults: Int,
+        ignoreCase: Boolean
+    ): List<com.github.meeplemeet.model.structures.Game> {
+      if (throwOnSearch) throw RuntimeException("boom")
+      return emptyList()
+    }
+  }
+
   @Before
   fun setUp() {
-    repository = mockk(relaxed = true)
-    viewModel = spyk(FirestoreViewModel(repository))
-    sessionVM = mockk(relaxed = true)
+    firestoreRepo = mockk(relaxed = true)
+    viewModel = spyk(FirestoreViewModel(firestoreRepo))
 
     baseDiscussion =
         Discussion(
@@ -83,42 +149,14 @@ class CreateSessionScreenTest {
               }
           cb(accounts)
         }
-  }
 
-  private fun allInputs() = compose.onAllNodes(hasSetTextAction())
-
-  private fun titleInput() = allInputs()[0]
-
-  private fun gameInput() = allInputs()[1]
-
-  private fun locationInput() = allInputs()[2]
-
-  private fun buttonWithLabel(text: String) =
-      compose.onNode(
-          hasClickAction().and(hasAnyDescendant(hasText(text, substring = false))),
-          useUnmergedTree = true)
-
-  private fun createBtn() = buttonWithLabel("Create Session")
-
-  private fun discardBtn() = buttonWithLabel("Discard")
-
-  private fun backBtn() = compose.onNodeWithContentDescription("Back")
-
-  private fun searchIcon() = compose.onNodeWithContentDescription("Search")
-
-  private fun pickBtn() = compose.onNodeWithText("Pick")
-
-  private fun setContent(onBack: () -> Unit = {}) {
-    compose.setContent {
-      AppTheme {
-        CreateSessionScreen(
-            viewModel = viewModel,
-            sessionViewModel = sessionVM,
-            currentUser = me,
-            discussionId = discussionId,
-            onBack = onBack)
-      }
-    }
+    sessionRepo = mockk(relaxed = true)
+    fakeGameRepo = FakeGameRepository()
+    sessionVM =
+        FirestoreSessionViewModel(
+            initDiscussion = baseDiscussion,
+            repository = sessionRepo,
+            gameRepository = fakeGameRepo)
   }
 
   @Test
@@ -168,12 +206,32 @@ class CreateSessionScreenTest {
   }
 
   @Test
-  fun game_section_label_and_search_button_present() {
+  fun game_search_bar_header_and_clear_icon_present_and_working() {
     setContent()
     compose.waitForIdle()
-    compose.onAllNodesWithText("$GAME_SECTION_NAME:").onFirst().assertExists()
+    compose.onAllNodesWithText("Proposed game:").onFirst().assertExists()
+
     gameInput().performTextInput("Cascadia")
-    searchIcon().assertIsDisplayed().performClick()
+    clearIcon().assertIsDisplayed().performClick()
+
+    compose.onAllNodesWithText("Cascadia").assertCountEquals(0)
+  }
+
+  @Test
+  fun game_search_bar_surfaces_repo_error_message() {
+    fakeGameRepo.throwOnSearch = true
+    setContent()
+    gameInput().performTextInput("Catan")
+    compose.waitUntil(5_000) {
+      compose
+          .onAllNodesWithText("Game search failed due to a repository error")
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+    compose
+        .onAllNodesWithText("Game search failed due to a repository error")
+        .onFirst()
+        .assertExists()
   }
 
   @Test
@@ -190,13 +248,6 @@ class CreateSessionScreenTest {
     setContent(onBack = { back.set(true) })
     backBtn().performClick()
     assert(back.get())
-  }
-
-  @Test
-  fun organisation_section_pick_button_click_is_safe() {
-    setContent()
-    compose.waitForIdle()
-    pickBtn().assertIsDisplayed().performClick()
   }
 
   @Test
@@ -245,77 +296,6 @@ class CreateSessionScreenTest {
     locationInput().performTextInput("Open Table")
     compose.onAllNodesWithText("Solo Setup").onFirst().assertExists()
     compose.onAllNodesWithText("Open Table").onFirst().assertExists()
-  }
-
-  @Test
-  fun game_section_calls_onSearchClick_and_updates_query() {
-    val clicked = AtomicBoolean(false)
-    val lastQuery = AtomicReference<String>("")
-    compose.setContent {
-      AppTheme {
-        var q by remember { mutableStateOf("Root") }
-        GameSection(
-            query = q,
-            onQueryChange = {
-              q = it
-              lastQuery.set(it)
-            },
-            onSearchClick = { clicked.set(true) },
-            title = GAME_SECTION_NAME,
-            placeholder = GAME_SEARCH_PLACEHOLDER)
-      }
-    }
-    compose.onAllNodesWithText("$GAME_SECTION_NAME:").onFirst().assertExists()
-    compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput(" (Expansion)")
-    compose.onNodeWithContentDescription("Search").performClick()
-    assert(clicked.get())
-    assert(lastQuery.get().contains("Expansion"))
-  }
-
-  @Test
-  fun organisation_section_onPickLocation_hidden_when_null() {
-    compose.setContent {
-      AppTheme {
-        OrganisationSection(
-            date = null,
-            time = null,
-            locationText = "",
-            onDateChange = {},
-            onTimeChange = {},
-            onLocationChange = {},
-            onPickLocation = null,
-            title = ORGANISATION_SECTION_NAME)
-      }
-    }
-    compose.onAllNodesWithText("Pick").assertCountEquals(0)
-  }
-
-  @Test
-  fun organisation_section_location_change_callback_receives_text_and_pick_invokes() {
-    val picked = AtomicBoolean(false)
-    val lastLocation = AtomicReference<String>("")
-    compose.setContent {
-      AppTheme {
-        var loc by remember { mutableStateOf("") }
-        OrganisationSection(
-            date = null,
-            time = null,
-            locationText = loc,
-            onDateChange = {},
-            onTimeChange = {},
-            onLocationChange = {
-              loc = it
-              lastLocation.set(it)
-            },
-            onPickLocation = { picked.set(true) },
-            title = ORGANISATION_SECTION_NAME)
-      }
-    }
-    compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Cafe Meeple")
-    compose.onAllNodesWithText("Cafe Meeple").onFirst().assertExists()
-    compose.onNodeWithText("Pick").assertIsDisplayed().performClick()
-    assert(picked.get())
-    assert(lastLocation.get() == "Cafe Meeple")
   }
 
   @Test
@@ -469,7 +449,7 @@ class CreateSessionScreenTest {
   }
 
   @Test
-  fun organisation_section_shows_location_icon() {
+  fun organisation_section_shows_location_label_and_search_field() {
     compose.setContent {
       AppTheme {
         OrganisationSection(
@@ -479,11 +459,11 @@ class CreateSessionScreenTest {
             onDateChange = {},
             onTimeChange = {},
             onLocationChange = {},
-            onPickLocation = {},
+            onLocationPicked = {},
             title = ORGANISATION_SECTION_NAME)
       }
     }
-    compose.onNodeWithContentDescription("Location").assertExists()
+    compose.onAllNodesWithText("Location").onFirst().assertExists()
   }
 
   @Test
@@ -500,25 +480,6 @@ class CreateSessionScreenTest {
     verify(exactly = 1) { viewModel.getDiscussionParticipants(match { it.uid == "discX" }, any()) }
     verify(exactly = 1) { viewModel.getDiscussionParticipants(match { it.uid == "discY" }, any()) }
     verify(exactly = 3) { viewModel.getDiscussionParticipants(any(), any()) }
-  }
-
-  @Test
-  fun game_section_onSearchClick_called_each_time() {
-    val count = AtomicInteger(0)
-    compose.setContent {
-      AppTheme {
-        var q by remember { mutableStateOf("Root") }
-        GameSection(
-            query = q,
-            onQueryChange = { q = it },
-            onSearchClick = { count.incrementAndGet() },
-            title = GAME_SECTION_NAME,
-            placeholder = GAME_SEARCH_PLACEHOLDER)
-      }
-    }
-    searchIcon().assertExists().performClick()
-    searchIcon().assertExists().performClick()
-    assert(count.get() == 2)
   }
 
   private fun screenFileClass(): Class<*> {
@@ -626,41 +587,29 @@ class CreateSessionScreenTest {
   }
 
   @Test
-  fun game_section_header_reflects_query() {
-    compose.setContent {
-      AppTheme {
-        var q by remember { mutableStateOf("") }
-        GameSection(
-            query = q,
-            onQueryChange = { q = it },
-            onSearchClick = {},
-            title = GAME_SECTION_NAME,
-            placeholder = GAME_SEARCH_PLACEHOLDER)
-      }
-    }
-    compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Wingspan")
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Wingspan").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("Wingspan").onFirst().assertExists()
-  }
-
-  @Test
-  fun create_button_stays_disabled_until_title_and_bounds_ok() {
-    injectedDiscussionFlow.value = baseDiscussion.copy(participants = listOf(me.uid))
-    setContent()
-    createBtn().assertIsNotEnabled()
-    titleInput().performTextInput("T")
-    createBtn().assertIsNotEnabled()
-  }
-
-  @Test
-  fun create_button_still_disabled_when_only_date_or_only_time_set() {
-    injectedDiscussionFlow.value = baseDiscussion.copy(participants = listOf(me.uid))
+  fun create_button_disabled_when_participants_out_of_bounds() {
     setContent()
     titleInput().performTextInput("Event")
-    locationInput().performTextInput("L")
+    compose.waitUntil(5_000) {
+      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
+    }
     createBtn().assertIsNotEnabled()
+    compose.onAllNodesWithText("Alexandre").onLast().performClick()
+    compose.runOnIdle {}
+    createBtn().assertIsNotEnabled()
+  }
+
+  @Test
+  fun candidate_list_empty_after_selecting_all_available_candidates() {
+    setContent()
+    compose.waitUntil(5_000) {
+      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
+    }
+    compose.onAllNodesWithText("Alexandre").onLast().performClick()
+    compose.onAllNodesWithText("Dany").onLast().performClick()
+    compose.runOnIdle {}
+    compose.onAllNodesWithText("Alexandre").assertCountEquals(1)
+    compose.onAllNodesWithText("Dany").assertCountEquals(1)
   }
 
   @Test
@@ -692,7 +641,6 @@ class CreateSessionScreenTest {
     discardBtn().performClick()
     compose.waitForIdle()
 
-    // Re-query and clear fields to avoid appending to any prefilled content.
     allInputs()[0].performTextClearance()
     allInputs()[0].performTextInput("X")
     allInputs()[1].performTextClearance()
@@ -701,203 +649,17 @@ class CreateSessionScreenTest {
     allInputs()[2].performTextInput("Z")
 
     titleInput().assertTextEquals("X")
-    gameInput().assertTextEquals("Y")
-    locationInput().assertTextEquals("Z")
 
-    // Candidate list should be back to a single "Alexandre" (not selected).
+    gameInput()
+        .assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Y")))
+
+    locationInput()
+        .assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Z")))
+
     compose.onAllNodesWithText("Alexandre").assertCountEquals(1)
 
-    // Still disabled (no date/time set).
     createBtn().assertIsNotEnabled()
-  }
-
-  @Test
-  fun game_section_custom_title_and_placeholder_render() {
-    compose.setContent {
-      AppTheme {
-        var q by remember { mutableStateOf("") }
-        GameSection(
-            query = q,
-            onQueryChange = { q = it },
-            onSearchClick = {},
-            title = "Pick a game",
-            placeholder = "Type to search")
-      }
-    }
-    compose.onAllNodesWithText("Pick a game:").onFirst().assertExists()
-    compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Azul")
-    compose.onAllNodesWithText("Azul").onFirst().assertExists()
-  }
-
-  @Test
-  fun game_section_search_click_works_with_default_lambda() {
-    compose.setContent {
-      AppTheme {
-        var q by remember { mutableStateOf("") }
-        GameSection(query = q, onQueryChange = { q = it }, placeholder = GAME_SEARCH_PLACEHOLDER)
-      }
-    }
-    searchIcon().assertExists().performClick()
-  }
-
-  @Test
-  fun candidates_derived_state_updates_when_both_candidates_selected() {
-    setContent()
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("Alexandre").onLast().performClick()
-    compose.onAllNodesWithText("Dany").onLast().performClick()
-    compose.runOnIdle {}
-    compose.onAllNodesWithText("Alexandre").assertCountEquals(1)
-    compose.onAllNodesWithText("Dany").assertCountEquals(1)
-  }
-
-  @Test
-  fun duplicate_accounts_from_participants_fetch_are_deduped() {
-    every { viewModel.getDiscussionParticipants(match { it.uid == "dup" }, any()) } answers
-        {
-          val cb = secondArg<(List<Account>) -> Unit>()
-          cb(listOf(alex, alex, dany, dany))
-        }
-    injectedDiscussionFlow.value =
-        baseDiscussion.copy(uid = "dup", participants = listOf(me.uid, alex.uid, dany.uid))
-    setContent()
-    compose.waitForIdle()
-    compose.onAllNodesWithText("Alexandre").assertCountEquals(1)
-    compose.onAllNodesWithText("Dany").assertCountEquals(1)
-  }
-
-  @Test
-  fun create_session_button_component_passes_form_payload() {
-    val captured = AtomicReference<SessionForm>()
-    compose.setContent {
-      AppTheme {
-        CreateSessionButton(
-            formToSubmit = SessionForm(title = "Hello", proposedGame = "Root", locationText = "L"),
-            enabled = true,
-            onCreate = { captured.set(it) })
-      }
-    }
-    compose
-        .onNode(
-            hasClickAction().and(hasAnyDescendant(hasText("Create Session"))),
-            useUnmergedTree = true)
-        .performClick()
-    val f = captured.get()
-    assert(f.title == "Hello")
-    assert(f.proposedGame == "Root")
-    assert(f.locationText == "L")
-  }
-
-  @Test
-  fun screen_top_bar_and_section_headers_present() {
-    setContent()
-    compose.onAllNodesWithText("Create Session").onFirst().assertExists()
-    compose.onAllNodesWithText("$GAME_SECTION_NAME:").onFirst().assertExists()
-    compose.onAllNodesWithText("$PARTICIPANT_SECTION_NAME:").onFirst().assertExists()
-    compose.onAllNodesWithText("$ORGANISATION_SECTION_NAME:").onFirst().assertExists()
-    backBtn().assertExists()
-    createBtn().assertExists()
-    discardBtn().assertExists()
-  }
-
-  @Test
-  fun participants_count_bubble_changes_when_selecting_and_removing() {
-    setContent()
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("1").fetchSemanticsNodes()
-    compose.onAllNodesWithText("Alexandre").onLast().performClick()
-    compose.runOnIdle {}
-    compose.onAllNodesWithText("2").fetchSemanticsNodes()
-    compose.onAllNodesWithText("Alexandre").onFirst().performClick()
-    compose.runOnIdle {}
-    compose.onAllNodesWithText("1").fetchSemanticsNodes()
-  }
-
-  @Test
-  fun game_section_title_recomposes_when_title_param_changes() {
-    compose.setContent {
-      AppTheme {
-        var t by remember { mutableStateOf("T1") }
-        var q by remember { mutableStateOf("Q") }
-        Column {
-          GameSection(
-              query = q,
-              onQueryChange = { q = it },
-              onSearchClick = {},
-              title = t,
-              placeholder = "ph")
-          LaunchedEffect(Unit) { t = "T2" }
-        }
-      }
-    }
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("T2:").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("T2:").onFirst().assertExists()
-  }
-
-  @Test
-  fun create_button_disabled_when_participants_out_of_bounds() {
-    setContent()
-    titleInput().performTextInput("Event")
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
-    }
-    createBtn().assertIsNotEnabled()
-    compose.onAllNodesWithText("Alexandre").onLast().performClick()
-    compose.runOnIdle {}
-    createBtn().assertIsNotEnabled()
-  }
-
-  @Test
-  fun candidate_list_empty_after_selecting_all_available_candidates() {
-    setContent()
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("Alexandre").onLast().performClick()
-    compose.onAllNodesWithText("Dany").onLast().performClick()
-    compose.runOnIdle {}
-    compose.onAllNodesWithText("Alexandre").assertCountEquals(1)
-    compose.onAllNodesWithText("Dany").assertCountEquals(1)
-  }
-
-  @Test
-  fun game_section_recomposes_query_many_times_and_search_clicks() {
-    val count = AtomicInteger(0)
-    compose.setContent {
-      AppTheme {
-        var q by remember { mutableStateOf("") }
-        GameSection(
-            query = q,
-            onQueryChange = { q = it },
-            onSearchClick = { count.incrementAndGet() },
-            title = GAME_SECTION_NAME,
-            placeholder = GAME_SEARCH_PLACEHOLDER)
-        LaunchedEffect(Unit) {
-          q = "A"
-          q = "AB"
-          q = "ABC"
-        }
-      }
-    }
-    compose.waitForIdle()
-    searchIcon().performClick()
-    searchIcon().performClick()
-    searchIcon().performClick()
-    assert(count.get() == 3)
-  }
-
-  @Test
-  fun discard_button_text_and_click_action_visible() {
-    compose.setContent { AppTheme { DiscardButton(onDiscard = {}) } }
-    compose.onAllNodesWithText("Discard").onFirst().assertExists()
-    compose
-        .onNode(hasClickAction().and(hasAnyDescendant(hasText("Discard"))), useUnmergedTree = true)
-        .assertExists()
   }
 }

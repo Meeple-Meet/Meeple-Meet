@@ -1,7 +1,3 @@
-// All the components and the screen were done initially by hand. They were then given to a
-// LLM (ChatGPT-5 Thinking Extend) to verify it's correctness and propose improvements.
-// The suggestions were then manually reviewed and integrated where/when relevant.
-// A final manual refactoring was done.
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package com.github.meeplemeet.ui
@@ -16,8 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +21,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
@@ -37,6 +32,7 @@ import java.time.*
 import java.util.Date
 import kotlin.math.roundToInt
 import kotlin.random.Random
+import kotlinx.coroutines.launch
 
 /* =======================================================================
  * Setup
@@ -56,21 +52,48 @@ data class SessionForm(
 const val TITLE_PLACEHOLDER: String = "Title"
 const val PARTICIPANT_SECTION_NAME: String = "Participants"
 const val SLIDER_DESCRIPTION: String = "Number of players"
-const val GAME_SECTION_NAME: String = "Proposed game"
 const val ORGANISATION_SECTION_NAME: String = "Organisation"
 const val GAME_SEARCH_PLACEHOLDER: String = "Search games…"
-
 const val MAX_SLIDER_NUMBER: Float = 9f
 const val MIN_SLIDER_NUMBER: Float = 1f
 const val SLIDER_STEPS: Int = (MAX_SLIDER_NUMBER - MIN_SLIDER_NUMBER - 1).toInt()
 
-/** TODO: implement location picker later */
+/** TODO: implement real geocoding later */
+/**
+ * Generate a random location for a given text
+ *
+ * @param text The text to base the location name on
+ */
 private fun randomLocationFrom(text: String): Location =
     Location(
         latitude = Random.nextDouble(-90.0, 90.0),
         longitude = Random.nextDouble(-180.0, 180.0),
         name = text.ifBlank { "Random place" })
 
+/** TODO: change this to a truly location searcher later when coded */
+/**
+ * Mock location suggestions from a query string
+ *
+ * @param query The query string to base suggestions on
+ * @param max Maximum number of suggestions to return; defaults to 5
+ */
+private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
+  if (query.isBlank()) return emptyList()
+  val rng = Random(query.hashCode())
+  return List(max) { i ->
+    val lat = rng.nextDouble(-90.0, 90.0)
+    val lon = rng.nextDouble(-180.0, 180.0)
+    Location(latitude = lat, longitude = lon, name = "$query #${i + 1}")
+  }
+}
+
+/**
+ * Convert LocalDate and LocalTime to Firebase Timestamp
+ *
+ * @param date The date to convert
+ * @param time The time to convert
+ * @param zoneId The time zone to use; defaults to system default
+ */
 private fun toTimestamp(
     date: LocalDate?,
     time: LocalTime?,
@@ -98,9 +121,14 @@ fun CreateSessionScreen(
 ) {
   var form by
       remember(currentUser.uid) { mutableStateOf(SessionForm(participants = listOf(currentUser))) }
+  var selectedLocation by remember { mutableStateOf<Location?>(null) }
 
   val discussion by viewModel.discussionFlow(discussionId).collectAsState()
   val availableParticipants = remember { mutableStateListOf<Account>() }
+
+  val snackbar = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+  val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   LaunchedEffect(discussion?.uid) {
     availableParticipants.clear()
@@ -108,6 +136,11 @@ fun CreateSessionScreen(
     viewModel.getDiscussionParticipants(disc) { fetched ->
       val withMe = (fetched + currentUser).distinctBy { it.uid }
       availableParticipants.addAll(withMe)
+    }
+
+    if (form.proposedGame.isNotBlank()) {
+      runCatching { sessionViewModel.setGameQuery(currentUser, disc, form.proposedGame) }
+          .onFailure { e -> showError(e.message ?: "Failed to run game search") }
     }
   }
 
@@ -131,7 +164,8 @@ fun CreateSessionScreen(
             colors =
                 TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface))
-      }) { innerPadding ->
+      },
+      snackbarHost = { SnackbarHost(snackbar) }) { innerPadding ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
@@ -140,7 +174,6 @@ fun CreateSessionScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-              /* TODO: implement game search later */
               // Title
               LabeledTextField(
                   label = "Title",
@@ -150,13 +183,14 @@ fun CreateSessionScreen(
                   singleLine = true,
                   modifier = Modifier.fillMaxWidth())
 
-              // Proposed game section
-              GameSection(
-                  query = form.proposedGame,
-                  onQueryChange = { form = form.copy(proposedGame = it) },
-                  onSearchClick = { /* TODO: open game search */},
-                  title = GAME_SECTION_NAME,
-                  placeholder = GAME_SEARCH_PLACEHOLDER)
+              // Game search (below title) — VM-backed, with safe error handling
+              GameSearchBar(
+                  sessionViewModel = sessionViewModel,
+                  currentUser = currentUser,
+                  discussion = discussion,
+                  queryFallback = form.proposedGame,
+                  onQueryFallbackChange = { form = form.copy(proposedGame = it) },
+                  onError = showError)
 
               // Participants section
               ParticipantsSection(
@@ -183,7 +217,7 @@ fun CreateSessionScreen(
                             participants = form.participants.filterNot { it.uid == toRemove.uid })
                   })
 
-              // Organisation section
+              // Organisation section (date/time + location search INSIDE)
               OrganisationSection(
                   date = form.date,
                   time = form.time,
@@ -191,7 +225,7 @@ fun CreateSessionScreen(
                   onDateChange = { form = form.copy(date = it) },
                   onTimeChange = { form = form.copy(time = it) },
                   onLocationChange = { form = form.copy(locationText = it) },
-                  onPickLocation = { /* TODO open location picker */},
+                  onLocationPicked = { selectedLocation = it },
                   title = ORGANISATION_SECTION_NAME)
 
               Spacer(Modifier.height(4.dp))
@@ -214,18 +248,30 @@ fun CreateSessionScreen(
                     onCreate = {
                       val disc = discussion ?: return@CreateSessionButton
 
-                      sessionViewModel.createSession(
-                          requester = currentUser,
-                          discussion = disc,
-                          name = form.title,
-                          gameId = form.proposedGame.ifBlank { "Unknown game" },
-                          date = toTimestamp(form.date, form.time),
-                          location = randomLocationFrom(form.locationText),
-                          minParticipants = form.minPlayers,
-                          maxParticipants = form.maxPlayers,
-                          *form.participants.toTypedArray())
+                      runCatching {
+                            val selectedGameId = sessionViewModel.gameUIState.value.selectedGameUid
+                            sessionViewModel.createSession(
+                                requester = currentUser,
+                                discussion = disc,
+                                name = form.title,
+                                gameId =
+                                    selectedGameId.ifBlank {
+                                      form.proposedGame.ifBlank { "Unknown game" }
+                                    },
+                                date = toTimestamp(form.date, form.time),
+                                location =
+                                    selectedLocation ?: randomLocationFrom(form.locationText),
+                                minParticipants = form.minPlayers,
+                                maxParticipants = form.maxPlayers,
+                                *form.participants.toTypedArray())
+                          }
+                          .onFailure { e ->
+                            showError(e.message ?: "Failed to create session")
+                            return@CreateSessionButton
+                          }
 
                       form = SessionForm(participants = listOf(currentUser))
+                      selectedLocation = null
                       onBack()
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -235,6 +281,7 @@ fun CreateSessionScreen(
                     modifier = Modifier.fillMaxWidth(),
                     onDiscard = {
                       form = SessionForm(participants = listOf(currentUser))
+                      selectedLocation = null
                       onBack()
                     })
               }
@@ -246,6 +293,81 @@ fun CreateSessionScreen(
  * Components
  * ======================================================================= */
 
+/**
+ * Game search bar
+ *
+ * @param sessionViewModel ViewModel holding the game search state and methods
+ * @param currentUser The user performing the search
+ * @param discussion The discussion to which the session will belong; if null, search is
+ * @param queryFallback Fallback query string if VM has none
+ * @param onQueryFallbackChange Callback when the query changes, to update the form state
+ * @param onError Callback to surface errors
+ * @param modifier Optional modifier for the outer card
+ */
+@Composable
+fun GameSearchBar(
+    sessionViewModel: FirestoreSessionViewModel,
+    currentUser: Account,
+    discussion: Discussion?,
+    queryFallback: String,
+    onQueryFallbackChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onError: (String) -> Unit = {}
+) {
+  val gameUi by sessionViewModel.gameUIState.collectAsState()
+  val gameQuery = gameUi.gameQuery.ifBlank { queryFallback }
+
+  SectionCard(
+      modifier
+          .fillMaxWidth()
+          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+        UnderlinedLabel("Proposed game:")
+        Spacer(Modifier.height(12.dp))
+
+        GameSearchField(
+            query = gameQuery,
+            onQueryChange = { q ->
+              onQueryFallbackChange(q)
+              discussion?.let { disc ->
+                runCatching { sessionViewModel.setGameQuery(currentUser, disc, q) }
+                    .onFailure { e -> onError(e.message ?: "Game search failed") }
+              }
+            },
+            results = gameUi.gameSuggestions,
+            onPick = { game ->
+              discussion?.let { disc ->
+                runCatching {
+                      sessionViewModel.setGame(currentUser, disc, game)
+                      sessionViewModel.getGameFromId(game.uid)
+                    }
+                    .onFailure { e -> onError(e.message ?: "Failed to select game") }
+              }
+            },
+            isLoading = false,
+            placeholder = GAME_SEARCH_PLACEHOLDER,
+            modifier = Modifier.fillMaxWidth())
+
+        gameUi.gameSearchError
+            ?.takeIf { it.isNotBlank() }
+            ?.let { msg ->
+              Spacer(Modifier.height(6.dp))
+              Text(
+                  msg,
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.error)
+            }
+      }
+}
+
+/**
+ * Create Session button
+ *
+ * @param formToSubmit The form data to submit when creating
+ * @param onCreate Callback when the button is clicked, with the form data
+ * @param modifier Optional modifier for the button
+ * @param enabled Whether the button is enabled
+ */
 @Composable
 fun CreateSessionButton(
     formToSubmit: SessionForm,
@@ -269,6 +391,12 @@ fun CreateSessionButton(
       }
 }
 
+/**
+ * Discard button
+ *
+ * @param onDiscard Callback when the button is clicked
+ * @param modifier Optional modifier for the button
+ */
 @Composable
 fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
   OutlinedButton(
@@ -285,24 +413,24 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 }
 
 /**
- * The participants section allowing to select and manage participants.
+ * Participants section
  *
- * @param currentUserId the UID of the current user
- * @param selected the list of currently selected participants
- * @param allCandidates the list of all possible participant candidates
- * @param minPlayers the current minimum number of players
- * @param maxPlayers the current maximum number of players
- * @param onMinMaxChange the callback to be invoked when the min or max players change
- * @param onAdd the callback to be invoked when a participant is added
- * @param onRemove the callback to be invoked when a participant is removed
- * @param minSliderNumber the minimum value for the slider
- * @param maxSliderNumber the maximum value for the slider
- * @param sliderSteps the number of discrete steps for the slider
- * @param mainSectionTitle the title of the main section
- * @param sliderDescription the description text for the slider
- * @param elevationSelected the elevation for selected participant chips
- * @param elevationUnselected the elevation for unselected participant chips
- * @param modifier the modifier to be applied to the section
+ * @param currentUserId The current user's ID, to prevent self-removal
+ * @param selected The currently selected participants
+ * @param allCandidates All possible candidates to add
+ * @param minPlayers Current minimum players
+ * @param maxPlayers Current maximum players
+ * @param onMinMaxChange Callback when min/max change
+ * @param onAdd Callback when a participant is added
+ * @param onRemove Callback when a participant is removed
+ * @param minSliderNumber Minimum number for the slider
+ * @param maxSliderNumber Maximum number for the slider
+ * @param sliderSteps Number of steps for the slider
+ * @param mainSectionTitle Title for the section
+ * @param sliderDescription Description text for the slider
+ * @param elevationSelected Elevation for selected chips
+ * @param elevationUnselected Elevation for unselected chips
+ * @param modifier Optional modifier for the outer card
  */
 @Composable
 fun ParticipantsSection(
@@ -446,17 +574,18 @@ fun ParticipantsSection(
 }
 
 /**
- * The organisation section containing date, time, and location fields.
+ * Organisation section
  *
- * @param date the currently selected date
- * @param time the currently selected time
- * @param locationText the current location text
- * @param onDateChange the callback to be invoked when the date changes
- * @param onTimeChange the callback to be invoked when the time changes
- * @param onLocationChange the callback to be invoked when the location text changes
- * @param onPickLocation the optional callback to be invoked when the "Pick" button is clicked
- * @param title the title of the section
- * @param modifier the modifier to be applied to the section
+ * @param date Currently selected date
+ * @param time Currently selected time
+ * @param locationText Current location text query
+ * @param onDateChange Callback when the date changes
+ * @param onTimeChange Callback when the time changes
+ * @param onLocationChange Callback when the location text changes
+ * @param onLocationPicked Optional callback when a location is picked from suggestions
+ * @param title Title for the section
+ * @param modifier Optional modifier for the outer card
+ * @param onLocationPicked Optional callback when a location is picked from suggestions
  */
 @Composable
 fun OrganisationSection(
@@ -468,7 +597,7 @@ fun OrganisationSection(
     onLocationChange: (String) -> Unit,
     title: String,
     modifier: Modifier = Modifier,
-    onPickLocation: (() -> Unit)? = null,
+    onLocationPicked: ((Location) -> Unit)? = null,
 ) {
   SectionCard(
       modifier
@@ -486,85 +615,44 @@ fun OrganisationSection(
 
         Spacer(Modifier.height(10.dp))
 
-        IconTextField(
-            value = locationText,
-            onValueChange = onLocationChange,
-            placeholder = "Location",
-            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
-            trailingIcon = {
-              if (onPickLocation != null) {
-                TextButton(onClick = onPickLocation) { Text("Pick") }
-              }
+        val locationResults = remember(locationText) { mockLocationSuggestionsFrom(locationText) }
+        LocationSearchField(
+            query = locationText,
+            onQueryChange = onLocationChange,
+            results = locationResults,
+            onPick = { loc ->
+              onLocationChange(loc.name)
+              onLocationPicked?.invoke(loc)
             },
+            isLoading = false,
+            placeholder = "Search locations…",
             modifier = Modifier.fillMaxWidth())
       }
 }
 
-/**
- * The game section containing a search field for the proposed game.
- *
- * @param query the current game query text
- * @param onQueryChange the callback to be invoked when the query text changes
- * @param onSearchClick the callback to be invoked when the search icon is clicked
- * @param title the title of the section
- * @param placeholder the placeholder text for the search field
- * @param modifier the modifier to be applied to the section
- */
-@Composable
-fun GameSection(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    placeholder: String,
-    modifier: Modifier = Modifier,
-    onSearchClick: () -> Unit = {},
-    title: String = GAME_SECTION_NAME,
-) {
-  SectionCard(
-      modifier
-          .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-          UnderlinedLabel("$title:")
-          Spacer(Modifier.width(4.dp))
-          Text(
-              text = query,
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onBackground)
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        IconTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = placeholder,
-            trailingIcon = {
-              IconButton(onClick = onSearchClick) {
-                Icon(Icons.Default.Search, contentDescription = "Search")
-              }
-            },
-            modifier = Modifier.fillMaxWidth())
-      }
-}
-
-/* =======================================================================
- * Preview
- * ======================================================================= */
+/* =========================
+ * Previews
+ * ========================= */
 
 /*
+@Preview(showBackground = true, name = "Create Session – Light")
 @Composable
-private fun CreateSessionScreenPreviewHost() {
-  val me = Account(uid = "1", name = "Marco", email = "marco@epfl.ch", handle = "")
+private fun Preview_CreateSession_Approx_Light() {
+  AppTheme { CreateSessionApproxPreviewHost() }
+}
+
+@Composable
+private fun CreateSessionApproxPreviewHost() {
+  val me = Account(uid = "1", name = "Marco", handle = " ", email = "marco@epfl.ch")
   val pool =
       listOf(
           me,
-          Account("2", name = "Alexandre", email = "alexandre@example.com", handle = ""),
-          Account("3", name = "Antoine", email = "antoine@example.com", handle = ""),
-          Account("4", name = "Dany", email = "dany@example.com", handle = ""),
-          Account("5", name = "Enes", email = "enes@example.com", handle = ""),
-          Account("6", name = "Nil", email = "nil@example.com", handle = ""),
-          Account("7", name = "Thomas", email = "thomas@example.com", handle = ""),
+          Account(uid = "2", name = "Alexandre", handle = " ", email = "alexandre@example.com"),
+          Account(uid = "3", name = "Antoine", handle = " ", email = "antoine@example.com"),
+          Account(uid = "4", name = "Dany", handle = " ", email = "dany@example.com"),
+          Account(uid = "5", name = "Enes", handle = " ", email = "enes@example.com"),
+          Account(uid = "6", name = "Nil", handle = " ", email = "nil@example.com"),
+          Account(uid = "7", name = "Thomas", handle = " ", email = "thomas@example.com"),
       )
 
   var form by remember {
@@ -577,6 +665,27 @@ private fun CreateSessionScreenPreviewHost() {
             participants = listOf(me, pool[1])))
   }
 
+  val allGames = remember { previewSampleGames() }
+  val allLocations = remember { previewSampleLocations() }
+
+  // Game search
+  var gameQuery by remember { mutableStateOf(form.proposedGame) }
+  val filteredGames by
+      remember(gameQuery, allGames) {
+        mutableStateOf(
+            if (gameQuery.isBlank()) emptyList()
+            else allGames.filter { it.name.contains(gameQuery, ignoreCase = true) }.take(5))
+      }
+
+  // Location search
+  var locationQuery by remember { mutableStateOf(form.locationText) }
+  val filteredLocations by
+      remember(locationQuery, allLocations) {
+        mutableStateOf(
+            if (locationQuery.isBlank()) emptyList()
+            else allLocations.filter { it.name.contains(locationQuery, ignoreCase = true) }.take(5))
+      }
+
   Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
@@ -587,7 +696,7 @@ private fun CreateSessionScreenPreviewHost() {
                   color = MaterialTheme.colorScheme.onPrimary)
             },
             navigationIcon = {
-              IconButton(onClick = /* not needed for preview */ {}) {
+              IconButton(onClick = { /* preview only */}) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -615,15 +724,25 @@ private fun CreateSessionScreenPreviewHost() {
                   singleLine = true,
                   modifier = Modifier.fillMaxWidth())
 
-              // Game section
-              GameSection(
-                  query = form.proposedGame,
-                  onQueryChange = { form = form.copy(proposedGame = it) },
-                  onSearchClick = {},
-                  title = GAME_SECTION_NAME,
-                  placeholder = GAME_SEARCH_PLACEHOLDER)
+              // Game search
+              SectionCard(
+                  Modifier.fillMaxWidth()
+                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+                      .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+                    UnderlinedLabel("Proposed game:")
+                    Spacer(Modifier.height(12.dp))
+                    GameSearchField(
+                        query = gameQuery,
+                        onQueryChange = { q -> gameQuery = q },
+                        results = filteredGames,
+                        onPick = { picked ->
+                          form = form.copy(proposedGame = picked.uid)
+                          gameQuery = picked.name
+                        },
+                        modifier = Modifier.fillMaxWidth())
+                  }
 
-              // Participants section (Accounts)
+              // Participants
               ParticipantsSection(
                   currentUserId = me.uid,
                   selected = form.participants,
@@ -646,16 +765,38 @@ private fun CreateSessionScreenPreviewHost() {
                   mainSectionTitle = PARTICIPANT_SECTION_NAME,
                   sliderDescription = SLIDER_DESCRIPTION)
 
-              // Organisation section
-              OrganisationSection(
-                  date = form.date,
-                  time = form.time,
-                  locationText = form.locationText,
-                  onDateChange = { form = form.copy(date = it) },
-                  onTimeChange = { form = form.copy(time = it) },
-                  onLocationChange = { form = form.copy(locationText = it) },
-                  onPickLocation = {},
-                  title = ORGANISATION_SECTION_NAME)
+              // Organisation
+              SectionCard(
+                  Modifier.fillMaxWidth()
+                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+                      .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+                    UnderlinedLabel("$ORGANISATION_SECTION_NAME:")
+                    Spacer(Modifier.height(12.dp))
+
+                    DatePickerDockedField(
+                        value = form.date,
+                        onValueChange = { form = form.copy(date = it) },
+                        label = "Date")
+                    Spacer(Modifier.height(10.dp))
+                    TimePickerField(
+                        value = form.time,
+                        onValueChange = { form = form.copy(time = it) },
+                        label = "Time")
+                    Spacer(Modifier.height(10.dp))
+
+                    LocationSearchField(
+                        query = locationQuery,
+                        onQueryChange = { q ->
+                          locationQuery = q
+                          form = form.copy(locationText = q)
+                        },
+                        results = filteredLocations,
+                        onPick = { loc ->
+                          locationQuery = loc.name
+                          form = form.copy(locationText = loc.name)
+                        },
+                        modifier = Modifier.fillMaxWidth())
+                  }
 
               Spacer(Modifier.height(4.dp))
 
@@ -672,75 +813,75 @@ private fun CreateSessionScreenPreviewHost() {
       }
 }
 
-@Preview(showBackground = true, name = "Create Session – Dark (safe preview)")
+@Preview(showBackground = true, name = "Game Search Field")
 @Composable
-private fun CreateSessionPreview_Dark_Safe() {
-  AppTheme { CreateSessionScreenPreviewHost() }
-}
-
-@Preview(showBackground = true, name = "Create Session – Lower area")
-@Composable
-private fun Preview_CreateSession_LowerArea() {
+private fun Preview_GameSearchField() {
   AppTheme {
-    Column(
-        modifier =
-            Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-          var date by remember { mutableStateOf(LocalDate.of(2025, 10, 15)) }
-          var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
-          var location by remember { mutableStateOf("Student Lounge") }
-
-          OrganisationSection(
-              date = date,
-              time = time,
-              locationText = location,
-              onDateChange = { date = it },
-              onTimeChange = { time = it },
-              onLocationChange = { location = it },
-              onPickLocation = {},
-              title = ORGANISATION_SECTION_NAME)
-
-          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CreateSessionButton(
-                formToSubmit = SessionForm(),
-                onCreate = {},
-                modifier = Modifier.fillMaxWidth(),
-            )
-            DiscardButton(modifier = Modifier.fillMaxWidth(), onDiscard = {})
-          }
+    val all = remember { previewSampleGames() }
+    var q by remember { mutableStateOf("Root") }
+    val results by
+        remember(q) {
+          mutableStateOf(all.filter { it.name.contains(q, ignoreCase = true) }.take(5))
         }
+    GameSearchField(
+        query = q,
+        onQueryChange = { q = it },
+        results = results,
+        onPick = { /* no-op */},
+        modifier = Modifier.padding(16.dp))
   }
 }
 
-@Preview(showBackground = true, name = "Game Section")
+@Preview(showBackground = true, name = "Organisation – With Location Search")
 @Composable
-private fun Preview_GameSection() {
+private fun Preview_Organisation_WithLocation() {
   AppTheme {
-    var q by remember { mutableStateOf("Root") }
-    GameSection(
-        query = q,
-        onQueryChange = { q = it },
-        onSearchClick = {},
-        modifier = Modifier.padding(16.dp),
-        title = GAME_SECTION_NAME,
-        placeholder = GAME_SEARCH_PLACEHOLDER)
+    var date by remember { mutableStateOf(LocalDate.of(2025, 10, 15)) }
+    var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
+    var locationText by remember { mutableStateOf("EPFL") }
+    val allLocations = remember { previewSampleLocations() }
+    val filtered by
+        remember(locationText, allLocations) {
+          mutableStateOf(
+              if (locationText.isBlank()) emptyList()
+              else
+                  allLocations.filter { it.name.contains(locationText, ignoreCase = true) }.take(5))
+        }
+
+    SectionCard(
+        Modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)
+            .padding(16.dp)) {
+          UnderlinedLabel(ORGANISATION_SECTION_NAME)
+          Spacer(Modifier.height(12.dp))
+          DatePickerDockedField(value = date, onValueChange = { date = it }, label = "Date")
+          Spacer(Modifier.height(10.dp))
+          TimePickerField(value = time, onValueChange = { time = it }, label = "Time")
+          Spacer(Modifier.height(10.dp))
+          LocationSearchField(
+              query = locationText,
+              onQueryChange = { locationText = it },
+              results = filtered,
+              onPick = { locationText = it.name },
+              modifier = Modifier.fillMaxWidth())
+        }
   }
 }
 
 @Preview(showBackground = true, name = "Participants – Basic")
 @Composable
-private fun ParticipantsSectionPreview() {
+private fun Preview_ParticipantsSection_Basic() {
   AppTheme {
-    val me = Account("1", name = "Marco", email = "marco@example.com", handle = "")
+    val me = Account(uid = "1", name = "Marco", handle = " ", email = "marco@example.com")
     val pool =
         listOf(
             me,
-            Account("2", name = "Alexandre", email = "alexandre@example.com", handle = ""),
-            Account("3", name = "Antoine", email = "antoine@example.com", handle = ""),
-            Account("4", name = "Dany", email = "dany@example.com", handle = ""),
-            Account("5", name = "Enes", email = "enes@example.com", handle = ""),
-            Account("6", name = "Nil", email = "nil@example.com", handle = ""),
-            Account("7", name = "Thomas", email = "thomas@example.com", handle = ""),
+            Account(uid = "2", name = "Alexandre", handle = " ", email = "alexandre@example.com"),
+            Account(uid = "3", name = "Antoine", handle = " ", email = "antoine@example.com"),
+            Account(uid = "4", name = "Dany", handle = " ", email = "dany@example.com"),
+            Account(uid = "5", name = "Enes", handle = " ", email = "enes@example.com"),
+            Account(uid = "6", name = "Nil", handle = " ", email = "nil@example.com"),
+            Account(uid = "7", name = "Thomas", handle = " ", email = "thomas@example.com"),
         )
     var min by remember { mutableIntStateOf(2) }
     var max by remember { mutableIntStateOf(4) }
@@ -782,7 +923,6 @@ private fun Preview_Organisation_Empty() {
         onDateChange = { date = it },
         onTimeChange = { time = it },
         onLocationChange = { location = it },
-        onPickLocation = {},
         title = ORGANISATION_SECTION_NAME)
   }
 }
@@ -814,4 +954,56 @@ private fun Preview_TimePickerField() {
     }
   }
 }
+
+private fun previewSampleGames(): List<Game> =
+    listOf(
+        Game(
+            uid = "g1",
+            name = "Catan",
+            description = "Trade, build, settle.",
+            imageURL = "",
+            minPlayers = 3,
+            maxPlayers = 4,
+            recommendedPlayers = 4,
+            averagePlayTime = 60,
+            genres = listOf(1, 2)),
+        Game(
+            uid = "g2",
+            name = "Carcassonne",
+            description = "Tile-laying in medieval France.",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 5,
+            recommendedPlayers = 4,
+            averagePlayTime = 45,
+            genres = listOf(2)),
+        Game(
+            uid = "g3",
+            name = "Camel Up",
+            description = "Chaotic camel betting fun.",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 8,
+            recommendedPlayers = 5,
+            averagePlayTime = 30,
+            genres = listOf(3)),
+        Game(
+            uid = "root",
+            name = "Root",
+            description = "Woodland warfare.",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 6,
+            recommendedPlayers = 4,
+            averagePlayTime = 90,
+            genres = listOf(4)))
+
+private fun previewSampleLocations(): List<Location> =
+    listOf(
+        Location(name = "Lausanne Flon", latitude = 46.5215, longitude = 6.6328),
+        Location(name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668),
+        Location(name = "Geneva Cornavin", latitude = 46.2102, longitude = 6.1424),
+        Location(name = "Zürich HB", latitude = 47.3782, longitude = 8.5402),
+        Location(name = "Bern Station", latitude = 46.9480, longitude = 7.4391),
+    )
 */
