@@ -46,18 +46,20 @@ class SessionViewScreenTest {
   private val initialForm =
       SessionForm(
           title = "Friday Night Meetup",
-          proposedGameQuery = "",
+          proposedGame = "",
           minPlayers = 3,
           maxPlayers = 6,
           participants =
               listOf(
-                  Participant("1", "user1"),
-                  Participant("2", "John Doe"),
-                  Participant("3", "Alice"),
-                  Participant("4", "Bob"),
-                  Participant("5", "Robert")),
-          dateText = LocalDate.now(),
-          timeText = "19:00",
+                  Account(uid = "1", handle = "user1", name = "user1", email = "user1@example.com"),
+                  Account(
+                      uid = "2", handle = "johndoe", name = "John Doe", email = "john@example.com"),
+                  Account(uid = "3", handle = "alice", name = "Alice", email = "alice@example.com"),
+                  Account(uid = "4", handle = "bob", name = "Bob", email = "bob@example.com"),
+                  Account(
+                      uid = "5", handle = "robert", name = "Robert", email = "robert@example.com")),
+          date = LocalDate.now(),
+          time = java.time.LocalTime.of(19, 0),
           locationText = "Student Lounge")
 
   @Test
@@ -177,7 +179,7 @@ class SessionViewScreenTest {
 
   @Test
   fun proposedGameSection_displaysTextAndCanBeUpdated() {
-    val editableForm = initialForm.copy(proposedGameQuery = "Catan")
+    val editableForm = initialForm.copy(proposedGame = "Catan")
     composeTestRule.setContent {
       SessionViewScreen(
           viewModel = FirestoreViewModel(),
@@ -338,7 +340,7 @@ class SessionViewScreenTest {
 
   @Test
   fun datePickerDialog_updatesDateField() {
-    val updatedForm = initialForm.copy(dateText = LocalDate.now())
+    val updatedForm = initialForm.copy(date = LocalDate.now())
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     composeTestRule.setContent {
       SessionViewScreen(
@@ -449,8 +451,11 @@ class SessionViewScreenTest {
 
   @Test
   fun userChipsGrid_onRemovePropagated() {
-    val list = listOf(Participant("1", "A"), Participant("2", "B"))
-    var out: Participant? = null
+    val list =
+        listOf(
+            Account(uid = "1", handle = "a", name = "A", email = "a@example.com"),
+            Account(uid = "2", handle = "b", name = "B", email = "b@example.com"))
+    var out: Account? = null
     composeTestRule.setContent { UserChipsGrid(participants = list, onRemove = { out = it }) }
     composeTestRule.onAllNodesWithContentDescription("Remove participant")[0].performClick()
     composeTestRule.runOnIdle { assert(out?.name == "A") }
@@ -516,7 +521,7 @@ class SessionViewScreenTest {
   @Test
   fun timeField_externalCallback() {
     var time = ""
-    composeTestRule.setContent { TimeField(value = "", onValueChange = { time = it }) }
+    composeTestRule.setContent { TimeField(value = "", onValueChange = { time = it.toString() }) }
     composeTestRule.onNodeWithText("Pick").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("OK").performClick()

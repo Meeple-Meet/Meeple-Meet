@@ -56,9 +56,7 @@ import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import java.time.LocalTime
 import java.util.Calendar
 import kotlin.math.roundToInt
 
@@ -90,17 +88,6 @@ object SessionTestTags {
  * ======================================================================= */
 
 data class Participant(val id: String, val name: String)
-
-data class SessionForm(
-    val title: String = "",
-    val proposedGameQuery: String = "",
-    val minPlayers: Int = 2,
-    val maxPlayers: Int = 5,
-    val participants: List<Participant> = emptyList(),
-    val dateText: LocalDate = Instant.now().atZone(ZoneId.systemDefault()).toLocalDate(),
-    val timeText: String = "",
-    val locationText: String = ""
-)
 
 val sliderMinRange = 2f
 val sliderMaxRange = 10f
@@ -166,7 +153,7 @@ fun SessionViewScreen(
                 form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
               },
               onRemoveParticipant = { p ->
-                form = form.copy(participants = form.participants.filterNot { it.id == p.id })
+                form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
               })
 
           // Organisation section
@@ -201,7 +188,7 @@ fun SessionViewScreen(
 fun ParticipantsSection(
     form: SessionForm,
     onFormChange: (Float, Float) -> Unit,
-    onRemoveParticipant: (Participant) -> Unit
+    onRemoveParticipant: (Account) -> Unit
 ) {
   SectionCard(
       modifier =
@@ -256,7 +243,8 @@ fun ParticipantsSection(
         Spacer(Modifier.height(12.dp))
 
         // Chips
-        UserChipsGrid(participants = form.participants, onRemove = { p -> onRemoveParticipant(p) })
+        UserChipsGrid(
+            participants = form.participants, onRemove = { acc -> onRemoveParticipant(acc) })
       }
 }
 
@@ -303,8 +291,8 @@ fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) 
 
         /** TODO: check date format */
         DatePickerDockedField(
-            value = form.dateText,
-            onValueChange = { onFormChange(form.copy(dateText = it!!)) },
+            value = form.date,
+            onValueChange = { onFormChange(form.copy(date = it!!)) },
         )
 
         Spacer(Modifier.height(10.dp))
@@ -312,8 +300,8 @@ fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) 
         /** TODO: check time format */
         // Time field using the new TimeField composable
         TimeField(
-            value = form.timeText,
-            onValueChange = { onFormChange(form.copy(timeText = it)) },
+            value = form.time.toString(),
+            onValueChange = { onFormChange(form.copy(time = it)) },
             modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
 
@@ -405,8 +393,8 @@ fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UserChipsGrid(
-    participants: List<Participant>,
-    onRemove: (Participant) -> Unit,
+    participants: List<Account>,
+    onRemove: (Account) -> Unit,
     modifier: Modifier = Modifier
 ) {
   FlowRow(
@@ -475,7 +463,7 @@ fun BadgedIconButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
+fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit) {
   // initialize state with current time
   val calendar = Calendar.getInstance()
   val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -490,12 +478,12 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
       containerColor = AppColors.primary,
       confirmButton = {
         TextButton(
+            // Kotlin
             onClick = {
               val h = timePickerState.hour
               val m = timePickerState.minute
-              /** Todo: fix this if buggy */
-              val formatted = String.format("%02d:%02d", h, m)
-              onTimeSelected(formatted)
+              val selectedTime = LocalTime.of(h, m)
+              onTimeSelected(selectedTime)
               onDismiss()
             },
             modifier = Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON)) {
@@ -523,7 +511,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (String) -> Unit) {
 }
 
 @Composable
-fun TimeField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+fun TimeField(value: String, onValueChange: (LocalTime) -> Unit, modifier: Modifier = Modifier) {
   var showDialogTime by remember { mutableStateOf(false) }
 
   IconTextField(
