@@ -71,6 +71,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.ui.SessionTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.ui.SessionTestTags
