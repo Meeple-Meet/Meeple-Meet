@@ -440,11 +440,6 @@ fun TimePickerField(
   }
 }
 
-
-
-
-
-
 /**
  * A search field with a dropdown of suggestions.
  *
