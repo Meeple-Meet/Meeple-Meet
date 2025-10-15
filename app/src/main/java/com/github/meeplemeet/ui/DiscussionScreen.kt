@@ -222,7 +222,7 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
                   Modifier.shadow(elevation = 4.dp, shape = appShapes.large, clip = false)
                       .background(color = AppColors.secondary, shape = appShapes.large)
                       .padding(10.dp)
-                      .widthIn(max = 250.dp)) {
+                      .widthIn(min = 100.dp, max = 250.dp)) {
                 Column {
                   if (senderName != null) {
                     Text(
