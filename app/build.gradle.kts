@@ -24,7 +24,7 @@ configurations.all {
 sonar {
     //disable automatic analysis
     properties {
-        property("sonar.projectName", "seekr")
+        property("sonar.projectName", "Meeple Meet")
         property("sonar.projectKey", "Meeple-Meet_Meeple-Meet")
         property("sonar.organization", "meeple-meet")
         property("sonar.host.url", "https://sonarcloud.io")
