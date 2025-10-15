@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/apk-build-workflow
   workflow_dispatch:
 
 jobs:
@@ -45,6 +46,8 @@ jobs:
             echo "::warning::LOCAL_PROPERTIES secret is not set."
           fi
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
       - name: Build Signed Release APK
         env:
@@ -54,8 +57,49 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew clean assembleRelease
 
+      - name: Get version information
+        id: version
+        run: |
+          VERSION_NAME=$(grep "versionName" app/build.gradle.kts | awk -F'"' '{print $2}')
+          VERSION_CODE=$(grep "versionCode" app/build.gradle.kts | awk '{print $3}')
+          echo "name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Rename APK with version
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/meeple-meet-v${{ steps.version.outputs.name }}.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release.apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/release/meeple-meet-v${{ steps.version.outputs.name }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Meeple Meet ${{ steps.version.outputs.tag }}
+          body: |
+            ## Meeple Meet Release ${{ steps.version.outputs.tag }}
+            
+            **Version Code:** ${{ steps.version.outputs.code }}
+            **Build Date:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ github.sha }}
+            
+            ### Changes
+            ${{ github.event.head_commit.message }}
+            
+            ### Installation
+            Download the APK file below and install it on your Android device.
+            
+            **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+          files: |
+            app/build/outputs/apk/release/meeple-meet-v${{ steps.version.outputs.name }}.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
