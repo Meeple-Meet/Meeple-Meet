@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +53,6 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -354,43 +355,78 @@ fun DatePickerDockedField(
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
-  var show by remember { mutableStateOf(false) }
-  val initial = value?.atStartOfDay(zoneId)?.toInstant()?.toEpochMilli()
-  val state = rememberDatePickerState(initialSelectedDateMillis = initial)
+  var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: ""
-
-  Box(Modifier.fillMaxWidth()) {
-    OutlinedTextField(
-        value = text,
-        onValueChange = { /* read-only; picker controls it */},
-        label = { Text(label) },
-        readOnly = true,
-        leadingIcon = {
-          IconButton(onClick = { show = !show }) {
-            Icon(Icons.Default.CalendarToday, contentDescription = "Select date")
-          }
-        },
-        modifier = Modifier.fillMaxWidth().height(64.dp))
-
-    if (show) {
-      Popup(onDismissRequest = { show = false }, alignment = Alignment.TopStart) {
-        Box(
-            Modifier.fillMaxWidth()
-                .offset(y = 64.dp)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(16.dp)) {
-              DatePicker(state = state, showModeToggle = false)
+  // The text field
+  IconTextField(
+      value = text.format(displayFormatter) ?: "",
+      onValueChange = {}, // we control it externally
+      placeholder = label,
+      leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
+      trailingIcon = {
+        TextButton(
+            onClick = { showDialogDate = true },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+              Text("Pick")
             }
-      }
-    }
-  }
+      },
+      modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
-  LaunchedEffect(state.selectedDateMillis) {
-    state.selectedDateMillis?.let { millis ->
-      val picked = Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate()
-      if (picked != value) onValueChange(picked)
-    }
+  // The popup
+  if (showDialogDate) {
+    DatePickerDialog(
+        onDismiss = { showDialogDate = false },
+        onDateSelected = { selectedDate -> onValueChange(selectedDate) },
+        displayFormatter = displayFormatter,
+        zoneId = zoneId,
+    )
   }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerDialog(
+    onDismiss: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
+    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+    zoneId: ZoneId = ZoneId.systemDefault()
+) {
+  val datePickerState = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
+
+  AlertDialog(
+      containerColor = AppColors.primary,
+      onDismissRequest = onDismiss,
+      confirmButton = {
+        TextButton(
+            onClick = {
+              val millis = datePickerState.selectedDateMillis
+              if (millis != null) {
+                val date =
+                    Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate() // e.g. "2025-10-13"
+                onDateSelected(date)
+              }
+              onDismiss()
+            },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON)) {
+              Text("OK")
+            }
+      },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+      text = {
+        // Wrap DatePicker in a Box with fillMaxWidth and padding to avoid cropping
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+          DatePicker(
+              state = datePickerState,
+              modifier = Modifier.fillMaxWidth(),
+              colors =
+                  DatePickerDefaults.colors(
+                      containerColor = AppColors.primary,
+                      titleContentColor = AppColors.textIconsFade,
+                      headlineContentColor = AppColors.textIcons,
+                      selectedDayContentColor = AppColors.primary,
+                      selectedDayContainerColor = AppColors.neutral))
+        }
+      })
 }
 
 /**
