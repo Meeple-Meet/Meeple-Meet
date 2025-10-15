@@ -60,16 +60,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.ui.SessionTestTags
+import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -645,7 +650,6 @@ fun LocationSearchField(
  * Previews
  * ======================================================================= */
 
-/*
 /* A tiny host to give all previews a pleasant surface + padding */
 @Composable
 private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
@@ -825,119 +829,3 @@ private fun Preview_TimePickerField() = PreviewHost {
     Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
   }
 }
-
-11) GameSearchField and LocationSearchField
-private fun sampleGames(): List<Game> = listOf(
-    Game(
-        uid = "g1",
-        name = "Catan",
-        description = "Trade, build, settle.",
-        imageURL = "",
-        minPlayers = 3,
-        maxPlayers = 4,
-        recommendedPlayers = 4,
-        averagePlayTime = 60,
-        genres = emptyList()
-    ),
-    Game(
-        uid = "g2",
-        name = "Carcassonne",
-        description = "Tile-laying in medieval France.",
-        imageURL = "",
-        minPlayers = 2,
-        maxPlayers = 5,
-        recommendedPlayers = 4,
-        averagePlayTime = 45,
-        genres = emptyList()
-    ),
-    Game(
-        uid = "g3",
-        name = "Camel Up",
-        description = "Chaotic camel betting fun.",
-        imageURL = "",
-        minPlayers = 2,
-        maxPlayers = 8,
-        recommendedPlayers = 5,
-        averagePlayTime = 30,
-        genres = emptyList()
-    )
-)
-
-private fun sampleLocations(): List<Location> = listOf(
-    Location(name = "Lausanne Flon", latitude = 46.5215, longitude = 6.6328),
-    Location(name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668),
-    Location(name = "Geneva Cornavin", latitude = 46.2102, longitude = 6.1424)
-)
-
-@Composable
-private fun SearchBarsPreviewContent() {
-    // Game search state
-    var gameQuery by remember { mutableStateOf("") }
-    val gameResults = remember { sampleGames() }
-    val setGameQuery: (String) -> Unit = { gameQuery = it }
-
-    // Location search state
-    var locationQuery by remember { mutableStateOf("") }
-    val locationResults = remember { sampleLocations() }
-    val setLocationQuery: (String) -> Unit = { locationQuery = it }
-
-    // Simulate user typing to open dropdowns in preview
-    LaunchedEffect(Unit) {
-        // Small delay to ensure the composition is ready in preview
-        delay(50)
-        setGameQuery("ca")       // e.g., "ca" -> matches Catan, Carcassonne, Camel Up
-        setLocationQuery("laus") // e.g., "laus" -> matches Lausanne Flon
-    }
-
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            GameSearchField(
-                query = gameQuery,
-                onQueryChange = setGameQuery,
-                results = gameResults,
-                onPick = { /* no-op in preview */ },
-                isLoading = false,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            LocationSearchField(
-                query = locationQuery,
-                onQueryChange = setLocationQuery,
-                results = locationResults,
-                onPick = { /* no-op in preview */ },
-                isLoading = false,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-
-@Preview(
-    name = "Game & Location Search — Light",
-    showBackground = true,
-    widthDp = 360
-)
-@Composable
-fun Preview_SearchBars_Light() {
-    AppTheme {
-        SearchBarsPreviewContent()
-    }
-}
-
-@Preview(
-    name = "Game & Location Search — Dark",
-    showBackground = true,
-    widthDp = 360,
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-fun Preview_SearchBars_Dark() {
-    AppTheme {
-        SearchBarsPreviewContent()
-    }
-}
-*/
