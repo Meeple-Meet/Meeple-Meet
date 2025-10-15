@@ -1,0 +1,102 @@
+name: Release Signed APK
+
+on:
+  push:
+    branches:
+      - main
+      - feat/apk-build-workflow
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Decode Keystore
+        run: |
+          mkdir -p app
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/key-store.keystore
+          echo "KEYSTORE_PATH=$PWD/app/key-store.keystore" >> $GITHUB_ENV
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/app/key-store.keystore
+
+
+      - name: Decode Google Services and Local Properties
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_PATH: key-store.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew clean assembleRelease
+
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/meeple-meet.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: meeple-meet-apk
+          path: app/build/outputs/apk/release/meeple-meet.apk
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Meeple Meet Build #${{ github.run_number }}
+          body: |
+            ## Meeple Meet APK
+            
+            **Build Number:** ${{ github.run_number }}
+            **Build Date:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ steps.sha.outputs.short }}
+            
+            ### Changes
+            ${{ github.event.head_commit.message }}
+            
+            ### Installation
+            Download the APK file below and install it on your Android device.
+            
+            **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+          files: |
+            app/build/outputs/apk/release/meeple-meet.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -11,6 +11,16 @@ plugins {
     alias(libs.plugins.sonar)
 }
 
+// Force newer version of commons-compress for all configurations including sonar
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.apache.commons" && requested.name == "commons-compress") {
+            useVersion("1.26.1")
+            because("Fixes compatibility issue with Gradle and SonarQube plugin")
+        }
+    }
+}
+
 sonar {
     //disable automatic analysis
     properties {
@@ -61,12 +71,32 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+            val keystoreKeyAlias = System.getenv("KEY_ALIAS")
+            val keystoreKeyPassword = System.getenv("KEY_PASSWORD")
+
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keystoreKeyAlias
+                keyPassword = keystoreKeyPassword
+            }
+        }
+    }
+
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
+            // Only apply signing config if keystore is configured
+            if (System.getenv("KEYSTORE_PATH") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             enableUnitTestCoverage = true
@@ -265,12 +295,4 @@ configurations.forEach { configuration ->
     // Exclude protobuf-lite from all configurations
     // This fixes a fatal exception for tests interacting with Cloud Firestore
     configuration.exclude("com.google.protobuf", "protobuf-lite")
-}
-
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.apache.commons" && requested.name == "commons-compress") {
-            useVersion("1.26.1")
-        }
-    }
 }
