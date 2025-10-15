@@ -18,44 +18,25 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.ui.components.CountBubble
-import com.github.meeplemeet.ui.components.DatePickerDockedField
-import com.github.meeplemeet.ui.components.DiscretePillSlider
-import com.github.meeplemeet.ui.components.IconTextField
-import com.github.meeplemeet.ui.components.LabeledTextField
-import com.github.meeplemeet.ui.components.ParticipantAction
-import com.github.meeplemeet.ui.components.ParticipantChip
-import com.github.meeplemeet.ui.components.SectionCard
-import com.github.meeplemeet.ui.components.TimePickerField
-import com.github.meeplemeet.ui.components.TwoPerRowGrid
-import com.github.meeplemeet.ui.components.UnderlinedLabel
-import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.theme.Elevation
+import com.google.firebase.Timestamp
 import java.time.*
-import java.time.format.DateTimeFormatter
+import java.util.Date
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 /* =======================================================================
  * Setup
@@ -83,17 +64,36 @@ const val MAX_SLIDER_NUMBER: Float = 9f
 const val MIN_SLIDER_NUMBER: Float = 1f
 const val SLIDER_STEPS: Int = (MAX_SLIDER_NUMBER - MIN_SLIDER_NUMBER - 1).toInt()
 
+/** TODO: implement location picker later */
+private fun randomLocationFrom(text: String): Location =
+    Location(
+        latitude = Random.nextDouble(-90.0, 90.0),
+        longitude = Random.nextDouble(-180.0, 180.0),
+        name = text.ifBlank { "Random place" })
+
+private fun toTimestamp(
+    date: LocalDate?,
+    time: LocalTime?,
+    zoneId: ZoneId = ZoneId.systemDefault()
+): Timestamp {
+  return if (date != null && time != null) {
+    val millis = date.atTime(time).atZone(zoneId).toInstant().toEpochMilli()
+    Timestamp(Date(millis))
+  } else {
+    Timestamp.now()
+  }
+}
+
 /* =======================================================================
  * Main screen
  * ======================================================================= */
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateSessionScreen(
     viewModel: FirestoreViewModel,
+    sessionViewModel: FirestoreSessionViewModel,
     currentUser: Account,
     discussionId: String,
-    onCreate: (SessionForm) -> Unit = {},
     onBack: () -> Unit = {},
 ) {
   var form by
@@ -102,21 +102,12 @@ fun CreateSessionScreen(
   val discussion by viewModel.discussionFlow(discussionId).collectAsState()
   val availableParticipants = remember { mutableStateListOf<Account>() }
 
-  LaunchedEffect(discussion?.participants) {
+  LaunchedEffect(discussion?.uid) {
     availableParticipants.clear()
-    val uids = discussion?.participants.orEmpty()
-    uids.forEach { uid ->
-      if (uid == currentUser.uid) {
-        if (availableParticipants.none { it.uid == uid }) {
-          availableParticipants.add(currentUser)
-        }
-      } else {
-        viewModel.getOtherAccount(uid) { acc ->
-          if (availableParticipants.none { it.uid == acc.uid }) {
-            availableParticipants.add(acc)
-          }
-        }
-      }
+    val disc = discussion ?: return@LaunchedEffect
+    viewModel.getDiscussionParticipants(disc) { fetched ->
+      val withMe = (fetched + currentUser).distinctBy { it.uid }
+      availableParticipants.addAll(withMe)
     }
   }
 
@@ -149,6 +140,7 @@ fun CreateSessionScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
+              /* TODO: implement game search later */
               // Title
               LabeledTextField(
                   label = "Title",
@@ -206,11 +198,39 @@ fun CreateSessionScreen(
 
               // Creation and Discard buttons
               Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val haveDiscussion = discussion != null
+                val haveDateTime = form.date != null && form.time != null
+                val withinBounds =
+                    form.participants.size >= form.minPlayers &&
+                        form.participants.size <= form.maxPlayers &&
+                        form.minPlayers <= form.maxPlayers
+
+                val canCreate =
+                    (haveDiscussion && haveDateTime && withinBounds && form.title.isNotBlank())
+
                 CreateSessionButton(
                     formToSubmit = form,
-                    onCreate = { onCreate(form) },
+                    enabled = canCreate,
+                    onCreate = {
+                      val disc = discussion ?: return@CreateSessionButton
+
+                      sessionViewModel.createSession(
+                          requester = currentUser,
+                          discussion = disc,
+                          name = form.title,
+                          gameId = form.proposedGame.ifBlank { "Unknown game" },
+                          date = toTimestamp(form.date, form.time),
+                          location = randomLocationFrom(form.locationText),
+                          minParticipants = form.minPlayers,
+                          maxParticipants = form.maxPlayers,
+                          *form.participants.toTypedArray())
+
+                      form = SessionForm(participants = listOf(currentUser))
+                      onBack()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
+
                 DiscardButton(
                     modifier = Modifier.fillMaxWidth(),
                     onDiscard = {
@@ -226,21 +246,16 @@ fun CreateSessionScreen(
  * Components
  * ======================================================================= */
 
-/**
- * A button to create the session.
- *
- * @param formToSubmit the form data to submit when creating the session
- * @param onCreate the callback to be invoked when the button is clicked
- * @param modifier the modifier to be applied to the button
- */
 @Composable
-private fun CreateSessionButton(
+fun CreateSessionButton(
     formToSubmit: SessionForm,
     onCreate: (SessionForm) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
   Button(
       onClick = { onCreate(formToSubmit) },
+      enabled = enabled,
       modifier = modifier,
       shape = CircleShape,
       elevation = ButtonDefaults.buttonElevation(defaultElevation = Elevation.raised),
@@ -254,14 +269,8 @@ private fun CreateSessionButton(
       }
 }
 
-/**
- * A button to discard the session creation.
- *
- * @param onDiscard the callback to be invoked when the button is clicked
- * @param modifier the modifier to be applied to the button
- */
 @Composable
-private fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
+fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
   OutlinedButton(
       onClick = onDiscard,
       modifier = modifier,
@@ -319,6 +328,7 @@ fun ParticipantsSection(
           .fillMaxWidth()
           .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+
         // Header
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -411,11 +421,12 @@ fun ParticipantsSection(
         Spacer(Modifier.height(12.dp))
 
         // Candidates
-        val selectedIds by remember(selected) { mutableStateOf(selected.map { it.uid }.toSet()) }
+        val selectedIds by remember(selected) { derivedStateOf { selected.map { it.uid }.toSet() } }
         val candidates by
             remember(allCandidates, selectedIds, currentUserId) {
-              mutableStateOf(
-                  allCandidates.filter { it.uid != currentUserId && it.uid !in selectedIds })
+              derivedStateOf {
+                allCandidates.filter { it.uid != currentUserId && it.uid !in selectedIds }
+              }
             }
 
         TwoPerRowGrid(items = candidates, key = { it.uid }) { acc, itemModifier ->
@@ -541,18 +552,7 @@ fun GameSection(
  * Preview
  * ======================================================================= */
 
-/**
- * @Preview(showBackground = true, name = "Create Session")
- * @Composable private fun CreateSessionPreview_Dark() { AppTheme { val all = listOf( Account("1",
- *   "Marco", email = "marco@example.com"), Account("2", "Alexandre", email =
- *   "alexandre@example.com"), Account("3", "Antoine", email = "antoine@example.com"), Account("4",
- *   "Dany", email = "dany@example.com"), Account("5", "Enes", email = "enes@example.com"),
- *   Account("6", "Nil", email = "nil@example.com"), Account("7", "Thomas", email =
- *   "thomas@example.com"), )
- *
- * CreateSessionScreen( currentUser = Account("1", "Marco", email = "marco@epfl.ch"), discussionId =
- * "", // If your CreateSessionScreen still accepts this param: availableParticipants = all ) } }
- */
+/*
 @Composable
 private fun CreateSessionScreenPreviewHost() {
   val me = Account(uid = "1", name = "Marco", email = "marco@epfl.ch", handle = "")
@@ -587,7 +587,7 @@ private fun CreateSessionScreenPreviewHost() {
                   color = MaterialTheme.colorScheme.onPrimary)
             },
             navigationIcon = {
-              IconButton(onClick = /* TODO */ {}) {
+              IconButton(onClick = /* not needed for preview */ {}) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -702,7 +702,7 @@ private fun Preview_CreateSession_LowerArea() {
 
           Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CreateSessionButton(
-                formToSubmit = SessionForm(), // preview stub
+                formToSubmit = SessionForm(),
                 onCreate = {},
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -814,3 +814,4 @@ private fun Preview_TimePickerField() {
     }
   }
 }
+*/
