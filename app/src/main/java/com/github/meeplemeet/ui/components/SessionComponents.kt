@@ -7,6 +7,7 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,8 +30,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,11 +65,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.model.structures.Game
+import com.github.meeplemeet.model.structures.Location
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -437,10 +440,212 @@ fun TimePickerField(
   }
 }
 
+/**
+ * A search field with a dropdown of suggestions.
+ *
+ * @param label the label for the text field
+ * @param query the current search query
+ * @param onQueryChange the callback to be invoked when the query changes
+ * @param suggestions the list of suggestions to display
+ * @param onSuggestionClick the callback to be invoked when a suggestion is clicked
+ * @param getPrimaryText a function to extract the primary text from a suggestion
+ * @param modifier the modifier to be applied to the text field
+ * @param placeholder the placeholder text
+ * @param isLoading whether the search is in a loading state
+ * @param showWhenEmptyQuery whether to show suggestions when the query is empty
+ * @param itemContent an optional custom composable for rendering each suggestion
+ * @param emptyText the text to display when there are no suggestions
+ */
+@Composable
+fun <T> SearchDropdownField(
+    label: String,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    suggestions: List<T>,
+    onSuggestionClick: (T) -> Unit,
+    getPrimaryText: (T) -> String,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    isLoading: Boolean = false,
+    showWhenEmptyQuery: Boolean = false,
+    itemContent: (@Composable (item: T) -> Unit)? = null,
+    emptyText: String = "No results"
+) {
+  var expanded by remember { mutableStateOf(false) }
+
+  Box(modifier = modifier) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = {
+          onQueryChange(it)
+          expanded = (showWhenEmptyQuery || it.isNotBlank())
+        },
+        label = { Text(label) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+          when {
+            isLoading -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            query.isNotEmpty() ->
+                IconButton(
+                    onClick = {
+                      onQueryChange("")
+                      expanded = false
+                    }) {
+                      Icon(Icons.Default.Close, contentDescription = "Clear")
+                    }
+          }
+        },
+        placeholder = { if (placeholder.isNotEmpty()) Text(placeholder) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().height(64.dp))
+
+    val shouldShow =
+        expanded && (isLoading || suggestions.isNotEmpty() || (query.isNotBlank() && !isLoading))
+
+    if (shouldShow) {
+      Popup(onDismissRequest = { expanded = false }, alignment = Alignment.TopStart) {
+        Column(Modifier.fillMaxWidth().offset(y = 64.dp)) {
+          Surface(
+              modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+              tonalElevation = 4.dp,
+              shadowElevation = 4.dp) {
+                when {
+                  isLoading -> {
+                    Row(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                          CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                          Text("Searching…", style = MaterialTheme.typography.bodyMedium)
+                        }
+                  }
+                  suggestions.isEmpty() -> {
+                    Text(
+                        emptyText,
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  }
+                  else -> {
+                    LazyColumn(
+                        modifier =
+                            Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+                        contentPadding = PaddingValues(vertical = 6.dp)) {
+                          items(suggestions) { item ->
+                            Row(
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .clickable {
+                                          onSuggestionClick(item)
+                                          expanded = false
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                  if (itemContent != null) {
+                                    itemContent(item)
+                                  } else {
+                                    Text(
+                                        text = getPrimaryText(item),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis)
+                                  }
+                                }
+                          }
+                        }
+                  }
+                }
+              }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * A search field specifically for searching games.
+ *
+ * @param query the current search query
+ * @param onQueryChange the callback to be invoked when the query changes
+ * @param results the list of game results to display
+ * @param onPick the callback to be invoked when a game is picked
+ * @param modifier the modifier to be applied to the text field
+ * @param isLoading whether the search is in a loading state
+ * @param placeholder the placeholder text
+ */
+@Composable
+fun GameSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    results: List<Game>,
+    onPick: (Game) -> Unit,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    placeholder: String = "Search games…"
+) {
+  SearchDropdownField(
+      label = "Game",
+      query = query,
+      onQueryChange = onQueryChange,
+      suggestions = results,
+      onSuggestionClick = onPick,
+      getPrimaryText = { it.name },
+      isLoading = isLoading,
+      placeholder = placeholder,
+      modifier = modifier)
+}
+
+/**
+ * A search field specifically for searching locations.
+ *
+ * @param query the current search query
+ * @param onQueryChange the callback to be invoked when the query changes
+ * @param results the list of location results to display
+ * @param onPick the callback to be invoked when a location is picked
+ * @param modifier the modifier to be applied to the text field
+ * @param isLoading whether the search is in a loading state
+ * @param placeholder the placeholder text
+ */
+@Composable
+fun LocationSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    results: List<Location>,
+    onPick: (Location) -> Unit,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    placeholder: String = "Search locations…"
+) {
+  SearchDropdownField(
+      label = "Location",
+      query = query,
+      onQueryChange = onQueryChange,
+      suggestions = results,
+      onSuggestionClick = onPick,
+      getPrimaryText = { it.name },
+      isLoading = isLoading,
+      placeholder = placeholder,
+      modifier = modifier,
+      itemContent = { loc ->
+        Column(Modifier.fillMaxWidth()) {
+          Text(
+              text = loc.name,
+              style = MaterialTheme.typography.bodyMedium,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis)
+          Text(
+              text = "${"%.5f".format(loc.latitude)}, ${"%.5f".format(loc.longitude)}",
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      })
+}
+
 /* =======================================================================
  * Previews
  * ======================================================================= */
 
+/*
 /* A tiny host to give all previews a pleasant surface + padding */
 @Composable
 private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
@@ -620,3 +825,119 @@ private fun Preview_TimePickerField() = PreviewHost {
     Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
   }
 }
+
+11) GameSearchField and LocationSearchField
+private fun sampleGames(): List<Game> = listOf(
+    Game(
+        uid = "g1",
+        name = "Catan",
+        description = "Trade, build, settle.",
+        imageURL = "",
+        minPlayers = 3,
+        maxPlayers = 4,
+        recommendedPlayers = 4,
+        averagePlayTime = 60,
+        genres = emptyList()
+    ),
+    Game(
+        uid = "g2",
+        name = "Carcassonne",
+        description = "Tile-laying in medieval France.",
+        imageURL = "",
+        minPlayers = 2,
+        maxPlayers = 5,
+        recommendedPlayers = 4,
+        averagePlayTime = 45,
+        genres = emptyList()
+    ),
+    Game(
+        uid = "g3",
+        name = "Camel Up",
+        description = "Chaotic camel betting fun.",
+        imageURL = "",
+        minPlayers = 2,
+        maxPlayers = 8,
+        recommendedPlayers = 5,
+        averagePlayTime = 30,
+        genres = emptyList()
+    )
+)
+
+private fun sampleLocations(): List<Location> = listOf(
+    Location(name = "Lausanne Flon", latitude = 46.5215, longitude = 6.6328),
+    Location(name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668),
+    Location(name = "Geneva Cornavin", latitude = 46.2102, longitude = 6.1424)
+)
+
+@Composable
+private fun SearchBarsPreviewContent() {
+    // Game search state
+    var gameQuery by remember { mutableStateOf("") }
+    val gameResults = remember { sampleGames() }
+    val setGameQuery: (String) -> Unit = { gameQuery = it }
+
+    // Location search state
+    var locationQuery by remember { mutableStateOf("") }
+    val locationResults = remember { sampleLocations() }
+    val setLocationQuery: (String) -> Unit = { locationQuery = it }
+
+    // Simulate user typing to open dropdowns in preview
+    LaunchedEffect(Unit) {
+        // Small delay to ensure the composition is ready in preview
+        delay(50)
+        setGameQuery("ca")       // e.g., "ca" -> matches Catan, Carcassonne, Camel Up
+        setLocationQuery("laus") // e.g., "laus" -> matches Lausanne Flon
+    }
+
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            GameSearchField(
+                query = gameQuery,
+                onQueryChange = setGameQuery,
+                results = gameResults,
+                onPick = { /* no-op in preview */ },
+                isLoading = false,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            LocationSearchField(
+                query = locationQuery,
+                onQueryChange = setLocationQuery,
+                results = locationResults,
+                onPick = { /* no-op in preview */ },
+                isLoading = false,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+
+@Preview(
+    name = "Game & Location Search — Light",
+    showBackground = true,
+    widthDp = 360
+)
+@Composable
+fun Preview_SearchBars_Light() {
+    AppTheme {
+        SearchBarsPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Game & Location Search — Dark",
+    showBackground = true,
+    widthDp = 360,
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun Preview_SearchBars_Dark() {
+    AppTheme {
+        SearchBarsPreviewContent()
+    }
+}
+*/

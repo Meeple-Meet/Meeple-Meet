@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.LocalDate
 import java.time.LocalTime
@@ -742,5 +743,518 @@ class SessionComponentsTest {
 
     composeRule.runOnUiThread { holder.value = second }
     composeRule.onNodeWithText(second.format(fmt)).assertIsDisplayed()
+  }
+
+  /* ---------------- SearchDropdownField / GameSearchField / LocationSearchField ---------------- */
+
+  @Test
+  fun searchDropdown_showsLoadingState_whenIsLoadingTrue_afterTyping() {
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = true,
+          placeholder = "Type…")
+    }
+
+    val tf = composeRule.onNode(hasSetTextAction())
+    tf.performTextInput("ca")
+
+    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchDropdown_showsEmptyText_whenNoResultsAndNotLoading() {
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false,
+          placeholder = "Type…")
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("xyz")
+    composeRule.onNodeWithText("No results").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchDropdown_clickingSuggestion_callsCallback_andClosesPopup() {
+    var picked: String? = null
+    val suggestions = listOf("Catan", "Carcassonne", "Camel Up")
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = suggestions,
+          onSuggestionClick = { picked = it },
+          getPrimaryText = { it },
+          isLoading = false,
+          placeholder = "Type…")
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("ca")
+
+    composeRule.onNodeWithText("Catan").assertIsDisplayed().performClick()
+
+    composeRule.runOnIdle { assert(picked == "Catan") }
+    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+  }
+
+  @Test
+  fun searchDropdown_trailingClearButton_clearsQuery_andHidesPopup() {
+    val suggestions = listOf("Catan")
+    set {
+      var q by remember { mutableStateOf("C") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = suggestions,
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false,
+          placeholder = "Type…")
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("a")
+
+    composeRule.onNodeWithContentDescription("Clear").assertIsDisplayed().performClick()
+
+    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+  }
+
+  @Test
+  fun gameSearchField_typingShowsGameSuggestions_andOnPickReturnsGame() {
+    var q by mutableStateOf("")
+    var picked: com.github.meeplemeet.model.structures.Game? = null
+
+    val g1 =
+        com.github.meeplemeet.model.structures.Game(
+            uid = "g1",
+            name = "Catan",
+            description = "Trade, build, settle.",
+            imageURL = "",
+            minPlayers = 3,
+            maxPlayers = 4,
+            recommendedPlayers = 4,
+            averagePlayTime = 60,
+            genres = emptyList())
+    val g2 =
+        com.github.meeplemeet.model.structures.Game(
+            uid = "g2",
+            name = "Carcassonne",
+            description = "Tile-laying.",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 5,
+            recommendedPlayers = 4,
+            averagePlayTime = 45,
+            genres = emptyList())
+
+    set {
+      GameSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = listOf(g1, g2),
+          onPick = { picked = it },
+          isLoading = false,
+          modifier = Modifier)
+    }
+
+    composeRule.onNodeWithText("Search games…").assertExists()
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("ca")
+    composeRule.onNodeWithText("Catan").assertIsDisplayed()
+    composeRule.onNodeWithText("Carcassonne").assertIsDisplayed()
+
+    composeRule.onNodeWithText("Catan").performClick()
+    composeRule.runOnIdle { assert(picked?.uid == "g1" && picked?.name == "Catan") }
+  }
+
+  @Test
+  fun locationSearchField_rendersCustomItemContent_withCoordinates_andOnPick() {
+    var q by mutableStateOf("")
+    var picked: com.github.meeplemeet.model.structures.Location? = null
+
+    val loc =
+        com.github.meeplemeet.model.structures.Location(
+            name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668)
+
+    set {
+      LocationSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = listOf(loc),
+          onPick = { picked = it },
+          isLoading = false,
+          modifier = Modifier)
+    }
+
+    composeRule.onNodeWithText("Search locations…").assertExists()
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("epfl")
+
+    composeRule.onNodeWithText("EPFL Esplanade").assertIsDisplayed()
+    composeRule.onNodeWithText("46.51910, 6.56680").assertIsDisplayed()
+
+    composeRule.onNodeWithText("EPFL Esplanade").performClick()
+    composeRule.runOnIdle {
+      assert(picked?.name == "EPFL Esplanade")
+      assert(picked?.latitude == 46.5191 && picked?.longitude == 6.5668)
+    }
+  }
+
+  @Test
+  fun searchDropdown_placeholder_and_label_render_and_textEditable() {
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Game",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          placeholder = "Search games…",
+          isLoading = false)
+    }
+
+    composeRule.onNodeWithText("Game").assertExists()
+    composeRule.onNodeWithText("Search games…").assertExists()
+
+    val tf = composeRule.onNode(hasSetTextAction())
+    tf.performTextInput("Brass")
+    tf.assertTextEquals("Brass")
+  }
+
+  /* ---------------- More tests for SearchDropdownField / GameSearchField / LocationSearchField ---------------- */
+
+  @Test
+  fun searchDropdown_showWhenEmptyQuery_true_showsSuggestions_evenWhenQueryEmpty_afterReplacement() {
+    val data = listOf("Azul", "Brass", "Catan")
+    set {
+      var q by remember { mutableStateOf("x") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = data,
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false,
+          showWhenEmptyQuery = true,
+          placeholder = "Type…")
+    }
+
+    val tf = composeRule.onNode(hasSetTextAction())
+    tf.performTextReplacement("")
+
+    composeRule.onNodeWithText("Azul").assertIsDisplayed()
+    composeRule.onNodeWithText("Brass").assertIsDisplayed()
+    composeRule.onNodeWithText("Catan").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchDropdown_showWhenEmptyQuery_false_hidesSuggestions_whenQueryBecomesEmpty() {
+    val data = listOf("Azul", "Brass", "Catan")
+    set {
+      var q by remember { mutableStateOf("ca") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = data,
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false,
+          showWhenEmptyQuery = false)
+    }
+
+    composeRule.onNode(hasSetTextAction()).assertExists()
+    composeRule.onNodeWithText("Catan").assertExists()
+
+    composeRule.onNode(hasSetTextAction()).performTextReplacement("")
+    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+  }
+
+  @Test
+  fun searchDropdown_customEmptyText_isRendered() {
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false,
+          emptyText = "Nothing found",
+          placeholder = "Type…")
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("zz")
+    composeRule.onNodeWithText("Nothing found").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchDropdown_spinnerOnly_whenLoading_andNoResults() {
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = true)
+    }
+    composeRule.onNode(hasSetTextAction()).performTextInput("abc")
+    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
+    composeRule.onAllNodesWithText("No results").assertCountEquals(0)
+  }
+
+  @Test
+  fun searchDropdown_manySuggestions_scrolls_andRendersLastItem() {
+    val data = (1..60).map { "Item $it" }
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = data,
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false)
+    }
+
+    val tf = composeRule.onNode(hasSetTextAction())
+    tf.performTextInput("i")
+
+    composeRule.onNodeWithText("Item 1").assertIsDisplayed()
+    repeat(6) { composeRule.onNodeWithText("Item 1").performTouchInput { swipeUp() } }
+
+    composeRule.onNodeWithText("Item 60").assertExists()
+  }
+
+  @Test
+  fun searchDropdown_primaryText_isTakenFromMapper() {
+    data class Thing(val id: Int, val title: String)
+    val items = listOf(Thing(1, "Alpha"), Thing(2, "Beta"))
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Things",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = items,
+          onSuggestionClick = {},
+          getPrimaryText = { it.title })
+    }
+    composeRule.onNode(hasSetTextAction()).performTextInput("a")
+    composeRule.onNodeWithText("Alpha").assertIsDisplayed()
+    composeRule.onNodeWithText("Beta").assertIsDisplayed()
+  }
+
+  @Test
+  fun gameSearchField_loadingState_showsSearchingText() {
+    set {
+      var q by remember { mutableStateOf("") }
+      GameSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = emptyList(),
+          onPick = {},
+          isLoading = true)
+    }
+    composeRule.onNode(hasSetTextAction()).performTextInput("car")
+    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
+  }
+
+  @Test
+  fun gameSearchField_noResults_showsDefaultEmptyText() {
+    set {
+      var q by remember { mutableStateOf("") }
+      GameSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = emptyList(),
+          onPick = {},
+          isLoading = false)
+    }
+    composeRule.onNode(hasSetTextAction()).performTextInput("qwerty")
+    composeRule.onNodeWithText("No results").assertIsDisplayed()
+  }
+
+  @Test
+  fun gameSearchField_doesNotShowDescriptions_onlyNames() {
+    val g =
+        com.github.meeplemeet.model.structures.Game(
+            uid = "g",
+            name = "Everdell",
+            description = "Woodland engine building",
+            imageURL = "",
+            minPlayers = 1,
+            maxPlayers = 4,
+            recommendedPlayers = 3,
+            averagePlayTime = 90,
+            genres = emptyList())
+    set {
+      var q by remember { mutableStateOf("") }
+      GameSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = listOf(g),
+          onPick = {},
+          isLoading = false)
+    }
+    composeRule.onNode(hasSetTextAction()).performTextInput("ever")
+    composeRule.onNodeWithText("Everdell").assertIsDisplayed()
+    composeRule.onAllNodesWithText("Woodland engine building").assertCountEquals(0)
+  }
+
+  @Test
+  fun gameSearchField_clickingOutsideClearsSuggestions_whenQueryEmptiedAfterwards() {
+    val g =
+        com.github.meeplemeet.model.structures.Game(
+            uid = "g1",
+            name = "Azul",
+            description = "",
+            imageURL = "",
+            minPlayers = 2,
+            maxPlayers = 4,
+            recommendedPlayers = 4,
+            averagePlayTime = 30,
+            genres = emptyList())
+    set {
+      var q by remember { mutableStateOf("a") }
+      GameSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = listOf(g),
+          onPick = {},
+          isLoading = false)
+    }
+    composeRule.onNodeWithText("Azul").assertExists()
+    composeRule.onNode(hasSetTextAction()).performTextReplacement("")
+    composeRule.onAllNodesWithText("Azul").assertCountEquals(0)
+  }
+
+  @Test
+  fun locationSearchField_noResults_showsDefaultEmptyText() {
+    set {
+      var q by remember { mutableStateOf("") }
+      LocationSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = emptyList(),
+          onPick = {},
+          isLoading = false)
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("somewhere")
+    composeRule.onNodeWithText("No results").assertIsDisplayed()
+  }
+
+  @Test
+  fun locationSearchField_multipleLocations_showAll_andPickSecond() {
+    val l1 = Location(name = "Local Game Store", longitude = 46.0, latitude = 6.0)
+    val l2 = Location(name = "Community Center", longitude = .12345, latitude = .98765)
+
+    var picked: Location? = null
+    set {
+      var q by remember { mutableStateOf("") }
+      LocationSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = listOf(l1, l2),
+          onPick = { picked = it },
+          isLoading = false)
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("c")
+    composeRule.onNodeWithText("Local Game Store").assertIsDisplayed()
+    composeRule.onNodeWithText("Community Center").assertIsDisplayed()
+    composeRule.onNodeWithText("Community Center").performClick()
+
+    composeRule.runOnIdle {
+      assert(picked?.name == "Community Center")
+      assert(picked?.latitude == 46.12345 && picked?.longitude == 6.98765)
+    }
+  }
+
+  @Test
+  fun locationSearchField_coordinatesFormatting_isFixedToFiveDecimals_evenForShorterInputs() {
+    val l = Location(name = "Place", longitude = 46.5, latitude = 6.2)
+    set {
+      var q by remember { mutableStateOf("") }
+      LocationSearchField(
+          query = q,
+          onQueryChange = { q = it },
+          results = listOf(l),
+          onPick = {},
+          isLoading = false)
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("pl")
+    composeRule.onNodeWithText("46.50000, 6.20000").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchDropdown_typing_then_setLoadingTrue_switchesToSpinner_withoutClosing() {
+    set {
+      var q by remember { mutableStateOf("") }
+      var loading by remember { mutableStateOf(false) }
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = {
+            q = it
+            loading = true
+          },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = loading)
+    }
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("du")
+    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchDropdown_labelAndPlaceholder_render_andPlaceholderDisappearsOnInput() {
+    set {
+      var q by remember { mutableStateOf("") }
+      SearchDropdownField(
+          label = "Label",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList<String>(),
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          placeholder = "Type here…")
+    }
+
+    composeRule.onNodeWithText("Label").assertExists()
+    composeRule.onNodeWithText("Type here…").assertExists()
+
+    val tf = composeRule.onNode(hasSetTextAction())
+    tf.performTextInput("x")
+    composeRule.onAllNodesWithText("Type here…").assertCountEquals(0)
   }
 }
