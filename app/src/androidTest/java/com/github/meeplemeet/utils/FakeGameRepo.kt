@@ -18,10 +18,6 @@ class FakeGameRepo() : GameRepository {
     return returnedGame ?: throw NoSuchElementException("No game found")
   }
 
-  override suspend fun getGameByName(name: String): Game? {
-    throw NotImplementedError("FakeGameRepo: unused method in this test context")
-  }
-
   override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> {
     throw NotImplementedError("FakeGameRepo: unused method in this test context")
   }

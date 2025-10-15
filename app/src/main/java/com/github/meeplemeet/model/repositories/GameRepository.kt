@@ -33,14 +33,6 @@ interface GameRepository {
   suspend fun getGameById(gameID: String): Game
 
   /**
-   * Retrieves a [Game] by its exact name.
-   *
-   * @param name the exact name of the game to search for.
-   * @return the matching [Game] object, or null if no game with the given name exists.
-   */
-  suspend fun getGameByName(name: String): Game?
-
-  /**
    * Retrieves games that include a specific genre ID.
    *
    * Returns up to [maxResults] items.

@@ -84,19 +84,6 @@ class FirestoreGameTests : FirestoreTests() {
   fun getGameById_throws_when_missing() = runTest { repository.getGameById("non-existent-id") }
 
   @Test
-  fun getGameByName_returns_first_matching_game() = runTest {
-    val result = repository.getGameByName("Carcassonne")
-    assertNotNull(result)
-    assertEquals("Carcassonne", result!!.name)
-  }
-
-  @Test
-  fun getGameByName_returns_null_when_none() = runTest {
-    val result = repository.getGameByName("DoesNotExist")
-    assertNull(result)
-  }
-
-  @Test
   fun getGamesByGenre_returns_only_games_containing_genre() = runTest {
     val results = repository.getGamesByGenre(2, maxResults = 10)
     val names = results.map { it.name }

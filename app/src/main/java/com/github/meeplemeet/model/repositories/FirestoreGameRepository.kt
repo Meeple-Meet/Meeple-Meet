@@ -36,17 +36,6 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
   }
 
   /**
-   * Retrieves a single game by its exact name.
-   *
-   * This performs a case-sensitive search in Firestore.
-   */
-  override suspend fun getGameByName(name: String): Game? {
-    val query = games.whereEqualTo("name", name).get().await()
-    val results = mapSnapshotToGames(query.documents)
-    return results.firstOrNull()
-  }
-
-  /**
    * Retrieves all games (within [maxResults]) that include a given genre ID.
    *
    * This uses Firestore's `array-contains` query operator.
