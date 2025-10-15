@@ -352,4 +352,25 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         }
     awaitClose { reg.remove() }
   }
+
+  fun searchByHandle(handle: String): Flow<List<Account>> = callbackFlow {
+    val reg =
+        accounts
+            .whereGreaterThanOrEqualTo(Account::handle.name, handle)
+            .whereLessThanOrEqualTo(Account::handle.name, handle + '\uf8ff')
+            .addSnapshotListener { qs, e ->
+              if (e != null) {
+                close(e)
+                return@addSnapshotListener
+              }
+              if (qs != null) {
+                val list =
+                    qs.documents.mapNotNull { d ->
+                      d.toObject(AccountNoUid::class.java)?.let { fromNoUid(d.id, it, emptyMap()) }
+                    }
+                trySend(list)
+              }
+            }
+    awaitClose { reg.remove() }
+  }
 }

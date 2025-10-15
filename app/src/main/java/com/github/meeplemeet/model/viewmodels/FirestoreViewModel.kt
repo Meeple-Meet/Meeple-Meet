@@ -35,6 +35,10 @@ class FirestoreViewModel(
 
   private val _discussion = MutableStateFlow<Discussion?>(null)
 
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
+
   /** The currently loaded discussion */
   val discussion: StateFlow<Discussion?> = _discussion
 
@@ -49,6 +53,7 @@ class FirestoreViewModel(
       creator: Account,
       vararg participants: Account
   ) {
+    println("CREATE DISCUSSION: ${creator.handle} + ${participants.map { it.handle }}")
     viewModelScope.launch {
       val (acc, disc) =
           repository.createDiscussion(
@@ -327,4 +332,11 @@ class FirestoreViewModel(
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = null)
       }
+
+  fun searchByHandle(prefix: String) {
+    if (prefix.isBlank()) return
+    viewModelScope.launch {
+      repository.searchByHandle(prefix).collect { list -> _handleSuggestions.value = list.take(30) }
+    }
+  }
 }
