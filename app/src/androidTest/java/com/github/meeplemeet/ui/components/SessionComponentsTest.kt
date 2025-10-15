@@ -23,12 +23,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,1224 +39,1273 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SessionComponentsTest {
 
-  @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
-  private fun set(content: @Composable () -> Unit) {
-    composeRule.setContent { AppTheme { content() } }
-  }
+    private var oldLocale: Locale? = null
 
-  private fun account(name: String = "Marco") =
-      Account(uid = "1", name = name, email = "marco@epfl.ch", handle = "")
-
-  /* ---------------- SectionCard ---------------- */
-
-  @Test
-  fun sectionCard_rendersChildContent_andAcceptsModifier() {
-    set {
-      SectionCard(modifier = Modifier.testTag("sectionCard")) {
-        Text("Meeple inside card", Modifier.testTag("section-content"))
-      }
-    }
-    composeRule.onNodeWithTag("sectionCard").assertExists().assertIsDisplayed()
-    composeRule
-        .onNodeWithTag("section-content")
-        .assertIsDisplayed()
-        .assertTextEquals("Meeple inside card")
-  }
-
-  @Test
-  fun sectionCard_customPadding_stillDisplaysChildren() {
-    set {
-      SectionCard(
-          modifier = Modifier.testTag("sectionCard2"), contentPadding = PaddingValues(24.dp)) {
-            UnderlinedLabel("Padded setup")
-          }
-    }
-    composeRule.onNodeWithText("Padded setup").assertIsDisplayed()
-  }
-
-  /* ---------------- UnderlinedLabel ---------------- */
-
-  @Test
-  fun underlinedLabel_showsGivenText() {
-    set { UnderlinedLabel(text = "Underlined board game") }
-    composeRule.onNodeWithText("Underlined board game").assertIsDisplayed()
-  }
-
-  @Test
-  fun underlinedLabel_customStyleParams_stillRenders() {
-    set { UnderlinedLabel(text = "Styled expansion") }
-    composeRule.onNodeWithText("Styled expansion").assertIsDisplayed()
-  }
-
-  /* ---------------- LabeledTextField ---------------- */
-
-  @Test
-  fun labeledTextField_labelVisible_placeholderShows_typingUpdatesValue() {
-    set {
-      var value by remember { mutableStateOf("") }
-      LabeledTextField(
-          label = "Game title",
-          value = value,
-          onValueChange = { value = it },
-          placeholder = "Type game…",
-          singleLine = true,
-          modifier = Modifier.testTag("labeledTF"))
+    @Before
+    fun forceStableLocale() {
+        oldLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
     }
 
-    composeRule.onNodeWithText("Game title").assertIsDisplayed()
-    composeRule.onNodeWithText("Type game…").assertIsDisplayed()
-
-    val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("labeledTF"))
-    tf.performClick()
-    tf.performTextInput("Terraforming Mars")
-    tf.assertTextEquals("Terraforming Mars")
-    composeRule.onNodeWithText("Type game…").assertDoesNotExist()
-  }
-
-  @Test
-  fun labeledTextField_multiline_mode_acceptsLongText() {
-    set {
-      var txt by remember { mutableStateOf("") }
-      LabeledTextField(
-          label = "Game description",
-          value = txt,
-          onValueChange = { txt = it },
-          placeholder = "Multi…",
-          singleLine = false,
-          modifier = Modifier.testTag("labeledTF-multi"))
-    }
-    val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("labeledTF-multi"))
-    tf.performTextInput("Setup:\nDraft cards\nEngine build")
-    tf.assertTextContains("Engine build", substring = true)
-  }
-
-  @Test
-  fun labeledTextField_hasImeActionDone_performImeAction_noCrash() {
-    set {
-      var txt by remember { mutableStateOf("") }
-      LabeledTextField(
-          label = "Submit",
-          value = txt,
-          onValueChange = { txt = it },
-          placeholder = "rulebook…",
-          singleLine = true,
-          modifier = Modifier.testTag("labeledTF-ime"))
-    }
-    val tf = composeRule.onNode(hasTestTag("labeledTF-ime") and hasImeAction(ImeAction.Done))
-    tf.performTextInput("Catan")
-    tf.performImeAction()
-    tf.assertTextEquals("Catan")
-  }
-
-  @Test
-  fun labeledTextField_clearText_showsPlaceholderAgain() {
-    set {
-      var value by remember { mutableStateOf("") }
-      LabeledTextField(
-          label = "Game title",
-          value = value,
-          onValueChange = { value = it },
-          placeholder = "Type game…",
-          singleLine = true,
-          modifier = Modifier.testTag("labeledTF-clear"))
-    }
-    val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("labeledTF-clear"))
-    tf.performTextInput("Azul")
-    tf.assertTextEquals("Azul")
-    tf.performTextReplacement("")
-    composeRule.onNodeWithText("Type game…").assertIsDisplayed()
-  }
-
-  /* ---------------- IconTextField ---------------- */
-
-  @Test
-  fun iconTextField_leadingAndTrailingIcons_visible_andTextEditable() {
-    set {
-      var value by remember { mutableStateOf("") }
-      IconTextField(
-          value = value,
-          onValueChange = { value = it },
-          placeholder = "With meeples",
-          leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "leading") },
-          trailingIcon = { Icon(Icons.Default.Close, contentDescription = "trailing") },
-          modifier = Modifier.testTag("iconTF"))
-    }
-    composeRule.onNodeWithContentDescription("leading").assertIsDisplayed()
-    composeRule.onNodeWithContentDescription("trailing").assertIsDisplayed()
-
-    val iconTf = composeRule.onNode(hasSetTextAction() and hasTestTag("iconTF"))
-    iconTf.performTextInput("Carcassonne")
-    iconTf.assertTextEquals("Carcassonne")
-  }
-
-  @Test
-  fun iconTextField_withoutIcons_stillEditable_andShowsPlaceholder() {
-    set {
-      var value by remember { mutableStateOf("") }
-      IconTextField(
-          value = value,
-          onValueChange = { value = it },
-          placeholder = "No meeples",
-          modifier = Modifier.testTag("iconTF-no-icons"))
-    }
-    composeRule.onNodeWithText("No meeples").assertIsDisplayed()
-
-    val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("iconTF-no-icons"))
-    tf.performTextInput("Wingspan")
-    tf.assertTextEquals("Wingspan")
-
-    tf.performTextReplacement("")
-    composeRule.onNodeWithTag("iconTF-no-icons").assertTextContains("No meeples", substring = true)
-  }
-
-  @Test
-  fun iconTextField_longText_preserved() {
-    set {
-      var value by remember { mutableStateOf("") }
-      IconTextField(
-          value = value,
-          onValueChange = { value = it },
-          placeholder = "Long rulebook",
-          modifier = Modifier.testTag("iconTF-long"))
-    }
-    val long = "x".repeat(200)
-    val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("iconTF-long"))
-    tf.performTextInput(long)
-    tf.assertTextEquals(long)
-  }
-
-  /* ---------------- CountBubble ---------------- */
-
-  @Test
-  fun countBubble_displaysProvidedNumber() {
-    set { CountBubble(count = 42) }
-    composeRule.onNodeWithText("42").assertIsDisplayed()
-  }
-
-  @Test
-  fun countBubble_handlesNegativeNumbers() {
-    set { CountBubble(count = -1) }
-    composeRule.onNodeWithText("-1").assertIsDisplayed()
-  }
-
-  @Test
-  fun countBubble_zeroValue() {
-    set { CountBubble(count = 0) }
-    composeRule.onNodeWithText("0").assertIsDisplayed()
-  }
-
-  /* ---------------- DiscretePillSlider ---------------- */
-
-  @Test
-  fun discretePillSlider_drag_invokesOnValuesChange() {
-    var changed: Pair<Float, Float>? = null
-    set {
-      DiscretePillSlider(
-          range = 0f..10f,
-          values = 2f..6f,
-          steps = 9,
-          onValuesChange = { start, end -> changed = start to end },
-          surroundModifier = Modifier.testTag("sliderHost"),
-          sliderModifier = Modifier.testTag("slider"))
-    }
-    composeRule.onNodeWithTag("slider").assertExists().assertIsDisplayed()
-    composeRule.onNodeWithTag("slider").performTouchInput {
-      down(centerLeft)
-      moveTo(centerRight)
-      up()
-    }
-    composeRule.waitUntil(timeoutMillis = 2_000) { changed != null }
-  }
-
-  @Test
-  fun discretePillSlider_withCustomColors_stillEmitsChanges() {
-    var changed = false
-    set {
-      DiscretePillSlider(
-          range = 0f..5f,
-          values = 1f..1f,
-          steps = 4,
-          onValuesChange = { _, _ -> changed = true },
-          surroundModifier = Modifier.testTag("sliderHost2"),
-          sliderModifier = Modifier.testTag("slider2"),
-          sliderColors = SliderDefaults.colors())
-    }
-    composeRule.onNodeWithTag("slider2").performTouchInput {
-      down(center)
-      moveBy(Offset(50f, 0f))
-      up()
-    }
-    composeRule.waitUntil(1_500) { changed }
-  }
-
-  @Test
-  fun discretePillSlider_extremeDrag_clampsAndOrdersValues() {
-    var last: Pair<Float, Float>? = null
-    set {
-      DiscretePillSlider(
-          range = -10f..10f,
-          values = -5f..5f,
-          steps = 20,
-          onValuesChange = { a, b -> last = a to b },
-          surroundModifier = Modifier.testTag("sliderHost3"),
-          sliderModifier = Modifier.testTag("slider3"))
-    }
-    composeRule.onNodeWithTag("slider3").performTouchInput {
-      down(centerLeft)
-      moveTo(centerRight)
-      up()
-    }
-    composeRule.waitUntil(2_000) { last != null }
-    val (start, end) = last!!
-    assert(start in -10f..10f && end in -10f..10f)
-    assert(start <= end)
-  }
-
-  /* ---------------- ParticipantChip ---------------- */
-
-  @Test
-  fun participantChip_add_click_invokesCallback() {
-    var clicked: Account? = null
-    set {
-      ParticipantChip(
-          account = account("Reiner Knizia"),
-          action = ParticipantAction.Add,
-          onClick = { clicked = it },
-          modifier = Modifier.testTag("chip-add"))
-    }
-    composeRule.onNodeWithText("Reiner Knizia").assertIsDisplayed()
-    composeRule
-        .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-add")))
-        .onFirst()
-        .performClick()
-    composeRule.runOnIdle { assert(clicked?.name == "Reiner Knizia") }
-  }
-
-  @Test
-  fun participantChip_remove_click_invokesCallback() {
-    var clicked: Account? = null
-    set {
-      ParticipantChip(
-          account = account("Uwe Rosenberg"),
-          action = ParticipantAction.Remove,
-          onClick = { clicked = it },
-          modifier = Modifier.testTag("chip-remove"))
-    }
-    composeRule.onNodeWithText("Uwe Rosenberg").assertIsDisplayed()
-    composeRule
-        .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-remove")))
-        .onFirst()
-        .performClick()
-    composeRule.runOnIdle { assert(clicked?.name == "Uwe Rosenberg") }
-  }
-
-  @Test
-  fun participantChip_longName_truncates_noCrash() {
-    set {
-      ParticipantChip(
-          account = account("A very very very very long board-game club name"),
-          action = ParticipantAction.Add,
-          onClick = {},
-          modifier = Modifier.testTag("chip-long"))
-    }
-    composeRule.onNodeWithTag("chip-long").assertExists().assertIsDisplayed()
-  }
-
-  @Test
-  fun participantChip_hasExactlyOneClickableChild() {
-    set {
-      ParticipantChip(
-          account = account("Sid Sackson"),
-          action = ParticipantAction.Add,
-          onClick = {},
-          modifier = Modifier.testTag("chip-unique"))
-    }
-    composeRule
-        .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-unique")))
-        .assertCountEquals(1)
-  }
-
-  /* ---------------- TwoPerRowGrid ---------------- */
-
-  @Test
-  fun twoPerRowGrid_rendersItems_andIsScrollable() {
-    val items = (1..7).map { "Game $it" }
-    set {
-      TwoPerRowGrid(
-          items = items,
-          key = { it },
-          modifier = Modifier.testTag("grid"),
-          rowsModifier = Modifier) { item, _ ->
-            Text(item)
-          }
-    }
-    items.forEach { composeRule.onNodeWithText(it).assertExists() }
-    composeRule.onNodeWithTag("grid").performTouchInput { swipeUp() }
-    composeRule.onNodeWithTag("grid").performTouchInput { swipeDown() }
-  }
-
-  @Test
-  fun twoPerRowGrid_oddCount_lastRowSpacers_noCrash_andModifierPropagation() {
-    val items = listOf("Catan", "Azul", "Gloomhaven")
-    set {
-      TwoPerRowGrid(
-          items = items,
-          key = { it },
-          modifier = Modifier.testTag("grid2"),
-          rowsModifier = Modifier) { item, mod ->
-            Box(mod.semantics { contentDescription = "cell-$item" }) { Text(item) }
-          }
+    @After
+    fun restoreLocale() {
+        oldLocale?.let { Locale.setDefault(it) }
     }
 
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("grid2").assertExists()
-
-    items.forEach {
-      composeRule.onNodeWithContentDescription("cell-$it", useUnmergedTree = true).assertExists()
-      composeRule.onNodeWithText(it).assertExists()
+    private fun set(content: @Composable () -> Unit) {
+        composeRule.setContent { AppTheme { content() } }
     }
 
-    composeRule.onNodeWithTag("grid2").performTouchInput { swipeUp() }
-    composeRule.onNodeWithTag("grid2").performTouchInput { swipeDown() }
-  }
+    private fun account(name: String = "Marco") =
+        Account(uid = "1", name = name, email = "marco@epfl.ch", handle = "")
 
-  @Test
-  fun twoPerRowGrid_evenCount_updatesOnRecomposition() {
-    var data by mutableStateOf(listOf("Azul", "Brass"))
-    set {
-      TwoPerRowGrid(items = data, key = { it }, modifier = Modifier.testTag("grid3")) { item, _ ->
-        Text("Cell $item")
-      }
+    private fun waitForText(text: String, timeoutMs: Long = 5_000, unmerged: Boolean = true) {
+        composeRule.waitUntil(timeoutMs) {
+            composeRule
+                .onAllNodesWithText(text, useUnmergedTree = unmerged)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
     }
-    composeRule.onNodeWithText("Cell Azul").assertExists()
-    composeRule.onNodeWithText("Cell Brass").assertExists()
 
-    composeRule.runOnUiThread { data = listOf("Azul", "Brass", "Catan", "Dune") }
-    composeRule.onNodeWithText("Cell Catan").assertExists()
-    composeRule.onNodeWithText("Cell Dune").assertExists()
-  }
-
-  @Test
-  fun twoPerRowGrid_emptyList_showsNothing() {
-    set {
-      TwoPerRowGrid(
-          items = emptyList<String>(), key = { it }, modifier = Modifier.testTag("grid-empty")) {
-              item,
-              _ ->
-            Text("X $item")
-          }
+    private fun waitForGone(text: String, timeoutMs: Long = 5_000, unmerged: Boolean = true) {
+        composeRule.waitUntil(timeoutMs) {
+            composeRule
+                .onAllNodesWithText(text, useUnmergedTree = unmerged)
+                .fetchSemanticsNodes()
+                .isEmpty()
+        }
     }
-    composeRule.onNodeWithTag("grid-empty").assertExists()
-    composeRule.onAllNodesWithText("X ").assertCountEquals(0)
-  }
 
-  @Test
-  fun twoPerRowGrid_rowsModifier_applied_toEachRow() {
-    val items = listOf("azul", "brass", "catan", "dune")
-    set {
-      TwoPerRowGrid(
-          items = items,
-          key = { it },
-          modifier = Modifier.testTag("grid-rows-mod"),
-          rowsModifier = Modifier.testTag("row-mod")) { item, _ ->
-            Text(item)
-          }
-    }
-    val rows =
+    /* ---------------- SectionCard ---------------- */
+
+    @Test
+    fun sectionCard_rendersChildContent_andAcceptsModifier() {
+        set {
+            SectionCard(modifier = Modifier.testTag("sectionCard")) {
+                Text("Meeple inside card", Modifier.testTag("section-content"))
+            }
+        }
+        composeRule.onNodeWithTag("sectionCard").assertExists().assertIsDisplayed()
         composeRule
-            .onAllNodes(hasTestTag("row-mod"), useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .size
-    assert(rows >= 2)
-  }
-
-  @Test
-  fun twoPerRowGrid_manyItems_scrollsToBottom_composesLastItem() {
-    val items = (1..50).map { "Game $it" }
-    set {
-      TwoPerRowGrid(items = items, key = { it }, modifier = Modifier.testTag("grid-long")) { item, _
-        ->
-        Text(item)
-      }
-    }
-    repeat(6) { composeRule.onNodeWithTag("grid-long").performTouchInput { swipeUp() } }
-    composeRule.onNodeWithText("Game 50").assertExists()
-  }
-
-  @Test
-  fun twoPerRowGrid_reorder_items_recomposes() {
-    var data by mutableStateOf(listOf("Azul", "Brass", "Catan", "Dune", "Everdell"))
-    set {
-      TwoPerRowGrid(items = data, key = { it }, modifier = Modifier.testTag("grid-reorder")) {
-          item,
-          _ ->
-        Text(item)
-      }
-    }
-    composeRule.onNodeWithText("Azul").assertExists()
-    composeRule.runOnUiThread { data = listOf("Everdell", "Dune", "Catan", "Brass", "Azul") }
-    listOf("Everdell", "Dune", "Catan", "Brass", "Azul").forEach {
-      composeRule.onNodeWithText(it).assertExists()
-    }
-  }
-
-  /* ---------------- TimePickerField ---------------- */
-
-  @Test
-  fun timePickerField_openDialog_confirm_setsDefault1900() {
-    var time: LocalTime? = null
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "Game time") }
-    composeRule.onNodeWithContentDescription("Select time").assertIsDisplayed().performClick()
-    composeRule.onNodeWithText("Game time").assertExists()
-    composeRule.onNodeWithText("OK").assertIsDisplayed().performClick()
-    composeRule.runOnIdle { assert(time == LocalTime.of(19, 0)) }
-  }
-
-  @Test
-  fun timePickerField_cancel_doesNotChangeValue() {
-    var time: LocalTime? = null
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "Game time") }
-    composeRule.onNodeWithContentDescription("Select time").performClick()
-    composeRule.onNodeWithText("Cancel").performClick()
-    composeRule.runOnIdle { assert(time == null) }
-  }
-
-  @Test
-  fun timePickerField_withInitialValue_showsFormattedText_andConfirmKeepsValue() {
-    val initial = LocalTime.of(8, 30)
-    var time: LocalTime? = initial
-    set {
-      TimePickerField(
-          value = time,
-          onValueChange = { time = it },
-          label = "Pick time",
-          is24Hour = false,
-          displayFormatter = DateTimeFormatter.ofPattern("HH:mm"))
-    }
-    composeRule.onNodeWithText("08:30").assertIsDisplayed()
-
-    composeRule.onNodeWithText("08:30").performClick()
-    composeRule.onAllNodesWithText("OK").assertCountEquals(0)
-
-    composeRule.onNodeWithContentDescription("Select time").performClick()
-    composeRule.onNodeWithText("OK").performClick()
-    composeRule.runOnIdle { assert(time == initial) }
-  }
-
-  @Test
-  fun timePickerField_backDismiss_doesNotChangeValue() {
-    var time: LocalTime? = null
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "BackDismiss") }
-
-    composeRule.onNodeWithContentDescription("Select time").performClick()
-    composeRule.onNodeWithText("OK").assertIsDisplayed()
-
-    composeRule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-
-    composeRule.runOnIdle { assert(time == null) }
-    composeRule.onAllNodesWithText("OK").assertCountEquals(0)
-  }
-
-  @Test
-  fun timePickerField_externalValueChange_updatesDisplayedText() {
-    var time by mutableStateOf<LocalTime?>(null)
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "External") }
-    composeRule.onAllNodesWithText("12:15").assertCountEquals(0)
-
-    composeRule.runOnUiThread { time = LocalTime.of(12, 15) }
-    composeRule.onNodeWithText("12:15").assertExists()
-  }
-
-  @Test
-  fun timePickerField_clickingFieldItself_doesNotOpenDialog() {
-    set { TimePickerField(value = null, onValueChange = {}, label = "Readonly game time") }
-    composeRule.onNodeWithText("Readonly game time").performClick()
-    composeRule.onAllNodesWithText("OK").assertCountEquals(0)
-  }
-
-  /* ---------------- DatePickerDockedField ---------------- */
-
-  @Test
-  fun datePickerDocked_withInitialValue_showsFormattedText_andToggleDoesNotCrash() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val initial = LocalDate.of(2025, 1, 5)
-
-    set {
-      var value by remember { mutableStateOf<LocalDate?>(initial) }
-      DatePickerDockedField(
-          value = value,
-          onValueChange = { value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
+            .onNodeWithTag("section-content")
+            .assertIsDisplayed()
+            .assertTextEquals("Meeple inside card")
     }
 
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-  }
-
-  @Test
-  fun datePickerDocked_externalValueChange_updatesDisplayedText() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val external = LocalDate.of(2024, 12, 24)
-
-    lateinit var holder: MutableState<LocalDate?>
-    set {
-      holder = remember { mutableStateOf<LocalDate?>(null) }
-      DatePickerDockedField(
-          value = holder.value,
-          onValueChange = { holder.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
+    @Test
+    fun sectionCard_customPadding_stillDisplaysChildren() {
+        set {
+            SectionCard(
+                modifier = Modifier.testTag("sectionCard2"), contentPadding = PaddingValues(24.dp)) {
+                UnderlinedLabel("Padded setup")
+            }
+        }
+        composeRule.onNodeWithText("Padded setup").assertIsDisplayed()
     }
 
-    composeRule.runOnUiThread { holder.value = external }
-    composeRule.onNodeWithText(external.format(fmt)).assertIsDisplayed()
-  }
+    /* ---------------- UnderlinedLabel ---------------- */
 
-  @Test
-  fun datePickerDocked_openAndCloseWithoutSelecting_doesNotChangeValue() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-
-    lateinit var picked: MutableState<LocalDate?>
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(null) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
+    @Test
+    fun underlinedLabel_showsGivenText() {
+        set { UnderlinedLabel(text = "Underlined board game") }
+        composeRule.onNodeWithText("Underlined board game").assertIsDisplayed()
     }
 
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-
-    composeRule.runOnIdle { assert(picked.value == null) }
-  }
-
-  @Test
-  fun datePickerDocked_withInitialValue_showsFormattedText_andToggleOpenClose() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val initial = LocalDate.of(2025, 1, 5)
-
-    lateinit var picked: MutableState<LocalDate?>
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(initial) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
+    @Test
+    fun underlinedLabel_customStyleParams_stillRenders() {
+        set { UnderlinedLabel(text = "Styled expansion") }
+        composeRule.onNodeWithText("Styled expansion").assertIsDisplayed()
     }
 
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+    /* ---------------- LabeledTextField ---------------- */
 
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-    composeRule.runOnIdle { assert(picked.value == initial) }
-  }
+    @Test
+    fun labeledTextField_labelVisible_placeholderShows_typingUpdatesValue() {
+        set {
+            var value by remember { mutableStateOf("") }
+            LabeledTextField(
+                label = "Game title",
+                value = value,
+                onValueChange = { value = it },
+                placeholder = "Type game…",
+                singleLine = true,
+                modifier = Modifier.testTag("labeledTF"))
+        }
 
-  @Test
-  fun datePickerDocked_labelVisible_and_multipleToggles_noSelection_noChange() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    lateinit var picked: MutableState<LocalDate?>
+        composeRule.onNodeWithText("Game title").assertIsDisplayed()
+        composeRule.onNodeWithText("Type game…", useUnmergedTree = true).assertIsDisplayed()
 
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(null) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game night",
-          displayFormatter = fmt,
-          zoneId = zone)
+        val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("labeledTF"))
+        tf.performClick()
+        tf.performTextInput("Terraforming Mars")
+        tf.assertTextEquals("Terraforming Mars")
+        composeRule.onAllNodesWithText("Type game…").assertCountEquals(0)
     }
 
-    composeRule.onNodeWithText("Game night").assertIsDisplayed()
-
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-    icon.performClick()
-    icon.performClick()
-    composeRule.runOnIdle { assert(picked.value == null) }
-  }
-
-  @Test
-  fun datePickerDocked_initialValue_persistsAcrossToggles() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val initial = LocalDate.of(2026, 6, 9)
-    lateinit var picked: MutableState<LocalDate?>
-
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(initial) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
+    @Test
+    fun labeledTextField_multiline_mode_acceptsLongText() {
+        set {
+            var txt by remember { mutableStateOf("") }
+            LabeledTextField(
+                label = "Game description",
+                value = txt,
+                onValueChange = { txt = it },
+                placeholder = "Multi…",
+                singleLine = false,
+                modifier = Modifier.testTag("labeledTF-multi"))
+        }
+        val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("labeledTF-multi"))
+        tf.performTextInput("Setup:\nDraft cards\nEngine build")
+        tf.assertTextContains("Engine build", substring = true)
     }
 
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-    composeRule.runOnIdle { assert(picked.value == initial) }
-  }
-
-  @Test
-  fun datePickerDocked_externalValueChange_updatesFieldText_again() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    lateinit var holder: MutableState<LocalDate?>
-
-    set {
-      holder = remember { mutableStateOf<LocalDate?>(null) }
-      DatePickerDockedField(
-          value = holder.value,
-          onValueChange = { holder.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
+    @Test
+    fun labeledTextField_hasImeActionDone_performImeAction_noCrash() {
+        set {
+            var txt by remember { mutableStateOf("") }
+            LabeledTextField(
+                label = "Submit",
+                value = txt,
+                onValueChange = { txt = it },
+                placeholder = "rulebook…",
+                singleLine = true,
+                modifier = Modifier.testTag("labeledTF-ime"))
+        }
+        val tf = composeRule.onNode(hasTestTag("labeledTF-ime") and hasImeAction(ImeAction.Done))
+        tf.performTextInput("Catan")
+        tf.performImeAction()
+        tf.assertTextEquals("Catan")
     }
 
-    val first = LocalDate.of(2024, 12, 24)
-    val second = LocalDate.of(2025, 1, 1)
-
-    composeRule.runOnUiThread { holder.value = first }
-    composeRule.onNodeWithText(first.format(fmt)).assertIsDisplayed()
-
-    composeRule.runOnUiThread { holder.value = second }
-    composeRule.onNodeWithText(second.format(fmt)).assertIsDisplayed()
-  }
-
-  /* ---------------- SearchDropdownField / GameSearchField / LocationSearchField ---------------- */
-
-  @Test
-  fun searchDropdown_showsLoadingState_whenIsLoadingTrue_afterTyping() {
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = true,
-          placeholder = "Type…")
+    @Test
+    fun labeledTextField_clearText_showsPlaceholderAgain() {
+        set {
+            var value by remember { mutableStateOf("") }
+            LabeledTextField(
+                label = "Game title",
+                value = value,
+                onValueChange = { value = it },
+                placeholder = "Type game…",
+                singleLine = true,
+                modifier = Modifier.testTag("labeledTF-clear"))
+        }
+        val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("labeledTF-clear"))
+        tf.performTextInput("Azul")
+        tf.assertTextEquals("Azul")
+        tf.performTextReplacement("")
+        waitForText("Type game…", unmerged = true)
+        composeRule.onNodeWithText("Type game…", useUnmergedTree = true).assertIsDisplayed()
     }
 
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performTextInput("ca")
+    /* ---------------- IconTextField ---------------- */
 
-    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
-  }
+    @Test
+    fun iconTextField_leadingAndTrailingIcons_visible_andTextEditable() {
+        set {
+            var value by remember { mutableStateOf("") }
+            IconTextField(
+                value = value,
+                onValueChange = { value = it },
+                placeholder = "With meeples",
+                leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "leading") },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "trailing") },
+                modifier = Modifier.testTag("iconTF"))
+        }
+        composeRule.onNodeWithContentDescription("leading").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("trailing").assertIsDisplayed()
 
-  @Test
-  fun searchDropdown_showsEmptyText_whenNoResultsAndNotLoading() {
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false,
-          placeholder = "Type…")
+        val iconTf = composeRule.onNode(hasSetTextAction() and hasTestTag("iconTF"))
+        iconTf.performTextInput("Carcassonne")
+        iconTf.assertTextEquals("Carcassonne")
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("xyz")
-    composeRule.onNodeWithText("No results").assertIsDisplayed()
-  }
+    @Test
+    fun iconTextField_withoutIcons_stillEditable_andShowsPlaceholder() {
+        set {
+            var value by remember { mutableStateOf("") }
+            IconTextField(
+                value = value,
+                onValueChange = { value = it },
+                placeholder = "No meeples",
+                modifier = Modifier.testTag("iconTF-no-icons"))
+        }
+        waitForText("No meeples", unmerged = true)
+        composeRule.onNodeWithText("No meeples", useUnmergedTree = true).assertIsDisplayed()
 
-  @Test
-  fun searchDropdown_clickingSuggestion_callsCallback_andClosesPopup() {
-    var picked: String? = null
-    val suggestions = listOf("Catan", "Carcassonne", "Camel Up")
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = suggestions,
-          onSuggestionClick = { picked = it },
-          getPrimaryText = { it },
-          isLoading = false,
-          placeholder = "Type…")
+        val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("iconTF-no-icons"))
+        tf.performTextInput("Wingspan")
+        tf.assertTextEquals("Wingspan")
+
+        tf.performTextReplacement("")
+        composeRule.onNodeWithTag("iconTF-no-icons").assertTextContains("No meeples", substring = true)
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("ca")
-
-    composeRule.onNodeWithText("Catan").assertIsDisplayed().performClick()
-
-    composeRule.runOnIdle { assert(picked == "Catan") }
-    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
-  }
-
-  @Test
-  fun searchDropdown_trailingClearButton_clearsQuery_andHidesPopup() {
-    val suggestions = listOf("Catan")
-    set {
-      var q by remember { mutableStateOf("C") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = suggestions,
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false,
-          placeholder = "Type…")
+    @Test
+    fun iconTextField_longText_preserved() {
+        set {
+            var value by remember { mutableStateOf("") }
+            IconTextField(
+                value = value,
+                onValueChange = { value = it },
+                placeholder = "Long rulebook",
+                modifier = Modifier.testTag("iconTF-long"))
+        }
+        val long = "x".repeat(200)
+        val tf = composeRule.onNode(hasSetTextAction() and hasTestTag("iconTF-long"))
+        tf.performTextInput(long)
+        tf.assertTextEquals(long)
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("a")
+    /* ---------------- CountBubble ---------------- */
 
-    composeRule.onNodeWithContentDescription("Clear").assertIsDisplayed().performClick()
-
-    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
-  }
-
-  @Test
-  fun gameSearchField_typingShowsGameSuggestions_andOnPickReturnsGame() {
-    var q by mutableStateOf("")
-    var picked: com.github.meeplemeet.model.structures.Game? = null
-
-    val g1 =
-        com.github.meeplemeet.model.structures.Game(
-            uid = "g1",
-            name = "Catan",
-            description = "Trade, build, settle.",
-            imageURL = "",
-            minPlayers = 3,
-            maxPlayers = 4,
-            recommendedPlayers = 4,
-            averagePlayTime = 60,
-            genres = emptyList())
-    val g2 =
-        com.github.meeplemeet.model.structures.Game(
-            uid = "g2",
-            name = "Carcassonne",
-            description = "Tile-laying.",
-            imageURL = "",
-            minPlayers = 2,
-            maxPlayers = 5,
-            recommendedPlayers = 4,
-            averagePlayTime = 45,
-            genres = emptyList())
-
-    set {
-      GameSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = listOf(g1, g2),
-          onPick = { picked = it },
-          isLoading = false,
-          modifier = Modifier)
+    @Test
+    fun countBubble_displaysProvidedNumber() {
+        set { CountBubble(count = 42) }
+        composeRule.onNodeWithText("42").assertIsDisplayed()
     }
 
-    composeRule.onNodeWithText("Search games…").assertExists()
-
-    composeRule.onNode(hasSetTextAction()).performTextInput("ca")
-    composeRule.onNodeWithText("Catan").assertIsDisplayed()
-    composeRule.onNodeWithText("Carcassonne").assertIsDisplayed()
-
-    composeRule.onNodeWithText("Catan").performClick()
-    composeRule.runOnIdle { assert(picked?.uid == "g1" && picked?.name == "Catan") }
-  }
-
-  @Test
-  fun locationSearchField_rendersCustomItemContent_withCoordinates_andOnPick() {
-    var q by mutableStateOf("")
-    var picked: com.github.meeplemeet.model.structures.Location? = null
-
-    val loc =
-        com.github.meeplemeet.model.structures.Location(
-            name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668)
-
-    set {
-      LocationSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = listOf(loc),
-          onPick = { picked = it },
-          isLoading = false,
-          modifier = Modifier)
+    @Test
+    fun countBubble_handlesNegativeNumbers() {
+        set { CountBubble(count = -1) }
+        composeRule.onNodeWithText("-1").assertIsDisplayed()
     }
 
-    composeRule.onNodeWithText("Search locations…").assertExists()
-
-    composeRule.onNode(hasSetTextAction()).performTextInput("epfl")
-
-    composeRule.onNodeWithText("EPFL Esplanade").assertIsDisplayed()
-    composeRule.onNodeWithText("46.51910, 6.56680").assertIsDisplayed()
-
-    composeRule.onNodeWithText("EPFL Esplanade").performClick()
-    composeRule.runOnIdle {
-      assert(picked?.name == "EPFL Esplanade")
-      assert(picked?.latitude == 46.5191 && picked?.longitude == 6.5668)
-    }
-  }
-
-  @Test
-  fun searchDropdown_placeholder_and_label_render_and_textEditable() {
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Game",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          placeholder = "Search games…",
-          isLoading = false)
+    @Test
+    fun countBubble_zeroValue() {
+        set { CountBubble(count = 0) }
+        composeRule.onNodeWithText("0").assertIsDisplayed()
     }
 
-    composeRule.onNodeWithText("Game").assertExists()
-    composeRule.onNodeWithText("Search games…").assertExists()
+    /* ---------------- DiscretePillSlider ---------------- */
 
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performTextInput("Brass")
-    tf.assertTextEquals("Brass")
-  }
-
-  /* ---------------- More tests for SearchDropdownField / GameSearchField / LocationSearchField ---------------- */
-
-  @Test
-  fun searchDropdown_showWhenEmptyQuery_true_showsSuggestions_evenWhenQueryEmpty_afterReplacement() {
-    val data = listOf("Azul", "Brass", "Catan")
-    set {
-      var q by remember { mutableStateOf("x") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = data,
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false,
-          showWhenEmptyQuery = true,
-          placeholder = "Type…")
+    @Test
+    fun discretePillSlider_drag_invokesOnValuesChange() {
+        var changed: Pair<Float, Float>? = null
+        set {
+            DiscretePillSlider(
+                range = 0f..10f,
+                values = 2f..6f,
+                steps = 9,
+                onValuesChange = { start, end -> changed = start to end },
+                surroundModifier = Modifier.testTag("sliderHost"),
+                sliderModifier = Modifier.testTag("slider"))
+        }
+        composeRule.onNodeWithTag("slider").assertExists().assertIsDisplayed()
+        composeRule.onNodeWithTag("slider").performTouchInput {
+            down(centerLeft)
+            moveTo(centerRight)
+            up()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) { changed != null }
     }
 
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performTextReplacement("")
-
-    composeRule.onNodeWithText("Azul").assertIsDisplayed()
-    composeRule.onNodeWithText("Brass").assertIsDisplayed()
-    composeRule.onNodeWithText("Catan").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchDropdown_showWhenEmptyQuery_false_hidesSuggestions_whenQueryBecomesEmpty() {
-    val data = listOf("Azul", "Brass", "Catan")
-    set {
-      var q by remember { mutableStateOf("ca") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = data,
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false,
-          showWhenEmptyQuery = false)
+    @Test
+    fun discretePillSlider_withCustomColors_stillEmitsChanges() {
+        var changed = false
+        set {
+            DiscretePillSlider(
+                range = 0f..5f,
+                values = 1f..1f,
+                steps = 4,
+                onValuesChange = { _, _ -> changed = true },
+                surroundModifier = Modifier.testTag("sliderHost2"),
+                sliderModifier = Modifier.testTag("slider2"),
+                sliderColors = SliderDefaults.colors())
+        }
+        composeRule.onNodeWithTag("slider2").performTouchInput {
+            down(center)
+            moveBy(Offset(50f, 0f))
+            up()
+        }
+        composeRule.waitUntil(5_000) { changed }
     }
 
-    composeRule.onNode(hasSetTextAction()).assertExists()
-    composeRule.onNodeWithText("Catan").assertExists()
-
-    composeRule.onNode(hasSetTextAction()).performTextReplacement("")
-    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
-  }
-
-  @Test
-  fun searchDropdown_customEmptyText_isRendered() {
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false,
-          emptyText = "Nothing found",
-          placeholder = "Type…")
+    @Test
+    fun discretePillSlider_extremeDrag_clampsAndOrdersValues() {
+        var last: Pair<Float, Float>? = null
+        set {
+            DiscretePillSlider(
+                range = -10f..10f,
+                values = -5f..5f,
+                steps = 20,
+                onValuesChange = { a, b -> last = a to b },
+                surroundModifier = Modifier.testTag("sliderHost3"),
+                sliderModifier = Modifier.testTag("slider3"))
+        }
+        composeRule.onNodeWithTag("slider3").performTouchInput {
+            down(centerLeft)
+            moveTo(centerRight)
+            up()
+        }
+        composeRule.waitUntil(5_000) { last != null }
+        val (start, end) = last!!
+        assert(start in -10f..10f && end in -10f..10f)
+        assert(start <= end)
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("zz")
-    composeRule.onNodeWithText("Nothing found").assertIsDisplayed()
-  }
+    /* ---------------- ParticipantChip ---------------- */
 
-  @Test
-  fun searchDropdown_spinnerOnly_whenLoading_andNoResults() {
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = true)
-    }
-    composeRule.onNode(hasSetTextAction()).performTextInput("abc")
-    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
-    composeRule.onAllNodesWithText("No results").assertCountEquals(0)
-  }
-
-  @Test
-  fun searchDropdown_manySuggestions_scrolls_andRendersLastItem() {
-    val data = (1..60).map { "Item $it" }
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = data,
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false)
+    @Test
+    fun participantChip_add_click_invokesCallback() {
+        var clicked: Account? = null
+        set {
+            ParticipantChip(
+                account = account("Reiner Knizia"),
+                action = ParticipantAction.Add,
+                onClick = { clicked = it },
+                modifier = Modifier.testTag("chip-add"))
+        }
+        composeRule.onNodeWithText("Reiner Knizia").assertIsDisplayed()
+        composeRule
+            .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-add")))
+            .onFirst()
+            .performClick()
+        composeRule.runOnIdle { assert(clicked?.name == "Reiner Knizia") }
     }
 
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performTextInput("i")
-
-    composeRule.onNodeWithText("Item 1").assertIsDisplayed()
-    repeat(6) { composeRule.onNodeWithText("Item 1").performTouchInput { swipeUp() } }
-
-    composeRule.onNodeWithText("Item 60").assertExists()
-  }
-
-  @Test
-  fun searchDropdown_primaryText_isTakenFromMapper() {
-    data class Thing(val id: Int, val title: String)
-    val items = listOf(Thing(1, "Alpha"), Thing(2, "Beta"))
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Things",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = items,
-          onSuggestionClick = {},
-          getPrimaryText = { it.title })
-    }
-    composeRule.onNode(hasSetTextAction()).performTextInput("a")
-    composeRule.onNodeWithText("Alpha").assertIsDisplayed()
-    composeRule.onNodeWithText("Beta").assertIsDisplayed()
-  }
-
-  @Test
-  fun gameSearchField_loadingState_showsSearchingText() {
-    set {
-      var q by remember { mutableStateOf("") }
-      GameSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = emptyList(),
-          onPick = {},
-          isLoading = true)
-    }
-    composeRule.onNode(hasSetTextAction()).performTextInput("car")
-    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
-  }
-
-  @Test
-  fun gameSearchField_noResults_showsDefaultEmptyText() {
-    set {
-      var q by remember { mutableStateOf("") }
-      GameSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = emptyList(),
-          onPick = {},
-          isLoading = false)
-    }
-    composeRule.onNode(hasSetTextAction()).performTextInput("qwerty")
-    composeRule.onNodeWithText("No results").assertIsDisplayed()
-  }
-
-  @Test
-  fun gameSearchField_doesNotShowDescriptions_onlyNames() {
-    val g =
-        com.github.meeplemeet.model.structures.Game(
-            uid = "g",
-            name = "Everdell",
-            description = "Woodland engine building",
-            imageURL = "",
-            minPlayers = 1,
-            maxPlayers = 4,
-            recommendedPlayers = 3,
-            averagePlayTime = 90,
-            genres = emptyList())
-    set {
-      var q by remember { mutableStateOf("") }
-      GameSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = listOf(g),
-          onPick = {},
-          isLoading = false)
-    }
-    composeRule.onNode(hasSetTextAction()).performTextInput("ever")
-    composeRule.onNodeWithText("Everdell").assertIsDisplayed()
-    composeRule.onAllNodesWithText("Woodland engine building").assertCountEquals(0)
-  }
-
-  @Test
-  fun gameSearchField_clickingOutsideClearsSuggestions_whenQueryEmptiedAfterwards() {
-    val g =
-        com.github.meeplemeet.model.structures.Game(
-            uid = "g1",
-            name = "Azul",
-            description = "",
-            imageURL = "",
-            minPlayers = 2,
-            maxPlayers = 4,
-            recommendedPlayers = 4,
-            averagePlayTime = 30,
-            genres = emptyList())
-    set {
-      var q by remember { mutableStateOf("a") }
-      GameSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = listOf(g),
-          onPick = {},
-          isLoading = false)
-    }
-    composeRule.onNodeWithText("Azul").assertExists()
-    composeRule.onNode(hasSetTextAction()).performTextReplacement("")
-    composeRule.onAllNodesWithText("Azul").assertCountEquals(0)
-  }
-
-  @Test
-  fun locationSearchField_noResults_showsDefaultEmptyText() {
-    set {
-      var q by remember { mutableStateOf("") }
-      LocationSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = emptyList(),
-          onPick = {},
-          isLoading = false)
+    @Test
+    fun participantChip_remove_click_invokesCallback() {
+        var clicked: Account? = null
+        set {
+            ParticipantChip(
+                account = account("Uwe Rosenberg"),
+                action = ParticipantAction.Remove,
+                onClick = { clicked = it },
+                modifier = Modifier.testTag("chip-remove"))
+        }
+        composeRule.onNodeWithText("Uwe Rosenberg").assertIsDisplayed()
+        composeRule
+            .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-remove")))
+            .onFirst()
+            .performClick()
+        composeRule.runOnIdle { assert(clicked?.name == "Uwe Rosenberg") }
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("somewhere")
-    composeRule.onNodeWithText("No results").assertIsDisplayed()
-  }
-
-  @Test
-  fun locationSearchField_multipleLocations_showAll_andPickSecond() {
-    val l1 = Location(name = "Local Game Store", longitude = 46.0, latitude = 6.0)
-    val l2 = Location(name = "Community Center", longitude = .12345, latitude = .98765)
-
-    var picked: Location? = null
-    set {
-      var q by remember { mutableStateOf("") }
-      LocationSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = listOf(l1, l2),
-          onPick = { picked = it },
-          isLoading = false)
+    @Test
+    fun participantChip_longName_truncates_noCrash() {
+        set {
+            ParticipantChip(
+                account = account("A very very very very long board-game club name"),
+                action = ParticipantAction.Add,
+                onClick = {},
+                modifier = Modifier.testTag("chip-long"))
+        }
+        composeRule.onNodeWithTag("chip-long").assertExists().assertIsDisplayed()
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("c")
-    composeRule.onNodeWithText("Local Game Store").assertIsDisplayed()
-    composeRule.onNodeWithText("Community Center").assertIsDisplayed()
-    composeRule.onNodeWithText("Community Center").performClick()
-
-    composeRule.runOnIdle {
-      assert(picked?.name == "Community Center")
-      assert(picked?.latitude == 46.12345 && picked?.longitude == 6.98765)
-    }
-  }
-
-  @Test
-  fun locationSearchField_coordinatesFormatting_isFixedToFiveDecimals_evenForShorterInputs() {
-    val l = Location(name = "Place", longitude = 46.5, latitude = 6.2)
-    set {
-      var q by remember { mutableStateOf("") }
-      LocationSearchField(
-          query = q,
-          onQueryChange = { q = it },
-          results = listOf(l),
-          onPick = {},
-          isLoading = false)
+    @Test
+    fun participantChip_hasExactlyOneClickableChild() {
+        set {
+            ParticipantChip(
+                account = account("Sid Sackson"),
+                action = ParticipantAction.Add,
+                onClick = {},
+                modifier = Modifier.testTag("chip-unique"))
+        }
+        composeRule
+            .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-unique")))
+            .assertCountEquals(1)
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("pl")
-    composeRule.onNodeWithText("46.50000, 6.20000").assertIsDisplayed()
-  }
+    /* ---------------- TwoPerRowGrid ---------------- */
 
-  @Test
-  fun searchDropdown_typing_then_setLoadingTrue_switchesToSpinner_withoutClosing() {
-    set {
-      var q by remember { mutableStateOf("") }
-      var loading by remember { mutableStateOf(false) }
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = {
-            q = it
-            loading = true
-          },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = loading)
+    @Test
+    fun twoPerRowGrid_rendersItems_andIsScrollable() {
+        val items = (1..7).map { "Game $it" }
+        set {
+            TwoPerRowGrid(
+                items = items,
+                key = { it },
+                modifier = Modifier.testTag("grid"),
+                rowsModifier = Modifier) { item, _ ->
+                Text(item)
+            }
+        }
+        items.forEach { composeRule.onNodeWithText(it).assertExists() }
+        composeRule.onNodeWithTag("grid").performScrollToNode(hasText("Game 7"))
+        composeRule.onNodeWithTag("grid").performScrollToNode(hasText("Game 1"))
     }
 
-    composeRule.onNode(hasSetTextAction()).performTextInput("du")
-    composeRule.onNodeWithText("Searching…").assertIsDisplayed()
-  }
+    @Test
+    fun twoPerRowGrid_oddCount_lastRowSpacers_noCrash_andModifierPropagation() {
+        val items = listOf("Catan", "Azul", "Gloomhaven")
+        set {
+            TwoPerRowGrid(
+                items = items,
+                key = { it },
+                modifier = Modifier.testTag("grid2"),
+                rowsModifier = Modifier) { item, mod ->
+                Box(mod.semantics { contentDescription = "cell-$item" }) { Text(item) }
+            }
+        }
 
-  @Test
-  fun searchDropdown_labelAndPlaceholder_render_andPlaceholderDisappearsOnInput() {
-    set {
-      var q by remember { mutableStateOf("") }
-      SearchDropdownField(
-          label = "Label",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList<String>(),
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          placeholder = "Type here…")
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("grid2").assertExists()
+
+        items.forEach {
+            composeRule.onNodeWithContentDescription("cell-$it", useUnmergedTree = true).assertExists()
+            composeRule.onNodeWithText(it).assertExists()
+        }
+
+        composeRule.onNodeWithTag("grid2").performScrollToNode(hasText("Gloomhaven"))
+        composeRule.onNodeWithTag("grid2").performScrollToNode(hasText("Catan"))
     }
 
-    composeRule.onNodeWithText("Label").assertExists()
-    composeRule.onNodeWithText("Type here…").assertExists()
+    @Test
+    fun twoPerRowGrid_evenCount_updatesOnRecomposition() {
+        var data by mutableStateOf(listOf("Azul", "Brass"))
+        set {
+            TwoPerRowGrid(items = data, key = { it }, modifier = Modifier.testTag("grid3")) { item, _ ->
+                Text("Cell $item")
+            }
+        }
+        composeRule.onNodeWithText("Cell Azul").assertExists()
+        composeRule.onNodeWithText("Cell Brass").assertExists()
 
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performTextInput("x")
-    composeRule.onAllNodesWithText("Type here…").assertCountEquals(0)
-  }
+        composeRule.runOnUiThread { data = listOf("Azul", "Brass", "Catan", "Dune") }
+        composeRule.onNodeWithText("Cell Catan").assertExists()
+        composeRule.onNodeWithText("Cell Dune").assertExists()
+    }
+
+    @Test
+    fun twoPerRowGrid_emptyList_showsNothing() {
+        set {
+            TwoPerRowGrid(
+                items = emptyList<String>(), key = { it }, modifier = Modifier.testTag("grid-empty")) {
+                    item,
+                    _ ->
+                Text("X $item")
+            }
+        }
+        composeRule.onNodeWithTag("grid-empty").assertExists()
+        composeRule.onAllNodesWithText("X ").assertCountEquals(0)
+    }
+
+    @Test
+    fun twoPerRowGrid_rowsModifier_applied_toEachRow() {
+        val items = listOf("azul", "brass", "catan", "dune")
+        set {
+            TwoPerRowGrid(
+                items = items,
+                key = { it },
+                modifier = Modifier.testTag("grid-rows-mod"),
+                rowsModifier = Modifier.testTag("row-mod")) { item, _ ->
+                Text(item)
+            }
+        }
+        val rows =
+            composeRule
+                .onAllNodes(hasTestTag("row-mod"), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .size
+        assert(rows >= 2)
+    }
+
+    @Test
+    fun twoPerRowGrid_manyItems_scrollsToBottom_composesLastItem() {
+        val items = (1..50).map { "Game $it" }
+        set {
+            TwoPerRowGrid(items = items, key = { it }, modifier = Modifier.testTag("grid-long")) {
+                    item,
+                    _ ->
+                Text(item)
+            }
+        }
+        composeRule.onNodeWithTag("grid-long").performScrollToNode(hasText("Game 50"))
+        composeRule.onNodeWithText("Game 50").assertExists()
+    }
+
+    @Test
+    fun twoPerRowGrid_reorder_items_recomposes() {
+        var data by mutableStateOf(listOf("Azul", "Brass", "Catan", "Dune", "Everdell"))
+        set {
+            TwoPerRowGrid(items = data, key = { it }, modifier = Modifier.testTag("grid-reorder")) {
+                    item,
+                    _ ->
+                Text(item)
+            }
+        }
+        composeRule.onNodeWithText("Azul").assertExists()
+        composeRule.runOnUiThread { data = listOf("Everdell", "Dune", "Catan", "Brass", "Azul") }
+        listOf("Everdell", "Dune", "Catan", "Brass", "Azul").forEach {
+            composeRule.onNodeWithText(it).assertExists()
+        }
+    }
+
+    /* ---------------- TimePickerField ---------------- */
+
+    @Test
+    fun timePickerField_openDialog_confirm_setsDefault1900() {
+        var time: LocalTime? = null
+        set { TimePickerField(value = time, onValueChange = { time = it }, label = "Game time") }
+        composeRule.onNodeWithContentDescription("Select time").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Game time").assertExists()
+        composeRule.onNodeWithText("OK").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { assert(time == LocalTime.of(19, 0)) }
+    }
+
+    @Test
+    fun timePickerField_cancel_doesNotChangeValue() {
+        var time: LocalTime? = null
+        set { TimePickerField(value = time, onValueChange = { time = it }, label = "Game time") }
+        composeRule.onNodeWithContentDescription("Select time").performClick()
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.runOnIdle { assert(time == null) }
+    }
+
+    @Test
+    fun timePickerField_withInitialValue_showsFormattedText_andConfirmKeepsValue() {
+        val initial = LocalTime.of(8, 30)
+        var time: LocalTime? = initial
+        set {
+            TimePickerField(
+                value = time,
+                onValueChange = { time = it },
+                label = "Pick time",
+                is24Hour = false,
+                displayFormatter = DateTimeFormatter.ofPattern("HH:mm"))
+        }
+        composeRule.onNodeWithText("08:30").assertIsDisplayed()
+
+        composeRule.onNodeWithText("08:30").performClick()
+        composeRule.onAllNodesWithText("OK").assertCountEquals(0)
+
+        composeRule.onNodeWithContentDescription("Select time").performClick()
+        composeRule.onNodeWithText("OK").performClick()
+        composeRule.runOnIdle { assert(time == initial) }
+    }
+
+    @Test
+    fun timePickerField_backDismiss_doesNotChangeValue() {
+        var time: LocalTime? = null
+        set { TimePickerField(value = time, onValueChange = { time = it }, label = "BackDismiss") }
+
+        composeRule.onNodeWithContentDescription("Select time").performClick()
+        composeRule.onNodeWithText("OK").assertIsDisplayed()
+
+        composeRule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assert(time == null) }
+        composeRule.onAllNodesWithText("OK").assertCountEquals(0)
+    }
+
+    @Test
+    fun timePickerField_externalValueChange_updatesDisplayedText() {
+        var time by mutableStateOf<LocalTime?>(null)
+        set { TimePickerField(value = time, onValueChange = { time = it }, label = "External") }
+        composeRule.onAllNodesWithText("12:15").assertCountEquals(0)
+
+        composeRule.runOnUiThread { time = LocalTime.of(12, 15) }
+        composeRule.onNodeWithText("12:15").assertExists()
+    }
+
+    @Test
+    fun timePickerField_clickingFieldItself_doesNotOpenDialog() {
+        set { TimePickerField(value = null, onValueChange = {}, label = "Readonly game time") }
+        composeRule.onNodeWithText("Readonly game time").performClick()
+        composeRule.onAllNodesWithText("OK").assertCountEquals(0)
+    }
+
+    /* ---------------- DatePickerDockedField ---------------- */
+
+    @Test
+    fun datePickerDocked_withInitialValue_showsFormattedText_andToggleDoesNotCrash() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val initial = LocalDate.of(2025, 1, 5)
+
+        set {
+            var value by remember { mutableStateOf<LocalDate?>(initial) }
+            DatePickerDockedField(
+                value = value,
+                onValueChange = { value = it },
+                label = "Game date",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+
+        val icon = composeRule.onNodeWithContentDescription("Select date")
+        icon.performClick()
+        icon.performClick()
+    }
+
+    @Test
+    fun datePickerDocked_externalValueChange_updatesDisplayedText() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val external = LocalDate.of(2024, 12, 24)
+
+        lateinit var holder: MutableState<LocalDate?>
+        set {
+            holder = remember { mutableStateOf<LocalDate?>(null) }
+            DatePickerDockedField(
+                value = holder.value,
+                onValueChange = { holder.value = it },
+                label = "Game date",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        composeRule.runOnUiThread { holder.value = external }
+        composeRule.onNodeWithText(external.format(fmt)).assertIsDisplayed()
+    }
+
+    @Test
+    fun datePickerDocked_openAndCloseWithoutSelecting_doesNotChangeValue() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+        lateinit var picked: MutableState<LocalDate?>
+        set {
+            picked = remember { mutableStateOf<LocalDate?>(null) }
+            DatePickerDockedField(
+                value = picked.value,
+                onValueChange = { picked.value = it },
+                label = "Game date",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        val icon = composeRule.onNodeWithContentDescription("Select date")
+        icon.performClick()
+        icon.performClick()
+
+        composeRule.runOnIdle { assert(picked.value == null) }
+    }
+
+    @Test
+    fun datePickerDocked_withInitialValue_showsFormattedText_andToggleOpenClose() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val initial = LocalDate.of(2025, 1, 5)
+
+        lateinit var picked: MutableState<LocalDate?>
+        set {
+            picked = remember { mutableStateOf<LocalDate?>(initial) }
+            DatePickerDockedField(
+                value = picked.value,
+                onValueChange = { picked.value = it },
+                label = "Game date",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+
+        val icon = composeRule.onNodeWithContentDescription("Select date")
+        icon.performClick()
+        icon.performClick()
+        composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+        composeRule.runOnIdle { assert(picked.value == initial) }
+    }
+
+    @Test
+    fun datePickerDocked_labelVisible_and_multipleToggles_noSelection_noChange() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        lateinit var picked: MutableState<LocalDate?>
+
+        set {
+            picked = remember { mutableStateOf<LocalDate?>(null) }
+            DatePickerDockedField(
+                value = picked.value,
+                onValueChange = { picked.value = it },
+                label = "Game night",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        composeRule.onNodeWithText("Game night").assertIsDisplayed()
+
+        val icon = composeRule.onNodeWithContentDescription("Select date")
+        icon.performClick()
+        icon.performClick()
+        icon.performClick()
+        icon.performClick()
+        composeRule.runOnIdle { assert(picked.value == null) }
+    }
+
+    @Test
+    fun datePickerDocked_initialValue_persistsAcrossToggles() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val initial = LocalDate.of(2026, 6, 9)
+        lateinit var picked: MutableState<LocalDate?>
+
+        set {
+            picked = remember { mutableStateOf<LocalDate?>(initial) }
+            DatePickerDockedField(
+                value = picked.value,
+                onValueChange = { picked.value = it },
+                label = "Game date",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+        val icon = composeRule.onNodeWithContentDescription("Select date")
+        icon.performClick()
+        icon.performClick()
+        composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+        composeRule.runOnIdle { assert(picked.value == initial) }
+    }
+
+    @Test
+    fun datePickerDocked_externalValueChange_updatesFieldText_again() {
+        val zone = ZoneId.of("UTC")
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        lateinit var holder: MutableState<LocalDate?>
+
+        set {
+            holder = remember { mutableStateOf<LocalDate?>(null) }
+            DatePickerDockedField(
+                value = holder.value,
+                onValueChange = { holder.value = it },
+                label = "Game date",
+                displayFormatter = fmt,
+                zoneId = zone)
+        }
+
+        val first = LocalDate.of(2024, 12, 24)
+        val second = LocalDate.of(2025, 1, 1)
+
+        composeRule.runOnUiThread { holder.value = first }
+        composeRule.onNodeWithText(first.format(fmt)).assertIsDisplayed()
+
+        composeRule.runOnUiThread { holder.value = second }
+        composeRule.onNodeWithText(second.format(fmt)).assertIsDisplayed()
+    }
+
+    /* ---------------- SearchDropdownField / GameSearchField / LocationSearchField ---------------- */
+
+    @Test
+    fun searchDropdown_showsLoadingState_whenIsLoadingTrue_afterTyping() {
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = emptyList<String>(),
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = true,
+                placeholder = "Type…")
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("ca")
+
+        waitForText("Searching…")
+        composeRule.onNodeWithText("Searching…").assertExists()
+    }
+
+    @Test
+    fun searchDropdown_showsEmptyText_whenNoResultsAndNotLoading() {
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = emptyList<String>(),
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = false,
+                placeholder = "Type…")
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("xyz")
+
+        waitForText("No results")
+        composeRule.onNodeWithText("No results").assertExists()
+    }
+
+    @Test
+    fun searchDropdown_clickingSuggestion_callsCallback_andClosesPopup() {
+        var picked: String? = null
+        val suggestions = listOf("Catan", "Carcassonne", "Camel Up")
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = suggestions,
+                onSuggestionClick = { picked = it },
+                getPrimaryText = { it },
+                isLoading = false,
+                placeholder = "Type…")
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("ca")
+
+        waitForText("Catan")
+        composeRule.onNodeWithText("Catan").assertExists().performClick()
+
+        composeRule.runOnIdle { assert(picked == "Catan") }
+
+        waitForGone("Catan")
+        composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+    }
+
+    @Test
+    fun searchDropdown_trailingClearButton_clearsQuery_andHidesPopup() {
+        val suggestions = listOf("Catan")
+        set {
+            var q by remember { mutableStateOf("C") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = suggestions,
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = false,
+                placeholder = "Type…")
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("a")
+
+        composeRule.waitUntil(5_000) {
+            composeRule
+                .onAllNodesWithContentDescription("Clear", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        composeRule
+            .onNodeWithContentDescription("Clear", useUnmergedTree = true)
+            .assertExists()
+            .performClick()
+
+        waitForGone("Catan")
+        composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+    }
+
+    @Test
+    fun gameSearchField_typingShowsGameSuggestions_andOnPickReturnsGame() {
+        var q by mutableStateOf("")
+        var picked: com.github.meeplemeet.model.structures.Game? = null
+
+        val g1 =
+            com.github.meeplemeet.model.structures.Game(
+                uid = "g1",
+                name = "Catan",
+                description = "Trade, build, settle.",
+                imageURL = "",
+                minPlayers = 3,
+                maxPlayers = 4,
+                recommendedPlayers = 4,
+                averagePlayTime = 60,
+                genres = emptyList())
+        val g2 =
+            com.github.meeplemeet.model.structures.Game(
+                uid = "g2",
+                name = "Carcassonne",
+                description = "Tile-laying.",
+                imageURL = "",
+                minPlayers = 2,
+                maxPlayers = 5,
+                recommendedPlayers = 4,
+                averagePlayTime = 45,
+                genres = emptyList())
+
+        set {
+            GameSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = listOf(g1, g2),
+                onPick = { picked = it },
+                isLoading = false,
+                modifier = Modifier)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("ca")
+
+        waitForText("Catan")
+        composeRule.onNodeWithText("Catan").assertExists()
+
+        waitForText("Carcassonne")
+        composeRule.onNodeWithText("Carcassonne").assertExists()
+
+        composeRule.onNodeWithText("Catan").performClick()
+        composeRule.runOnIdle { assert(picked?.uid == "g1" && picked?.name == "Catan") }
+    }
+
+    @Test
+    fun locationSearchField_rendersCustomItemContent_withCoordinates_andOnPick() {
+        var q by mutableStateOf("")
+        var picked: com.github.meeplemeet.model.structures.Location? = null
+
+        val loc =
+            com.github.meeplemeet.model.structures.Location(
+                name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668)
+
+        set {
+            LocationSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = listOf(loc),
+                onPick = { picked = it },
+                isLoading = false,
+                modifier = Modifier)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("epfl")
+
+        waitForText("EPFL Esplanade")
+        composeRule.onNodeWithText("EPFL Esplanade").assertExists()
+
+        val coordsDot = "46.51910, 6.56680"
+        val coordsComma = "46,51910, 6,56680"
+        composeRule.waitUntil(5_000) {
+            val nodesDot =
+                composeRule.onAllNodesWithText(coordsDot).fetchSemanticsNodes().isNotEmpty()
+            val nodesComma =
+                composeRule.onAllNodesWithText(coordsComma).fetchSemanticsNodes().isNotEmpty()
+            nodesDot || nodesComma
+        }
+        if (composeRule.onAllNodesWithText(coordsDot).fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithText(coordsDot).assertExists()
+        } else {
+            composeRule.onNodeWithText(coordsComma).assertExists()
+        }
+
+        composeRule.onNodeWithText("EPFL Esplanade").performClick()
+        composeRule.runOnIdle {
+            assert(picked?.name == "EPFL Esplanade")
+            assert(picked?.latitude == 46.5191 && picked?.longitude == 6.5668)
+        }
+    }
+
+
+    @Test
+    fun gameSearchField_doesNotShowDescriptions_onlyNames() {
+        val g =
+            com.github.meeplemeet.model.structures.Game(
+                uid = "g",
+                name = "Everdell",
+                description = "Woodland engine building",
+                imageURL = "",
+                minPlayers = 1,
+                maxPlayers = 4,
+                recommendedPlayers = 3,
+                averagePlayTime = 90,
+                genres = emptyList())
+        set {
+            var q by remember { mutableStateOf("") }
+            GameSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = listOf(g),
+                onPick = {},
+                isLoading = false)
+        }
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("ever")
+
+        waitForText("Everdell")
+        composeRule.onNodeWithText("Everdell").assertExists()
+        composeRule.onAllNodesWithText("Woodland engine building").assertCountEquals(0)
+    }
+
+    @Test
+    fun locationSearchField_noResults_showsDefaultEmptyText() {
+        set {
+            var q by remember { mutableStateOf("") }
+            LocationSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = emptyList(),
+                onPick = {},
+                isLoading = false)
+        }
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("somewhere")
+
+        waitForText("No results")
+        composeRule.onNodeWithText("No results").assertExists()
+    }
+
+    @Test
+    fun locationSearchField_multipleLocations_showAll_andPickSecond() {
+        val l1 =
+            com.github.meeplemeet.model.structures.Location(
+                name = "Local Game Store", latitude = 46.0, longitude = 6.0)
+        val l2 =
+            com.github.meeplemeet.model.structures.Location(
+                name = "Community Center", latitude = 46.12345, longitude = 6.98765)
+
+        var picked: com.github.meeplemeet.model.structures.Location? = null
+        set {
+            var q by remember { mutableStateOf("") }
+            LocationSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = listOf(l1, l2),
+                onPick = { picked = it },
+                isLoading = false)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("c")
+
+        waitForText("Local Game Store")
+        composeRule.onNodeWithText("Local Game Store").assertExists()
+
+        waitForText("Community Center")
+        composeRule.onNodeWithText("Community Center").assertExists()
+
+        composeRule.onNodeWithText("Community Center").performClick()
+        composeRule.runOnIdle {
+            assert(picked?.name == "Community Center")
+            assert(picked?.latitude == 46.12345 && picked?.longitude == 6.98765)
+        }
+    }
+
+    @Test
+    fun locationSearchField_coordinatesFormatting_isFixedToFiveDecimals_evenForShorterInputs() {
+        val l =
+            com.github.meeplemeet.model.structures.Location(
+                name = "Place", latitude = 46.5, longitude = 6.2)
+        set {
+            var q by remember { mutableStateOf("") }
+            LocationSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = listOf(l),
+                onPick = {},
+                isLoading = false)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("pl")
+
+        val dot = "46.50000, 6.20000"
+        val comma = "46,50000, 6,20000"
+        composeRule.waitUntil(5_000) {
+            val hasDot = composeRule.onAllNodesWithText(dot).fetchSemanticsNodes().isNotEmpty()
+            val hasComma = composeRule.onAllNodesWithText(comma).fetchSemanticsNodes().isNotEmpty()
+            hasDot || hasComma
+        }
+        if (composeRule.onAllNodesWithText(dot).fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithText(dot).assertExists()
+        } else {
+            composeRule.onNodeWithText(comma).assertExists()
+        }
+    }
+
+    @Test
+    fun searchDropdown_typing_then_setLoadingTrue_switchesToSpinner_withoutClosing() {
+        set {
+            var q by remember { mutableStateOf("") }
+            var loading by remember { mutableStateOf(false) }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = {
+                    q = it
+                    loading = true
+                },
+                suggestions = emptyList<String>(),
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = loading)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("du")
+
+        waitForText("Searching…")
+        composeRule.onNodeWithText("Searching…").assertExists()
+    }
+
+    @Test
+    fun searchDropdown_showWhenEmptyQuery_true_showsSuggestions_evenWhenQueryEmpty_afterReplacement() {
+        val data = listOf("Azul", "Brass", "Catan")
+        set {
+            var q by remember { mutableStateOf("x") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = data,
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = false,
+                showWhenEmptyQuery = true,
+                placeholder = "Type…")
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextReplacement("")
+
+        waitForText("Azul")
+        composeRule.onNodeWithText("Azul").assertExists()
+        composeRule.onNodeWithText("Brass").assertExists()
+        composeRule.onNodeWithText("Catan").assertExists()
+    }
+
+    @Test
+    fun searchDropdown_spinnerOnly_whenLoading_andNoResults() {
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = emptyList<String>(),
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = true)
+        }
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("abc")
+
+        waitForText("Searching…")
+        composeRule.onNodeWithText("Searching…").assertExists()
+        composeRule.onAllNodesWithText("No results").assertCountEquals(0)
+    }
+
+    @Test
+    fun searchDropdown_placeholder_and_label_render_andPlaceholderDisappearsOnInput() {
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Label",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = emptyList<String>(),
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                placeholder = "Type here…")
+        }
+
+        composeRule.onNodeWithText("Label").assertExists()
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        waitForText("Type here…", unmerged = true)
+        composeRule.onNodeWithText("Type here…", useUnmergedTree = true).assertExists()
+
+        tf.performTextInput("x")
+        waitForGone("Type here…")
+        composeRule.onAllNodesWithText("Type here…").assertCountEquals(0)
+    }
+
+    @Test
+    fun gameSearchField_clickingOutsideClearsSuggestions_whenQueryEmptiedAfterwards() {
+        val g =
+            com.github.meeplemeet.model.structures.Game(
+                uid = "g1",
+                name = "Azul",
+                description = "",
+                imageURL = "",
+                minPlayers = 2,
+                maxPlayers = 4,
+                recommendedPlayers = 4,
+                averagePlayTime = 30,
+                genres = emptyList())
+
+        set {
+            var q by remember { mutableStateOf("") }
+            GameSearchField(
+                query = q,
+                onQueryChange = { q = it },
+                results = listOf(g),
+                onPick = {},
+                isLoading = false)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("a")
+
+        waitForText("Azul")
+        composeRule.onNodeWithText("Azul").assertExists()
+
+        tf.performTextReplacement("")
+        waitForGone("Azul")
+        composeRule.onAllNodesWithText("Azul").assertCountEquals(0)
+    }
+
+    @Test
+    fun searchDropdown_showWhenEmptyQuery_false_hidesSuggestions_whenQueryBecomesEmpty() {
+        val data = listOf("Azul", "Brass", "Catan")
+
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Search",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = data,
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                isLoading = false,
+                showWhenEmptyQuery = false)
+        }
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        tf.performTextInput("ca")
+
+        waitForText("Catan")
+        composeRule.onNodeWithText("Catan").assertExists()
+
+        tf.performTextReplacement("")
+        waitForGone("Catan")
+        composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+    }
+
+    @Test
+    fun searchDropdown_placeholder_and_label_render_and_textEditable() {
+        set {
+            var q by remember { mutableStateOf("") }
+            SearchDropdownField(
+                label = "Game",
+                query = q,
+                onQueryChange = { q = it },
+                suggestions = emptyList<String>(),
+                onSuggestionClick = {},
+                getPrimaryText = { it },
+                placeholder = "Search games…")
+        }
+
+        composeRule.onNodeWithText("Game").assertExists()
+
+        val tf = composeRule.onNode(hasSetTextAction())
+        tf.performClick()
+        waitForText("Search games…", unmerged = true)
+        composeRule.onNodeWithText("Search games…", useUnmergedTree = true).assertExists()
+
+        tf.performTextInput("Brass")
+        composeRule.waitForIdle()
+
+        tf.assert(hasText("Brass", substring = false, ignoreCase = false))
+    }
 }
