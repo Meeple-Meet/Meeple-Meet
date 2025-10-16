@@ -1,3 +1,4 @@
+/** Sections of this file were generated using ChatGPT */
 package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
@@ -114,5 +115,28 @@ class DiscussionScreenIntegrationTest {
 
     composeTestRule.onNodeWithContentDescription("Back").performClick()
     verify { mockNavigation.goBack() }
+  }
+  /** Tests that DiscussionScreen autoscrolls to the latest message when opened */
+  @Test
+  fun discussionScreen_autoscrolls_to_latest_message() = runTest {
+    val messages = (1..50).map { i -> Message("user${i % 2 + 1}", "Message $i", Timestamp(Date())) }
+    val discussionWithManyMessages = safeDiscussion.copy(messages = messages)
+
+    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
+    discussionFlowsField.isAccessible = true
+    @Suppress("UNCHECKED_CAST")
+    val map =
+        discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
+    map["disc1"]?.value = discussionWithManyMessages
+
+    composeTestRule.setContent {
+      DiscussionScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          currentUser = currentUser,
+          onBack = { mockNavigation.goBack() })
+    }
+
+    composeTestRule.onNodeWithText("Message 50").assertIsDisplayed()
   }
 }
