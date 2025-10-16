@@ -85,8 +85,8 @@ fun CreateAccountScreen(
             textStyle = TextStyle(color = AppColors.textIcons),
             colors =
                 TextFieldDefaults.colors(
-                    focusedIndicatorColor = AppColors.textIcons, // border when selected
-                    unfocusedIndicatorColor = AppColors.textIconsFade, // border when deselected
+                    focusedIndicatorColor = AppColors.textIcons,
+                    unfocusedIndicatorColor = AppColors.textIconsFade,
                     cursorColor = AppColors.textIcons,
                     focusedLabelColor = AppColors.textIcons,
                     unfocusedLabelColor = AppColors.textIconsFade,
@@ -115,8 +115,8 @@ fun CreateAccountScreen(
             singleLine = true,
             colors =
                 TextFieldDefaults.colors(
-                    focusedIndicatorColor = AppColors.textIcons, // border when selected
-                    unfocusedIndicatorColor = AppColors.textIconsFade, // border when deselected
+                    focusedIndicatorColor = AppColors.textIcons,
+                    unfocusedIndicatorColor = AppColors.textIconsFade,
                     cursorColor = AppColors.textIcons,
                     focusedLabelColor = AppColors.textIcons,
                     unfocusedLabelColor = AppColors.textIconsFade,

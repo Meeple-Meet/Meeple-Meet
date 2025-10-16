@@ -142,7 +142,7 @@ class CreateAccountScreenTest {
     val updated = handlesRepo.getAccount(me.uid)
     assert(updated.handle == "uniqueHandle")
     assert(onCreateCalled)
-    Thread.sleep(5000) // For observing the result during test runs
+    Thread.sleep(5000)
   }
 
   /** Verifies that empty handle input does not create a handle or call onCreate. */
