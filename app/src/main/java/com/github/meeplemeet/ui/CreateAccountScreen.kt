@@ -62,21 +62,25 @@ fun CreateAccountScreen(
     }
   }
 
+  /** Root layout column for aligning all UI components vertically. */
   Column(
       modifier = modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center) {
         Spacer(modifier = Modifier.height(24.dp))
 
+        /** Placeholder image box displayed at the top of the screen. */
         Box(modifier = Modifier.size(120.dp).background(Color(0xFFe0e0e0)))
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        /** Title text shown below the image placeholder. */
         Text(
             "You're almost there!",
             style = TextStyle(fontSize = 36.sp, color = AppColors.neutral),
             modifier = Modifier.padding(bottom = 16.dp))
 
+        /** Input field for entering the user's unique handle. */
         OutlinedTextField(
             value = handle,
             onValueChange = { handle = it },
@@ -95,6 +99,7 @@ fun CreateAccountScreen(
             isError = showErrors && errorMessage.isNotBlank(),
             modifier = Modifier.fillMaxWidth())
 
+        /** Error message displayed if handle validation fails. */
         if (showErrors && errorMessage.isNotBlank()) {
           Text(
               text = errorMessage,
@@ -105,6 +110,7 @@ fun CreateAccountScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        /** Input field for entering the user's display username. */
         OutlinedTextField(
             value = username,
             onValueChange = {
@@ -126,6 +132,7 @@ fun CreateAccountScreen(
             textStyle = TextStyle(color = AppColors.textIcons),
             modifier = Modifier.fillMaxWidth())
 
+        /** Error message displayed if username validation fails. */
         if (usernameError != null) {
           Text(
               text = usernameError!!,
@@ -136,6 +143,7 @@ fun CreateAccountScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        /** Submit button to create the account once inputs are valid. */
         Button(
             enabled = handle.isNotBlank() && username.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
