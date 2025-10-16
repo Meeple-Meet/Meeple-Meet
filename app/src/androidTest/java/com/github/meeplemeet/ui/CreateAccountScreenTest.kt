@@ -15,6 +15,7 @@ import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.After
@@ -33,7 +34,7 @@ import org.junit.runner.RunWith
  * - Successful handle creation triggers [onCreate] callback.
  */
 @RunWith(AndroidJUnit4::class)
-class CreateAccountScreenTest {
+class CreateAccountScreenTest: FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
