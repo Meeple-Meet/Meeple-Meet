@@ -22,8 +22,8 @@ object NavigationTestTags {
   const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
   const val SCREEN_TITLE = "ScreenTitle"
   const val GO_BACK_BUTTON = "GoBackButton"
-  const val SESSIONS_TAB = "OverviewTab"
-  const val DISCUSSIONS_TAB = "MapTab"
+  const val SESSIONS_TAB = "SessionsTab"
+  const val DISCUSSIONS_TAB = "DiscussionsTab"
   const val DISCOVER_TAB = "DiscoverTab"
   const val PROFILE_TAB = "ProfileTab"
 }
@@ -216,12 +216,31 @@ open class NavigationActions(private val navController: NavHostController) {
       return
     }
     navController.navigate(screen.route) {
+      // Screens available through the bottom navigation bar are top-level destinations.
+      // When navigating to one of these, we want to clear the back stack to avoid building
+      // up a large stack of destinations as the user switches between them.
       if (screen.isInBottomBar) {
         launchSingleTop = true
         popUpTo(screen.route) { inclusive = true }
       }
 
       restoreState = true
+    }
+  }
+
+  /**
+   * Navigates out of the authentication graph and enters the discussions overview screen.
+   *
+   * This function clears the entire back stack to ensure the user cannot navigate back into the
+   * authentication flow (SignIn/SignUp). It should be called once authentication is successfully
+   * completed.
+   *
+   * Typical usage: called after a successful login or account creation.
+   */
+  open fun navigateOutOfAuthGraph() {
+    navController.navigate(MeepleMeetScreen.DiscussionsOverview.route) {
+      popUpTo(0) { inclusive = true } // Empty stack
+      launchSingleTop = true
     }
   }
 

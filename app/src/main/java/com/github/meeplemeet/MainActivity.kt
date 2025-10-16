@@ -80,23 +80,13 @@ fun MeepleMeetApp(
     FirebaseProvider.auth.currentUser?.let { firestoreVM.getCurrentAccount() }
   }
 
-  /** Authentification gate */
+  /** Authentication gate: navigates out of auth graph when an account becomes available */
   LaunchedEffect(firestoreVMAccount) {
     currentAccount = firestoreVMAccount
-    currentAccount?.let {
-      navController.navigate(MeepleMeetScreen.DiscussionsOverview.route) {
-        popUpTo(0) { inclusive = true } // Empty stack
-        launchSingleTop = true
-      }
-    }
+    currentAccount?.let { navigationActions.navigateOutOfAuthGraph() }
   }
   LaunchedEffect(currentAccount) {
-    currentAccount?.let {
-      navController.navigate(MeepleMeetScreen.DiscussionsOverview.route) {
-        popUpTo(0) { inclusive = true } // Empty stack
-        launchSingleTop = true
-      }
-    }
+    currentAccount?.let { navigationActions.navigateOutOfAuthGraph() }
   }
 
   NavHost(navController = navController, startDestination = startDestination) {
@@ -203,7 +193,7 @@ fun MeepleMeetApp(
                 navigation = navigationActions,
                 authViewModel = authVM,
                 firestoreVM,
-                onSignOut = { navigationActions.navigateTo(MeepleMeetScreen.SignUpScreen) })
+                onSignOut = { navigationActions.navigateTo(MeepleMeetScreen.SignInScreen) })
           }
         }
   }

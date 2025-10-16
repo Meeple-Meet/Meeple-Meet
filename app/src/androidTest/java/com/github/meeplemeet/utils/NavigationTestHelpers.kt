@@ -142,7 +142,7 @@ object NavigationTestHelpers {
   fun ComposeTestRule.navigateToDiscussionScreen(discussionName: String) {
     waitForIdle()
 
-    val tag = "Discussion/$discussionName"
+    val tag = "Discussion/$discussionName" // TODO better test tag
     val foundInMergedTree =
         try {
           onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()

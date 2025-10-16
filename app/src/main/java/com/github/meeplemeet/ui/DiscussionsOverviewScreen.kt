@@ -156,9 +156,7 @@ fun DiscussionsOverviewScreen(
                       discussionName = discussionName,
                       lastMsg = msgText,
                       unreadMsgCount = preview.unreadCount,
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .testTag("Discussion/$discussionName"), // TODO better test tag
+                      modifier = Modifier.fillMaxWidth().testTag("Discussion/$discussionName"),
                       onClick = { discussion?.let { onSelectDiscussion(it) } })
                 }
               }
