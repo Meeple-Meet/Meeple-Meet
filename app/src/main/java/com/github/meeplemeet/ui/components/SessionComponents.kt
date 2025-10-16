@@ -71,10 +71,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.ui.SessionTestTags
-import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.ui.SessionTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
@@ -184,6 +184,7 @@ fun IconTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    editable: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     textStyle: TextStyle = MaterialTheme.typography.bodySmall,
@@ -193,6 +194,7 @@ fun IconTextField(
       value = value,
       onValueChange = onValueChange,
       modifier = modifier,
+      readOnly = editable,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
@@ -233,6 +235,7 @@ fun DiscretePillSlider(
     range: ClosedFloatingPointRange<Float>,
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
+    editable: Boolean = false,
     onValuesChange: (Float, Float) -> Unit,
     surroundModifier: Modifier = Modifier,
     sliderModifier: Modifier = Modifier,
@@ -246,7 +249,8 @@ fun DiscretePillSlider(
     Box(modifier = sliderModifier) {
       RangeSlider(
           value = values,
-          onValueChange = { onValuesChange(it.start, it.endInclusive) },
+          enabled = editable,
+          onValueChange = { if (editable) onValuesChange(it.start, it.endInclusive) },
           valueRange = range,
           steps = steps,
           colors = sliderColors)
@@ -352,6 +356,7 @@ fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
     label: String = "Date",
+    editable: Boolean = true, // Marked as true to make Marco's tests pass
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
@@ -364,11 +369,13 @@ fun DatePickerDockedField(
       placeholder = label,
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
       trailingIcon = {
-        TextButton(
-            onClick = { showDialogDate = true },
-            modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
-              Text("Pick")
-            }
+        if (editable) {
+          TextButton(
+              onClick = { showDialogDate = true },
+              modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+                Text("Pick")
+              }
+        }
       },
       modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
