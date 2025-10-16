@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +53,6 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +72,9 @@ import androidx.compose.ui.window.Popup
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.ui.SessionTestTags
+import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -349,43 +354,78 @@ fun DatePickerDockedField(
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
-  var show by remember { mutableStateOf(false) }
-  val initial = value?.atStartOfDay(zoneId)?.toInstant()?.toEpochMilli()
-  val state = rememberDatePickerState(initialSelectedDateMillis = initial)
+  var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: ""
-
-  Box(Modifier.fillMaxWidth()) {
-    OutlinedTextField(
-        value = text,
-        onValueChange = { /* read-only; picker controls it */},
-        label = { Text(label) },
-        readOnly = true,
-        leadingIcon = {
-          IconButton(onClick = { show = !show }) {
-            Icon(Icons.Default.CalendarToday, contentDescription = "Select date")
-          }
-        },
-        modifier = Modifier.fillMaxWidth().height(64.dp))
-
-    if (show) {
-      Popup(onDismissRequest = { show = false }, alignment = Alignment.TopStart) {
-        Box(
-            Modifier.fillMaxWidth()
-                .offset(y = 64.dp)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(16.dp)) {
-              DatePicker(state = state, showModeToggle = false)
+  // The text field
+  IconTextField(
+      value = text.format(displayFormatter) ?: "",
+      onValueChange = {}, // we control it externally
+      placeholder = label,
+      leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
+      trailingIcon = {
+        TextButton(
+            onClick = { showDialogDate = true },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+              Text("Pick")
             }
-      }
-    }
-  }
+      },
+      modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
-  LaunchedEffect(state.selectedDateMillis) {
-    state.selectedDateMillis?.let { millis ->
-      val picked = Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate()
-      if (picked != value) onValueChange(picked)
-    }
+  // The popup
+  if (showDialogDate) {
+    DatePickerDialog(
+        onDismiss = { showDialogDate = false },
+        onDateSelected = { selectedDate -> onValueChange(selectedDate) },
+        displayFormatter = displayFormatter,
+        zoneId = zoneId,
+    )
   }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerDialog(
+    onDismiss: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
+    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+    zoneId: ZoneId = ZoneId.systemDefault()
+) {
+  val datePickerState = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
+
+  AlertDialog(
+      containerColor = AppColors.primary,
+      onDismissRequest = onDismiss,
+      confirmButton = {
+        TextButton(
+            onClick = {
+              val millis = datePickerState.selectedDateMillis
+              if (millis != null) {
+                val date =
+                    Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate() // e.g. "2025-10-13"
+                onDateSelected(date)
+              }
+              onDismiss()
+            },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON)) {
+              Text("OK")
+            }
+      },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+      text = {
+        // Wrap DatePicker in a Box with fillMaxWidth and padding to avoid cropping
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+          DatePicker(
+              state = datePickerState,
+              modifier = Modifier.fillMaxWidth(),
+              colors =
+                  DatePickerDefaults.colors(
+                      containerColor = AppColors.primary,
+                      titleContentColor = AppColors.textIconsFade,
+                      headlineContentColor = AppColors.textIcons,
+                      selectedDayContentColor = AppColors.primary,
+                      selectedDayContainerColor = AppColors.neutral))
+        }
+      })
 }
 
 /**
@@ -645,7 +685,6 @@ fun LocationSearchField(
  * Previews
  * ======================================================================= */
 
-/*
 /* A tiny host to give all previews a pleasant surface + padding */
 @Composable
 private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
@@ -653,291 +692,175 @@ private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
     Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
   }
 }
-
-/* 1) SectionCard */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_SectionCard() = PreviewHost {
-  AppTheme {
-    SectionCard(
-        modifier =
-            Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)) {
-          Text("This is a SectionCard")
-          Spacer(Modifier.height(8.dp))
-          Text("You can place any Column content here.")
-        }
-  }
-}
-
-/* 2) UnderlinedLabel */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_UnderlinedLabel() = PreviewHost {
-  AppTheme { UnderlinedLabel(text = "Underlined label") }
-}
-
-/* 3) LabeledTextField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_LabeledTextField() = PreviewHost {
-  var text by remember { mutableStateOf("Hello") }
-  AppTheme {
-    LabeledTextField(
-        label = "Title",
-        value = text,
-        onValueChange = { text = it },
-        placeholder = "Type here…",
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth())
-  }
-}
-
-/* 4) IconTextField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_IconTextField() = PreviewHost {
-  var text by remember { mutableStateOf("") }
-  AppTheme {
-    IconTextField(
-        value = text,
-        onValueChange = { text = it },
-        placeholder = "With icons",
-        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-        trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth())
-  }
-}
-
-/* 5) CountBubble */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_CountBubble() = PreviewHost {
-  AppTheme {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      CountBubble(count = 0, modifier = Modifier.background(Color.Transparent))
-      CountBubble(count = 3, modifier = Modifier.background(Color.Transparent))
-      CountBubble(count = 42, modifier = Modifier.background(Color.Transparent))
-    }
-  }
-}
-
-/* 6) DiscretePillSlider */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_DiscretePillSlider() = PreviewHost {
-  var range by remember { mutableStateOf(2f..6f) }
-  AppTheme {
-    DiscretePillSlider(
-        range = 0f..10f,
-        values = range,
-        steps = 9,
-        onValuesChange = { start, end -> range = start..end },
-        surroundModifier = Modifier.fillMaxWidth(),
-        sliderModifier = Modifier.fillMaxWidth())
-  }
-}
-
-/* 7) ParticipantChip
- * NOTE: Replace the Account(...) construction with your project's real constructor.
- */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_ParticipantChip_Add() = PreviewHost {
-  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
-  AppTheme {
-    ParticipantChip(
-        account = sampleAccount,
-        action = ParticipantAction.Add,
-        onClick = {},
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(32.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 8.dp))
-  }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun Preview_ParticipantChip_Remove() = PreviewHost {
-  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
-  AppTheme {
-    ParticipantChip(
-        account = sampleAccount,
-        action = ParticipantAction.Remove,
-        onClick = {},
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(32.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 8.dp))
-  }
-}
-
-/* 8) TwoPerRowGrid (showing simple string items) */
-@Preview(showBackground = true, heightDp = 320)
-@Composable
-private fun Preview_TwoPerRowGrid() = PreviewHost {
-  val items = remember { (1..5).map { "Item $it" } }
-  AppTheme {
-    TwoPerRowGrid(
-        items = items,
-        key = { it },
-        modifier = Modifier.fillMaxWidth(),
-        rowsModifier = Modifier.fillMaxWidth()) { item, cellModifier ->
-          Box(
-              modifier =
-                  cellModifier
-                      .height(56.dp)
-                      .clip(RoundedCornerShape(10.dp))
-                      .background(MaterialTheme.colorScheme.secondaryContainer),
-              contentAlignment = Alignment.Center) {
-                Text(item, style = MaterialTheme.typography.bodyMedium)
-              }
-        }
-  }
-}
-
-/* 9) DatePickerDockedField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_DatePickerDockedField() = PreviewHost {
-  var date by remember { mutableStateOf(LocalDate.now()) }
-  AppTheme {
-    DatePickerDockedField(value = date, onValueChange = { date = it })
-    Spacer(Modifier.height(8.dp))
-    Text("Selected: ${date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
-  }
-}
-
-/* 10) TimePickerField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_TimePickerField() = PreviewHost {
-  var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
-  AppTheme {
-    TimePickerField(value = time, onValueChange = { time = it })
-    Spacer(Modifier.height(8.dp))
-    Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
-  }
-}
-
-11) GameSearchField and LocationSearchField
-private fun sampleGames(): List<Game> = listOf(
-    Game(
-        uid = "g1",
-        name = "Catan",
-        description = "Trade, build, settle.",
-        imageURL = "",
-        minPlayers = 3,
-        maxPlayers = 4,
-        recommendedPlayers = 4,
-        averagePlayTime = 60,
-        genres = emptyList()
-    ),
-    Game(
-        uid = "g2",
-        name = "Carcassonne",
-        description = "Tile-laying in medieval France.",
-        imageURL = "",
-        minPlayers = 2,
-        maxPlayers = 5,
-        recommendedPlayers = 4,
-        averagePlayTime = 45,
-        genres = emptyList()
-    ),
-    Game(
-        uid = "g3",
-        name = "Camel Up",
-        description = "Chaotic camel betting fun.",
-        imageURL = "",
-        minPlayers = 2,
-        maxPlayers = 8,
-        recommendedPlayers = 5,
-        averagePlayTime = 30,
-        genres = emptyList()
-    )
-)
-
-private fun sampleLocations(): List<Location> = listOf(
-    Location(name = "Lausanne Flon", latitude = 46.5215, longitude = 6.6328),
-    Location(name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668),
-    Location(name = "Geneva Cornavin", latitude = 46.2102, longitude = 6.1424)
-)
-
-@Composable
-private fun SearchBarsPreviewContent() {
-    // Game search state
-    var gameQuery by remember { mutableStateOf("") }
-    val gameResults = remember { sampleGames() }
-    val setGameQuery: (String) -> Unit = { gameQuery = it }
-
-    // Location search state
-    var locationQuery by remember { mutableStateOf("") }
-    val locationResults = remember { sampleLocations() }
-    val setLocationQuery: (String) -> Unit = { locationQuery = it }
-
-    // Simulate user typing to open dropdowns in preview
-    LaunchedEffect(Unit) {
-        // Small delay to ensure the composition is ready in preview
-        delay(50)
-        setGameQuery("ca")       // e.g., "ca" -> matches Catan, Carcassonne, Camel Up
-        setLocationQuery("laus") // e.g., "laus" -> matches Lausanne Flon
-    }
-
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            GameSearchField(
-                query = gameQuery,
-                onQueryChange = setGameQuery,
-                results = gameResults,
-                onPick = { /* no-op in preview */ },
-                isLoading = false,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            LocationSearchField(
-                query = locationQuery,
-                onQueryChange = setLocationQuery,
-                results = locationResults,
-                onPick = { /* no-op in preview */ },
-                isLoading = false,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-
-@Preview(
-    name = "Game & Location Search — Light",
-    showBackground = true,
-    widthDp = 360
-)
-@Composable
-fun Preview_SearchBars_Light() {
-    AppTheme {
-        SearchBarsPreviewContent()
-    }
-}
-
-@Preview(
-    name = "Game & Location Search — Dark",
-    showBackground = true,
-    widthDp = 360,
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-fun Preview_SearchBars_Dark() {
-    AppTheme {
-        SearchBarsPreviewContent()
-    }
-}
-*/
+//
+/// * 1) SectionCard */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_SectionCard() = PreviewHost {
+//  AppTheme {
+//    SectionCard(
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .clip(RoundedCornerShape(12.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)) {
+//          Text("This is a SectionCard")
+//          Spacer(Modifier.height(8.dp))
+//          Text("You can place any Column content here.")
+//        }
+//  }
+// }
+//
+/// * 2) UnderlinedLabel */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_UnderlinedLabel() = PreviewHost {
+//  AppTheme { UnderlinedLabel(text = "Underlined label") }
+// }
+//
+/// * 3) LabeledTextField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_LabeledTextField() = PreviewHost {
+//  var text by remember { mutableStateOf("Hello") }
+//  AppTheme {
+//    LabeledTextField(
+//        label = "Title",
+//        value = text,
+//        onValueChange = { text = it },
+//        placeholder = "Type here…",
+//        singleLine = true,
+//        modifier = Modifier.fillMaxWidth())
+//  }
+// }
+//
+/// * 4) IconTextField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_IconTextField() = PreviewHost {
+//  var text by remember { mutableStateOf("") }
+//  AppTheme {
+//    IconTextField(
+//        value = text,
+//        onValueChange = { text = it },
+//        placeholder = "With icons",
+//        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+//        trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+//        modifier = Modifier.fillMaxWidth())
+//  }
+// }
+//
+/// * 5) CountBubble */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_CountBubble() = PreviewHost {
+//  AppTheme {
+//    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+//      CountBubble(count = 0, modifier = Modifier.background(Color.Transparent))
+//      CountBubble(count = 3, modifier = Modifier.background(Color.Transparent))
+//      CountBubble(count = 42, modifier = Modifier.background(Color.Transparent))
+//    }
+//  }
+// }
+//
+/// * 6) DiscretePillSlider */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_DiscretePillSlider() = PreviewHost {
+//  var range by remember { mutableStateOf(2f..6f) }
+//  AppTheme {
+//    DiscretePillSlider(
+//        range = 0f..10f,
+//        values = range,
+//        steps = 9,
+//        onValuesChange = { start, end -> range = start..end },
+//        surroundModifier = Modifier.fillMaxWidth(),
+//        sliderModifier = Modifier.fillMaxWidth())
+//  }
+// }
+//
+/// * 7) ParticipantChip
+// * NOTE: Replace the Account(...) construction with your project's real constructor.
+// */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_ParticipantChip_Add() = PreviewHost {
+//  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
+//  AppTheme {
+//    ParticipantChip(
+//        account = sampleAccount,
+//        action = ParticipantAction.Add,
+//        onClick = {},
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .height(32.dp)
+//                .clip(RoundedCornerShape(999.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)
+//                .padding(horizontal = 8.dp))
+//  }
+// }
+//
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_ParticipantChip_Remove() = PreviewHost {
+//  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
+//  AppTheme {
+//    ParticipantChip(
+//        account = sampleAccount,
+//        action = ParticipantAction.Remove,
+//        onClick = {},
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .height(32.dp)
+//                .clip(RoundedCornerShape(999.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)
+//                .padding(horizontal = 8.dp))
+//  }
+// }
+//
+/// * 8) TwoPerRowGrid (showing simple string items) */
+// @Preview(showBackground = true, heightDp = 320)
+// @Composable
+// private fun Preview_TwoPerRowGrid() = PreviewHost {
+//  val items = remember { (1..5).map { "Item $it" } }
+//  AppTheme {
+//    TwoPerRowGrid(
+//        items = items,
+//        key = { it },
+//        modifier = Modifier.fillMaxWidth(),
+//        rowsModifier = Modifier.fillMaxWidth()) { item, cellModifier ->
+//          Box(
+//              modifier =
+//                  cellModifier
+//                      .height(56.dp)
+//                      .clip(RoundedCornerShape(10.dp))
+//                      .background(MaterialTheme.colorScheme.secondaryContainer),
+//              contentAlignment = Alignment.Center) {
+//                Text(item, style = MaterialTheme.typography.bodyMedium)
+//              }
+//        }
+//  }
+// }
+//
+/// * 9) DatePickerDockedField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_DatePickerDockedField() = PreviewHost {
+//  var date by remember { mutableStateOf(LocalDate.now()) }
+//  AppTheme {
+//    DatePickerDockedField(value = date, onValueChange = { date = it })
+//    Spacer(Modifier.height(8.dp))
+//    Text("Selected: ${date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
+//  }
+// }
+//
+/// * 10) TimePickerField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_TimePickerField() = PreviewHost {
+//  var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
+//  AppTheme {
+//    TimePickerField(value = time, onValueChange = { time = it })
+//    Spacer(Modifier.height(8.dp))
+//    Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
+//  }
+// }

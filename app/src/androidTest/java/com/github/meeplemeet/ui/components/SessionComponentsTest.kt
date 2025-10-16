@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.LocalDate
 import java.time.LocalTime
@@ -57,6 +59,11 @@ class SessionComponentsTest {
   private fun set(content: @Composable () -> Unit) {
     composeRule.setContent { AppTheme { content() } }
   }
+  // Custom matcher to check that the text is different from a given value
+  private fun hasTextDifferentFrom(oldText: String) =
+      SemanticsMatcher("Text != '$oldText'") { node ->
+        node.config[SemanticsProperties.EditableText].text != oldText
+      }
 
   private fun account(name: String = "Marco") =
       Account(uid = "1", name = name, email = "marco@epfl.ch", handle = "")
@@ -593,6 +600,31 @@ class SessionComponentsTest {
   }
 
   @Test
+  fun datePickerDialog_nullDateDismissed() {
+    var dismissed = false
+    composeRule.setContent {
+      DatePickerDialog(onDismiss = { dismissed = true }, onDateSelected = {})
+    }
+    composeRule.onNodeWithText("Cancel").performClick()
+    composeRule.runOnIdle { assert(dismissed) }
+  }
+
+  @Test
+  fun dateField_externalCallback() {
+    var date = ""
+    composeRule.setContent {
+      DatePickerDockedField(value = LocalDate.now(), onValueChange = { date = it.toString() })
+    }
+    composeRule.onNodeWithText("Pick").performClick()
+    composeRule.waitForIdle()
+    composeRule.onNode(isDialog()).performTouchInput { click(center) }
+    composeRule.onNodeWithText("OK").performClick()
+    composeRule.waitForIdle()
+
+    assert(date.isNotEmpty())
+  }
+
+  @Test
   fun timePickerField_externalValueChange_updatesDisplayedText() {
     var time by mutableStateOf<LocalTime?>(null)
     set { TimePickerField(value = time, onValueChange = { time = it }, label = "External") }
@@ -612,26 +644,37 @@ class SessionComponentsTest {
   /* ---------------- DatePickerDockedField ---------------- */
 
   @Test
-  fun datePickerDocked_withInitialValue_showsFormattedText_andToggleDoesNotCrash() {
+  fun datePickerDocked_selectNewDate_updatesValue() {
     val zone = ZoneId.of("UTC")
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val initial = LocalDate.of(2025, 1, 5)
 
     set {
-      var value by remember { mutableStateOf<LocalDate?>(initial) }
+      var state by remember { mutableStateOf<LocalDate?>(initial) }
       DatePickerDockedField(
-          value = value,
-          onValueChange = { value = it },
+          value = state,
+          onValueChange = { state = it },
           label = "Game date",
           displayFormatter = fmt,
           zoneId = zone)
     }
+    val dateNode = composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
+    dateNode.assertIsDisplayed()
 
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
+    val initialValue = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+    // Open the picker
+    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.waitForIdle()
 
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
+    // Simulate selecting a new date (this may need to be adapted to your picker UI)
+    // For example, click on a date cell in the dialog:
+    composeRule.onNode(isDialog()).performTouchInput { click(center) }
+    composeRule.waitForIdle()
+    composeRule.onNodeWithText("OK").performClick()
+
+    // Assert the new date is displayed
+    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertIsDisplayed()
+    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasTextDifferentFrom(initialValue))
   }
 
   @Test
@@ -656,103 +699,34 @@ class SessionComponentsTest {
   }
 
   @Test
-  fun datePickerDocked_openAndCloseWithoutSelecting_doesNotChangeValue() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-
-    lateinit var picked: MutableState<LocalDate?>
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(null) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
-    }
-
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-
-    composeRule.runOnIdle { assert(picked.value == null) }
-  }
-
-  @Test
-  fun datePickerDocked_withInitialValue_showsFormattedText_andToggleOpenClose() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val initial = LocalDate.of(2025, 1, 5)
-
-    lateinit var picked: MutableState<LocalDate?>
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(initial) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game date",
-          displayFormatter = fmt,
-          zoneId = zone)
-    }
-
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-    composeRule.runOnIdle { assert(picked.value == initial) }
-  }
-
-  @Test
-  fun datePickerDocked_labelVisible_and_multipleToggles_noSelection_noChange() {
-    val zone = ZoneId.of("UTC")
-    val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    lateinit var picked: MutableState<LocalDate?>
-
-    set {
-      picked = remember { mutableStateOf<LocalDate?>(null) }
-      DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
-          label = "Game night",
-          displayFormatter = fmt,
-          zoneId = zone)
-    }
-
-    composeRule.onNodeWithText("Game night").assertIsDisplayed()
-
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-    icon.performClick()
-    icon.performClick()
-    composeRule.runOnIdle { assert(picked.value == null) }
-  }
-
-  @Test
-  fun datePickerDocked_initialValue_persistsAcrossToggles() {
+  fun datePickerDocked_togglePickerWithoutSelection_preservesValue() {
     val zone = ZoneId.of("UTC")
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val initial = LocalDate.of(2026, 6, 9)
-    lateinit var picked: MutableState<LocalDate?>
 
     set {
-      picked = remember { mutableStateOf<LocalDate?>(initial) }
+      var state by remember { mutableStateOf<LocalDate?>(initial) }
       DatePickerDockedField(
-          value = picked.value,
-          onValueChange = { picked.value = it },
+          value = state,
+          onValueChange = { state = it },
           label = "Game date",
           displayFormatter = fmt,
           zoneId = zone)
     }
 
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-    val icon = composeRule.onNodeWithContentDescription("Select date")
-    icon.performClick()
-    icon.performClick()
-    composeRule.onNodeWithText(initial.format(fmt)).assertIsDisplayed()
-    composeRule.runOnIdle { assert(picked.value == initial) }
+    // capture the initial text
+    val initialText = initial.format(fmt)
+    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertTextEquals(initialText)
+
+    // open → close twice
+    repeat(2) {
+      composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+      composeRule.waitForIdle()
+      composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    }
+
+    // text must still be the same
+    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertTextEquals(initialText)
   }
 
   @Test
