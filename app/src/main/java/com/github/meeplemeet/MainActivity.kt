@@ -159,7 +159,6 @@ fun MeepleMeetApp(
             currentUser = currentAccount!!,
             onBack = { navigationActions.goBack() },
             onOpenDiscussionInfo = {
-              currentDiscussion = null
               navigationActions.navigateTo(MeepleMeetScreen.DiscussionInfoScreen)
             },
             onCreateSessionClick = {
