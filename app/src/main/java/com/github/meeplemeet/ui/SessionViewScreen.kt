@@ -1,7 +1,6 @@
 package com.github.meeplemeet.ui
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -95,8 +94,6 @@ object SessionTestTags {
  * Models
  * ======================================================================= */
 
-data class Participant(val id: String, val name: String)
-
 val sliderMinRange = 2f
 val sliderMaxRange = 10f
 
@@ -144,10 +141,7 @@ fun SessionViewScreen(
       topBar = {
         TopBarWithDivider(
             text = "Session View",
-            onReturn = {
-              onBack()
-              /** save the data */
-            },
+            onReturn = onBack,
             { TopRightIcons(onclickChat = onclickChat, onclickNotification = onclickNotification) })
       },
   ) { innerPadding ->
@@ -331,9 +325,6 @@ private fun ProposedGameSection(
     editable: Boolean
 ) {
   val gameUIState by sessionViewModel.gameUIState.collectAsState()
-  //  Log.d("Session debug", "ProposedGameSection editable=$editable,
-  // currentUser=${currentUser.uid}")
-  Log.d("DEBUG setGameQuery", "currentUser=${currentUser.uid}, admins=${discussion.admins}")
 
   SectionCard(
       modifier =
@@ -349,7 +340,6 @@ private fun ProposedGameSection(
           Spacer(Modifier.height(8.dp))
 
           if (editable) {
-            // 🔸 Replace everything with a single call to GameSearchField
             GameSearchField(
                 query = gameUIState.gameQuery,
                 onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
@@ -358,7 +348,6 @@ private fun ProposedGameSection(
                 isLoading = false,
                 modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
           } else {
-            // Member view — just show the current game text
             Text(
                 text = "Current Game",
                 modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
@@ -487,8 +476,6 @@ fun TopRightIcons(onclickNotification: () -> Unit = {}, onclickChat: () -> Unit 
         icon = Icons.Default.Notifications,
         contentDescription = "Notifications",
         modifier = Modifier.testTag(SessionTestTags.NOTIFICATION_BADGE_COUNT),
-        // badge count could be dynamic based on actual notifications
-        // not implemented in this demo
         badgeCount = 3, // Example badge count for notifications
         onClick = { onclickNotification() })
     BadgedIconButton(

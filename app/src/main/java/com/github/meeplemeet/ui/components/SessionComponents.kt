@@ -697,181 +697,181 @@ fun LocationSearchField(
  * ======================================================================= */
 
 /* A tiny host to give all previews a pleasant surface + padding */
-@Composable
-private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
-  AppTheme {
-    Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
-  }
-}
-
-/* 1) SectionCard */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_SectionCard() = PreviewHost {
-  AppTheme {
-    SectionCard(
-        modifier =
-            Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)) {
-          Text("This is a SectionCard")
-          Spacer(Modifier.height(8.dp))
-          Text("You can place any Column content here.")
-        }
-  }
-}
-
-/* 2) UnderlinedLabel */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_UnderlinedLabel() = PreviewHost {
-  AppTheme { UnderlinedLabel(text = "Underlined label") }
-}
-
-/* 3) LabeledTextField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_LabeledTextField() = PreviewHost {
-  var text by remember { mutableStateOf("Hello") }
-  AppTheme {
-    LabeledTextField(
-        label = "Title",
-        value = text,
-        onValueChange = { text = it },
-        placeholder = "Type here…",
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth())
-  }
-}
-
-/* 4) IconTextField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_IconTextField() = PreviewHost {
-  var text by remember { mutableStateOf("") }
-  AppTheme {
-    IconTextField(
-        value = text,
-        onValueChange = { text = it },
-        placeholder = "With icons",
-        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-        trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth())
-  }
-}
-
-/* 5) CountBubble */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_CountBubble() = PreviewHost {
-  AppTheme {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      CountBubble(count = 0, modifier = Modifier.background(Color.Transparent))
-      CountBubble(count = 3, modifier = Modifier.background(Color.Transparent))
-      CountBubble(count = 42, modifier = Modifier.background(Color.Transparent))
-    }
-  }
-}
-
-/* 6) DiscretePillSlider */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_DiscretePillSlider() = PreviewHost {
-  var range by remember { mutableStateOf(2f..6f) }
-  AppTheme {
-    DiscretePillSlider(
-        range = 0f..10f,
-        values = range,
-        steps = 9,
-        onValuesChange = { start, end -> range = start..end },
-        surroundModifier = Modifier.fillMaxWidth(),
-        sliderModifier = Modifier.fillMaxWidth())
-  }
-}
-
-/* 7) ParticipantChip
- * NOTE: Replace the Account(...) construction with your project's real constructor.
- */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_ParticipantChip_Add() = PreviewHost {
-  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
-  AppTheme {
-    ParticipantChip(
-        account = sampleAccount,
-        action = ParticipantAction.Add,
-        onClick = {},
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(32.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 8.dp))
-  }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun Preview_ParticipantChip_Remove() = PreviewHost {
-  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
-  AppTheme {
-    ParticipantChip(
-        account = sampleAccount,
-        action = ParticipantAction.Remove,
-        onClick = {},
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(32.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 8.dp))
-  }
-}
-
-/* 8) TwoPerRowGrid (showing simple string items) */
-@Preview(showBackground = true, heightDp = 320)
-@Composable
-private fun Preview_TwoPerRowGrid() = PreviewHost {
-  val items = remember { (1..5).map { "Item $it" } }
-  AppTheme {
-    TwoPerRowGrid(
-        items = items,
-        key = { it },
-        modifier = Modifier.fillMaxWidth(),
-        rowsModifier = Modifier.fillMaxWidth()) { item, cellModifier ->
-          Box(
-              modifier =
-                  cellModifier
-                      .height(56.dp)
-                      .clip(RoundedCornerShape(10.dp))
-                      .background(MaterialTheme.colorScheme.secondaryContainer),
-              contentAlignment = Alignment.Center) {
-                Text(item, style = MaterialTheme.typography.bodyMedium)
-              }
-        }
-  }
-}
-
-/* 9) DatePickerDockedField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_DatePickerDockedField() = PreviewHost {
-  var date by remember { mutableStateOf(LocalDate.now()) }
-  AppTheme {
-    DatePickerDockedField(value = date, onValueChange = { date = it })
-    Spacer(Modifier.height(8.dp))
-    Text("Selected: ${date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
-  }
-}
-
-/* 10) TimePickerField */
-@Preview(showBackground = true)
-@Composable
-private fun Preview_TimePickerField() = PreviewHost {
-  var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
-  AppTheme {
-    TimePickerField(value = time, onValueChange = { time = it })
-    Spacer(Modifier.height(8.dp))
-    Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
-  }
-}
+//@Composable
+//private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
+//  AppTheme {
+//    Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
+//  }
+//}
+//
+///* 1) SectionCard */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_SectionCard() = PreviewHost {
+//  AppTheme {
+//    SectionCard(
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .clip(RoundedCornerShape(12.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)) {
+//          Text("This is a SectionCard")
+//          Spacer(Modifier.height(8.dp))
+//          Text("You can place any Column content here.")
+//        }
+//  }
+//}
+//
+///* 2) UnderlinedLabel */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_UnderlinedLabel() = PreviewHost {
+//  AppTheme { UnderlinedLabel(text = "Underlined label") }
+//}
+//
+///* 3) LabeledTextField */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_LabeledTextField() = PreviewHost {
+//  var text by remember { mutableStateOf("Hello") }
+//  AppTheme {
+//    LabeledTextField(
+//        label = "Title",
+//        value = text,
+//        onValueChange = { text = it },
+//        placeholder = "Type here…",
+//        singleLine = true,
+//        modifier = Modifier.fillMaxWidth())
+//  }
+//}
+//
+///* 4) IconTextField */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_IconTextField() = PreviewHost {
+//  var text by remember { mutableStateOf("") }
+//  AppTheme {
+//    IconTextField(
+//        value = text,
+//        onValueChange = { text = it },
+//        placeholder = "With icons",
+//        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+//        trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+//        modifier = Modifier.fillMaxWidth())
+//  }
+//}
+//
+///* 5) CountBubble */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_CountBubble() = PreviewHost {
+//  AppTheme {
+//    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+//      CountBubble(count = 0, modifier = Modifier.background(Color.Transparent))
+//      CountBubble(count = 3, modifier = Modifier.background(Color.Transparent))
+//      CountBubble(count = 42, modifier = Modifier.background(Color.Transparent))
+//    }
+//  }
+//}
+//
+///* 6) DiscretePillSlider */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_DiscretePillSlider() = PreviewHost {
+//  var range by remember { mutableStateOf(2f..6f) }
+//  AppTheme {
+//    DiscretePillSlider(
+//        range = 0f..10f,
+//        values = range,
+//        steps = 9,
+//        onValuesChange = { start, end -> range = start..end },
+//        surroundModifier = Modifier.fillMaxWidth(),
+//        sliderModifier = Modifier.fillMaxWidth())
+//  }
+//}
+//
+///* 7) ParticipantChip
+// * NOTE: Replace the Account(...) construction with your project's real constructor.
+// */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_ParticipantChip_Add() = PreviewHost {
+//  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
+//  AppTheme {
+//    ParticipantChip(
+//        account = sampleAccount,
+//        action = ParticipantAction.Add,
+//        onClick = {},
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .height(32.dp)
+//                .clip(RoundedCornerShape(999.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)
+//                .padding(horizontal = 8.dp))
+//  }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_ParticipantChip_Remove() = PreviewHost {
+//  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
+//  AppTheme {
+//    ParticipantChip(
+//        account = sampleAccount,
+//        action = ParticipantAction.Remove,
+//        onClick = {},
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .height(32.dp)
+//                .clip(RoundedCornerShape(999.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)
+//                .padding(horizontal = 8.dp))
+//  }
+//}
+//
+///* 8) TwoPerRowGrid (showing simple string items) */
+//@Preview(showBackground = true, heightDp = 320)
+//@Composable
+//private fun Preview_TwoPerRowGrid() = PreviewHost {
+//  val items = remember { (1..5).map { "Item $it" } }
+//  AppTheme {
+//    TwoPerRowGrid(
+//        items = items,
+//        key = { it },
+//        modifier = Modifier.fillMaxWidth(),
+//        rowsModifier = Modifier.fillMaxWidth()) { item, cellModifier ->
+//          Box(
+//              modifier =
+//                  cellModifier
+//                      .height(56.dp)
+//                      .clip(RoundedCornerShape(10.dp))
+//                      .background(MaterialTheme.colorScheme.secondaryContainer),
+//              contentAlignment = Alignment.Center) {
+//                Text(item, style = MaterialTheme.typography.bodyMedium)
+//              }
+//        }
+//  }
+//}
+//
+///* 9) DatePickerDockedField */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_DatePickerDockedField() = PreviewHost {
+//  var date by remember { mutableStateOf(LocalDate.now()) }
+//  AppTheme {
+//    DatePickerDockedField(value = date, onValueChange = { date = it })
+//    Spacer(Modifier.height(8.dp))
+//    Text("Selected: ${date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
+//  }
+//}
+//
+///* 10) TimePickerField */
+//@Preview(showBackground = true)
+//@Composable
+//private fun Preview_TimePickerField() = PreviewHost {
+//  var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
+//  AppTheme {
+//    TimePickerField(value = time, onValueChange = { time = it })
+//    Spacer(Modifier.height(8.dp))
+//    Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
+//  }
+//}
