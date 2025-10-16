@@ -1,7 +1,6 @@
 /** Sections of this file were generated using ChatGPT */
 package com.github.meeplemeet.ui
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -158,8 +157,8 @@ class CreateAccountScreenTest {
     assert(!onCreateCalled)
   }
   /**
-   * Tests that typing something in the username field and then deleting it
-   * shows the "Username cannot be empty" error message.
+   * Tests that typing something in the username field and then deleting it shows the "Username
+   * cannot be empty" error message.
    */
   @Test
   fun deleting_username_shows_empty_error_message() {

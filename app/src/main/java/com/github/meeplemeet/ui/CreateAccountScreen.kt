@@ -3,7 +3,9 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,7 +16,6 @@ import androidx.compose.ui.unit.sp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.appShapes
 
 /**
  * Composable screen for completing account creation by selecting a handle and username.
@@ -62,7 +63,7 @@ fun CreateAccountScreen(
   }
 
   Column(
-      modifier = modifier.fillMaxSize().padding(24.dp).background(AppColors.primary),
+      modifier = modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -82,6 +83,15 @@ fun CreateAccountScreen(
             label = { Text("Handle") },
             singleLine = true,
             textStyle = TextStyle(color = AppColors.textIcons),
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = AppColors.textIcons, // border when selected
+                    unfocusedIndicatorColor = AppColors.textIconsFade, // border when deselected
+                    cursorColor = AppColors.textIcons,
+                    focusedLabelColor = AppColors.textIcons,
+                    unfocusedLabelColor = AppColors.textIconsFade,
+                    focusedTextColor = AppColors.textIcons,
+                    unfocusedTextColor = AppColors.textIconsFade),
             isError = showErrors && errorMessage.isNotBlank(),
             modifier = Modifier.fillMaxWidth())
 
@@ -103,6 +113,15 @@ fun CreateAccountScreen(
             },
             label = { Text("Username") },
             singleLine = true,
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = AppColors.textIcons, // border when selected
+                    unfocusedIndicatorColor = AppColors.textIconsFade, // border when deselected
+                    cursorColor = AppColors.textIcons,
+                    focusedLabelColor = AppColors.textIcons,
+                    unfocusedLabelColor = AppColors.textIconsFade,
+                    focusedTextColor = AppColors.textIcons,
+                    unfocusedTextColor = AppColors.textIconsFade),
             isError = usernameError != null,
             textStyle = TextStyle(color = AppColors.textIcons),
             modifier = Modifier.fillMaxWidth())
@@ -120,7 +139,7 @@ fun CreateAccountScreen(
         Button(
             enabled = handle.isNotBlank() && username.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-            shape = appShapes.medium,
+            shape = CircleShape,
             elevation =
                 ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 0.dp),
             onClick = {
@@ -134,7 +153,7 @@ fun CreateAccountScreen(
                 if (errorMessage.isBlank()) onCreate()
               }
             },
-            modifier = Modifier.fillMaxWidth()) {
+            modifier = Modifier.fillMaxWidth(0.3f)) {
               Text("Let's go!")
             }
       }
