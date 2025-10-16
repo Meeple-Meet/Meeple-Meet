@@ -93,6 +93,7 @@ enum class MeepleMeetScreen(
 ) {
   SignInScreen("Sign In"),
   SignUpScreen("Sign Up"),
+  CreateAccountScreen("Create your Account"),
   DiscussionsOverview(
       "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
   SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),

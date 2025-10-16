@@ -231,7 +231,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
    * @param email The user's email address
    * @param password The user's chosen password
    */
-  fun registerWithEmail(email: String, password: String) {
+  fun registerWithEmail(email: String, password: String, onRegister: () -> Unit = {}) {
     // Prevent multiple simultaneous operations
     if (_uiState.value.isLoading) return
 
@@ -245,6 +245,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
         _uiState.update {
           it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
         }
+        onRegister()
       }) { failure ->
         // Registration failed: Show error message
         _uiState.update {
