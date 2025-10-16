@@ -131,11 +131,18 @@ fun DiscussionScreen(
           }
         },
         actions = {
-          IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
-            Icon(
-                if (discussion != null && discussion!!.session == null) Icons.Default.LibraryAdd
-                else Icons.Default.Games,
-                contentDescription = "Search")
+          val icon =
+              when {
+                discussion == null -> null
+                discussion!!.session != null -> Icons.Default.Games
+                discussion!!.admins.contains(currentUser.uid) -> Icons.Default.LibraryAdd
+                else -> null
+              }
+
+          if (icon != null) {
+            IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
+              Icon(icon, contentDescription = "Session action")
+            }
           }
         })
 

@@ -132,10 +132,12 @@ fun DiscussionSettingScreen(
                * Save Name and Description on back — this is the only time the DB is updated here
                */
               onReturn = {
-                viewModel.setDiscussionName(
-                    discussion = d, name = newName, changeRequester = currentAccount)
-                viewModel.setDiscussionDescription(
-                    discussion = d, description = newDesc, changeRequester = currentAccount)
+                if (discussion!!.admins.contains(currentAccount.uid)) {
+                  viewModel.setDiscussionName(
+                      discussion = d, name = newName, changeRequester = currentAccount)
+                  viewModel.setDiscussionDescription(
+                      discussion = d, description = newDesc, changeRequester = currentAccount)
+                }
                 onBack()
               })
         },
@@ -145,18 +147,19 @@ fun DiscussionSettingScreen(
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 /** The actual deletion happens only after the confirmation dialog */
                 /** Delete button only if not member */
-                OutlinedButton(
-                    onClick = { if (!isMember) showDeleteDialog = true },
-                    enabled = !isMember,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
-                    modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
-                      Icon(
-                          imageVector = Icons.Default.Delete,
-                          contentDescription = null,
-                          tint = AppColors.textIcons)
-                      Spacer(modifier = Modifier.width(8.dp))
-                      Text("Delete Discussion", color = AppColors.textIcons)
-                    }
+                if (discussion!!.admins.contains(currentAccount.uid))
+                    OutlinedButton(
+                        onClick = { if (!isMember) showDeleteDialog = true },
+                        enabled = !isMember,
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
+                        modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
+                          Icon(
+                              imageVector = Icons.Default.Delete,
+                              contentDescription = null,
+                              tint = AppColors.textIcons)
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text("Delete Discussion", color = AppColors.textIcons)
+                        }
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
                 OutlinedButton(
@@ -284,20 +287,20 @@ fun DiscussionSettingScreen(
                     color = AppColors.divider)
 
                 /** Row for search and member selection */
-                MemberSearchField(
-                    enabled = discussion!!.admins.contains(currentAccount.uid),
-                    searchQuery = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    searchResults = searchResults,
-                    isSearching = isSearching,
-                    dropdownExpanded = dropdownExpanded,
-                    onDismiss = { dropdownExpanded = false },
-                    onSelect = { account ->
-                      selectedMembers.add(account)
-                      viewModel.addUserToDiscussion(discussion!!, currentAccount, account)
-                      searchQuery = ""
-                      dropdownExpanded = false
-                    })
+                if (discussion!!.admins.contains(currentAccount.uid))
+                    MemberSearchField(
+                        searchQuery = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        searchResults = searchResults,
+                        isSearching = isSearching,
+                        dropdownExpanded = dropdownExpanded,
+                        onDismiss = { dropdownExpanded = false },
+                        onSelect = { account ->
+                          selectedMembers.add(account)
+                          viewModel.addUserToDiscussion(discussion!!, currentAccount, account)
+                          searchQuery = ""
+                          dropdownExpanded = false
+                        })
 
                 /** --- Members List --- */
                 MemberList(
