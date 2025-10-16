@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
  * @param viewModel FirestoreViewModel for creating discussions
  * @param currentUser The currently logged-in user
  */
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddDiscussionScreen(
@@ -68,12 +70,12 @@ fun AddDiscussionScreen(
       return@LaunchedEffect
     }
     isSearching = true
-    searchResults =
-        fakeSearchAccounts(searchQuery).filter {
-          it.uid != currentUser.uid && it !in selectedMembers
-        }
-    dropdownExpanded = searchResults.isNotEmpty()
-    isSearching = false
+    viewModel.searchByHandle(searchQuery)
+    viewModel.handleSuggestions.collect { list ->
+      searchResults = list.filter { it.uid != currentUser.uid && it !in selectedMembers }
+      dropdownExpanded = searchResults.isNotEmpty()
+      isSearching = false
+    }
   }
 
   val snackbarHostState = remember { SnackbarHostState() }
@@ -213,7 +215,7 @@ fun AddDiscussionScreen(
                               else -> {
                                 searchResults.forEach { account ->
                                   DropdownMenuItem(
-                                      text = { Text(account.name) },
+                                      text = { Text(account.handle) },
                                       onClick = {
                                         selectedMembers.add(account)
                                         searchQuery = ""
@@ -275,7 +277,7 @@ fun AddDiscussionScreen(
 
                           /** Member name */
                           Text(
-                              text = member.name,
+                              text = member.handle,
                               modifier = Modifier.weight(1f),
                               maxLines = 1,
                               color = AppColors.textIcons,
@@ -304,8 +306,12 @@ fun AddDiscussionScreen(
                           scope.launch {
                             try {
                               isCreating = true
+                              val clean = selectedMembers.toList()
+                              require(clean.size == selectedMembers.size) {
+                                "Bug: null Account in selection"
+                              }
                               viewModel.createDiscussion(
-                                  title, description, currentUser, *selectedMembers.toTypedArray())
+                                  title, description, currentUser, *clean.toTypedArray())
                               isCreating = false
                               onCreate()
                             } catch (_: Exception) {
@@ -338,25 +344,4 @@ fun AddDiscussionScreen(
                   }
             }
       }
-}
-
-/**
- * Fake search function to simulate backend account search. Filters a hard-coded list of accounts by
- * the query string.
- *
- * @param query The search query
- * @return List of matching [Account] objects
- */
-fun fakeSearchAccounts(query: String): List<Account> {
-  val allAccounts =
-      listOf(
-          Account("1", "1", "Alice", email = "Alice@example.com"),
-          Account("2", "2", "Bob", email = "Bob@example.com"),
-          Account("3", "3", "Charlie", email = "Alice@example.com"),
-          Account("4", "4", "David", email = "David@example.com"),
-          Account("5", "5", "Eve", email = "Eve@example.com"),
-          Account("6", "6", "Frank", email = "Frank@example.com"),
-          Account("7", "7", "Grace", email = "Grace@example.com"),
-          Account("8", "8", "Heidi", email = "Heidi@example.com"))
-  return allAccounts.filter { it.name.contains(query, ignoreCase = true) }
 }

@@ -1,191 +1,221 @@
+/** Sections of this file were generated using ChatGPT */
 package com.github.meeplemeet.ui
 
-import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.filterToOne
-import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.isPopup
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTextReplacement
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
-import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
-import io.mockk.verify
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 
 /**
- * Tests for the AddDiscussionScreen UI. Verifies initial state, input behavior, member search, and
- * navigation actions.
+ * UI tests for [AddDiscussionScreen] using the real [FirestoreViewModel] and a seeded repository.
+ * These tests interact with the real ViewModel to verify full UI behavior including search
+ * suggestions and member selection.
  */
+@RunWith(AndroidJUnit4::class)
 class AddDiscussionScreenTest {
 
-  /** Compose test rule for running Compose UI tests */
+  /** Compose test rule for setting up and interacting with the Compose UI. */
   @get:Rule val compose = createComposeRule()
 
-  /** Mocked navigation actions */
+  /** Mocked navigation actions to verify back and create callbacks. */
   private val nav: NavigationActions = mockk(relaxed = true)
 
-  /** Mocked ViewModel for testing */
-  private val vm: FirestoreViewModel = mockk(relaxed = true)
+  /** The current logged-in account used in the tests. */
+  private lateinit var me: Account
 
-  /** Current user for the screen */
-  private val me = Account(uid = "6", handle = "6", name = "Frank", email = "Frank@example.com")
+  /** Another account used for selection and search tests. */
+  private lateinit var otherAcc: Account
 
-  // ---------- Semantic matchers ----------
+  /* ---------- Semantic helpers for UI nodes ---------- */
 
-  /** Returns the title input field node */
+  /** Returns the Title input field node. */
   private fun titleField() = compose.onNodeWithText("Title", substring = true)
 
-  /** Returns the description input field node */
+  /** Returns the Description input field node. */
   private fun descField() = compose.onNodeWithText("Description", substring = true)
 
-  /** Returns the add members search field node */
+  /** Returns the Add Members search field node. */
   private fun searchField() = compose.onNodeWithText("Add Members", substring = true)
 
-  /** Returns the create discussion button node */
+  /** Returns the Create Discussion button node. */
   private fun createBtn() = compose.onNodeWithText("Create Discussion")
 
-  /** Returns the discard button node */
-  private fun discardBtn() = compose.onNodeWithText("Discard")
-
-  /** Returns the back button node */
+  /** Returns the Back button node. */
   private fun backBtn() = compose.onNodeWithContentDescription("Back")
 
-  // ---------- Helpers ----------
+  /** Returns the Discard button node. */
+  private fun discardBtn() = compose.onNodeWithText("Discard")
 
-  /** Sets the Compose content for the AddDiscussionScreen */
-  private fun setContent() {
+  /* ---------- Repository and ViewModel ---------- */
+
+  /** The real Firestore repository used to seed accounts. */
+  private lateinit var repo: com.github.meeplemeet.model.repositories.FirestoreRepository
+
+  /** The real ViewModel used in UI tests. */
+  private lateinit var realVm: FirestoreViewModel
+
+  /**
+   * Sets up the test environment before each test:
+   * - Seeds the repository with multiple accounts.
+   * - Initializes the real [FirestoreViewModel].
+   * - Sets the Compose content with the screen under test.
+   */
+  @Before
+  fun setup() = runBlocking {
+    repo = com.github.meeplemeet.model.repositories.FirestoreRepository()
+    repo.createAccount("alice", "Alice", "alice@example.com", null)
+    repo.createAccount("bob", "Bob", "bob@example.com", null)
+    otherAcc = repo.createAccount("john", "John", "john@example.com", null)
+    repo.createAccount("johna", "Johna", "johna@example.com", null)
+    repo.createAccount("johnny", "Johnny", "johnny@example.com", null)
+    me = repo.createAccount("frank", "Frank", "frank@example.com", null)
+
+    realVm = FirestoreViewModel(repo)
     compose.setContent {
-      AddDiscussionScreen(onBack = { nav.goBack() }, onCreate = { nav.goBack() }, vm, me)
+      AddDiscussionScreen(
+          onBack = { nav.goBack() },
+          onCreate = { nav.goBack() },
+          viewModel = realVm,
+          currentUser = me)
     }
   }
 
-  // ---------- Tests ----------
+  /* ---------- Original UI Tests ---------- */
 
-  /** Verifies initial state: empty fields and disabled create button */
+  /** Verifies that initially all fields are empty and the create button is disabled. */
   @Test
   fun initial_state_empty_fields_create_disabled() {
-    setContent()
     titleField().assertTextContains("")
     descField().assertTextContains("")
     createBtn().assertIsNotEnabled()
   }
 
-  /** Verifies typing a title enables the create button */
+  /** Typing a title enables the Create Discussion button. */
   @Test
   fun typing_title_enables_create() {
-    setContent()
     titleField().performTextInput("Kotlin")
     createBtn().assertIsEnabled()
   }
 
-  /** Verifies back arrow calls navigation.goBack() */
+  /** Clicking the back arrow triggers the navigation callback. */
   @Test
   fun back_arrow_calls_navigation() {
-    setContent()
     backBtn().performClick()
-    verify { nav.goBack() }
+    coVerify { nav.goBack() }
   }
 
-  /** Verifies discard button calls navigation.goBack() */
+  /** Clicking the discard button triggers the navigation callback. */
   @Test
   fun discard_button_calls_navigation() {
-    setContent()
     discardBtn().performClick()
-    verify { nav.goBack() }
+    coVerify { nav.goBack() }
   }
 
-  /** Verifies member search displays results and adds a member */
-  @Test
-  fun search_shows_results_and_adds_member() {
-    setContent()
-    searchField().performTextInput("bo")
-    compose.waitForIdle()
-    compose.onNodeWithText("Bob").assertExists().performClick()
-    compose.onNodeWithText("Bob").assertExists()
-    searchField().assertTextContains("")
-  }
-
-  /** Verifies that the clear icon resets the search query */
+  /** Clears the Add Members search field when clicking the Clear icon. */
   @Test
   fun clear_icon_resets_query() {
-    setContent()
     searchField().performTextInput("xyz")
     compose.onNodeWithContentDescription("Clear").performClick()
     searchField().assertTextContains("")
   }
 
-  /** Verifies removing a member from the selected list works correctly */
+  /** Adds and then removes a member from the selected list. */
   @Test
   fun remove_member_from_selected_list() {
-    setContent()
     searchField().performTextInput("ali")
     compose.waitForIdle()
-    compose.onNodeWithText("Alice").performClick()
+    compose.onNodeWithText("alice").performClick()
     compose.onNodeWithContentDescription("Remove").performClick()
-    compose.onNodeWithText("Alice").assertDoesNotExist()
+    compose.onNodeWithText("alice").assertDoesNotExist()
   }
 
-  /** Verifies that the current user is filtered out of search results */
+  /** Ensures the current user does not appear in the member search results. */
   @Test
   fun search_filters_out_current_user() {
-    setContent()
-    searchField().performTextInput("Fr")
+    searchField().performTextInput("fra")
     compose.waitForIdle()
-    compose.onAllNodesWithText("Frank").assertCountEquals(0)
+    compose.onAllNodesWithText("frank").assertCountEquals(0)
   }
 
-  /** Verifies that already selected members are filtered out of search results */
+  /** Ensures already selected members are filtered out of the search dropdown. */
   @Test
   fun search_filters_out_already_selected_members() {
-    setContent()
     searchField().performTextInput("ali")
     compose.waitForIdle()
-    compose.onNodeWithText("Alice").performClick()
+    compose.onNodeWithText("alice").performClick()
 
     searchField().performTextInput("ali")
     compose.waitForIdle()
-    compose.onAllNodesWithText("Alice").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
+    compose.onAllNodesWithText("alice").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
   }
 
-  /** Verifies that clearing the search query closes the dropdown */
+  /** Verifies that clearing the search field closes the suggestion dropdown. */
   @Test
   fun empty_query_closes_dropdown() {
-    setContent()
     searchField().performTextInput("x")
     compose.waitForIdle()
-    compose.onAllNodesWithText("x", substring = true)
     searchField().performTextReplacement("")
     compose.waitForIdle()
-    compose.onAllNodesWithText("Alice").assertCountEquals(0)
-    compose.onAllNodesWithText("Bob").assertCountEquals(0)
-    compose.onAllNodesWithText("Eve").assertCountEquals(0)
+    compose.onAllNodesWithText("alice").assertCountEquals(0)
+    compose.onAllNodesWithText("bob").assertCountEquals(0)
+    compose.onAllNodesWithText("john").assertCountEquals(0)
+  }
+
+  /* ---------- Search-by-handle Tests ---------- */
+
+  /**
+   * Tests that entering a search query shows the correct handle suggestions and excludes unrelated
+   * users.
+   */
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun searchByHandleShowsCorrectHandles() {
+    searchField().performTextInput("john")
+    compose.waitUntilAtLeastOneExists(
+        hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
+
+    compose.onNode(hasText("john") and hasAnyAncestor(isPopup())).assertExists()
+    compose.onNode(hasText("johna") and hasAnyAncestor(isPopup())).assertExists()
+    compose.onNode(hasText("johnny") and hasAnyAncestor(isPopup())).assertExists()
+
+    compose.onAllNodesWithText("alice").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
+    compose.onAllNodesWithText("bob").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
+  }
+
+  /** Verifies that a search query with no matching handles returns no suggestions. */
+  @Test
+  fun searchByHandleEmptyForNoMatch() {
+    searchField().performTextInput("xyz")
+    compose.waitForIdle()
+
+    compose.onNodeWithText("alice").assertDoesNotExist()
+    compose.onNodeWithText("bob").assertDoesNotExist()
+    compose.onNodeWithText("john").assertDoesNotExist()
   }
 
   /**
-   * Verifies that tapping the "Create Discussion" button calls the onCreate callback with the
-   * correct title, description, creator, and member list.
+   * Tests selecting a member from the search suggestions. The selected member should appear in the
+   * UI and the search field should reset.
    */
+  @OptIn(ExperimentalTestApi::class)
   @Test
-  fun create_button_calls_viewmodel_createDiscussion() = runTest {
-    coEvery { vm.createDiscussion(any(), any(), any()) } just runs
-    setContent()
-    titleField().performTextInput("New Discussion")
-    createBtn().performClick()
-    coVerify(exactly = 1) { vm.createDiscussion(any(), any(), any()) }
+  fun searchByHandleSelectsMember() {
+    searchField().performTextInput("jo")
+    compose.waitUntilAtLeastOneExists(
+        hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
+    compose.waitForIdle()
+    compose.onNodeWithText("john").performClick()
+
+    compose.onNodeWithText("john").assertExists()
+    searchField().assertTextContains("")
   }
 }

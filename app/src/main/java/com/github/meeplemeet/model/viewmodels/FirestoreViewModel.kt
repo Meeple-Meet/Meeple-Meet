@@ -35,8 +35,14 @@ class FirestoreViewModel(
 
   private val _discussion = MutableStateFlow<Discussion?>(null)
 
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
+
   /** The currently loaded discussion */
   val discussion: StateFlow<Discussion?> = _discussion
+
+  private val SUGGESTIONS_LIMIT = 30
 
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
     return discussion.admins.contains(account.uid)
@@ -49,6 +55,7 @@ class FirestoreViewModel(
       creator: Account,
       vararg participants: Account
   ) {
+    println("CREATE DISCUSSION: ${creator.handle} + ${participants.map { it.handle }}")
     viewModelScope.launch {
       val (acc, disc) =
           repository.createDiscussion(
@@ -327,4 +334,24 @@ class FirestoreViewModel(
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = null)
       }
+
+  /**
+   * Searches for user accounts whose handles start with the given [prefix].
+   *
+   * This function launches a coroutine in the [viewModelScope] to asynchronously fetch matching
+   * handles from the [repository]. The resulting list of suggestions is truncated to
+   * [SUGGESTIONS_LIMIT] items and posted to [_handleSuggestions].
+   *
+   * If the [prefix] is blank, the function returns immediately without performing a search.
+   *
+   * @param prefix The starting string of the handle to search for. Must not be blank.
+   */
+  fun searchByHandle(prefix: String) {
+    if (prefix.isBlank()) return
+    viewModelScope.launch {
+      repository.searchByHandle(prefix).collect { list ->
+        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
+      }
+    }
+  }
 }
