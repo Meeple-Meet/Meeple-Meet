@@ -194,7 +194,7 @@ fun IconTextField(
       value = value,
       onValueChange = onValueChange,
       modifier = modifier,
-      readOnly = editable,
+      readOnly = !editable,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
@@ -513,6 +513,7 @@ fun <T> SearchDropdownField(
     onSuggestionClick: (T) -> Unit,
     getPrimaryText: (T) -> String,
     modifier: Modifier = Modifier,
+    modifierTxtField: Modifier = Modifier,
     placeholder: String = "",
     isLoading: Boolean = false,
     showWhenEmptyQuery: Boolean = false,
@@ -545,7 +546,7 @@ fun <T> SearchDropdownField(
         },
         placeholder = { if (placeholder.isNotEmpty()) Text(placeholder) },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth().height(64.dp))
+        modifier = Modifier.fillMaxWidth().height(64.dp).then(modifierTxtField))
 
     val shouldShow =
         expanded && (isLoading || suggestions.isNotEmpty() || (query.isNotBlank() && !isLoading))
@@ -637,6 +638,7 @@ fun GameSearchField(
       onQueryChange = onQueryChange,
       suggestions = results,
       onSuggestionClick = onPick,
+      modifierTxtField = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
       getPrimaryText = { it.name },
       isLoading = isLoading,
       placeholder = placeholder,
@@ -672,6 +674,7 @@ fun LocationSearchField(
       onSuggestionClick = onPick,
       getPrimaryText = { it.name },
       isLoading = isLoading,
+      modifierTxtField = Modifier.testTag(SessionTestTags.LOCATION_FIELD),
       placeholder = placeholder,
       modifier = modifier,
       itemContent = { loc ->

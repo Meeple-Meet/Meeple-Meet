@@ -296,6 +296,7 @@ class SessionComponentsTest {
           range = 0f..10f,
           values = 2f..6f,
           steps = 9,
+          editable = true,
           onValuesChange = { start, end -> changed = start to end },
           surroundModifier = Modifier.testTag("sliderHost"),
           sliderModifier = Modifier.testTag("slider"))
@@ -317,6 +318,7 @@ class SessionComponentsTest {
           range = 0f..5f,
           values = 1f..1f,
           steps = 4,
+          editable = true,
           onValuesChange = { _, _ -> changed = true },
           surroundModifier = Modifier.testTag("sliderHost2"),
           sliderModifier = Modifier.testTag("slider2"),
@@ -338,6 +340,7 @@ class SessionComponentsTest {
           range = -10f..10f,
           values = -5f..5f,
           steps = 20,
+          editable = true,
           onValuesChange = { a, b -> last = a to b },
           surroundModifier = Modifier.testTag("sliderHost3"),
           sliderModifier = Modifier.testTag("slider3"))
