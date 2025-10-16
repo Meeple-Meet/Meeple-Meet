@@ -1,3 +1,4 @@
+/** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.background
@@ -15,6 +16,18 @@ import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
 
+/**
+ * Composable screen for completing account creation by selecting a handle and username.
+ *
+ * This screen collects a handle and username from the user, validates them, and interacts with the
+ * [FirestoreHandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate]
+ * to continue the account creation flow.
+ *
+ * @param viewModel The ViewModel responsible for handling Firestore handle validation.
+ * @param currentAccount The [Account] object representing the user creating an account.
+ * @param modifier Optional [Modifier] for styling and layout.
+ * @param onCreate Lambda to be executed when account creation is successfully validated.
+ */
 @Composable
 fun CreateAccountScreen(
     viewModel: FirestoreHandlesViewModel,
@@ -22,54 +35,47 @@ fun CreateAccountScreen(
     modifier: Modifier = Modifier,
     onCreate: () -> Unit = {},
 ) {
-    var handle by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var usernameError by remember { mutableStateOf<String?>(null) }
+  var handle by remember { mutableStateOf("") }
+  var username by remember { mutableStateOf("") }
+  var usernameError by remember { mutableStateOf<String?>(null) }
 
-    val errorMessage by viewModel.errorMessage.collectAsState()
-    var showErrors by remember { mutableStateOf(false) }
+  val errorMessage by viewModel.errorMessage.collectAsState()
+  var showErrors by remember { mutableStateOf(false) }
 
-    fun validateHandle(handle: String) {
-        showErrors = true
-        viewModel.checkHandleAvailable(handle)
+  /** Checks the handle availability and updates the ViewModel state. */
+  fun validateHandle(handle: String) {
+    showErrors = true
+    viewModel.checkHandleAvailable(handle)
+  }
+
+  /**
+   * Validates the username for non-emptiness.
+   *
+   * @param username The input username string.
+   * @return Error message if username is empty; null if valid.
+   */
+  fun validateUsername(username: String): String? {
+    return when {
+      username.isBlank() -> "Username cannot be empty"
+      else -> null
     }
+  }
 
-    fun validateUsername(username: String): String? {
-        return when {
-            username.isBlank() -> "Username cannot be empty"
-            else -> null
-        }
-    }
-
-    // Main column centered vertically
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .background(AppColors.primary),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Spacer above square to push content into center
+  Column(
+      modifier = modifier.fillMaxSize().padding(24.dp).background(AppColors.primary),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Square box placeholder (colored properly)
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .background(Color(0xFFe0e0e0))
-        )
+        Box(modifier = Modifier.size(120.dp).background(Color(0xFFe0e0e0)))
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // "You're almost there!" text
         Text(
             "You're almost there!",
             style = TextStyle(fontSize = 36.sp, color = AppColors.neutral),
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+            modifier = Modifier.padding(bottom = 16.dp))
 
-        // Handle input field
         OutlinedTextField(
             value = handle,
             onValueChange = { handle = it },
@@ -77,69 +83,59 @@ fun CreateAccountScreen(
             singleLine = true,
             textStyle = TextStyle(color = AppColors.textIcons),
             isError = showErrors && errorMessage.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
-        )
+            modifier = Modifier.fillMaxWidth())
 
         if (showErrors && errorMessage.isNotBlank()) {
-            Text(
-                text = errorMessage,
-                color = AppColors.textIconsFade,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 4.dp)
-            )
+          Text(
+              text = errorMessage,
+              color = AppColors.textIconsFade,
+              style = MaterialTheme.typography.bodySmall,
+              modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Username input field
         OutlinedTextField(
             value = username,
             onValueChange = {
-                username = it
-                usernameError = validateUsername(username)
+              username = it
+              usernameError = validateUsername(username)
             },
             label = { Text("Username") },
             singleLine = true,
             isError = usernameError != null,
             textStyle = TextStyle(color = AppColors.textIcons),
-            modifier = Modifier.fillMaxWidth()
-        )
+            modifier = Modifier.fillMaxWidth())
 
         if (usernameError != null) {
-            Text(
-                text = usernameError!!,
-                color = AppColors.textIconsFade,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 4.dp)
-            )
+          Text(
+              text = usernameError!!,
+              color = AppColors.textIconsFade,
+              style = MaterialTheme.typography.bodySmall,
+              modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Action button
         Button(
             enabled = handle.isNotBlank() && username.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
             shape = appShapes.medium,
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 0.dp),
+            elevation =
+                ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 0.dp),
             onClick = {
-                showErrors = true
-                validateHandle(handle)
-                val usernameValidation = validateUsername(username)
-                usernameError = usernameValidation
+              showErrors = true
+              validateHandle(handle)
+              val usernameValidation = validateUsername(username)
+              usernameError = usernameValidation
 
-                if ((errorMessage.isBlank()) && usernameValidation == null) {
-                    viewModel.createAccountHandle(account = currentAccount, handle = handle)
-                    if (errorMessage.isBlank()) onCreate()
-                }
+              if ((errorMessage.isBlank()) && usernameValidation == null) {
+                viewModel.createAccountHandle(account = currentAccount, handle = handle)
+                if (errorMessage.isBlank()) onCreate()
+              }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Let's go!")
-        }
-    }
+            modifier = Modifier.fillMaxWidth()) {
+              Text("Let's go!")
+            }
+      }
 }
