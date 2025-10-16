@@ -22,14 +22,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.CreateSessionScreen
 import com.github.meeplemeet.ui.DiscoverSessionsScreen
 import com.github.meeplemeet.ui.DiscussionAddScreen
 import com.github.meeplemeet.ui.DiscussionInfoScreen
 import com.github.meeplemeet.ui.DiscussionScreen
 import com.github.meeplemeet.ui.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.ProfileScreen
+import com.github.meeplemeet.ui.SessionViewScreen
 import com.github.meeplemeet.ui.SessionsOverviewScreen
 import com.github.meeplemeet.ui.SignInScreen
 import com.github.meeplemeet.ui.SignUpScreen
@@ -73,8 +77,10 @@ fun MeepleMeetApp(
   val navigationActions = NavigationActions(navController)
 
   val uiState by authVM.uiState.collectAsState()
-  var currentAccount = uiState.account
   val firestoreVMAccount by firestoreVM.account.collectAsState()
+
+  var currentAccount = uiState.account
+  var currentDiscussion: Discussion? = null
 
   /** Fetch current user if already logged in */
   LaunchedEffect(FirebaseProvider.auth.currentUser) {
@@ -102,6 +108,7 @@ fun MeepleMeetApp(
                 credentialManager = credentialManager,
                 onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUpScreen) })
           }
+
           composable(MeepleMeetScreen.SignUpScreen.route) {
             SignUpScreen(
                 viewModel = authVM,
@@ -131,6 +138,7 @@ fun MeepleMeetApp(
               LoadingScreen()
             }
           }
+
           composable(MeepleMeetScreen.Routes.DISCUSSION) { backStackEntry ->
             if (currentAccount != null) {
               DiscussionScreen(
@@ -138,13 +146,21 @@ fun MeepleMeetApp(
                   currentUser = currentAccount!!,
                   onBack = { navigationActions.goBack() },
                   onOpenDiscussionInfo = {
+                    currentDiscussion = null
                     navigationActions.navigateTo(MeepleMeetScreen.DiscussionInfoScreen(it.uid))
+                  },
+                  onCreateSessionClick = {
+                    currentDiscussion = it
+                    if (it.session != null)
+                        navigationActions.navigateTo(MeepleMeetScreen.SessionScreen(it.uid))
+                    else navigationActions.navigateTo(MeepleMeetScreen.SessionAddScreen(it.uid))
                   },
                   viewModel = firestoreVM)
             } else {
               LoadingScreen()
             }
           }
+
           composable(MeepleMeetScreen.DiscussionAddScreen.route) {
             if (currentAccount != null) {
               DiscussionAddScreen(
@@ -156,6 +172,7 @@ fun MeepleMeetApp(
               LoadingScreen()
             }
           }
+
           composable(MeepleMeetScreen.Routes.DISCUSSION_INFO) { backStackEntry ->
             if (currentAccount != null) {
               DiscussionInfoScreen(
@@ -167,6 +184,42 @@ fun MeepleMeetApp(
                   viewModel = firestoreVM)
             } else {
               LoadingScreen()
+            }
+          }
+
+          composable(MeepleMeetScreen.Routes.SESSION_ADD) { backStackEntry ->
+            if (currentAccount != null) {
+              val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+              if (discussionId.isBlank()) {
+                navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+              } else {
+                CreateSessionScreen(
+                    viewModel = firestoreVM,
+                    sessionViewModel = FirestoreSessionViewModel(currentDiscussion!!),
+                    discussionId = discussionId,
+                    currentUser = currentAccount!!,
+                    onBack = {
+                      navigationActions.navigateTo(MeepleMeetScreen.DiscussionScreen(discussionId))
+                    },
+                    onCreate = {
+                      navigationActions.navigateTo(MeepleMeetScreen.SessionScreen(discussionId))
+                    })
+              }
+            } else {
+              LoadingScreen()
+            }
+          }
+
+          composable(MeepleMeetScreen.Routes.SESSION) { backStackEntry ->
+            val discussionId = backStackEntry.arguments?.getString("discussionId") ?: ""
+            if (discussionId.isBlank()) {
+              navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+            } else {
+              SessionViewScreen(
+                  viewModel = firestoreVM,
+                  discussionId = discussionId,
+                  currentUser = currentAccount!!,
+                  onBack = { navigationActions.goBack() })
             }
           }
         }

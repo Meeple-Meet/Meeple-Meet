@@ -134,7 +134,8 @@ sealed class MeepleMeetScreen(
   data class SessionScreen(val sessionId: String) :
       MeepleMeetScreen(route = "session/$sessionId", name = "Session")
 
-  object SessionAddScreen : MeepleMeetScreen(route = "session_add", name = "Add Session")
+  data class SessionAddScreen(val sessionId: String) :
+      MeepleMeetScreen(route = "session_add/$sessionId", name = "Add Session")
 
   data class SessionInfoScreen(val sessionId: String) :
       MeepleMeetScreen(route = "session_info/$sessionId", name = "Session Details")
@@ -148,6 +149,8 @@ sealed class MeepleMeetScreen(
       MeepleMeetScreen(route = "discussion_info/$discussionId", name = "Discussion Details")
 
   object Routes {
+    const val SESSION_ADD = "session_add/{discussionId}"
+    const val SESSION = "session/{discussionId}"
     const val SESSION_INFO = "session_info/{sessionId}"
     const val DISCUSSION = "discussion/{discussionId}"
     const val DISCUSSION_INFO = "discussion_info/{discussionId}"
@@ -190,7 +193,7 @@ fun BottomNavigationMenu(
  * Provides high-level navigation actions for the Meeple Meet app.
  *
  * This class wraps the [NavHostController] to simplify navigation logic. It should be used by
- * composables to move between screens.
+ * composable to move between screens.
  *
  * Example usage:
  * ```kotlin

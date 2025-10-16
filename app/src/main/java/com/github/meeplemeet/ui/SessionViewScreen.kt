@@ -94,8 +94,8 @@ object SessionTestTags {
 data class Participant(val id: String, val name: String)
 
 // Constants for the minimum and maximum values of the player count slider.
-val sliderMinRange = 2f
-val sliderMaxRange = 10f
+const val sliderMinRange = 2f
+const val sliderMaxRange = 10f
 
 /* =======================================================================
  * Public entry point
@@ -240,7 +240,10 @@ fun ParticipantsSection(
         PillSliderNoBackground(
             title = "Number of players",
             range = sliderMinRange..sliderMaxRange,
-            values = form.minPlayers.toFloat()..form.maxPlayers.toFloat(),
+            values =
+                form.minPlayers.toFloat().coerceIn(sliderMinRange, sliderMaxRange)..form.maxPlayers
+                        .toFloat()
+                        .coerceIn(sliderMinRange, sliderMaxRange),
             steps = 7,
             onValuesChange = { min, max -> onFormChange(min, max) })
 

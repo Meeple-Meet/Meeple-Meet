@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
  * - Successful handle creation triggers [onCreate] callback.
  */
 @RunWith(AndroidJUnit4::class)
-class CreateAccountScreenTest: FirestoreTests() {
+class CreateAccountScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 

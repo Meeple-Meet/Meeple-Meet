@@ -13,7 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Games
+import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,7 +57,8 @@ fun DiscussionScreen(
     discussionId: String,
     currentUser: Account,
     onBack: () -> Unit,
-    onOpenDiscussionInfo: (Discussion) -> Unit = {}
+    onOpenDiscussionInfo: (Discussion) -> Unit = {},
+    onCreateSessionClick: (Discussion) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
   var messageText by remember { mutableStateOf("") }
@@ -129,7 +131,11 @@ fun DiscussionScreen(
           }
         },
         actions = {
-          IconButton(onClick = {}) { Icon(Icons.Default.Search, contentDescription = "Search") }
+          IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
+            Icon(
+                if (discussion!!.session == null) Icons.Default.LibraryAdd else Icons.Default.Games,
+                contentDescription = "Search")
+          }
         })
 
     /** LazyColumn showing all messages with optional date separators */
