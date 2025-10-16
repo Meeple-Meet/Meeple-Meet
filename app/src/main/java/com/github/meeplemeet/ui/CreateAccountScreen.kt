@@ -156,6 +156,7 @@ fun CreateAccountScreen(
               val usernameValidation = validateUsername(username)
               usernameError = usernameValidation
 
+              /** Create the handle and call onCreate if there are no errors */
               if ((errorMessage.isBlank()) && usernameValidation == null) {
                 viewModel.createAccountHandle(account = currentAccount, handle = handle)
                 if (errorMessage.isBlank()) onCreate()
