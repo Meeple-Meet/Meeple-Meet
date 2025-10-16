@@ -13,6 +13,7 @@ import com.github.meeplemeet.model.structures.DiscussionPreviewNoUid
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.structures.toNoUid
+import com.github.meeplemeet.model.structures.toPreview
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -59,14 +60,14 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
             listOf(creatorId),
             Timestamp.now(),
             null)
-    discussions.document(discussion.uid).set(toNoUid(discussion)).await()
 
-    accounts
-        .document(creatorId)
-        .collection(Account::previews.name)
-        .document(discussion.uid)
-        .set(DiscussionPreviewNoUid())
-        .await()
+    val batch = db.batch()
+    batch.set(discussions.document(discussion.uid), toNoUid(discussion))
+    (participants + creatorId).forEach { id ->
+      val ref = accounts.document(id).collection(Account::previews.name).document(discussion.uid)
+      batch.set(ref, DiscussionPreviewNoUid())
+    }
+    batch.commit().await()
 
     return Pair(getAccount(creatorId), discussion)
   }
@@ -108,6 +109,12 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(userId))
         .await()
+    accounts
+        .document(userId)
+        .collection(Account::previews.name)
+        .document(discussion.uid)
+        .set(toPreview(discussion))
+        .await()
     return getDiscussion(discussion.uid)
   }
 
@@ -136,6 +143,12 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(*userIds.toTypedArray()))
         .await()
+    val batch = db.batch()
+    userIds.forEach { id ->
+      val ref = accounts.document(id).collection(Account::previews.name).document(discussion.uid)
+      batch.set(ref, toPreview(discussion))
+    }
+    batch.commit().await()
     return getDiscussion(discussion.uid)
   }
 

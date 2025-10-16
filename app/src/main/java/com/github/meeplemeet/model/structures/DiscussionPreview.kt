@@ -49,3 +49,14 @@ fun fromNoUid(id: String, discussionPreviewNoUid: DiscussionPreviewNoUid): Discu
         discussionPreviewNoUid.lastMessageSender,
         discussionPreviewNoUid.lastMessageAt,
         discussionPreviewNoUid.unreadCount)
+
+fun toPreview(discussion: Discussion): DiscussionPreview {
+  val lastMessage: Message? =
+      if (discussion.messages.isNotEmpty()) discussion.messages.last() else null
+  return DiscussionPreview(
+      discussion.uid,
+      lastMessage?.content ?: "",
+      lastMessage?.senderId ?: "",
+      lastMessage?.createdAt ?: Timestamp.now(),
+      0)
+}

@@ -76,7 +76,7 @@ object NavigationTestHelpers {
   }
 
   fun ComposeTestRule.checkDiscussionAddScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.DiscussionAddScreen.name)
+    checkScreenIsDisplayed(MeepleMeetScreen.DiscussionAddScreen.title)
   }
 
   fun ComposeTestRule.checkBottomBarIsNotDisplayed() {

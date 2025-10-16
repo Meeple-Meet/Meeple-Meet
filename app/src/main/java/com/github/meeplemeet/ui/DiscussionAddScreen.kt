@@ -175,6 +175,7 @@ fun DiscussionAddScreen(
 
               /** Row for search and member selection */
               MemberSearchField(
+                  enabled = true,
                   searchQuery = searchQuery,
                   onQueryChange = { searchQuery = it },
                   searchResults = searchResults,
@@ -294,6 +295,7 @@ fun DiscussionAddScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberSearchField(
+    enabled: Boolean,
     searchQuery: String,
     onQueryChange: (String) -> Unit,
     searchResults: List<Account>,
@@ -304,6 +306,7 @@ fun MemberSearchField(
 ) {
   ExposedDropdownMenuBox(expanded = dropdownExpanded, onExpandedChange = {}) {
     OutlinedTextField(
+        enabled = enabled,
         value = searchQuery,
         onValueChange = { onQueryChange(it) },
         label = { Text("Add Members") },

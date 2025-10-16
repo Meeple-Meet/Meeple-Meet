@@ -285,6 +285,7 @@ fun DiscussionSettingScreen(
 
                 /** Row for search and member selection */
                 MemberSearchField(
+                    enabled = discussion!!.admins.contains(currentAccount.uid),
                     searchQuery = searchQuery,
                     onQueryChange = { searchQuery = it },
                     searchResults = searchResults,
@@ -293,6 +294,7 @@ fun DiscussionSettingScreen(
                     onDismiss = { dropdownExpanded = false },
                     onSelect = { account ->
                       selectedMembers.add(account)
+                      viewModel.addUserToDiscussion(discussion!!, currentAccount, account)
                       searchQuery = ""
                       dropdownExpanded = false
                     })
@@ -592,10 +594,7 @@ fun MemberList(
           if (!selectedIsAdmin && !selectedIsOwner) {
             TextButton(
                 onClick = {
-                  viewModel.addAdminToDiscussion(
-                      discussion = discussion,
-                      admin = selectedMember!!,
-                      changeRequester = currentAccount)
+                  viewModel.addAdminToDiscussion(discussion, currentAccount, selectedMember!!)
                   selectedMember = null
                 }) {
                   Text(
