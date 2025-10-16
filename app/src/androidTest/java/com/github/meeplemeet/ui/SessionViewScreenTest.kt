@@ -131,7 +131,11 @@ class SessionViewScreenTest {
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.TITLE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(SessionTestTags.PROPOSED_GAME).assertIsDisplayed()
+    composeTestRule
+        .onAllNodesWithTag(SessionTestTags.PROPOSED_GAME)
+        .assertCountEquals(2) // Optional, helps confirm why we do this
+    composeTestRule.onAllNodesWithTag(SessionTestTags.PROPOSED_GAME)[0].assertIsDisplayed()
+
     composeTestRule.onNodeWithTag(SessionTestTags.MIN_PLAYERS).assertIsDisplayed()
     composeTestRule.onNodeWithTag(SessionTestTags.MAX_PLAYERS).assertIsDisplayed()
     composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertIsDisplayed()
@@ -139,7 +143,6 @@ class SessionViewScreenTest {
     composeTestRule.onNodeWithTag(SessionTestTags.TIME_FIELD).assertIsDisplayed()
     composeTestRule.onNodeWithTag(SessionTestTags.LOCATION_FIELD).assertIsDisplayed()
     composeTestRule.onRoot().performTouchInput { swipeUp() }
-
     composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).assertIsDisplayed()
   }
 
@@ -253,7 +256,7 @@ class SessionViewScreenTest {
 
   @Test
   fun proposedGameSection_displaysTextAndCanBeUpdated() {
-    // Ensure admin rights so editable UI is rendered
+    // Make sure it's the admin view
     baseDiscussion = baseDiscussion.copy(creatorId = admin.uid, admins = listOf(admin.uid))
     injectedDiscussionFlow.value = baseDiscussion
 
@@ -266,34 +269,46 @@ class SessionViewScreenTest {
           initial = initialForm)
     }
 
-    // --- Verify header exists ---
+    // Header exists
     composeTestRule.onAllNodesWithText("Proposed game:").onFirst().assertExists()
 
-    // --- Type in query ---
-    composeTestRule.onNodeWithTag(SessionTestTags.PROPOSED_GAME).assertExists()
-    composeTestRule.onNodeWithTag(SessionTestTags.PROPOSED_GAME).performTextInput("Cascadia")
+    // Wait until the *editable* field (has SetText) is in the tree
+    composeTestRule.waitUntil(5_000) {
+      composeTestRule
+          .onAllNodes(
+              hasTestTag(SessionTestTags.PROPOSED_GAME) and hasSetTextAction(),
+              useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
-    // --- Wait for clear icon to appear (same pattern as reference test) ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+    // Type in query in the *editable* node
+    val editableGameField =
+        composeTestRule.onNode(
+            hasTestTag(SessionTestTags.PROPOSED_GAME) and hasSetTextAction(),
+            useUnmergedTree = true)
+    editableGameField.assertExists().performTextInput("Cascadia")
+
+    // Wait for the trailing clear icon to appear
+    composeTestRule.waitUntil(5_000) {
       composeTestRule
           .onAllNodesWithContentDescription("Clear", useUnmergedTree = true)
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
 
-    // --- Click clear icon ---
+    // Click clear
     composeTestRule
         .onAllNodesWithContentDescription("Clear", useUnmergedTree = true)
         .onFirst()
         .assertExists()
         .performClick()
 
-    // --- Wait for cleared state ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+    // Wait until text is cleared
+    composeTestRule.waitUntil(5_000) {
       composeTestRule.onAllNodesWithText("Cascadia").fetchSemanticsNodes().isEmpty()
     }
 
-    // --- Assert text removed ---
     composeTestRule.onAllNodesWithText("Cascadia").assertCountEquals(0)
   }
 

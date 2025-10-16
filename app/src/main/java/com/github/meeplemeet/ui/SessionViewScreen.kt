@@ -340,7 +340,7 @@ private fun ProposedGameSection(
           Modifier.clip(appShapes.extraLarge)
               .background(AppColors.primary)
               .border(1.dp, AppColors.primary)) {
-        Column(modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME)) {
+        Column(modifier = Modifier.fillMaxWidth()) {
           UnderlinedLabel(
               text = "Proposed game:",
               textColor = AppColors.textIcons,
