@@ -128,7 +128,7 @@ fun DiscussionSettingScreen(
     Scaffold(
         topBar = {
           TopBarWithDivider(
-              text = "Discussion Settings",
+              text = d.name,
               /**
                * Save Name and Description on back — this is the only time the DB is updated here
                */
@@ -138,8 +138,7 @@ fun DiscussionSettingScreen(
                 viewModel.setDiscussionDescription(
                     discussion = d, description = newDesc, changeRequester = currentAccount)
                 onBack()
-              }
-              /*Todo: navigation back*/ )
+              })
         },
         bottomBar = {
           Row(
@@ -394,7 +393,10 @@ fun TopBarWithDivider(
         },
         title = {
           Text(
-              text = text, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
+              text = text,
+              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE),
+              style = MaterialTheme.typography.bodyMedium,
+              color = AppColors.textIcons)
         },
         actions = { /* Add trailing icons here if needed */
           trailingIcons()
