@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
@@ -382,12 +383,14 @@ fun TopBarWithDivider(
   Column {
     CenterAlignedTopAppBar(
         navigationIcon = {
-          IconButton(onClick = { onReturn() }, modifier = Modifier.testTag("back_button")) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = AppColors.textIcons)
-          }
+          IconButton(
+              onClick = { onReturn() },
+              modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = AppColors.textIcons)
+              }
         },
         title = {
           Text(

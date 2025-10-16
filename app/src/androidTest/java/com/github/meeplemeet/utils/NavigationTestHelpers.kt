@@ -52,19 +52,19 @@ object NavigationTestHelpers {
   }
 
   fun ComposeTestRule.checkDiscussionsOverviewIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.DiscussionsOverview.name)
+    checkScreenIsDisplayed(MeepleMeetScreen.DiscussionsOverview.title)
   }
 
   fun ComposeTestRule.checkDiscoverScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.DiscoverSessions.name)
+    checkScreenIsDisplayed(MeepleMeetScreen.DiscoverSessions.title)
   }
 
   fun ComposeTestRule.checkSessionsScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.SessionsOverview.name)
+    checkScreenIsDisplayed(MeepleMeetScreen.SessionsOverview.title)
   }
 
   fun ComposeTestRule.checkProfileScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.ProfileScreen.name)
+    checkScreenIsDisplayed(MeepleMeetScreen.ProfileScreen.title)
   }
 
   fun ComposeTestRule.checkDiscussionScreenIsDisplayed(discussionName: String) {
