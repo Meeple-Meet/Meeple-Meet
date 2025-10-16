@@ -1,3 +1,5 @@
+// Chatgpt helped for documentation and some bug fixes
+
 package com.github.meeplemeet.ui
 
 import android.annotation.SuppressLint
@@ -64,6 +66,7 @@ import kotlin.math.roundToInt
  * Test tags for UI tests
  * ======================================================================= */
 
+// Object holding test tags for UI testing purposes.
 object SessionTestTags {
   const val TITLE = "session_title"
   const val PROPOSED_GAME = "proposed_game"
@@ -87,8 +90,10 @@ object SessionTestTags {
  * Models
  * ======================================================================= */
 
+// Simple data class representing a session participant (not always used, see Account).
 data class Participant(val id: String, val name: String)
 
+// Constants for the minimum and maximum values of the player count slider.
 val sliderMinRange = 2f
 val sliderMaxRange = 10f
 
@@ -96,6 +101,16 @@ val sliderMaxRange = 10f
  * Public entry point
  * ======================================================================= */
 
+/**
+ * Main screen composable for viewing (and possibly editing) a session. Displays the session title,
+ * proposed game, participants, organizational info, and a quit button.
+ *
+ * @param viewModel The FirestoreViewModel for session/discussion data.
+ * @param currentUser The current logged-in user/account.
+ * @param initial The initial SessionForm state (default: empty).
+ * @param discussionId The ID of the discussion/session.
+ * @param onBack Callback when the user navigates back or quits.
+ */
 @SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,12 +121,13 @@ fun SessionViewScreen(
     discussionId: String,
     onBack: () -> Unit = {}
 ) {
-  // Local state for the form
+  // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
 
+  // Observe discussion updates from the view model.
   val discussion by viewModel.discussionFlow(discussionId).collectAsState()
 
-  // Scaffold with top bar and content
+  // Scaffold provides the top bar and main content area.
   Scaffold(
       topBar = {
         TopBarWithDivider(
@@ -132,7 +148,7 @@ fun SessionViewScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-          // Title
+          // Session title (centered, not editable for now).
           Title(
               text = form.title.ifEmpty { "New Session" },
               editable = false, // TODO: make editable for admins and the session creator
@@ -141,12 +157,11 @@ fun SessionViewScreen(
                   Modifier.align(Alignment.CenterHorizontally)
                       .then(Modifier.testTag(SessionTestTags.TITLE)))
 
-          // Proposed game section
-          // background and border are primary for members since it blends with the screen bg
-          // proposed game is a text for members, it's not in a editable box
+          // Proposed game section (read-only).
+          // Background and border are primary for members since it blends with the screen bg.
           ProposedGameSection()
 
-          // Participants section
+          // Participants section with slider and chips.
           ParticipantsSection(
               form,
               onFormChange = { min, max ->
@@ -156,13 +171,13 @@ fun SessionViewScreen(
                 form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
               })
 
-          // Organisation section
-          // editable for admins and the session creator, read-only for members
+          // Organisation section (date, time, location).
+          // Editable for admins and the session creator, read-only for members.
           OrganizationSection(form, onFormChange = { form = it })
 
           Spacer(Modifier.height(4.dp))
 
-          // Quit session button
+          // Quit session button (removes user from session, not yet implemented).
           OutlinedButton(
               onClick = onBack
               /** TODO: remove currentAccount from the session */
@@ -184,6 +199,13 @@ fun SessionViewScreen(
  * Sub-components
  * ======================================================================= */
 
+/**
+ * Section displaying the list of participants, a slider for player count, and chips for each user.
+ *
+ * @param form The current session form state.
+ * @param onFormChange Callback when the slider values change.
+ * @param onRemoveParticipant Callback when a participant is removed.
+ */
 @Composable
 fun ParticipantsSection(
     form: SessionForm,
@@ -195,6 +217,7 @@ fun ParticipantsSection(
           Modifier.clip(appShapes.extraLarge)
               .background(AppColors.primary)
               .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
+        // Header row: "Participants" label and participant count bubble.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
           UnderlinedLabel(
               text = "Participants:",
@@ -213,6 +236,7 @@ fun ParticipantsSection(
 
         Spacer(Modifier.height(12.dp))
 
+        // Slider for selecting min and max number of players.
         PillSliderNoBackground(
             title = "Number of players",
             range = sliderMinRange..sliderMaxRange,
@@ -220,7 +244,7 @@ fun ParticipantsSection(
             steps = 7,
             onValuesChange = { min, max -> onFormChange(min, max) })
 
-        // Min/max bubbles of the slider
+        // Min/max value bubbles for the slider.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           CountBubble(
               count = form.minPlayers,
@@ -242,12 +266,16 @@ fun ParticipantsSection(
         Spacer(Modifier.height(10.dp))
         Spacer(Modifier.height(12.dp))
 
-        // Chips
+        // Participant chips (grid of users, removable).
         UserChipsGrid(
             participants = form.participants, onRemove = { acc -> onRemoveParticipant(acc) })
       }
 }
 
+/**
+ * Section displaying the currently proposed game for the session. For now, shown as read-only text
+ * for members.
+ */
 @Composable
 private fun ProposedGameSection() {
   SectionCard(
@@ -264,7 +292,7 @@ private fun ProposedGameSection() {
                   textColor = AppColors.textIcons,
                   textStyle = MaterialTheme.typography.titleLarge)
               Spacer(Modifier.width(8.dp))
-              // Text for members
+              // Text for members (not editable).
               Text(
                   "Current Game",
                   modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
@@ -275,6 +303,13 @@ private fun ProposedGameSection() {
       }
 }
 
+/**
+ * Section for organizing session details: date, time, and location. Editable for admins/session
+ * creator, read-only for members.
+ *
+ * @param form The current session form state.
+ * @param onFormChange Callback when any organization field changes.
+ */
 @Composable
 fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) {
   SectionCard(
@@ -290,6 +325,7 @@ fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) 
         Spacer(Modifier.height(12.dp))
 
         /** TODO: check date format */
+        // Date field with a docked date picker dialog.
         DatePickerDockedField(
             value = form.date,
             onValueChange = { onFormChange(form.copy(date = it!!)) },
@@ -298,17 +334,15 @@ fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) 
         Spacer(Modifier.height(10.dp))
 
         /** TODO: check time format */
-        // Time field using the new TimeField composable
+        // Time field using the TimeField composable, opens a time picker dialog.
         TimeField(
             value = form.time.toString(),
             onValueChange = { onFormChange(form.copy(time = it)) },
             modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
 
-        // Location field
-        // could be redone like the bootcamp
-        // using a search field with suggestions and map integration
-        // for now it's just a text field
+        // Location field (currently a simple text field).
+        // Could be improved with suggestions and map integration.
         OutlinedTextField(
             value = form.locationText,
             onValueChange = { onFormChange(form.copy(locationText = it)) },
@@ -321,6 +355,15 @@ fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) 
       }
 }
 
+/**
+ * Displays the session title. (Currently not editable.)
+ *
+ * @param text The title text to display.
+ * @param editable Whether the title is editable (not yet supported).
+ * @param form The session form (unused for now).
+ * @param onValueChange Callback for title changes (unused for now).
+ * @param modifier Modifier for styling.
+ */
 @Composable
 fun Title(
     text: String,
@@ -336,6 +379,12 @@ fun Title(
       modifier = modifier)
 }
 
+/**
+ * Row of icon buttons for notifications and chat, each with a badge.
+ *
+ * @param onclickNotification Callback when notification icon is clicked.
+ * @param onclickChat Callback when chat icon is clicked.
+ */
 @Composable
 fun TopRightIcons(onclickNotification: () -> Unit = {}, onclickChat: () -> Unit = {}) {
   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -358,6 +407,13 @@ fun TopRightIcons(onclickNotification: () -> Unit = {}, onclickChat: () -> Unit 
   }
 }
 
+/**
+ * Displays a participant as a removable chip with their name and avatar.
+ *
+ * @param name The participant's display name.
+ * @param onRemove Callback when the remove icon is clicked.
+ * @param modifier Modifier for styling.
+ */
 @Composable
 fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) {
   InputChip(
@@ -390,6 +446,13 @@ fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) 
       shape = appShapes.extraLarge)
 }
 
+/**
+ * Displays the list of participants as a grid of removable chips.
+ *
+ * @param participants List of participant accounts.
+ * @param onRemove Callback when a participant is removed.
+ * @param modifier Modifier for styling.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UserChipsGrid(
@@ -408,6 +471,12 @@ fun UserChipsGrid(
 /**
  * Compact, discrete "pill" styled range slider with subtle rounded track & dots. This mirrors the
  * blue/red dotted pills in the mock (generic visual).
+ *
+ * @param title The label above the slider.
+ * @param range The minimum and maximum values for the slider.
+ * @param values The current selected min/max values.
+ * @param steps Number of steps between min and max.
+ * @param onValuesChange Callback when slider values change.
  */
 @Composable
 fun PillSliderNoBackground(
@@ -439,6 +508,15 @@ fun PillSliderNoBackground(
   }
 }
 
+/**
+ * Icon button with a badge, for notifications or chat.
+ *
+ * @param icon The icon to display.
+ * @param contentDescription Content description for accessibility.
+ * @param badgeCount Number to display in the badge (shows empty if 0).
+ * @param onClick Callback for button click.
+ * @param modifier Modifier for styling.
+ */
 @Composable
 fun BadgedIconButton(
     icon: ImageVector,
@@ -461,10 +539,16 @@ fun BadgedIconButton(
       }
 }
 
+/**
+ * Dialog for picking a time using the Material3 TimePicker.
+ *
+ * @param onDismiss Callback when the dialog is dismissed.
+ * @param onTimeSelected Callback with the selected LocalTime.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit) {
-  // initialize state with current time
+  // Initialize state with current time.
   val calendar = Calendar.getInstance()
   val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
   val initialMinute = calendar.get(Calendar.MINUTE)
@@ -492,7 +576,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
       text = {
-        // Use the Material3 TimePicker (dial) inside the dialog
+        // Use the Material3 TimePicker (dial) inside the dialog.
         TimePicker(
             state = timePickerState,
             colors =
@@ -510,8 +594,16 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
       })
 }
 
+/**
+ * Displays a time field with a button to open a time picker dialog.
+ *
+ * @param value The current time as a string.
+ * @param onValueChange Callback with the new LocalTime when picked.
+ * @param modifier Modifier for styling.
+ */
 @Composable
 fun TimeField(value: String, onValueChange: (LocalTime) -> Unit, modifier: Modifier = Modifier) {
+  // Controls visibility of the time picker dialog.
   var showDialogTime by remember { mutableStateOf(false) }
 
   IconTextField(
