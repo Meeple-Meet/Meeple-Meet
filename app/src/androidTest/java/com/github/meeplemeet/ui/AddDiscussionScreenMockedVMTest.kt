@@ -42,7 +42,7 @@ class AddDiscussionScreenMockedVMTest {
   /**
    * Set up the Compose content before each test.
    *
-   * Initializes a relaxed mocked [FirestoreViewModel] and sets the [AddDiscussionScreen] content
+   * Initializes a relaxed mocked [FirestoreViewModel] and sets the [DiscussionAddScreen] content
    * with the mocked ViewModel and account.
    */
   @Before

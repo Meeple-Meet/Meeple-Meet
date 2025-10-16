@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -156,12 +157,17 @@ fun MeepleMeetApp(
             }
           }
           composable(MeepleMeetScreen.Routes.DISCUSSION_INFO) { backStackEntry ->
-            DiscussionInfoScreen(
-                discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
-                onBack = { navigationActions.goBack() },
-                onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-                onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-                viewModel = firestoreVM)
+            if (currentAccount != null) {
+              DiscussionInfoScreen(
+                  discussionId = backStackEntry.arguments?.getString("discussionId") ?: "",
+                  currentAccount = currentAccount!!,
+                  onBack = { navigationActions.goBack() },
+                  onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                  onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                  viewModel = firestoreVM)
+            } else {
+              LoadingScreen()
+            }
           }
         }
 
@@ -201,7 +207,9 @@ fun MeepleMeetApp(
 
 @Composable
 private fun LoadingScreen() {
-  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-    CircularProgressIndicator()
-  }
+  Box(
+      modifier = Modifier.testTag("Loading Screen").fillMaxSize(),
+      contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+      }
 }
