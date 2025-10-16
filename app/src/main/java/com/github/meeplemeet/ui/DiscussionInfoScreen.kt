@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -284,6 +283,20 @@ fun DiscussionSettingScreen(
                     thickness = 1.75.dp,
                     color = AppColors.divider)
 
+                /** Row for search and member selection */
+                MemberSearchField(
+                    searchQuery = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    searchResults = searchResults,
+                    isSearching = isSearching,
+                    dropdownExpanded = dropdownExpanded,
+                    onDismiss = { dropdownExpanded = false },
+                    onSelect = { account ->
+                      selectedMembers.add(account)
+                      searchQuery = ""
+                      dropdownExpanded = false
+                    })
+
                 /** --- Members List --- */
                 MemberList(
                     searchQuery = searchQuery,
@@ -444,96 +457,6 @@ fun MemberList(
     currentAccount: Account,
     discussion: Discussion,
 ) {
-
-  /** --- Members Header + Search Field --- */
-  Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-    Text(
-        text = "Members:",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = AppColors.textIcons)
-
-    /** Autocomplete Search Field + Dropdown (only for non-members) */
-    if (!isMember) {
-
-      /** Spacer between title and search field */
-      Box(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
-
-        /** --- Search Field --- */
-        OutlinedTextField(
-            value = searchQuery,
-            shape = RoundedCornerShape(28.dp),
-            onValueChange = onSearchQueryChange,
-            label = { Text("Add Members", color = AppColors.textIconsFade) },
-            modifier = Modifier.fillMaxWidth(),
-            trailingIcon = {
-              if (searchQuery.isNotBlank()) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Clear",
-                    modifier =
-                        Modifier.clickable {
-                          onSearchQueryChange("")
-                          onDropdownExpandedChange(false)
-                        },
-                    tint = AppColors.textIcons)
-              }
-            },
-            enabled = true,
-            colors =
-                TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = AppColors.textIcons,
-                    unfocusedIndicatorColor = AppColors.textIconsFade,
-                    cursorColor = AppColors.textIcons,
-                    focusedTextColor = AppColors.textIcons,
-                    unfocusedTextColor = AppColors.textIcons))
-
-        /** --- Dropdown Menu for search results --- */
-        DropdownMenu(
-            expanded = dropdownExpanded,
-            onDismissRequest = { onDropdownExpandedChange(false) },
-            modifier = Modifier.fillMaxWidth().background(AppColors.secondary)) {
-              when {
-                isSearching -> {
-                  DropdownMenuItem(
-                      text = { Text("Searching...", color = AppColors.textIconsFade) },
-                      onClick = {})
-                }
-                searchResults.isEmpty() -> {
-                  DropdownMenuItem(
-                      text = { Text("No results", color = AppColors.textIconsFade) }, onClick = {})
-                }
-                else -> {
-                  searchResults.forEach { account ->
-                    DropdownMenuItem(
-                        text = { Text(account.name, color = AppColors.textIcons) },
-                        onClick = {
-                          selectedMembers.add(account)
-                          onSearchQueryChange("")
-                          onDropdownExpandedChange(false)
-                        },
-                        leadingIcon = {
-                          Box(
-                              modifier =
-                                  Modifier.size(32.dp)
-                                      .clip(CircleShape)
-                                      .background(AppColors.primary),
-                              contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = account.name.firstOrNull()?.toString() ?: "A",
-                                    color = AppColors.affirmative,
-                                    fontWeight = FontWeight.Bold)
-                              }
-                        })
-                  }
-                }
-              }
-            }
-      }
-    }
-  }
   /** Small spacer between search field and list */
   Spacer(modifier = Modifier.height(0.dp))
 

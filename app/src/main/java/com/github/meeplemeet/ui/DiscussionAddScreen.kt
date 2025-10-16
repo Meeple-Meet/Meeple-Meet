@@ -71,13 +71,17 @@ fun DiscussionAddScreen(
     if (searchQuery.isBlank()) {
       searchResults = emptyList()
       dropdownExpanded = false
+      isSearching = false
       return@LaunchedEffect
     }
     isSearching = true
     viewModel.searchByHandle(searchQuery)
+  }
+
+  LaunchedEffect(viewModel.handleSuggestions) {
     viewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != currentUser.uid && it !in selectedMembers }
-      dropdownExpanded = searchResults.isNotEmpty()
+      dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false
     }
   }
@@ -104,7 +108,7 @@ fun DiscussionAddScreen(
                       navigationIconContentColor = AppColors.textIcons),
               title = {
                 Text(
-                    text = MeepleMeetScreen.DiscussionAddScreen.name,
+                    text = MeepleMeetScreen.DiscussionAddScreen.title,
                     modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               },
               navigationIcon = {
@@ -170,88 +174,18 @@ fun DiscussionAddScreen(
               Spacer(modifier = Modifier.height(16.dp))
 
               /** Row for search and member selection */
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Members:",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold)
-
-                    /** Autocomplete search field */
-                    Box(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
-                      OutlinedTextField(
-                          value = searchQuery,
-                          colors =
-                              TextFieldDefaults.colors()
-                                  .copy(
-                                      focusedTextColor = AppColors.textIcons,
-                                      unfocusedTextColor = AppColors.textIcons,
-                                      unfocusedIndicatorColor = AppColors.textIcons,
-                                      focusedIndicatorColor = AppColors.textIcons,
-                                      unfocusedLabelColor = AppColors.textIconsFade,
-                                      focusedLabelColor = AppColors.textIconsFade,
-                                      unfocusedContainerColor = Color.Transparent,
-                                      focusedContainerColor = Color.Transparent),
-                          textStyle = MaterialTheme.typography.bodySmall,
-                          shape = CircleShape,
-                          onValueChange = { searchQuery = it },
-                          label = { Text("Add Members") },
-                          modifier = Modifier.fillMaxWidth(),
-                          trailingIcon = {
-                            if (searchQuery.isNotBlank()) {
-                              Icon(
-                                  Icons.Default.Close,
-                                  contentDescription = "Clear",
-                                  modifier =
-                                      Modifier.clickable {
-                                        searchQuery = ""
-                                        dropdownExpanded = false
-                                      })
-                            }
-                          })
-
-                      /** Dropdown menu showing search results */
-                      DropdownMenu(
-                          expanded = dropdownExpanded,
-                          onDismissRequest = { dropdownExpanded = false },
-                          modifier = Modifier.fillMaxWidth().background(AppColors.divider)) {
-                            when {
-                              isSearching -> {
-                                DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
-                              }
-                              searchResults.isEmpty() -> {
-                                DropdownMenuItem(text = { Text("No results") }, onClick = {})
-                              }
-                              else -> {
-                                searchResults.forEach { account ->
-                                  DropdownMenuItem(
-                                      text = { Text(account.handle) },
-                                      onClick = {
-                                        selectedMembers.add(account)
-                                        searchQuery = ""
-                                        dropdownExpanded = false
-                                      },
-                                      leadingIcon = {
-                                        Box(
-                                            modifier =
-                                                Modifier.size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color.LightGray),
-                                            contentAlignment = Alignment.Center) {
-                                              Text(
-                                                  text =
-                                                      account.name.firstOrNull()?.toString() ?: "A",
-                                                  color = Color(0xFFFFA000),
-                                                  fontWeight = FontWeight.Bold)
-                                            }
-                                      })
-                                }
-                              }
-                            }
-                          }
-                    }
-                  }
+              MemberSearchField(
+                  searchQuery = searchQuery,
+                  onQueryChange = { searchQuery = it },
+                  searchResults = searchResults,
+                  isSearching = isSearching,
+                  dropdownExpanded = dropdownExpanded,
+                  onDismiss = { dropdownExpanded = false },
+                  onSelect = { account ->
+                    selectedMembers.add(account)
+                    searchQuery = ""
+                    dropdownExpanded = false
+                  })
 
               Spacer(modifier = Modifier.height(20.dp))
 
@@ -355,4 +289,50 @@ fun DiscussionAddScreen(
                   }
             }
       }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MemberSearchField(
+    searchQuery: String,
+    onQueryChange: (String) -> Unit,
+    searchResults: List<Account>,
+    isSearching: Boolean,
+    dropdownExpanded: Boolean,
+    onDismiss: () -> Unit,
+    onSelect: (Account) -> Unit
+) {
+  ExposedDropdownMenuBox(expanded = dropdownExpanded, onExpandedChange = {}) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = { onQueryChange(it) },
+        label = { Text("Add Members") },
+        modifier =
+            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                .fillMaxWidth(),
+        trailingIcon = {
+          if (searchQuery.isNotBlank()) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Clear",
+                modifier = Modifier.clickable { onQueryChange("") })
+          }
+        })
+
+    ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = onDismiss) {
+      when {
+        isSearching -> DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
+        searchResults.isEmpty() -> DropdownMenuItem(text = { Text("No results") }, onClick = {})
+        else ->
+            searchResults.forEach { account ->
+              DropdownMenuItem(
+                  text = { Text(account.handle) },
+                  onClick = {
+                    onSelect(account)
+                    onDismiss()
+                  })
+            }
+      }
+    }
+  }
 }

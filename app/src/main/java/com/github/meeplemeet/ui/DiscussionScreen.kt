@@ -106,7 +106,7 @@ fun DiscussionScreen(
           Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier =
-                  Modifier.testTag("DiscussionInfo/${discussion?.name}").clickable {
+                  Modifier.fillMaxSize().testTag("DiscussionInfo/${discussion?.name}").clickable {
                     discussion?.let { onOpenDiscussionInfo(it) }
                   }) {
                 Box(
