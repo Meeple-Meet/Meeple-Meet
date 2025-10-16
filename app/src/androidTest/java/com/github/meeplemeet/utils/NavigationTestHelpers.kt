@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.ui.UITestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -198,6 +199,7 @@ object NavigationTestHelpers {
   fun ComposeTestRule.leaveDiscussion() {
     waitForIdle()
 
+    // Leave button
     val foundInMergedTree =
         try {
           onNodeWithTag(UITestTags.LEAVE_BUTTON, useUnmergedTree = false)
@@ -215,11 +217,31 @@ object NavigationTestHelpers {
     }
 
     waitForIdle()
+
+    // Confirm leave button
+    val foundConfirmInMergedTree =
+        try {
+          onNodeWithTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON, useUnmergedTree = false)
+              .assertIsDisplayed()
+              .performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundConfirmInMergedTree) {
+      onNodeWithTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .performClick()
+    }
+
+    waitForIdle()
   }
 
   fun ComposeTestRule.deleteDiscussion() {
     waitForIdle()
 
+    // Delete button
     val foundInMergedTree =
         try {
           onNodeWithTag(UITestTags.DELETE_BUTTON, useUnmergedTree = false)
@@ -237,10 +259,40 @@ object NavigationTestHelpers {
     }
 
     waitForIdle()
+
+    // Confirm delete button
+    val foundConfirmInMergedTree =
+        try {
+          onNodeWithTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON, useUnmergedTree = false)
+              .assertIsDisplayed()
+              .performClick()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+
+    if (!foundConfirmInMergedTree) {
+      onNodeWithTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .performClick()
+    }
+
+    waitForIdle()
   }
 
-  fun ComposeTestRule.addDiscussion() {
+  fun ComposeTestRule.fillAddDiscussionForm(title: String, description: String) {
     waitForIdle()
+
+    onNodeWithTag("Add Title").performTextInput(title)
+    onNodeWithTag("Add Description").performTextInput(description)
+
+    waitForIdle()
+  }
+
+  fun ComposeTestRule.addDiscussion(title: String, description: String) {
+    waitForIdle()
+
+    fillAddDiscussionForm(title, description)
 
     val tag = "Create Discussion" // TODO better tag
     val foundInMergedTree =

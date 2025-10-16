@@ -144,7 +144,7 @@ fun DiscussionAddScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { title = it },
                   label = { Text("Title") },
-                  modifier = Modifier.fillMaxWidth())
+                  modifier = Modifier.testTag("Add Title").fillMaxWidth())
 
               Spacer(modifier = Modifier.height(12.dp))
 
@@ -165,7 +165,7 @@ fun DiscussionAddScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { description = it },
                   label = { Text("Description (optional)") },
-                  modifier = Modifier.fillMaxWidth().height(150.dp))
+                  modifier = Modifier.testTag("Add Description").fillMaxWidth().height(150.dp))
 
               Spacer(modifier = Modifier.height(16.dp))
 

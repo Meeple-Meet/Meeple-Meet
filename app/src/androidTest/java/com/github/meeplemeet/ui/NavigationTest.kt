@@ -8,14 +8,12 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.github.meeplemeet.MeepleMeetApp
-import com.github.meeplemeet.model.repositories.AuthRepository
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.DiscussionPreview
-import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.FirestoreTests
 import com.github.meeplemeet.utils.NavigationTestHelpers.addDiscussion
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsDisplayed
 import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsNotDisplayed
@@ -36,12 +34,9 @@ import com.github.meeplemeet.utils.NavigationTestHelpers.navigateBack
 import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToAddDiscussionScreen
 import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionInfoScreen
 import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionScreen
-import com.google.firebase.Timestamp
 import junit.framework.TestCase.assertEquals
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -57,167 +52,78 @@ import org.junit.Test
  *   instead of "Sessions"), update the asserted strings accordingly.
  * - Update test tags for better testability where applicable.
  */
-class NavigationTest {
+class NavigationTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private lateinit var authVM: AuthViewModel
-  private lateinit var dbVM: FirestoreViewModel
+  private lateinit var firestoreVM: FirestoreViewModel
+  private lateinit var repository: FirestoreRepository
 
-  private val fakeAccount =
-      Account(
-          uid = "fake-uid-123",
-          handle = "fake_handle",
-          name = "Fake User",
-          email = "fake@example.com",
-          previews = emptyMap(),
-          photoUrl = null,
-          description = "Test account")
-
-  private val fakeDiscussion1 =
-      Discussion(
-          uid = "discussion-1",
-          creatorId = fakeAccount.uid,
-          name = "Fake Discussion 1",
-          description = "Testing navigation from overview",
-          messages = emptyList(),
-          participants = listOf(fakeAccount.uid),
-          admins = listOf(fakeAccount.uid),
-          createdAt = Timestamp.now())
-
-  private val fakeDiscussion2 =
-      Discussion(
-          uid = "discussion-2",
-          creatorId = fakeAccount.uid,
-          name = "Fake Discussion 2",
-          description = "Testing navigation with multiple discussions",
-          messages = emptyList(),
-          participants = listOf(fakeAccount.uid),
-          admins = listOf(fakeAccount.uid),
-          createdAt = Timestamp.now())
-
-  private val fakePreview1 =
-      DiscussionPreview(
-          uid = fakeDiscussion1.uid,
-          lastMessage = "Yo!",
-          lastMessageSender = fakeAccount.uid,
-          lastMessageAt = Timestamp.now(),
-          unreadCount = 0)
-
-  private val fakePreview2 =
-      DiscussionPreview(
-          uid = fakeDiscussion2.uid,
-          lastMessage = "Another one!",
-          lastMessageSender = fakeAccount.uid,
-          lastMessageAt = Timestamp.now(),
-          unreadCount = 0)
-
-  private val fakePreviews =
-      mapOf(fakeDiscussion1.uid to fakePreview1, fakeDiscussion2.uid to fakePreview2)
+  private lateinit var testAccount: Account
+  private lateinit var testDiscussion1Uid: String
+  private lateinit var testDiscussion2Uid: String
 
   // ---------- Setup ----------
 
   @Before
   fun setUp() {
-    // Create ViewModels with logged-out state
-    authVM = AuthViewModel(AuthRepository())
-    dbVM = FirestoreViewModel()
+    // Create repository and ViewModels
+    repository = FirestoreRepository()
+    authVM = AuthViewModel()
+    firestoreVM = FirestoreViewModel(repository)
 
-    // CRITICAL: Start with BOTH VMs in logged-out state
-    setAuthVMState(authVM, AuthUIState(account = null))
-    setFirestoreVMAccount(dbVM, null)
+    // Create test data directly in Firestore
+    runBlocking {
+      // Create test account
+      testAccount =
+          repository.createAccount(
+              userHandle = "test_user",
+              name = "Test User",
+              email = "test@example.com",
+              photoUrl = null)
 
-    // Launch the full app UI
-    composeTestRule.setContent { MeepleMeetApp(authVM = authVM, firestoreVM = dbVM) }
+      // Create test discussions
+      val (_, discussion1) =
+          repository.createDiscussion(
+              name = "Fake Discussion 1",
+              description = "Testing navigation from overview",
+              creatorId = testAccount.uid)
+      testDiscussion1Uid = discussion1.uid
+
+      val (_, discussion2) =
+          repository.createDiscussion(
+              name = "Fake Discussion 2",
+              description = "Testing navigation with multiple discussions",
+              creatorId = testAccount.uid)
+      testDiscussion2Uid = discussion2.uid
+    }
+
+    // Launch the app UI (starts at SignIn screen)
+    composeTestRule.setContent { MeepleMeetApp(authVM = authVM, firestoreVM = firestoreVM) }
     composeTestRule.waitForIdle()
   }
 
-  // ===== VM State helpers =====
+  // ===== Test helpers =====
 
   /**
-   * Set the AuthViewModel UI state. Uses reflection to access the private _uiState
-   * MutableStateFlow.
-   */
-  private fun setAuthVMState(vm: AuthViewModel, newState: AuthUIState) {
-    val field =
-        vm::class.java.declaredFields.firstOrNull { f ->
-          f.isAccessible = true
-          val value =
-              try {
-                f.get(vm)
-              } catch (_: Throwable) {
-                null
-              }
-          value is MutableStateFlow<*> && value.value is AuthUIState
-        } ?: error("MutableStateFlow<AuthUIState> not found on AuthViewModel")
-
-    @Suppress("UNCHECKED_CAST") val flow = field.get(vm) as MutableStateFlow<AuthUIState>
-    flow.value = newState
-  }
-
-  /**
-   * Set the FirestoreViewModel account state. Uses reflection to access the private _account
-   * MutableStateFlow.
-   */
-  private fun setFirestoreVMAccount(vm: FirestoreViewModel, account: Account?) {
-    val field = vm::class.java.declaredFields.first { it.name == "_account" }
-    field.isAccessible = true
-
-    @Suppress("UNCHECKED_CAST") val flow = field.get(vm) as MutableStateFlow<Account?>
-    flow.value = account
-  }
-
-  /**
-   * Simulate login by setting both ViewModels to logged-in state. This mimics what happens in the
-   * real app when Firebase auth completes.
+   * Simulate login by loading the test account into the FirestoreViewModel. This triggers the
+   * navigation to DiscussionsOverview in MainActivity.
    */
   private fun login() {
-    // Set AuthViewModel account
-    setAuthVMState(authVM, AuthUIState(account = fakeAccount))
+    firestoreVM.getAccount(testAccount.uid)
 
-    // Set FirestoreViewModel account and discussion data
-    populateFirestoreVM(dbVM)
+    // Wait until the account is actually loaded in the ViewModel
+    composeTestRule.waitUntil(timeoutMillis = 5_000) { firestoreVM.account.value != null }
 
-    // Wait for navigation to complete
     composeTestRule.waitForIdle()
   }
 
-  /** Simulate logout by clearing both ViewModels. */
+  /** Simulate logout by clearing the account from the ViewModels. */
   private fun logout() {
-    setAuthVMState(authVM, AuthUIState(account = null))
-    setFirestoreVMAccount(dbVM, null)
+    firestoreVM.signOut()
+    authVM.logout()
     composeTestRule.waitForIdle()
-  }
-
-  /**
-   * Populate FirestoreViewModel with fake data for testing. This sets up the account, discussions,
-   * and previews.
-   */
-  private fun populateFirestoreVM(vm: FirestoreViewModel) {
-    val fields = vm::class.java.declaredFields
-    fields.forEach { it.isAccessible = true }
-
-    val accountField = fields.first { it.name == "_account" }
-    val discussionField = fields.first { it.name == "_discussion" }
-    val previewStatesField = fields.first { it.name == "previewStates" }
-    val discussionFlowsField = fields.first { it.name == "discussionFlows" }
-
-    @Suppress("UNCHECKED_CAST")
-    (accountField.get(vm) as MutableStateFlow<Account?>).value = fakeAccount
-
-    @Suppress("UNCHECKED_CAST")
-    (discussionField.get(vm) as MutableStateFlow<Discussion?>).value = fakeDiscussion1
-
-    @Suppress("UNCHECKED_CAST")
-    val previewStates =
-        previewStatesField.get(vm) as MutableMap<String, StateFlow<Map<String, DiscussionPreview>>>
-
-    @Suppress("UNCHECKED_CAST")
-    val discussionFlows = discussionFlowsField.get(vm) as MutableMap<String, StateFlow<Discussion?>>
-
-    previewStates[fakeAccount.uid] = MutableStateFlow(fakePreviews)
-    discussionFlows[fakeDiscussion1.uid] = MutableStateFlow(fakeDiscussion1)
-    discussionFlows[fakeDiscussion2.uid] = MutableStateFlow(fakeDiscussion2)
   }
 
   private fun pressSystemBack(shouldTerminate: Boolean = false) {
@@ -375,14 +281,15 @@ class NavigationTest {
   }
 
   // ---------- Discussions navigation ----------
+
   // DiscussionsOverview navigation
 
   @Test
   fun clickingOnDiscussionPreview_openDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
     composeTestRule.checkBottomBarIsNotDisplayed()
   }
 
@@ -423,7 +330,6 @@ class NavigationTest {
     composeTestRule.checkBottomBarIsDisplayed()
   }
 
-  @Ignore("FIXME")
   @Test
   fun createDiscussion_navigateToDiscussionsOverview() {
     login()
@@ -432,7 +338,7 @@ class NavigationTest {
     composeTestRule.checkDiscussionAddScreenIsDisplayed()
 
     // Simulate adding a discussion
-    composeTestRule.addDiscussion()
+    composeTestRule.addDiscussion("New Discussion", "Created during test")
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.checkBottomBarIsDisplayed()
   }
@@ -443,8 +349,8 @@ class NavigationTest {
   fun canGoBack_fromDiscussionScreen_toDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Back to overview
     pressSystemBack(shouldTerminate = false)
@@ -455,8 +361,8 @@ class NavigationTest {
   fun backButton_fromDiscussionScreen_toDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Back to overview
     composeTestRule.navigateBack()
@@ -465,82 +371,77 @@ class NavigationTest {
 
   // DiscussionInfo navigation
 
-  @Ignore("FIXME")
   @Test
   fun clickingOnDiscussionInfo_opensDiscussionInfoScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Open info
-    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
     composeTestRule.checkBottomBarIsNotDisplayed()
   }
 
-  @Ignore("FIXME")
   @Test
   fun canGoBack_fromDiscussionInfo_toDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Open info
-    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
 
     // Back to discussion
     pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
   }
 
-  @Ignore("FIXME")
   @Test
   fun backButton_fromDiscussionInfo_toDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Open info
-    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
 
     // Back to discussion
     composeTestRule.navigateBack()
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
   }
 
-  @Ignore("FIXME")
   @Test
   fun deleteDiscussion_fromInfo_toOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Open info
-    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
 
     // Simulate delete
     composeTestRule.deleteDiscussion()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
   }
 
-  @Ignore("FIXME")
   @Test
   fun leaveDiscussion_fromInfo_toOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
 
     // Open info
-    composeTestRule.navigateToDiscussionInfoScreen(fakeDiscussion1.name)
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed(fakeDiscussion1.name)
+    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
+    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
 
     // Simulate leave
     composeTestRule.leaveDiscussion()

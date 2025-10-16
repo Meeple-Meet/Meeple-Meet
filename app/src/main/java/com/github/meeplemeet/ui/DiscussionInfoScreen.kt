@@ -38,6 +38,8 @@ object UITestTags {
   const val DISCUSSION_DESCRIPTION = "discussion_description"
   const val DELETE_DISCUSSION_DISPLAY = "delete_discussion_display"
   const val LEAVE_DISCUSSION_DISPLAY = "leave_discussion_display"
+  const val DELETE_DISCUSSION_CONFIRM_BUTTON = "confirm_delete_button"
+  const val LEAVE_DISCUSSION_CONFIRM_BUTTON = "confirm_leave_button"
   const val MAKE_ADMIN_BUTTON = "make_admin_button"
   const val DISCUSSION_NAME = "discussion_name"
 }
@@ -316,7 +318,9 @@ fun DiscussionSettingScreen(
                                 onDelete()
                               }
                               showDeleteDialog = false
-                            }) {
+                            },
+                            modifier =
+                                Modifier.testTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON)) {
                               Text("Delete")
                             }
                       },
@@ -346,7 +350,9 @@ fun DiscussionSettingScreen(
                                 onLeave()
                               }
                               showLeaveDialog = false
-                            }) {
+                            },
+                            modifier =
+                                Modifier.testTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON)) {
                               Text("Leave")
                             }
                       },
