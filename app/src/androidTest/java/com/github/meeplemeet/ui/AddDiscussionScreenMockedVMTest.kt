@@ -49,7 +49,7 @@ class AddDiscussionScreenMockedVMTest {
   fun setup() {
     mockVm = mockk(relaxed = true)
     compose.setContent {
-      AddDiscussionScreen(
+      DiscussionAddScreen(
           onBack = { nav.goBack() },
           onCreate = { nav.goBack() },
           viewModel = mockVm,

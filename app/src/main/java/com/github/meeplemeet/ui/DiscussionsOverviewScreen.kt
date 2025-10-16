@@ -103,7 +103,7 @@ fun DiscussionsOverviewScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.DiscussionsOverview.name,
+                  text = MeepleMeetScreen.DiscussionsOverview.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))

@@ -22,7 +22,7 @@ fun SessionsOverviewScreen(navigation: NavigationActions) {
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.SessionsOverview.name,
+                  text = MeepleMeetScreen.SessionsOverview.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))

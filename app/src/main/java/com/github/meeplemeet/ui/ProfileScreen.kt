@@ -35,7 +35,7 @@ fun ProfileScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.ProfileScreen.name,
+                  text = MeepleMeetScreen.ProfileScreen.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))

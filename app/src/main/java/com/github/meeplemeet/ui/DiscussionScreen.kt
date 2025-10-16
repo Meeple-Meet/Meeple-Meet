@@ -133,7 +133,8 @@ fun DiscussionScreen(
         actions = {
           IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
             Icon(
-                if (discussion!!.session == null) Icons.Default.LibraryAdd else Icons.Default.Games,
+                if (discussion != null && discussion!!.session == null) Icons.Default.LibraryAdd
+                else Icons.Default.Games,
                 contentDescription = "Search")
           }
         })

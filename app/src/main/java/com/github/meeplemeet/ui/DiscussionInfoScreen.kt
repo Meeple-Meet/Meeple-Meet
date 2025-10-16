@@ -45,8 +45,8 @@ object UITestTags {
 }
 
 /**
- * Displays the discussion infos screen, allowing users to view and edit discussion details,
- * manage members, and perform actions such as deleting or leaving the discussion.
+ * Displays the discussion infos screen, allowing users to view and edit discussion details, manage
+ * members, and perform actions such as deleting or leaving the discussion.
  *
  * @param viewModel The FirestoreViewModel for data operations.
  * @param discussionId The ID of the discussion to manage.

@@ -85,76 +85,25 @@ object NavigationTestTags {
  * - The sealed class allows for safer type-checking and easier management of dynamic routes.
  * - `route` and `name` should stay aligned for clarity.
  */
-sealed class MeepleMeetScreen(
-    val route: String,
-    val name: String,
-    val isInBottomBar: Boolean = false,
+enum class MeepleMeetScreen(
+    val title: String,
+    val inBottomBar: Boolean = false,
     val icon: ImageVector? = null,
     val testTag: String? = null
 ) {
-  /** Top-level destinations */
-  object DiscoverSessions :
-      MeepleMeetScreen(
-          route = "discover",
-          name = "Discover",
-          isInBottomBar = true,
-          icon = Icons.Default.Language,
-          testTag = NavigationTestTags.DISCOVER_TAB)
-
-  object SessionsOverview :
-      MeepleMeetScreen(
-          route = "sessions_overview",
-          name = "Sessions",
-          isInBottomBar = true,
-          icon = Icons.Default.Groups,
-          testTag = NavigationTestTags.SESSIONS_TAB)
-
-  object DiscussionsOverview :
-      MeepleMeetScreen(
-          route = "discussions_overview",
-          name = "Discussions",
-          isInBottomBar = true,
-          icon = Icons.Default.ChatBubbleOutline,
-          testTag = NavigationTestTags.DISCUSSIONS_TAB)
-
-  object ProfileScreen :
-      MeepleMeetScreen(
-          route = "profile",
-          name = "Profile",
-          isInBottomBar = true,
-          icon = Icons.Default.AccountCircle,
-          testTag = NavigationTestTags.PROFILE_TAB)
-
-  /** Authentication screens */
-  object SignInScreen : MeepleMeetScreen(route = "sign_in", name = "Sign In")
-
-  object SignUpScreen : MeepleMeetScreen(route = "sign_up", name = "Sign Up")
-
-  /** Parameterized screens */
-  data class SessionScreen(val sessionId: String) :
-      MeepleMeetScreen(route = "session/$sessionId", name = "Session")
-
-  data class SessionAddScreen(val sessionId: String) :
-      MeepleMeetScreen(route = "session_add/$sessionId", name = "Add Session")
-
-  data class SessionInfoScreen(val sessionId: String) :
-      MeepleMeetScreen(route = "session_info/$sessionId", name = "Session Details")
-
-  data class DiscussionScreen(val discussionId: String) :
-      MeepleMeetScreen(route = "discussion/$discussionId", name = "Discussion")
-
-  object DiscussionAddScreen : MeepleMeetScreen(route = "discussion_add", name = "Add Discussion")
-
-  data class DiscussionInfoScreen(val discussionId: String) :
-      MeepleMeetScreen(route = "discussion_info/$discussionId", name = "Discussion Details")
-
-  object Routes {
-    const val SESSION_ADD = "session_add/{discussionId}"
-    const val SESSION = "session/{discussionId}"
-    const val SESSION_INFO = "session_info/{sessionId}"
-    const val DISCUSSION = "discussion/{discussionId}"
-    const val DISCUSSION_INFO = "discussion_info/{discussionId}"
-  }
+  SignInScreen("Sign In"),
+  SignUpScreen("Sign Up"),
+  DiscussionsOverview(
+      "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
+  SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
+  DiscoverSessions("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
+  ProfileScreen("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
+  DiscussionAddScreen("Add Discussion"),
+  DiscussionScreen("Discussion"),
+  DiscussionInfoScreen("Discussion Details"),
+  SessionAddScreen("Add Session"),
+  SessionScreen("Session"),
+  SessionInfoScreen("Session Details"),
 }
 
 /**
@@ -170,18 +119,14 @@ fun BottomNavigationMenu(
     onTabSelected: (MeepleMeetScreen) -> Unit,
     modifier: Modifier = Modifier
 ) {
-  // TODO: Update colors when full MaterialTheme is implemented
   NavigationBar(
       modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
-        listOf(
-                MeepleMeetScreen.DiscussionsOverview,
-                MeepleMeetScreen.SessionsOverview,
-                MeepleMeetScreen.DiscoverSessions,
-                MeepleMeetScreen.ProfileScreen)
+        MeepleMeetScreen.entries
+            .filter { it -> it.inBottomBar }
             .forEach { screen ->
               NavigationBarItem(
-                  icon = { screen.icon?.let { Icon(it, contentDescription = screen.name) } },
-                  label = { Text(screen.name) },
+                  icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
+                  label = { Text(screen.title) },
                   selected = screen == currentScreen,
                   onClick = { onTabSelected(screen) },
                   modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)
@@ -214,17 +159,17 @@ open class NavigationActions(private val navController: NavHostController) {
    * @param screen The target screen to navigate to.
    */
   open fun navigateTo(screen: MeepleMeetScreen) {
-    if (screen.isInBottomBar && currentRoute() == screen.route) {
+    if (screen.inBottomBar && currentRoute() == screen.name) {
       // If the user is already on the top-level destination, do nothing
       return
     }
-    navController.navigate(screen.route) {
+    navController.navigate(screen.name) {
       // Screens available through the bottom navigation bar are top-level destinations.
       // When navigating to one of these, we want to clear the back stack to avoid building
       // up a large stack of destinations as the user switches between them.
-      if (screen.isInBottomBar) {
+      if (screen.inBottomBar) {
         launchSingleTop = true
-        popUpTo(screen.route) { inclusive = true }
+        popUpTo(screen.name) { inclusive = true }
       }
 
       restoreState = true
@@ -241,7 +186,7 @@ open class NavigationActions(private val navController: NavHostController) {
    * Typical usage: called after a successful login or account creation.
    */
   open fun navigateOutOfAuthGraph() {
-    navController.navigate(MeepleMeetScreen.DiscussionsOverview.route) {
+    navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
       popUpTo(0) { inclusive = true } // Empty stack
       launchSingleTop = true
     }
