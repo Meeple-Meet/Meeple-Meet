@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
@@ -46,7 +45,6 @@ import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
-import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Elevation
 
 /* ================================================================
@@ -276,9 +274,9 @@ private fun DiscussionCardTextSection(
  * Previews
  * ================================================================ */
 
-//@Preview(showBackground = true, name = "Card – yours")
-//@Composable
-//private fun DiscussionCardPreview() {
+// @Preview(showBackground = true, name = "Card – yours")
+// @Composable
+// private fun DiscussionCardPreview() {
 //  AppTheme {
 //    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
 //      DiscussionCard(
@@ -289,12 +287,12 @@ private fun DiscussionCardTextSection(
 //      )
 //    }
 //  }
-//}
+// }
 //
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Preview(showBackground = true, name = "Overview – scaffold mock")
-//@Composable
-//private fun DiscussionsOverviewPreview() {
+// @OptIn(ExperimentalMaterial3Api::class)
+// @Preview(showBackground = true, name = "Overview – scaffold mock")
+// @Composable
+// private fun DiscussionsOverviewPreview() {
 //  AppTheme {
 //    Scaffold(
 //        topBar = {
@@ -358,7 +356,8 @@ private fun DiscussionCardTextSection(
 //                  DiscussionCard(
 //                      discussionName = "D&D One-shot",
 //                      lastMsg =
-//                          "You: Long recap incoming… Last session we rescued the baron’s daughter, found the secret cellar, defeated the mimic, AND leveled up! 🎉",
+//                          "You: Long recap incoming… Last session we rescued the baron’s daughter,
+// found the secret cellar, defeated the mimic, AND leveled up! 🎉",
 //                      unreadMsgCount = 0,
 //                      modifier = Modifier.fillMaxWidth())
 //                }
@@ -393,4 +392,4 @@ private fun DiscussionCardTextSection(
 //              }
 //        }
 //  }
-//}
+// }

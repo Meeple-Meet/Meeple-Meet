@@ -67,7 +67,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import com.github.meeplemeet.model.structures.Account
@@ -75,7 +74,6 @@ import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -697,17 +695,17 @@ fun LocationSearchField(
  * ======================================================================= */
 
 /* A tiny host to give all previews a pleasant surface + padding */
-//@Composable
-//private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
+// @Composable
+// private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
 //  AppTheme {
 //    Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
 //  }
-//}
+// }
 //
-///* 1) SectionCard */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_SectionCard() = PreviewHost {
+/// * 1) SectionCard */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_SectionCard() = PreviewHost {
 //  AppTheme {
 //    SectionCard(
 //        modifier =
@@ -719,19 +717,19 @@ fun LocationSearchField(
 //          Text("You can place any Column content here.")
 //        }
 //  }
-//}
+// }
 //
-///* 2) UnderlinedLabel */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_UnderlinedLabel() = PreviewHost {
+/// * 2) UnderlinedLabel */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_UnderlinedLabel() = PreviewHost {
 //  AppTheme { UnderlinedLabel(text = "Underlined label") }
-//}
+// }
 //
-///* 3) LabeledTextField */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_LabeledTextField() = PreviewHost {
+/// * 3) LabeledTextField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_LabeledTextField() = PreviewHost {
 //  var text by remember { mutableStateOf("Hello") }
 //  AppTheme {
 //    LabeledTextField(
@@ -742,12 +740,12 @@ fun LocationSearchField(
 //        singleLine = true,
 //        modifier = Modifier.fillMaxWidth())
 //  }
-//}
+// }
 //
-///* 4) IconTextField */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_IconTextField() = PreviewHost {
+/// * 4) IconTextField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_IconTextField() = PreviewHost {
 //  var text by remember { mutableStateOf("") }
 //  AppTheme {
 //    IconTextField(
@@ -758,12 +756,12 @@ fun LocationSearchField(
 //        trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
 //        modifier = Modifier.fillMaxWidth())
 //  }
-//}
+// }
 //
-///* 5) CountBubble */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_CountBubble() = PreviewHost {
+/// * 5) CountBubble */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_CountBubble() = PreviewHost {
 //  AppTheme {
 //    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
 //      CountBubble(count = 0, modifier = Modifier.background(Color.Transparent))
@@ -771,12 +769,12 @@ fun LocationSearchField(
 //      CountBubble(count = 42, modifier = Modifier.background(Color.Transparent))
 //    }
 //  }
-//}
+// }
 //
-///* 6) DiscretePillSlider */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_DiscretePillSlider() = PreviewHost {
+/// * 6) DiscretePillSlider */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_DiscretePillSlider() = PreviewHost {
 //  var range by remember { mutableStateOf(2f..6f) }
 //  AppTheme {
 //    DiscretePillSlider(
@@ -787,14 +785,14 @@ fun LocationSearchField(
 //        surroundModifier = Modifier.fillMaxWidth(),
 //        sliderModifier = Modifier.fillMaxWidth())
 //  }
-//}
+// }
 //
-///* 7) ParticipantChip
+/// * 7) ParticipantChip
 // * NOTE: Replace the Account(...) construction with your project's real constructor.
 // */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_ParticipantChip_Add() = PreviewHost {
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_ParticipantChip_Add() = PreviewHost {
 //  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
 //  AppTheme {
 //    ParticipantChip(
@@ -808,11 +806,11 @@ fun LocationSearchField(
 //                .background(MaterialTheme.colorScheme.surfaceVariant)
 //                .padding(horizontal = 8.dp))
 //  }
-//}
+// }
 //
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_ParticipantChip_Remove() = PreviewHost {
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_ParticipantChip_Remove() = PreviewHost {
 //  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
 //  AppTheme {
 //    ParticipantChip(
@@ -826,12 +824,12 @@ fun LocationSearchField(
 //                .background(MaterialTheme.colorScheme.surfaceVariant)
 //                .padding(horizontal = 8.dp))
 //  }
-//}
+// }
 //
-///* 8) TwoPerRowGrid (showing simple string items) */
-//@Preview(showBackground = true, heightDp = 320)
-//@Composable
-//private fun Preview_TwoPerRowGrid() = PreviewHost {
+/// * 8) TwoPerRowGrid (showing simple string items) */
+// @Preview(showBackground = true, heightDp = 320)
+// @Composable
+// private fun Preview_TwoPerRowGrid() = PreviewHost {
 //  val items = remember { (1..5).map { "Item $it" } }
 //  AppTheme {
 //    TwoPerRowGrid(
@@ -850,28 +848,28 @@ fun LocationSearchField(
 //              }
 //        }
 //  }
-//}
+// }
 //
-///* 9) DatePickerDockedField */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_DatePickerDockedField() = PreviewHost {
+/// * 9) DatePickerDockedField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_DatePickerDockedField() = PreviewHost {
 //  var date by remember { mutableStateOf(LocalDate.now()) }
 //  AppTheme {
 //    DatePickerDockedField(value = date, onValueChange = { date = it })
 //    Spacer(Modifier.height(8.dp))
 //    Text("Selected: ${date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
 //  }
-//}
+// }
 //
-///* 10) TimePickerField */
-//@Preview(showBackground = true)
-//@Composable
-//private fun Preview_TimePickerField() = PreviewHost {
+/// * 10) TimePickerField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_TimePickerField() = PreviewHost {
 //  var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
 //  AppTheme {
 //    TimePickerField(value = time, onValueChange = { time = it })
 //    Spacer(Modifier.height(8.dp))
 //    Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
 //  }
-//}
+// }
