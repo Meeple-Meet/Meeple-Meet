@@ -14,6 +14,8 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.AccountNoUid
 import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
+import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.ui.theme.ThemeMode
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.After
@@ -84,7 +86,7 @@ class CreateAccountScreenTest {
     existing = bootstrapRepo.createAccount("222", "bob", "bob@email.com", null)
 
     compose.setContent {
-      MaterialTheme {
+      AppTheme(themeMode = ThemeMode.DARK) {
         CreateAccountScreen(
             viewModel = viewModel, currentAccount = me, onCreate = { onCreateCalled = true })
       }
@@ -141,6 +143,7 @@ class CreateAccountScreenTest {
     val updated = handlesRepo.getAccount(me.uid)
     assert(updated.handle == "uniqueHandle")
     assert(onCreateCalled)
+    Thread.sleep(5000) // For observing the result during test runs
   }
 
   /** Verifies that empty handle input does not create a handle or call onCreate. */
@@ -153,6 +156,18 @@ class CreateAccountScreenTest {
     val updated = runBlocking { handlesRepo.getAccount(me.uid) }
     assert(updated.handle == me.handle)
     assert(!onCreateCalled)
+  }
+  /**
+   * Tests that typing something in the username field and then deleting it
+   * shows the "Username cannot be empty" error message.
+   */
+  @Test
+  fun deleting_username_shows_empty_error_message() {
+    usernameField().performTextInput("Frank")
+    compose.waitForIdle()
+    usernameField().performTextClearance()
+    compose.waitForIdle()
+    compose.onNodeWithText("Username cannot be empty", substring = true).assertExists()
   }
 }
 
