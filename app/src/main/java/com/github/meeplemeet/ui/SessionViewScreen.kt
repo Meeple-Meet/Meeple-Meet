@@ -70,6 +70,7 @@ import kotlin.math.roundToInt
  * Test tags for UI tests
  * ======================================================================= */
 
+// Object holding test tags for UI testing purposes.
 object SessionTestTags {
   const val TITLE = "session_title"
   const val PROPOSED_GAME = "proposed_game"
@@ -93,6 +94,8 @@ object SessionTestTags {
 /* =======================================================================
  * Models
  * ======================================================================= */
+
+data class Participant(val id: String, val name: String)
 
 val sliderMinRange = 2f
 val sliderMaxRange = 10f
@@ -125,17 +128,18 @@ fun SessionViewScreen(
     discussionId: String,
     onBack: () -> Unit = {},
     onclickNotification: () -> Unit = {},
-    onclickChat: () -> Unit = {},
+    onclickChat: () -> Unit = {}
 ) {
-  // Local state for the form
+  // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
 
+  // Observe discussion updates from the view model.
   val discussion by viewModel.discussionFlow(discussionId).collectAsState()
   val isCurrUserAdmin =
       currentUser.uid == discussion?.creatorId ||
           discussion?.admins?.contains(currentUser.uid) == true
 
-  // Scaffold with top bar and content
+  // Scaffold provides the top bar and main content area.
   Scaffold(
       topBar = {
         TopBarWithDivider(
@@ -156,7 +160,7 @@ fun SessionViewScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-          // Title
+          // Session title (centered, not editable for now).
           Title(
               text = form.title.ifEmpty { "New Session" },
               editable = isCurrUserAdmin,
@@ -167,6 +171,8 @@ fun SessionViewScreen(
                       .then(Modifier.testTag(SessionTestTags.TITLE)))
 
           // Proposed game section
+          // background and border are primary for members since it blends with the screen bg
+          // proposed game is a text for members, it's not in a editable box
           discussion?.let { disc ->
             ProposedGameSection(
                 sessionViewModel = sessionViewModel,
@@ -203,6 +209,7 @@ fun SessionViewScreen(
                       discussion = disc,
                       newParticipantList = updatedParticipants)
                 }
+                onBack()
               },
               shape = CircleShape,
               border = BorderStroke(1.5.dp, AppColors.negative),
@@ -268,6 +275,7 @@ fun ParticipantsSection(
 
         Spacer(Modifier.height(12.dp))
 
+        // Slider for selecting min and max number of players.
         PillSliderNoBackground(
             title = "Number of players",
             editable = editable,
@@ -298,7 +306,7 @@ fun ParticipantsSection(
         Spacer(Modifier.height(10.dp))
         Spacer(Modifier.height(12.dp))
 
-        // Chips
+        // Participant chips (grid of users, removable).
         UserChipsGrid(
             participants = form.participants,
             onRemove = { p -> onRemoveParticipant(p) },
@@ -332,7 +340,7 @@ private fun ProposedGameSection(
           Modifier.clip(appShapes.extraLarge)
               .background(AppColors.primary)
               .border(1.dp, AppColors.primary)) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME)) {
           UnderlinedLabel(
               text = "Proposed game:",
               textColor = AppColors.textIcons,
@@ -348,7 +356,7 @@ private fun ProposedGameSection(
                 results = gameUIState.gameSuggestions,
                 onPick = { sessionViewModel.setGame(currentUser, discussion, it) },
                 isLoading = false,
-                modifier = Modifier.fillMaxWidth())
+                modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
           } else {
             // Member view — just show the current game text
             Text(
@@ -568,6 +576,9 @@ fun UserChipsGrid(
               onRemove = { if (editable) onRemove(p) },
               showRemoveBTN = editable)
         }
+
+        // Add button chip (to add new participants)
+        // might be implemented later (users might joining the session themselves)
       }
 }
 
@@ -772,158 +783,3 @@ fun DeleteSessionBTN(
         }
   }
 }
-
-/* =======================================================================
- * Preview
- * ======================================================================= */
-// @Composable
-// fun FakeSessionViewScreen() {
-//  // 🔸 Toggle this to see how UI reacts for admin vs member
-//  val isAdmin = remember { mutableStateOf(true) }
-//
-//  // 🔸 Fake data
-//  var form by remember {
-//    mutableStateOf(
-//        SessionForm(
-//            title = "Friday Night Meetup",
-//            minPlayers = 3,
-//            maxPlayers = 6,
-//            participants =
-//                listOf(
-//                    Account("1", "Marco", "Marco", "e@"),
-//                    Account("2", "John Doe", "john", "e@"),
-//                    Account("3", "Alice", "alice", "e@"),
-//                    Account("4", "Bob", "bob", "e@"),
-//                    Account("5", "Robert", "robert", "e@")),
-//            time = LocalTime.of(19, 0),
-//            locationText = "Student Lounge"))
-//  }
-//
-//  val mockDiscussion =
-//      Discussion(
-//          uid = "discussion123",
-//          creatorId = "marcoUID",
-//          name = "Friday Night Meetup",
-//          description = "Weekly board game hangout",
-//          messages = emptyList(),
-//          participants = listOf("marcoUID") + form.participants.map { it.uid },
-//          admins = listOf("marcoUID"),
-//          session = null)
-//
-//  Log.d(
-//      "DEBUG FAKE",
-//      "isContained=${form.participants.map{it.uid}.contains("marcoUID")},
-// admins=${mockDiscussion.admins}")
-//
-//  val currentUser =
-//      if (isAdmin.value) {
-//        Account("marcoUID", "Marco", "marco", "marco@epfl.ch")
-//      } else {
-//        Account("user2", "John Doe", "john", "john@example.com")
-//      }
-//
-//  val fakeSessionVM = FirestoreSessionViewModel(mockDiscussion)
-//  val onBack = {}
-//  val onclickChat = {}
-//  val onclickNotification = {}
-//
-//  AppTheme {
-//    Scaffold(
-//        topBar = {
-//          TopBarWithDivider(
-//              text = "Session View",
-//              onReturn = {
-//                onBack()
-//                /** save the data */
-//              },
-//              {
-//                TopRightIcons(onclickChat = onclickChat, onclickNotification =
-// onclickNotification)
-//              })
-//        },
-//    ) { innerPadding ->
-//      Column(
-//          modifier =
-//              Modifier.fillMaxSize()
-//                  .verticalScroll(rememberScrollState())
-//                  .background(AppColors.primary)
-//                  .padding(innerPadding)
-//                  .padding(horizontal = 16.dp, vertical = 8.dp),
-//          verticalArrangement = Arrangement.spacedBy(16.dp)) {
-//
-//            // --- Title ---
-//            Title(
-//                text = form.title.ifEmpty { "New Session" },
-//                editable = isAdmin.value,
-//                form = form,
-//                onValueChange = { newTitle -> form = form.copy(title = newTitle) },
-//                modifier = Modifier.align(Alignment.CenterHorizontally))
-//
-//            // --- Proposed game section ---
-//            ProposedGameSection(
-//                sessionViewModel = fakeSessionVM,
-//                currentUser = currentUser,
-//                discussion = mockDiscussion,
-//                editable = isAdmin.value)
-//
-//            // --- Participants section ---
-//            ParticipantsSection(
-//                editable = isAdmin.value,
-//                form = form,
-//                onFormChange = { min, max ->
-//                  form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
-//                },
-//                onRemoveParticipant = { participant ->
-//                  form =
-//                      form.copy(
-//                          participants = form.participants.filterNot { it.uid == participant.uid
-// })
-//                })
-//
-//            // --- Organisation section ---
-//            OrganizationSection(form = form, onFormChange = { form = it }, editable =
-// isAdmin.value)
-//
-//            Spacer(Modifier.height(4.dp))
-//
-//            // --- Quit session button ---
-//            OutlinedButton(
-//                onClick = { println("Quit session clicked for user: ${currentUser.name}") },
-//                shape = CircleShape,
-//                border = BorderStroke(1.5.dp, AppColors.negative),
-//                modifier = Modifier.fillMaxWidth(),
-//                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-//                  Icon(Icons.Default.ArrowBackIosNew, contentDescription = null)
-//                  Spacer(Modifier.width(8.dp))
-//                  Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
-//                }
-//
-//            // --- Delete session button (admin only) ---
-//            if (isAdmin.value) {
-//              OutlinedButton(
-//                  onClick = { println("Delete session clicked") },
-//                  shape = CircleShape,
-//                  border = BorderStroke(1.5.dp, AppColors.negative),
-//                  modifier = Modifier.fillMaxWidth(),
-//                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative))
-// {
-//                    Icon(Icons.Default.Delete, contentDescription = null)
-//                    Spacer(Modifier.width(8.dp))
-//                    Text("Delete Session", style = MaterialTheme.typography.bodyMedium)
-//                  }
-//            }
-//
-//            // --- Permission toggle ---
-//            Spacer(Modifier.height(16.dp))
-//            OutlinedButton(
-//                onClick = { isAdmin.value = !isAdmin.value },
-//                border = BorderStroke(1.dp, AppColors.focus),
-//                modifier = Modifier.fillMaxWidth(),
-//                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.focus)) {
-//                  val roleText = if (isAdmin.value) "Switch to Member" else "Switch to Admin"
-//                  Text(roleText, style = MaterialTheme.typography.bodyMedium)
-//                }
-//          }
-//    }
-//  }
-// }
