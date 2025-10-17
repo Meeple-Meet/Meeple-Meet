@@ -256,7 +256,13 @@ class FirestoreViewModel(
         throw NotSignedInException("A user must be signed in for the UI to call this function")
 
     viewModelScope.launch {
-      _account.value = repository.getAccount(Firebase.auth.currentUser?.uid ?: "")
+      try {
+        _account.value = repository.getAccount(Firebase.auth.currentUser?.uid ?: "")
+      } catch (_: Exception) {
+        // Account was deleted from Firestore, sign out the user
+        FirebaseProvider.auth.signOut()
+        _account.value = null
+      }
     }
   }
 
