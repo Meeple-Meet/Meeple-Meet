@@ -97,8 +97,6 @@ class EndToEndTest : FirestoreTests() {
 
     composeTestRule.onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
 
-    composeTestRule.onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
-
     // After submitting sign-up + create account: wait for the main app bottom navigation to appear.
     composeTestRule.waitUntil(timeoutMillis = 15_000) {
       try {
@@ -216,8 +214,6 @@ class EndToEndTest : FirestoreTests() {
 
     composeTestRule.onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
 
-    composeTestRule.onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
-
     // Wait for main app to load
     composeTestRule.waitUntil(timeoutMillis = 15_000) {
       try {
@@ -292,8 +288,6 @@ class EndToEndTest : FirestoreTests() {
         .onNodeWithText("Username", substring = true)
         .assertExists()
         .performTextInput(user2Name)
-
-    composeTestRule.onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
 
     composeTestRule.onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
 
