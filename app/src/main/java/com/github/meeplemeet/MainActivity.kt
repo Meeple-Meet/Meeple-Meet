@@ -148,6 +148,7 @@ fun MeepleMeetApp(
             },
             onSelectDiscussion = {
               currentDiscussion = it
+              firestoreVM.readDiscussionMessages(currentAccount!!, currentDiscussion!!)
               navigationActions.navigateTo(MeepleMeetScreen.DiscussionScreen)
             },
             viewModel = firestoreVM)
