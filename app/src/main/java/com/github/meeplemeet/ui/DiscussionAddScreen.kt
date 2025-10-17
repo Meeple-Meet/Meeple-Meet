@@ -309,7 +309,8 @@ fun MemberSearchField(
         label = { Text("Add Members") },
         modifier =
             Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
-                .fillMaxWidth().testTag("Add Members"),
+                .fillMaxWidth()
+                .testTag("Add Members"),
         trailingIcon = {
           if (searchQuery.isNotBlank()) {
             Icon(
