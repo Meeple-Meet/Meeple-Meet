@@ -1,6 +1,8 @@
 package com.github.meeplemeet.ui
 
 import android.annotation.SuppressLint
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -56,7 +59,12 @@ import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
+import com.google.firebase.Timestamp
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.roundToInt
 
@@ -97,6 +105,13 @@ const val sliderMaxRange = 10f
  * Public entry point
  * ======================================================================= */
 
+fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
+  val instant = Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
+  val zone = ZoneId.systemDefault()
+  val dateTime = LocalDateTime.ofInstant(instant, zone)
+  return dateTime.toLocalDate() to dateTime.toLocalTime()
+}
+
 /**
  * Main composable for the Session View screen. Displays session details, participants, proposed
  * game, and organizational info.
@@ -107,9 +122,8 @@ const val sliderMaxRange = 10f
  * @param initial Initial session form state (optional)
  * @param discussionId ID of the discussion linked to the session
  * @param onBack Callback triggered when navigating back
- * @param onclickNotification Callback when clicking the notifications icon
- * @param onclickChat Callback when clicking the chat icon
  */
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,12 +144,44 @@ fun SessionViewScreen(
       currentUser.uid == discussion?.creatorId ||
           discussion?.admins?.contains(currentUser.uid) == true
 
+  LaunchedEffect(Unit) {
+    val session = discussion!!.session!!
+    val (date, time) = timestampToLocal(session.date)
+
+    viewModel.getDiscussionParticipants(discussion!!) {
+      form =
+          form.copy(
+              title = session.name,
+              date = date,
+              time = time,
+              proposedGame = "",
+              minPlayers = session.minParticipants,
+              maxPlayers = session.maxParticipants,
+              participants = it,
+              locationText = session.location.name)
+    }
+  }
+
   // Scaffold provides the top bar and main content area.
   Scaffold(
       topBar = {
         TopBarWithDivider(
             text = "Session View",
-            onReturn = onBack,
+            onReturn = {
+              if (discussion!!.admins.contains(currentUser.uid)) {
+                sessionViewModel.updateSession(
+                    requester = currentUser,
+                    discussion = discussion!!,
+                    name = form.title,
+                    gameId = null,
+                    date = toTimestamp(form.date, form.time),
+                    location = null,
+                    minParticipants = form.minPlayers,
+                    maxParticipants = form.maxPlayers,
+                    form.participants.toTypedArray())
+              }
+              onBack()
+            },
         )
       },
   ) { innerPadding ->
@@ -195,7 +241,7 @@ fun SessionViewScreen(
                   sessionViewModel.updateSession(
                       requester = currentUser,
                       discussion = disc,
-                      newParticipantList = updatedParticipants)
+                      newParticipantList = updatedParticipants.toTypedArray())
                 }
                 onBack()
               },
@@ -203,7 +249,7 @@ fun SessionViewScreen(
               border = BorderStroke(1.5.dp, AppColors.negative),
               modifier = Modifier.testTag(SessionTestTags.QUIT_BUTTON).fillMaxWidth(),
               colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
               }
