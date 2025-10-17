@@ -92,7 +92,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun deleteDiscussionRemovesDiscussion() = runTest {
     val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.deleteDiscussion(discussion.uid)
+    repository.deleteDiscussion(discussion)
     repository.getDiscussion(discussion.uid)
   }
 

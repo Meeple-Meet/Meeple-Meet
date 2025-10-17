@@ -23,10 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,14 +42,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Elevation
 
@@ -72,9 +79,10 @@ const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionsOverviewScreen(
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account,
     navigation: NavigationActions,
+    onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
 
@@ -85,6 +93,12 @@ fun DiscussionsOverviewScreen(
       }
 
   Scaffold(
+      floatingActionButton = {
+        FloatingActionButton(
+            onClick = onClickAddDiscussion, modifier = Modifier.testTag("Add Discussion")) {
+              Icon(Icons.Default.Add, contentDescription = "Create")
+            }
+      },
       topBar = {
         CenterAlignedTopAppBar(
             title = {
@@ -92,9 +106,8 @@ fun DiscussionsOverviewScreen(
                   text = MeepleMeetScreen.DiscussionsOverview.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
-              )
-            },
-        )
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+            })
       },
       bottomBar = {
         BottomNavigationMenu(
@@ -143,7 +156,7 @@ fun DiscussionsOverviewScreen(
                       discussionName = discussionName,
                       lastMsg = msgText,
                       unreadMsgCount = preview.unreadCount,
-                      modifier = Modifier.fillMaxWidth(),
+                      modifier = Modifier.fillMaxWidth().testTag("Discussion/$discussionName"),
                       onClick = { discussion?.let { onSelectDiscussion(it) } })
                 }
               }
@@ -301,7 +314,7 @@ private fun DiscussionsOverviewPreview() {
           CenterAlignedTopAppBar(
               title = {
                 Text(
-                    text = MeepleMeetScreen.DiscussionsOverview.title,
+                    text = MeepleMeetScreen.DiscussionsOverview.name,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary)
               },

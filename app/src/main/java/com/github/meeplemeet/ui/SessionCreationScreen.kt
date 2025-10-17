@@ -7,7 +7,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -118,6 +120,7 @@ fun CreateSessionScreen(
     currentUser: Account,
     discussionId: String,
     onBack: () -> Unit = {},
+    onCreate: () -> Unit = {}
 ) {
   var form by
       remember(currentUser.uid) { mutableStateOf(SessionForm(participants = listOf(currentUser))) }
@@ -168,10 +171,11 @@ fun CreateSessionScreen(
       snackbarHost = { SnackbarHost(snackbar) }) { innerPadding ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier.fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
               // Title

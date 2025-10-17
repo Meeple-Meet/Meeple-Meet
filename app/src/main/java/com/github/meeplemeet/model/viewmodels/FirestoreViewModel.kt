@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+const val SUGGESTIONS_LIMIT = 30
+
 /**
  * ViewModel exposing Firestore operations and real-time listeners as flows.
  *
@@ -35,14 +37,12 @@ class FirestoreViewModel(
 
   private val _discussion = MutableStateFlow<Discussion?>(null)
 
-  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
-
-  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
-
   /** The currently loaded discussion */
   val discussion: StateFlow<Discussion?> = _discussion
 
-  private val SUGGESTIONS_LIMIT = 30
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
 
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
     return discussion.admins.contains(account.uid)
@@ -108,7 +108,7 @@ class FirestoreViewModel(
         throw PermissionDeniedException("Only discussion owner can perform this operation")
 
     viewModelScope.launch {
-      repository.deleteDiscussion(discussion.uid)
+      repository.deleteDiscussion(discussion)
       _discussion.value = null
     }
   }
@@ -128,7 +128,7 @@ class FirestoreViewModel(
   fun removeUserFromDiscussion(discussion: Discussion, changeRequester: Account, user: Account) {
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
-    if (discussion.creatorId == user.uid)
+    if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
     viewModelScope.launch {
@@ -228,6 +228,10 @@ class FirestoreViewModel(
     }
   }
 
+  fun signOut() {
+    _account.value = null
+  }
+
   /** Retrieve an account by ID. */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
@@ -302,19 +306,6 @@ class FirestoreViewModel(
               initialValue = emptyMap())
     }
   }
-
-  /**
-   * Real-time flow of a single discussion preview for a specific account.
-   *
-   * Emits `null` if the preview does not exist.
-   */
-  fun previewFlow(accountId: String, discussionId: String): StateFlow<DiscussionPreview?> =
-      previewsFlow(accountId)
-          .map { it[discussionId] }
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(5_000),
-              initialValue = previewsFlow(accountId).value[discussionId])
 
   /** Holds a [StateFlow] of discussion documents keyed by discussion ID. */
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()

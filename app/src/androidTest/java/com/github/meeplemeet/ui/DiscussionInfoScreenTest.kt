@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -135,7 +136,7 @@ class DiscussionSettingScreenTest {
     compose.waitForIdle()
 
     compose.onNodeWithTag("discussion_name").performTextInput(" Updated")
-    compose.onNodeWithTag("back_button").performClick()
+    compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).performClick()
 
     compose.waitForIdle()
     // Here we just assert the UI still exists (no crash)

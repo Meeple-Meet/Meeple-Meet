@@ -81,7 +81,7 @@ class AddDiscussionScreenTest {
 
     realVm = FirestoreViewModel(repo)
     compose.setContent {
-      AddDiscussionScreen(
+      DiscussionAddScreen(
           onBack = { nav.goBack() },
           onCreate = { nav.goBack() },
           viewModel = realVm,

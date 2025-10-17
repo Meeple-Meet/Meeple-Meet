@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -324,17 +325,14 @@ fun <T> TwoPerRowGrid(
     content: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
   val rows = remember(items) { items.chunked(2) }
-  LazyColumn(
-      modifier = modifier,
-      verticalArrangement = Arrangement.spacedBy(10.dp),
-      contentPadding = PaddingValues(vertical = 8.dp)) {
-        items(items = rows, key = { row -> row.joinToString("|") { key(it).toString() } }) { row ->
-          Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = rowsModifier) {
-            row.forEach { item -> content(item, rowsModifier.weight(1f, fill = true)) }
-            if (row.size == 1) Spacer(rowsModifier.weight(1f, fill = true))
-          }
-        }
+  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    rows.forEach { row ->
+      Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = rowsModifier) {
+        row.forEach { item -> content(item, rowsModifier.weight(1f, fill = true)) }
+        if (row.size == 1) Spacer(rowsModifier.weight(1f, fill = true))
       }
+    }
+  }
 }
 
 /**
@@ -569,7 +567,9 @@ fun <T> SearchDropdownField(
                   else -> {
                     LazyColumn(
                         modifier =
-                            Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+                            Modifier.fillMaxWidth()
+                                .heightIn(max = 200.dp)
+                                .background(MaterialTheme.colorScheme.surface),
                         contentPadding = PaddingValues(vertical = 6.dp)) {
                           items(suggestions) { item ->
                             Row(
