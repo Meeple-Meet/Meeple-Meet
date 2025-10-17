@@ -177,7 +177,7 @@ fun SessionViewScreen(
                     location = null,
                     minParticipants = form.minPlayers,
                     maxParticipants = form.maxPlayers,
-                    form.participants)
+                    form.participants.ifEmpty { null })
               }
               onBack()
             },
