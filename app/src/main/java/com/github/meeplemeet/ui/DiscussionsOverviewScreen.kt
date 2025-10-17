@@ -23,10 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,13 +42,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Elevation
 
 /* ================================================================
@@ -70,9 +79,10 @@ const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionsOverviewScreen(
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account,
     navigation: NavigationActions,
+    onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
 
@@ -83,6 +93,12 @@ fun DiscussionsOverviewScreen(
       }
 
   Scaffold(
+      floatingActionButton = {
+        FloatingActionButton(
+            onClick = onClickAddDiscussion, modifier = Modifier.testTag("Add Discussion")) {
+              Icon(Icons.Default.Add, contentDescription = "Create")
+            }
+      },
       topBar = {
         CenterAlignedTopAppBar(
             title = {
@@ -90,9 +106,8 @@ fun DiscussionsOverviewScreen(
                   text = MeepleMeetScreen.DiscussionsOverview.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
-              )
-            },
-        )
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+            })
       },
       bottomBar = {
         BottomNavigationMenu(
@@ -141,7 +156,7 @@ fun DiscussionsOverviewScreen(
                       discussionName = discussionName,
                       lastMsg = msgText,
                       unreadMsgCount = preview.unreadCount,
-                      modifier = Modifier.fillMaxWidth(),
+                      modifier = Modifier.fillMaxWidth().testTag("Discussion/$discussionName"),
                       onClick = { discussion?.let { onSelectDiscussion(it) } })
                 }
               }
@@ -274,122 +289,121 @@ private fun DiscussionCardTextSection(
  * Previews
  * ================================================================ */
 
-// @Preview(showBackground = true, name = "Card – yours")
-// @Composable
-// private fun DiscussionCardPreview() {
-//  AppTheme {
-//    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-//      DiscussionCard(
-//          discussionName = "Tomorrow party !",
-//          lastMsg = "Be on time please",
-//          modifier = Modifier.fillMaxWidth(),
-//          unreadMsgCount = 3,
-//      )
-//    }
-//  }
-// }
-//
-// @OptIn(ExperimentalMaterial3Api::class)
-// @Preview(showBackground = true, name = "Overview – scaffold mock")
-// @Composable
-// private fun DiscussionsOverviewPreview() {
-//  AppTheme {
-//    Scaffold(
-//        topBar = {
-//          CenterAlignedTopAppBar(
-//              title = {
-//                Text(
-//                    text = MeepleMeetScreen.DiscussionsOverview.title,
-//                    style = MaterialTheme.typography.bodyMedium,
-//                    color = MaterialTheme.colorScheme.onPrimary)
-//              },
-//          )
-//        },
-//        bottomBar = {
-//          BottomNavigationMenu(
-//              currentScreen = MeepleMeetScreen.DiscussionsOverview,
-//              onTabSelected = { /* preview only */})
-//        }) { inner ->
-//          LazyColumn(
-//              modifier =
-//                  Modifier.fillMaxSize()
-//                      .background(MaterialTheme.colorScheme.background)
-//                      .padding(inner),
-//              verticalArrangement = Arrangement.spacedBy(10.dp),
-//              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Catan Crew",
-//                      lastMsg = "You: I’ll bring wheat 🍞",
-//                      unreadMsgCount = 0,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Gloomhaven Sunday",
-//                      lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
-//                      unreadMsgCount = 3,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Arkham Horror Night",
-//                      lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
-//                      unreadMsgCount = 1,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Ticket to Ride: Europe",
-//                      lastMsg = "(No messages yet)",
-//                      unreadMsgCount = 0,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Root Tourney",
-//                      lastMsg = "Clara: Vagabond banned? Also maps—Winter or Lake?",
-//                      unreadMsgCount = 7,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "D&D One-shot",
-//                      lastMsg =
-//                          "You: Long recap incoming… Last session we rescued the baron’s daughter,
-// found the secret cellar, defeated the mimic, AND leveled up! 🎉",
-//                      unreadMsgCount = 0,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Spirit Island Learners",
-//                      lastMsg = "Diego: Let’s try Lightning + River synergy; difficulty 3 OK?",
-//                      unreadMsgCount = 12,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Azul After-work",
-//                      lastMsg = "Maya: I booked the meeting room 18:30.",
-//                      unreadMsgCount = 2,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Brass: Birmingham",
-//                      lastMsg = "You: Anyone mind if I take first player to rush cotton?",
-//                      unreadMsgCount = 0,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//                item {
-//                  DiscussionCard(
-//                      discussionName = "Wingspan Chill",
-//                      lastMsg = "No messages yet",
-//                      unreadMsgCount = 0,
-//                      modifier = Modifier.fillMaxWidth())
-//                }
-//              }
-//        }
-//  }
-// }
+@Preview(showBackground = true, name = "Card – yours")
+@Composable
+private fun DiscussionCardPreview() {
+  AppTheme {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      DiscussionCard(
+          discussionName = "Tomorrow party !",
+          lastMsg = "Be on time please",
+          modifier = Modifier.fillMaxWidth(),
+          unreadMsgCount = 3,
+      )
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, name = "Overview – scaffold mock")
+@Composable
+private fun DiscussionsOverviewPreview() {
+  AppTheme {
+    Scaffold(
+        topBar = {
+          CenterAlignedTopAppBar(
+              title = {
+                Text(
+                    text = MeepleMeetScreen.DiscussionsOverview.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary)
+              },
+          )
+        },
+        bottomBar = {
+          BottomNavigationMenu(
+              currentScreen = MeepleMeetScreen.DiscussionsOverview,
+              onTabSelected = { /* preview only */})
+        }) { inner ->
+          LazyColumn(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .background(MaterialTheme.colorScheme.background)
+                      .padding(inner),
+              verticalArrangement = Arrangement.spacedBy(10.dp),
+              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+                item {
+                  DiscussionCard(
+                      discussionName = "Catan Crew",
+                      lastMsg = "You: I’ll bring wheat 🍞",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Gloomhaven Sunday",
+                      lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
+                      unreadMsgCount = 3,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Arkham Horror Night",
+                      lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
+                      unreadMsgCount = 1,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Ticket to Ride: Europe",
+                      lastMsg = "(No messages yet)",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Root Tourney",
+                      lastMsg = "Clara: Vagabond banned? Also maps—Winter or Lake?",
+                      unreadMsgCount = 7,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "D&D One-shot",
+                      lastMsg =
+                          "You: Long recap incoming… Last session we rescued the baron’s daughter, found the secret cellar, defeated the mimic, AND leveled up! 🎉",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Spirit Island Learners",
+                      lastMsg = "Diego: Let’s try Lightning + River synergy; difficulty 3 OK?",
+                      unreadMsgCount = 12,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Azul After-work",
+                      lastMsg = "Maya: I booked the meeting room 18:30.",
+                      unreadMsgCount = 2,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Brass: Birmingham",
+                      lastMsg = "You: Anyone mind if I take first player to rush cotton?",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                  DiscussionCard(
+                      discussionName = "Wingspan Chill",
+                      lastMsg = "No messages yet",
+                      unreadMsgCount = 0,
+                      modifier = Modifier.fillMaxWidth())
+                }
+              }
+        }
+  }
+}

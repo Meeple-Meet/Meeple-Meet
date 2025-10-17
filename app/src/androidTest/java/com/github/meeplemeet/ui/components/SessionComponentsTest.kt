@@ -423,7 +423,7 @@ class SessionComponentsTest {
   /* ---------------- TwoPerRowGrid ---------------- */
 
   @Test
-  fun twoPerRowGrid_rendersItems_andIsScrollable() {
+  fun twoPerRowGrid_rendersItems() {
     val items = (1..7).map { "Game $it" }
     set {
       TwoPerRowGrid(
@@ -435,8 +435,6 @@ class SessionComponentsTest {
           }
     }
     items.forEach { composeRule.onNodeWithText(it).assertExists() }
-    composeRule.onNodeWithTag("grid").performScrollToNode(hasText("Game 7"))
-    composeRule.onNodeWithTag("grid").performScrollToNode(hasText("Game 1"))
   }
 
   @Test
@@ -459,9 +457,6 @@ class SessionComponentsTest {
       composeRule.onNodeWithContentDescription("cell-$it", useUnmergedTree = true).assertExists()
       composeRule.onNodeWithText(it).assertExists()
     }
-
-    composeRule.onNodeWithTag("grid2").performScrollToNode(hasText("Gloomhaven"))
-    composeRule.onNodeWithTag("grid2").performScrollToNode(hasText("Catan"))
   }
 
   @Test
@@ -515,7 +510,7 @@ class SessionComponentsTest {
   }
 
   @Test
-  fun twoPerRowGrid_manyItems_scrollsToBottom_composesLastItem() {
+  fun twoPerRowGrid_manyItems_composesAllItems() {
     val items = (1..50).map { "Game $it" }
     set {
       TwoPerRowGrid(items = items, key = { it }, modifier = Modifier.testTag("grid-long")) { item, _
@@ -523,7 +518,8 @@ class SessionComponentsTest {
         Text(item)
       }
     }
-    composeRule.onNodeWithTag("grid-long").performScrollToNode(hasText("Game 50"))
+    // Verify first and last items exist (all items are rendered in a Column)
+    composeRule.onNodeWithText("Game 1").assertExists()
     composeRule.onNodeWithText("Game 50").assertExists()
   }
 

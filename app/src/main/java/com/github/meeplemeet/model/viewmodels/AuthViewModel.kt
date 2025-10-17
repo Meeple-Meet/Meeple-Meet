@@ -57,7 +57,7 @@ data class AuthUIState(
  * @property repository The authentication repository that handles the actual auth operations.
  *   Defaults to AuthRepoFirebase for production use.
  */
-class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
+class AuthViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
 
   // Private mutable state flow for internal state management
   private val _uiState = MutableStateFlow(AuthUIState())
@@ -231,7 +231,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
    * @param email The user's email address
    * @param password The user's chosen password
    */
-  fun registerWithEmail(email: String, password: String) {
+  fun registerWithEmail(email: String, password: String, onRegister: () -> Unit = {}) {
     // Prevent multiple simultaneous operations
     if (_uiState.value.isLoading) return
 
@@ -245,6 +245,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         _uiState.update {
           it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
         }
+        onRegister()
       }) { failure ->
         // Registration failed: Show error message
         _uiState.update {

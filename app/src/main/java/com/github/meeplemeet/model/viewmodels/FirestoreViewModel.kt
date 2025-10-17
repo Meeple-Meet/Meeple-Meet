@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+const val SUGGESTIONS_LIMIT = 30
+
 /**
  * ViewModel exposing Firestore operations and real-time listeners as flows.
  *
@@ -38,6 +40,10 @@ class FirestoreViewModel(
   /** The currently loaded discussion */
   val discussion: StateFlow<Discussion?> = _discussion
 
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
+
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
     return discussion.admins.contains(account.uid)
   }
@@ -49,6 +55,7 @@ class FirestoreViewModel(
       creator: Account,
       vararg participants: Account
   ) {
+    println("CREATE DISCUSSION: ${creator.handle} + ${participants.map { it.handle }}")
     viewModelScope.launch {
       val (acc, disc) =
           repository.createDiscussion(
@@ -101,7 +108,7 @@ class FirestoreViewModel(
         throw PermissionDeniedException("Only discussion owner can perform this operation")
 
     viewModelScope.launch {
-      repository.deleteDiscussion(discussion.uid)
+      repository.deleteDiscussion(discussion)
       _discussion.value = null
     }
   }
@@ -121,7 +128,7 @@ class FirestoreViewModel(
   fun removeUserFromDiscussion(discussion: Discussion, changeRequester: Account, user: Account) {
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
-    if (discussion.creatorId == user.uid)
+    if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
     viewModelScope.launch {
@@ -221,6 +228,10 @@ class FirestoreViewModel(
     }
   }
 
+  fun signOut() {
+    _account.value = null
+  }
+
   /** Retrieve an account by ID. */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
@@ -296,19 +307,6 @@ class FirestoreViewModel(
     }
   }
 
-  /**
-   * Real-time flow of a single discussion preview for a specific account.
-   *
-   * Emits `null` if the preview does not exist.
-   */
-  fun previewFlow(accountId: String, discussionId: String): StateFlow<DiscussionPreview?> =
-      previewsFlow(accountId)
-          .map { it[discussionId] }
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(5_000),
-              initialValue = previewsFlow(accountId).value[discussionId])
-
   /** Holds a [StateFlow] of discussion documents keyed by discussion ID. */
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
 
@@ -327,4 +325,24 @@ class FirestoreViewModel(
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = null)
       }
+
+  /**
+   * Searches for user accounts whose handles start with the given [prefix].
+   *
+   * This function launches a coroutine in the [viewModelScope] to asynchronously fetch matching
+   * handles from the [repository]. The resulting list of suggestions is truncated to
+   * [SUGGESTIONS_LIMIT] items and posted to [_handleSuggestions].
+   *
+   * If the [prefix] is blank, the function returns immediately without performing a search.
+   *
+   * @param prefix The starting string of the handle to search for. Must not be blank.
+   */
+  fun searchByHandle(prefix: String) {
+    if (prefix.isBlank()) return
+    viewModelScope.launch {
+      repository.searchByHandle(prefix).collect { list ->
+        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
+      }
+    }
+  }
 }

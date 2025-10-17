@@ -67,7 +67,7 @@ class FirestoreSessionViewModel(
    * Currently checks if the requester is a participant in the discussion.
    */
   private fun isAdmin(requester: Account, discussion: Discussion): Boolean {
-    return discussion.participants.contains(requester.uid)
+    return discussion.admins.contains(requester.uid)
   }
 
   /**

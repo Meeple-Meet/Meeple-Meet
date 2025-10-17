@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,10 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
@@ -35,12 +40,13 @@ import kotlinx.coroutines.launch
  * @param viewModel FirestoreViewModel for creating discussions
  * @param currentUser The currently logged-in user
  */
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddDiscussionScreen(
+fun DiscussionAddScreen(
     onBack: () -> Unit,
-    onCreate: () -> Unit,
-    viewModel: FirestoreViewModel,
+    onCreate: () -> Unit, // TODO: Pass created discussion ID for better navigation later on
+    viewModel: FirestoreViewModel = viewModel(),
     currentUser: Account
 ) {
   val scope = rememberCoroutineScope()
@@ -65,15 +71,19 @@ fun AddDiscussionScreen(
     if (searchQuery.isBlank()) {
       searchResults = emptyList()
       dropdownExpanded = false
+      isSearching = false
       return@LaunchedEffect
     }
     isSearching = true
-    searchResults =
-        fakeSearchAccounts(searchQuery).filter {
-          it.uid != currentUser.uid && it !in selectedMembers
-        }
-    dropdownExpanded = searchResults.isNotEmpty()
-    isSearching = false
+    viewModel.searchByHandle(searchQuery)
+  }
+
+  LaunchedEffect(viewModel.handleSuggestions) {
+    viewModel.handleSuggestions.collect { list ->
+      searchResults = list.filter { it.uid != currentUser.uid && it !in selectedMembers }
+      dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
+      isSearching = false
+    }
   }
 
   val snackbarHostState = remember { SnackbarHostState() }
@@ -96,10 +106,17 @@ fun AddDiscussionScreen(
                       containerColor = AppColors.primary,
                       titleContentColor = AppColors.textIcons,
                       navigationIconContentColor = AppColors.textIcons),
-              title = { Text(text = "Add Discussion") },
+              title = {
+                Text(
+                    text = MeepleMeetScreen.DiscussionAddScreen.title,
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+              },
               navigationIcon = {
                 IconButton(onClick = onBack) {
-                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  Icon(
+                      Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back",
+                      modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
                 }
               })
           HorizontalDivider(
@@ -131,7 +148,7 @@ fun AddDiscussionScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { title = it },
                   label = { Text("Title") },
-                  modifier = Modifier.fillMaxWidth())
+                  modifier = Modifier.testTag("Add Title").fillMaxWidth())
 
               Spacer(modifier = Modifier.height(12.dp))
 
@@ -152,93 +169,23 @@ fun AddDiscussionScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { description = it },
                   label = { Text("Description (optional)") },
-                  modifier = Modifier.fillMaxWidth().height(150.dp))
+                  modifier = Modifier.testTag("Add Description").fillMaxWidth().height(150.dp))
 
               Spacer(modifier = Modifier.height(16.dp))
 
               /** Row for search and member selection */
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Members:",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold)
-
-                    /** Autocomplete search field */
-                    Box(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
-                      OutlinedTextField(
-                          value = searchQuery,
-                          colors =
-                              TextFieldDefaults.colors()
-                                  .copy(
-                                      focusedTextColor = AppColors.textIcons,
-                                      unfocusedTextColor = AppColors.textIcons,
-                                      unfocusedIndicatorColor = AppColors.textIcons,
-                                      focusedIndicatorColor = AppColors.textIcons,
-                                      unfocusedLabelColor = AppColors.textIconsFade,
-                                      focusedLabelColor = AppColors.textIconsFade,
-                                      unfocusedContainerColor = Color.Transparent,
-                                      focusedContainerColor = Color.Transparent),
-                          textStyle = MaterialTheme.typography.bodySmall,
-                          shape = CircleShape,
-                          onValueChange = { searchQuery = it },
-                          label = { Text("Add Members") },
-                          modifier = Modifier.fillMaxWidth(),
-                          trailingIcon = {
-                            if (searchQuery.isNotBlank()) {
-                              Icon(
-                                  Icons.Default.Close,
-                                  contentDescription = "Clear",
-                                  modifier =
-                                      Modifier.clickable {
-                                        searchQuery = ""
-                                        dropdownExpanded = false
-                                      })
-                            }
-                          })
-
-                      /** Dropdown menu showing search results */
-                      DropdownMenu(
-                          expanded = dropdownExpanded,
-                          onDismissRequest = { dropdownExpanded = false },
-                          modifier = Modifier.fillMaxWidth().background(AppColors.divider)) {
-                            when {
-                              isSearching -> {
-                                DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
-                              }
-                              searchResults.isEmpty() -> {
-                                DropdownMenuItem(text = { Text("No results") }, onClick = {})
-                              }
-                              else -> {
-                                searchResults.forEach { account ->
-                                  DropdownMenuItem(
-                                      text = { Text(account.name) },
-                                      onClick = {
-                                        selectedMembers.add(account)
-                                        searchQuery = ""
-                                        dropdownExpanded = false
-                                      },
-                                      leadingIcon = {
-                                        Box(
-                                            modifier =
-                                                Modifier.size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color.LightGray),
-                                            contentAlignment = Alignment.Center) {
-                                              Text(
-                                                  text =
-                                                      account.name.firstOrNull()?.toString() ?: "A",
-                                                  color = Color(0xFFFFA000),
-                                                  fontWeight = FontWeight.Bold)
-                                            }
-                                      })
-                                }
-                              }
-                            }
-                          }
-                    }
-                  }
+              MemberSearchField(
+                  searchQuery = searchQuery,
+                  onQueryChange = { searchQuery = it },
+                  searchResults = searchResults,
+                  isSearching = isSearching,
+                  dropdownExpanded = dropdownExpanded,
+                  onDismiss = { dropdownExpanded = false },
+                  onSelect = { account ->
+                    selectedMembers.add(account)
+                    searchQuery = ""
+                    dropdownExpanded = false
+                  })
 
               Spacer(modifier = Modifier.height(20.dp))
 
@@ -275,7 +222,7 @@ fun AddDiscussionScreen(
 
                           /** Member name */
                           Text(
-                              text = member.name,
+                              text = member.handle,
                               modifier = Modifier.weight(1f),
                               maxLines = 1,
                               color = AppColors.textIcons,
@@ -304,8 +251,12 @@ fun AddDiscussionScreen(
                           scope.launch {
                             try {
                               isCreating = true
+                              val clean = selectedMembers.toList()
+                              require(clean.size == selectedMembers.size) {
+                                "Bug: null Account in selection"
+                              }
                               viewModel.createDiscussion(
-                                  title, description, currentUser, *selectedMembers.toTypedArray())
+                                  title, description, currentUser, *clean.toTypedArray())
                               isCreating = false
                               onCreate()
                             } catch (_: Exception) {
@@ -315,7 +266,7 @@ fun AddDiscussionScreen(
                           }
                         },
                         enabled = title.isNotBlank() && !isCreating,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.testTag("Create Discussion").fillMaxWidth(0.5f),
                         shape = CircleShape,
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
@@ -340,23 +291,48 @@ fun AddDiscussionScreen(
       }
 }
 
-/**
- * Fake search function to simulate backend account search. Filters a hard-coded list of accounts by
- * the query string.
- *
- * @param query The search query
- * @return List of matching [Account] objects
- */
-fun fakeSearchAccounts(query: String): List<Account> {
-  val allAccounts =
-      listOf(
-          Account("1", "1", "Alice", email = "Alice@example.com"),
-          Account("2", "2", "Bob", email = "Bob@example.com"),
-          Account("3", "3", "Charlie", email = "Alice@example.com"),
-          Account("4", "4", "David", email = "David@example.com"),
-          Account("5", "5", "Eve", email = "Eve@example.com"),
-          Account("6", "6", "Frank", email = "Frank@example.com"),
-          Account("7", "7", "Grace", email = "Grace@example.com"),
-          Account("8", "8", "Heidi", email = "Heidi@example.com"))
-  return allAccounts.filter { it.name.contains(query, ignoreCase = true) }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MemberSearchField(
+    searchQuery: String,
+    onQueryChange: (String) -> Unit,
+    searchResults: List<Account>,
+    isSearching: Boolean,
+    dropdownExpanded: Boolean,
+    onDismiss: () -> Unit,
+    onSelect: (Account) -> Unit
+) {
+  ExposedDropdownMenuBox(expanded = dropdownExpanded, onExpandedChange = {}) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = { onQueryChange(it) },
+        label = { Text("Add Members") },
+        modifier =
+            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                .fillMaxWidth(),
+        trailingIcon = {
+          if (searchQuery.isNotBlank()) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Clear",
+                modifier = Modifier.clickable { onQueryChange("") })
+          }
+        })
+
+    ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = onDismiss) {
+      when {
+        isSearching -> DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
+        searchResults.isEmpty() -> DropdownMenuItem(text = { Text("No results") }, onClick = {})
+        else ->
+            searchResults.forEach { account ->
+              DropdownMenuItem(
+                  text = { Text(account.handle) },
+                  onClick = {
+                    onSelect(account)
+                    onDismiss()
+                  })
+            }
+      }
+    }
+  }
 }

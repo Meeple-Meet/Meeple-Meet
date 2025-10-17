@@ -20,10 +20,10 @@ import androidx.navigation.NavHostController
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
   const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
+  const val SCREEN_TITLE = "ScreenTitle"
   const val GO_BACK_BUTTON = "GoBackButton"
-  const val TOP_BAR_TITLE = "TopBarTitle"
-  const val SESSIONS_TAB = "OverviewTab"
-  const val DISCUSSIONS_TAB = "MapTab"
+  const val SESSIONS_TAB = "SessionsTab"
+  const val DISCUSSIONS_TAB = "DiscussionsTab"
   const val DISCOVER_TAB = "DiscoverTab"
   const val PROFILE_TAB = "ProfileTab"
 }
@@ -31,88 +31,80 @@ object NavigationTestTags {
 /**
  * Defines all navigation destinations (screens) in the Meeple Meet app.
  *
- * Each entry in this enum represents a screen(or tab) that can be displayed within the app. It
- * centralizes both screen definitions and their metadata, replacing the previous `Tab` and
- * `MeepleMeetScreen` sealed classes.
+ * This sealed class replaces the previous enum approach, supporting both:
+ * 1. Fixed screens (object): top-level destinations or screens without parameters.
+ * 2. Parameterized screens (data class): screens that require dynamic arguments (e.g., IDs).
  *
  * ## Properties
  * - `route`: The unique route string used by the [NavHostController] to identify the screen.
- * - `title`: The human-readable title of the screen, used for display in UI components.
- * - `hasBottomBar`: Whether this screen appears in the bottom navigation bar.
- * - `hasBackButton`: Whether this screen should display a back button in the top bar.
+ * - `name`: The human-readable name of the screen, used for display in UI components.
+ * - `isInBottomBar`: Whether this screen appears in the bottom navigation bar.
  * - `icon`: The [ImageVector] shown in the bottom navigation bar (if applicable).
- * - `testTag`: The Compose testing tag associated with this screen.
+ * - `testTag`: The Compose testing tag associated with this screen (if applicable).
  *
- * ## Example
- *
+ * ## Top-level destinations
+ * Screens that appear in the bottom navigation bar are marked with `isInBottomBar = true`. For
+ * bottom navigation, you can filter:
  * ```kotlin
- * enum class MeepleMeetScreen(
- *     val route: String,
- *     val title: String,
- *     val hasBottomBar: Boolean,
- *     val hasBackButton: Boolean,
- *     val icon: ImageVector?,
- *     val testTag: String
- * ) {
- *     DiscoverSessions("discover", "Discover", true, false, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
- *     SessionsOverview("sessions_overview", "Sessions", true, false, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
- *     DiscussionsOverview("discussions_overview", "Discussions", true, false, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB)
- * }
+ * val topLevelScreens = listOf(
+ *     MeepleMeetScreen.DiscoverSessions,
+ *     MeepleMeetScreen.SessionsOverview,
+ *     MeepleMeetScreen.DiscussionsOverview,
+ *     MeepleMeetScreen.ProfileScreen
+ * )
  * ```
  *
+ * ## Parameterized screens
+ * Use `data class` when the screen depends on a dynamic parameter, e.g.:
+ * ```kotlin
+ * val screen = MeepleMeetScreen.DiscussionScreen(discussionId = "abc123")
+ * navigationActions.navigateTo(screen)
+ * ```
+ *
+ * The route will be resolved as `"discussion/abc123"` in the NavController.
+ *
  * ## How to Add a New Screen
- * 1. Add a new entry in this enum with appropriate parameters:
- *     - A unique `route` string.
- *     - A user-facing `title` for display.
- *     - Whether it should appear in the bottom navigation bar (`hasBottomBar`).
- *     - Whether it should show a back button (`hasBackButton`).
- *     - An optional `icon` (if it should appear in the bottom navigation bar) and `testTag` for
- *       Compose UI testing.
- * 2. Add the corresponding composable to your navigation graph (NavHost) using its `route`.
- * 3. If `hasBottomBar` is true, it will automatically appear in [BottomNavigationMenu], which
- *    iterates over [entries] to display all bottom bar items.
+ * 1. Determine if the screen needs parameters:
+ *     - **No parameters** → create an `object` inside the sealed class.
+ *     - **With parameters** → create a `data class` with the required arguments.
+ * 2. Define the screen inside the sealed class: ```kotlin object SignInScreen :
+ *    MeepleMeetScreen("sign_in", "Sign In") data class DiscussionScreen(val discussionId: String) :
+ *    MeepleMeetScreen("discussion/$discussionId", "Discussion") ```
+ * 3. Add the corresponding composable in your NavHost using the screen's `route`: ```kotlin
+ *    composable(MeepleMeetScreen.SignInScreen.route) { SignInScreen() }
+ *    composable("discussion/{discussionId}") { backStackEntry -> val id =
+ *    backStackEntry.arguments?.getString("discussionId")!! DiscussionScreen(discussionId = id)
+ *    } ```
+ * 4. If the screen is a top-level destination (should appear in the bottom navigation bar):
+ *     - Add the **object** (not data class) manually in your BottomNavigationMenu: ```kotlin val
+ *       bottomBarScreens = listOf( MeepleMeetScreen.DiscoverSessions,
+ *       MeepleMeetScreen.SessionsOverview, MeepleMeetScreen.DiscussionsOverview,
+ *       MeepleMeetScreen.ProfileScreen ) ```
  *
  * ## Notes
- * - The enum structure removes the need for manual tab list management.
- * - `route` and `title` should stay aligned for clarity.
- * - Top-level destinations correspond to screens with `hasBottomBar = true`.
+ * - The sealed class allows for safer type-checking and easier management of dynamic routes.
+ * - `route` and `name` should stay aligned for clarity.
  */
 enum class MeepleMeetScreen(
-    val route: String,
     val title: String,
-    val hasBottomBar: Boolean,
-    val hasBackButton: Boolean,
-    val icon: ImageVector?,
-    val testTag: String
+    val inBottomBar: Boolean = false,
+    val icon: ImageVector? = null,
+    val testTag: String? = null
 ) {
-  DiscoverSessions(
-      route = "discover",
-      title = "Discover",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.Language,
-      testTag = NavigationTestTags.DISCOVER_TAB),
-  SessionsOverview(
-      route = "sessions_overview",
-      title = "Sessions",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.Groups,
-      testTag = NavigationTestTags.SESSIONS_TAB),
+  SignInScreen("Sign In"),
+  SignUpScreen("Sign Up"),
+  CreateAccountScreen("Create your Account"),
   DiscussionsOverview(
-      route = "discussions_overview",
-      title = "Discussions",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.ChatBubbleOutline,
-      testTag = NavigationTestTags.DISCUSSIONS_TAB),
-  ProfileScreen(
-      route = "profile",
-      title = "Profile",
-      hasBottomBar = true,
-      hasBackButton = false,
-      icon = Icons.Default.AccountCircle,
-      testTag = NavigationTestTags.PROFILE_TAB)
+      "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
+  SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
+  DiscoverSessions("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
+  ProfileScreen("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
+  DiscussionAddScreen("Add Discussion"),
+  DiscussionScreen("Discussion"),
+  DiscussionInfoScreen("Discussion Details"),
+  SessionAddScreen("Add Session"),
+  SessionScreen("Session"),
+  SessionInfoScreen("Session Details"),
 }
 
 /**
@@ -128,18 +120,17 @@ fun BottomNavigationMenu(
     onTabSelected: (MeepleMeetScreen) -> Unit,
     modifier: Modifier = Modifier
 ) {
-  // TODO: Update colors when full MaterialTheme is implemented
   NavigationBar(
       modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
         MeepleMeetScreen.entries
-            .filter { it.hasBottomBar }
+            .filter { it -> it.inBottomBar }
             .forEach { screen ->
               NavigationBarItem(
                   icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
                   label = { Text(screen.title) },
                   selected = screen == currentScreen,
                   onClick = { onTabSelected(screen) },
-                  modifier = Modifier.testTag(screen.testTag))
+                  modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)
             }
       }
 }
@@ -148,7 +139,7 @@ fun BottomNavigationMenu(
  * Provides high-level navigation actions for the Meeple Meet app.
  *
  * This class wraps the [NavHostController] to simplify navigation logic. It should be used by
- * composables to move between screens.
+ * composable to move between screens.
  *
  * Example usage:
  * ```kotlin
@@ -163,23 +154,42 @@ open class NavigationActions(private val navController: NavHostController) {
   /**
    * Navigates to the specified [screen].
    *
-   * If the destination is already the current top-level destination (hasBottomBar), this call has
+   * If the destination is already the current top-level destination (isInBottomBar), this call has
    * no effect to avoid redundant navigation.
    *
    * @param screen The target screen to navigate to.
    */
   open fun navigateTo(screen: MeepleMeetScreen) {
-    if (screen.hasBottomBar && currentRoute() == screen.route) {
+    if (screen.inBottomBar && currentRoute() == screen.name) {
       // If the user is already on the top-level destination, do nothing
       return
     }
-    navController.navigate(screen.route) {
-      if (screen.hasBottomBar) {
+    navController.navigate(screen.name) {
+      // Screens available through the bottom navigation bar are top-level destinations.
+      // When navigating to one of these, we want to clear the back stack to avoid building
+      // up a large stack of destinations as the user switches between them.
+      if (screen.inBottomBar) {
         launchSingleTop = true
-        popUpTo(screen.route) { inclusive = true }
+        popUpTo(screen.name) { inclusive = true }
       }
 
       restoreState = true
+    }
+  }
+
+  /**
+   * Navigates out of the authentication graph and enters the discussions overview screen.
+   *
+   * This function clears the entire back stack to ensure the user cannot navigate back into the
+   * authentication flow (SignIn/SignUp). It should be called once authentication is successfully
+   * completed.
+   *
+   * Typical usage: called after a successful login or account creation.
+   */
+  open fun navigateOutOfAuthGraph() {
+    navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
+      popUpTo(0) { inclusive = true } // Empty stack
+      launchSingleTop = true
     }
   }
 

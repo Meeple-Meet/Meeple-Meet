@@ -2,6 +2,7 @@ package com.github.meeplemeet.ui
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -12,17 +13,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Games
+import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
 import java.text.SimpleDateFormat
@@ -45,10 +51,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
     discussionId: String,
     currentUser: Account,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenDiscussionInfo: (Discussion) -> Unit = {},
+    onCreateSessionClick: (Discussion) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
   var messageText by remember { mutableStateOf("") }
@@ -88,27 +96,47 @@ fun DiscussionScreen(
     /** Top bar showing discussion name and navigation back button */
     TopAppBar(
         title = {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier =
-                    Modifier.size(40.dp).background(color = Color(0xFF800080), shape = CircleShape))
-            /** TODO: Placeholder for avatar */
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = discussionName,
-                style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons))
-          }
+          Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier =
+                  Modifier.fillMaxSize().testTag("DiscussionInfo/${discussion?.name}").clickable {
+                    discussion?.let { onOpenDiscussionInfo(it) }
+                  }) {
+                Box(
+                    modifier =
+                        Modifier.size(40.dp)
+                            .background(color = Color(0xFF800080), shape = CircleShape))
+                /** TODO: Placeholder for avatar */
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = discussionName,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons),
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+              }
         },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = AppColors.textIconsFade)
+                tint = AppColors.textIconsFade,
+                modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
           }
         },
         actions = {
-          IconButton(onClick = {}) { Icon(Icons.Default.Search, contentDescription = "Search") }
+          val icon =
+              when {
+                discussion == null -> null
+                discussion!!.session != null -> Icons.Default.Games
+                discussion!!.admins.contains(currentUser.uid) -> Icons.Default.LibraryAdd
+                else -> null
+              }
+
+          if (icon != null) {
+            IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
+              Icon(icon, contentDescription = "Session action")
+            }
+          }
         })
 
     /** LazyColumn showing all messages with optional date separators */

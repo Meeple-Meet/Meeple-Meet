@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -29,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
@@ -38,13 +38,15 @@ object UITestTags {
   const val DISCUSSION_DESCRIPTION = "discussion_description"
   const val DELETE_DISCUSSION_DISPLAY = "delete_discussion_display"
   const val LEAVE_DISCUSSION_DISPLAY = "leave_discussion_display"
+  const val DELETE_DISCUSSION_CONFIRM_BUTTON = "confirm_delete_button"
+  const val LEAVE_DISCUSSION_CONFIRM_BUTTON = "confirm_leave_button"
   const val MAKE_ADMIN_BUTTON = "make_admin_button"
   const val DISCUSSION_NAME = "discussion_name"
 }
 
 /**
- * Displays the discussion settings screen, allowing users to view and edit discussion details,
- * manage members, and perform actions such as deleting or leaving the discussion.
+ * Displays the discussion infos screen, allowing users to view and edit discussion details, manage
+ * members, and perform actions such as deleting or leaving the discussion.
  *
  * @param viewModel The FirestoreViewModel for data operations.
  * @param discussionId The ID of the discussion to manage.
@@ -55,7 +57,10 @@ fun DiscussionSettingScreen(
     viewModel: FirestoreViewModel,
     discussionId: String,
     currentAccount: Account,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
+    onLeave: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
   val coroutineScope = rememberCoroutineScope()
 
@@ -124,20 +129,19 @@ fun DiscussionSettingScreen(
     Scaffold(
         topBar = {
           TopBarWithDivider(
-              text = "Discussion Settings",
-              /**
-               * Save Name and Description on back — this is the only time the DB is updated here
-               */
+              text = d.name,
               /**
                * Save Name and Description on back — this is the only time the DB is updated here
                */
               onReturn = {
-                viewModel.setDiscussionName(
-                    discussion = d, name = newName, changeRequester = currentAccount)
-                viewModel.setDiscussionDescription(
-                    discussion = d, description = newDesc, changeRequester = currentAccount)
-              }
-              /*Todo: navigation back*/ )
+                if (discussion!!.admins.contains(currentAccount.uid)) {
+                  viewModel.setDiscussionName(
+                      discussion = d, name = newName, changeRequester = currentAccount)
+                  viewModel.setDiscussionDescription(
+                      discussion = d, description = newDesc, changeRequester = currentAccount)
+                }
+                onBack()
+              })
         },
         bottomBar = {
           Row(
@@ -145,18 +149,19 @@ fun DiscussionSettingScreen(
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 /** The actual deletion happens only after the confirmation dialog */
                 /** Delete button only if not member */
-                OutlinedButton(
-                    onClick = { if (!isMember) showDeleteDialog = true },
-                    enabled = !isMember,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
-                    modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
-                      Icon(
-                          imageVector = Icons.Default.Delete,
-                          contentDescription = null,
-                          tint = AppColors.textIcons)
-                      Spacer(modifier = Modifier.width(8.dp))
-                      Text("Delete Discussion", color = AppColors.textIcons)
-                    }
+                if (discussion!!.admins.contains(currentAccount.uid))
+                    OutlinedButton(
+                        onClick = { if (!isMember) showDeleteDialog = true },
+                        enabled = !isMember,
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
+                        modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
+                          Icon(
+                              imageVector = Icons.Default.Delete,
+                              contentDescription = null,
+                              tint = AppColors.textIcons)
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text("Delete Discussion", color = AppColors.textIcons)
+                        }
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
                 OutlinedButton(
@@ -283,6 +288,22 @@ fun DiscussionSettingScreen(
                     thickness = 1.75.dp,
                     color = AppColors.divider)
 
+                /** Row for search and member selection */
+                if (discussion!!.admins.contains(currentAccount.uid))
+                    MemberSearchField(
+                        searchQuery = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        searchResults = searchResults,
+                        isSearching = isSearching,
+                        dropdownExpanded = dropdownExpanded,
+                        onDismiss = { dropdownExpanded = false },
+                        onSelect = { account ->
+                          selectedMembers.add(account)
+                          viewModel.addUserToDiscussion(discussion!!, currentAccount, account)
+                          searchQuery = ""
+                          dropdownExpanded = false
+                        })
+
                 /** --- Members List --- */
                 MemberList(
                     searchQuery = searchQuery,
@@ -313,11 +334,13 @@ fun DiscussionSettingScreen(
                             /** Only owner can delete */
                             onClick = {
                               coroutineScope.launch {
-                                /*Todo: navigation to other screen after deletion*/
                                 viewModel.deleteDiscussion(d, currentAccount)
+                                onDelete()
                               }
                               showDeleteDialog = false
-                            }) {
+                            },
+                            modifier =
+                                Modifier.testTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON)) {
                               Text("Delete")
                             }
                       },
@@ -344,10 +367,12 @@ fun DiscussionSettingScreen(
                                 /** leave discussion */
                                 viewModel.removeUserFromDiscussion(
                                     d, currentAccount, currentAccount)
-                                /*Todo: navigation to next screen after leaving the group*/
+                                onLeave()
                               }
                               showLeaveDialog = false
-                            }) {
+                            },
+                            modifier =
+                                Modifier.testTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON)) {
                               Text("Leave")
                             }
                       },
@@ -377,16 +402,21 @@ fun TopBarWithDivider(
   Column {
     CenterAlignedTopAppBar(
         navigationIcon = {
-          IconButton(onClick = { onReturn() }, modifier = Modifier.testTag("back_button")) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = AppColors.textIcons)
-          }
+          IconButton(
+              onClick = { onReturn() },
+              modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = AppColors.textIcons)
+              }
         },
         title = {
           Text(
-              text = text, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
+              text = text,
+              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE),
+              style = MaterialTheme.typography.bodyMedium,
+              color = AppColors.textIcons)
         },
         actions = { /* Add trailing icons here if needed */
           trailingIcons()
@@ -434,96 +464,6 @@ fun MemberList(
     currentAccount: Account,
     discussion: Discussion,
 ) {
-
-  /** --- Members Header + Search Field --- */
-  Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-    Text(
-        text = "Members:",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = AppColors.textIcons)
-
-    /** Autocomplete Search Field + Dropdown (only for non-members) */
-    if (!isMember) {
-
-      /** Spacer between title and search field */
-      Box(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
-
-        /** --- Search Field --- */
-        OutlinedTextField(
-            value = searchQuery,
-            shape = RoundedCornerShape(28.dp),
-            onValueChange = onSearchQueryChange,
-            label = { Text("Add Members", color = AppColors.textIconsFade) },
-            modifier = Modifier.fillMaxWidth(),
-            trailingIcon = {
-              if (searchQuery.isNotBlank()) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Clear",
-                    modifier =
-                        Modifier.clickable {
-                          onSearchQueryChange("")
-                          onDropdownExpandedChange(false)
-                        },
-                    tint = AppColors.textIcons)
-              }
-            },
-            enabled = true,
-            colors =
-                TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = AppColors.textIcons,
-                    unfocusedIndicatorColor = AppColors.textIconsFade,
-                    cursorColor = AppColors.textIcons,
-                    focusedTextColor = AppColors.textIcons,
-                    unfocusedTextColor = AppColors.textIcons))
-
-        /** --- Dropdown Menu for search results --- */
-        DropdownMenu(
-            expanded = dropdownExpanded,
-            onDismissRequest = { onDropdownExpandedChange(false) },
-            modifier = Modifier.fillMaxWidth().background(AppColors.secondary)) {
-              when {
-                isSearching -> {
-                  DropdownMenuItem(
-                      text = { Text("Searching...", color = AppColors.textIconsFade) },
-                      onClick = {})
-                }
-                searchResults.isEmpty() -> {
-                  DropdownMenuItem(
-                      text = { Text("No results", color = AppColors.textIconsFade) }, onClick = {})
-                }
-                else -> {
-                  searchResults.forEach { account ->
-                    DropdownMenuItem(
-                        text = { Text(account.name, color = AppColors.textIcons) },
-                        onClick = {
-                          selectedMembers.add(account)
-                          onSearchQueryChange("")
-                          onDropdownExpandedChange(false)
-                        },
-                        leadingIcon = {
-                          Box(
-                              modifier =
-                                  Modifier.size(32.dp)
-                                      .clip(CircleShape)
-                                      .background(AppColors.primary),
-                              contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = account.name.firstOrNull()?.toString() ?: "A",
-                                    color = AppColors.affirmative,
-                                    fontWeight = FontWeight.Bold)
-                              }
-                        })
-                  }
-                }
-              }
-            }
-      }
-    }
-  }
   /** Small spacer between search field and list */
   Spacer(modifier = Modifier.height(0.dp))
 
@@ -561,6 +501,7 @@ fun MemberList(
               Box(
                   modifier = Modifier.size(36.dp).clip(CircleShape).background(AppColors.primary),
                   contentAlignment = Alignment.Center) {
+
                     /** First letter of name or A if name is empty */
                     Text(
                         text = member.name.firstOrNull()?.toString() ?: "A",
@@ -658,10 +599,7 @@ fun MemberList(
           if (!selectedIsAdmin && !selectedIsOwner) {
             TextButton(
                 onClick = {
-                  viewModel.addAdminToDiscussion(
-                      discussion = discussion,
-                      admin = selectedMember!!,
-                      changeRequester = currentAccount)
+                  viewModel.addAdminToDiscussion(discussion, currentAccount, selectedMember!!)
                   selectedMember = null
                 }) {
                   Text(
