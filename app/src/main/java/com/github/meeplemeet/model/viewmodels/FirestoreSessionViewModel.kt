@@ -165,9 +165,9 @@ class FirestoreSessionViewModel(
       participantsList = newParticipantList.toList().map { it -> it.uid }
       if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
       if (participantsList.size < (minParticipants ?: discussion.session!!.minParticipants))
-        throw IllegalArgumentException("To little participants")
+          throw IllegalArgumentException("To little participants")
       if (participantsList.size > (maxParticipants ?: discussion.session!!.maxParticipants))
-        throw IllegalArgumentException("To many participants")
+          throw IllegalArgumentException("To many participants")
     }
 
     viewModelScope.launch {

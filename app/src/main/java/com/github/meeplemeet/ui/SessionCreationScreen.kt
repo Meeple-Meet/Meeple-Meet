@@ -2,6 +2,7 @@
 
 package com.github.meeplemeet.ui
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,7 +16,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
@@ -190,13 +195,27 @@ fun CreateSessionScreen(
 
               // Participants section
               ParticipantsSection(
-                  form = form,
-                  editable = true,
-                  onFormChange = { min, max ->
-                    form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
+                  currentUserId = currentUser.uid,
+                  selected = form.participants,
+                  allCandidates = form.participants,
+                  minPlayers = form.minPlayers,
+                  maxPlayers = form.maxPlayers,
+                  onMinMaxChange = { min, max ->
+                    form = form.copy(minPlayers = min, maxPlayers = max)
                   },
-                  onRemoveParticipant = { p ->
-                    form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
+                  minSliderNumber = MIN_SLIDER_NUMBER,
+                  maxSliderNumber = MAX_SLIDER_NUMBER,
+                  sliderSteps = SLIDER_STEPS,
+                  onAdd = { toAdd ->
+                    form =
+                        form.copy(participants = (form.participants + toAdd).distinctBy { it.uid })
+                  },
+                  mainSectionTitle = PARTICIPANT_SECTION_NAME,
+                  sliderDescription = SLIDER_DESCRIPTION,
+                  onRemove = { toRemove ->
+                    form =
+                        form.copy(
+                            participants = form.participants.filterNot { it.uid == toRemove.uid })
                   })
 
               // Organisation section (date/time + location search INSIDE)
@@ -448,5 +467,166 @@ fun OrganisationSection(
             isLoading = false,
             placeholder = "Search locations…",
             modifier = Modifier.fillMaxWidth())
+      }
+}
+
+/**
+ * Participants section
+ *
+ * @param currentUserId The current user's ID, to prevent self-removal
+ * @param selected The currently selected participants
+ * @param allCandidates All possible candidates to add
+ * @param minPlayers Current minimum players
+ * @param maxPlayers Current maximum players
+ * @param onMinMaxChange Callback when min/max change
+ * @param onAdd Callback when a participant is added
+ * @param onRemove Callback when a participant is removed
+ * @param minSliderNumber Minimum number for the slider
+ * @param maxSliderNumber Maximum number for the slider
+ * @param sliderSteps Number of steps for the slider
+ * @param mainSectionTitle Title for the section
+ * @param sliderDescription Description text for the slider
+ * @param elevationSelected Elevation for selected chips
+ * @param elevationUnselected Elevation for unselected chips
+ * @param modifier Optional modifier for the outer card
+ */
+@Composable
+fun ParticipantsSection(
+    currentUserId: String,
+    selected: List<Account>,
+    allCandidates: List<Account>,
+    minPlayers: Int,
+    maxPlayers: Int,
+    onMinMaxChange: (Int, Int) -> Unit,
+    onAdd: (Account) -> Unit,
+    onRemove: (Account) -> Unit,
+    minSliderNumber: Float,
+    maxSliderNumber: Float,
+    sliderSteps: Int,
+    mainSectionTitle: String,
+    sliderDescription: String,
+    elevationSelected: Dp = Elevation.floating,
+    elevationUnselected: Dp = Elevation.raised,
+    modifier: Modifier = Modifier
+) {
+  SectionCard(
+      modifier
+          .fillMaxWidth()
+          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+
+        // Header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
+        ) {
+          UnderlinedLabel("$mainSectionTitle:")
+          Spacer(Modifier.width(8.dp))
+          CountBubble(
+              count = selected.size,
+              modifier =
+                  Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.surface)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp))
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = sliderDescription,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(2.dp))
+
+        // Slider row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()) {
+              CountBubble(
+                  count = minPlayers,
+                  modifier =
+                      Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
+                          .clip(CircleShape)
+                          .background(MaterialTheme.colorScheme.surface)
+                          .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                          .padding(horizontal = 10.dp, vertical = 6.dp))
+
+              DiscretePillSlider(
+                  range = minSliderNumber..maxSliderNumber,
+                  values = minPlayers.toFloat()..maxPlayers.toFloat(),
+                  steps = sliderSteps,
+                  onValuesChange = { min, max ->
+                    val newMin =
+                        min.roundToInt().coerceIn(minSliderNumber.toInt(), maxSliderNumber.toInt())
+                    val newMax = max.roundToInt().coerceIn(newMin, maxSliderNumber.toInt())
+                    if (newMin != minPlayers || newMax != maxPlayers) {
+                      onMinMaxChange(newMin, newMax)
+                    }
+                  },
+                  surroundModifier = Modifier.weight(1f),
+                  sliderModifier =
+                      Modifier.background(MaterialTheme.colorScheme.surface, CircleShape)
+                          .padding(horizontal = 10.dp, vertical = 6.dp))
+
+              CountBubble(
+                  count = maxPlayers,
+                  modifier =
+                      Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
+                          .clip(CircleShape)
+                          .background(MaterialTheme.colorScheme.surface)
+                          .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                          .padding(horizontal = 10.dp, vertical = 6.dp))
+            }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Selected chips
+        val animElev by animateDpAsState(targetValue = elevationSelected, label = "chipElevation")
+        TwoPerRowGrid(
+            items = selected,
+            key = { it.uid },
+            modifier = Modifier.fillMaxWidth(),
+            rowsModifier = Modifier.fillMaxWidth(),
+        ) { acc, itemModifier ->
+          ParticipantChip(
+              account = acc,
+              action = ParticipantAction.Remove,
+              onClick = { toRemove -> if (toRemove.uid != currentUserId) onRemove(toRemove) },
+              modifier =
+                  itemModifier
+                      .shadow(animElev, MaterialTheme.shapes.large, clip = false)
+                      .background(MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+                      .padding(horizontal = 8.dp, vertical = 4.dp),
+              textModifier = Modifier.fillMaxWidth())
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Candidates
+        val selectedIds by remember(selected) { derivedStateOf { selected.map { it.uid }.toSet() } }
+        val candidates by
+            remember(allCandidates, selectedIds, currentUserId) {
+              derivedStateOf {
+                allCandidates.filter { it.uid != currentUserId && it.uid !in selectedIds }
+              }
+            }
+
+        TwoPerRowGrid(items = candidates, key = { it.uid }) { acc, itemModifier ->
+          ParticipantChip(
+              account = acc,
+              action = ParticipantAction.Add,
+              onClick = onAdd,
+              modifier =
+                  itemModifier
+                      .shadow(elevationUnselected, MaterialTheme.shapes.large, clip = false)
+                      .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+                      .padding(horizontal = 8.dp, vertical = 4.dp),
+              textModifier = Modifier.fillMaxWidth())
+        }
       }
 }

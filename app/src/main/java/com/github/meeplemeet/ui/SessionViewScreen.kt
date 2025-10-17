@@ -237,10 +237,12 @@ fun SessionViewScreen(
                 onBack()
                 val updatedParticipants = form.participants.filterNot { it.uid == currentUser.uid }
                 discussion?.let { disc ->
-                  sessionViewModel.updateSession(
-                      requester = currentUser,
-                      discussion = disc,
-                      newParticipantList = updatedParticipants)
+                  if (updatedParticipants.isNotEmpty())
+                      sessionViewModel.updateSession(
+                          requester = currentUser,
+                          discussion = disc,
+                          newParticipantList = updatedParticipants)
+                  else sessionViewModel.deleteSession(currentUser, disc)
                 }
                 onBack()
               },
