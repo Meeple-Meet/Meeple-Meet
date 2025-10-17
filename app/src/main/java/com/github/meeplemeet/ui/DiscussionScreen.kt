@@ -188,7 +188,7 @@ fun DiscussionScreen(
           BasicTextField(
               value = messageText,
               onValueChange = { messageText = it },
-              modifier = Modifier.weight(1f),
+              modifier = Modifier.weight(1f).testTag("Input Field"),
               singleLine = true,
               decorationBox = { innerTextField ->
                 if (messageText.isEmpty()) {
@@ -201,6 +201,7 @@ fun DiscussionScreen(
 
           /** Send button */
           IconButton(
+              modifier = Modifier.testTag("Send Button"),
               onClick = {
                 discussion?.let { disc ->
                   if (messageText.isNotBlank() && !isSending) {
