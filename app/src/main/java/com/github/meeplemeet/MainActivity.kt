@@ -12,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -83,7 +86,8 @@ fun MeepleMeetApp(
   val handlesError by handlesVM.errorMessage.collectAsState()
 
   var currentAccount = uiState.account
-  var currentDiscussion: Discussion? = null
+  var currentDiscussion by remember { mutableStateOf<Discussion?>(null) }
+  var inAuth by remember { mutableStateOf(false) }
 
   /** Fetch current user if already logged in */
   LaunchedEffect(FirebaseProvider.auth.currentUser) {
@@ -94,25 +98,25 @@ fun MeepleMeetApp(
     }
   }
 
-  /** Authentication gate: navigates out of auth graph when an account becomes available */
-  LaunchedEffect(firestoreVMAccount) {
-    currentAccount = firestoreVMAccount
-    currentAccount?.let {
-      handlesVM.handleForAccountExists(currentAccount!!)
-      if (handlesError.isBlank()) navigationActions.navigateOutOfAuthGraph()
-      else navigationActions.navigateTo(MeepleMeetScreen.CreateAccountScreen)
-    }
-  }
-  LaunchedEffect(currentAccount) {
-    currentAccount?.let {
-      handlesVM.handleForAccountExists(currentAccount!!)
-      if (handlesError.isBlank()) navigationActions.navigateOutOfAuthGraph()
-      else navigationActions.navigateTo(MeepleMeetScreen.CreateAccountScreen)
-    }
-  }
-
   NavHost(navController = navController, startDestination = startDestination) {
     composable(MeepleMeetScreen.SignInScreen.name) {
+      LaunchedEffect(firestoreVMAccount) {
+        currentAccount = firestoreVMAccount
+        currentAccount?.let {
+          handlesVM.handleForAccountExists(currentAccount!!)
+          if (handlesError.isBlank()) navigationActions.navigateOutOfAuthGraph()
+          else navigationActions.navigateTo(MeepleMeetScreen.CreateAccountScreen)
+        }
+      }
+
+      LaunchedEffect(currentAccount) {
+        currentAccount?.let {
+          handlesVM.handleForAccountExists(currentAccount!!)
+          if (handlesError.isBlank()) navigationActions.navigateOutOfAuthGraph()
+          else navigationActions.navigateTo(MeepleMeetScreen.CreateAccountScreen)
+        }
+      }
+
       SignInScreen(
           viewModel = authVM,
           credentialManager = credentialManager,

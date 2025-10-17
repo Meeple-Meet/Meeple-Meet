@@ -59,7 +59,6 @@ fun DiscussionScreen(
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
-    onSend: (Discussion) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
   var messageText by remember { mutableStateOf("") }
@@ -210,7 +209,6 @@ fun DiscussionScreen(
                       isSending = true
                       try {
                         viewModel.sendMessageToDiscussion(disc, currentUser, messageText)
-                        onSend(discussion!!)
                         messageText = ""
                       } finally {
                         isSending = false
