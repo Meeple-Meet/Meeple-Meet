@@ -11,6 +11,7 @@ import com.github.meeplemeet.MeepleMeetApp
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
@@ -72,6 +73,7 @@ class NavigationTest : FirestoreTests() {
     repository = FirestoreRepository()
     authVM = AuthViewModel()
     firestoreVM = FirestoreViewModel(repository)
+    val handlesVM = FirestoreHandlesViewModel()
 
     // Create test data directly in Firestore
     runBlocking {
@@ -82,6 +84,8 @@ class NavigationTest : FirestoreTests() {
               name = "Test User",
               email = "test@example.com",
               photoUrl = null)
+
+      handlesVM.createAccountHandle(testAccount, "handle")
 
       // Create test discussions
       val (_, discussion1) =

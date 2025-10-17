@@ -418,7 +418,7 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals("Catan Night", result.session?.name)
   }
 
-  @Test
+  @Test(expected = PermissionDeniedException::class)
   fun multipleParticipantsCanUpdateSession() = runTest {
     val originalSession =
         Session(
