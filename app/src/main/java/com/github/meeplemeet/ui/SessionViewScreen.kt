@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
@@ -178,7 +177,7 @@ fun SessionViewScreen(
                     location = null,
                     minParticipants = form.minPlayers,
                     maxParticipants = form.maxPlayers,
-                    form.participants.toTypedArray())
+                    form.participants)
               }
               onBack()
             },
@@ -241,7 +240,7 @@ fun SessionViewScreen(
                   sessionViewModel.updateSession(
                       requester = currentUser,
                       discussion = disc,
-                      newParticipantList = updatedParticipants.toTypedArray())
+                      newParticipantList = updatedParticipants)
                 }
                 onBack()
               },

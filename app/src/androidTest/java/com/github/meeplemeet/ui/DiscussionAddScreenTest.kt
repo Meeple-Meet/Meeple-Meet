@@ -82,10 +82,10 @@ class AddDiscussionScreenTest {
     realVm = FirestoreViewModel(repo)
     compose.setContent {
       DiscussionAddScreen(
-        onBack = { nav.goBack() },
-        onCreate = { nav.goBack() },
-        viewModel = realVm,
-        currentUser = me)
+          onBack = { nav.goBack() },
+          onCreate = { nav.goBack() },
+          viewModel = realVm,
+          currentUser = me)
     }
   }
 
@@ -181,7 +181,7 @@ class AddDiscussionScreenTest {
   fun searchByHandleShowsCorrectHandles() {
     searchField().performTextInput("john")
     compose.waitUntilAtLeastOneExists(
-      hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
+        hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
 
     compose.onNode(hasText("john") and hasAnyAncestor(isPopup())).assertExists()
     compose.onNode(hasText("johna") and hasAnyAncestor(isPopup())).assertExists()
@@ -211,7 +211,7 @@ class AddDiscussionScreenTest {
   fun searchByHandleSelectsMember() {
     searchField().performTextInput("jo")
     compose.waitUntilAtLeastOneExists(
-      hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
+        hasText("john") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
     compose.waitForIdle()
     compose.onNodeWithText("john").performClick()
 

@@ -150,7 +150,7 @@ class FirestoreSessionViewModel(
       location: Location? = null,
       minParticipants: Int? = null,
       maxParticipants: Int? = null,
-      newParticipantList: Array<Account> = emptyArray()
+      newParticipantList: List<Account>? = null
   ) {
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
@@ -160,12 +160,15 @@ class FirestoreSessionViewModel(
         throw IllegalArgumentException(
             "The minimum number of participants can not be more than the maximum number of participants")
 
-    val participantsList: List<String> = newParticipantList.toList().map { it -> it.uid }
-    if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
-    if (participantsList.size < (minParticipants ?: discussion.session!!.minParticipants))
+    var participantsList: List<String>? = null
+    if (newParticipantList != null) {
+      participantsList = newParticipantList.toList().map { it -> it.uid }
+      if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
+      if (participantsList.size < (minParticipants ?: discussion.session!!.minParticipants))
         throw IllegalArgumentException("To little participants")
-    if (participantsList.size > (maxParticipants ?: discussion.session!!.maxParticipants))
+      if (participantsList.size > (maxParticipants ?: discussion.session!!.maxParticipants))
         throw IllegalArgumentException("To many participants")
+    }
 
     viewModelScope.launch {
       _discussion.value =
