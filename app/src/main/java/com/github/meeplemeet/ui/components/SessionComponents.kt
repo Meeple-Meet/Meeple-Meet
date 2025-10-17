@@ -460,10 +460,13 @@ fun TimePickerField(
       onValueChange = { /* read-only; picker controls it */},
       label = { Text(label) },
       readOnly = true,
-      leadingIcon = {
-        IconButton(onClick = { open = true }) {
-          Icon(Icons.Default.Timer, contentDescription = "Select time")
-        }
+      leadingIcon = { Icon(Icons.Default.Timer, contentDescription = "Select time") },
+      trailingIcon = {
+        TextButton(
+            onClick = { open = true },
+            modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
+              Text("Pick")
+            }
       },
       modifier = Modifier.fillMaxWidth().height(64.dp))
 
