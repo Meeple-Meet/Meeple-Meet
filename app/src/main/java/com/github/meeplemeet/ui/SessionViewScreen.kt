@@ -1,8 +1,6 @@
 package com.github.meeplemeet.ui
 
 import android.annotation.SuppressLint
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -122,7 +120,6 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
  * @param discussionId ID of the discussion linked to the session
  * @param onBack Callback triggered when navigating back
  */
-@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
