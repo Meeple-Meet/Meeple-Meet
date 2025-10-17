@@ -1,5 +1,3 @@
-// Chatgpt helped for documentation and some bug fixes
-
 package com.github.meeplemeet.ui
 
 import android.annotation.SuppressLint
@@ -11,18 +9,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,21 +38,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
+import com.github.meeplemeet.ui.components.GameSearchField
 import com.github.meeplemeet.ui.components.IconTextField
+import com.github.meeplemeet.ui.components.LocationSearchField
 import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
+import com.google.firebase.Timestamp
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.roundToInt
 
@@ -84,14 +87,12 @@ object SessionTestTags {
   const val CHAT_BADGE = "chat_badge"
   const val NOTIFICATION_BADGE_COUNT = "notification_badge_count"
   const val EMPTY_BADGE = "empty_badge"
+  const val DELETE_SESSION_BUTTON = "delete_session_button"
 }
 
 /* =======================================================================
  * Models
  * ======================================================================= */
-
-// Simple data class representing a session participant (not always used, see Account).
-data class Participant(val id: String, val name: String)
 
 // Constants for the minimum and maximum values of the player count slider.
 const val sliderMinRange = 2f
@@ -101,31 +102,61 @@ const val sliderMaxRange = 10f
  * Public entry point
  * ======================================================================= */
 
+fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
+  val instant = Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
+  val zone = ZoneId.systemDefault()
+  val dateTime = LocalDateTime.ofInstant(instant, zone)
+  return dateTime.toLocalDate() to dateTime.toLocalTime()
+}
+
 /**
- * Main screen composable for viewing (and possibly editing) a session. Displays the session title,
- * proposed game, participants, organizational info, and a quit button.
+ * Main composable for the Session View screen. Displays session details, participants, proposed
+ * game, and organizational info.
  *
- * @param viewModel The FirestoreViewModel for session/discussion data.
- * @param currentUser The current logged-in user/account.
- * @param initial The initial SessionForm state (default: empty).
- * @param discussionId The ID of the discussion/session.
- * @param onBack Callback when the user navigates back or quits.
+ * @param viewModel Global FirestoreViewModel for retrieving discussions
+ * @param sessionViewModel ViewModel managing session-specific operations
+ * @param currentUser Currently logged-in user
+ * @param initial Initial session form state (optional)
+ * @param discussionId ID of the discussion linked to the session
+ * @param onBack Callback triggered when navigating back
  */
 @SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionViewScreen(
     viewModel: FirestoreViewModel,
+    sessionViewModel: FirestoreSessionViewModel,
     currentUser: Account,
     initial: SessionForm = SessionForm(),
     discussionId: String,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
 ) {
   // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
 
   // Observe discussion updates from the view model.
   val discussion by viewModel.discussionFlow(discussionId).collectAsState()
+  val isCurrUserAdmin =
+      currentUser.uid == discussion?.creatorId ||
+          discussion?.admins?.contains(currentUser.uid) == true
+
+  LaunchedEffect(Unit) {
+    val session = discussion!!.session!!
+    val (date, time) = timestampToLocal(session.date)
+
+    viewModel.getDiscussionParticipants(discussion!!) {
+      form =
+          form.copy(
+              title = session.name,
+              date = date,
+              time = time,
+              proposedGame = "",
+              minPlayers = session.minParticipants,
+              maxPlayers = session.maxParticipants,
+              participants = it,
+              locationText = session.location.name)
+    }
+  }
 
   // Scaffold provides the top bar and main content area.
   Scaffold(
@@ -133,10 +164,21 @@ fun SessionViewScreen(
         TopBarWithDivider(
             text = "Session View",
             onReturn = {
+              if (discussion!!.admins.contains(currentUser.uid)) {
+                sessionViewModel.updateSession(
+                    requester = currentUser,
+                    discussion = discussion!!,
+                    name = form.title,
+                    gameId = null,
+                    date = toTimestamp(form.date, form.time),
+                    location = null,
+                    minParticipants = form.minPlayers,
+                    maxParticipants = form.maxPlayers,
+                    form.participants.ifEmpty { null })
+              }
               onBack()
-              /** save the data */
             },
-            { TopRightIcons() })
+        )
       },
   ) { innerPadding ->
     Column(
@@ -151,19 +193,28 @@ fun SessionViewScreen(
           // Session title (centered, not editable for now).
           Title(
               text = form.title.ifEmpty { "New Session" },
-              editable = false, // TODO: make editable for admins and the session creator
+              editable = isCurrUserAdmin,
               form,
+              onValueChange = { newTitle -> form = form.copy(title = newTitle) },
               modifier =
                   Modifier.align(Alignment.CenterHorizontally)
                       .then(Modifier.testTag(SessionTestTags.TITLE)))
 
-          // Proposed game section (read-only).
-          // Background and border are primary for members since it blends with the screen bg.
-          ProposedGameSection()
+          // Proposed game section
+          // background and border are primary for members since it blends with the screen bg
+          // proposed game is a text for members, it's not in a editable box
+          discussion?.let { disc ->
+            ProposedGameSection(
+                sessionViewModel = sessionViewModel,
+                currentUser = currentUser,
+                discussion = disc, // safe – non-null here
+                editable = isCurrUserAdmin)
+          } ?: Box(Modifier.fillMaxWidth()) {}
 
-          // Participants section with slider and chips.
+          // Participants section
           ParticipantsSection(
-              form,
+              form = form,
+              editable = isCurrUserAdmin,
               onFormChange = { min, max ->
                 form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
               },
@@ -171,26 +222,44 @@ fun SessionViewScreen(
                 form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
               })
 
-          // Organisation section (date, time, location).
-          // Editable for admins and the session creator, read-only for members.
-          OrganizationSection(form, onFormChange = { form = it })
+          // Organisation section
+          // editable for admins and the session creator, read-only for members
+          OrganizationSection(form, onFormChange = { form = it }, editable = isCurrUserAdmin)
 
           Spacer(Modifier.height(4.dp))
 
-          // Quit session button (removes user from session, not yet implemented).
+          // Quit session button
           OutlinedButton(
-              onClick = onBack
-              /** TODO: remove currentAccount from the session */
-              ,
-              modifier =
-                  Modifier.fillMaxWidth().then(Modifier.testTag(SessionTestTags.QUIT_BUTTON)),
+              onClick = {
+                onBack()
+                val updatedParticipants = form.participants.filterNot { it.uid == currentUser.uid }
+                discussion?.let { disc ->
+                  if (updatedParticipants.isNotEmpty())
+                      sessionViewModel.updateSession(
+                          requester = currentUser,
+                          discussion = disc,
+                          newParticipantList = updatedParticipants)
+                  else sessionViewModel.deleteSession(currentUser, disc)
+                }
+                onBack()
+              },
               shape = CircleShape,
               border = BorderStroke(1.5.dp, AppColors.negative),
+              modifier = Modifier.testTag(SessionTestTags.QUIT_BUTTON).fillMaxWidth(),
               colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                Icon(Icons.Default.Delete, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
               }
+
+          discussion?.let { disc ->
+            DeleteSessionBTN(
+                sessionViewModel = sessionViewModel,
+                currentUser = currentUser,
+                discussion = disc,
+                userIsAdmin = isCurrUserAdmin,
+                onback = onBack)
+          }
         }
   }
 }
@@ -200,16 +269,19 @@ fun SessionViewScreen(
  * ======================================================================= */
 
 /**
- * Section displaying the list of participants, a slider for player count, and chips for each user.
+ * Displays the participants section of the session. Shows participant count, editable range slider
+ * for player limits, and participant chips.
  *
- * @param form The current session form state.
- * @param onFormChange Callback when the slider values change.
- * @param onRemoveParticipant Callback when a participant is removed.
+ * @param form Current session form data
+ * @param onFormChange Callback triggered when player limits are adjusted
+ * @param editable Whether the section is editable (admin-only)
+ * @param onRemoveParticipant Callback to remove a participant
  */
 @Composable
 fun ParticipantsSection(
     form: SessionForm,
     onFormChange: (Float, Float) -> Unit,
+    editable: Boolean = false,
     onRemoveParticipant: (Account) -> Unit
 ) {
   SectionCard(
@@ -217,7 +289,6 @@ fun ParticipantsSection(
           Modifier.clip(appShapes.extraLarge)
               .background(AppColors.primary)
               .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
-        // Header row: "Participants" label and participant count bubble.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
           UnderlinedLabel(
               text = "Participants:",
@@ -239,6 +310,7 @@ fun ParticipantsSection(
         // Slider for selecting min and max number of players.
         PillSliderNoBackground(
             title = "Number of players",
+            editable = editable,
             range = sliderMinRange..sliderMaxRange,
             values =
                 form.minPlayers.toFloat().coerceIn(sliderMinRange, sliderMaxRange)..form.maxPlayers
@@ -247,7 +319,7 @@ fun ParticipantsSection(
             steps = 7,
             onValuesChange = { min, max -> onFormChange(min, max) })
 
-        // Min/max value bubbles for the slider.
+        // Min/max bubbles of the slider
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           CountBubble(
               count = form.minPlayers,
@@ -271,50 +343,82 @@ fun ParticipantsSection(
 
         // Participant chips (grid of users, removable).
         UserChipsGrid(
-            participants = form.participants, onRemove = { acc -> onRemoveParticipant(acc) })
+            participants = form.participants,
+            onRemove = { p -> onRemoveParticipant(p) },
+            editable = editable)
       }
 }
 
 /**
- * Section displaying the currently proposed game for the session. For now, shown as read-only text
- * for members.
+ * Displays the proposed game section for the session. Admins can search and update the game, while
+ * members see it as read-only.
+ *
+ * @param sessionViewModel ViewModel managing session operations
+ * @param currentUser Currently logged-in user
+ * @param discussion The discussion the session belongs to
+ * @param editable Whether the current user can modify the proposed game
  */
 @Composable
-private fun ProposedGameSection() {
+private fun ProposedGameSection(
+    sessionViewModel: FirestoreSessionViewModel,
+    currentUser: Account,
+    discussion: Discussion,
+    editable: Boolean
+) {
+  val gameUIState by sessionViewModel.gameUIState.collectAsState()
+
   SectionCard(
       modifier =
           Modifier.clip(appShapes.extraLarge)
               .background(AppColors.primary)
               .border(1.dp, AppColors.primary)) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically) {
-              UnderlinedLabel(
-                  text = "Proposed game:",
-                  textColor = AppColors.textIcons,
-                  textStyle = MaterialTheme.typography.titleLarge)
-              Spacer(Modifier.width(8.dp))
-              // Text for members (not editable).
-              Text(
-                  "Current Game",
-                  modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = AppColors.textIcons)
-            }
-        Spacer(Modifier.height(10.dp))
+        Column(modifier = Modifier.fillMaxWidth()) {
+          UnderlinedLabel(
+              text = "Proposed game:",
+              textColor = AppColors.textIcons,
+              textStyle = MaterialTheme.typography.titleLarge)
+
+          Spacer(Modifier.height(8.dp))
+
+          if (editable) {
+            GameSearchField(
+                query = gameUIState.gameQuery,
+                onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
+                results = gameUIState.gameSuggestions,
+                onPick = { sessionViewModel.setGame(currentUser, discussion, it) },
+                isLoading = false,
+                modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
+          } else {
+            Text(
+                text = "Current Game",
+                modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.textIcons)
+          }
+        }
       }
 }
 
 /**
- * Section for organizing session details: date, time, and location. Editable for admins/session
- * creator, read-only for members.
+ * Displays and manages the organizational details of the session. Includes date, time, and location
+ * fields, with editable options for admins.
  *
- * @param form The current session form state.
- * @param onFormChange Callback when any organization field changes.
+ * @param form Current session form data
+ * @param onFormChange Callback triggered when form data changes
+ * @param editable Whether the section is editable (admin-only)
  */
 @Composable
-fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) {
+fun OrganizationSection(
+    form: SessionForm,
+    onFormChange: (SessionForm) -> Unit,
+    editable: Boolean = false
+) {
+  val mockResults =
+      listOf(
+          Location(46.5197, 6.6323, "Student Lounge"),
+          Location(46.5191, 6.5668, "Rolex Learning Center"),
+          Location(46.5221, 6.5674, "Satellite Café"))
+
   SectionCard(
       modifier =
           Modifier.clip(appShapes.extraLarge)
@@ -327,45 +431,54 @@ fun OrganizationSection(form: SessionForm, onFormChange: (SessionForm) -> Unit) 
             textStyle = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
 
-        /** TODO: check date format */
-        // Date field with a docked date picker dialog.
         DatePickerDockedField(
             value = form.date,
+            editable = editable,
             onValueChange = { onFormChange(form.copy(date = it!!)) },
         )
 
         Spacer(Modifier.height(10.dp))
 
-        /** TODO: check time format */
-        // Time field using the TimeField composable, opens a time picker dialog.
+        // Time field using the new TimeField composable
         TimeField(
             value = form.time.toString(),
             onValueChange = { onFormChange(form.copy(time = it)) },
+            editable = editable,
             modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
 
-        // Location field (currently a simple text field).
-        // Could be improved with suggestions and map integration.
-        OutlinedTextField(
-            value = form.locationText,
-            onValueChange = { onFormChange(form.copy(locationText = it)) },
-            placeholder = { Text("Location", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
-            modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD).fillMaxWidth(),
-            textStyle = MaterialTheme.typography.bodySmall,
-            keyboardOptions = KeyboardOptions.Default,
-        )
+        if (editable) {
+          // Admins and creators: interactive search field
+          LocationSearchField(
+              query = form.locationText,
+              onQueryChange = { newQuery -> onFormChange(form.copy(locationText = newQuery)) },
+              results = mockResults,
+              onPick = { picked -> onFormChange(form.copy(locationText = picked.name)) },
+              isLoading = false, // can hook into your VM later
+              placeholder = "Search locations…")
+        } else {
+          // Members: plain read-only text field
+          IconTextField(
+              value = form.locationText,
+              editable = false,
+              onValueChange = { if (editable) onFormChange(form.copy(locationText = it)) },
+              placeholder = "Location",
+              leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
+              modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD).fillMaxWidth(),
+              textStyle = MaterialTheme.typography.bodySmall,
+          )
+        }
       }
 }
 
 /**
- * Displays the session title. (Currently not editable.)
+ * Displays the session title, either as editable text input for admins or plain text for members.
  *
- * @param text The title text to display.
- * @param editable Whether the title is editable (not yet supported).
- * @param form The session form (unused for now).
- * @param onValueChange Callback for title changes (unused for now).
- * @param modifier Modifier for styling.
+ * @param text Title text
+ * @param editable Whether the field is editable
+ * @param form Current session form data
+ * @param onValueChange Callback triggered when the title changes
+ * @param modifier Modifier applied to the composable
  */
 @Composable
 fun Title(
@@ -375,53 +488,40 @@ fun Title(
     onValueChange: (String) -> Unit = {},
     modifier: Modifier
 ) {
-  Text(
-      text = text,
-      style = MaterialTheme.typography.headlineLarge,
-      color = AppColors.textIcons,
-      modifier = modifier)
-}
-
-/**
- * Row of icon buttons for notifications and chat, each with a badge.
- *
- * @param onclickNotification Callback when notification icon is clicked.
- * @param onclickChat Callback when chat icon is clicked.
- */
-@Composable
-fun TopRightIcons(onclickNotification: () -> Unit = {}, onclickChat: () -> Unit = {}) {
-  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-    BadgedIconButton(
-        icon = Icons.Default.Notifications,
-        contentDescription = "Notifications",
-        modifier = Modifier.testTag(SessionTestTags.NOTIFICATION_BADGE_COUNT),
-        // badge count could be dynamic based on actual notifications
-        // not implemented in this demo
-        badgeCount = 3, // Example badge count for notifications
-        onClick = {
-          onclickNotification() /* TODO: go to list of users that wants to join the session */
-        })
-    BadgedIconButton(
-        icon = Icons.Default.ChatBubbleOutline,
-        modifier = Modifier.testTag(SessionTestTags.CHAT_BADGE),
-        contentDescription = "Messages",
-        badgeCount = 0,
-        onClick = { onclickChat() /* TODO: navigates to the discussion*/ })
+  if (editable) {
+    OutlinedTextField(
+        value = text,
+        onValueChange = onValueChange,
+        textStyle = MaterialTheme.typography.headlineLarge,
+        singleLine = true,
+        modifier = modifier.fillMaxWidth())
+  } else {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.headlineLarge,
+        color = AppColors.textIcons,
+        modifier = modifier)
   }
 }
 
 /**
- * Displays a participant as a removable chip with their name and avatar.
+ * Composable used for the individual UserChip
  *
- * @param name The participant's display name.
- * @param onRemove Callback when the remove icon is clicked.
- * @param modifier Modifier for styling.
+ * @param name User's name
+ * @param onRemove Callback fn used to remove the user
+ * @param modifier Modifiers to apply to this component
+ * @param showRemoveBTN Should only be visible to admins/owners
  */
 @Composable
-fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+fun UserChip(
+    name: String,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+    showRemoveBTN: Boolean = false
+) {
   InputChip(
       selected = false,
-      onClick = { /* optional: maybe show details */},
+      onClick = {},
       label = { Text(text = name, style = MaterialTheme.typography.bodySmall) },
       avatar = {
         Box(
@@ -434,11 +534,14 @@ fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) 
             }
       },
       trailingIcon = {
-        IconButton(onClick = onRemove, modifier = Modifier.size(18.dp)) {
-          Icon(
-              imageVector = Icons.Default.Close,
-              contentDescription = "Remove participant",
-              tint = AppColors.negative)
+        if (showRemoveBTN) {
+          IconButton(
+              onClick = onRemove, modifier = Modifier.size(18.dp).testTag("remove:${name}")) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Remove participant",
+                    tint = AppColors.negative)
+              }
         }
       },
       modifier = modifier,
@@ -450,24 +553,36 @@ fun UserChip(name: String, onRemove: () -> Unit, modifier: Modifier = Modifier) 
 }
 
 /**
- * Displays the list of participants as a grid of removable chips.
+ * Component used to display the participants in a clean and flexible box Each chip shows a
+ * participant name and optionally a remove button for admins.
  *
- * @param participants List of participant accounts.
- * @param onRemove Callback when a participant is removed.
- * @param modifier Modifier for styling.
+ * @param participants List of participants to display
+ * @param onRemove Callback fn used when an Admin/Owner removes a participant
+ * @param modifier Modifiers used for the component
+ * @param editable Whether the current user can edit (remove) participants
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UserChipsGrid(
     participants: List<Account>,
     onRemove: (Account) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    editable: Boolean = false
 ) {
   FlowRow(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
       modifier = modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS).fillMaxWidth()) {
-        participants.forEach { p -> UserChip(name = p.name, onRemove = { onRemove(p) }) }
+        participants.forEach { p ->
+          UserChip(
+              name = p.name,
+              modifier = Modifier.testTag("chip${p.uid}"),
+              onRemove = { if (editable) onRemove(p) },
+              showRemoveBTN = editable)
+        }
+
+        // Add button chip (to add new participants)
+        // might be implemented later (users might joining the session themselves)
       }
 }
 
@@ -475,11 +590,12 @@ fun UserChipsGrid(
  * Compact, discrete "pill" styled range slider with subtle rounded track & dots. This mirrors the
  * blue/red dotted pills in the mock (generic visual).
  *
- * @param title The label above the slider.
- * @param range The minimum and maximum values for the slider.
- * @param values The current selected min/max values.
- * @param steps Number of steps between min and max.
- * @param onValuesChange Callback when slider values change.
+ * @param title Text to display with the pill slider
+ * @param range Range of values that the slider can attain
+ * @param values Values that be attained by the slider
+ * @param steps Number of steps to display
+ * @param editable whether the current user can edit the slider (Admin/Owner only)
+ * @param onValuesChange callback fn used when the slider is moved
  */
 @Composable
 fun PillSliderNoBackground(
@@ -487,6 +603,7 @@ fun PillSliderNoBackground(
     range: ClosedFloatingPointRange<Float>,
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
+    editable: Boolean = true,
     onValuesChange: (Float, Float) -> Unit
 ) {
   Column {
@@ -495,6 +612,7 @@ fun PillSliderNoBackground(
     DiscretePillSlider(
         range = range,
         values = values,
+        editable = editable,
         steps = steps,
         onValuesChange = onValuesChange,
         surroundModifier =
@@ -512,46 +630,15 @@ fun PillSliderNoBackground(
 }
 
 /**
- * Icon button with a badge, for notifications or chat.
+ * * Dialog popup used to edit the time field
  *
- * @param icon The icon to display.
- * @param contentDescription Content description for accessibility.
- * @param badgeCount Number to display in the badge (shows empty if 0).
- * @param onClick Callback for button click.
- * @param modifier Modifier for styling.
- */
-@Composable
-fun BadgedIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    badgeCount: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  BadgedBox(
-      badge = {
-        if (badgeCount > 0) {
-          Badge(modifier = modifier) { Text(badgeCount.toString()) }
-        } else {
-          Text(text = "", modifier = Modifier.testTag(SessionTestTags.EMPTY_BADGE))
-        } // Empty badge when count is 0 to avoid layout shift
-      }) {
-        IconButton(onClick = { onClick() }) {
-          Icon(icon, contentDescription = contentDescription, tint = AppColors.textIcons)
-        }
-      }
-}
-
-/**
- * Dialog for picking a time using the Material3 TimePicker.
- *
- * @param onDismiss Callback when the dialog is dismissed.
- * @param onTimeSelected Callback with the selected LocalTime.
+ * @param onDismiss callback fn called when focusing out of the popup
+ * @param onTimeSelected callback fn used to update the time field
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit) {
-  // Initialize state with current time.
+  // initialize state with current time
   val calendar = Calendar.getInstance()
   val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
   val initialMinute = calendar.get(Calendar.MINUTE)
@@ -565,7 +652,6 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
       containerColor = AppColors.primary,
       confirmButton = {
         TextButton(
-            // Kotlin
             onClick = {
               val h = timePickerState.hour
               val m = timePickerState.minute
@@ -579,7 +665,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
       text = {
-        // Use the Material3 TimePicker (dial) inside the dialog.
+        // Use the Material3 TimePicker (dial) inside the dialog
         TimePicker(
             state = timePickerState,
             colors =
@@ -598,15 +684,21 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
 }
 
 /**
- * Displays a time field with a button to open a time picker dialog.
+ * Composable used to display an interactive timefield
  *
- * @param value The current time as a string.
- * @param onValueChange Callback with the new LocalTime when picked.
- * @param modifier Modifier for styling.
+ * @param value Time set
+ * @param onValueChange callback fn when time is changed
+ * @param modifier Modifiers that want to be passed to the composable
+ * @param editable Whether the composable should be made editable depending on the current user's
+ *   perms
  */
 @Composable
-fun TimeField(value: String, onValueChange: (LocalTime) -> Unit, modifier: Modifier = Modifier) {
-  // Controls visibility of the time picker dialog.
+fun TimeField(
+    value: String,
+    onValueChange: (LocalTime) -> Unit,
+    modifier: Modifier = Modifier,
+    editable: Boolean = false
+) {
   var showDialogTime by remember { mutableStateOf(false) }
 
   IconTextField(
@@ -615,11 +707,13 @@ fun TimeField(value: String, onValueChange: (LocalTime) -> Unit, modifier: Modif
       placeholder = "Time",
       leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Time") },
       trailingIcon = {
-        TextButton(
-            onClick = { showDialogTime = true },
-            modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
-              Text("Pick")
-            }
+        if (editable) {
+          TextButton(
+              onClick = { showDialogTime = true },
+              modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
+                Text("Pick")
+              }
+        }
       },
       modifier = modifier.testTag(SessionTestTags.TIME_FIELD))
 
@@ -629,360 +723,36 @@ fun TimeField(value: String, onValueChange: (LocalTime) -> Unit, modifier: Modif
   }
 }
 
-/// * =======================================================================
-// * Preview
-// * ======================================================================= */
-//
-//
-// @OptIn(ExperimentalMaterial3Api::class)
-// @Preview(showBackground = true, name = "datePicker")
-// @Composable
-// private fun Preview_datePicker() {
-//  AppTheme {
-//    val datePickerState = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
-//
-//    DatePicker(
-//        title = { Text("Select date") },
-//        state = datePickerState,
-//        colors =
-//            DatePickerDefaults.colors(
-//                containerColor = AppColors.primary,
-//                titleContentColor = AppColors.textIconsFade,
-//                headlineContentColor = AppColors.textIcons,
-//                selectedDayContentColor = AppColors.neutral,
-//            ))
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "SectionCard")
-// @Composable
-// private fun Preview_SectionCard() {
-//  AppTheme {
-//    Column {
-//      SectionCard(
-//          Modifier.clip(appShapes.extraLarge)
-//              .background(AppColors.primary)
-//              .border(1.dp, AppColors.primary, shape = appShapes.extraLarge)) {
-//            UnderlinedLabel("Sample section")
-//            Spacer(Modifier.height(8.dp))
-//            Text(
-//                "Any content goes in here; this container uses your theme shapes and borders.",
-//                style = MaterialTheme.typography.bodySmall,
-//                modifier = Modifier.padding(top = 4.dp))
-//          }
-//      Spacer(Modifier.height(12.dp))
-//      SectionCard(
-//          Modifier.clip(appShapes.extraLarge)
-//              .background(AppColors.secondary)
-//              .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
-//            UnderlinedLabel("Another section")
-//            Spacer(Modifier.height(8.dp))
-//            Text(
-//                "This is a second SectionCard using the main composable.",
-//                style = MaterialTheme.typography.bodySmall,
-//                modifier = Modifier.padding(top = 4.dp))
-//          }
-//    }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "UnderlinedLabel")
-// @Composable
-// private fun Preview_UnderlinedLabel() {
-//  AppTheme {
-//    Column(Modifier.padding(16.dp)) {
-//      UnderlinedLabel("Proposed game:")
-//      Spacer(Modifier.height(8.dp))
-//      UnderlinedLabel("Participants:")
-//    }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "IconTextField")
-// @Composable
-// private fun Preview_IconTextField() {
-//  AppTheme {
-//    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-//      IconTextField(
-//          value = "",
-//          onValueChange = {},
-//          placeholder = "Search games",
-//          trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-//          textStyle = MaterialTheme.typography.bodySmall,
-//          modifier = Modifier)
-//      IconTextField(
-//          value = "2025-10-15",
-//          onValueChange = {},
-//          placeholder = "Date",
-//          leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-//          textStyle = MaterialTheme.typography.bodySmall,
-//          modifier = Modifier)
-//      IconTextField(
-//          value = "Student Lounge",
-//          onValueChange = {},
-//          placeholder = "Location",
-//          leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
-//          textStyle = MaterialTheme.typography.bodySmall,
-//          modifier = Modifier)
-//    }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "CountBubble")
-// @Composable
-// private fun Preview_CountBubble() {
-//  AppTheme {
-//    Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-//      CountBubble(
-//          0,
-//          modifier =
-//              Modifier.clip(CircleShape)
-//                  .background(AppColors.primary)
-//                  .border(1.dp, AppColors.secondary, CircleShape)
-//                  .padding(horizontal = 10.dp, vertical = 6.dp))
-//      CountBubble(
-//          3,
-//          modifier =
-//              Modifier.clip(CircleShape)
-//                  .background(AppColors.secondary)
-//                  .border(1.dp, AppColors.secondary, CircleShape)
-//                  .padding(horizontal = 10.dp, vertical = 6.dp))
-//      CountBubble(
-//          12,
-//          modifier =
-//              Modifier.clip(CircleShape)
-//                  .background(AppColors.affirmative)
-//                  .border(1.dp, AppColors.secondary, CircleShape)
-//                  .padding(horizontal = 10.dp, vertical = 6.dp))
-//    }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "ParticipantChip")
-// @Composable
-// private fun Preview_ParticipantChip() {
-//  AppTheme {
-//    Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-//      UserChip(name = "user1", onRemove = {})
-//      UserChip(name = "Alice", onRemove = {})
-//    }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "ParticipantChipsGrid")
-// @Composable
-// private fun Preview_ParticipantChipsGrid() {
-//  AppTheme {
-//    UserChipsGrid(
-//        participants =
-//            listOf(
-//                Participant("1", "user1"),
-//                Participant("2", "John Doe"),
-//                Participant("3", "Alice"),
-//                Participant("4", "Bob"),
-//                Participant("5", "Robert")),
-//        onRemove = {})
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "DiscretePillSlider")
-// @Composable
-// private fun Preview_DiscretePillSlider() {
-//  AppTheme {
-//    var values by remember { mutableStateOf(3f..6f) }
-//    Column(Modifier.padding(16.dp)) {
-//      PillSliderNoBackground(
-//          title = "Players",
-//          range = 2f..10f,
-//          values = values,
-//          steps = 7,
-//          onValuesChange = { start, end -> values = start..end })
-//    }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "BadgedIconButton")
-// @Composable
-// private fun Preview_BadgedIconButton() {
-//  AppTheme { TopRightIcons() }
-// }
-//
-//// Full screen preview (kept separate from the sub-component previews)
-// @Preview(showBackground = true, name = "Create Session – Full")
-// @Composable
-// private fun Preview_SessionView_Full() {
-//  var form =
-//      SessionForm(
-//          title = "Friday Night Meetup",
-//          proposedGameQuery = "",
-//          minPlayers = 3,
-//          maxPlayers = 6,
-//          participants =
-//              listOf(
-//                  Participant("1", "user1"),
-//                  Participant("2", "John Doe"),
-//                  Participant("3", "Alice"),
-//                  Participant("4", "Bob"),
-//                  Participant("5", "Robert")),
-//          dateText = LocalDate.now(),
-//          timeText = "19:00",
-//          locationText = "Student Lounge")
-//  AppTheme {
-//    Scaffold(
-//        topBar = {
-//          TopBarWithDivider(
-//              text = "Session View",
-//              onReturn = {
-//                {}
-//                /** save the data */
-//              },
-//              { TopRightIcons() })
-//        },
-//    ) { innerPadding ->
-//      Column(
-//          modifier =
-//              Modifier.fillMaxSize()
-//                  .verticalScroll(rememberScrollState())
-//                  .background(AppColors.primary)
-//                  .padding(innerPadding)
-//                  .padding(horizontal = 16.dp, vertical = 8.dp),
-//          verticalArrangement = Arrangement.spacedBy(16.dp)) {
-//
-//            // Title
-//            Title(
-//                text = form.title.ifEmpty { "New Session" },
-//                editable = true,
-//                form,
-//                modifier = Modifier.align(Alignment.CenterHorizontally))
-//
-//            // Proposed game section
-//            // background and border are primary for members since it blends with the screen bg
-//            // proposed game is a text for members, it's not in a editable box
-//            ProposedGameSection()
-//
-//            // Participants section
-//            ParticipantsSection(
-//                form,
-//                onFormChange = { min, max ->
-//                  form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
-//                },
-//                onRemoveParticipant = { p ->
-//                  form = form.copy(participants = form.participants.filterNot { it.id == p.id })
-//                })
-//
-//            // Organisation section
-//            // editable for admins and the session creator, read-only for members
-//            OrganizationSection(form, onFormChange = { form = it })
-//
-//            Spacer(Modifier.height(4.dp))
-//
-//            // Quit session button
-//            OutlinedButton(
-//                onClick = {},
-//                modifier = Modifier.fillMaxWidth(),
-//                shape = CircleShape,
-//                border = BorderStroke(1.5.dp, AppColors.negative),
-//                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-//                  Icon(Icons.Default.Delete, contentDescription = null)
-//                  Spacer(Modifier.width(8.dp))
-//                  Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
-//                }
-//          }
-//    }
-//  }
-// }
-//
-//// =============================
-//// Organisation previews
-//// =============================
-//
-// @Preview(showBackground = true, name = "Organisation – Single Rows")
-// @Composable
-// private fun Preview_Organisation_SingleRows() {
-//  AppTheme {
-//    var form by remember {
-//      mutableStateOf(SessionForm(dateText = LocalDate.now(), timeText = "19:30", locationText =
-// "EPFL"))
-//    }
-//    OrganizationSection(form, onFormChange = { form = it })
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "Session View – Lower area")
-// @Composable
-// private fun Preview_Session_LowerArea() {
-//  AppTheme {
-//    var form by remember {
-//      mutableStateOf(
-//          SessionForm(dateText = LocalDate.now(), timeText = "19:30", locationText = "Satellite
-// "))
-//    }
-//    Column(
-//        modifier = Modifier.fillMaxWidth().background(AppColors.primary).padding(16.dp),
-//        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-//          // Organisation section (reuse composable)
-//          OrganizationSection(form, onFormChange = { form = it })
-//
-//          Spacer(Modifier.height(4.dp))
-//
-//          // Quit session button
-//          OutlinedButton(
-//              onClick = {},
-//              modifier = Modifier.fillMaxWidth(),
-//              shape = CircleShape,
-//              border = BorderStroke(1.5.dp, AppColors.negative),
-//              colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-//                Icon(Icons.Default.Delete, contentDescription = null)
-//                Spacer(Modifier.width(8.dp))
-//                Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
-//              }
-//        }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "DateField and DatePickerDialog")
-// @Composable
-// private fun Preview_DateField_DatePickerDialog() {
-//  AppTheme {
-//    var date by remember { mutableStateOf(LocalDate.now()) }
-//    Column(Modifier.padding(16.dp)) { DatePickerDockedField(value = date, onValueChange = { date =
-// it }) }
-//  }
-// }
-//
-// @Preview(showBackground = true, name = "TimeField and TimePickerDialog")
-// @Composable
-// private fun Preview_TimeField_TimePickerDialog() {
-//  AppTheme {
-//    var time by remember { mutableStateOf("18:30") }
-//    Column(Modifier.padding(16.dp)) { TimeField(value = time, onValueChange = { time = it }) }
-//  }
-// }
-//
-// @OptIn(ExperimentalMaterial3Api::class)
-// @Preview(showBackground = true, name = "TimePicker")
-// @Composable
-// private fun Preview_TimePicker() {
-//  AppTheme {
-//    // Initialize with example time
-//    val timePickerState = rememberTimePickerState(is24Hour = false)
-//
-//    // Place the TimePicker inside a Column to make it visible
-//    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-//      TimePicker(
-//          state = timePickerState,
-//          colors =
-//              TimePickerDefaults.colors(
-//                  clockDialColor = AppColors.secondary,
-//                  clockDialSelectedContentColor = AppColors.primary,
-//                  clockDialUnselectedContentColor = AppColors.textIconsFade,
-//                  selectorColor = AppColors.neutral,
-//                  periodSelectorBorderColor = AppColors.textIconsFade,
-//                  periodSelectorSelectedContainerColor = AppColors.secondary,
-//                  periodSelectorSelectedContentColor = AppColors.negative,
-//                  timeSelectorSelectedContainerColor = AppColors.neutral,
-//                  timeSelectorUnselectedContainerColor = AppColors.secondary,
-//              ))
-//    }
-//  }
-// }
+/**
+ * Deletes the currently viewed session - Only accessible with Admin/Owner rights
+ *
+ * @param sessionViewModel ViewModel used to delete the session
+ * @param currentUser User performing the action
+ * @param discussion Discussion the session is tied to
+ * @param userIsAdmin Boolean to check whether the user can see this button
+ * @param onback Callback function for navigation
+ */
+@Composable
+fun DeleteSessionBTN(
+    sessionViewModel: FirestoreSessionViewModel,
+    currentUser: Account,
+    discussion: Discussion,
+    userIsAdmin: Boolean,
+    onback: () -> Unit
+) {
+  if (userIsAdmin) {
+    OutlinedButton(
+        onClick = {
+          sessionViewModel.deleteSession(currentUser, discussion)
+          onback()
+        },
+        shape = CircleShape,
+        border = BorderStroke(1.5.dp, AppColors.negative),
+        modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DELETE_SESSION_BUTTON),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+          Icon(Icons.Default.Delete, contentDescription = "Delete Session")
+          Spacer(Modifier.width(8.dp))
+          Text("Delete Session", style = MaterialTheme.typography.bodyMedium)
+        }
+  }
+}

@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.ui.SignInScreenTestTags
 import com.github.meeplemeet.ui.SignUpScreenTestTags
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.auth.FirebaseAuth
@@ -68,8 +69,7 @@ class EndToEndTest : FirestoreTests() {
         .assertIsEnabled()
         .performClick()
 
-    // NEW: Wait for Create Account screen to appear (it uses text labels like "Handle", "Username",
-    // and a button "Let's go!")
+    // Wait for Create Account screen to appear
     composeTestRule.waitUntil(timeoutMillis = 12_000) {
       try {
         composeTestRule
@@ -85,7 +85,6 @@ class EndToEndTest : FirestoreTests() {
     // button
     val uniqueHandle = "e2eHandle${UUID.randomUUID().toString().take(6)}"
 
-    // The CreateAccountScreenTest uses the visible text labels for fields and button
     composeTestRule
         .onNodeWithText("Handle", substring = true)
         .assertExists()
@@ -119,7 +118,6 @@ class EndToEndTest : FirestoreTests() {
         .assertIsDisplayed()
 
     // Step 6: Navigate through the main tabs to verify full access
-    // Discover tab (should be selected by default)
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists()
 
     // Navigate to Sessions tab
@@ -137,18 +135,13 @@ class EndToEndTest : FirestoreTests() {
 
     composeTestRule.waitForIdle()
 
-    // Verify profile screen shows the username we created (if available)
-    // Note: account creation steps removed — the username may be blank if the app requires a
-    // separate flow.
-    if (testUsername.isNotEmpty()) {
-      try {
-        composeTestRule.onNodeWithText(testUsername, useUnmergedTree = true).assertExists()
-      } catch (_: Throwable) {
-        // If the username isn't present, continue — test focuses on navigation flow.
-      }
-    }
+    // Verify profile screen shows
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertIsDisplayed()
+        .assertTextContains(MeepleMeetScreen.ProfileScreen.title)
 
-    // Sign out from profile (assumes a "Sign out" button/text exists)
+    // Sign out from profile
     composeTestRule.onNodeWithTag("Logout Button").assertExists().assertIsEnabled().performClick()
 
     composeTestRule.waitForIdle()

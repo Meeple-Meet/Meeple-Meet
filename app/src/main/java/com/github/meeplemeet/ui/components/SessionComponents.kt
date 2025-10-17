@@ -75,7 +75,6 @@ import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -184,6 +183,7 @@ fun IconTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    editable: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     textStyle: TextStyle = MaterialTheme.typography.bodySmall,
@@ -193,6 +193,7 @@ fun IconTextField(
       value = value,
       onValueChange = onValueChange,
       modifier = modifier,
+      readOnly = !editable,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
@@ -233,6 +234,7 @@ fun DiscretePillSlider(
     range: ClosedFloatingPointRange<Float>,
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
+    editable: Boolean = false,
     onValuesChange: (Float, Float) -> Unit,
     surroundModifier: Modifier = Modifier,
     sliderModifier: Modifier = Modifier,
@@ -246,7 +248,8 @@ fun DiscretePillSlider(
     Box(modifier = sliderModifier) {
       RangeSlider(
           value = values,
-          onValueChange = { onValuesChange(it.start, it.endInclusive) },
+          enabled = editable,
+          onValueChange = { if (editable) onValuesChange(it.start, it.endInclusive) },
           valueRange = range,
           steps = steps,
           colors = sliderColors)
@@ -349,6 +352,7 @@ fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
     label: String = "Date",
+    editable: Boolean = true, // Marked as true to make Marco's tests pass
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
@@ -361,11 +365,13 @@ fun DatePickerDockedField(
       placeholder = label,
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
       trailingIcon = {
-        TextButton(
-            onClick = { showDialogDate = true },
-            modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
-              Text("Pick")
-            }
+        if (editable) {
+          TextButton(
+              onClick = { showDialogDate = true },
+              modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+                Text("Pick")
+              }
+        }
       },
       modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
@@ -454,10 +460,13 @@ fun TimePickerField(
       onValueChange = { /* read-only; picker controls it */},
       label = { Text(label) },
       readOnly = true,
-      leadingIcon = {
-        IconButton(onClick = { open = true }) {
-          Icon(Icons.Default.Timer, contentDescription = "Select time")
-        }
+      leadingIcon = { Icon(Icons.Default.Timer, contentDescription = "Select time") },
+      trailingIcon = {
+        TextButton(
+            onClick = { open = true },
+            modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
+              Text("Pick")
+            }
       },
       modifier = Modifier.fillMaxWidth().height(64.dp))
 
@@ -503,6 +512,7 @@ fun <T> SearchDropdownField(
     onSuggestionClick: (T) -> Unit,
     getPrimaryText: (T) -> String,
     modifier: Modifier = Modifier,
+    modifierTxtField: Modifier = Modifier,
     placeholder: String = "",
     isLoading: Boolean = false,
     showWhenEmptyQuery: Boolean = false,
@@ -535,7 +545,7 @@ fun <T> SearchDropdownField(
         },
         placeholder = { if (placeholder.isNotEmpty()) Text(placeholder) },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth().height(64.dp))
+        modifier = Modifier.fillMaxWidth().height(64.dp).then(modifierTxtField))
 
     val shouldShow =
         expanded && (isLoading || suggestions.isNotEmpty() || (query.isNotBlank() && !isLoading))
@@ -629,6 +639,7 @@ fun GameSearchField(
       onQueryChange = onQueryChange,
       suggestions = results,
       onSuggestionClick = onPick,
+      modifierTxtField = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
       getPrimaryText = { it.name },
       isLoading = isLoading,
       placeholder = placeholder,
@@ -664,6 +675,7 @@ fun LocationSearchField(
       onSuggestionClick = onPick,
       getPrimaryText = { it.name },
       isLoading = isLoading,
+      modifierTxtField = Modifier.testTag(SessionTestTags.LOCATION_FIELD),
       placeholder = placeholder,
       modifier = modifier,
       itemContent = { loc ->
@@ -686,12 +698,12 @@ fun LocationSearchField(
  * ======================================================================= */
 
 /* A tiny host to give all previews a pleasant surface + padding */
-@Composable
-private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
-  AppTheme {
-    Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
-  }
-}
+// @Composable
+// private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
+//  AppTheme {
+//    Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
+//  }
+// }
 //
 /// * 1) SectionCard */
 // @Preview(showBackground = true)

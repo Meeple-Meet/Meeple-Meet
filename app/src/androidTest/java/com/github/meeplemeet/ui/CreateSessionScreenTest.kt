@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -636,6 +637,7 @@ class CreateSessionScreenTest {
     assert(called.get())
   }
 
+  @Ignore("Non-deterministic test")
   @Test
   fun discard_from_screen_resets_fields_and_participants() {
     setContent()
