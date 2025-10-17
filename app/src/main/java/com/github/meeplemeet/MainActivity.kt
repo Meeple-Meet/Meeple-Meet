@@ -227,6 +227,7 @@ fun MeepleMeetApp(
       } else {
         SessionViewScreen(
             viewModel = firestoreVM,
+            sessionViewModel = FirestoreSessionViewModel(currentDiscussion!!),
             discussionId = discussionId,
             currentUser = currentAccount!!,
             onBack = { navigationActions.goBack() })

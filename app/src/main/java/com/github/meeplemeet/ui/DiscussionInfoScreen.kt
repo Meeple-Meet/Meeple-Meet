@@ -107,14 +107,12 @@ fun DiscussionSettingScreen(
     }
 
     isSearching = true
-    /** Placeholder for backend search */
-    searchResults =
-        fakeSearchAccounts(searchQuery).filter {
-          it.uid != currentAccount.uid && it !in selectedMembers
-        }
-
-    dropdownExpanded = searchResults.isNotEmpty()
-    isSearching = false
+    viewModel.searchByHandle(searchQuery)
+    viewModel.handleSuggestions.collect { list ->
+      searchResults = list.filter { it.uid != currentAccount.uid && it !in selectedMembers }
+      dropdownExpanded = searchResults.isNotEmpty()
+      isSearching = false
+    }
   }
 
   discussion?.let { d ->
