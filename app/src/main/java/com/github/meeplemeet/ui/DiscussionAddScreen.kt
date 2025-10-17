@@ -309,7 +309,8 @@ fun MemberSearchField(
         label = { Text("Add Members") },
         modifier =
             Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag("Add Members"),
         trailingIcon = {
           if (searchQuery.isNotBlank()) {
             Icon(
@@ -326,6 +327,7 @@ fun MemberSearchField(
         else ->
             searchResults.forEach { account ->
               DropdownMenuItem(
+                  modifier = Modifier.testTag("Add Member Element"),
                   text = { Text(account.handle) },
                   onClick = {
                     onSelect(account)
