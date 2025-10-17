@@ -479,72 +479,6 @@ class SessionViewScreenTest {
   }
 
   @Test
-  fun topRightIcons_displayBadges() {
-    composeTestRule.setContent {
-      SessionViewScreen(
-          viewModel = viewModel,
-          currentUser = admin,
-          discussionId = "discussion1",
-          sessionViewModel = sessionVM,
-          initial = initialForm)
-    }
-    composeTestRule.onNodeWithContentDescription("Notifications").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(SessionTestTags.NOTIFICATION_BADGE_COUNT).assertIsDisplayed()
-    composeTestRule.onNodeWithContentDescription("Messages").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(SessionTestTags.CHAT_BADGE).assertIsNotDisplayed()
-  }
-
-  @Test
-  fun badgedIconButton_displaysBadgeAndHandlesClick() {
-    var clicked = false
-    composeTestRule.setContent {
-      BadgedIconButton(
-          icon = Icons.Default.Notifications,
-          contentDescription = "Notifications",
-          badgeCount = 2,
-          onClick = { clicked = true },
-          modifier = Modifier.testTag("test_badge"))
-    }
-    composeTestRule.onNodeWithTag("test_badge").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("test_badge").onChild().assertTextContains("2")
-    composeTestRule.onNodeWithContentDescription("Notifications").performClick()
-    composeTestRule.runOnIdle { assert(clicked) }
-  }
-
-  @Test
-  fun badgedIconButton_doesNotDisplayOn0() {
-    var clicked = false
-    composeTestRule.setContent {
-      BadgedIconButton(
-          icon = Icons.Default.Notifications,
-          contentDescription = "Notifications",
-          badgeCount = 0,
-          onClick = { clicked = true },
-          modifier = Modifier.testTag("test_badge"))
-    }
-    composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
-    composeTestRule.onNodeWithTag(SessionTestTags.EMPTY_BADGE).assert(hasText(""))
-    composeTestRule.onNodeWithContentDescription("Notifications").performClick()
-    composeTestRule.runOnIdle { assert(clicked) }
-  }
-
-  @Test
-  fun notificationBadge_displaysCorrectCount() {
-    composeTestRule.setContent {
-      SessionViewScreen(
-          viewModel = viewModel,
-          currentUser = admin,
-          discussionId = "discussion1",
-          sessionViewModel = sessionVM,
-          initial = initialForm)
-    }
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.NOTIFICATION_BADGE_COUNT)
-        .onChild()
-        .assertTextContains("3")
-  }
-
-  @Test
   fun datePickerDialog_updatesDateField() {
     val updatedForm = initialForm.copy(date = LocalDate.now())
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -706,26 +640,6 @@ class SessionViewScreenTest {
   }
 
   @Test
-  fun topRightIcons_bothClicks() {
-    var notifClicked = false
-    var chatClicked = false
-
-    composeTestRule.setContent {
-      TopRightIcons(
-          onclickNotification = { notifClicked = true }, onclickChat = { chatClicked = true })
-    }
-
-    // click by content-description (stable)
-    composeTestRule.onNodeWithContentDescription("Notifications").performClick()
-    composeTestRule.onNodeWithContentDescription("Messages").performClick()
-
-    composeTestRule.runOnIdle {
-      assert(notifClicked)
-      assert(chatClicked)
-    }
-  }
-
-  @Test
   fun userChip_mainClick_doesNothing() {
     var clicked = false
     composeTestRule.setContent {
@@ -778,32 +692,6 @@ class SessionViewScreenTest {
       swipeRight(startX = centerX - 80, endX = centerX + 80)
     }
     composeTestRule.runOnIdle { assert(min > 3f || max > 5f) }
-  }
-
-  @Test
-  fun badgedIconButton_zeroBadge_path() {
-    composeTestRule.setContent {
-      BadgedIconButton(
-          icon = Icons.Default.ChatBubbleOutline,
-          contentDescription = "Zero",
-          badgeCount = 0,
-          onClick = {})
-    }
-    composeTestRule.onNodeWithText("0").assertDoesNotExist()
-    composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
-  }
-
-  @Test
-  fun badgedIconButton_negativeBadge_path() {
-    composeTestRule.setContent {
-      BadgedIconButton(
-          icon = Icons.Default.ChatBubbleOutline,
-          contentDescription = "Zero",
-          badgeCount = -12,
-          onClick = {})
-    }
-    composeTestRule.onNodeWithText("-12").assertDoesNotExist()
-    composeTestRule.onNodeWithTag("test_badge").assertIsNotDisplayed()
   }
 
   @Test

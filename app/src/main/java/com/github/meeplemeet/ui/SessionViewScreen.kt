@@ -124,8 +124,6 @@ fun SessionViewScreen(
     initial: SessionForm = SessionForm(),
     discussionId: String,
     onBack: () -> Unit = {},
-    onclickNotification: () -> Unit = {},
-    onclickChat: () -> Unit = {}
 ) {
   // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
@@ -142,7 +140,7 @@ fun SessionViewScreen(
         TopBarWithDivider(
             text = "Session View",
             onReturn = onBack,
-            { TopRightIcons(onclickChat = onclickChat, onclickNotification = onclickNotification) })
+        )
       },
   ) { innerPadding ->
     Column(
@@ -464,30 +462,6 @@ fun Title(
 }
 
 /**
- * Displays the notification and chat icons with optional badges.
- *
- * @param onclickNotification Callback for the notification icon
- * @param onclickChat Callback for the chat icon
- */
-@Composable
-fun TopRightIcons(onclickNotification: () -> Unit = {}, onclickChat: () -> Unit = {}) {
-  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-    BadgedIconButton(
-        icon = Icons.Default.Notifications,
-        contentDescription = "Notifications",
-        modifier = Modifier.testTag(SessionTestTags.NOTIFICATION_BADGE_COUNT),
-        badgeCount = 3, // Example badge count for notifications
-        onClick = { onclickNotification() })
-    BadgedIconButton(
-        icon = Icons.Default.ChatBubbleOutline,
-        modifier = Modifier.testTag(SessionTestTags.CHAT_BADGE),
-        contentDescription = "Messages",
-        badgeCount = 0,
-        onClick = { onclickChat() })
-  }
-}
-
-/**
  * Composable used for the individual UserChip
  *
  * @param name User's name
@@ -610,37 +584,6 @@ fun PillSliderNoBackground(
                 inactiveTrackColor = AppColors.divider,
                 thumbColor = AppColors.neutral))
   }
-}
-
-/**
- * A composable that displays an icon with a small numeric badge close to it
- *
- * @param icon Icon to display
- * @param contentDescription Content description of the icon
- * @param badgeCount Number to display on the little badge
- * @param onClick Callback fn used on click of the button
- * @param modifier Modifiers to be added to the composable
- */
-@Composable
-fun BadgedIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    badgeCount: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  BadgedBox(
-      badge = {
-        if (badgeCount > 0) {
-          Badge(modifier = modifier) { Text(badgeCount.toString()) }
-        } else {
-          Text(text = "", modifier = Modifier.testTag(SessionTestTags.EMPTY_BADGE))
-        } // Empty badge when count is 0 to avoid layout shift
-      }) {
-        IconButton(onClick = onClick) {
-          Icon(icon, contentDescription = contentDescription, tint = AppColors.textIcons)
-        }
-      }
 }
 
 /**
