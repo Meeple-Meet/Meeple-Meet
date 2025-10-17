@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 
 /** Centralizes test tags used in navigation-related UI elements. */
@@ -206,10 +205,4 @@ open class NavigationActions(private val navController: NavHostController) {
   open fun currentRoute(): String {
     return navController.currentDestination?.route ?: ""
   }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun BottomMenuPreview() {
-  BottomNavigationMenu(currentScreen = MeepleMeetScreen.SessionsOverview, onTabSelected = {})
 }
