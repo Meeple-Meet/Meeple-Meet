@@ -54,9 +54,8 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
             participants = listOf(account1.uid, account2.uid, account3.uid),
             admins = listOf(account1.uid))
 
-    coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
-        Pair(account1, discussion)
-    coEvery { repository.sendMessageToDiscussion(discussion, account1, content) } returns discussion
+    coEvery { repository.createDiscussion(any(), any(), any(), any()) }
+    coEvery { repository.sendMessageToDiscussion(discussion, account1, content) }
 
     val a1Preview =
         DiscussionPreview(lastMessage = content, lastMessageSender = account1.uid, unreadCount = 0)
@@ -112,9 +111,8 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
             participants = listOf(account1.uid, account2.uid, account3.uid),
             admins = listOf(account1.uid))
 
-    coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
-        Pair(account1, discussion)
-    coEvery { repository.sendMessageToDiscussion(discussion, account1, any()) } returns discussion
+    coEvery { repository.createDiscussion(any(), any(), any(), any()) }
+    coEvery { repository.sendMessageToDiscussion(discussion, account1, any()) }
 
     val last = "${base}10"
     val a1Preview =
@@ -172,10 +170,9 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
             participants = listOf(account1.uid, account2.uid, account3.uid),
             admins = listOf(account1.uid))
 
-    coEvery { repository.createDiscussion(any(), any(), any(), any()) } returns
-        Pair(account1, discussion)
-    coEvery { repository.sendMessageToDiscussion(discussion, account1, "Hi") } returns discussion
-    coEvery { repository.sendMessageToDiscussion(discussion, account2, "Hello") } returns discussion
+    coEvery { repository.createDiscussion(any(), any(), any(), any()) }
+    coEvery { repository.sendMessageToDiscussion(discussion, account1, "Hi") }
+    coEvery { repository.sendMessageToDiscussion(discussion, account2, "Hello") }
     coEvery { repository.sendMessageToDiscussion(discussion, account3, "How are you ?") } returns
         discussion
 

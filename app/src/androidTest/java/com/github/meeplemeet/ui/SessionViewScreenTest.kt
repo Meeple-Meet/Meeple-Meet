@@ -120,9 +120,9 @@ class SessionViewScreenTest {
   @Test
   fun screen_displaysAllFields() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -148,9 +148,9 @@ class SessionViewScreenTest {
   fun clickingQuitButton_triggersBack() {
     var backClicked = false
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           initial = initialForm,
           sessionViewModel = sessionVM,
@@ -165,9 +165,9 @@ class SessionViewScreenTest {
   @Test
   fun datePickerDialog_selectsDate() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -193,9 +193,9 @@ class SessionViewScreenTest {
   fun timePickerDialog_selectsTime() {
     val initialTime = initialForm.time
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -229,9 +229,9 @@ class SessionViewScreenTest {
   @Test
   fun screen_Calls_OnFormChange_WhenSliderMoves_updatesMinMaxBubbles() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -259,9 +259,9 @@ class SessionViewScreenTest {
     injectedDiscussionFlow.value = baseDiscussion
 
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -314,9 +314,9 @@ class SessionViewScreenTest {
   @Test
   fun participantsSection_displaysAllParticipants() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -329,9 +329,9 @@ class SessionViewScreenTest {
   @Test
   fun organizationSection_displaysDateTimeAndLocation() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -422,9 +422,9 @@ class SessionViewScreenTest {
   fun quitButton_triggersCallback() {
     var quitClicked = false
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           initial = initialForm,
           sessionViewModel = sessionVM,
@@ -440,9 +440,9 @@ class SessionViewScreenTest {
   @Test
   fun removeParticipant_removesChipFromUI() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel, // the injected one with discussionFlow set
-          currentUser = admin, // is admin/creator (see setup above)
+          account = admin, // is admin/creator (see setup above)
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -470,9 +470,9 @@ class SessionViewScreenTest {
   fun changeSessionTitle_displaysNewTitle() {
     val updatedForm = initialForm.copy(title = "Board Game Bash")
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = updatedForm)
@@ -486,9 +486,9 @@ class SessionViewScreenTest {
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = updatedForm)
@@ -530,9 +530,9 @@ class SessionViewScreenTest {
     var initialValue: String? = null
 
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -597,9 +597,9 @@ class SessionViewScreenTest {
   fun datePickerDialog_updatesDateField_nonDeterministic() {
     var initialValue: String? = null
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -790,9 +790,9 @@ class SessionViewScreenTest {
   fun topBar_backButton_triggersOnBack() {
     var backClicked = false
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = "discussion1",
           initial = initialForm,
           sessionViewModel = sessionVM,
@@ -910,9 +910,9 @@ class SessionViewScreenTest {
   @Test
   fun adminView_showsDeleteSessionButton() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -925,9 +925,9 @@ class SessionViewScreenTest {
   @Test
   fun adminView_deleteSessionButton_isClickable() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -952,9 +952,9 @@ class SessionViewScreenTest {
         baseDiscussion.copy(admins = listOf("otherUser"), creatorId = "otherUser")
 
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = member,
+          account = member,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -972,9 +972,9 @@ class SessionViewScreenTest {
   @Test
   fun memberView_dateAndTimeAreReadOnly() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = member,
+          account = member,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -998,9 +998,9 @@ class SessionViewScreenTest {
   @Test
   fun memberView_locationAndGameAreReadOnly() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = member,
+          account = member,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -1030,9 +1030,9 @@ class SessionViewScreenTest {
   @Test
   fun memberView_sliderIsVisibleButNonInteractive() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = member,
+          account = member,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -1068,9 +1068,9 @@ class SessionViewScreenTest {
   @Test
   fun memberView_noSliderAndNoRemoveButtons() {
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = member,
+          account = member,
           discussionId = discussionId,
           sessionViewModel = sessionVM,
           initial = initialForm)
@@ -1087,9 +1087,9 @@ class SessionViewScreenTest {
     every { fakeSessionVM.deleteSession(any(), any()) } answers {}
 
     composeTestRule.setContent {
-      SessionViewScreen(
+      SessionDetailsScreen(
           viewModel = viewModel,
-          currentUser = admin,
+          account = admin,
           discussionId = discussionId,
           sessionViewModel = fakeSessionVM,
           initial = initialForm,

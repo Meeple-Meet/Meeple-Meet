@@ -84,9 +84,6 @@ object SessionTestTags {
   const val DATE_PICK_BUTTON = "date_pick_button"
   const val TIME_PICK_BUTTON = "time_pick_button"
   const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
-  const val CHAT_BADGE = "chat_badge"
-  const val NOTIFICATION_BADGE_COUNT = "notification_badge_count"
-  const val EMPTY_BADGE = "empty_badge"
   const val DELETE_SESSION_BUTTON = "delete_session_button"
 }
 
@@ -115,36 +112,33 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
  *
  * @param viewModel Global FirestoreViewModel for retrieving discussions
  * @param sessionViewModel ViewModel managing session-specific operations
- * @param currentUser Currently logged-in user
+ * @param account Currently logged-in user
  * @param initial Initial session form state (optional)
- * @param discussionId ID of the discussion linked to the session
+ * @param discussion The discussion linked to the session
  * @param onBack Callback triggered when navigating back
  */
 @SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionViewScreen(
+fun SessionDetailsScreen(
+    account: Account,
+    discussion: Discussion,
     viewModel: FirestoreViewModel,
     sessionViewModel: FirestoreSessionViewModel,
-    currentUser: Account,
     initial: SessionForm = SessionForm(),
-    discussionId: String,
     onBack: () -> Unit = {},
 ) {
   // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
 
-  // Observe discussion updates from the view model.
-  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
   val isCurrUserAdmin =
-      currentUser.uid == discussion?.creatorId ||
-          discussion?.admins?.contains(currentUser.uid) == true
+      account.uid == discussion.creatorId || discussion.admins.contains(account.uid)
 
   LaunchedEffect(Unit) {
-    val session = discussion!!.session!!
+    val session = discussion.session!!
     val (date, time) = timestampToLocal(session.date)
 
-    viewModel.getDiscussionParticipants(discussion!!) {
+    viewModel.getDiscussionParticipants(discussion) {
       form =
           form.copy(
               title = session.name,
@@ -164,10 +158,10 @@ fun SessionViewScreen(
         TopBarWithDivider(
             text = "Session View",
             onReturn = {
-              if (discussion!!.admins.contains(currentUser.uid)) {
+              if (discussion.admins.contains(account.uid)) {
                 sessionViewModel.updateSession(
-                    requester = currentUser,
-                    discussion = discussion!!,
+                    requester = account,
+                    discussion = discussion,
                     name = form.title,
                     gameId = null,
                     date = toTimestamp(form.date, form.time),
@@ -203,13 +197,11 @@ fun SessionViewScreen(
           // Proposed game section
           // background and border are primary for members since it blends with the screen bg
           // proposed game is a text for members, it's not in a editable box
-          discussion?.let { disc ->
-            ProposedGameSection(
-                sessionViewModel = sessionViewModel,
-                currentUser = currentUser,
-                discussion = disc, // safe – non-null here
-                editable = isCurrUserAdmin)
-          } ?: Box(Modifier.fillMaxWidth()) {}
+          ProposedGameSection(
+              sessionViewModel = sessionViewModel,
+              currentUser = account,
+              discussion = discussion, // safe – non-null here
+              editable = isCurrUserAdmin)
 
           // Participants section
           ParticipantsSection(
@@ -232,14 +224,14 @@ fun SessionViewScreen(
           OutlinedButton(
               onClick = {
                 onBack()
-                val updatedParticipants = form.participants.filterNot { it.uid == currentUser.uid }
-                discussion?.let { disc ->
+                val updatedParticipants = form.participants.filterNot { it.uid == account.uid }
+                discussion.let { disc ->
                   if (updatedParticipants.isNotEmpty())
                       sessionViewModel.updateSession(
-                          requester = currentUser,
+                          requester = account,
                           discussion = disc,
                           newParticipantList = updatedParticipants)
-                  else sessionViewModel.deleteSession(currentUser, disc)
+                  else sessionViewModel.deleteSession(account, disc)
                 }
                 onBack()
               },
@@ -252,14 +244,12 @@ fun SessionViewScreen(
                 Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
               }
 
-          discussion?.let { disc ->
-            DeleteSessionBTN(
-                sessionViewModel = sessionViewModel,
-                currentUser = currentUser,
-                discussion = disc,
-                userIsAdmin = isCurrUserAdmin,
-                onback = onBack)
-          }
+          DeleteSessionBTN(
+              sessionViewModel = sessionViewModel,
+              currentUser = account,
+              discussion = discussion,
+              userIsAdmin = isCurrUserAdmin,
+              onback = onBack)
         }
   }
 }

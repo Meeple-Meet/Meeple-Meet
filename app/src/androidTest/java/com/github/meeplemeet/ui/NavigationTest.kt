@@ -184,6 +184,7 @@ class NavigationTest : FirestoreTests() {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
     composeTestRule.checkSignUpScreenIsDisplayed()
+    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).performClick()
 
     // Simulate login
     login()

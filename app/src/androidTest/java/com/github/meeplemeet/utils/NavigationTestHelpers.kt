@@ -56,7 +56,7 @@ object NavigationTestHelpers {
   }
 
   fun ComposeTestRule.checkDiscoverScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.DiscoverSessions.title)
+    checkScreenIsDisplayed(MeepleMeetScreen.DiscoverFeeds.title)
   }
 
   fun ComposeTestRule.checkSessionsScreenIsDisplayed() {
@@ -64,7 +64,7 @@ object NavigationTestHelpers {
   }
 
   fun ComposeTestRule.checkProfileScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.ProfileScreen.title)
+    checkScreenIsDisplayed(MeepleMeetScreen.Profile.title)
   }
 
   fun ComposeTestRule.checkDiscussionScreenIsDisplayed(discussionName: String) {
@@ -76,7 +76,7 @@ object NavigationTestHelpers {
   }
 
   fun ComposeTestRule.checkDiscussionAddScreenIsDisplayed() {
-    checkScreenIsDisplayed(MeepleMeetScreen.DiscussionAddScreen.title)
+    checkScreenIsDisplayed(MeepleMeetScreen.AddDiscussion.title)
   }
 
   fun ComposeTestRule.checkBottomBarIsNotDisplayed() {

@@ -35,7 +35,7 @@ fun ProfileScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.ProfileScreen.title,
+                  text = MeepleMeetScreen.Profile.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -43,7 +43,7 @@ fun ProfileScreen(
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.ProfileScreen,
+            currentScreen = MeepleMeetScreen.Profile,
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
         Box(

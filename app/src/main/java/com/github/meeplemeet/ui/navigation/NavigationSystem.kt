@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 
 /** Centralizes test tags used in navigation-related UI elements. */
@@ -91,20 +90,20 @@ enum class MeepleMeetScreen(
     val icon: ImageVector? = null,
     val testTag: String? = null
 ) {
-  SignInScreen("Sign In"),
-  SignUpScreen("Sign Up"),
-  CreateAccountScreen("Create your Account"),
+  SignIn("Sign In"),
+  SignUp("Sign Up"),
+  CreateAccount("Create your Account"),
   DiscussionsOverview(
       "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
   SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
-  DiscoverSessions("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
-  ProfileScreen("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
-  DiscussionAddScreen("Add Discussion"),
-  DiscussionScreen("Discussion"),
-  DiscussionInfoScreen("Discussion Details"),
-  SessionAddScreen("Add Session"),
-  SessionScreen("Session"),
-  SessionInfoScreen("Session Details"),
+  DiscoverFeeds("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
+  Profile("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
+  AddDiscussion("Add Discussion"),
+  Discussion("Discussion"),
+  DiscussionDetails("Discussion Details"),
+  AddSession("Add Session"),
+  Session("Session"),
+  SessionDetails("Session Details"),
 }
 
 /**
@@ -206,10 +205,4 @@ open class NavigationActions(private val navController: NavHostController) {
   open fun currentRoute(): String {
     return navController.currentDestination?.route ?: ""
   }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun BottomMenuPreview() {
-  BottomNavigationMenu(currentScreen = MeepleMeetScreen.SessionsOverview, onTabSelected = {})
 }

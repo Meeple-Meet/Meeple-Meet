@@ -25,15 +25,13 @@ import com.github.meeplemeet.ui.theme.AppColors
  * to continue the account creation flow.
  *
  * @param viewModel The ViewModel responsible for handling Firestore handle validation.
- * @param currentAccount The [Account] object representing the user creating an account.
- * @param modifier Optional [Modifier] for styling and layout.
+ * @param account The [Account] object representing the user creating an account.
  * @param onCreate Lambda to be executed when account creation is successfully validated.
  */
 @Composable
 fun CreateAccountScreen(
+    account: Account,
     viewModel: FirestoreHandlesViewModel,
-    currentAccount: Account,
-    modifier: Modifier = Modifier,
     onCreate: () -> Unit = {},
 ) {
   var handle by remember { mutableStateOf("") }
@@ -64,7 +62,7 @@ fun CreateAccountScreen(
 
   /** Root layout column for aligning all UI components vertically. */
   Column(
-      modifier = modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
+      modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -158,7 +156,7 @@ fun CreateAccountScreen(
 
               /** Create the handle and call onCreate if there are no errors */
               if ((errorMessage.isBlank()) && usernameValidation == null) {
-                viewModel.createAccountHandle(account = currentAccount, handle = handle)
+                viewModel.createAccountHandle(account = account, handle = handle)
                 if (errorMessage.isBlank()) onCreate()
               }
             },

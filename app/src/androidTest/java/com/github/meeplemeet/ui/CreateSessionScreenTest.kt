@@ -11,7 +11,6 @@ import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.repositories.GameRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -76,10 +75,10 @@ class CreateSessionScreenTest {
   private fun setContent(onBack: () -> Unit = {}) {
     compose.setContent {
       AppTheme {
-        CreateSessionScreen(
+        AddSessionScreen(
             viewModel = viewModel,
             sessionViewModel = sessionVM,
-            currentUser = me,
+            account = me,
             discussionId = discussionId,
             onBack = onBack)
       }
@@ -498,27 +497,10 @@ class CreateSessionScreenTest {
 
   private fun screenFileClass(): Class<*> {
     return try {
-      Class.forName("com.github.meeplemeet.ui.CreateSessionScreenKt")
+      Class.forName("com.github.meeplemeet.ui.AddSessionScreenKt")
     } catch (_: ClassNotFoundException) {
-      Class.forName("com.github.meeplemeet.ui.SessionCreationScreenKt")
+      Class.forName("com.github.meeplemeet.ui.AddSessionScreenKt")
     }
-  }
-
-  @Test
-  fun randomLocationFrom_bounds_and_name_behavior() {
-    val cls = screenFileClass()
-    val m =
-        cls.getDeclaredMethod("randomLocationFrom", String::class.java).apply {
-          isAccessible = true
-        }
-    val nonBlank = m.invoke(null, "Hall A") as Location
-    assert(nonBlank.name == "Hall A")
-    assert(nonBlank.latitude in -90.0..90.0)
-    assert(nonBlank.longitude in -180.0..180.0)
-    val blank = m.invoke(null, "   ") as Location
-    assert(blank.name == "Random place")
-    assert(blank.latitude in -90.0..90.0)
-    assert(blank.longitude in -180.0..180.0)
   }
 
   @Test
