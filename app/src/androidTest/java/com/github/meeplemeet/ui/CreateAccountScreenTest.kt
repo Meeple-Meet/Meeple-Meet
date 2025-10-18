@@ -88,7 +88,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
         CreateAccountScreen(
-            viewModel = viewModel, currentAccount = me, onCreate = { onCreateCalled = true })
+            viewModel = viewModel, account = me, onCreate = { onCreateCalled = true })
       }
     }
   }

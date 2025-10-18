@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,16 +37,15 @@ import kotlinx.coroutines.launch
  * @param onBack Lambda called when back/discard is pressed
  * @param onCreate Lambda called when creation is successful
  * @param viewModel FirestoreViewModel for creating discussions
- * @param currentUser The currently logged-in user
+ * @param account The currently logged-in user
  */
-@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiscussionAddScreen(
-    onBack: () -> Unit,
-    onCreate: () -> Unit, // TODO: Pass created discussion ID for better navigation later on
+fun AddDiscussionScreen(
+    account: Account,
     viewModel: FirestoreViewModel = viewModel(),
-    currentUser: Account
+    onBack: () -> Unit = {},
+    onCreate: () -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
 
@@ -80,7 +78,7 @@ fun DiscussionAddScreen(
 
   LaunchedEffect(viewModel.handleSuggestions) {
     viewModel.handleSuggestions.collect { list ->
-      searchResults = list.filter { it.uid != currentUser.uid && it !in selectedMembers }
+      searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false
     }
@@ -108,7 +106,7 @@ fun DiscussionAddScreen(
                       navigationIconContentColor = AppColors.textIcons),
               title = {
                 Text(
-                    text = MeepleMeetScreen.DiscussionAddScreen.title,
+                    text = MeepleMeetScreen.AddDiscussion.title,
                     modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               },
               navigationIcon = {
@@ -256,7 +254,7 @@ fun DiscussionAddScreen(
                                 "Bug: null Account in selection"
                               }
                               viewModel.createDiscussion(
-                                  title, description, currentUser, *clean.toTypedArray())
+                                  title, description, account, *clean.toTypedArray())
                               isCreating = false
                               onCreate()
                             } catch (_: Exception) {

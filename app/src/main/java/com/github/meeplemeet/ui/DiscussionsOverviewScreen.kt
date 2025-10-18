@@ -70,24 +70,22 @@ const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
  * Screen that shows an overview of all discussions the user is part of
  *
  * @param viewModel [FirestoreViewModel] instance to interact with Firestore
- * @param currentUser The currently logged-in user ([Account])
+ * @param account The currently logged-in user ([Account])
  * @param navigation [NavigationActions] instance to navigate to other screens
  * @param onSelectDiscussion Callback function when a discussion is clicked
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionsOverviewScreen(
-    viewModel: FirestoreViewModel = viewModel(),
-    currentUser: Account,
+    account: Account,
     navigation: NavigationActions,
+    viewModel: FirestoreViewModel = viewModel(),
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
-
-  val discussionPreviews by viewModel.previewsFlow(currentUser.uid).collectAsState()
   val discussionPreviewsSorted =
-      remember(discussionPreviews) {
-        discussionPreviews.values.sortedByDescending { it.lastMessageAt.toDate() }
+      remember(account.previews) {
+        account.previews.values.sortedByDescending { it.lastMessageAt.toDate() }
       }
 
   Scaffold(
@@ -112,8 +110,6 @@ fun DiscussionsOverviewScreen(
             currentScreen = MeepleMeetScreen.DiscussionsOverview,
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
-
-        // Main content:
         if (discussionPreviewsSorted.isEmpty()) {
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             EmptyDiscussionsListText()
@@ -131,9 +127,9 @@ fun DiscussionsOverviewScreen(
                   val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
 
                   val senderId = preview.lastMessageSender
-                  val isMe = (senderId == currentUser.uid)
+                  val isMe = (senderId == account.uid)
                   val senderName by
-                      produceState<String?>(
+                      produceState(
                           key1 = senderId, initialValue = if (isMe) MY_MSG_USERNAME else null) {
                             if (senderId.isNotBlank() && !isMe) {
                               viewModel.getOtherAccount(senderId) { acc -> value = acc.name }

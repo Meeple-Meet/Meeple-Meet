@@ -360,7 +360,7 @@ fun DatePickerDockedField(
   val text = value?.format(displayFormatter) ?: ""
   // The text field
   IconTextField(
-      value = text.format(displayFormatter) ?: "",
+      value = text.format(displayFormatter),
       onValueChange = {}, // we control it externally
       placeholder = label,
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },

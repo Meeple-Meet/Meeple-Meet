@@ -120,7 +120,7 @@ class DiscussionsOverviewScreenTest {
   @Test
   fun should_pass_test_setup() {
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     assert(me.name == "Marco")
     assert(bob.name == "Bob")
@@ -132,7 +132,7 @@ class DiscussionsOverviewScreenTest {
   @Test
   fun overview_shows_discussion_cards_with_names_messages_and_unread_counts() {
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
 
@@ -157,7 +157,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid] = MutableStateFlow(emptyMap())
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("No discussions yet").assertIsDisplayed()
@@ -166,7 +166,7 @@ class DiscussionsOverviewScreenTest {
   @Test
   fun overview_non_empty_state_hides_empty_message() {
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("No discussions yet").assertDoesNotExist()
@@ -197,7 +197,7 @@ class DiscussionsOverviewScreenTest {
     discussionMap["d4"] = MutableStateFlow(null)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Discussion").assertIsDisplayed()
@@ -223,7 +223,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid]!!.value = previewMap[me.uid]!!.value.toMutableMap().apply { put("d3", p3) }
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
@@ -249,7 +249,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid]!!.value = mapOf("d1" to p5)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Hello there").assertIsDisplayed()
@@ -274,7 +274,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid]!!.value = mapOf("d2" to pKnown)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Zoe: See you!", substring = true).assertIsDisplayed()
@@ -301,7 +301,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid]!!.value = mapOf("d1" to pZero)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("0").assertIsDisplayed()
@@ -320,7 +320,7 @@ class DiscussionsOverviewScreenTest {
     val previewsFlow = previewMap[me.uid]!!
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
@@ -337,7 +337,7 @@ class DiscussionsOverviewScreenTest {
   @Test
   fun overview_sorts_cards_by_latest_preview_time_descending() {
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
 
@@ -373,7 +373,7 @@ class DiscussionsOverviewScreenTest {
     val flow = previewMap[me.uid]!!
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertIsDisplayed()
@@ -407,7 +407,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid]!!.value = mapOf("d1" to pUnknownName)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Hi!").assertIsDisplayed()
@@ -426,7 +426,7 @@ class DiscussionsOverviewScreenTest {
     previewMap[me.uid]!!.value = mapOf("d1" to pLarge)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("123").assertIsDisplayed()
@@ -445,7 +445,7 @@ class DiscussionsOverviewScreenTest {
     flow.value = emptyMap()
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("No discussions yet").assertIsDisplayed()
@@ -469,7 +469,7 @@ class DiscussionsOverviewScreenTest {
     flow.value = mapOf("d1" to p1)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Catan Crew").assertIsDisplayed()
@@ -506,7 +506,7 @@ class DiscussionsOverviewScreenTest {
     flows["d5"] = d5Flow
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Discussion").assertIsDisplayed()
@@ -547,7 +547,7 @@ class DiscussionsOverviewScreenTest {
     previews[me.uid]!!.value = mapOf("d1" to pBlankMine)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
@@ -568,7 +568,7 @@ class DiscussionsOverviewScreenTest {
     previews[me.uid]!!.value = mapOf("d1" to pNeg)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("-3").assertIsDisplayed()
@@ -594,7 +594,7 @@ class DiscussionsOverviewScreenTest {
     previews[me.uid]!!.value = mapOf("d1" to p1, "d2" to p2, "d3" to pNewest)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, currentUser = me, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
     }
     compose.waitForIdle()
 

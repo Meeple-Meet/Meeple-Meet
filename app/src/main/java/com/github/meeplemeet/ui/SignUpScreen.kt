@@ -57,12 +57,10 @@ object SignUpScreenTestTags {
  * @param viewModel Authentication view model that manages auth state and operations
  * @param context Android context, used for Credential Manager and other platform services
  * @param credentialManager Credential manager instance for Google sign-up
- * @param modifier Modifier for customizing the composable's appearance and behavior
  */
 @Composable
 fun SignUpScreen(
     viewModel: AuthViewModel,
-    modifier: Modifier = Modifier,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     onLogInClick: () -> Unit = {},
@@ -155,8 +153,7 @@ fun SignUpScreen(
       containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         Column(
             modifier =
-                modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .padding(paddingValues)
                     .padding(24.dp)
                     .background(MaterialTheme.colorScheme.background),

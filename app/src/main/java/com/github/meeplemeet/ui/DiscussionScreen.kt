@@ -46,16 +46,16 @@ import kotlinx.coroutines.launch
  * displayed in a scrollable list. Users are cached locally for display purposes.
  *
  * @param viewModel FirestoreViewModel for fetching discussion and sending messages
- * @param discussionId ID of the discussion to display
- * @param currentUser The currently logged-in user
+ * @param discussion The discussion to display
+ * @param account The currently logged-in user
  * @param onBack Callback when the back button is pressed
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(
-    viewModel: FirestoreViewModel = viewModel(),
-    discussionId: String,
-    currentUser: Account,
+    account: Account,
+    discussion: Discussion,
+    viewModel: FirestoreViewModel,
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
@@ -68,8 +68,7 @@ fun DiscussionScreen(
   var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
 
-  /** Collect the discussion StateFlow as Compose state */
-  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
+  viewModel.readDiscussionMessages(account, discussion)
 
   /**
    * Update messages list and user cache whenever the discussion changes.
@@ -77,13 +76,13 @@ fun DiscussionScreen(
    * Scrolls to the last message automatically.
    */
   LaunchedEffect(discussion) {
-    discussion?.let { disc ->
+    discussion.let { disc ->
       messages.clear()
       messages.addAll(disc.messages)
       scope.launch { listState.animateScrollToItem(messages.size) }
 
       disc.messages.forEach { msg ->
-        if (!userCache.containsKey(msg.senderId) && msg.senderId != currentUser.uid) {
+        if (!userCache.containsKey(msg.senderId) && msg.senderId != account.uid) {
           try {
             viewModel.getOtherAccount(msg.senderId) { account -> userCache[msg.senderId] = account }
           } catch (_: Exception) {}
@@ -94,7 +93,7 @@ fun DiscussionScreen(
     }
   }
 
-  LaunchedEffect(discussionId, listState) {
+  LaunchedEffect(discussion.uid, listState) {
     snapshotFlow { listState.layoutInfo.totalItemsCount }.filter { it > 0 }.first()
     listState.scrollToItem(maxOf(0, listState.layoutInfo.totalItemsCount - 1))
   }
@@ -106,8 +105,8 @@ fun DiscussionScreen(
           Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier =
-                  Modifier.fillMaxSize().testTag("DiscussionInfo/${discussion?.name}").clickable {
-                    discussion?.let { onOpenDiscussionInfo(it) }
+                  Modifier.fillMaxSize().testTag("DiscussionInfo/${discussion.name}").clickable {
+                    onOpenDiscussionInfo(discussion)
                   }) {
                 Box(
                     modifier =
@@ -133,14 +132,13 @@ fun DiscussionScreen(
         actions = {
           val icon =
               when {
-                discussion == null -> null
-                discussion!!.session != null -> Icons.Default.Games
-                discussion!!.admins.contains(currentUser.uid) -> Icons.Default.LibraryAdd
+                discussion.session != null -> Icons.Default.Games
+                discussion.admins.contains(account.uid) -> Icons.Default.LibraryAdd
                 else -> null
               }
 
           if (icon != null) {
-            IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
+            IconButton(onClick = { onCreateSessionClick(discussion) }) {
               Icon(icon, contentDescription = "Session action")
             }
           }
@@ -153,7 +151,7 @@ fun DiscussionScreen(
         contentPadding = PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
           itemsIndexed(messages) { index, message ->
-            val isMine = message.senderId == currentUser.uid
+            val isMine = message.senderId == account.uid
             val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
             val showDateHeader =
@@ -203,12 +201,12 @@ fun DiscussionScreen(
           IconButton(
               modifier = Modifier.testTag("Send Button"),
               onClick = {
-                discussion?.let { disc ->
+                discussion.let { disc ->
                   if (messageText.isNotBlank() && !isSending) {
                     scope.launch {
                       isSending = true
                       try {
-                        viewModel.sendMessageToDiscussion(disc, currentUser, messageText)
+                        viewModel.sendMessageToDiscussion(disc, account, messageText)
                         messageText = ""
                       } finally {
                         isSending = false

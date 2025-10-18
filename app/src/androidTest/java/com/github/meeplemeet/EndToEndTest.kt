@@ -137,7 +137,7 @@ class EndToEndTest : FirestoreTests() {
     composeTestRule
         .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
         .assertIsDisplayed()
-        .assertTextContains(MeepleMeetScreen.ProfileScreen.title)
+        .assertTextContains(MeepleMeetScreen.Profile.title)
 
     // Sign out from profile
     composeTestRule.onNodeWithTag("Logout Button").assertExists().assertIsEnabled().performClick()

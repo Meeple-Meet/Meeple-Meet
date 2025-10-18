@@ -60,18 +60,6 @@ const val MAX_SLIDER_NUMBER: Float = 9f
 const val MIN_SLIDER_NUMBER: Float = 1f
 const val SLIDER_STEPS: Int = (MAX_SLIDER_NUMBER - MIN_SLIDER_NUMBER - 1).toInt()
 
-/** TODO: implement real geocoding later */
-/**
- * Generate a random location for a given text
- *
- * @param text The text to base the location name on
- */
-private fun randomLocationFrom(text: String): Location =
-    Location(
-        latitude = Random.nextDouble(-90.0, 90.0),
-        longitude = Random.nextDouble(-180.0, 180.0),
-        name = text.ifBlank { "Random place" })
-
 /** TODO: change this to a truly location searcher later when coded */
 /**
  * Mock location suggestions from a query string
@@ -114,32 +102,27 @@ fun toTimestamp(
  * ======================================================================= */
 
 @Composable
-fun CreateSessionScreen(
+fun AddSessionScreen(
+    account: Account,
+    discussion: Discussion,
     viewModel: FirestoreViewModel,
     sessionViewModel: FirestoreSessionViewModel,
-    currentUser: Account,
-    discussionId: String,
-    onBack: () -> Unit = {},
-    onCreate: () -> Unit = {}
+    onBack: () -> Unit = {}
 ) {
-  var form by
-      remember(currentUser.uid) { mutableStateOf(SessionForm(participants = listOf(currentUser))) }
+  var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
   var selectedLocation by remember { mutableStateOf<Location?>(null) }
-
-  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
-  LaunchedEffect(discussion?.uid) {
-    val disc = discussion ?: return@LaunchedEffect
-    viewModel.getDiscussionParticipants(disc) { fetched ->
-      form = form.copy(participants = (fetched + currentUser).distinctBy { it.uid })
+  LaunchedEffect(discussion.uid) {
+    viewModel.getDiscussionParticipants(discussion) { fetched ->
+      form = form.copy(participants = (fetched + account).distinctBy { it.uid })
     }
 
     if (form.proposedGame.isNotBlank()) {
-      runCatching { sessionViewModel.setGameQuery(currentUser, disc, form.proposedGame) }
+      runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGame) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
     }
   }
@@ -187,7 +170,7 @@ fun CreateSessionScreen(
               // Game search (below title) — VM-backed, with safe error handling
               GameSearchBar(
                   sessionViewModel = sessionViewModel,
-                  currentUser = currentUser,
+                  currentUser = account,
                   discussion = discussion,
                   queryFallback = form.proposedGame,
                   onQueryFallbackChange = { form = form.copy(proposedGame = it) },
@@ -195,7 +178,7 @@ fun CreateSessionScreen(
 
               // Participants section
               ParticipantsSection(
-                  currentUserId = currentUser.uid,
+                  currentUserId = account.uid,
                   selected = form.participants,
                   allCandidates = form.participants,
                   minPlayers = form.minPlayers,
@@ -233,35 +216,29 @@ fun CreateSessionScreen(
 
               // Creation and Discard buttons
               Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val haveDiscussion = discussion != null
                 val haveDateTime = form.date != null && form.time != null
                 val withinBounds =
                     form.participants.size >= form.minPlayers &&
-                        form.participants.size <= form.maxPlayers &&
-                        form.minPlayers <= form.maxPlayers
+                        form.participants.size <= form.maxPlayers
 
-                val canCreate =
-                    (haveDiscussion && haveDateTime && withinBounds && form.title.isNotBlank())
+                val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
 
                 CreateSessionButton(
                     formToSubmit = form,
                     enabled = canCreate,
                     onCreate = {
-                      val disc = discussion ?: return@CreateSessionButton
-
                       runCatching {
                             val selectedGameId = sessionViewModel.gameUIState.value.selectedGameUid
                             sessionViewModel.createSession(
-                                requester = currentUser,
-                                discussion = disc,
+                                requester = account,
+                                discussion = discussion,
                                 name = form.title,
                                 gameId =
                                     selectedGameId.ifBlank {
                                       form.proposedGame.ifBlank { "Unknown game" }
                                     },
                                 date = toTimestamp(form.date, form.time),
-                                location =
-                                    selectedLocation ?: randomLocationFrom(form.locationText),
+                                location = selectedLocation ?: Location(),
                                 minParticipants = form.minPlayers,
                                 maxParticipants = form.maxPlayers,
                                 *form.participants.toTypedArray())
@@ -271,7 +248,7 @@ fun CreateSessionScreen(
                             return@CreateSessionButton
                           }
 
-                      form = SessionForm(participants = listOf(currentUser))
+                      form = SessionForm(participants = listOf(account))
                       selectedLocation = null
                       onBack()
                     },
@@ -281,7 +258,7 @@ fun CreateSessionScreen(
                 DiscardButton(
                     modifier = Modifier.fillMaxWidth(),
                     onDiscard = {
-                      form = SessionForm(participants = listOf(currentUser))
+                      form = SessionForm(participants = listOf(account))
                       selectedLocation = null
                       onBack()
                     })

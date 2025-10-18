@@ -72,7 +72,7 @@ class DiscussionScreenIntegrationTest {
       DiscussionScreen(
           viewModel = viewModel,
           discussionId = "disc1",
-          currentUser = currentUser,
+          account = currentUser,
           onBack = { mockNavigation.goBack() })
     }
 
@@ -88,7 +88,7 @@ class DiscussionScreenIntegrationTest {
       DiscussionScreen(
           viewModel = viewModel,
           discussionId = "disc1",
-          currentUser = currentUser,
+          account = currentUser,
           onBack = { mockNavigation.goBack() })
     }
 
@@ -108,7 +108,7 @@ class DiscussionScreenIntegrationTest {
       DiscussionScreen(
           viewModel = viewModel,
           discussionId = "disc1",
-          currentUser = currentUser,
+          account = currentUser,
           onBack = { mockNavigation.goBack() })
     }
 

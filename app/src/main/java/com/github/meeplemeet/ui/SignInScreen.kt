@@ -52,12 +52,10 @@ object SignInScreenTestTags {
  * @param viewModel Authentication view model that manages auth state and operations
  * @param context Android context, used for Credential Manager and other platform services
  * @param credentialManager Credential manager instance for Google sign-in
- * @param modifier Modifier for customizing the composable's appearance and behavior
  */
 @Composable
 fun SignInScreen(
     viewModel: AuthViewModel,
-    modifier: Modifier = Modifier,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     onSignUpClick: () -> Unit = {},
@@ -106,7 +104,7 @@ fun SignInScreen(
   // Main UI layout using Column for vertical arrangement
   Column(
       modifier =
-          modifier.fillMaxSize().padding(24.dp).background(MaterialTheme.colorScheme.background),
+          Modifier.fillMaxSize().padding(24.dp).background(MaterialTheme.colorScheme.background),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.SpaceBetween) {
         // Top spacing
