@@ -40,7 +40,6 @@ class SessionViewScreenTest {
   private lateinit var gameRepo: FirestoreGameRepository
   private lateinit var sessionVM: FirestoreSessionViewModel
 
-  private val me = Account(uid = "user1", handle = "", name = "Marco", email = "marco@epfl.ch")
   private val member = Account(uid = "user2", handle = "", name = "Alex", email = "alex@epfl.ch")
   private val admin = Account(uid = "user1", handle = "Alice", name = "Alice", email = "*")
 
@@ -123,7 +122,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -151,7 +150,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           initial = initialForm,
           sessionViewModel = sessionVM,
           onBack = { backClicked = true })
@@ -168,7 +167,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -196,7 +195,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -232,7 +231,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -262,7 +261,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -317,7 +316,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -332,7 +331,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -359,7 +358,7 @@ class SessionViewScreenTest {
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       val node = composeTestRule.onNodeWithTag(SessionTestTags.DATE_FIELD).fetchSemanticsNode()
       val text = node.config[SemanticsProperties.EditableText].text
-      !text.isNullOrBlank() &&
+      !text.isBlank() &&
           !text.contains(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
     }
 
@@ -425,7 +424,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           initial = initialForm,
           sessionViewModel = sessionVM,
           onBack = { quitClicked = true })
@@ -443,7 +442,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel, // the injected one with discussionFlow set
           account = admin, // is admin/creator (see setup above)
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -473,7 +472,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = updatedForm)
     }
@@ -489,7 +488,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = updatedForm)
     }
@@ -527,13 +526,11 @@ class SessionViewScreenTest {
 
   @Test
   fun timePickerDialog_updatesTimeField_nonDeterministic() {
-    var initialValue: String? = null
-
     composeTestRule.setContent {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -542,12 +539,12 @@ class SessionViewScreenTest {
     val timeNode = composeTestRule.onNodeWithTag(SessionTestTags.TIME_FIELD)
     timeNode.assertIsDisplayed()
 
-    initialValue =
+    val initialValue =
         try {
           timeNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
-        } catch (e: Exception) {
+        } catch (_: Exception) {
           // fallback: if non-editable text field
-          timeNode.fetchSemanticsNode().config[SemanticsProperties.Text]?.firstOrNull()?.text
+          timeNode.fetchSemanticsNode().config[SemanticsProperties.Text].firstOrNull()?.text
         }
 
     // --- OPEN DIALOG ---
@@ -576,12 +573,12 @@ class SessionViewScreenTest {
                 .fetchSemanticsNode()
                 .config[SemanticsProperties.EditableText]
                 .text
-          } catch (e: Exception) {
+          } catch (_: Exception) {
             composeTestRule
                 .onNodeWithTag(SessionTestTags.TIME_FIELD)
                 .fetchSemanticsNode()
                 .config[SemanticsProperties.Text]
-                ?.firstOrNull()
+                .firstOrNull()
                 ?.text
           }
       newText != initialValue
@@ -595,19 +592,18 @@ class SessionViewScreenTest {
 
   @Test
   fun datePickerDialog_updatesDateField_nonDeterministic() {
-    var initialValue: String? = null
     composeTestRule.setContent {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
 
     val dateNode = composeTestRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
     dateNode.assertIsDisplayed()
-    initialValue = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+    val initialValue = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
 
     // --- open the dialog ---
     composeTestRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).assertExists().performClick()
@@ -643,12 +639,10 @@ class SessionViewScreenTest {
 
   @Test
   fun userChip_mainClick_doesNothing() {
-    var clicked = false
     composeTestRule.setContent {
       UserChip(name = "Alice", onRemove = {}, modifier = Modifier.testTag("user_chip"))
     }
     composeTestRule.onNodeWithTag("user_chip").performClick()
-    composeTestRule.runOnIdle { assert(!clicked) }
   }
 
   @Test
@@ -793,7 +787,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = "discussion1",
+          discussion = baseDiscussion,
           initial = initialForm,
           sessionViewModel = sessionVM,
           onBack = { backClicked = true })
@@ -913,7 +907,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -928,7 +922,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -955,7 +949,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = member,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -975,7 +969,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = member,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -1001,7 +995,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = member,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -1033,7 +1027,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = member,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -1071,7 +1065,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = member,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = sessionVM,
           initial = initialForm)
     }
@@ -1090,7 +1084,7 @@ class SessionViewScreenTest {
       SessionDetailsScreen(
           viewModel = viewModel,
           account = admin,
-          discussionId = discussionId,
+          discussion = baseDiscussion,
           sessionViewModel = fakeSessionVM,
           initial = initialForm,
           onBack = { onBackCalled = true })

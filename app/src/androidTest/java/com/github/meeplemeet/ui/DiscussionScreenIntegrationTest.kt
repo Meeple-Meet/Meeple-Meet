@@ -71,7 +71,7 @@ class DiscussionScreenIntegrationTest {
     composeTestRule.setContent {
       DiscussionScreen(
           viewModel = viewModel,
-          discussionId = "disc1",
+          discussion = safeDiscussion,
           account = currentUser,
           onBack = { mockNavigation.goBack() })
     }
@@ -86,10 +86,7 @@ class DiscussionScreenIntegrationTest {
   fun sendButton_clears_text_field_after_sending() = runTest {
     composeTestRule.setContent {
       DiscussionScreen(
-          viewModel = viewModel,
-          discussionId = "disc1",
-          account = currentUser,
-          onBack = { mockNavigation.goBack() })
+          viewModel = viewModel, discussion = safeDiscussion, account = currentUser, onBack = {})
     }
 
     val textField = composeTestRule.onNodeWithText("Type something...")
@@ -107,7 +104,7 @@ class DiscussionScreenIntegrationTest {
     composeTestRule.setContent {
       DiscussionScreen(
           viewModel = viewModel,
-          discussionId = "disc1",
+          discussion = safeDiscussion,
           account = currentUser,
           onBack = { mockNavigation.goBack() })
     }

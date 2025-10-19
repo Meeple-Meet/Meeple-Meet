@@ -13,6 +13,7 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.AccountNoUid
 import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
+import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
@@ -82,13 +83,17 @@ class CreateAccountScreenTest : FirestoreTests() {
 
     handlesRepo = FirestoreHandlesRepository()
     viewModel = FirestoreHandlesViewModel(handlesRepo)
+    val firestoreViewModel = FirestoreViewModel()
 
     existing = bootstrapRepo.createAccount("222", "bob", "bob@email.com", null)
 
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
         CreateAccountScreen(
-            viewModel = viewModel, account = me, onCreate = { onCreateCalled = true })
+            handlesVM = viewModel,
+            account = me,
+            firstoreVM = firestoreViewModel,
+            onCreate = { onCreateCalled = true })
       }
     }
   }

@@ -88,14 +88,14 @@ class NavigationTest : FirestoreTests() {
       handlesVM.createAccountHandle(testAccount, "handle")
 
       // Create test discussions
-      val (_, discussion1) =
+      val discussion1 =
           repository.createDiscussion(
               name = "Fake Discussion 1",
               description = "Testing navigation from overview",
               creatorId = testAccount.uid)
       testDiscussion1Uid = discussion1.uid
 
-      val (_, discussion2) =
+      val discussion2 =
           repository.createDiscussion(
               name = "Fake Discussion 2",
               description = "Testing navigation with multiple discussions",
@@ -115,17 +115,17 @@ class NavigationTest : FirestoreTests() {
    * navigation to DiscussionsOverview in MainActivity.
    */
   private fun login() {
-    firestoreVM.getAccount(testAccount.uid)
+    // Get the account flow for this user
+    val accountFlow = firestoreVM.accountFlow(testAccount.uid)
 
-    // Wait until the account is actually loaded in the ViewModel
-    composeTestRule.waitUntil(timeoutMillis = 5_000) { firestoreVM.account.value != null }
+    // Wait until the account is actually loaded in the flow
+    composeTestRule.waitUntil(timeoutMillis = 5_000) { accountFlow.value != null }
 
     composeTestRule.waitForIdle()
   }
 
   /** Simulate logout by clearing the account from the ViewModels. */
   private fun logout() {
-    firestoreVM.signOut()
     authVM.logout()
     composeTestRule.waitForIdle()
   }

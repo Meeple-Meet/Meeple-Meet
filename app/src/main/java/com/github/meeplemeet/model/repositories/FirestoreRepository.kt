@@ -48,7 +48,7 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       description: String,
       creatorId: String,
       participants: List<String> = emptyList()
-  ) {
+  ): Discussion {
     val discussion =
         Discussion(
             newDiscussionUID(),
@@ -68,6 +68,8 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       batch.set(ref, DiscussionPreviewNoUid())
     }
     batch.commit().await()
+
+    return discussion
   }
 
   /** Retrieve a discussion document by ID. */
@@ -227,14 +229,14 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     discussion.participants.forEach { userId ->
       val ref =
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
-      val unreadIncrement = if (userId == sender.uid) 0 else 1
+      val unreadCountValue = if (userId == sender.uid) 0 else FieldValue.increment(1)
       batch.set(
           ref,
           mapOf(
               "lastMessage" to message.content,
               "lastMessageSender" to message.senderId,
               "lastMessageAt" to message.createdAt,
-              "unreadCount" to FieldValue.increment(unreadIncrement.toLong())),
+              "unreadCount" to unreadCountValue),
           SetOptions.merge())
     }
 

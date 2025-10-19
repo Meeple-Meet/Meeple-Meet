@@ -1,6 +1,5 @@
 package com.github.meeplemeet.integration
 
-import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.repositories.FirestoreRepository
@@ -30,8 +29,6 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class AuthIntegrationTest : FirestoreTests() {
-
-  private lateinit var context: Context
   private lateinit var authRepo: AuthRepository
   private lateinit var firestoreRepo: FirestoreRepository
 
@@ -72,7 +69,7 @@ class AuthIntegrationTest : FirestoreTests() {
       for (document in testUserQuery.documents) {
         document.reference.delete().await()
       }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       // Ignore cleanup errors - they shouldn't fail the test
     }
   }

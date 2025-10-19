@@ -8,10 +8,7 @@ import com.github.meeplemeet.ui.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*
-import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,17 +19,6 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class EndToEndTest : FirestoreTests() {
-
-  companion object {
-    @BeforeClass
-    @JvmStatic
-    fun ensureEmulatorIsSet() {
-      // Ensure emulator is configured for this test class as well (guard against timing issues)
-      FirebaseFirestore.getInstance().useEmulator("10.0.2.2", 8080)
-      FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
-    }
-  }
-
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   private val testEmail = "e2etest${UUID.randomUUID().toString().take(8)}@example.com"

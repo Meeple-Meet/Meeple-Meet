@@ -689,7 +689,7 @@ class SessionComponentsTest {
 
     lateinit var holder: MutableState<LocalDate?>
     set {
-      holder = remember { mutableStateOf<LocalDate?>(null) }
+      holder = remember { mutableStateOf(null) }
       DatePickerDockedField(
           value = holder.value,
           onValueChange = { holder.value = it },
@@ -740,7 +740,7 @@ class SessionComponentsTest {
     lateinit var holder: MutableState<LocalDate?>
 
     set {
-      holder = remember { mutableStateOf<LocalDate?>(null) }
+      holder = remember { mutableStateOf(null) }
       DatePickerDockedField(
           value = holder.value,
           onValueChange = { holder.value = it },

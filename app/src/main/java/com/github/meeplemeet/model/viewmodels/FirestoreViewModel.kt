@@ -24,19 +24,8 @@ const val SUGGESTIONS_LIMIT = 30
 class FirestoreViewModel(
     private val repository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) : ViewModel() {
-
-  private val _account = MutableStateFlow<Account?>(null)
-
-  /** The currently loaded account */
-  val account: StateFlow<Account?> = _account
-
-  private val _discussion = MutableStateFlow<Discussion?>(null)
-
-  /** The currently loaded discussion */
-  val discussion: StateFlow<Discussion?> = _discussion
-
   private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
-
+  /** The currently loaded handle suggestions */
   val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
 
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
@@ -201,14 +190,14 @@ class FirestoreViewModel(
   }
 
   fun signOut() {
-    _account.value = null
+    accountFlows.clear()
   }
 
   /** Retrieve an account by ID. */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
 
-    viewModelScope.launch { _account.value = repository.getAccount(id) }
+    viewModelScope.launch { repository.getAccount(id) }
   }
 
   /** Retrieve an account by ID without changing the current account state. */
@@ -224,9 +213,7 @@ class FirestoreViewModel(
 
   /** Update account name. */
   fun setAccountName(account: Account, newName: String) {
-    viewModelScope.launch {
-      _account.value = repository.setAccountName(account.uid, newName.ifBlank { "~" })
-    }
+    viewModelScope.launch { repository.setAccountName(account.uid, newName.ifBlank { "~" }) }
   }
 
   /** Delete an account. */
@@ -244,8 +231,7 @@ class FirestoreViewModel(
     if (account.previews[discussion.uid]!!.unreadCount == 0) return
 
     viewModelScope.launch {
-      _account.value =
-          repository.readDiscussionMessages(account.uid, discussion.uid, discussion.messages.last())
+      repository.readDiscussionMessages(account.uid, discussion.uid, discussion.messages.last())
     }
   }
 
@@ -261,7 +247,6 @@ class FirestoreViewModel(
    */
   fun accountFlow(accountId: String): StateFlow<Account?> {
     if (accountId.isBlank()) return MutableStateFlow(null)
-    if (!accountFlows.contains(accountId)) accountFlows.clear()
     return accountFlows.getOrPut(accountId) {
       repository
           .listenAccount(accountId)
