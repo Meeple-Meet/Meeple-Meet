@@ -9,6 +9,8 @@ import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,8 +27,9 @@ class EndToEndTest : FirestoreTests() {
   private val testPassword = "Password123!"
   private val testUsername = "Test User"
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   @Test
-  fun completeUserJourney_signUpCreateAccountAndNavigate() {
+  fun completeUserJourney_signUpCreateAccountAndNavigate() = runTest {
     // Step 1: Navigate from Sign In to Sign Up screen
     composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
 

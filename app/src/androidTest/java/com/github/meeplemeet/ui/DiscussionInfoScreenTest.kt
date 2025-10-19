@@ -5,68 +5,88 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import io.mockk.coEvery
-import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.github.meeplemeet.utils.FirestoreTests
+import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class DiscussionSettingScreenTest {
+class DiscussionSettingScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
   private lateinit var viewModel: FirestoreViewModel
   private lateinit var repository: FirestoreRepository
-
-  private val currentAccount = Account(uid = "user1", handle = "user1", name = "Alice", email = "*")
-
-  private val safeDiscussion =
-      Discussion(
-          uid = "disc1",
-          name = "Test Discussion",
-          description = "A sample group",
-          messages = listOf(Message("user1", "Hi", com.google.firebase.Timestamp.now())),
-          participants = listOf("user1", "user2"),
-          creatorId = "user1",
-          admins = listOf("user1"))
+  private lateinit var currentAccount: Account
+  private lateinit var otherUser: Account
+  private lateinit var thirdUser: Account
+  private lateinit var testDiscussion: Discussion
 
   @Before
-  fun setup() {
-    repository = mockk(relaxed = true)
-    coEvery { repository.getDiscussion("disc1") } returns safeDiscussion
-    coEvery { repository.getAccount(any()) } answers
-        {
-          val uid = firstArg<String>()
-          Account(uid = uid, handle = uid, name = "NameFor$uid", email = "***")
-        }
-
-    // Initialize real ViewModel with repository
+  fun setup() = runBlocking {
+    repository = FirestoreRepository()
     viewModel = FirestoreViewModel(repository)
 
-    // Inject MutableStateFlow<Discussion> into discussionFlows
-    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
-    discussionFlowsField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val map =
-        discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
-    map["disc1"] = MutableStateFlow(safeDiscussion)
+    // Create test users
+    currentAccount =
+        repository.createAccount(
+            userHandle = "testuser1_${System.currentTimeMillis()}",
+            name = "Alice",
+            email = "alice@test.com",
+            photoUrl = null)
 
-    // Also inject account flow
-    val accountFlowField = viewModel::class.java.getDeclaredField("_account")
-    accountFlowField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    (accountFlowField.get(viewModel) as MutableStateFlow<Account?>).value = currentAccount
+    otherUser =
+        repository.createAccount(
+            userHandle = "testuser2_${System.currentTimeMillis()}",
+            name = "Bob",
+            email = "bob@test.com",
+            photoUrl = null)
+
+    thirdUser =
+        repository.createAccount(
+            userHandle = "testuser3_${System.currentTimeMillis()}",
+            name = "Charlie",
+            email = "charlie@test.com",
+            photoUrl = null)
+
+    // Create a test discussion
+    testDiscussion =
+        repository.createDiscussion(
+            name = "Test Discussion",
+            description = "A sample group",
+            creatorId = currentAccount.uid,
+            participants = listOf(otherUser.uid))
+
+    // Add a test message
+    repository.sendMessageToDiscussion(testDiscussion, currentAccount, "Hi")
+
+    // Fetch updated discussion and accounts with previews
+    testDiscussion = repository.getDiscussion(testDiscussion.uid)
+    currentAccount = repository.getAccount(currentAccount.uid)
+    otherUser = repository.getAccount(otherUser.uid)
+    thirdUser = repository.getAccount(thirdUser.uid)
+  }
+
+  @After
+  fun cleanup() = runBlocking {
+    try {
+      repository.deleteDiscussion(testDiscussion)
+      repository.deleteAccount(currentAccount.uid)
+      repository.deleteAccount(otherUser.uid)
+      repository.deleteAccount(thirdUser.uid)
+    } catch (e: Exception) {
+      // Ignore cleanup errors
+    }
   }
 
   @Test
   fun screen_displaysDiscussionName_andButtons() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -90,7 +110,7 @@ class DiscussionSettingScreenTest {
   fun clickingDeleteButton_showsDeleteDialog() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -105,7 +125,7 @@ class DiscussionSettingScreenTest {
   fun clickingLeaveButton_showsLeaveDialog() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -120,13 +140,13 @@ class DiscussionSettingScreenTest {
   fun memberList_displaysMembersWithBadges() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
 
-    compose.onNodeWithTag("member_row_user1").assertIsDisplayed()
-    compose.onNodeWithTag("member_row_user2").assertIsDisplayed()
+    compose.onNodeWithTag("member_row_${currentAccount.uid}").assertIsDisplayed()
+    compose.onNodeWithTag("member_row_${otherUser.uid}").assertIsDisplayed()
     compose.onNodeWithText("Owner").assertIsDisplayed()
     compose.onNodeWithText("Member").assertIsDisplayed()
   }
@@ -135,7 +155,7 @@ class DiscussionSettingScreenTest {
   fun backButton_savesChanges() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -149,19 +169,21 @@ class DiscussionSettingScreenTest {
   }
 
   @Test
-  fun participantView_cannotEditOrAddMembers() {
-    // Participant is not admin or owner
-    val participantDiscussion = safeDiscussion.copy(admins = emptyList(), creatorId = "user3")
-    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
-    discussionFlowsField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val map =
-        discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
-    map["disc1"] = MutableStateFlow(participantDiscussion)
+  fun participantView_cannotEditOrAddMembers() = runBlocking {
+    // Create a discussion where current user is participant but not admin or owner
+    val participantDiscussion =
+        repository.createDiscussion(
+            name = "Participant Test",
+            description = "Test description",
+            creatorId = thirdUser.uid, // Third user is the owner
+            participants = listOf(currentAccount.uid, otherUser.uid))
+
+    repository.sendMessageToDiscussion(participantDiscussion, thirdUser, "Test message")
+    val updatedDiscussion = repository.getDiscussion(participantDiscussion.uid)
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = updatedDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -174,26 +196,37 @@ class DiscussionSettingScreenTest {
     compose.onAllNodesWithText("Add Members").assertCountEquals(0)
 
     // Member row for current user: just check displayed
-    compose.onNodeWithTag("member_row_user1").assertIsDisplayed()
+    compose.onNodeWithTag("member_row_${currentAccount.uid}").assertIsDisplayed()
 
     // Member row for other user: check displayed and not clickable
-    compose.onNodeWithTag("member_row_user2").assertIsDisplayed().assertHasNoClickAction()
+    compose
+        .onNodeWithTag("member_row_${otherUser.uid}")
+        .assertIsDisplayed()
+        .assertHasNoClickAction()
+
+    // Cleanup
+    repository.deleteDiscussion(updatedDiscussion)
   }
 
   @Test
-  fun adminView_canEditAndAddMembers() {
-    // Admin but not owner
-    val adminDiscussion = safeDiscussion.copy(admins = listOf("user1"), creatorId = "user3")
-    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
-    discussionFlowsField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val map =
-        discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
-    map["disc1"] = MutableStateFlow(adminDiscussion)
+  fun adminView_canEditAndAddMembers() = runBlocking {
+    // Create a discussion where current user is admin but not owner
+    val adminDiscussion =
+        repository.createDiscussion(
+            name = "Admin Test",
+            description = "Test description",
+            creatorId = thirdUser.uid, // Third user is the owner
+            participants = listOf(currentAccount.uid, otherUser.uid))
+
+    // Make current user an admin
+    repository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
+
+    repository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
+    val updatedDiscussion = repository.getDiscussion(adminDiscussion.uid)
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = updatedDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -204,32 +237,42 @@ class DiscussionSettingScreenTest {
 
     // Can see search bar
     compose.onNodeWithText("Add Members").assertIsDisplayed()
+
+    // Cleanup
+    repository.deleteDiscussion(updatedDiscussion)
   }
 
   @Test
-  fun ownerView_canRemoveAdmins() {
-    // Owner is also admin and creator
+  fun ownerView_canRemoveAdmins() = runBlocking {
+    // Create a discussion where current user is the owner
     val ownerDiscussion =
-        safeDiscussion.copy(admins = listOf("user1", "user2"), creatorId = "user1")
-    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
-    discussionFlowsField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val map =
-        discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
-    map["disc1"] = MutableStateFlow(ownerDiscussion)
+        repository.createDiscussion(
+            name = "Owner Test",
+            description = "Test description",
+            creatorId = currentAccount.uid,
+            participants = listOf(otherUser.uid))
+
+    // Make other user an admin
+    repository.addAdminToDiscussion(ownerDiscussion, otherUser.uid)
+
+    repository.sendMessageToDiscussion(ownerDiscussion, currentAccount, "Test message")
+    val updatedDiscussion = repository.getDiscussion(ownerDiscussion.uid)
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = safeDiscussion, account = currentAccount)
+          viewModel = viewModel, discussion = updatedDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
 
     // Can click member to open dialog
-    compose.onNodeWithTag("member_row_user2").performClick()
+    compose.onNodeWithTag("member_row_${otherUser.uid}").performClick()
     compose.waitForIdle()
 
     // Owner can remove admin
     compose.onNodeWithText("Remove Admin").assertIsDisplayed()
+
+    // Cleanup
+    repository.deleteDiscussion(updatedDiscussion)
   }
 }

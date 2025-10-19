@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
@@ -87,17 +88,6 @@ fun MeepleMeetApp(
   val discussion by discussionFlow.collectAsState()
 
   var nextDestination by remember { mutableStateOf<MeepleMeetScreen?>(null) }
-  val handlesError by handlesVM.errorMessage.collectAsState()
-  var isAutoLoggingIn by remember { mutableStateOf(false) }
-  var hasManuallySignedOut by remember { mutableStateOf(false) }
-
-  DisposableEffect(Unit) {
-    val authListener =
-        FirebaseAuth.AuthStateListener { auth -> accountId = auth.currentUser?.uid ?: "" }
-    FirebaseProvider.auth.addAuthStateListener(authListener)
-    onDispose { FirebaseProvider.auth.removeAuthStateListener(authListener) }
-  }
-
   LaunchedEffect(nextDestination) {
     nextDestination?.let {
       navigationActions.navigateTo(nextDestination!!)
@@ -105,24 +95,25 @@ fun MeepleMeetApp(
     }
   }
 
+  DisposableEffect(Unit) {
+    val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
+    FirebaseProvider.auth.addAuthStateListener(listener)
+    onDispose { FirebaseProvider.auth.removeAuthStateListener(listener) }
+  }
+
   NavHost(navController = navController, startDestination = MeepleMeetScreen.SignIn.name) {
     composable(MeepleMeetScreen.SignIn.name) {
       LaunchedEffect(account) {
-        if (account != null) {
-          if (hasManuallySignedOut) hasManuallySignedOut = false
+        if (account != null && FirebaseProvider.auth.currentUser != null) {
+          val exists =
+              FirestoreHandlesRepository().handleForAccountExists(account!!.uid, account!!.handle)
 
-          try {
-            isAutoLoggingIn = false
-            handlesVM.handleForAccountExists(account!!)
-            if (handlesError.isBlank()) navigationActions.navigateOutOfAuthGraph()
-            else navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
-          } catch (_: Exception) {
-            FirebaseProvider.auth.signOut()
-          }
-        } else isAutoLoggingIn = FirebaseProvider.auth.currentUser != null && !hasManuallySignedOut
+          if (exists) navigationActions.navigateOutOfAuthGraph()
+          else navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
+        }
       }
 
-      if (isAutoLoggingIn) LoadingScreen()
+      if (FirebaseProvider.auth.currentUser != null) LoadingScreen()
       else
           SignInScreen(
               authVM,
@@ -139,9 +130,12 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.CreateAccount.name) {
-      CreateAccountScreen(account!!, firestoreVM, handlesVM) {
-        hasManuallySignedOut = false
-        navigationActions.navigateOutOfAuthGraph()
+      if (account != null) {
+        CreateAccountScreen(account!!, firestoreVM, handlesVM) {
+          navigationActions.navigateOutOfAuthGraph()
+        }
+      } else {
+        LoadingScreen()
       }
     }
 
@@ -222,10 +216,7 @@ fun MeepleMeetApp(
           navigation = navigationActions,
           authViewModel = authVM,
           firestoreVM,
-          onSignOut = {
-            hasManuallySignedOut = true
-            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          })
+          onSignOut = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) })
     }
   }
 }

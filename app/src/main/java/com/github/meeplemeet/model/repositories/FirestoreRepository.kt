@@ -293,9 +293,8 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   /** Update account display name. */
-  suspend fun setAccountName(id: String, name: String): Account {
+  suspend fun setAccountName(id: String, name: String) {
     accounts.document(id).update(Account::name.name, name).await()
-    return getAccount(id)
   }
 
   /** Delete an account document. */

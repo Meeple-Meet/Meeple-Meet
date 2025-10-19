@@ -7,7 +7,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.MeepleMeetApp
+import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
@@ -58,10 +60,13 @@ class NavigationTest : FirestoreTests() {
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private lateinit var authVM: AuthViewModel
+  private lateinit var authRepository: AuthRepository
   private lateinit var firestoreVM: FirestoreViewModel
   private lateinit var repository: FirestoreRepository
 
   private lateinit var testAccount: Account
+  private val testEmail = "test${System.currentTimeMillis()}@example.com"
+  private val testPassword = "testPassword123"
   private lateinit var testDiscussion1Uid: String
   private lateinit var testDiscussion2Uid: String
 
@@ -69,23 +74,24 @@ class NavigationTest : FirestoreTests() {
 
   @Before
   fun setUp() {
-    // Create repository and ViewModels
+    // Create repositories and ViewModels
     repository = FirestoreRepository()
-    authVM = AuthViewModel()
+    authRepository = AuthRepository()
+    authVM = AuthViewModel(authRepository)
     firestoreVM = FirestoreViewModel(repository)
     val handlesVM = FirestoreHandlesViewModel()
 
-    // Create test data directly in Firestore
+    // Create test account with AuthRepository
     runBlocking {
-      // Create test account
-      testAccount =
-          repository.createAccount(
-              userHandle = "test_user",
-              name = "Test User",
-              email = "test@example.com",
-              photoUrl = null)
+      // Register the account (this creates both Firebase Auth user and Firestore account)
+      val result = authRepository.registerWithEmail(testEmail, testPassword)
+      testAccount = result.getOrThrow()
 
-      handlesVM.createAccountHandle(testAccount, "handle")
+      // Create handle for the account
+      handlesVM.createAccountHandle(testAccount, "testhandle")
+
+      // Sign out after creating account so tests start from logged out state
+      FirebaseProvider.auth.signOut()
 
       // Create test discussions
       val discussion1 =
@@ -111,17 +117,19 @@ class NavigationTest : FirestoreTests() {
   // ===== Test helpers =====
 
   /**
-   * Simulate login by loading the test account into the FirestoreViewModel. This triggers the
-   * navigation to DiscussionsOverview in MainActivity.
+   * Simulate login by using the AuthViewModel to log in with email/password. This triggers the auth
+   * state listener in MainActivity which loads the account and navigates to DiscussionsOverview.
    */
   private fun login() {
-    // Get the account flow for this user
-    val accountFlow = firestoreVM.accountFlow(testAccount.uid)
+    runBlocking {
+      // Use AuthViewModel's login method (which calls AuthRepository)
+      authVM.loginWithEmail(testEmail, testPassword)
 
-    // Wait until the account is actually loaded in the flow
-    composeTestRule.waitUntil(timeoutMillis = 5_000) { accountFlow.value != null }
-
-    composeTestRule.waitForIdle()
+      // Wait for the auth state to update and navigation to complete
+      composeTestRule.waitForIdle()
+      Thread.sleep(1000)
+      composeTestRule.waitForIdle()
+    }
   }
 
   /** Simulate logout by clearing the account from the ViewModels. */
