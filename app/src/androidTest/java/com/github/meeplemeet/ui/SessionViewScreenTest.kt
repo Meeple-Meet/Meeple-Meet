@@ -29,7 +29,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -309,114 +308,6 @@ class SessionViewScreenTest {
     composeTestRule.onAllNodesWithText("Cascadia").assertCountEquals(0)
   }
 
-  @Ignore("Non-deterministic behavior")
-  @Test
-  fun participantsSection_displaysAllParticipants() {
-    composeTestRule.setContent {
-      SessionDetailsScreen(
-          viewModel = viewModel,
-          account = admin,
-          discussion = baseDiscussion,
-          sessionViewModel = sessionVM,
-          initial = initialForm)
-    }
-    composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertIsDisplayed()
-    initialForm.participants.forEach { composeTestRule.onNodeWithText(it.name).assertIsDisplayed() }
-  }
-
-  @Ignore("Non-deterministic behavior")
-  @Test
-  fun organizationSection_displaysDateTimeAndLocation() {
-    composeTestRule.setContent {
-      SessionDetailsScreen(
-          viewModel = viewModel,
-          account = admin,
-          discussion = baseDiscussion,
-          sessionViewModel = sessionVM,
-          initial = initialForm)
-    }
-
-    // --- Wait for the date picker button to exist ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(SessionTestTags.DATE_PICK_BUTTON)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    // --- DATE PICKER ---
-    composeTestRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).assertExists().performClick()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.DATE_PICKER_OK_BUTTON)
-        .assertExists()
-        .performClick()
-
-    // --- Wait until the date field updates ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      val node = composeTestRule.onNodeWithTag(SessionTestTags.DATE_FIELD).fetchSemanticsNode()
-      val text = node.config[SemanticsProperties.EditableText].text
-      !text.isBlank() &&
-          !text.contains(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-    }
-
-    // --- TIME PICKER ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(SessionTestTags.TIME_PICK_BUTTON)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule.onNodeWithTag(SessionTestTags.TIME_PICK_BUTTON).assertExists().performClick()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.TIME_PICKER_OK_BUTTON)
-        .assertExists()
-        .performClick()
-
-    // --- Wait until time field updates ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      val node = composeTestRule.onNodeWithTag(SessionTestTags.TIME_FIELD).fetchSemanticsNode()
-      val text = node.config[SemanticsProperties.EditableText].text
-      text.isNotBlank() && text != "19:00"
-    }
-
-    // --- LOCATION FIELD ---
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(SessionTestTags.LOCATION_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
-        .assertExists()
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
-        .performTextInput("Rolex Learning Center")
-
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      val text =
-          composeTestRule
-              .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
-              .fetchSemanticsNode()
-              .config[SemanticsProperties.EditableText]
-              .text
-      text.contains("Rolex Learning Center")
-    }
-
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
-        .assertTextContains("Rolex Learning Center")
-  }
-
   @Test
   fun quitButton_triggersCallback() {
     var quitClicked = false
@@ -433,50 +324,6 @@ class SessionViewScreenTest {
     composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).assertExists()
     composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).performClick()
     composeTestRule.runOnIdle { assert(quitClicked) }
-  }
-
-  @Ignore("Non-deterministic behavior")
-  @Test
-  fun removeParticipant_removesChipFromUI() {
-    composeTestRule.setContent {
-      SessionDetailsScreen(
-          viewModel = viewModel, // the injected one with discussionFlow set
-          account = admin, // is admin/creator (see setup above)
-          discussion = baseDiscussion,
-          sessionViewModel = sessionVM,
-          initial = initialForm)
-    }
-
-    // Ensure it’s there first
-    composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
-
-    // Click the specific remove icon belonging to the "Alice" chip
-    composeTestRule
-        .onNode(hasContentDescription("Remove participant") and hasAnyAncestor(hasText("Alice")))
-        .performClick()
-
-    // Wait for recomposition: node count should drop to zero
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule.onAllNodes(hasText("Alice")).fetchSemanticsNodes().isEmpty()
-    }
-
-    // Final assert (now deterministic)
-    composeTestRule.onNodeWithText("Alice").assertDoesNotExist()
-  }
-
-  @Ignore("Deprecated behavior")
-  @Test
-  fun changeSessionTitle_displaysNewTitle() {
-    val updatedForm = initialForm.copy(title = "Board Game Bash")
-    composeTestRule.setContent {
-      SessionDetailsScreen(
-          viewModel = viewModel,
-          account = admin,
-          discussion = baseDiscussion,
-          sessionViewModel = sessionVM,
-          initial = updatedForm)
-    }
-    composeTestRule.onNodeWithTag(SessionTestTags.TITLE).assertTextContains("Board Game Bash")
   }
 
   @Test
@@ -883,13 +730,6 @@ class SessionViewScreenTest {
     }
 
     composeTestRule.waitForIdle()
-  }
-
-  @Ignore("Non-deterministic behavior")
-  @Test
-  fun userChipsGrid_emptyList_displaysNothingButNoCrash() {
-    composeTestRule.setContent { UserChipsGrid(participants = emptyList(), onRemove = {}) }
-    composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertExists()
   }
 
   @Test

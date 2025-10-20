@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
@@ -149,6 +152,7 @@ fun BottomNavigationMenu(
  * @param navController The [NavHostController] used for Compose navigation.
  */
 open class NavigationActions(private val navController: NavHostController) {
+  private val scope = MainScope()
 
   /**
    * Navigates to the specified [screen].
@@ -159,20 +163,22 @@ open class NavigationActions(private val navController: NavHostController) {
    * @param screen The target screen to navigate to.
    */
   open fun navigateTo(screen: MeepleMeetScreen) {
-    if (screen.inBottomBar && currentRoute() == screen.name) {
-      // If the user is already on the top-level destination, do nothing
-      return
-    }
-    navController.navigate(screen.name) {
-      // Screens available through the bottom navigation bar are top-level destinations.
-      // When navigating to one of these, we want to clear the back stack to avoid building
-      // up a large stack of destinations as the user switches between them.
-      if (screen.inBottomBar) {
-        launchSingleTop = true
-        popUpTo(screen.name) { inclusive = true }
+    scope.launch(Dispatchers.Main) {
+      if (screen.inBottomBar && currentRoute() == screen.name) {
+        // If the user is already on the top-level destination, do nothing
+        return@launch
       }
+      navController.navigate(screen.name) {
+        // Screens available through the bottom navigation bar are top-level destinations.
+        // When navigating to one of these, we want to clear the back stack to avoid building
+        // up a large stack of destinations as the user switches between them.
+        if (screen.inBottomBar) {
+          launchSingleTop = true
+          popUpTo(screen.name) { inclusive = true }
+        }
 
-      restoreState = true
+        restoreState = true
+      }
     }
   }
 
@@ -186,15 +192,17 @@ open class NavigationActions(private val navController: NavHostController) {
    * Typical usage: called after a successful login or account creation.
    */
   open fun navigateOutOfAuthGraph() {
-    navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
-      popUpTo(0) { inclusive = true } // Empty stack
-      launchSingleTop = true
+    scope.launch(Dispatchers.Main) {
+      navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
+        popUpTo(0) { inclusive = true } // Empty stack
+        launchSingleTop = true
+      }
     }
   }
 
   /** Navigate back to the previous screen. */
   open fun goBack() {
-    navController.popBackStack()
+    scope.launch(Dispatchers.Main) { navController.popBackStack() }
   }
 
   /**

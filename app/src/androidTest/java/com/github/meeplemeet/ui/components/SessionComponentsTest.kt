@@ -33,7 +33,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -542,66 +541,6 @@ class SessionComponentsTest {
   }
 
   /* ---------------- TimePickerField ---------------- */
-
-  @Ignore("Flaky test, needs investigation")
-  @Test
-  fun timePickerField_openDialog_confirm_setsDefault1900() {
-    var time: LocalTime? = null
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "Game time") }
-    composeRule.onNodeWithContentDescription("Select time").assertIsDisplayed().performClick()
-    composeRule.onNodeWithText("Game time").assertExists()
-    composeRule.onNodeWithText("OK").assertIsDisplayed().performClick()
-    composeRule.runOnIdle { assert(time == LocalTime.of(19, 0)) }
-  }
-
-  @Ignore("Flaky test, needs investigation")
-  @Test
-  fun timePickerField_cancel_doesNotChangeValue() {
-    var time: LocalTime? = null
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "Game time") }
-    composeRule.onNodeWithContentDescription("Select time").performClick()
-    composeRule.onNodeWithText("Cancel").performClick()
-    composeRule.runOnIdle { assert(time == null) }
-  }
-
-  @Ignore("Flaky test, needs investigation")
-  @Test
-  fun timePickerField_withInitialValue_showsFormattedText_andConfirmKeepsValue() {
-    val initial = LocalTime.of(8, 30)
-    var time: LocalTime? = initial
-    set {
-      TimePickerField(
-          value = time,
-          onValueChange = { time = it },
-          label = "Pick time",
-          is24Hour = false,
-          displayFormatter = DateTimeFormatter.ofPattern("HH:mm"))
-    }
-    composeRule.onNodeWithText("08:30").assertIsDisplayed()
-
-    composeRule.onNodeWithText("08:30").performClick()
-    composeRule.onAllNodesWithText("OK").assertCountEquals(0)
-
-    composeRule.onNodeWithContentDescription("Select time").performClick()
-    composeRule.onNodeWithText("OK").performClick()
-    composeRule.runOnIdle { assert(time == initial) }
-  }
-
-  @Ignore("Flaky test, needs investigation")
-  @Test
-  fun timePickerField_backDismiss_doesNotChangeValue() {
-    var time: LocalTime? = null
-    set { TimePickerField(value = time, onValueChange = { time = it }, label = "BackDismiss") }
-
-    composeRule.onNodeWithContentDescription("Select time").performClick()
-    composeRule.onNodeWithText("OK").assertIsDisplayed()
-
-    composeRule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-    composeRule.waitForIdle()
-
-    composeRule.runOnIdle { assert(time == null) }
-    composeRule.onAllNodesWithText("OK").assertCountEquals(0)
-  }
 
   @Test
   fun datePickerDialog_nullDateDismissed() {

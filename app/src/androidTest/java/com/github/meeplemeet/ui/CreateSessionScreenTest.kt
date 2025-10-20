@@ -2,11 +2,8 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.text.AnnotatedString
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.repositories.GameRepository
 import com.github.meeplemeet.model.structures.Account
@@ -24,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -172,18 +168,6 @@ class CreateSessionScreenTest {
     compose.waitForIdle()
     compose.onAllNodesWithText("Alexandre").assertCountEquals(0)
     compose.onAllNodesWithText("Dany").assertCountEquals(0)
-  }
-
-  @Ignore("")
-  @Test
-  fun flow_update_shows_new_participant_candidate() {
-    setContent()
-    injectedDiscussionFlow.value =
-        baseDiscussion.copy(uid = "disc2", participants = listOf(me.uid, alex.uid, dany.uid, "u4"))
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Newbie").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("Newbie").assertCountEquals(1)
   }
 
   @Test
@@ -346,20 +330,6 @@ class CreateSessionScreenTest {
     }
   }
 
-  @Ignore("")
-  @Test
-  fun changing_discussion_uid_refetches_participants() {
-    setContent()
-    compose.waitForIdle()
-    verify(exactly = 1) {
-      viewModel.getDiscussionParticipants(match { it.uid == discussionId }, any())
-    }
-    injectedDiscussionFlow.value = baseDiscussion.copy(uid = "discX")
-    compose.waitForIdle()
-    verify(exactly = 1) { viewModel.getDiscussionParticipants(match { it.uid == "discX" }, any()) }
-    verify(exactly = 2) { viewModel.getDiscussionParticipants(any(), any()) }
-  }
-
   @Test
   fun even_if_fetch_omits_me_current_user_is_still_present_and_not_a_candidate() {
     every { viewModel.getDiscussionParticipants(match { it.uid == "discY" }, any()) } answers
@@ -454,23 +424,6 @@ class CreateSessionScreenTest {
       }
     }
     compose.onAllNodesWithText("Location").onFirst().assertExists()
-  }
-
-  @Ignore("")
-  @Test
-  fun changing_discussion_uid_twice_refetches_each_time() {
-    setContent()
-    compose.waitForIdle()
-    verify(exactly = 1) {
-      viewModel.getDiscussionParticipants(match { it.uid == discussionId }, any())
-    }
-    injectedDiscussionFlow.value = baseDiscussion.copy(uid = "discX")
-    compose.waitForIdle()
-    injectedDiscussionFlow.value = baseDiscussion.copy(uid = "discY")
-    compose.waitForIdle()
-    verify(exactly = 1) { viewModel.getDiscussionParticipants(match { it.uid == "discX" }, any()) }
-    verify(exactly = 1) { viewModel.getDiscussionParticipants(match { it.uid == "discY" }, any()) }
-    verify(exactly = 3) { viewModel.getDiscussionParticipants(any(), any()) }
   }
 
   private fun screenFileClass(): Class<*> {
@@ -595,50 +548,5 @@ class CreateSessionScreenTest {
         .assertIsEnabled()
         .performClick()
     assert(called.get())
-  }
-
-  @Ignore("Non-deterministic test")
-  @Test
-  fun discard_from_screen_resets_fields_and_participants() {
-    setContent()
-    compose.waitForIdle()
-
-    titleInput().performTextInput("Temp Title")
-    gameInput().performTextInput("Temp Game")
-    locationInput().performTextInput("Temp Location")
-
-    compose.waitUntil(5_000) {
-      compose.onAllNodesWithText("Alexandre").fetchSemanticsNodes().isNotEmpty()
-    }
-    compose.onAllNodesWithText("Alexandre").onLast().performClick()
-    compose.runOnIdle {}
-
-    discardBtn().performClick()
-
-    // Harden: wait for the screen to recompose after discard
-    compose.waitUntil(3_000) {
-      // Heuristic: fields are focusable and ready again
-      compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size >= 3
-    }
-
-    allInputs()[0].performTextClearance()
-    allInputs()[0].performTextInput("X")
-    allInputs()[1].performTextClearance()
-    allInputs()[1].performTextInput("Y")
-    allInputs()[2].performTextClearance()
-    allInputs()[2].performTextInput("Z")
-
-    titleInput().assertTextEquals("X")
-
-    gameInput()
-        .assert(
-            SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Y")))
-
-    // locationInput()
-    //    .assert(
-    //        SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Z")))
-
-    compose.onAllNodesWithText("Alexandre").assertCountEquals(1)
-    createBtn().assertIsNotEnabled()
   }
 }

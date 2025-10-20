@@ -1,16 +1,22 @@
 package com.github.meeplemeet
 
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.ui.SignInScreenTestTags
 import com.github.meeplemeet.ui.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
-import java.util.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
+import java.util.UUID
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,9 +33,8 @@ class EndToEndTest : FirestoreTests() {
   private val testPassword = "Password123!"
   private val testUsername = "Test User"
 
-  @OptIn(ExperimentalCoroutinesApi::class)
   @Test
-  fun completeUserJourney_signUpCreateAccountAndNavigate() = runTest {
+  fun completeUserJourney_signUpCreateAccountAndNavigate() {
     // Step 1: Navigate from Sign In to Sign Up screen
     composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
 
@@ -310,19 +315,21 @@ class EndToEndTest : FirestoreTests() {
         .onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD)
         .assertExists()
         .performTextInput(password)
-    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists().performClick()
 
     // Wait for main app
-    composeTestRule.waitUntil(timeoutMillis = 15_000) {
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
       try {
-        composeTestRule
-            .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertIsEnabled()
+        true
       } catch (_: Throwable) {
         false
       }
     }
+    composeTestRule
+        .onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+        .assertExists()
+        .assertIsEnabled()
+        .performClick()
 
     // Alice navigates to Discussions
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()

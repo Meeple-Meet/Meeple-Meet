@@ -11,21 +11,22 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
@@ -71,29 +72,24 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MeepleMeetApp(
     context: Context = LocalContext.current,
-    credentialManager: CredentialManager = CredentialManager.create(context),
     authVM: AuthViewModel = viewModel(),
     firestoreVM: FirestoreViewModel = viewModel(),
-    handlesVM: FirestoreHandlesViewModel = viewModel()
+    handlesVM: FirestoreHandlesViewModel = viewModel(),
+    navController: NavHostController = rememberNavController()
 ) {
-  val navController = rememberNavController()
+  val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
+  val scope = rememberCoroutineScope()
 
   var accountId by remember { mutableStateOf(FirebaseProvider.auth.currentUser?.uid ?: "") }
   val accountFlow = remember(accountId) { firestoreVM.accountFlow(accountId) }
-  val account by accountFlow.collectAsState()
+  val account by accountFlow.collectAsStateWithLifecycle()
 
   var discussionId by remember { mutableStateOf("") }
   val discussionFlow = remember(discussionId) { firestoreVM.discussionFlow(discussionId) }
-  val discussion by discussionFlow.collectAsState()
-
-  var nextDestination by remember { mutableStateOf<MeepleMeetScreen?>(null) }
-  LaunchedEffect(nextDestination) {
-    nextDestination?.let {
-      navigationActions.navigateTo(nextDestination!!)
-      nextDestination = null
-    }
-  }
+  val discussion by discussionFlow.collectAsStateWithLifecycle()
+  val sessionRepo =
+      remember(discussion) { discussion?.let { FirestoreSessionViewModel(discussion!!) } }
 
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
@@ -106,7 +102,7 @@ fun MeepleMeetApp(
       LaunchedEffect(account) {
         if (account != null && FirebaseProvider.auth.currentUser != null) {
           val exists =
-              FirestoreHandlesRepository().handleForAccountExists(account!!.uid, account!!.handle)
+              handlesVM::repository.get().handleForAccountExists(account!!.uid, account!!.handle)
 
           if (exists) navigationActions.navigateOutOfAuthGraph()
           else navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
@@ -147,26 +143,28 @@ fun MeepleMeetApp(
           onClickAddDiscussion = { navigationActions.navigateTo(MeepleMeetScreen.AddDiscussion) },
           onSelectDiscussion = {
             discussionId = it.uid
-            nextDestination = MeepleMeetScreen.Discussion
+            navigationActions.navigateTo(MeepleMeetScreen.Discussion)
           },
       )
     }
 
     composable(MeepleMeetScreen.Discussion.name) {
-      DiscussionScreen(
-          account!!,
-          discussion!!,
-          firestoreVM,
-          onBack = { navigationActions.goBack() },
-          onOpenDiscussionInfo = {
-            navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
-          },
-          onCreateSessionClick = {
-            discussionId = it.uid
-            nextDestination =
-                if (it.session != null) MeepleMeetScreen.Session else MeepleMeetScreen.AddSession
-          },
-      )
+      discussion?.let {
+        DiscussionScreen(
+            account!!,
+            discussion!!,
+            firestoreVM,
+            onBack = { navigationActions.goBack() },
+            onOpenDiscussionInfo = {
+              navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
+            },
+            onCreateSessionClick = {
+              discussionId = it.uid
+              navigationActions.navigateTo(
+                  if (it.session != null) MeepleMeetScreen.Session else MeepleMeetScreen.AddSession)
+            },
+        )
+      } ?: LoadingScreen()
     }
 
     composable(MeepleMeetScreen.AddDiscussion.name) {
@@ -190,21 +188,25 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.AddSession.name) {
-      AddSessionScreen(
-          account = account!!,
-          discussion = discussion!!,
-          viewModel = firestoreVM,
-          sessionViewModel = FirestoreSessionViewModel(discussion!!),
-          onBack = { navigationActions.goBack() })
+      sessionRepo?.let {
+        AddSessionScreen(
+            account = account!!,
+            discussion = discussion!!,
+            viewModel = firestoreVM,
+            sessionViewModel = sessionRepo,
+            onBack = { navigationActions.goBack() })
+      } ?: LoadingScreen()
     }
 
     composable(MeepleMeetScreen.Session.name) {
-      SessionDetailsScreen(
-          account = account!!,
-          discussion = discussion!!,
-          viewModel = firestoreVM,
-          sessionViewModel = FirestoreSessionViewModel(discussion!!),
-          onBack = { navigationActions.goBack() })
+      sessionRepo?.let {
+        SessionDetailsScreen(
+            account = account!!,
+            discussion = discussion!!,
+            viewModel = firestoreVM,
+            sessionViewModel = sessionRepo,
+            onBack = { navigationActions.goBack() })
+      } ?: LoadingScreen()
     }
 
     composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
