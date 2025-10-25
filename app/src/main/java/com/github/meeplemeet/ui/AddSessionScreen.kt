@@ -167,7 +167,7 @@ fun AddSessionScreen(
                   singleLine = true,
                   modifier = Modifier.fillMaxWidth())
 
-              // Game search (below title) — VM-backed, with safe error handling
+              // Game search
               GameSearchBar(
                   sessionViewModel = sessionViewModel,
                   currentUser = account,
@@ -201,7 +201,7 @@ fun AddSessionScreen(
                             participants = form.participants.filterNot { it.uid == toRemove.uid })
                   })
 
-              // Organisation section (date/time + location search INSIDE)
+              // Organisation section
               OrganisationSection(
                   date = form.date,
                   time = form.time,
@@ -215,13 +215,21 @@ fun AddSessionScreen(
               Spacer(Modifier.height(4.dp))
 
               // Creation and Discard buttons
-              Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+              Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val haveDateTime = form.date != null && form.time != null
                 val withinBounds =
                     form.participants.size >= form.minPlayers &&
                         form.participants.size <= form.maxPlayers
 
                 val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
+
+                DiscardButton(
+                    modifier = Modifier.weight(0.8f),
+                    onDiscard = {
+                      form = SessionForm(participants = listOf(account))
+                      selectedLocation = null
+                      onBack()
+                    })
 
                 CreateSessionButton(
                     formToSubmit = form,
@@ -252,16 +260,8 @@ fun AddSessionScreen(
                       selectedLocation = null
                       onBack()
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(1.20f),
                 )
-
-                DiscardButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onDiscard = {
-                      form = SessionForm(participants = listOf(account))
-                      selectedLocation = null
-                      onBack()
-                    })
               }
             }
       }
