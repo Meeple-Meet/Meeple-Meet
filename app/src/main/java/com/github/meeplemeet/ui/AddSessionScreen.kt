@@ -535,6 +535,7 @@ fun ParticipantsSection(
                   range = minSliderNumber..maxSliderNumber,
                   values = minPlayers.toFloat()..maxPlayers.toFloat(),
                   steps = sliderSteps,
+                  editable = true,
                   onValuesChange = { min, max ->
                     val newMin =
                         min.roundToInt().coerceIn(minSliderNumber.toInt(), maxSliderNumber.toInt())
