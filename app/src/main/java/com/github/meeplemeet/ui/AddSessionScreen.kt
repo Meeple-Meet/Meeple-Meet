@@ -424,7 +424,8 @@ fun OrganisationSection(
         UnderlinedLabel("$title:")
         Spacer(Modifier.height(12.dp))
 
-        DatePickerDockedField(value = date, onValueChange = onDateChange, label = "Date")
+        DatePickerDockedField(
+            value = date, onValueChange = onDateChange, label = "Date", editable = true)
 
         Spacer(Modifier.height(10.dp))
 
@@ -535,6 +536,7 @@ fun ParticipantsSection(
                   range = minSliderNumber..maxSliderNumber,
                   values = minPlayers.toFloat()..maxPlayers.toFloat(),
                   steps = sliderSteps,
+                  editable = true,
                   onValuesChange = { min, max ->
                     val newMin =
                         min.roundToInt().coerceIn(minSliderNumber.toInt(), maxSliderNumber.toInt())

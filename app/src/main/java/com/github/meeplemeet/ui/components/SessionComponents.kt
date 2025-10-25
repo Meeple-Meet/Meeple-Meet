@@ -37,6 +37,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -339,29 +340,31 @@ fun <T> TwoPerRowGrid(
 }
 
 /**
- * A date picker field that shows a date picker in a popup when clicked.
+ * A date picker field that shows a date picker dialog when clicked.
  *
  * @param value the currently selected date
  * @param onValueChange the callback to be invoked when the date changes
  * @param label the label for the text field
+ * @param editable whether the field is editable
  * @param displayFormatter the formatter to display the date
  * @param zoneId the time zone to use for date conversion
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
     label: String = "Date",
-    editable: Boolean = true, // Marked as true to make Marco's tests pass
+    editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: ""
-  // The text field
+
   IconTextField(
-      value = text.format(displayFormatter),
-      onValueChange = {}, // we control it externally
+      value = text,
+      onValueChange = {},
       placeholder = label,
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
       trailingIcon = {
@@ -375,61 +378,55 @@ fun DatePickerDockedField(
       },
       modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
-  // The popup
   if (showDialogDate) {
-    DatePickerDialog(
-        onDismiss = { showDialogDate = false },
-        onDateSelected = { selectedDate -> onValueChange(selectedDate) },
-        displayFormatter = displayFormatter,
+    AppDatePickerDialog(
         zoneId = zoneId,
-    )
+        onDismiss = { showDialogDate = false },
+        onDateSelected = { selectedDate -> onValueChange(selectedDate) })
   }
 }
 
+/**
+ * A date picker dialog that allows the user to select a date.
+ *
+ * @param onDismiss the callback to be invoked when the dialog is dismissed
+ * @param onDateSelected the callback to be invoked when a date is selected
+ * @param zoneId the time zone to use for date conversion
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DatePickerDialog(
+fun AppDatePickerDialog(
     onDismiss: () -> Unit,
     onDateSelected: (LocalDate) -> Unit,
-    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
-  val datePickerState = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
+  val state = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
 
-  AlertDialog(
-      containerColor = AppColors.primary,
+  DatePickerDialog(
       onDismissRequest = onDismiss,
       confirmButton = {
         TextButton(
             onClick = {
-              val millis = datePickerState.selectedDateMillis
-              if (millis != null) {
-                val date =
-                    Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate() // e.g. "2025-10-13"
-                onDateSelected(date)
+              state.selectedDateMillis?.let { ms ->
+                onDateSelected(Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate())
               }
               onDismiss()
-            },
-            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON)) {
+            }) {
               Text("OK")
             }
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-      text = {
-        // Wrap DatePicker in a Box with fillMaxWidth and padding to avoid cropping
-        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-          DatePicker(
-              state = datePickerState,
-              modifier = Modifier.fillMaxWidth(),
-              colors =
-                  DatePickerDefaults.colors(
-                      containerColor = AppColors.primary,
-                      titleContentColor = AppColors.textIconsFade,
-                      headlineContentColor = AppColors.textIcons,
-                      selectedDayContentColor = AppColors.primary,
-                      selectedDayContainerColor = AppColors.neutral))
-        }
-      })
+  ) {
+    DatePicker(
+        state = state,
+        colors =
+            DatePickerDefaults.colors(
+                containerColor = AppColors.primary,
+                titleContentColor = AppColors.textIconsFade,
+                headlineContentColor = AppColors.textIcons,
+                selectedDayContentColor = AppColors.primary,
+                selectedDayContainerColor = AppColors.neutral))
+  }
 }
 
 /**
