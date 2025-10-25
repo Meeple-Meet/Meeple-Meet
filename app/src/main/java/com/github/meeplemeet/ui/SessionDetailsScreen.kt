@@ -200,13 +200,14 @@ fun SessionDetailsScreen(
           ProposedGameSection(
               sessionViewModel = sessionViewModel,
               currentUser = account,
-              discussion = discussion, // safe – non-null here
+              discussion = discussion,
               editable = isCurrUserAdmin)
 
           // Participants section
           ParticipantsSection(
               form = form,
               editable = isCurrUserAdmin,
+              account = account,
               onFormChange = { min, max ->
                 form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
               },
@@ -265,12 +266,14 @@ fun SessionDetailsScreen(
  * @param form Current session form data
  * @param onFormChange Callback triggered when player limits are adjusted
  * @param editable Whether the section is editable (admin-only)
+ * @param account The current user that's viewing the session details
  * @param onRemoveParticipant Callback to remove a participant
  */
 @Composable
 fun ParticipantsSection(
     form: SessionForm,
     onFormChange: (Float, Float) -> Unit,
+    account: Account,
     editable: Boolean = false,
     onRemoveParticipant: (Account) -> Unit
 ) {
@@ -335,6 +338,7 @@ fun ParticipantsSection(
         UserChipsGrid(
             participants = form.participants,
             onRemove = { p -> onRemoveParticipant(p) },
+            account = account,
             editable = editable)
       }
 }
@@ -445,6 +449,7 @@ fun OrganizationSection(
               results = mockResults,
               onPick = { picked -> onFormChange(form.copy(locationText = picked.name)) },
               isLoading = false, // can hook into your VM later
+              modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD),
               placeholder = "Search locations…")
         } else {
           // Members: plain read-only text field
@@ -497,14 +502,15 @@ fun Title(
 /**
  * Composable used for the individual UserChip
  *
- * @param name User's name
+ * @param user User's account (needed for his name and handle)
  * @param onRemove Callback fn used to remove the user
  * @param modifier Modifiers to apply to this component
  * @param showRemoveBTN Should only be visible to admins/owners
  */
 @Composable
 fun UserChip(
-    name: String,
+    user: Account,
+    account: Account,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
     showRemoveBTN: Boolean = false
@@ -512,21 +518,21 @@ fun UserChip(
   InputChip(
       selected = false,
       onClick = {},
-      label = { Text(text = name, style = MaterialTheme.typography.bodySmall) },
+      label = { Text(text = user.name, style = MaterialTheme.typography.bodySmall) },
       avatar = {
         Box(
             modifier = Modifier.size(26.dp).clip(CircleShape).background(Color.LightGray),
             contentAlignment = Alignment.Center) {
               Text(
-                  text = name.firstOrNull()?.toString() ?: "A",
+                  text = user.name.firstOrNull()?.toString() ?: "A",
                   color = AppColors.focus,
                   fontWeight = FontWeight.Bold)
             }
       },
       trailingIcon = {
-        if (showRemoveBTN) {
+        if (showRemoveBTN && account.handle != user.handle) {
           IconButton(
-              onClick = onRemove, modifier = Modifier.size(18.dp).testTag("remove:${name}")) {
+              onClick = onRemove, modifier = Modifier.size(18.dp).testTag("remove:${user.name}")) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove participant",
@@ -549,6 +555,7 @@ fun UserChip(
  * @param participants List of participants to display
  * @param onRemove Callback fn used when an Admin/Owner removes a participant
  * @param modifier Modifiers used for the component
+ * @param account The current user that's viewing the session details
  * @param editable Whether the current user can edit (remove) participants
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -557,6 +564,7 @@ fun UserChipsGrid(
     participants: List<Account>,
     onRemove: (Account) -> Unit,
     modifier: Modifier = Modifier,
+    account: Account,
     editable: Boolean = false
 ) {
   FlowRow(
@@ -565,9 +573,10 @@ fun UserChipsGrid(
       modifier = modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS).fillMaxWidth()) {
         participants.forEach { p ->
           UserChip(
-              name = p.name,
+              user = p,
               modifier = Modifier.testTag("chip${p.uid}"),
               onRemove = { if (editable) onRemove(p) },
+              account = account,
               showRemoveBTN = editable)
         }
 
