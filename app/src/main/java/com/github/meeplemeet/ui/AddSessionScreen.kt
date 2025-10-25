@@ -424,7 +424,8 @@ fun OrganisationSection(
         UnderlinedLabel("$title:")
         Spacer(Modifier.height(12.dp))
 
-        DatePickerDockedField(value = date, onValueChange = onDateChange, label = "Date")
+        DatePickerDockedField(
+            value = date, onValueChange = onDateChange, label = "Date", editable = true)
 
         Spacer(Modifier.height(10.dp))
 

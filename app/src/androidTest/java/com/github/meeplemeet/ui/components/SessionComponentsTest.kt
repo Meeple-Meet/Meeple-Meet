@@ -546,7 +546,7 @@ class SessionComponentsTest {
   fun datePickerDialog_nullDateDismissed() {
     var dismissed = false
     composeRule.setContent {
-      DatePickerDialog(onDismiss = { dismissed = true }, onDateSelected = {})
+      AppDatePickerDialog(onDismiss = { dismissed = true }, onDateSelected = {})
     }
     composeRule.onNodeWithText("Cancel").performClick()
     composeRule.runOnIdle { assert(dismissed) }
@@ -556,7 +556,8 @@ class SessionComponentsTest {
   fun dateField_externalCallback() {
     var date = ""
     composeRule.setContent {
-      DatePickerDockedField(value = LocalDate.now(), onValueChange = { date = it.toString() })
+      DatePickerDockedField(
+          value = LocalDate.now(), onValueChange = { date = it.toString() }, editable = true)
     }
     composeRule.onNodeWithText("Pick").performClick()
     composeRule.waitForIdle()
@@ -599,7 +600,8 @@ class SessionComponentsTest {
           onValueChange = { state = it },
           label = "Game date",
           displayFormatter = fmt,
-          zoneId = zone)
+          zoneId = zone,
+          editable = true)
     }
     val dateNode = composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
     dateNode.assertIsDisplayed()
@@ -634,7 +636,8 @@ class SessionComponentsTest {
           onValueChange = { holder.value = it },
           label = "Game date",
           displayFormatter = fmt,
-          zoneId = zone)
+          zoneId = zone,
+          editable = true)
     }
 
     composeRule.runOnUiThread { holder.value = external }
@@ -654,7 +657,8 @@ class SessionComponentsTest {
           onValueChange = { state = it },
           label = "Game date",
           displayFormatter = fmt,
-          zoneId = zone)
+          zoneId = zone,
+          editable = true)
     }
 
     // capture the initial text
@@ -685,7 +689,8 @@ class SessionComponentsTest {
           onValueChange = { holder.value = it },
           label = "Game date",
           displayFormatter = fmt,
-          zoneId = zone)
+          zoneId = zone,
+          editable = true)
     }
 
     val first = LocalDate.of(2024, 12, 24)
