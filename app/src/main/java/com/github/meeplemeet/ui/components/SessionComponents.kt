@@ -115,6 +115,13 @@ enum class ParticipantAction {
  * Components
  * ======================================================================= */
 
+/**
+ * A card-like section container with padding.
+ *
+ * @param modifier Modifier to be applied to the Column.
+ * @param contentPadding Padding values to be applied inside the Column.
+ * @param content Composable content to be placed inside the Column.
+ */
 @Composable
 fun SectionCard(
     modifier: Modifier = Modifier,
@@ -124,6 +131,13 @@ fun SectionCard(
   Column(modifier = modifier.padding(contentPadding), content = content)
 }
 
+/**
+ * A text label with an underline decoration.
+ *
+ * @param text The text to be displayed in the label.
+ * @param textStyle The style to be applied to the text.
+ * @param textColor The color of the text.
+ */
 @Composable
 fun UnderlinedLabel(
     text: String,
@@ -139,6 +153,19 @@ fun UnderlinedLabel(
   )
 }
 
+/**
+ * A labeled text field with a label above it.
+ *
+ * @param label The label text to be displayed above the text field.
+ * @param value The current value of the text field.
+ * @param onValueChange Callback function to be invoked when the text field value changes.
+ * @param placeholder Placeholder text to be displayed when the text field is empty.
+ * @param singleLine Whether the text field should be single line or multi-line.
+ * @param labelTextStyle The style to be applied to the label text.
+ * @param labelTextColor The color of the label text.
+ * @param modifier Modifier to be applied to the OutlinedTextField.
+ * @param outlinedTextStyle The style to be applied to the text inside the OutlinedTextField.
+ */
 @Composable
 fun LabeledTextField(
     label: String,
@@ -169,6 +196,18 @@ fun LabeledTextField(
   }
 }
 
+/**
+ * A text field with optional leading and trailing icons.
+ *
+ * @param value The current value of the text field.
+ * @param onValueChange Callback function to be invoked when the text field value changes.
+ * @param placeholder Placeholder text to be displayed when the text field is empty.
+ * @param editable Whether the text field is editable or read-only.
+ * @param leadingIcon Optional composable for the leading icon.
+ * @param trailingIcon Optional composable for the trailing icon.
+ * @param textStyle The style to be applied to the text inside the text field.
+ * @param modifier Modifier to be applied to the OutlinedTextField.
+ */
 @Composable
 fun IconTextField(
     value: String,
@@ -191,6 +230,14 @@ fun IconTextField(
       textStyle = textStyle)
 }
 
+/**
+ * A bubble displaying a count number.
+ *
+ * @param count The count number to be displayed.
+ * @param modifier Modifier to be applied to the Box containing the count.
+ * @param colorText The color of the count text.
+ * @param styleText The style to be applied to the count text.
+ */
 @Composable
 fun CountBubble(
     count: Int,
@@ -207,6 +254,18 @@ fun CountBubble(
   }
 }
 
+/**
+ * A discrete pill-shaped range slider.
+ *
+ * @param range The range of values for the slider.
+ * @param values The current selected range values.
+ * @param steps The number of discrete steps between the min and max values.
+ * @param editable Whether the slider is editable or read-only.
+ * @param onValuesChange Callback function to be invoked when the slider values change.
+ * @param surroundModifier Modifier to be applied to the surrounding Column.
+ * @param sliderModifier Modifier to be applied to the RangeSlider.
+ * @param sliderColors Colors to be applied to the RangeSlider.
+ */
 @Composable
 fun DiscretePillSlider(
     range: ClosedFloatingPointRange<Float>,
@@ -236,6 +295,16 @@ fun DiscretePillSlider(
   }
 }
 
+/**
+ * A chip representing a participant with an action button.
+ *
+ * @param account The account of the participant.
+ * @param action The action to be performed (add or remove).
+ * @param onClick Callback function to be invoked when the action button is clicked.
+ * @param modifier Modifier to be applied to the Box containing the chip.
+ * @param textModifier Modifier to be applied to the Text displaying the participant's name.
+ * @param textColor The color of the participant's name text.
+ */
 @Composable
 fun ParticipantChip(
     account: Account,
@@ -285,6 +354,15 @@ fun ParticipantChip(
   }
 }
 
+/**
+ * A grid layout that arranges items in two columns per row.
+ *
+ * @param items The list of items to be displayed in the grid.
+ * @param key A function to generate a unique key for each item.
+ * @param modifier Modifier to be applied to the Column containing the grid.
+ * @param rowsModifier Modifier to be applied to each Row in the grid.
+ * @param content Composable content to be displayed for each item, with a modifier for layout.
+ */
 @Composable
 fun <T> TwoPerRowGrid(
     items: List<T>,
@@ -304,6 +382,16 @@ fun <T> TwoPerRowGrid(
   }
 }
 
+/**
+ * A date picker field that shows a date picker dialog when the "Pick" button is clicked.
+ *
+ * @param value The currently selected date.
+ * @param onValueChange Callback function to be invoked when a new date is selected.
+ * @param label The label text for the date field.
+ * @param editable Whether the date field is editable or read-only.
+ * @param displayFormatter The formatter to display the selected date.
+ * @param zoneId The time zone to be used for date selection.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerDockedField(
@@ -341,6 +429,13 @@ fun DatePickerDockedField(
   }
 }
 
+/**
+ * A date picker dialog that allows the user to select a date.
+ *
+ * @param onDismiss Callback function to be invoked when the dialog is dismissed.
+ * @param onDateSelected Callback function to be invoked when a date is selected.
+ * @param zoneId The time zone to be used for date selection.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDatePickerDialog(
@@ -379,6 +474,15 @@ fun AppDatePickerDialog(
   }
 }
 
+/**
+ * A time picker field that shows a time picker dialog when the "Pick" button is clicked.
+ *
+ * @param value The currently selected time.
+ * @param onValueChange Callback function to be invoked when a new time is selected.
+ * @param label The label text for the time field.
+ * @param is24Hour Whether to use 24-hour format or 12-hour format.
+ * @param displayFormatter The formatter to display the selected time.
+ */
 @Composable
 fun TimePickerField(
     value: LocalTime?,
@@ -428,6 +532,23 @@ fun TimePickerField(
   }
 }
 
+/**
+ * A search dropdown field that shows suggestions based on the query input.
+ *
+ * @param label The label text for the search field.
+ * @param query The current query string.
+ * @param onQueryChange Callback function to be invoked when the query changes.
+ * @param suggestions The list of suggestions to be displayed.
+ * @param onSuggestionClick Callback function to be invoked when a suggestion is clicked.
+ * @param getPrimaryText Function to extract the primary text from a suggestion item.
+ * @param modifier Modifier to be applied to the Box containing the search field.
+ * @param modifierTxtField Modifier to be applied to the OutlinedTextField.
+ * @param placeholder Placeholder text to be displayed in the text field.
+ * @param isLoading Whether the search is currently loading results.
+ * @param showWhenEmptyQuery Whether to show suggestions when the query is empty.
+ * @param itemContent Optional composable content for each suggestion item.
+ * @param emptyText Text to display when there are no suggestions.
+ */
 @Composable
 fun <T> SearchDropdownField(
     label: String,
@@ -468,9 +589,7 @@ fun <T> SearchDropdownField(
                       Icon(
                           Icons.Default.Close,
                           contentDescription = "Clear",
-                          modifier =
-                              Modifier.testTag(
-                                  ComponentsTestTags.SEARCH_EMPTY))
+                          modifier = Modifier.testTag(ComponentsTestTags.SEARCH_EMPTY))
                     }
           }
         },
@@ -559,6 +678,17 @@ fun <T> SearchDropdownField(
   }
 }
 
+/**
+ * A search field specifically for searching games.
+ *
+ * @param query The current query string.
+ * @param onQueryChange Callback function to be invoked when the query changes.
+ * @param results The list of game results to be displayed.
+ * @param onPick Callback function to be invoked when a game is picked.
+ * @param modifier Modifier to be applied to the Box containing the search field.
+ * @param isLoading Whether the search is currently loading results.
+ * @param placeholder Placeholder text to be displayed in the text field.
+ */
 @Composable
 fun GameSearchField(
     query: String,
@@ -582,6 +712,17 @@ fun GameSearchField(
       modifier = modifier)
 }
 
+/**
+ * A search field specifically for searching locations.
+ *
+ * @param query The current query string.
+ * @param onQueryChange Callback function to be invoked when the query changes.
+ * @param results The list of location results to be displayed.
+ * @param onPick Callback function to be invoked when a location is picked.
+ * @param modifier Modifier to be applied to the Box containing the search field.
+ * @param isLoading Whether the search is currently loading results.
+ * @param placeholder Placeholder text to be displayed in the text field.
+ */
 @Composable
 fun LocationSearchField(
     query: String,
