@@ -59,7 +59,6 @@ class SessionComponentsTest {
   private fun set(content: @Composable () -> Unit) {
     composeRule.setContent { AppTheme { content() } }
   }
-  // Custom matcher to check that the text is different from a given value
   private fun hasTextDifferentFrom(oldText: String) =
       SemanticsMatcher("Text != '$oldText'") { node ->
         node.config[SemanticsProperties.EditableText].text != oldText
@@ -110,6 +109,7 @@ class SessionComponentsTest {
             UnderlinedLabel("Padded setup")
           }
     }
+    composeRule.onNodeWithTag(ComponentsTestTags.UNDERLINED_LABEL).assertIsDisplayed()
     composeRule.onNodeWithText("Padded setup").assertIsDisplayed()
   }
 
@@ -118,12 +118,14 @@ class SessionComponentsTest {
   @Test
   fun underlinedLabel_showsGivenText() {
     set { UnderlinedLabel(text = "Underlined board game") }
+    composeRule.onNodeWithTag(ComponentsTestTags.UNDERLINED_LABEL).assertIsDisplayed()
     composeRule.onNodeWithText("Underlined board game").assertIsDisplayed()
   }
 
   @Test
   fun underlinedLabel_customStyleParams_stillRenders() {
     set { UnderlinedLabel(text = "Styled expansion") }
+    composeRule.onNodeWithTag(ComponentsTestTags.UNDERLINED_LABEL).assertIsDisplayed()
     composeRule.onNodeWithText("Styled expansion").assertIsDisplayed()
   }
 
@@ -142,6 +144,7 @@ class SessionComponentsTest {
           modifier = Modifier.testTag("labeledTF"))
     }
 
+    composeRule.onNodeWithTag(ComponentsTestTags.LABELED_LABEL).assertIsDisplayed()
     composeRule.onNodeWithText("Game title").assertIsDisplayed()
     composeRule.onNodeWithText("Type game…", useUnmergedTree = true).assertIsDisplayed()
 
@@ -271,19 +274,19 @@ class SessionComponentsTest {
   @Test
   fun countBubble_displaysProvidedNumber() {
     set { CountBubble(count = 42) }
-    composeRule.onNodeWithText("42").assertIsDisplayed()
+    composeRule.onNodeWithTag(ComponentsTestTags.COUNT_BUBBLE_TEXT).assertTextEquals("42")
   }
 
   @Test
   fun countBubble_handlesNegativeNumbers() {
     set { CountBubble(count = -1) }
-    composeRule.onNodeWithText("-1").assertIsDisplayed()
+    composeRule.onNodeWithTag(ComponentsTestTags.COUNT_BUBBLE_TEXT).assertTextEquals("-1")
   }
 
   @Test
   fun countBubble_zeroValue() {
     set { CountBubble(count = 0) }
-    composeRule.onNodeWithText("0").assertIsDisplayed()
+    composeRule.onNodeWithTag(ComponentsTestTags.COUNT_BUBBLE_TEXT).assertTextEquals("0")
   }
 
   /* ---------------- DiscretePillSlider ---------------- */
@@ -301,12 +304,14 @@ class SessionComponentsTest {
           surroundModifier = Modifier.testTag("sliderHost"),
           sliderModifier = Modifier.testTag("slider"))
     }
-    composeRule.onNodeWithTag("slider").assertExists().assertIsDisplayed()
-    composeRule.onNodeWithTag("slider").performTouchInput {
-      down(centerLeft)
-      moveTo(centerRight)
-      up()
-    }
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.PILL_RANGE_SLIDER)
+        .assertExists()
+        .performTouchInput {
+          down(centerLeft)
+          moveTo(centerRight)
+          up()
+        }
     composeRule.waitUntil(timeoutMillis = 5_000) { changed != null }
   }
 
@@ -324,7 +329,7 @@ class SessionComponentsTest {
           sliderModifier = Modifier.testTag("slider2"),
           sliderColors = SliderDefaults.colors())
     }
-    composeRule.onNodeWithTag("slider2").performTouchInput {
+    composeRule.onNodeWithTag(ComponentsTestTags.PILL_RANGE_SLIDER).performTouchInput {
       down(center)
       moveBy(Offset(50f, 0f))
       up()
@@ -345,7 +350,7 @@ class SessionComponentsTest {
           surroundModifier = Modifier.testTag("sliderHost3"),
           sliderModifier = Modifier.testTag("slider3"))
     }
-    composeRule.onNodeWithTag("slider3").performTouchInput {
+    composeRule.onNodeWithTag(ComponentsTestTags.PILL_RANGE_SLIDER).performTouchInput {
       down(centerLeft)
       moveTo(centerRight)
       up()
@@ -361,62 +366,72 @@ class SessionComponentsTest {
   @Test
   fun participantChip_add_click_invokesCallback() {
     var clicked: Account? = null
+    val name = "Reiner Knizia"
     set {
       ParticipantChip(
-          account = account("Reiner Knizia"),
+          account = account(name),
           action = ParticipantAction.Add,
           onClick = { clicked = it },
           modifier = Modifier.testTag("chip-add"))
     }
-    composeRule.onNodeWithText("Reiner Knizia").assertIsDisplayed()
+    composeRule.onNodeWithTag("${ComponentsTestTags.PARTICIPANT_NAME}:$name").assertIsDisplayed()
     composeRule
-        .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-add")))
-        .onFirst()
+        .onNodeWithTag("${ComponentsTestTags.PARTICIPANT_ACTION}:Add:$name", useUnmergedTree = true)
+        .assertExists()
         .performClick()
-    composeRule.runOnIdle { assert(clicked?.name == "Reiner Knizia") }
+    composeRule.runOnIdle { assert(clicked?.name == name) }
   }
 
   @Test
   fun participantChip_remove_click_invokesCallback() {
     var clicked: Account? = null
+    val name = "Uwe Rosenberg"
     set {
       ParticipantChip(
-          account = account("Uwe Rosenberg"),
+          account = account(name),
           action = ParticipantAction.Remove,
           onClick = { clicked = it },
           modifier = Modifier.testTag("chip-remove"))
     }
-    composeRule.onNodeWithText("Uwe Rosenberg").assertIsDisplayed()
+    composeRule.onNodeWithTag("${ComponentsTestTags.PARTICIPANT_NAME}:$name").assertIsDisplayed()
     composeRule
-        .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-remove")))
-        .onFirst()
+        .onNodeWithTag(
+            "${ComponentsTestTags.PARTICIPANT_ACTION}:Remove:$name", useUnmergedTree = true)
+        .assertExists()
         .performClick()
-    composeRule.runOnIdle { assert(clicked?.name == "Uwe Rosenberg") }
+    composeRule.runOnIdle { assert(clicked?.name == name) }
   }
 
   @Test
   fun participantChip_longName_truncates_noCrash() {
+    val name = "A very very very very long board-game club name"
     set {
       ParticipantChip(
-          account = account("A very very very very long board-game club name"),
+          account = account(name),
           action = ParticipantAction.Add,
           onClick = {},
           modifier = Modifier.testTag("chip-long"))
     }
     composeRule.onNodeWithTag("chip-long").assertExists().assertIsDisplayed()
+    composeRule.onNodeWithTag("${ComponentsTestTags.PARTICIPANT_NAME}:$name").assertExists()
   }
 
   @Test
   fun participantChip_hasExactlyOneClickableChild() {
+    val name = "Sid Sackson"
     set {
       ParticipantChip(
-          account = account("Sid Sackson"),
+          account = account(name),
           action = ParticipantAction.Add,
           onClick = {},
           modifier = Modifier.testTag("chip-unique"))
     }
     composeRule
         .onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("chip-unique")))
+        .assertCountEquals(1)
+    composeRule
+        .onAllNodesWithTag(
+            "${ComponentsTestTags.PARTICIPANT_ACTION}:Add:$name", useUnmergedTree = true)
         .assertCountEquals(1)
   }
 
@@ -540,7 +555,7 @@ class SessionComponentsTest {
     }
   }
 
-  /* ---------------- TimePickerField ---------------- */
+  /* ---------------- TimePickerField / DatePickerDockedField ---------------- */
 
   @Test
   fun datePickerDialog_nullDateDismissed() {
@@ -548,6 +563,8 @@ class SessionComponentsTest {
     composeRule.setContent {
       AppDatePickerDialog(onDismiss = { dismissed = true }, onDateSelected = {})
     }
+    // dialog shows our DatePicker
+    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICKER, useUnmergedTree = true).assertExists()
     composeRule.onNodeWithText("Cancel").performClick()
     composeRule.runOnIdle { assert(dismissed) }
   }
@@ -559,9 +576,14 @@ class SessionComponentsTest {
       DatePickerDockedField(
           value = LocalDate.now(), onValueChange = { date = it.toString() }, editable = true)
     }
-    composeRule.onNodeWithText("Pick").performClick()
+    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
     composeRule.waitForIdle()
-    composeRule.onNode(isDialog()).performTouchInput { click(center) }
+
+    // Select a day (tap inside the calendar) BEFORE OK
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.DATE_PICKER, useUnmergedTree = true)
+        .performTouchInput { click(center) }
+
     composeRule.onNodeWithText("OK").performClick()
     composeRule.waitForIdle()
 
@@ -582,6 +604,9 @@ class SessionComponentsTest {
   fun timePickerField_clickingFieldItself_doesNotOpenDialog() {
     set { TimePickerField(value = null, onValueChange = {}, label = "Readonly game time") }
     composeRule.onNodeWithText("Readonly game time").performClick()
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.TIME_PICKER, useUnmergedTree = true)
+        .assertCountEquals(0)
     composeRule.onAllNodesWithText("OK").assertCountEquals(0)
   }
 
@@ -607,17 +632,17 @@ class SessionComponentsTest {
     dateNode.assertIsDisplayed()
 
     val initialValue = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
-    // Open the picker
+
+    // Open, select a day, then OK
     composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
     composeRule.waitForIdle()
 
-    // Simulate selecting a new date (this may need to be adapted to your picker UI)
-    // For example, click on a date cell in the dialog:
-    composeRule.onNode(isDialog()).performTouchInput { click(center) }
-    composeRule.waitForIdle()
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.DATE_PICKER, useUnmergedTree = true)
+        .performTouchInput { click(center) }
+
     composeRule.onNodeWithText("OK").performClick()
 
-    // Assert the new date is displayed
     composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertIsDisplayed()
     composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasTextDifferentFrom(initialValue))
   }
@@ -661,18 +686,15 @@ class SessionComponentsTest {
           editable = true)
     }
 
-    // capture the initial text
     val initialText = initial.format(fmt)
     composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertTextEquals(initialText)
 
-    // open → close twice
     repeat(2) {
       composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
       composeRule.waitForIdle()
       composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
     }
 
-    // text must still be the same
     composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertTextEquals(initialText)
   }
 
@@ -724,7 +746,12 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("ca")
 
-    waitForText("Searching…")
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_LOADING, useUnmergedTree = true)
+        .assertExists()
     composeRule.onNodeWithText("Searching…").assertExists()
   }
 
@@ -747,7 +774,16 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("xyz")
 
-    waitForText("No results")
+    // Popup exists
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertExists()
+
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_EMPTY, useUnmergedTree = true)
+        .onLast()
+        .assertExists()
+
     composeRule.onNodeWithText("No results").assertExists()
   }
 
@@ -772,13 +808,16 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("ca")
 
-    waitForText("Catan")
-    composeRule.onNodeWithText("Catan").assertExists().performClick()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
+        .assertExists()
+        .performClick()
 
     composeRule.runOnIdle { assert(picked == "Catan") }
 
-    waitForGone("Catan")
-    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertCountEquals(0)
   }
 
   @Test
@@ -807,13 +846,11 @@ class SessionComponentsTest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-    composeRule
-        .onNodeWithContentDescription("Clear", useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeRule.onNodeWithContentDescription("Clear", useUnmergedTree = true).performClick()
 
-    waitForGone("Catan")
-    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertCountEquals(0)
   }
 
   @Test
@@ -858,13 +895,17 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("ca")
 
-    waitForText("Catan")
-    composeRule.onNodeWithText("Catan").assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag(
+            "${ComponentsTestTags.SEARCH_ITEM_PREFIX}carcassonne", useUnmergedTree = true)
+        .assertExists()
 
-    waitForText("Carcassonne")
-    composeRule.onNodeWithText("Carcassonne").assertExists()
-
-    composeRule.onNodeWithText("Catan").performClick()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
+        .performClick()
     composeRule.runOnIdle { assert(picked?.uid == "g1" && picked?.name == "Catan") }
   }
 
@@ -891,8 +932,10 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("epfl")
 
-    waitForText("EPFL Esplanade")
-    composeRule.onNodeWithText("EPFL Esplanade").assertExists()
+    composeRule
+        .onNodeWithTag(
+            "${ComponentsTestTags.SEARCH_ITEM_PREFIX}epfl_esplanade", useUnmergedTree = true)
+        .assertExists()
 
     val coordsDot = "46.51910, 6.56680"
     val coordsComma = "46,51910, 6,56680"
@@ -908,7 +951,10 @@ class SessionComponentsTest {
       composeRule.onNodeWithText(coordsComma).assertExists()
     }
 
-    composeRule.onNodeWithText("EPFL Esplanade").performClick()
+    composeRule
+        .onNodeWithTag(
+            "${ComponentsTestTags.SEARCH_ITEM_PREFIX}epfl_esplanade", useUnmergedTree = true)
+        .performClick()
     composeRule.runOnIdle {
       assert(picked?.name == "EPFL Esplanade")
       assert(picked?.latitude == 46.5191 && picked?.longitude == 6.5668)
@@ -941,8 +987,9 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("ever")
 
-    waitForText("Everdell")
-    composeRule.onNodeWithText("Everdell").assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}everdell", useUnmergedTree = true)
+        .assertExists()
     composeRule.onAllNodesWithText("Woodland engine building").assertCountEquals(0)
   }
 
@@ -961,7 +1008,11 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("somewhere")
 
-    waitForText("No results")
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_EMPTY, useUnmergedTree = true)
+        .onLast()
+        .assertExists()
+
     composeRule.onNodeWithText("No results").assertExists()
   }
 
@@ -989,13 +1040,16 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("c")
 
-    waitForText("Local Game Store")
-    composeRule.onNodeWithText("Local Game Store").assertExists()
+    composeRule
+        .onNodeWithTag(
+            "${ComponentsTestTags.SEARCH_ITEM_PREFIX}local_game_store", useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag(
+            "${ComponentsTestTags.SEARCH_ITEM_PREFIX}community_center", useUnmergedTree = true)
+        .assertExists()
+        .performClick()
 
-    waitForText("Community Center")
-    composeRule.onNodeWithText("Community Center").assertExists()
-
-    composeRule.onNodeWithText("Community Center").performClick()
     composeRule.runOnIdle {
       assert(picked?.name == "Community Center")
       assert(picked?.latitude == 46.12345 && picked?.longitude == 6.98765)
@@ -1057,7 +1111,12 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("du")
 
-    waitForText("Searching…")
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_LOADING, useUnmergedTree = true)
+        .assertExists()
     composeRule.onNodeWithText("Searching…").assertExists()
   }
 
@@ -1082,10 +1141,18 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextReplacement("")
 
-    waitForText("Azul")
-    composeRule.onNodeWithText("Azul").assertExists()
-    composeRule.onNodeWithText("Brass").assertExists()
-    composeRule.onNodeWithText("Catan").assertExists()
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}azul", useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}brass", useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
+        .assertExists()
   }
 
   @Test
@@ -1105,9 +1172,15 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("abc")
 
-    waitForText("Searching…")
-    composeRule.onNodeWithText("Searching…").assertExists()
-    composeRule.onAllNodesWithText("No results").assertCountEquals(0)
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_LOADING, useUnmergedTree = true)
+        .assertExists()
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_EMPTY, useUnmergedTree = true)
+        .assertCountEquals(0)
   }
 
   @Test
@@ -1164,12 +1237,14 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("a")
 
-    waitForText("Azul")
-    composeRule.onNodeWithText("Azul").assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}azul", useUnmergedTree = true)
+        .assertExists()
 
     tf.performTextReplacement("")
-    waitForGone("Azul")
-    composeRule.onAllNodesWithText("Azul").assertCountEquals(0)
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertCountEquals(0)
   }
 
   @Test
@@ -1193,12 +1268,14 @@ class SessionComponentsTest {
     tf.performClick()
     tf.performTextInput("ca")
 
-    waitForText("Catan")
-    composeRule.onNodeWithText("Catan").assertExists()
+    composeRule
+        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
+        .assertExists()
 
     tf.performTextReplacement("")
-    waitForGone("Catan")
-    composeRule.onAllNodesWithText("Catan").assertCountEquals(0)
+    composeRule
+        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertCountEquals(0)
   }
 
   @Test
