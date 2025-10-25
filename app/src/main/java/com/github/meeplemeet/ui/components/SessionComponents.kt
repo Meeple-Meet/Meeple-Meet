@@ -406,6 +406,7 @@ fun AppDatePickerDialog(
       onDismissRequest = onDismiss,
       confirmButton = {
         TextButton(
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON),
             onClick = {
               state.selectedDateMillis?.let { ms ->
                 onDateSelected(Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate())
