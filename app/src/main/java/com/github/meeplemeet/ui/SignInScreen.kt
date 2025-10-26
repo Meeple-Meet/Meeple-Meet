@@ -1,5 +1,5 @@
 package com.github.meeplemeet.ui
-
+//Github copilot was used for this file
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -247,9 +247,9 @@ fun SignInScreen(
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isFormValid && !uiState.isLoading)
-                    AppColors.affirmative  // Green when valid
+                    AppColors.affirmative  // Valid input
                 else
-                    AppColors.secondary,  // Gray surface when invalid
+                    AppColors.secondary,  // Invalid input
                 contentColor = if (isFormValid && !uiState.isLoading)
                     AppColors.textIcons
                 else

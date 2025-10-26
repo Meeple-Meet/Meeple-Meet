@@ -1,5 +1,5 @@
 package com.github.meeplemeet.ui
-
+//Github Copilot was used for this file
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -342,9 +342,9 @@ fun SignUpScreen(
                   },
                   colors = ButtonDefaults.buttonColors(
                       containerColor = if (isFormValid && !uiState.isLoading)
-                          AppColors.affirmative  // Green when validf
+                          AppColors.affirmative  // Valid input
                       else
-                          AppColors.secondary,  // Gray surface when invalid
+                          AppColors.secondary,  // Invalid input
                       contentColor = if (isFormValid && !uiState.isLoading)
                           AppColors.textIcons
                       else
