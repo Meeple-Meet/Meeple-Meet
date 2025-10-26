@@ -2,10 +2,12 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Message
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import io.mockk.coEvery
@@ -22,6 +24,9 @@ class DiscussionSettingScreenTest {
   private lateinit var viewModel: FirestoreViewModel
   private lateinit var repository: FirestoreRepository
 
+  private lateinit var handlesRepository: FirestoreHandlesRepository
+  private lateinit var handlesViewModel: FirestoreHandlesViewModel
+
   private val currentAccount = Account(uid = "user1", handle = "user1", name = "Alice", email = "*")
 
   private val safeDiscussion =
@@ -37,14 +42,15 @@ class DiscussionSettingScreenTest {
   @Before
   fun setup() {
     repository = mockk(relaxed = true)
+    handlesRepository = mockk(relaxed = true)
     coEvery { repository.getDiscussion("disc1") } returns safeDiscussion
     coEvery { repository.getAccount(any()) } answers
         {
           val uid = firstArg<String>()
           Account(uid = uid, handle = uid, name = "NameFor$uid", email = "***")
         }
-
     // Initialize real ViewModel with repository
+    handlesViewModel = FirestoreHandlesViewModel(handlesRepository)
     viewModel = FirestoreViewModel(repository)
 
     // Inject MutableStateFlow<Discussion> into discussionFlows
@@ -65,7 +71,11 @@ class DiscussionSettingScreenTest {
   @Test
   fun screen_displaysDiscussionName_andButtons() {
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -88,7 +98,11 @@ class DiscussionSettingScreenTest {
   @Test
   fun clickingDeleteButton_showsDeleteDialog() {
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -102,7 +116,11 @@ class DiscussionSettingScreenTest {
   @Test
   fun clickingLeaveButton_showsLeaveDialog() {
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -116,7 +134,11 @@ class DiscussionSettingScreenTest {
   @Test
   fun memberList_displaysMembersWithBadges() {
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -130,7 +152,11 @@ class DiscussionSettingScreenTest {
   @Test
   fun backButton_savesChanges() {
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -155,7 +181,11 @@ class DiscussionSettingScreenTest {
     map["disc1"] = MutableStateFlow(participantDiscussion)
 
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -186,7 +216,11 @@ class DiscussionSettingScreenTest {
     map["disc1"] = MutableStateFlow(adminDiscussion)
 
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()
@@ -212,7 +246,11 @@ class DiscussionSettingScreenTest {
     map["disc1"] = MutableStateFlow(ownerDiscussion)
 
     compose.setContent {
-      DiscussionSettingScreen(viewModel = viewModel, discussionId = "disc1", currentAccount)
+      DiscussionSettingScreen(
+          viewModel = viewModel,
+          discussionId = "disc1",
+          handlesViewModel = handlesViewModel,
+          currentAccount = currentAccount)
     }
 
     compose.waitForIdle()

@@ -20,6 +20,10 @@ class FirestoreHandlesViewModel(
   private val _account = MutableStateFlow<Account?>(null)
   val account: StateFlow<Account?> = _account
 
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
+
   fun handleForAccountExists(account: Account) {
     viewModelScope.launch {
       val exists = repository.handleForAccountExists(account.uid, account.handle)
@@ -82,5 +86,14 @@ class FirestoreHandlesViewModel(
 
   fun deleteAccountHandle(account: Account) {
     viewModelScope.launch { repository.deleteAccountHandle(account.handle) }
+  }
+
+  fun searchByHandle(prefix: String) {
+    if (prefix.isBlank()) return
+    viewModelScope.launch {
+      repository.searchByHandle(prefix).collect { list ->
+        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
+      }
+    }
   }
 }

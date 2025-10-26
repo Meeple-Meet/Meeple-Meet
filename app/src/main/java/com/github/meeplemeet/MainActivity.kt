@@ -178,6 +178,7 @@ fun MeepleMeetApp(
             onBack = { navigationActions.goBack() },
             onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
             currentUser = currentAccount!!,
+            handleViewModel = handlesVM,
             viewModel = firestoreVM)
       } else {
         LoadingScreen()
@@ -192,6 +193,7 @@ fun MeepleMeetApp(
             onBack = { navigationActions.goBack() },
             onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
             onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+            handlesViewModel = handlesVM,
             viewModel = firestoreVM)
       } else {
         LoadingScreen()

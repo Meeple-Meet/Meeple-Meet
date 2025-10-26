@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -55,6 +56,7 @@ object UITestTags {
 @Composable
 fun DiscussionSettingScreen(
     viewModel: FirestoreViewModel,
+    handlesViewModel: FirestoreHandlesViewModel,
     discussionId: String,
     currentAccount: Account,
     modifier: Modifier = Modifier,
@@ -107,8 +109,8 @@ fun DiscussionSettingScreen(
     }
 
     isSearching = true
-    viewModel.searchByHandle(searchQuery)
-    viewModel.handleSuggestions.collect { list ->
+    handlesViewModel.searchByHandle(searchQuery)
+    handlesViewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != currentAccount.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty()
       isSearching = false

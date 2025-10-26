@@ -4,12 +4,16 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
+import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -62,6 +66,8 @@ class AddDiscussionScreenTest {
 
   /** The real ViewModel used in UI tests. */
   private lateinit var realVm: FirestoreViewModel
+  private lateinit var handlesVm: FirestoreHandlesViewModel
+  private lateinit var handlesRepo: FirestoreHandlesRepository
 
   /**
    * Sets up the test environment before each test:
@@ -71,22 +77,57 @@ class AddDiscussionScreenTest {
    */
   @Before
   fun setup() = runBlocking {
-    repo = com.github.meeplemeet.model.repositories.FirestoreRepository()
-    repo.createAccount("alice", "Alice", "alice@example.com", null)
-    repo.createAccount("bob", "Bob", "bob@example.com", null)
-    otherAcc = repo.createAccount("john", "John", "john@example.com", null)
-    repo.createAccount("johna", "Johna", "johna@example.com", null)
-    repo.createAccount("johnny", "Johnny", "johnny@example.com", null)
-    me = repo.createAccount("frank", "Frank", "frank@example.com", null)
+    repo = FirestoreRepository()
+    handlesRepo = FirestoreHandlesRepository()
 
+    // Create accounts
+    val alice = repo.createAccount("alice", "Alice", "alice@example.com", null)
+    val bob = repo.createAccount("bob1", "Bob", "bob@example.com", null)
+    val john = repo.createAccount("john", "John", "john@example.com", null)
+    val johna = repo.createAccount("johna", "Johna", "johna@example.com", null)
+    val johnny = repo.createAccount("johnny", "Johnny", "johnny@example.com", null)
+    val frank = repo.createAccount("frank", "Frank", "frank@example.com", null)
+
+    // Mirror them into the handles collection
+    handlesRepo.createAccountHandle(alice.uid, "alice")
+    handlesRepo.createAccountHandle(bob.uid, "bob1")
+    handlesRepo.createAccountHandle(john.uid, "john")
+    handlesRepo.createAccountHandle(johna.uid, "johna")
+    handlesRepo.createAccountHandle(johnny.uid, "johnny")
+    handlesRepo.createAccountHandle(frank.uid, "frank")
+
+    otherAcc = john
+    me = frank
+
+    // Initialize both ViewModels
     realVm = FirestoreViewModel(repo)
+    handlesVm = FirestoreHandlesViewModel(handlesRepo)
+
     compose.setContent {
       DiscussionAddScreen(
           onBack = { nav.goBack() },
           onCreate = { nav.goBack() },
           viewModel = realVm,
+          handleViewModel = handlesVm,
           currentUser = me)
     }
+  }
+
+  @After
+  fun teardown() = runBlocking {
+    // Clean up created accounts
+    repo.deleteAccount("alice")
+    repo.deleteAccount("bob1")
+    repo.deleteAccount("john")
+    repo.deleteAccount("johna")
+    repo.deleteAccount("johnny")
+    repo.deleteAccount("frank")
+    handlesRepo.deleteAccountHandle("alice")
+    handlesRepo.deleteAccountHandle("bob1")
+    handlesRepo.deleteAccountHandle("john")
+    handlesRepo.deleteAccountHandle("johna")
+    handlesRepo.deleteAccountHandle("johnny")
+    handlesRepo.deleteAccountHandle("frank")
   }
 
   /* ---------- Original UI Tests ---------- */
@@ -129,10 +170,12 @@ class AddDiscussionScreenTest {
   }
 
   /** Adds and then removes a member from the selected list. */
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun remove_member_from_selected_list() {
     searchField().performTextInput("ali")
-    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(
+        hasText("alice") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
     compose.onNodeWithText("alice").performClick()
     compose.onNodeWithContentDescription("Remove").performClick()
     compose.onNodeWithText("alice").assertDoesNotExist()
@@ -147,10 +190,12 @@ class AddDiscussionScreenTest {
   }
 
   /** Ensures already selected members are filtered out of the search dropdown. */
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun search_filters_out_already_selected_members() {
     searchField().performTextInput("ali")
-    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(
+        hasText("alice") and hasAnyAncestor(isPopup()), timeoutMillis = 5_000)
     compose.onNodeWithText("alice").performClick()
 
     searchField().performTextInput("ali")
@@ -166,7 +211,7 @@ class AddDiscussionScreenTest {
     searchField().performTextReplacement("")
     compose.waitForIdle()
     compose.onAllNodesWithText("alice").assertCountEquals(0)
-    compose.onAllNodesWithText("bob").assertCountEquals(0)
+    compose.onAllNodesWithText("bob1").assertCountEquals(0)
     compose.onAllNodesWithText("john").assertCountEquals(0)
   }
 
@@ -188,7 +233,7 @@ class AddDiscussionScreenTest {
     compose.onNode(hasText("johnny") and hasAnyAncestor(isPopup())).assertExists()
 
     compose.onAllNodesWithText("alice").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
-    compose.onAllNodesWithText("bob").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
+    compose.onAllNodesWithText("bob1").filterToOne(hasAnyAncestor(isPopup())).assertDoesNotExist()
   }
 
   /** Verifies that a search query with no matching handles returns no suggestions. */
@@ -198,7 +243,7 @@ class AddDiscussionScreenTest {
     compose.waitForIdle()
 
     compose.onNodeWithText("alice").assertDoesNotExist()
-    compose.onNodeWithText("bob").assertDoesNotExist()
+    compose.onNodeWithText("bob1").assertDoesNotExist()
     compose.onNodeWithText("john").assertDoesNotExist()
   }
 

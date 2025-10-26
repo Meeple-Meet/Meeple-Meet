@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -47,6 +48,7 @@ fun DiscussionAddScreen(
     onBack: () -> Unit,
     onCreate: () -> Unit, // TODO: Pass created discussion ID for better navigation later on
     viewModel: FirestoreViewModel = viewModel(),
+    handleViewModel: FirestoreHandlesViewModel = viewModel(),
     currentUser: Account
 ) {
   val scope = rememberCoroutineScope()
@@ -75,11 +77,11 @@ fun DiscussionAddScreen(
       return@LaunchedEffect
     }
     isSearching = true
-    viewModel.searchByHandle(searchQuery)
+    handleViewModel.searchByHandle(searchQuery)
   }
 
-  LaunchedEffect(viewModel.handleSuggestions) {
-    viewModel.handleSuggestions.collect { list ->
+  LaunchedEffect(handleViewModel.handleSuggestions) {
+    handleViewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != currentUser.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false
