@@ -138,7 +138,7 @@ fun SessionDetailsScreen(
     val session = discussion.session!!
     val (date, time) = timestampToLocal(session.date)
 
-    viewModel.getDiscussionParticipants(discussion) {
+    viewModel.getAccounts(session.participants) {
       form =
           form.copy(
               title = session.name,

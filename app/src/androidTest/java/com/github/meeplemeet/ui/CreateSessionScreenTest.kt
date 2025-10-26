@@ -139,7 +139,7 @@ class CreateSessionScreenTest {
     injectedDiscussionFlow = MutableStateFlow(baseDiscussion)
     map[discussionId] = injectedDiscussionFlow
 
-    every { viewModel.getDiscussionParticipants(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any()) } answers
         {
           val disc = firstArg<Discussion>()
           val cb = secondArg<(List<Account>) -> Unit>()
@@ -339,9 +339,7 @@ class CreateSessionScreenTest {
   fun initial_load_fetches_participants_once() {
     setContent()
     compose.waitForIdle()
-    verify(exactly = 1) {
-      viewModel.getDiscussionParticipants(match { it.uid == discussionId }, any())
-    }
+    verify(exactly = 1) { viewModel.getAccounts(any(), any()) }
   }
 
   // Timestamp conversions

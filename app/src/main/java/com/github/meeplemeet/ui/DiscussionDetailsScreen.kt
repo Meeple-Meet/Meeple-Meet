@@ -292,9 +292,9 @@ fun DiscussionDetailsScreen(
                         isSearching = isSearching,
                         dropdownExpanded = dropdownExpanded,
                         onDismiss = { dropdownExpanded = false },
-                        onSelect = { account ->
-                          selectedMembers.add(account)
-                          viewModel.addUserToDiscussion(discussion, account, account)
+                        onSelect = { newAccount ->
+                          selectedMembers.add(newAccount)
+                          viewModel.addUserToDiscussion(discussion, account, newAccount)
                           searchQuery = ""
                           dropdownExpanded = false
                         })

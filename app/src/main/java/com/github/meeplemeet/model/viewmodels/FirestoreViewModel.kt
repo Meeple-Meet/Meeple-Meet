@@ -25,11 +25,12 @@ class FirestoreViewModel(
     private val repository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) : ViewModel() {
   private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
   /** The currently loaded handle suggestions */
   val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
 
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
-    return discussion.admins.contains(account.uid)
+    return discussion.admins.contains(account.uid) || account.uid == discussion.creatorId
   }
 
   /** Create a new discussion. */
@@ -207,8 +208,8 @@ class FirestoreViewModel(
     viewModelScope.launch { onResult(repository.getAccount(id)) }
   }
 
-  fun getDiscussionParticipants(discussion: Discussion, onResult: (List<Account>) -> Unit) {
-    viewModelScope.launch { onResult(repository.getAccounts(discussion.participants)) }
+  fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
+    viewModelScope.launch { onResult(repository.getAccounts(uids)) }
   }
 
   /** Update account name. */

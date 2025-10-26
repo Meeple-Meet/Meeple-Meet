@@ -150,7 +150,7 @@ fun AddSessionScreen(
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   LaunchedEffect(discussion.uid) {
-    viewModel.getDiscussionParticipants(discussion) { fetched ->
+    viewModel.getAccounts(discussion.participants) { fetched ->
       form = form.copy(participants = (fetched + account).distinctBy { it.uid })
     }
 
