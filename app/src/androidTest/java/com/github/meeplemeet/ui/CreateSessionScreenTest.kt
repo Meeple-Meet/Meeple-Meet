@@ -141,10 +141,10 @@ class CreateSessionScreenTest {
 
     every { viewModel.getAccounts(any(), any()) } answers
         {
-          val disc = firstArg<Discussion>()
+          val disc = firstArg<List<String>>()
           val cb = secondArg<(List<Account>) -> Unit>()
           val accounts =
-              disc.participants.distinct().mapNotNull { uid ->
+              disc.distinct().mapNotNull { uid ->
                 when (uid) {
                   me.uid -> me
                   alex.uid -> alex

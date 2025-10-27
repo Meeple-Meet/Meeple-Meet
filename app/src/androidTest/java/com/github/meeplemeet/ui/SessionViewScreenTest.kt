@@ -108,7 +108,7 @@ class SessionDetailsScreenTest {
 
   @Test
   fun display_admin_sees_all_core_sections_and_delete() {
-    every { viewModel.getDiscussionParticipants(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any()) } answers
         {
           secondArg<(List<Account>) -> Unit>().invoke(initialForm.participants)
         }
@@ -139,7 +139,7 @@ class SessionDetailsScreenTest {
   fun display_member_sees_core_sections_no_delete() {
     val memberUser = member.copy(uid = "user2")
 
-    every { viewModel.getDiscussionParticipants(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any()) } answers
         {
           secondArg<(List<Account>) -> Unit>().invoke(initialForm.participants)
         }
@@ -288,7 +288,7 @@ class SessionDetailsScreenTest {
     // Inject this new discussion into the flow
     injectedDiscussionFlow.value = memberDiscussion
 
-    every { viewModel.getDiscussionParticipants(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any()) } answers
         {
           secondArg<(List<Account>) -> Unit>().invoke(listOf(memberUser, other))
         }
@@ -329,7 +329,7 @@ class SessionDetailsScreenTest {
 
   @Test
   fun admin_title_and_proposed_game_are_editable() {
-    every { viewModel.getDiscussionParticipants(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any()) } answers
         {
           secondArg<(List<Account>) -> Unit>().invoke(initialForm.participants)
         }
@@ -354,7 +354,7 @@ class SessionDetailsScreenTest {
   @Test
   fun member_title_and_proposed_game_are_readOnly() {
     val memberUser = member.copy(uid = "user2")
-    every { viewModel.getDiscussionParticipants(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any()) } answers
         {
           secondArg<(List<Account>) -> Unit>().invoke(initialForm.participants)
         }
