@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * Represents a post in the application with hierarchical comments.
  *
  * A post contains main content and can have threaded comments attached to it. Comments are stored
- * in the [nodes] list as a tree structure.
+ * in the [comments] list as a tree structure.
  *
  * @property id Unique identifier for the post.
  * @property title The title/heading of the post.
@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
  * @property timestamp When the post was created.
  * @property authorId The UID of the user who created the post.
  * @property tags List of tags for categorizing and filtering posts.
- * @property nodes Top-level comments on this post, which may contain nested replies.
+ * @property comments Top-level comments on this post, which may contain nested replies.
  */
 data class Post(
     val id: String,
@@ -26,7 +26,7 @@ data class Post(
     val timestamp: Timestamp,
     val authorId: String,
     val tags: List<String>,
-    val nodes: MutableList<Comment> = mutableListOf()
+    val comments: List<Comment> = emptyList()
 )
 
 /**
@@ -44,7 +44,7 @@ data class Post(
  */
 @Serializable
 data class PostNoUid(
-    val id: String,
+    val id: String = "",
     val title: String = "",
     val body: String = "",
     val timestamp: Timestamp = Timestamp.now(),
@@ -63,7 +63,6 @@ data class PostNoUid(
  * @return A pair of ([PostNoUid], [List]<[CommentNoUid]>) ready for Firestore storage.
  */
 fun toNoUid(post: Post): Pair<PostNoUid, List<CommentNoUid>> {
-  val commentDocs = toNoUid(post.id, post.nodes)
   val postNoUid =
       PostNoUid(
           id = post.id,
@@ -72,7 +71,7 @@ fun toNoUid(post: Post): Pair<PostNoUid, List<CommentNoUid>> {
           timestamp = post.timestamp,
           authorId = post.authorId,
           tags = post.tags)
-  return postNoUid to commentDocs
+  return postNoUid to toNoUid(post.id, post.comments)
 }
 
 /**
@@ -85,15 +84,13 @@ fun toNoUid(post: Post): Pair<PostNoUid, List<CommentNoUid>> {
  * @param commentDocs The list of comments from the Firestore subcollection.
  * @return A fully reconstructed [Post] with nested comment hierarchy.
  */
-fun fromNoUid(postNoUid: PostNoUid, commentDocs: List<CommentNoUid>): Post {
-  val rootComments = fromNoUid(postNoUid.id, commentDocs)
-  return Post(
-      id = postNoUid.id,
-      title = postNoUid.title,
-      body = postNoUid.body,
-      timestamp = postNoUid.timestamp,
-      authorId = postNoUid.authorId,
-      tags = postNoUid.tags,
-      nodes = rootComments,
-  )
-}
+fun fromNoUid(postNoUid: PostNoUid, commentDocs: List<CommentNoUid>): Post =
+    Post(
+        id = postNoUid.id,
+        title = postNoUid.title,
+        body = postNoUid.body,
+        timestamp = postNoUid.timestamp,
+        authorId = postNoUid.authorId,
+        tags = postNoUid.tags,
+        comments = fromNoUid(postNoUid.id, commentDocs),
+    )
