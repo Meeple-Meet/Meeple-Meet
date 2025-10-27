@@ -146,7 +146,8 @@ fun SignInScreen(
             value = email,
             onValueChange = {
               email = it
-              emailError = null // Clear validation error when user starts typing
+              // Validate email in real-time as user types
+              emailError = if (email.isNotEmpty()) validateEmail(it) else null
             },
             label = { Text("Email") },
             singleLine = true,
@@ -171,7 +172,8 @@ fun SignInScreen(
             value = password,
             onValueChange = {
               password = it
-              passwordError = null // Clear validation error when user starts typing
+              // Validate password in real-time as user types
+              passwordError = if (password.isNotEmpty()) validatePassword(it) else null
             },
             label = { Text("Password") },
             singleLine = true,
@@ -246,12 +248,7 @@ fun SignInScreen(
             },
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor =
-                        if (isFormValid && !uiState.isLoading) AppColors.affirmative // Valid input
-                        else AppColors.secondary, // Invalid input
-                    contentColor =
-                        if (isFormValid && !uiState.isLoading) AppColors.textIcons
-                        else AppColors.textIconsFade),
+                    containerColor = AppColors.affirmative, contentColor = AppColors.textIcons),
             modifier =
                 Modifier.fillMaxWidth(0.6f)
                     .testTag(SignInScreenTestTags.SIGN_IN_BUTTON), // For UI testing

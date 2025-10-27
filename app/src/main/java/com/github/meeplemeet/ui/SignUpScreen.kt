@@ -203,7 +203,8 @@ fun SignUpScreen(
                   value = email,
                   onValueChange = {
                     email = it
-                    emailError = null // Clear validation error when user starts typing
+                    // Validate email in real-time as user types
+                    emailError = if (it.isNotEmpty()) validateEmail(it) else null
                   },
                   label = { Text("Email") },
                   singleLine = true,
@@ -229,7 +230,12 @@ fun SignUpScreen(
                   value = password,
                   onValueChange = {
                     password = it
-                    passwordError = null // Clear validation error when user starts typing
+                    // Validate password in real-time as user types
+                    passwordError = if (it.isNotEmpty()) validatePassword(it) else null
+                    // Also re-validate confirm password if it's not empty
+                    if (confirmPassword.isNotEmpty()) {
+                      confirmPasswordError = validateConfirmPassword(it, confirmPassword)
+                    }
                   },
                   label = { Text("Password") },
                   singleLine = true,
@@ -276,7 +282,9 @@ fun SignUpScreen(
                   value = confirmPassword,
                   onValueChange = {
                     confirmPassword = it
-                    confirmPasswordError = null // Clear validation error when user starts typing
+                    // Validate confirm password in real-time as user types
+                    confirmPasswordError =
+                        if (it.isNotEmpty()) validateConfirmPassword(password, it) else null
                   },
                   label = { Text("Confirm Password") },
                   singleLine = true,
@@ -340,13 +348,8 @@ fun SignUpScreen(
                   },
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor =
-                              if (isFormValid && !uiState.isLoading)
-                                  AppColors.affirmative // Valid input
-                              else AppColors.secondary, // Invalid input
-                          contentColor =
-                              if (isFormValid && !uiState.isLoading) AppColors.textIcons
-                              else AppColors.textIconsFade),
+                          containerColor = AppColors.affirmative,
+                          contentColor = AppColors.textIcons),
                   modifier =
                       Modifier.fillMaxWidth(0.6f)
                           .testTag(SignUpScreenTestTags.SIGN_UP_BUTTON), // For UI testing
