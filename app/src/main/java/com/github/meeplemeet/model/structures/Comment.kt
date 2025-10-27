@@ -40,7 +40,7 @@ fun toNoUid(feedId: String, comments: List<Comment>): List<CommentNoUid> {
 }
 
 /** Reconstruct a tree of comments from flat CommentNoUid list. */
-fun fromNoUid(feedId: String, docs: List<CommentNoUid>): MutableList<Comment> {
+fun fromNoUid(feedId: String, docs: List<CommentNoUid>): List<Comment> {
   val map =
       docs
           .associateBy { it.id }
@@ -52,16 +52,12 @@ fun fromNoUid(feedId: String, docs: List<CommentNoUid>): MutableList<Comment> {
                 authorId = c.authorId,
                 children = mutableListOf())
           }
-          .toMutableMap()
 
   docs.forEach { c ->
-    if (c.parentId.isNotEmpty() && c.parentId != feedId) {
+    if (c.parentId.isNotBlank() && c.parentId != feedId) {
       map[c.parentId]?.children?.add(map[c.id]!!)
     }
   }
 
-  return docs
-      .filter { it.parentId == feedId || it.parentId.isEmpty() }
-      .mapNotNull { map[it.id] }
-      .toMutableList()
+  return docs.filter { it.parentId == feedId || it.parentId.isBlank() }.mapNotNull { map[it.id] }
 }
