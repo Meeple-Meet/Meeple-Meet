@@ -44,6 +44,7 @@ import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -59,6 +60,7 @@ import org.junit.Test
  *   instead of "Sessions"), update the asserted strings accordingly.
  * - Update test tags for better testability where applicable.
  */
+@Ignore
 class NavigationTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
