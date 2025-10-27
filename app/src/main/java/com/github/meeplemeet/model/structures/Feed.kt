@@ -5,51 +5,48 @@ import kotlinx.serialization.Serializable
 
 data class Feed(
     val id: String,
-    val text: String,
+    val title: String,
+    val content: String,
     val timestamp: Timestamp,
     val authorId: String,
-    val nodes: MutableList<Feed> = mutableListOf()
+    val tags: List<String>,
+    val nodes: MutableList<Comment> = mutableListOf()
 )
 
 @Serializable
-data class FeedSerializable(
+data class FeedNoUid(
     val id: String,
-    val text: String = "",
+    val title: String = "",
+    val content: String = "",
     val timestamp: Timestamp = Timestamp.now(),
+    val tags: List<String> = emptyList(),
     val authorId: String = "",
-    val parentId: String = ""
 )
 
-fun toNoUid(feed: Feed): List<FeedSerializable> {
-  val result = mutableListOf<FeedSerializable>()
-  val stack = ArrayDeque<Pair<Feed, String>>()
-  stack.add(feed to "")
-
-  while (stack.isNotEmpty()) {
-    val (node, parentId) = stack.removeLast()
-    result.add(
-        FeedSerializable(
-            id = node.id,
-            text = node.text,
-            timestamp = node.timestamp,
-            authorId = node.authorId,
-            parentId = parentId))
-    node.nodes.forEach { child -> stack.add(child to node.id) }
-  }
-  return result
+/** Flatten feed and comments into Firestore-storable forms. */
+fun toNoUid(feed: Feed): Pair<FeedNoUid, List<CommentNoUid>> {
+  val commentDocs = toNoUid(feed.id, feed.nodes)
+  val feedNoUid =
+      FeedNoUid(
+          id = feed.id,
+          title = feed.title,
+          content = feed.content,
+          timestamp = feed.timestamp,
+          authorId = feed.authorId,
+          tags = feed.tags)
+  return feedNoUid to commentDocs
 }
 
-fun fromNoUid(rootId: String, docs: List<FeedSerializable>): Feed {
-  val feeds =
-      docs
-          .associateBy { it.id }
-          .mapValues { Feed(it.key, it.value.text, it.value.timestamp, it.value.authorId) }
-          .toMutableMap()
-
-  feeds.values.forEach { feed ->
-    val parentId = docs.find { it.id == feed.id }?.parentId ?: ""
-    feeds[parentId]?.nodes?.add(feed)
-  }
-
-  return feeds[rootId] ?: error("Root not found")
+/** Reconstruct a full Feed from Firestore-stored parts. */
+fun fromNoUid(feedNoUid: FeedNoUid, commentDocs: List<CommentNoUid>): Feed {
+  val rootComments = fromNoUid(feedNoUid.id, commentDocs)
+  return Feed(
+      id = feedNoUid.id,
+      title = feedNoUid.title,
+      content = feedNoUid.content,
+      timestamp = feedNoUid.timestamp,
+      authorId = feedNoUid.authorId,
+      tags = feedNoUid.tags,
+      nodes = rootComments,
+  )
 }
