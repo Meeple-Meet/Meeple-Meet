@@ -4,9 +4,19 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -33,7 +43,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +62,7 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.viewmodels.GameUIState
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
@@ -130,6 +147,7 @@ fun SessionDetailsScreen(
 ) {
   // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
+  val gameUIState by sessionViewModel.gameUIState.collectAsState()
 
   val isCurrUserAdmin =
       account.uid == discussion.creatorId || discussion.admins.contains(account.uid)
@@ -144,11 +162,13 @@ fun SessionDetailsScreen(
               title = session.name,
               date = date,
               time = time,
-              proposedGame = "",
+              proposedGame = session.gameId,
               minPlayers = session.minParticipants,
               maxPlayers = session.maxParticipants,
               participants = it,
               locationText = session.location.name)
+
+      if (form.proposedGame.isNotBlank()) sessionViewModel.getGameFromId(form.proposedGame)
     }
   }
 
@@ -163,7 +183,7 @@ fun SessionDetailsScreen(
                     requester = account,
                     discussion = discussion,
                     name = form.title,
-                    gameId = null,
+                    gameId = form.proposedGame,
                     date = toTimestamp(form.date, form.time),
                     location = null,
                     minParticipants = form.minPlayers,
@@ -201,7 +221,10 @@ fun SessionDetailsScreen(
               sessionViewModel = sessionViewModel,
               currentUser = account,
               discussion = discussion,
-              editable = isCurrUserAdmin)
+              editable = isCurrUserAdmin,
+              gameUIState = gameUIState) {
+                form = form.copy(proposedGame = it)
+              }
 
           // Participants section
           ParticipantsSection(
@@ -357,10 +380,10 @@ private fun ProposedGameSection(
     sessionViewModel: FirestoreSessionViewModel,
     currentUser: Account,
     discussion: Discussion,
-    editable: Boolean
+    editable: Boolean,
+    gameUIState: GameUIState,
+    onChooseGame: (String) -> Unit
 ) {
-  val gameUIState by sessionViewModel.gameUIState.collectAsState()
-
   SectionCard(
       modifier =
           Modifier.clip(appShapes.extraLarge)
@@ -379,7 +402,10 @@ private fun ProposedGameSection(
                 query = gameUIState.gameQuery,
                 onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
                 results = gameUIState.gameSuggestions,
-                onPick = { sessionViewModel.setGame(currentUser, discussion, it) },
+                onPick = {
+                  onChooseGame(it.uid)
+                  sessionViewModel.setGame(currentUser, discussion, it)
+                },
                 isLoading = false,
                 modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
           } else {
@@ -614,7 +640,7 @@ fun PillSliderNoBackground(
         editable = editable,
         steps = steps,
         onValuesChange = onValuesChange,
-        surroundModifier =
+        modifier =
             Modifier.fillMaxWidth()
                 .background(AppColors.primary, CircleShape)
                 .border(1.dp, AppColors.primary, CircleShape)

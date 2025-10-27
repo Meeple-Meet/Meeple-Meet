@@ -602,7 +602,7 @@ fun ParticipantsSection(
                       onMinMaxChange(newMin, newMax)
                     }
                   },
-                  surroundModifier = Modifier.weight(1f),
+                  modifier = Modifier.weight(1f),
                   sliderModifier =
                       Modifier.background(MaterialTheme.colorScheme.surface, CircleShape)
                           .padding(horizontal = 10.dp, vertical = 6.dp))

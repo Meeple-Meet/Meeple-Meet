@@ -314,7 +314,7 @@ class SessionComponentsTest {
             steps = 9,
             editable = true,
             onValuesChange = { a, b -> enabledPair = a to b },
-            surroundModifier = Modifier.testTag("surround"),
+            modifier = Modifier.testTag("surround"),
             sliderModifier = Modifier.testTag("host"))
 
         // B) Zero steps
@@ -340,7 +340,7 @@ class SessionComponentsTest {
             steps = 9,
             editable = true,
             onValuesChange = { _, _ -> isoA = true },
-            surroundModifier = Modifier.testTag("pillA-parent"))
+            modifier = Modifier.testTag("pillA-parent"))
 
         // E) Isolation B
         DiscretePillSlider(
@@ -349,7 +349,7 @@ class SessionComponentsTest {
             steps = 10,
             editable = true,
             onValuesChange = { _, _ -> isoB = true },
-            surroundModifier = Modifier.testTag("pillB-parent"))
+            modifier = Modifier.testTag("pillB-parent"))
 
         // F) Toggle editable
         DiscretePillSlider(
@@ -358,7 +358,7 @@ class SessionComponentsTest {
             steps = 0,
             editable = toggleEditable,
             onValuesChange = { _, _ -> hits++ },
-            surroundModifier = Modifier.testTag("pillToggle-parent"))
+            modifier = Modifier.testTag("pillToggle-parent"))
 
         // G) Custom colors
         DiscretePillSlider(
@@ -371,7 +371,7 @@ class SessionComponentsTest {
               lastPair = a to b
             },
             sliderColors = SliderDefaults.colors(),
-            surroundModifier = Modifier.testTag("pillColor-parent"))
+            modifier = Modifier.testTag("pillColor-parent"))
       }
     }
 

@@ -55,13 +55,13 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -87,7 +87,6 @@ import java.util.Locale
 object ComponentsTestTags {
   const val UNDERLINED_LABEL = "comp_underlined_label"
   const val LABELED_LABEL = "comp_labeled_label"
-
   const val COUNT_BUBBLE_TEXT = "comp_count_bubble_text"
 
   const val PILL_RANGE_SLIDER = "comp_pill_range_slider"
@@ -262,7 +261,7 @@ fun CountBubble(
  * @param steps The number of discrete steps between the min and max values.
  * @param editable Whether the slider is editable or read-only.
  * @param onValuesChange Callback function to be invoked when the slider values change.
- * @param surroundModifier Modifier to be applied to the surrounding Column.
+ * @param modifier Modifier to be applied to the surrounding Column.
  * @param sliderModifier Modifier to be applied to the RangeSlider.
  * @param sliderColors Colors to be applied to the RangeSlider.
  */
@@ -271,9 +270,9 @@ fun DiscretePillSlider(
     range: ClosedFloatingPointRange<Float>,
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
+    modifier: Modifier = Modifier,
     editable: Boolean = false,
     onValuesChange: (Float, Float) -> Unit,
-    surroundModifier: Modifier = Modifier,
     sliderModifier: Modifier = Modifier,
     sliderColors: SliderColors =
         SliderDefaults.colors(
@@ -281,7 +280,7 @@ fun DiscretePillSlider(
             inactiveTrackColor = MaterialTheme.colorScheme.outline,
             thumbColor = MaterialTheme.colorScheme.tertiary)
 ) {
-  Column(modifier = surroundModifier) {
+  Column(modifier = modifier) {
     Box(modifier = sliderModifier) {
       RangeSlider(
           value = values,
@@ -566,11 +565,16 @@ fun <T> SearchDropdownField(
     emptyText: String = "No results"
 ) {
   var expanded by remember { mutableStateOf(false) }
+  var internalQuery by remember { mutableStateOf(query) }
+
+  // Sync internalQuery with query parameter when it changes externally
+  LaunchedEffect(query) { internalQuery = query }
 
   Box(modifier = modifier) {
     OutlinedTextField(
-        value = query,
+        value = internalQuery,
         onValueChange = {
+          internalQuery = it
           onQueryChange(it)
           expanded = (showWhenEmptyQuery || it.isNotBlank())
         },
@@ -579,17 +583,14 @@ fun <T> SearchDropdownField(
         trailingIcon = {
           when {
             isLoading -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            query.isNotEmpty() ->
+            internalQuery.isNotEmpty() ->
                 IconButton(
                     onClick = {
+                      internalQuery = ""
                       onQueryChange("")
                       expanded = false
-                    },
-                    modifier = Modifier.testTag(ComponentsTestTags.SEARCH_LOADING).then(Modifier)) {
-                      Icon(
-                          Icons.Default.Close,
-                          contentDescription = "Clear",
-                          modifier = Modifier.testTag(ComponentsTestTags.SEARCH_EMPTY))
+                    }) {
+                      Icon(Icons.Default.Close, contentDescription = "Clear")
                     }
           }
         },
@@ -597,17 +598,14 @@ fun <T> SearchDropdownField(
         singleLine = true,
         modifier = Modifier.fillMaxWidth().height(64.dp).then(modifierTxtField))
 
-    val shouldShow =
-        expanded && (isLoading || suggestions.isNotEmpty() || (query.isNotBlank() && !isLoading))
+    val shouldShow = expanded && (isLoading || suggestions.isNotEmpty())
 
     if (shouldShow) {
       Popup(onDismissRequest = { expanded = false }, alignment = Alignment.TopStart) {
         Column(Modifier.fillMaxWidth().offset(y = 64.dp)) {
           Surface(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .clip(RoundedCornerShape(12.dp))
-                      .testTag(ComponentsTestTags.SEARCH_POPUP_SURFACE),
+              modifier = Modifier.fillMaxWidth().testTag(ComponentsTestTags.SEARCH_POPUP_SURFACE),
+              shape = RoundedCornerShape(12.dp),
               tonalElevation = 4.dp,
               shadowElevation = 4.dp) {
                 when {
@@ -637,7 +635,6 @@ fun <T> SearchDropdownField(
                         modifier =
                             Modifier.fillMaxWidth()
                                 .heightIn(max = 200.dp)
-                                .background(MaterialTheme.colorScheme.surface)
                                 .testTag(ComponentsTestTags.SEARCH_LIST),
                         contentPadding = PaddingValues(vertical = 6.dp)) {
                           items(suggestions) { item ->
