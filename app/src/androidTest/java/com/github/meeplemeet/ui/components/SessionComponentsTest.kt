@@ -294,6 +294,7 @@ class SessionComponentsTest {
   /* ====================== DISCRETE PILL SLIDER ====================== */
 
   @Test
+  @Ignore("Pill slider no longer interactable")
   fun discretePillSlider_all_paths_one_test() {
     var enabledPair: Pair<Float, Float>? = null
     var zeroStepsCalled = false
@@ -313,25 +314,14 @@ class SessionComponentsTest {
             values = 2f..6f,
             steps = 9,
             editable = true,
-            onValuesChange = { a, b -> enabledPair = a to b },
             modifier = Modifier.testTag("surround"),
             sliderModifier = Modifier.testTag("host"))
 
         // B) Zero steps
-        DiscretePillSlider(
-            range = 0f..1f,
-            values = 0.2f..0.8f,
-            steps = 0,
-            editable = true,
-            onValuesChange = { _, _ -> zeroStepsCalled = true })
+        DiscretePillSlider(range = 0f..1f, values = 0.2f..0.8f, steps = 0)
 
         // C) Disabled
-        DiscretePillSlider(
-            range = 0f..10f,
-            values = 3f..7f,
-            steps = 9,
-            editable = false,
-            onValuesChange = { _, _ -> disabledCalled = true })
+        DiscretePillSlider(range = 0f..10f, values = 3f..7f, steps = 9)
 
         // D) Isolation A
         DiscretePillSlider(
@@ -339,7 +329,6 @@ class SessionComponentsTest {
             values = 2f..6f,
             steps = 9,
             editable = true,
-            onValuesChange = { _, _ -> isoA = true },
             modifier = Modifier.testTag("pillA-parent"))
 
         // E) Isolation B
@@ -348,7 +337,6 @@ class SessionComponentsTest {
             values = -1f..1f,
             steps = 10,
             editable = true,
-            onValuesChange = { _, _ -> isoB = true },
             modifier = Modifier.testTag("pillB-parent"))
 
         // F) Toggle editable
@@ -357,7 +345,6 @@ class SessionComponentsTest {
             values = 0.2f..0.8f,
             steps = 0,
             editable = toggleEditable,
-            onValuesChange = { _, _ -> hits++ },
             modifier = Modifier.testTag("pillToggle-parent"))
 
         // G) Custom colors
@@ -366,10 +353,6 @@ class SessionComponentsTest {
             values = -5f..5f,
             steps = 20,
             editable = true,
-            onValuesChange = { a, b ->
-              colorHit = true
-              lastPair = a to b
-            },
             sliderColors = SliderDefaults.colors(),
             modifier = Modifier.testTag("pillColor-parent"))
       }

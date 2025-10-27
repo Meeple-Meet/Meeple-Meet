@@ -106,10 +106,6 @@ class FirestoreSessionViewModel(
 
     val participantsList = participants.toList().map { it -> it.uid }
     if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
-    if (participantsList.size < minParticipants)
-        throw IllegalArgumentException("To little participants")
-    if (participantsList.size > maxParticipants)
-        throw IllegalArgumentException("To many participants")
 
     viewModelScope.launch {
       _discussion.value =

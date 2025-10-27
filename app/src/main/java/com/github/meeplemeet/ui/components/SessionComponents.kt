@@ -272,7 +272,6 @@ fun DiscretePillSlider(
     steps: Int,
     modifier: Modifier = Modifier,
     editable: Boolean = false,
-    onValuesChange: (Float, Float) -> Unit,
     sliderModifier: Modifier = Modifier,
     sliderColors: SliderColors =
         SliderDefaults.colors(
@@ -284,8 +283,8 @@ fun DiscretePillSlider(
     Box(modifier = sliderModifier) {
       RangeSlider(
           value = values,
-          enabled = editable,
-          onValueChange = { if (editable) onValuesChange(it.start, it.endInclusive) },
+          enabled = true,
+          onValueChange = {},
           valueRange = range,
           steps = steps,
           colors = sliderColors,
