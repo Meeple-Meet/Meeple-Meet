@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.model.repositories.FirestorePostRepository
 import com.github.meeplemeet.model.structures.Account
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -20,14 +19,6 @@ import kotlinx.coroutines.launch
  */
 class CreatePostViewModel(val repository: FirestorePostRepository = FirestorePostRepository()) :
     ViewModel() {
-
-  private val _postId = MutableStateFlow<String?>(null)
-  /**
-   * StateFlow containing the ID of the most recently created post. Value is null before any post is
-   * created.
-   */
-  val postId: StateFlow<String?> = _postId
-
   /**
    * Creates a new post in Firestore.
    *
@@ -44,8 +35,6 @@ class CreatePostViewModel(val repository: FirestorePostRepository = FirestorePos
 
     if (body.isBlank()) throw IllegalArgumentException("Cannot create a post with an empty body")
 
-    viewModelScope.launch {
-      _postId.value = repository.createPost(title, body, author.uid, tags).id
-    }
+    viewModelScope.launch { repository.createPost(title, body, author.uid, tags).id }
   }
 }

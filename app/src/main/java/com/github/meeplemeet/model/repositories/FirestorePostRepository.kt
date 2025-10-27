@@ -137,6 +137,34 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
   }
 
   /**
+   * Retrieves a single post with all its comments from Firestore.
+   *
+   * This function fetches both the post document and its comments subcollection, reconstructing the
+   * full hierarchical comment tree.
+   *
+   * @param postId The ID of the post to retrieve.
+   * @return The complete [Post] object with nested comments.
+   * @throws IllegalArgumentException if the post does not exist.
+   */
+  suspend fun getPost(postId: String): Post {
+    val feedRef = posts.document(postId)
+    val feedSnap = feedRef.get().await()
+
+    if (!feedSnap.exists()) {
+      throw IllegalArgumentException("Post with ID $postId does not exist")
+    }
+
+    val postNoUid =
+        feedSnap.toObject(PostNoUid::class.java)
+            ?: throw IllegalArgumentException("Failed to deserialize post")
+
+    val commentsSnap = feedRef.collection(COMMENTS_COLLECTION_PATH).get().await()
+    val comments = commentsSnap.toObjects(CommentNoUid::class.java)
+
+    return fromNoUid(postNoUid, comments)
+  }
+
+  /**
    * Creates a Flow that emits real-time updates for a post and its comments.
    *
    * This function sets up Firestore listeners for both the post document and its comments
@@ -146,7 +174,7 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
    * @return A [Flow] that emits the complete [Post] object with nested comments whenever updates
    *   occur.
    */
-  fun listenFeed(postId: String): Flow<Post> = callbackFlow {
+  fun listenPost(postId: String): Flow<Post> = callbackFlow {
     val feedRef = posts.document(postId)
     val commentsRef = feedRef.collection(COMMENTS_COLLECTION_PATH)
 
@@ -177,5 +205,24 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
 
     awaitClose { commentsListener?.remove() }
     awaitClose { feedListener.remove() }
+  }
+
+  /**
+   * Retrieves all posts without their comments from Firestore.
+   *
+   * This function fetches all post documents for efficient preview display in feed/overview
+   * screens. Comments are not loaded to improve performance when displaying multiple posts.
+   *
+   * @return A list of [Post] objects without comments, sorted by timestamp (newest first).
+   */
+  suspend fun getPosts(): List<Post> {
+    val postsSnap = posts.get().await()
+
+    return postsSnap.documents
+        .mapNotNull { postDoc ->
+          val postNoUid = postDoc.toObject(PostNoUid::class.java) ?: return@mapNotNull null
+          fromNoUid(postNoUid, emptyList())
+        }
+        .sortedByDescending { it.timestamp }
   }
 }
