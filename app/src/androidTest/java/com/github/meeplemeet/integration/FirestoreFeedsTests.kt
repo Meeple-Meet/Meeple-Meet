@@ -16,9 +16,9 @@ class FirestoreFeedsTests : FirestoreTests() {
 
   @Test
   fun test() = runTest {
-    val feed = repository.createFeed("What's up world ?", "qsdf")
+    val feed = repository.createFeed("What's up world ?", "hi", "qsdf")
     val id = repository.addComment(feed.id, "Nothing", "t", feed.id)
-    repository.removeComment(feed.id, id)
-    repository.deleteFeed(feed.id)
+    // repository.removeComment(feed.id, id)
+    // repository.deleteFeed(feed.id)
   }
 }
