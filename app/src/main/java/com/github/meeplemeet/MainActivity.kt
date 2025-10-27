@@ -14,7 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +50,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.flow.MutableStateFlow
 
 object FirebaseProvider {
   val db: FirebaseFirestore by lazy { Firebase.firestore }
@@ -79,14 +79,20 @@ fun MeepleMeetApp(
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
-  val scope = rememberCoroutineScope()
+  var signedOut by remember { mutableStateOf(false) }
 
   var accountId by remember { mutableStateOf(FirebaseProvider.auth.currentUser?.uid ?: "") }
-  val accountFlow = remember(accountId) { firestoreVM.accountFlow(accountId) }
+  val accountFlow =
+      remember(accountId, signedOut) {
+        if (!signedOut) firestoreVM.accountFlow(accountId) else MutableStateFlow(null)
+      }
   val account by accountFlow.collectAsStateWithLifecycle()
 
   var discussionId by remember { mutableStateOf("") }
-  val discussionFlow = remember(discussionId) { firestoreVM.discussionFlow(discussionId) }
+  val discussionFlow =
+      remember(discussionId, signedOut) {
+        if (!signedOut) firestoreVM.discussionFlow(discussionId) else MutableStateFlow(null)
+      }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
   val sessionRepo =
       remember(discussion) { discussion?.let { FirestoreSessionViewModel(discussion!!) } }
@@ -114,7 +120,8 @@ fun MeepleMeetApp(
           SignInScreen(
               authVM,
               credentialManager = credentialManager,
-              onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUp) })
+              onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUp) },
+              onSignIn = { signedOut = false })
     }
 
     composable(MeepleMeetScreen.SignUp.name) {
@@ -122,7 +129,10 @@ fun MeepleMeetApp(
           authVM,
           credentialManager = credentialManager,
           onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) },
-          onRegister = { navigationActions.navigateTo(MeepleMeetScreen.CreateAccount) })
+          onRegister = {
+            signedOut = false
+            navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
+          })
     }
 
     composable(MeepleMeetScreen.CreateAccount.name) {
@@ -218,7 +228,10 @@ fun MeepleMeetApp(
           navigation = navigationActions,
           authViewModel = authVM,
           firestoreVM,
-          onSignOut = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) })
+          onSignOut = {
+            signedOut = true
+            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+          })
     }
   }
 }

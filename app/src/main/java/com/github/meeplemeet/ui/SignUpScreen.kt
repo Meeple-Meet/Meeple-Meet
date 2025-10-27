@@ -1,11 +1,9 @@
 package com.github.meeplemeet.ui
-//Github Copilot was used for this file
+// Github Copilot was used for this file
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -17,16 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
-import com.github.meeplemeet.R
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -94,14 +89,15 @@ fun SignUpScreen(
   val uiState by viewModel.uiState.collectAsState()
 
   // Check if all credentials are valid in real-time
-  val isFormValid = remember(email, password, confirmPassword) {
-    email.isNotBlank() &&
-    android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
-    password.isNotBlank() &&
-    password.length >= 6 &&
-    confirmPassword.isNotBlank() &&
-    password == confirmPassword
-  }
+  val isFormValid =
+      remember(email, password, confirmPassword) {
+        email.isNotBlank() &&
+            android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
+            password.isNotBlank() &&
+            password.length >= 6 &&
+            confirmPassword.isNotBlank() &&
+            password == confirmPassword
+      }
 
   // Snackbar state
   val snackbarHostState = remember { SnackbarHostState() }
@@ -179,6 +175,7 @@ fun SignUpScreen(
               Spacer(modifier = Modifier.height(8.dp))
 
               // App logo - changes based on theme
+              /*
               val isDarkTheme = isSystemInDarkTheme()
               Box(modifier = Modifier.size(250.dp)) {
                 Image(
@@ -188,6 +185,7 @@ fun SignUpScreen(
                     contentDescription = "Meeple Meet Logo",
                     modifier = Modifier.fillMaxSize())
               }
+              */
 
               Spacer(modifier = Modifier.height(24.dp))
 
@@ -198,9 +196,9 @@ fun SignUpScreen(
                   modifier =
                       Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
-            Spacer(modifier = Modifier.height(26.dp))
+              Spacer(modifier = Modifier.height(26.dp))
 
-            // Email input field with validation
+              // Email input field with validation
               OutlinedTextField(
                   value = email,
                   onValueChange = {
@@ -340,20 +338,21 @@ fun SignUpScreen(
                       viewModel.registerWithEmail(email, password, onRegister)
                     }
                   },
-                  colors = ButtonDefaults.buttonColors(
-                      containerColor = if (isFormValid && !uiState.isLoading)
-                          AppColors.affirmative  // Valid input
-                      else
-                          AppColors.secondary,  // Invalid input
-                      contentColor = if (isFormValid && !uiState.isLoading)
-                          AppColors.textIcons
-                      else
-                          AppColors.textIconsFade
-                  ),
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor =
+                              if (isFormValid && !uiState.isLoading)
+                                  AppColors.affirmative // Valid input
+                              else AppColors.secondary, // Invalid input
+                          contentColor =
+                              if (isFormValid && !uiState.isLoading) AppColors.textIcons
+                              else AppColors.textIconsFade),
                   modifier =
                       Modifier.fillMaxWidth(0.6f)
                           .testTag(SignUpScreenTestTags.SIGN_UP_BUTTON), // For UI testing
-                  enabled = isFormValid && !uiState.isLoading // Enable only when form is valid and not loading
+                  enabled =
+                      isFormValid &&
+                          !uiState.isLoading // Enable only when form is valid and not loading
                   ) {
                     // Show loading indicator during registration
                     if (uiState.isLoading) {
@@ -382,12 +381,11 @@ fun SignUpScreen(
                     // Initiate Google sign-up flow through ViewModel
                     // Note: Google sign-up and sign-in use the same flow - if the account exists,
                     // it signs in, if it doesn't exist, it creates a new account
-                    viewModel.googleSignIn(context, credentialManager)
+                    viewModel.googleSignIn(context, credentialManager, onRegister)
                   },
-                  colors = ButtonDefaults.outlinedButtonColors(
-                      containerColor = AppColors.primary,
-                      contentColor = AppColors.textIcons
-                  ),
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          containerColor = AppColors.primary, contentColor = AppColors.textIcons),
                   border = BorderStroke(1.dp, AppColors.divider),
                   modifier =
                       Modifier.fillMaxWidth(0.6f)
@@ -416,10 +414,4 @@ fun SignUpScreen(
               Spacer(modifier = Modifier.height(8.dp))
             }
       }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SignUpScreenPreview() {
-    SignUpScreen(viewModel = AuthViewModel())
 }
