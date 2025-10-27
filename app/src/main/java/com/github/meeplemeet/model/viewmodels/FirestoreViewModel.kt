@@ -49,13 +49,6 @@ class FirestoreViewModel(
     }
   }
 
-  /** Retrieve a discussion by ID. */
-  fun getDiscussion(id: String) {
-    if (id.isBlank()) throw IllegalArgumentException("Discussion id cannot be blank")
-
-    viewModelScope.launch { repository.getDiscussion(id) }
-  }
-
   /** Update discussion name (admin-only). */
   fun setDiscussionName(discussion: Discussion, changeRequester: Account, name: String) {
     if (!isAdmin(changeRequester, discussion))
@@ -191,6 +184,7 @@ class FirestoreViewModel(
   }
 
   fun signOut() {
+    discussionFlows.clear()
     accountFlows.clear()
   }
 
@@ -253,7 +247,7 @@ class FirestoreViewModel(
           .listenAccount(accountId)
           .stateIn(
               scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(5_000),
+              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
               initialValue = null)
     }
   }
@@ -274,7 +268,7 @@ class FirestoreViewModel(
           .listenDiscussion(discussionId)
           .stateIn(
               scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(5_000),
+              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
               initialValue = null)
     }
   }
