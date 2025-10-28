@@ -18,8 +18,9 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository for accessing post data from Firestore.
  */
-class PostOverviewViewModel(val repository: FirestorePostRepository = FirestorePostRepository()) :
-    ViewModel() {
+class PostOverviewViewModel(
+    private val repository: FirestorePostRepository = FirestorePostRepository()
+) : ViewModel() {
 
   private val _posts = MutableStateFlow<List<Post>>(emptyList())
 
@@ -31,6 +32,9 @@ class PostOverviewViewModel(val repository: FirestorePostRepository = FirestoreP
    */
   val posts: StateFlow<List<Post>> = _posts
 
+  private val _errorMsg = MutableStateFlow("")
+  val errorMessage: StateFlow<String> = _errorMsg
+
   /**
    * Fetches all posts from the repository and updates the [posts] StateFlow.
    *
@@ -39,8 +43,14 @@ class PostOverviewViewModel(val repository: FirestorePostRepository = FirestoreP
    */
   fun getPosts() {
     viewModelScope.launch {
-      val fetchedPosts = repository.getPosts()
-      _posts.value = fetchedPosts
+      try {
+        val fetchedPosts = repository.getPosts()
+        _posts.value = fetchedPosts
+        _errorMsg.value = ""
+      } catch (_: Exception) {
+        _posts.value = emptyList()
+        _errorMsg.value = "An error occurred while getting all posts."
+      }
     }
   }
 }
