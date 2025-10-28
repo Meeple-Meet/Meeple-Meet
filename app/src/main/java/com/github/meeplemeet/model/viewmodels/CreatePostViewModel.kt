@@ -17,8 +17,9 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for post operations.
  */
-class CreatePostViewModel(val repository: FirestorePostRepository = FirestorePostRepository()) :
-    ViewModel() {
+class CreatePostViewModel(
+    private val repository: FirestorePostRepository = FirestorePostRepository()
+) : ViewModel() {
   /**
    * Creates a new post in Firestore.
    *
@@ -35,6 +36,6 @@ class CreatePostViewModel(val repository: FirestorePostRepository = FirestorePos
 
     if (body.isBlank()) throw IllegalArgumentException("Cannot create a post with an empty body")
 
-    viewModelScope.launch { repository.createPost(title, body, author.uid, tags).id }
+    viewModelScope.launch { repository.createPost(title, body, author.uid, tags) }
   }
 }

@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for post operations.
  */
-class PostViewModel(val repository: FirestorePostRepository = FirestorePostRepository()) :
+class PostViewModel(private val repository: FirestorePostRepository = FirestorePostRepository()) :
     ViewModel() {
   /**
    * Deletes a post from Firestore.
