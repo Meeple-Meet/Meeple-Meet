@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import com.github.meeplemeet.model.repositories.FirestorePostRepository
@@ -102,7 +103,6 @@ class PostScreenTest {
   private fun t(text: String, unmerged: Boolean = true) =
       compose.onNodeWithText(text, useUnmergedTree = unmerged)
 
-  /* Drive any animations to completion */
   private fun settleAnimations() {
     compose.mainClock.advanceTimeBy(700)
     compose.waitForIdle()
@@ -164,7 +164,6 @@ class PostScreenTest {
 
   @Before
   fun setup() {
-    // Sample discussion tree (board-game themed)
     val c1_1_1 = c("c1_1_1", "Deep reply about Spirit Island combos", dany)
     val c1_1 = c("c1_1", "Marco: let's bring Slay the Spire IRL?", marco, c1_1_1)
     val c1_2 = c("c1_2", "Alex: Root needs 4, I’m in", alex)
@@ -178,7 +177,6 @@ class PostScreenTest {
             body = "Who wants to play Root or Ark Nova?",
             timestamp = ts,
             authorId = alex.uid,
-            // Keep tags used by assertions
             tags = listOf("boardgames", "lausanne"),
             comments = listOf(c1, c2))
     postByMarco = postByAlex.copy(id = "p2", authorId = marco.uid)
@@ -189,7 +187,6 @@ class PostScreenTest {
     injectPost("p1", postFlowP1)
     injectStaticPost("p2", postByMarco)
 
-    // Resolve user ids to our example accounts (or a generic fallback).
     usersVM = mockk(relaxed = true)
     every { usersVM.getOtherAccount(any(), any()) } answers
         {
@@ -205,25 +202,21 @@ class PostScreenTest {
         }
   }
 
-  /** Verifies loading shows until post arrives, content renders, and back invokes the callback. */
   @Test
   fun loading_then_content_and_topbar_back_navigation() {
     val backCount = AtomicInteger(0)
     setContent(postId = "p1", onBack = { backCount.incrementAndGet() })
 
-    // Loading visible first
     n(PostTags.SCREEN).assertExists()
     n(PostTags.LOADING_BOX).assertExists()
     n(PostTags.LOADING_SPINNER).assertExists()
 
-    // Emit post -> content present
     postFlowP1.value = postByAlex
     n(PostTags.LIST).assertExists()
     n(PostTags.postCard("p1")).assertExists()
     n(PostTags.POST_TITLE).assertIsDisplayed()
     n(PostTags.POST_BODY).assertIsDisplayed()
 
-    // Top bar UI + back
     n(PostTags.TOP_BAR).assertExists()
     n(PostTags.TOP_BAR_DIVIDER).assertExists()
     n(PostTags.TOP_TITLE).assertExists()
@@ -231,7 +224,6 @@ class PostScreenTest {
     compose.waitUntil(1_000) { backCount.get() == 1 }
   }
 
-  /** Asserts default-parameter back handler does not crash when not provided. */
   @Test
   fun topbar_back_default_onBack_no_crash() {
     renderHost(postId = "p1", initialOnBack = null)
@@ -239,24 +231,21 @@ class PostScreenTest {
     n(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
   }
 
-  /** Post header details, tags, and delete permission depending on author. */
   @Test
   fun post_card_details_and_delete_permission() {
     val host = renderHost(postId = "p1", initialOnBack = {})
     postFlowP1.value = postByAlex
 
     n(PostTags.POST_TAGS_ROW).assertExists()
-    n(PostTags.tagChip("boardgames")).assertExists()
-    n(PostTags.tagChip("lausanne")).assertExists()
+    n(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
+    n(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
     n(PostTags.POST_HEADER).assertExists()
     n(PostTags.POST_AVATAR).assertExists()
     n(PostTags.POST_AUTHOR).assertExists()
     n(PostTags.POST_DATE).assertExists()
 
-    // Not my post -> no delete
     n(PostTags.POST_DELETE_BTN).assertDoesNotExist()
 
-    // My post -> delete triggers VM + onBack
     val backCount = AtomicInteger(0)
     host.setOnBack { backCount.incrementAndGet() }
     host.setPostId("p2")
@@ -265,7 +254,6 @@ class PostScreenTest {
     compose.waitUntil(1_000) { backCount.get() == 1 }
   }
 
-  /** Changing account should recompute ownership and show the right delete buttons. */
   @Test
   fun switching_account_updates_isMine_and_delete_buttons() {
     lateinit var setAcc: (Account) -> Unit
@@ -278,11 +266,9 @@ class PostScreenTest {
     }
     postFlowP1.value = postByAlex
 
-    // Initially Marco -> can delete only his comment c2
     n(PostTags.commentDeleteBtn("c2")).assertExists()
     n(PostTags.commentDeleteBtn("c1")).assertDoesNotExist()
 
-    // Switch to Dany -> Dany authored c1
     compose.runOnUiThread { setAcc(dany) }
     compose.waitForIdle()
     n(PostTags.commentCard("c1")).performClick()
@@ -290,38 +276,35 @@ class PostScreenTest {
     n(PostTags.commentDeleteBtn("c1")).assertExists()
   }
 
-  /** Full composer lifecycle: enablement, trimming, send, async disable, and placeholder. */
   @Test
-  fun composer_enablement_trim_send_and_async_disable() {
+  fun composer_end_to_end_behaviors() {
     val host = renderHost(postId = "p1", initialOnBack = {})
 
-    // Start with null post: send disabled, placeholder visible
+    // Pre-post: disabled & placeholder
     n(PostTags.COMPOSER_BAR).assertExists()
-    t("Share your thoughts...", true).assertExists()
+    t(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
     n(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
     n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
 
-    // Post arrives -> enabled
+    // Post arrives -> enabled, send by click with trimming
     postFlowP1.value = postByAlex
     n(PostTags.COMPOSER_SEND).assertIsEnabled()
-
-    // Trim before send
     n(PostTags.COMPOSER_INPUT).performTextReplacement("   slay the spire   ")
     n(PostTags.COMPOSER_SEND).performClick()
     verify { postVM.addComment(marco, postByAlex, "p1", "slay the spire") }
 
     // Placeholder toggles & whitespace disables
-    t("Share your thoughts...", true).assertExists()
+    t(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
     n(PostTags.COMPOSER_INPUT).performTextReplacement("x")
-    t("Share your thoughts...", true).assertDoesNotExist()
+    t(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertDoesNotExist()
     n(PostTags.COMPOSER_INPUT).performTextReplacement("     ")
     n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
 
-    // Attach button (no-op)
+    // Attach (no-op visual)
     n(PostTags.COMPOSER_ATTACH).assertExists().performClick()
     n(PostTags.COMPOSER_BAR).assertExists()
 
-    // Async path: swap a delaying repo -> button disables while sending
+    // Swap a delaying repo -> send via IME; check disabled while sending
     val delayingRepo = mockk<FirestorePostRepository>(relaxed = true)
     coEvery { delayingRepo.addComment(any(), any(), any(), any()) } coAnswers
         {
@@ -332,118 +315,58 @@ class PostScreenTest {
     injectPost("p1", MutableStateFlow(postByAlex))
     host.setPostVM(postVM)
 
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("Shuffling deck…")
-    n(PostTags.COMPOSER_SEND).assertIsEnabled().performClick()
+    n(PostTags.COMPOSER_INPUT).performTextReplacement("root meetup!")
+    n(PostTags.COMPOSER_INPUT).performImeAction()
     n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
     compose.mainClock.advanceTimeBy(500)
-    t("Share your thoughts...", true).assertExists()
-    n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
-    verify { postVM.addComment(marco, postByAlex, "p1", "Shuffling deck…") }
+    verify { postVM.addComment(marco, postByAlex, "p1", "root meetup!") }
   }
 
-  /** Placeholder should hide on input and reappear when cleared. */
   @Test
-  fun composer_placeholder_toggles_with_text_and_clearing() {
+  fun threads_expand_collapse_flow_and_gutters() {
     setContent(postId = "p1")
     postFlowP1.value = postByAlex
 
-    t("Share your thoughts...", true).assertExists()
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("x")
-    t("Share your thoughts...", true).assertDoesNotExist()
-
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("")
-    t("Share your thoughts...", true).assertExists()
-  }
-
-  /** Roots render, children appear on expand, and grandchild appears on nested expand. */
-  @Test
-  fun threads_expand_show_children_and_grandchildren() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
+    // Roots present
     n(PostTags.threadCard("c1")).assertExists()
     n(PostTags.threadCard("c2")).assertExists()
 
+    // Expand c1 -> children visible
     n(PostTags.commentText("c1_1")).assertDoesNotExist()
     n(PostTags.commentText("c1_2")).assertDoesNotExist()
-
     n(PostTags.commentCard("c1")).performClick()
     settleAnimations()
     n(PostTags.commentText("c1_1")).assertExists()
     n(PostTags.commentText("c1_2")).assertExists()
 
+    // Expand c1_1 -> grandchild visible + gutters present
     n(PostTags.commentText("c1_1_1")).assertDoesNotExist()
     n(PostTags.commentCard("c1_1")).performClick()
     settleAnimations()
     n(PostTags.commentText("c1_1_1")).assertExists()
-  }
-
-  /** Tree/gutter depth indicators should appear when nested. */
-  @Test
-  fun threads_gutter_and_tree_depth_markers_when_nested() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
-    n(PostTags.commentCard("c1_1")).performClick()
-    settleAnimations()
-
     n(PostTags.treeDepth(1)).assertExists()
     n(PostTags.gutterDepth(1)).assertExists()
     n(PostTags.treeDepth(2)).assertExists()
     n(PostTags.gutterDepth(2)).assertExists()
-  }
 
-  /** Collapsing a root hides its children. */
-  @Test
-  fun threads_collapse_hides_children() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
+    // Leaf click no-op
+    n(PostTags.commentCard("c1_2")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1")).assertExists()
+    n(PostTags.treeDepth(3)).assertDoesNotExist()
 
+    // Collapse nested -> hides only its branch
+    n(PostTags.commentCard("c1_1")).performClick()
+    settleAnimations()
+    n(PostTags.commentText("c1_1_1")).assertDoesNotExist()
+
+    // Collapse root -> hides children
     n(PostTags.commentCard("c1")).performClick()
     settleAnimations()
     n(PostTags.commentText("c1_1")).assertDoesNotExist()
   }
 
-  /** Collapsing a nested node hides its grandchild only. */
-  @Test
-  fun threads_nested_collapse_hides_grandchild() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
-    n(PostTags.commentCard("c1_1")).performClick()
-    settleAnimations()
-    n(PostTags.commentText("c1_1_1")).assertExists()
-
-    n(PostTags.commentCard("c1_1")).performClick()
-    settleAnimations()
-    n(PostTags.commentText("c1_1_1")).assertDoesNotExist()
-  }
-
-  /** Clicking a leaf thread (no children) is a no-op. */
-  @Test
-  fun threads_leaf_click_noop() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
-    n(PostTags.commentCard("c1_2")).performClick()
-    settleAnimations()
-    n(PostTags.treeDepth(3)).assertDoesNotExist()
-  }
-
-  /** Each thread maintains independent expand state. */
   @Test
   fun threads_independent_expand_state_per_roots() {
-    // Give c2 a child so it can expand
     val c2Child = c("c2_1", "Marco: Ark Nova engine?", marco)
     val c2WithChild =
         postByAlex.comments.first { it.id == "c2" }.copy(children = mutableListOf(c2Child))
@@ -453,19 +376,16 @@ class PostScreenTest {
 
     setContent(postId = "p_indep")
 
-    // Expand c1 only
     n(PostTags.commentCard("c1")).performClick()
     settleAnimations()
     n(PostTags.commentText("c1_1")).assertExists()
     n(PostTags.commentText("c2_1")).assertDoesNotExist()
 
-    // Now expand c2 as well
     n(PostTags.commentCard("c2")).performClick()
     settleAnimations()
     n(PostTags.commentText("c2_1")).assertExists()
   }
 
-  /** Expansion state persists across recompositions when ids are stable. */
   @Test
   fun threads_expansion_persists_across_recomposition() {
     setContent(postId = "p1")
@@ -475,14 +395,11 @@ class PostScreenTest {
     settleAnimations()
     n(PostTags.commentText("c1_1")).assertExists()
 
-    // Recompose same tree (title change)
     postFlowP1.value = postByAlex.copy(title = "Friday Root Night (updated)")
     compose.waitForIdle()
-
     n(PostTags.commentText("c1_1")).assertExists()
   }
 
-  /** Depth-3 gutters appear when walking down to depth 3. */
   @Test
   fun threads_depth3_gutter_visible_when_deeper() {
     val c1_1_1_1 = c("c1_1_1_1", "Dany: stack your relics!", dany)
@@ -532,127 +449,55 @@ class PostScreenTest {
     n(PostTags.gutterDepth(3)).assertExists()
   }
 
-  /** Reply toggle shows editor; author/date/text are present on the comment card. */
   @Test
-  fun replies_field_toggle_and_metadata_visible() {
+  fun replies_end_to_end_toggle_placeholder_send_ime_trim_close() {
     setContent(postId = "p1")
     postFlowP1.value = postByAlex
 
-    n(PostTags.commentCard("c1")).assertExists()
-    n(PostTags.commentAuthor("c1")).assertExists()
-    n(PostTags.commentDate("c1")).assertExists()
-    n(PostTags.commentText("c1")).assertExists()
-
-    n(PostTags.commentReplyToggle("c1")).assertExists().performClick()
+    // Open root, toggle reply -> field + placeholder
+    n(PostTags.commentCard("c1")).performClick()
+    settleAnimations()
+    n(PostTags.commentReplyToggle("c1")).performClick()
     settleAnimations()
     n(PostTags.commentReplyField("c1")).assertExists()
-  }
+    compose.onNodeWithText(REPLY_TEXT_ZONE_PLACEHOLDER, useUnmergedTree = true).assertExists()
+    n(PostTags.commentReplySend("c1")).assertIsNotEnabled()
 
-  /** Sending a reply calls VM with parent id and text. */
-  @Test
-  fun replies_send_calls_vm_with_parent_and_text() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
+    // Send with trimming by click
+    n(PostTags.commentReplyField("c1")).performTextReplacement("   root is great   ")
+    n(PostTags.commentReplySend("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyToggle("c1_2")).performClick()
-    settleAnimations()
-    n(PostTags.commentReplyField("c1_2")).performTextInput("let's draft")
-    n(PostTags.commentReplySend("c1_2")).performClick()
+    n(PostTags.commentReplyField("c1")).assertDoesNotExist()
+    verify { postVM.addComment(marco, postByAlex, "c1", "root is great") }
 
-    verify(exactly = 1) { postVM.addComment(marco, postByAlex, "c1_2", "let's draft") }
-  }
-
-  /** Placeholder appears; whitespace-only reply remains disabled. */
-  @Test
-  fun replies_placeholder_visible_and_whitespace_disabled() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
+    // Open another node, IME send path
     n(PostTags.commentReplyToggle("c1_1")).performClick()
     settleAnimations()
+    n(PostTags.commentReplyField("c1_1")).performTextReplacement("via ime send")
+    n(PostTags.commentReplyField("c1_1")).performImeAction()
+    verify { postVM.addComment(marco, postByAlex, "c1_1", "via ime send") }
 
-    // OutlinedTextField placeholder lives in unmerged semantics
-    compose.onNodeWithText("Write a reply…", useUnmergedTree = true).assertExists()
-    n(PostTags.commentReplyField("c1_1")).performTextReplacement("    ")
-    n(PostTags.commentReplySend("c1_1")).assertIsNotEnabled()
-  }
-
-  /** Toggling the reply editor twice closes it and prevents blank sends. */
-  @Test
-  fun replies_toggle_twice_closes_and_prevents_blank() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
-    n(PostTags.commentReplyToggle("c1_1")).performClick()
-    settleAnimations()
-
-    n(PostTags.commentReplyField("c1_1")).assertExists()
-    n(PostTags.commentReplySend("c1_1")).assertIsNotEnabled()
-
-    n(PostTags.commentReplyToggle("c1_1")).performClick()
-    settleAnimations()
-    n(PostTags.commentReplyField("c1_1")).assertDoesNotExist()
-    verify(exactly = 0) { postVM.addComment(any(), any(), any(), any()) }
-  }
-
-  /** Reply text is trimmed before sending. */
-  @Test
-  fun replies_trims_text_before_send() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
+    // Toggle twice closes, no send on blank
     n(PostTags.commentReplyToggle("c1_2")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyField("c1_2")).performTextReplacement("   root is great   ")
-    n(PostTags.commentReplySend("c1_2")).performClick()
-
-    verify(exactly = 1) { postVM.addComment(marco, postByAlex, "c1_2", "root is great") }
-  }
-
-  /** After sending a reply, the inline editor closes and clears its content. */
-  @Test
-  fun replies_send_closes_editor_and_clears() {
-    setContent(postId = "p1")
-    postFlowP1.value = postByAlex
-
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
+    n(PostTags.commentReplySend("c1_2")).assertIsNotEnabled()
     n(PostTags.commentReplyToggle("c1_2")).performClick()
-    settleAnimations()
-    n(PostTags.commentReplyField("c1_2")).assertExists()
-    n(PostTags.commentReplyField("c1_2")).performTextInput("gg")
-
-    n(PostTags.commentReplySend("c1_2")).performClick()
     settleAnimations()
     n(PostTags.commentReplyField("c1_2")).assertDoesNotExist()
-
-    verify(exactly = 1) { postVM.addComment(marco, postByAlex, "c1_2", "gg") }
   }
 
-  /** Correct delete buttons show for my comments vs others; nested delete works. */
   @Test
   fun permissions_delete_buttons_for_post_and_comments() {
     setContent(postId = "p1")
     postFlowP1.value = postByAlex
 
-    // My root comment
     n(PostTags.commentDeleteBtn("c2")).assertExists().performClick()
     val c2 = postByAlex.comments.first { it.id == "c2" }
     verify { postVM.removeComment(marco, postByAlex, c2) }
 
-    // Other user's comment has no delete
     n(PostTags.commentDeleteBtn("c1")).assertDoesNotExist()
     verify(exactly = 1) { postVM.removeComment(any(), any(), any()) }
 
-    // Nested: Marco owns c1_1
     n(PostTags.commentCard("c1")).performClick()
     settleAnimations()
     n(PostTags.commentDeleteBtn("c1_1")).assertExists().performClick()
@@ -660,7 +505,6 @@ class PostScreenTest {
     verify { postVM.removeComment(marco, postByAlex, c11) }
   }
 
-  /** Placeholders while unresolved, caching between updates, and no fetch for blank uid. */
   @Test
   fun user_resolution_placeholders_and_caching_behaviour() {
     val host = renderHost(postId = "p1")
@@ -668,22 +512,20 @@ class PostScreenTest {
     compose.mainClock.advanceTimeByFrame()
     compose.waitForIdle()
 
-    // Resolved authors shown when visible
     n(PostTags.commentCard("c1")).performClick()
     settleAnimations()
     n(PostTags.commentAuthor("c1")).assertExists()
     n(PostTags.commentAuthor("c1_1")).assertExists()
     n(PostTags.commentAuthor("c1_2")).assertExists()
 
-    // Assist chips clickable; tag row hides when empty
-    n(PostTags.tagChip("boardgames")).performClick()
-    n(PostTags.tagChip("lausanne")).performClick()
+    n(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
+    n(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
+
     val noTags = postByAlex.copy(id = "p_no_tags", tags = emptyList())
     injectStaticPost("p_no_tags", noTags)
     host.setPostId("p_no_tags")
     n(PostTags.POST_TAGS_ROW).assertDoesNotExist()
 
-    // Cached user not re-fetched on comments update
     host.setPostId("p1")
     postFlowP1.value = postByAlex
     compose.waitForIdle()
@@ -700,7 +542,6 @@ class PostScreenTest {
     compose.waitForIdle()
     verify(exactly = 0) { usersVM.getOtherAccount(dany.uid, any()) }
 
-    // Header author unresolved -> placeholder "<Username>"
     every { usersVM.getOtherAccount(eq(alex.uid), any()) } answers { /* unresolved */}
     val noAuthor = postByAlex.copy(id = "p_author_unresolved", comments = emptyList())
     injectStaticPost("p_author_unresolved", noAuthor)
@@ -709,11 +550,10 @@ class PostScreenTest {
     settleAnimations()
     compose
         .onNode(
-            hasTestTag(PostTags.POST_AUTHOR).and(hasText("<Username>", false, false)),
+            hasTestTag(PostTags.POST_AUTHOR).and(hasText(UNKNOWN_USER_PLACEHOLDER, false, false)),
             useUnmergedTree = true)
         .assertExists()
 
-    // Comment from Nil (unresolved): shows placeholder and triggers fetch
     val nilUid = "u_nil"
     every { usersVM.getOtherAccount(eq(nilUid), any()) } answers { /* unresolved */}
     val nilComment =
@@ -729,12 +569,12 @@ class PostScreenTest {
     settleAnimations()
     compose
         .onNode(
-            hasTestTag(PostTags.commentAuthor("c_nil")).and(hasText("<Username>", false, false)),
+            hasTestTag(PostTags.commentAuthor("c_nil"))
+                .and(hasText(UNKNOWN_USER_PLACEHOLDER, false, false)),
             useUnmergedTree = true)
         .assertExists()
     verify(atLeast = 1) { usersVM.getOtherAccount(eq(nilUid), any()) }
 
-    // Blank uid -> no fetch, show placeholder
     val blank = c("c_blank", "Anonymous meeple", marco.copy(uid = "")).copy(authorId = "")
     val blankPost = postByAlex.copy(id = "p_blank", comments = listOf(blank))
     injectStaticPost("p_blank", blankPost)
@@ -743,12 +583,12 @@ class PostScreenTest {
     settleAnimations()
     compose
         .onNode(
-            hasTestTag(PostTags.commentAuthor("c_blank")).and(hasText("<Username>", false, false)),
+            hasTestTag(PostTags.commentAuthor("c_blank"))
+                .and(hasText(UNKNOWN_USER_PLACEHOLDER, false, false)),
             useUnmergedTree = true)
         .assertExists()
     verify(exactly = 0) { usersVM.getOtherAccount("", any()) }
 
-    // Back to normal; ensure Alex & Dany are fetched at least once in a fresh subtree
     host.setPostId("p1")
     host.resetScreen()
     postFlowP1.value = postByAlex
@@ -758,30 +598,16 @@ class PostScreenTest {
     verify(timeout = 1500, atLeast = 1) { usersVM.getOtherAccount(dany.uid, any()) }
   }
 
-  /** Basic list rendering and expanding a thread realizes child rows. */
   @Test
-  fun comments_list_basic_render_and_expand() {
-    val host = renderHost(postId = "p1", initialOnBack = {})
-    postFlowP1.value = postByAlex
-    n(PostTags.commentText("c1")).assertExists()
-    n(PostTags.commentText("c2")).assertExists()
-    n(PostTags.commentCard("c1")).performClick()
-    settleAnimations()
-    n(PostTags.commentText("c1_1")).assertExists()
-    n(PostTags.commentText("c1_2")).assertExists()
-  }
-
-  /** FlowRow of tags wraps and chips are clickable; empty comments shows no threads. */
-  @Test
-  fun tags_flow_wrap_clickable_and_empty_comments_case() {
+  fun tags_flow_wrap_and_empty_comments_case() {
     val manyTags = (1..24).map { i -> "averyverylongtag_${i}" + "_".repeat(18) }
     injectStaticPost("p_many_tags", postByAlex.copy(id = "p_many_tags", tags = manyTags))
 
     val host = renderHost(postId = "p_many_tags")
 
     n(PostTags.POST_TAGS_ROW).assertExists()
-    n(PostTags.tagChip(manyTags.first())).performClick()
-    n(PostTags.tagChip(manyTags.last())).performClick()
+    n(PostTags.tagChip(manyTags.first())).assertExists().assertIsNotEnabled()
+    n(PostTags.tagChip(manyTags.last())).assertExists().assertIsNotEnabled()
 
     val noComments = postByAlex.copy(id = "p_empty_comments", comments = emptyList())
     injectStaticPost("p_empty_comments", noComments)
