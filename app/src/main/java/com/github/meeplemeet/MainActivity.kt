@@ -57,6 +57,8 @@ object FirebaseProvider {
   val auth: FirebaseAuth by lazy { Firebase.auth }
 }
 
+const val LOADING_SCREEN_TAG = "Loading Screen"
+
 /**
  * `MainActivity` is the entry point of the application. It sets up the content view with the
  * `onCreate` methods. You can run the app by running the `app` configuration in Android Studio. NB:
@@ -239,7 +241,7 @@ fun MeepleMeetApp(
 @Composable
 private fun LoadingScreen() {
   Box(
-      modifier = Modifier.testTag("Loading Screen").fillMaxSize(),
+      modifier = Modifier.testTag(LOADING_SCREEN_TAG).fillMaxSize(),
       contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
       }

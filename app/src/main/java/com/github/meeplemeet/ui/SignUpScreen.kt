@@ -2,8 +2,10 @@ package com.github.meeplemeet.ui
 // Github Copilot was used for this file
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -15,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -175,17 +179,15 @@ fun SignUpScreen(
               Spacer(modifier = Modifier.height(8.dp))
 
               // App logo - changes based on theme
-              /*
               val isDarkTheme = isSystemInDarkTheme()
               Box(modifier = Modifier.size(250.dp)) {
                 Image(
-                    painter = painterResource(
-                        id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear
-                    ),
+                    painter =
+                        painterResource(
+                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
                     contentDescription = "Meeple Meet Logo",
                     modifier = Modifier.fillMaxSize())
               }
-              */
 
               Spacer(modifier = Modifier.height(24.dp))
 
@@ -196,14 +198,13 @@ fun SignUpScreen(
                   modifier =
                       Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
-              Spacer(modifier = Modifier.height(26.dp))
-
               // Email input field with validation
               OutlinedTextField(
                   value = email,
                   onValueChange = {
                     email = it
-                    emailError = null // Clear validation error when user starts typing
+                    // Validate email in real-time as user types
+                    emailError = if (it.isNotEmpty()) validateEmail(it) else null
                   },
                   label = { Text("Email") },
                   singleLine = true,
@@ -229,7 +230,12 @@ fun SignUpScreen(
                   value = password,
                   onValueChange = {
                     password = it
-                    passwordError = null // Clear validation error when user starts typing
+                    // Validate password in real-time as user types
+                    passwordError = if (it.isNotEmpty()) validatePassword(it) else null
+                    // Also re-validate confirm password if it's not empty
+                    if (confirmPassword.isNotEmpty()) {
+                      confirmPasswordError = validateConfirmPassword(it, confirmPassword)
+                    }
                   },
                   label = { Text("Password") },
                   singleLine = true,
@@ -276,7 +282,9 @@ fun SignUpScreen(
                   value = confirmPassword,
                   onValueChange = {
                     confirmPassword = it
-                    confirmPasswordError = null // Clear validation error when user starts typing
+                    // Validate confirm password in real-time as user types
+                    confirmPasswordError =
+                        if (it.isNotEmpty()) validateConfirmPassword(password, it) else null
                   },
                   label = { Text("Confirm Password") },
                   singleLine = true,
@@ -340,13 +348,8 @@ fun SignUpScreen(
                   },
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor =
-                              if (isFormValid && !uiState.isLoading)
-                                  AppColors.affirmative // Valid input
-                              else AppColors.secondary, // Invalid input
-                          contentColor =
-                              if (isFormValid && !uiState.isLoading) AppColors.textIcons
-                              else AppColors.textIconsFade),
+                          containerColor = AppColors.affirmative,
+                          contentColor = AppColors.textIcons),
                   modifier =
                       Modifier.fillMaxWidth(0.6f)
                           .testTag(SignUpScreenTestTags.SIGN_UP_BUTTON), // For UI testing
