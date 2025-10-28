@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
@@ -36,9 +38,12 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
@@ -52,7 +57,21 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 
 /* ================================================================
- * Types & Styling
+ * Magic Numbers
+ * ================================================================ */
+const val ERROR_NOT_SENT_COMMENT: String = "Couldn't send comment. Please try again."
+const val ERROR_NOT_DELETED_POST: String = "Couldn't delete post. Please try again."
+const val ERROR_SEND_REPLY: String = "Couldn't send reply. Please try again."
+const val ERROR_NOT_DELETED_COMMENT: String = "Couldn't delete comment. Please try again."
+
+const val TOPBAR_TITLE: String = "Post"
+const val COMMENT_TEXT_ZONE_PLACEHOLDER: String = "Share your thoughts..."
+const val REPLY_TEXT_ZONE_PLACEHOLDER: String = "Write a reply…"
+const val UNKNOWN_USER_PLACEHOLDER: String = "<Unknown User>"
+const val TIMESTAMP_COMMENT_FORMAT: String = "MMM d, yyyy · HH:mm"
+
+/* ================================================================
+ * Setups
  * ================================================================ */
 
 private typealias ResolveUser = (String) -> Account?
@@ -116,7 +135,7 @@ object PostTags {
 }
 
 /* ================================================================
- * Composables
+ * Main screen
  * ================================================================ */
 
 /**
@@ -142,13 +161,35 @@ fun PostScreen(
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
+  val snackbarHostState = remember { SnackbarHostState() }
 
   var topComment by rememberSaveable { mutableStateOf("") }
   var isSending by remember { mutableStateOf(false) }
 
+  // Ensure current user is in cache
   LaunchedEffect(account.uid) { userCache[account.uid] = account }
 
-  LaunchedEffect(post?.id, post?.comments?.hashCode()) {
+  // Build a stable fingerprint of author IDs
+  val authorsKey =
+      remember(post) {
+        post?.let { p ->
+          buildSet {
+                add(p.authorId)
+                fun walk(list: List<Comment>) {
+                  list.forEach { c ->
+                    add(c.authorId)
+                    if (c.children.isNotEmpty()) walk(c.children)
+                  }
+                }
+                walk(p.comments)
+              }
+              .sorted()
+              .joinToString("|")
+        }
+      }
+
+  // Prefetch all distinct authors for the current post/comments in one go
+  LaunchedEffect(post?.id, authorsKey) {
     val p = post ?: return@LaunchedEffect
     val toFetch =
         buildSet {
@@ -167,6 +208,7 @@ fun PostScreen(
 
   Scaffold(
       modifier = Modifier.testTag(PostTags.SCREEN),
+      snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
       topBar = {
         Column(Modifier.testTag(PostTags.TOP_BAR)) {
           PostTopBar(onBack = onBack)
@@ -190,6 +232,8 @@ fun PostScreen(
                       author = account, post = p, parentId = p.id, text = topComment.trim())
                   topComment = ""
                   focusManager.clearFocus(force = true)
+                } catch (_: Throwable) {
+                  snackbarHostState.showSnackbar(ERROR_NOT_SENT_COMMENT)
                 } finally {
                   isSending = false
                 }
@@ -203,24 +247,38 @@ fun PostScreen(
                 CircularProgressIndicator(Modifier.testTag(PostTags.LOADING_SPINNER))
               }
         } else {
+          val currentPost = post!!
           PostContent(
-              post = post!!,
+              post = currentPost,
               currentUser = account,
               onDeletePost = {
-                postViewModel.deletePost(account, post!!)
-                onBack()
+                scope.launch {
+                  runCatching { postViewModel.deletePost(account, currentPost) }
+                      .onSuccess { onBack() }
+                      .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
+                }
               },
               onReply = { parentId, text ->
-                postViewModel.addComment(account, post!!, parentId, text)
+                scope.launch {
+                  runCatching { postViewModel.addComment(account, currentPost, parentId, text) }
+                      .onFailure { snackbarHostState.showSnackbar(ERROR_SEND_REPLY) }
+                }
               },
               onDeleteComment = { comment ->
-                postViewModel.removeComment(account, post!!, comment)
+                scope.launch {
+                  runCatching { postViewModel.removeComment(account, currentPost, comment) }
+                      .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_COMMENT) }
+                }
               },
               resolveUser = { uid -> userCache[uid] },
               modifier = Modifier.padding(padding))
         }
       }
 }
+
+/* ================================================================
+ * Composables
+ * ================================================================ */
 
 /**
  * Top app bar for the Post screen, with a back button and title.
@@ -238,7 +296,7 @@ private fun PostTopBar(onBack: () -> Unit) {
       },
       title = {
         Text(
-            text = "Post",
+            text = TOPBAR_TITLE,
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -247,12 +305,12 @@ private fun PostTopBar(onBack: () -> Unit) {
 }
 
 /**
- * Bottom composer bar for writing and sending comments.
+ * Comment composer bar at the bottom of the Post screen.
  *
- * @param value The current text in the input field.
- * @param onValueChange Lambda to invoke when the input text changes.
+ * @param value The current text input value.
+ * @param onValueChange Lambda to invoke when the text input changes.
  * @param onAttach Lambda to invoke when the attach button is pressed.
- * @param sendEnabled Boolean indicating if the send button should be enabled.
+ * @param sendEnabled Whether the send button is enabled.
  * @param onSend Lambda to invoke when the send button is pressed.
  */
 @Composable
@@ -285,9 +343,13 @@ private fun ComposerBar(
                     .semantics { contentDescription = "Comment input" }
                     .testTag(PostTags.COMPOSER_INPUT),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { if (sendEnabled) onSend() }),
             decorationBox = { inner ->
               if (value.isEmpty())
-                  Text("Share your thoughts...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  Text(
+                      COMMENT_TEXT_ZONE_PLACEHOLDER,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant)
               inner()
             })
         Spacer(Modifier.width(6.dp))
@@ -304,12 +366,12 @@ private fun ComposerBar(
  * Composable displaying the content of a post along with its comments.
  *
  * @param post The post to display.
- * @param currentUser The currently logged-in user.
- * @param onDeletePost Lambda to invoke when the post is deleted.
- * @param onReply Lambda to invoke when a reply is made to a comment.
- * @param onDeleteComment Lambda to invoke when a comment is deleted.
- * @param resolveUser Function to resolve a user ID to an Account object.
- * @param modifier Modifier to be applied to the LazyColumn.
+ * @param currentUser The current user's account information.
+ * @param onDeletePost Lambda to invoke when deleting the post.
+ * @param onReply Lambda to invoke when replying to a comment.
+ * @param onDeleteComment Lambda to invoke when deleting a comment.
+ * @param resolveUser Lambda to resolve a user ID to an Account.
+ * @param modifier Modifier to be applied to the content.
  */
 @Composable
 private fun PostContent(
@@ -340,7 +402,7 @@ private fun PostContent(
               onDelete = onDeletePost)
         }
 
-        items(post.comments, key = { it.id }) { root ->
+        items(items = post.comments, key = { it.id }, contentType = { "root_comment" }) { root ->
           ThreadCard(
               root = root,
               currentUser = currentUser,
@@ -352,12 +414,12 @@ private fun PostContent(
 }
 
 /**
- * Composable displaying a post card with its header, title, body, tags, and delete option.
+ * Composable displaying a card for a post, including title, body, tags, and author info.
  *
  * @param post The post to display.
  * @param author The author of the post.
- * @param currentUser The currently logged-in user.
- * @param onDelete Lambda to invoke when the post is deleted.
+ * @param currentUser The current user's account information.
+ * @param onDelete Lambda to invoke when deleting the post.
  */
 @Composable
 private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelete: () -> Unit) {
@@ -388,12 +450,15 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
               modifier = Modifier.testTag(PostTags.POST_TAGS_ROW)) {
                 post.tags.forEach { tag ->
                   AssistChip(
+                      enabled = false,
                       onClick = {},
                       label = { Text("#$tag") },
                       colors =
                           AssistChipDefaults.assistChipColors(
                               containerColor = MaterialTheme.colorScheme.tertiary,
-                              labelColor = MaterialTheme.colorScheme.onBackground),
+                              labelColor = MaterialTheme.colorScheme.onBackground,
+                              disabledContainerColor = MaterialTheme.colorScheme.tertiary,
+                              disabledLabelColor = MaterialTheme.colorScheme.onBackground),
                       modifier = Modifier.testTag(PostTags.tagChip(tag)),
                   )
                 }
@@ -430,11 +495,11 @@ private fun PostHeader(post: Post, author: Account?) {
                 Modifier.size(36.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary)
-                    .testTag(PostTags.POST_AVATAR))
+                    .clearAndSetSemantics { testTag = PostTags.POST_AVATAR })
         Spacer(Modifier.width(10.dp))
         Column {
           Text(
-              text = author?.handle ?: "<Username>",
+              text = author?.handle ?: UNKNOWN_USER_PLACEHOLDER,
               style =
                   MaterialTheme.typography.labelLarge.copy(
                       color = MaterialTheme.colorScheme.onBackground,
@@ -456,11 +521,11 @@ private fun PostHeader(post: Post, author: Account?) {
  * Composable displaying a comment thread card with expandable replies.
  *
  * @param root The root comment of the thread.
- * @param currentUser The currently logged-in user.
- * @param resolveUser Function to resolve a user ID to an Account object.
- * @param onReply Lambda to invoke when a reply is made to the root comment.
- * @param onDelete Lambda to invoke when the root comment is deleted.
- * @param gutterColor Color of the gutter lines indicating comment depth.
+ * @param currentUser The current user's account information.
+ * @param resolveUser Lambda to resolve a user ID to an Account.
+ * @param onReply Lambda to invoke when replying to a comment.
+ * @param onDelete Lambda to invoke when deleting a comment.
+ * @param gutterColor The color of the gutter lines.
  */
 @Composable
 private fun ThreadCard(
@@ -501,13 +566,13 @@ private fun ThreadCard(
 /**
  * Recursive composable displaying a tree of comments with indentation and gutters.
  *
- * @param comments The list of comments to display at the current depth.
- * @param currentUser The currently logged-in user.
- * @param resolveUser Function to resolve a user ID to an Account object.
- * @param onReply Lambda to invoke when a reply is made to a comment.
- * @param onDelete Lambda to invoke when a comment is deleted.
+ * @param comments List of comments to display.
+ * @param currentUser The current user's account information.
+ * @param resolveUser Lambda to resolve a user ID to an Account.
+ * @param onReply Lambda to invoke when replying to a comment.
+ * @param onDelete Lambda to invoke when deleting a comment.
  * @param depth The current depth in the comment tree.
- * @param gutterColor Color of the gutter lines indicating comment depth.
+ * @param gutterColor The color of the gutter lines.
  */
 @Composable
 private fun CommentsTree(
@@ -586,11 +651,11 @@ private fun CommentsTree(
 }
 
 /**
- * Composable drawing vertical gutter lines to indicate comment depth.
+ * Composable displaying the gutter lines for comment threading based on depth.
  *
  * @param depth The depth of the comment in the thread.
- * @param modifier Modifier to be applied to the gutter box.
- * @param color Color of the gutter lines.
+ * @param modifier Modifier to be applied to the gutter.
+ * @param color The color of the gutter lines.
  */
 @Composable
 private fun ThreadGutter(
@@ -619,16 +684,14 @@ private fun ThreadGutter(
 }
 
 /**
- * Composable displaying an individual comment item with author, timestamp, text, and reply/delete
- * options.
+ * Composable displaying an individual comment item with reply and delete options.
  *
  * @param comment The comment to display.
  * @param author The author of the comment.
- * @param isMine Boolean indicating if the comment was made by the current user.
- * @param onReply Lambda to invoke when a reply is made to the comment.
- * @param onDelete Lambda to invoke when the comment is deleted.
- * @param onCardClick Optional lambda to invoke when the comment card is clicked (for
- *   expanding/collapsing).
+ * @param isMine Whether the comment was authored by the current user.
+ * @param onReply Lambda to invoke when replying to the comment.
+ * @param onDelete Lambda to invoke when deleting the comment.
+ * @param onCardClick Optional lambda to invoke when the comment card is clicked.
  */
 @Composable
 private fun CommentItem(
@@ -654,11 +717,12 @@ private fun CommentItem(
               modifier =
                   Modifier.size(24.dp)
                       .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.primary))
+                      .background(MaterialTheme.colorScheme.primary)
+                      .clearAndSetSemantics {})
           Spacer(Modifier.width(8.dp))
           Column(Modifier.weight(1f)) {
             Text(
-                text = author?.handle ?: "<Username>",
+                text = author?.handle ?: UNKNOWN_USER_PLACEHOLDER,
                 style =
                     MaterialTheme.typography.labelMedium.copy(
                         color = MaterialTheme.colorScheme.onBackground,
@@ -707,8 +771,20 @@ private fun CommentItem(
                     Modifier.weight(1f)
                         .semantics { contentDescription = "Reply input" }
                         .testTag(PostTags.commentReplyField(comment.id)),
-                placeholder = { Text("Write a reply…") },
+                placeholder = { Text(REPLY_TEXT_ZONE_PLACEHOLDER) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions =
+                    KeyboardActions(
+                        onSend = {
+                          val text = replyText.trim()
+                          if (text.isNotEmpty()) {
+                            onReply(text)
+                            replyText = ""
+                            replying = false
+                            focusManager.clearFocus(force = true)
+                          }
+                        }),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -737,10 +813,10 @@ private fun CommentItem(
 }
 
 /**
- * Composable representing a styled card used for posts and comments.
+ * Composable representing a styled card used throughout the MeepleMeet app.
  *
  * @param modifier Modifier to be applied to the card.
- * @param contentPadding Padding values to apply inside the card.
+ * @param contentPadding Padding values for the content inside the card.
  * @param content Composable content to be displayed inside the card.
  */
 @Composable
@@ -762,13 +838,12 @@ private fun MeepleCard(
 }
 
 /**
- * A custom layout that arranges its children in a horizontal flow, wrapping to the next line as
- * needed.
+ * A custom layout that arranges its children in a horizontal flow, wrapping to new lines as needed.
  *
- * @param modifier Modifier to be applied to the FlowRow.
+ * @param modifier Modifier to be applied to the layout.
  * @param horizontalGap Horizontal gap between items.
  * @param verticalGap Vertical gap between rows.
- * @param content Composable content to be arranged in the FlowRow.
+ * @param content Composable content to be laid out.
  */
 @Composable
 private fun FlowRow(
@@ -837,5 +912,5 @@ private fun FlowRow(
  */
 private fun formatDateTime(ts: Timestamp): String {
   val d = ts.toDate()
-  return DateFormat.format("MMM d, yyyy · HH:mm", d).toString()
+  return DateFormat.format(TIMESTAMP_COMMENT_FORMAT, d).toString()
 }
