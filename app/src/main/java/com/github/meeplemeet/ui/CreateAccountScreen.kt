@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
+import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.theme.AppColors
 
 /**
@@ -24,29 +25,28 @@ import com.github.meeplemeet.ui.theme.AppColors
  * [FirestoreHandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate]
  * to continue the account creation flow.
  *
- * @param viewModel The ViewModel responsible for handling Firestore handle validation.
- * @param currentAccount The [Account] object representing the user creating an account.
- * @param modifier Optional [Modifier] for styling and layout.
+ * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
+ * @param account The [Account] object representing the user creating an account.
  * @param onCreate Lambda to be executed when account creation is successfully validated.
  */
 @Composable
 fun CreateAccountScreen(
-    viewModel: FirestoreHandlesViewModel,
-    currentAccount: Account,
-    modifier: Modifier = Modifier,
+    account: Account,
+    firstoreVM: FirestoreViewModel,
+    handlesVM: FirestoreHandlesViewModel,
     onCreate: () -> Unit = {},
 ) {
   var handle by remember { mutableStateOf("") }
   var username by remember { mutableStateOf("") }
   var usernameError by remember { mutableStateOf<String?>(null) }
 
-  val errorMessage by viewModel.errorMessage.collectAsState()
+  val errorMessage by handlesVM.errorMessage.collectAsState()
   var showErrors by remember { mutableStateOf(false) }
 
   /** Checks the handle availability and updates the ViewModel state. */
   fun validateHandle(handle: String) {
     showErrors = true
-    viewModel.checkHandleAvailable(handle)
+    handlesVM.checkHandleAvailable(handle)
   }
 
   /**
@@ -64,7 +64,7 @@ fun CreateAccountScreen(
 
   /** Root layout column for aligning all UI components vertically. */
   Column(
-      modifier = modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
+      modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -158,7 +158,8 @@ fun CreateAccountScreen(
 
               /** Create the handle and call onCreate if there are no errors */
               if ((errorMessage.isBlank()) && usernameValidation == null) {
-                viewModel.createAccountHandle(account = currentAccount, handle = handle)
+                handlesVM.createAccountHandle(account = account, handle = handle)
+                firstoreVM.setAccountName(account, username)
                 if (errorMessage.isBlank()) onCreate()
               }
             },
