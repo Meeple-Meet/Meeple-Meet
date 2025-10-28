@@ -161,7 +161,7 @@ jobs:
           fi
 
       - name: Run Unit Tests
-        run: ./gradlew check --parallel --build-cache
+        run: ./gradlew check --no-parallel --build-cache
 
       - name: Upload unit test results
         if: always()
@@ -254,7 +254,7 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedAndroidTest --parallel --build-cache
+          script: ./gradlew connectedAndroidTest --no-parallel --build-cache
 
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
@@ -330,7 +330,7 @@ jobs:
           path: app/build/reports/
 
       - name: Generate coverage report
-        run: ./gradlew jacocoTestReport --parallel --build-cache
+        run: ./gradlew jacocoTestReport
 
       - name: Upload report to SonarCloud
         env:

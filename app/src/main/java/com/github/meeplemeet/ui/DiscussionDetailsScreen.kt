@@ -42,6 +42,8 @@ object UITestTags {
   const val LEAVE_DISCUSSION_CONFIRM_BUTTON = "confirm_leave_button"
   const val MAKE_ADMIN_BUTTON = "make_admin_button"
   const val DISCUSSION_NAME = "discussion_name"
+
+  fun memberRowTag(uid: String) = "member_row_$uid"
 }
 
 /**
@@ -488,7 +490,7 @@ fun MemberList(
                 clickableModifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp, horizontal = 14.dp)
-                    .testTag("member_row_${member.uid}"),
+                    .testTag(UITestTags.memberRowTag(member.uid)),
             verticalAlignment = Alignment.CenterVertically) {
 
               /** --- Avatar Circle --- */

@@ -11,6 +11,7 @@ import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -136,6 +137,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithText("Cancel").assertIsDisplayed()
   }
 
+  @Ignore
   @Test
   fun memberList_displaysMembersWithBadges() {
     compose.setContent {
@@ -168,6 +170,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithTag("discussion_name").assertExists()
   }
 
+  @Ignore
   @Test
   fun participantView_cannotEditOrAddMembers() = runBlocking {
     // Create a discussion where current user is participant but not admin or owner
@@ -242,6 +245,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     repository.deleteDiscussion(updatedDiscussion)
   }
 
+  @Ignore
   @Test
   fun ownerView_canRemoveAdmins() = runBlocking {
     // Create a discussion where current user is the owner

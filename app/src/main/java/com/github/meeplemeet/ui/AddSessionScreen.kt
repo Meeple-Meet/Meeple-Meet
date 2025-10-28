@@ -36,7 +36,6 @@ import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
 import java.time.*
 import java.util.Date
-import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.launch
 
@@ -593,16 +592,7 @@ fun ParticipantsSection(
                   range = minSliderNumber..maxSliderNumber,
                   values = minPlayers.toFloat()..maxPlayers.toFloat(),
                   steps = sliderSteps,
-                  editable = true,
-                  onValuesChange = { min, max ->
-                    val newMin =
-                        min.roundToInt().coerceIn(minSliderNumber.toInt(), maxSliderNumber.toInt())
-                    val newMax = max.roundToInt().coerceIn(newMin, maxSliderNumber.toInt())
-                    if (newMin != minPlayers || newMax != maxPlayers) {
-                      onMinMaxChange(newMin, newMax)
-                    }
-                  },
-                  surroundModifier = Modifier.weight(1f),
+                  modifier = Modifier.weight(1f),
                   sliderModifier =
                       Modifier.background(MaterialTheme.colorScheme.surface, CircleShape)
                           .padding(horizontal = 10.dp, vertical = 6.dp))

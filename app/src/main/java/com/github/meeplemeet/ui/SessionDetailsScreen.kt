@@ -4,9 +4,19 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +28,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,7 +45,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,9 +61,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.viewmodels.GameUIState
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
@@ -63,7 +83,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Calendar
-import kotlin.math.roundToInt
 
 /* =======================================================================
  * Test tags for UI tests
@@ -76,6 +95,9 @@ object SessionTestTags {
   const val MIN_PLAYERS = "min_players"
   const val MAX_PLAYERS = "max_players"
   const val PARTICIPANT_CHIPS = "participant_chips"
+  const val ADD_PARTICIPANT_BUTTON = "add_participant_button"
+  const val ADD_PARTICIPANT_SEARCH = "add_participant_search"
+  const val DISCRETE_PILL_SLIDER = "discrete_pill_slider"
   const val DATE_FIELD = "date_field"
   const val TIME_FIELD = "time_field"
   const val LOCATION_FIELD = "location_field"
@@ -85,18 +107,16 @@ object SessionTestTags {
   const val TIME_PICK_BUTTON = "time_pick_button"
   const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
   const val DELETE_SESSION_BUTTON = "delete_session_button"
+
+  fun chipsTag(uid: String) = "chip${uid}"
+
+  fun addParticipantTag(uid: String) = "add_participant_item:${uid}"
+
+  fun removeParticipantTag(uid: String) = "remove:${uid}"
 }
 
 /* =======================================================================
- * Models
- * ======================================================================= */
-
-// Constants for the minimum and maximum values of the player count slider.
-const val sliderMinRange = 2f
-const val sliderMaxRange = 10f
-
-/* =======================================================================
- * Public entry point
+ * Helpers
  * ======================================================================= */
 
 fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
@@ -128,47 +148,62 @@ fun SessionDetailsScreen(
     initial: SessionForm = SessionForm(),
     onBack: () -> Unit = {},
 ) {
-  // Local state for the session form data.
   var form by remember { mutableStateOf(initial) }
+  val gameUIState by sessionViewModel.gameUIState.collectAsState()
 
-  val isCurrUserAdmin =
-      account.uid == discussion.creatorId || discussion.admins.contains(account.uid)
+  // Fetch game as soon as we know the proposed game
+  val sessionGameId = discussion.session?.gameId.orEmpty()
+  LaunchedEffect(sessionGameId) {
+    if (sessionGameId.isNotBlank()) {
+      sessionViewModel.getGameFromId(sessionGameId)
+    }
+  }
 
-  LaunchedEffect(Unit) {
-    val session = discussion.session!!
+  val game = gameUIState.fetchedGame
+  val session = discussion.session!!
+
+  LaunchedEffect(session.gameId, game) {
     val (date, time) = timestampToLocal(session.date)
 
-    viewModel.getAccounts(session.participants) {
+    viewModel.getAccounts(session.participants) { accounts ->
       form =
           form.copy(
               title = session.name,
               date = date,
               time = time,
-              proposedGame = "",
+              proposedGame = session.gameId,
               minPlayers = session.minParticipants,
               maxPlayers = session.maxParticipants,
-              participants = it,
+              participants = accounts,
               locationText = session.location.name)
+
+      if (form.proposedGame.isNotBlank()) sessionViewModel.getGameFromId(form.proposedGame)
+    }
+
+    if (session.gameId.isNotBlank() && game == null) {
+      sessionViewModel.getGameFromId(session.gameId)
     }
   }
 
-  // Scaffold provides the top bar and main content area.
+  val isCurrUserAdmin =
+      account.uid == discussion.creatorId || discussion.admins.contains(account.uid)
+
   Scaffold(
       topBar = {
         TopBarWithDivider(
             text = "Session View",
             onReturn = {
-              if (discussion.admins.contains(account.uid)) {
+              if (isCurrUserAdmin) {
                 sessionViewModel.updateSession(
                     requester = account,
                     discussion = discussion,
                     name = form.title,
-                    gameId = null,
+                    gameId = form.proposedGame, // game?.uid ?: "Loading...",
                     date = toTimestamp(form.date, form.time),
-                    location = null,
+                    location = Location(0.0, 0.0, form.locationText),
                     minParticipants = form.minPlayers,
                     maxParticipants = form.maxPlayers,
-                    form.participants.ifEmpty { null })
+                    newParticipantList = form.participants.ifEmpty { emptyList() })
               }
               onBack()
             },
@@ -201,19 +236,23 @@ fun SessionDetailsScreen(
               sessionViewModel = sessionViewModel,
               currentUser = account,
               discussion = discussion,
-              editable = isCurrUserAdmin)
+              editable = isCurrUserAdmin,
+              gameUIState = gameUIState) {
+                form = form.copy(proposedGame = it)
+              }
 
           // Participants section
           ParticipantsSection(
               form = form,
               editable = isCurrUserAdmin,
               account = account,
-              onFormChange = { min, max ->
-                form = form.copy(minPlayers = min.roundToInt(), maxPlayers = max.roundToInt())
-              },
+              game = game,
               onRemoveParticipant = { p ->
                 form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
-              })
+              },
+              onAddParticipant = { p -> form = form.copy(participants = form.participants + p) },
+              discussion = discussion,
+              viewModel = viewModel)
 
           // Organisation section
           // editable for admins and the session creator, read-only for members
@@ -221,7 +260,7 @@ fun SessionDetailsScreen(
 
           Spacer(Modifier.height(4.dp))
 
-          // Quit session button
+          // Quit session button (all users)
           OutlinedButton(
               onClick = {
                 onBack()
@@ -259,24 +298,29 @@ fun SessionDetailsScreen(
  * Sub-components
  * ======================================================================= */
 
-/**
- * Displays the participants section of the session. Shows participant count, editable range slider
- * for player limits, and participant chips.
- *
- * @param form Current session form data
- * @param onFormChange Callback triggered when player limits are adjusted
- * @param editable Whether the section is editable (admin-only)
- * @param account The current user that's viewing the session details
- * @param onRemoveParticipant Callback to remove a participant
- */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ParticipantsSection(
     form: SessionForm,
-    onFormChange: (Float, Float) -> Unit,
     account: Account,
     editable: Boolean = false,
-    onRemoveParticipant: (Account) -> Unit
+    game: Game?,
+    onRemoveParticipant: (Account) -> Unit,
+    onAddParticipant: (Account) -> Unit,
+    discussion: Discussion,
+    viewModel: FirestoreViewModel
 ) {
+  val participants = form.participants
+  val currentCount = participants.size
+  val max = form.maxPlayers
+
+  // Fetch discussion members (UID -> Account) once and keep in state
+  var candidateAccounts by remember { mutableStateOf<List<Account>>(emptyList()) }
+  LaunchedEffect(discussion.participants) {
+    viewModel.getAccounts(discussion.participants) { accounts -> candidateAccounts = accounts }
+  }
+
+  // UI shell
   SectionCard(
       modifier =
           Modifier.clip(appShapes.extraLarge)
@@ -290,7 +334,7 @@ fun ParticipantsSection(
           )
           Spacer(Modifier.width(8.dp))
           CountBubble(
-              count = form.participants.size,
+              count = currentCount,
               modifier =
                   Modifier.clip(CircleShape)
                       .background(AppColors.affirmative)
@@ -300,67 +344,179 @@ fun ParticipantsSection(
 
         Spacer(Modifier.height(12.dp))
 
-        // Slider for selecting min and max number of players.
-        PillSliderNoBackground(
-            title = "Number of players",
-            editable = editable,
-            range = sliderMinRange..sliderMaxRange,
-            values =
-                form.minPlayers.toFloat().coerceIn(sliderMinRange, sliderMaxRange)..form.maxPlayers
-                        .toFloat()
-                        .coerceIn(sliderMinRange, sliderMaxRange),
-            steps = 7,
-            onValuesChange = { min, max -> onFormChange(min, max) })
+        // Slider (visual-only)
+        if (game != null) {
+          PillSliderNoBackground(
+              title = "Number of players",
+              range = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
+              values = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
+              steps = (game.maxPlayers - game.minPlayers - 1).coerceAtLeast(0))
 
-        // Min/max bubbles of the slider
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-          CountBubble(
-              count = form.minPlayers,
-              modifier =
-                  Modifier.clip(CircleShape)
-                      .background(AppColors.secondary)
-                      .border(1.dp, AppColors.secondary, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp)
-                      .testTag(SessionTestTags.MIN_PLAYERS))
-          CountBubble(
-              count = form.maxPlayers,
-              modifier =
-                  Modifier.clip(CircleShape)
-                      .background(AppColors.secondary)
-                      .border(1.dp, AppColors.secondary, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp)
-                      .testTag(SessionTestTags.MAX_PLAYERS))
+          // Min/Max bubbles (below)
+          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            CountBubble(
+                count = form.minPlayers,
+                modifier =
+                    Modifier.clip(CircleShape)
+                        .background(AppColors.secondary)
+                        .border(1.dp, AppColors.secondary, CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .testTag(SessionTestTags.MIN_PLAYERS))
+            CountBubble(
+                count = form.maxPlayers,
+                modifier =
+                    Modifier.clip(CircleShape)
+                        .background(AppColors.secondary)
+                        .border(1.dp, AppColors.secondary, CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .testTag(SessionTestTags.MAX_PLAYERS))
+          }
+        } else {
+          Text("Loading slider...", color = AppColors.textIconsFade)
         }
-        Spacer(Modifier.height(10.dp))
+
         Spacer(Modifier.height(12.dp))
 
-        // Participant chips (grid of users, removable).
+        // 👉 Delegate chips + add-button + dropdown to UserChipsGrid
         UserChipsGrid(
-            participants = form.participants,
-            onRemove = { p -> onRemoveParticipant(p) },
+            participants = participants,
+            onRemove = onRemoveParticipant,
+            onAdd = onAddParticipant,
             account = account,
-            editable = editable)
+            editable = editable,
+            candidateMembers = candidateAccounts, // full discussion members as Accounts
+            maxPlayers = max,
+            modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
       }
 }
 
 /**
- * Displays the proposed game section for the session. Admins can search and update the game, while
- * members see it as read-only.
+ * Component used to display the participants in a clean and flexible box Each chip shows a
+ * participant name and optionally a remove button for admins.
  *
- * @param sessionViewModel ViewModel managing session operations
- * @param currentUser Currently logged-in user
- * @param discussion The discussion the session belongs to
- * @param editable Whether the current user can modify the proposed game
+ * @param participants List of participants to display
+ * @param onRemove Callback fn used when an Admin/Owner removes a participant
+ * @param modifier Modifiers used for the component
+ * @param account The current user that's viewing the session details
+ * @param editable Whether the current user can edit (remove) participants
  */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun UserChipsGrid(
+    participants: List<Account>,
+    onRemove: (Account) -> Unit,
+    onAdd: (Account) -> Unit,
+    modifier: Modifier = Modifier,
+    account: Account,
+    editable: Boolean = false,
+    candidateMembers: List<Account> = emptyList(),
+    maxPlayers: Int = Int.MAX_VALUE
+) {
+  var showAddMenu by remember { mutableStateOf(false) }
+  var searchQuery by remember { mutableStateOf("") }
+
+  // Filter: not already a participant AND matches handle (case-insensitive)
+  val filteredCandidates =
+      candidateMembers
+          .filter { m -> participants.none { it.uid == m.uid } }
+          .filter { m -> m.handle.contains(searchQuery, ignoreCase = true) }
+
+  FlowRow(
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = modifier.fillMaxWidth()) {
+        // Existing participant chips
+        participants.forEach { p ->
+          UserChip(
+              user = p,
+              modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
+              onRemove = { if (editable) onRemove(p) },
+              account = account,
+              showRemoveBTN = editable)
+        }
+
+        // "+" button: admins only, disappears when full
+        val canAdd = editable && participants.size < maxPlayers && !filteredCandidates.isEmpty()
+        if (canAdd) {
+          Box(
+              modifier =
+                  Modifier.background(AppColors.primary)
+                      .padding(
+                          horizontal = 12.dp,
+                          vertical = 7.dp) // mimic chip padding to vertically align elements
+              ) {
+                IconButton(
+                    onClick = { showAddMenu = true },
+                    modifier =
+                        Modifier.size(32.dp)
+                            .border(1.dp, AppColors.divider, CircleShape)
+                            .clip(CircleShape)
+                            .background(AppColors.primary)
+                            .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
+                      Text("+", color = AppColors.textIcons, fontWeight = FontWeight.Bold)
+                    }
+
+                DropdownMenu(
+                    expanded = showAddMenu,
+                    onDismissRequest = { showAddMenu = false },
+                    modifier = Modifier.background(AppColors.primary),
+                ) {
+                  // Search (by handle only)
+                  OutlinedTextField(
+                      value = searchQuery,
+                      onValueChange = { searchQuery = it },
+                      placeholder = { Text("Search", color = AppColors.textIconsFade) },
+                      singleLine = true,
+                      modifier =
+                          Modifier.padding(horizontal = 12.dp)
+                              .fillMaxWidth()
+                              .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
+
+                  Spacer(Modifier.height(4.dp))
+
+                  // Candidates list
+                  filteredCandidates.forEach { member ->
+                    DropdownMenuItem(
+                        onClick = {
+                          showAddMenu = false
+                          onAdd(member)
+                        },
+                        modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
+                        text = {
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                            AvatarBubble(member.name)
+                            Spacer(Modifier.width(10.dp))
+                            Text(member.handle, color = AppColors.textIcons)
+                          }
+                        })
+                  }
+                }
+              }
+        }
+      }
+}
+
+@Composable
+private fun AvatarBubble(name: String) {
+  Box(
+      modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.LightGray),
+      contentAlignment = Alignment.Center) {
+        Text(
+            text = name.firstOrNull()?.uppercase() ?: "?",
+            color = AppColors.focus,
+            fontWeight = FontWeight.Bold)
+      }
+}
+
 @Composable
 private fun ProposedGameSection(
     sessionViewModel: FirestoreSessionViewModel,
     currentUser: Account,
     discussion: Discussion,
-    editable: Boolean
+    editable: Boolean,
+    gameUIState: GameUIState,
+    onChooseGame: (String) -> Unit
 ) {
-  val gameUIState by sessionViewModel.gameUIState.collectAsState()
-
   SectionCard(
       modifier =
           Modifier.clip(appShapes.extraLarge)
@@ -379,12 +535,16 @@ private fun ProposedGameSection(
                 query = gameUIState.gameQuery,
                 onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
                 results = gameUIState.gameSuggestions,
-                onPick = { sessionViewModel.setGame(currentUser, discussion, it) },
+                onPick = {
+                  onChooseGame(it.uid)
+                  sessionViewModel.setGame(currentUser, discussion, it)
+                },
                 isLoading = false,
                 modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
           } else {
+            val displayedName = gameUIState.fetchedGame?.name ?: "Loading..."
             Text(
-                text = "Current Game",
+                text = displayedName,
                 modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = AppColors.textIcons)
@@ -448,7 +608,7 @@ fun OrganizationSection(
               onQueryChange = { newQuery -> onFormChange(form.copy(locationText = newQuery)) },
               results = mockResults,
               onPick = { picked -> onFormChange(form.copy(locationText = picked.name)) },
-              isLoading = false, // can hook into your VM later
+              isLoading = false,
               modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD),
               placeholder = "Search locations…")
         } else {
@@ -532,7 +692,9 @@ fun UserChip(
       trailingIcon = {
         if (showRemoveBTN && account.handle != user.handle) {
           IconButton(
-              onClick = onRemove, modifier = Modifier.size(18.dp).testTag("remove:${user.name}")) {
+              onClick = onRemove,
+              modifier =
+                  Modifier.size(18.dp).testTag(SessionTestTags.removeParticipantTag(user.name))) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove participant",
@@ -549,43 +711,6 @@ fun UserChip(
 }
 
 /**
- * Component used to display the participants in a clean and flexible box Each chip shows a
- * participant name and optionally a remove button for admins.
- *
- * @param participants List of participants to display
- * @param onRemove Callback fn used when an Admin/Owner removes a participant
- * @param modifier Modifiers used for the component
- * @param account The current user that's viewing the session details
- * @param editable Whether the current user can edit (remove) participants
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun UserChipsGrid(
-    participants: List<Account>,
-    onRemove: (Account) -> Unit,
-    modifier: Modifier = Modifier,
-    account: Account,
-    editable: Boolean = false
-) {
-  FlowRow(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS).fillMaxWidth()) {
-        participants.forEach { p ->
-          UserChip(
-              user = p,
-              modifier = Modifier.testTag("chip${p.uid}"),
-              onRemove = { if (editable) onRemove(p) },
-              account = account,
-              showRemoveBTN = editable)
-        }
-
-        // Add button chip (to add new participants)
-        // might be implemented later (users might joining the session themselves)
-      }
-}
-
-/**
  * Compact, discrete "pill" styled range slider with subtle rounded track & dots. This mirrors the
  * blue/red dotted pills in the mock (generic visual).
  *
@@ -594,7 +719,6 @@ fun UserChipsGrid(
  * @param values Values that be attained by the slider
  * @param steps Number of steps to display
  * @param editable whether the current user can edit the slider (Admin/Owner only)
- * @param onValuesChange callback fn used when the slider is moved
  */
 @Composable
 fun PillSliderNoBackground(
@@ -603,7 +727,6 @@ fun PillSliderNoBackground(
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
     editable: Boolean = true,
-    onValuesChange: (Float, Float) -> Unit
 ) {
   Column {
     Text(title, style = MaterialTheme.typography.labelSmall, color = AppColors.textIconsFade)
@@ -611,15 +734,13 @@ fun PillSliderNoBackground(
     DiscretePillSlider(
         range = range,
         values = values,
-        editable = editable,
         steps = steps,
-        onValuesChange = onValuesChange,
-        surroundModifier =
+        modifier =
             Modifier.fillMaxWidth()
                 .background(AppColors.primary, CircleShape)
                 .border(1.dp, AppColors.primary, CircleShape)
                 .padding(horizontal = 10.dp, vertical = 3.dp),
-        sliderModifier = Modifier.testTag("discrete_pill_slider"),
+        sliderModifier = Modifier.testTag(SessionTestTags.DISCRETE_PILL_SLIDER),
         sliderColors =
             SliderDefaults.colors(
                 activeTrackColor = AppColors.neutral,
@@ -628,12 +749,6 @@ fun PillSliderNoBackground(
   }
 }
 
-/**
- * * Dialog popup used to edit the time field
- *
- * @param onDismiss callback fn called when focusing out of the popup
- * @param onTimeSelected callback fn used to update the time field
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit) {

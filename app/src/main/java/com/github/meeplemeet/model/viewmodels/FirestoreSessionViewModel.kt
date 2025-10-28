@@ -36,7 +36,8 @@ data class GameUIState(
     val selectedGameUid: String = "",
     val gameSearchError: String? = null,
     val fetchedGame: Game? = null,
-    val gameFetchError: String? = null
+    val gameFetchError: String? = null,
+    val isSearching: Boolean = false
 )
 
 /**
@@ -105,10 +106,6 @@ class FirestoreSessionViewModel(
 
     val participantsList = participants.toList().map { it -> it.uid }
     if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
-    if (participantsList.size < minParticipants)
-        throw IllegalArgumentException("To little participants")
-    if (participantsList.size > maxParticipants)
-        throw IllegalArgumentException("To many participants")
 
     viewModelScope.launch {
       _discussion.value =
@@ -280,9 +277,7 @@ class FirestoreSessionViewModel(
         val game = gameRepository.getGameById(gameId)
         _gameUIState.value =
             _gameUIState.value.copy(
-                fetchedGame = game,
-                gameFetchError = null,
-            )
+                fetchedGame = game, gameFetchError = null, gameQuery = game.name)
       } catch (_: Exception) {
         _gameUIState.value =
             _gameUIState.value.copy(
