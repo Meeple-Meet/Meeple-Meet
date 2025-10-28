@@ -2,8 +2,10 @@ package com.github.meeplemeet.ui
 // Github Copilot was used for this file
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -15,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -175,17 +179,15 @@ fun SignUpScreen(
               Spacer(modifier = Modifier.height(8.dp))
 
               // App logo - changes based on theme
-              /*
               val isDarkTheme = isSystemInDarkTheme()
               Box(modifier = Modifier.size(250.dp)) {
                 Image(
-                    painter = painterResource(
-                        id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear
-                    ),
+                    painter =
+                        painterResource(
+                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
                     contentDescription = "Meeple Meet Logo",
                     modifier = Modifier.fillMaxSize())
               }
-              */
 
               Spacer(modifier = Modifier.height(24.dp))
 
@@ -195,8 +197,6 @@ fun SignUpScreen(
                   style = TextStyle(fontSize = 56.sp),
                   modifier =
                       Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
-
-              Spacer(modifier = Modifier.height(26.dp))
 
               // Email input field with validation
               OutlinedTextField(
