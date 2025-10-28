@@ -55,7 +55,9 @@ fun fromNoUid(feedId: String, docs: List<CommentNoUid>): List<Comment> {
 
   docs.forEach { c ->
     if (c.parentId.isNotBlank() && c.parentId != feedId) {
-      map[c.parentId]?.children?.add(map[c.id]!!)
+      val parent = map[c.parentId]
+      val child = map[c.id]
+      if (parent != null && child != null) parent.children.add(child)
     }
   }
 

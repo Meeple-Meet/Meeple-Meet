@@ -35,7 +35,10 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
   private val posts = db.collection(POSTS_COLLECTION_PATH)
 
   /** Generates a new unique ID for a post or comment. */
-  private fun newFeedUID(): String = posts.document().id
+  private fun newPostUUID(): String = posts.document().id
+
+  private fun newCommentUUID(postId: String): String =
+      posts.document(postId).collection(COMMENTS_COLLECTION_PATH).document().id
 
   /**
    * Creates a new post in Firestore.
@@ -52,7 +55,7 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
       authorId: String,
       tags: List<String> = emptyList()
   ): Post {
-    val postId = newFeedUID()
+    val postId = newPostUUID()
     val post = Post(postId, title, content, Timestamp.now(), authorId, tags)
     val (feedNoUid, comments) = toNoUid(post)
 
@@ -96,7 +99,7 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
    * @return The generated ID of the newly created comment.
    */
   suspend fun addComment(postId: String, text: String, authorId: String, parentId: String): String {
-    val commentId = newFeedUID()
+    val commentId = newCommentUUID(postId)
     val comment =
         CommentNoUid(
             id = commentId,
