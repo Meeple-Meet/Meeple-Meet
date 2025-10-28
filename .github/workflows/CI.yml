@@ -15,7 +15,7 @@ on:
 jobs:
   format-check:
     name: Format Check
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -42,7 +42,7 @@ jobs:
 
   assemble-lint:
     name: Assemble and Lint
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -96,7 +96,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -173,7 +173,7 @@ jobs:
 
   android-tests:
     name: Android Instrumentation Tests
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -262,12 +262,9 @@ jobs:
           name: android-test-coverage
           path: app/build/outputs/code_coverage/debugAndroidTest/connected/**/coverage.ec
 
-  coverage-report:
-    name: Coverage Report
-    needs: [unit-tests, android-tests]
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    outputs:
-      coverage: ${{ steps.coverage.outputs.percentage }}
+  compile-debug-classes:
+    name: Compile Debug Classes
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -310,6 +307,64 @@ jobs:
 
       - name: Build debug classes
         run: ./gradlew compileDebugKotlin --parallel --build-cache
+
+      - name: Upload compiled classes
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-classes
+          path: app/build/intermediates/javac/debug/classes/
+
+  coverage-report:
+    name: Coverage Report
+    needs: [unit-tests, android-tests, compile-debug-classes]
+    runs-on: ubuntu-latest
+    outputs:
+      coverage: ${{ steps.coverage.outputs.percentage }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Retrieve gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Download compiled classes
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-classes
+          path: app/build/intermediates/javac/debug/classes/
 
       - name: Download unit test results
         uses: actions/download-artifact@v4
