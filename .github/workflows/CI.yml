@@ -12,6 +12,10 @@ on:
       - synchronize
       - reopened
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   format-check:
     name: Format Check
@@ -137,6 +141,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('firebase.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
@@ -173,7 +185,7 @@ jobs:
 
   android-tests:
     name: Android Instrumentation Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -220,6 +232,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('firebase.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
@@ -262,12 +282,9 @@ jobs:
           name: android-test-coverage
           path: app/build/outputs/code_coverage/debugAndroidTest/connected/**/coverage.ec
 
-  coverage-report:
-    name: Coverage Report
-    needs: [unit-tests, android-tests]
+  compile-debug-classes:
+    name: Compile Debug Classes
     runs-on: ubuntu-latest
-    outputs:
-      coverage: ${{ steps.coverage.outputs.percentage }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -311,6 +328,67 @@ jobs:
       - name: Build debug classes
         run: ./gradlew compileDebugKotlin --parallel --build-cache
 
+      - name: Upload compiled classes
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-classes
+          path: |
+            app/build/tmp/kotlin-classes/debug/
+            app/build/intermediates/javac/debug/
+          if-no-files-found: error
+
+  coverage-report:
+    name: Coverage Report
+    needs: [unit-tests, android-tests, compile-debug-classes]
+    runs-on: ubuntu-latest
+    outputs:
+      coverage: ${{ steps.coverage.outputs.percentage }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Retrieve gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Download compiled classes
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-classes
+          path: app/build/
+
       - name: Download unit test results
         uses: actions/download-artifact@v4
         with:
@@ -334,15 +412,6 @@ jobs:
 
       - name: Upload report to SonarCloud
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            ./gradlew sonar \
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref }} \
-            --parallel --build-cache
-          else
-            ./gradlew sonar --parallel --build-cache
-          fi
+        run: ./gradlew sonar --parallel --build-cache
