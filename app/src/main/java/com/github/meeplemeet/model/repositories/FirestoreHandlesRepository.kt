@@ -7,7 +7,11 @@ import com.github.meeplemeet.model.InvalidHandleFormatException
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.AccountNoUid
 import com.github.meeplemeet.model.structures.fromNoUid
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 const val HANDLES_COLLECTION_PATH = "handles"
@@ -90,5 +94,63 @@ class FirestoreHandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db
 
   suspend fun deleteAccountHandle(userHandle: String) {
     handles.document(userHandle).delete().await()
+  }
+
+  fun searchByHandle(handle: String): Flow<List<Account>> = callbackFlow {
+    if (!validSearchHandle(handle)) {
+      trySend(emptyList())
+      close()
+      return@callbackFlow
+    }
+
+    val reg =
+        handles
+            .whereGreaterThanOrEqualTo(FieldPath.documentId(), handle)
+            .whereLessThanOrEqualTo(FieldPath.documentId(), nextString(handle))
+            .addSnapshotListener { qs, e ->
+              if (e != null) {
+                close(e)
+                return@addSnapshotListener
+              }
+              if (qs != null) {
+                // Extract account IDs from handle docs
+                val accountIds = qs.documents.mapNotNull { doc -> doc.getString("accountId") }
+
+                if (accountIds.isEmpty()) {
+                  trySend(emptyList())
+                  return@addSnapshotListener
+                }
+
+                FirebaseProvider.db.runBatch { batch -> }
+                FirebaseProvider.db
+                    .collection(ACCOUNT_COLLECTION_PATH)
+                    .whereIn(
+                        FieldPath.documentId(), accountIds.take(10)) // Firestore limit workaround
+                    .get()
+                    .addOnSuccessListener { snap ->
+                      val accounts =
+                          snap.documents.mapNotNull { d ->
+                            d.toObject(AccountNoUid::class.java)?.let {
+                              fromNoUid(d.id, it, emptyMap())
+                            }
+                          }
+                      trySend(accounts)
+                    }
+                    .addOnFailureListener { close(it) }
+              }
+            }
+
+    awaitClose { reg.remove() }
+  }
+
+  private fun nextString(s: String): String {
+    if (s.isEmpty()) return s
+    val lastChar = s.last()
+    val nextChar = lastChar + 1
+    return s.dropLast(1) + nextChar
+  }
+
+  private fun validSearchHandle(handle: String): Boolean {
+    return handle.all { it.isLetterOrDigit() || it == '_' }
   }
 }
