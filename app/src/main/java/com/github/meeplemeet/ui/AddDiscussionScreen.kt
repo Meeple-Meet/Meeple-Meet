@@ -29,6 +29,14 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
+object AddDiscussionTestTags {
+  const val ADD_TITLE = "Add Title"
+  const val ADD_DESCRIPTION = "Add Description"
+  const val ADD_MEMBERS = "Add Members"
+  const val CREATE_DISCUSSION_BUTTON = "Create Discussion"
+  const val ADD_MEMBERS_ELEMENT = "Add Member Element"
+}
+
 /**
  * Screen for creating a new discussion with title, description, and selected members.
  *
@@ -146,7 +154,7 @@ fun AddDiscussionScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { title = it },
                   label = { Text("Title") },
-                  modifier = Modifier.testTag("Add Title").fillMaxWidth())
+                  modifier = Modifier.testTag(AddDiscussionTestTags.ADD_TITLE).fillMaxWidth())
 
               Spacer(modifier = Modifier.height(12.dp))
 
@@ -167,7 +175,10 @@ fun AddDiscussionScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { description = it },
                   label = { Text("Description (optional)") },
-                  modifier = Modifier.testTag("Add Description").fillMaxWidth().height(150.dp))
+                  modifier =
+                      Modifier.testTag(AddDiscussionTestTags.ADD_DESCRIPTION)
+                          .fillMaxWidth()
+                          .height(150.dp))
 
               Spacer(modifier = Modifier.height(16.dp))
 
@@ -264,7 +275,9 @@ fun AddDiscussionScreen(
                           }
                         },
                         enabled = title.isNotBlank() && !isCreating,
-                        modifier = Modifier.testTag("Create Discussion").fillMaxWidth(0.5f),
+                        modifier =
+                            Modifier.testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
+                                .fillMaxWidth(0.5f),
                         shape = CircleShape,
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
@@ -308,7 +321,7 @@ fun MemberSearchField(
         modifier =
             Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                 .fillMaxWidth()
-                .testTag("Add Members"),
+                .testTag(AddDiscussionTestTags.ADD_MEMBERS),
         trailingIcon = {
           if (searchQuery.isNotBlank()) {
             Icon(
@@ -325,7 +338,7 @@ fun MemberSearchField(
         else ->
             searchResults.forEach { account ->
               DropdownMenuItem(
-                  modifier = Modifier.testTag("Add Member Element"),
+                  modifier = Modifier.testTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT),
                   text = { Text(account.handle) },
                   onClick = {
                     onSelect(account)

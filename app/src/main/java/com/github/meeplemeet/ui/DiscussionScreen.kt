@@ -39,6 +39,13 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+object DiscussionTestTags {
+  const val INPUT_FIELD = "Input Field"
+  const val SEND_BUTTON = "Send Button"
+
+  fun discussionInfo(name: String) = "DiscussionInfo/$name"
+}
+
 /**
  * Composable screen that displays a discussion (chat) and allows sending messages.
  *
@@ -105,9 +112,9 @@ fun DiscussionScreen(
           Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier =
-                  Modifier.fillMaxSize().testTag("DiscussionInfo/${discussion.name}").clickable {
-                    onOpenDiscussionInfo(discussion)
-                  }) {
+                  Modifier.fillMaxSize()
+                      .testTag(DiscussionTestTags.discussionInfo(discussion.name))
+                      .clickable { onOpenDiscussionInfo(discussion) }) {
                 Box(
                     modifier =
                         Modifier.size(40.dp)
@@ -186,7 +193,7 @@ fun DiscussionScreen(
           BasicTextField(
               value = messageText,
               onValueChange = { messageText = it },
-              modifier = Modifier.weight(1f).testTag("Input Field"),
+              modifier = Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
               singleLine = true,
               decorationBox = { innerTextField ->
                 if (messageText.isEmpty()) {
@@ -199,7 +206,7 @@ fun DiscussionScreen(
 
           /** Send button */
           IconButton(
-              modifier = Modifier.testTag("Send Button"),
+              modifier = Modifier.testTag(DiscussionTestTags.SEND_BUTTON),
               onClick = {
                 discussion.let { disc ->
                   if (messageText.isNotBlank() && !isSending) {

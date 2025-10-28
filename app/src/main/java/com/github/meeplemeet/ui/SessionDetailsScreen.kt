@@ -107,6 +107,12 @@ object SessionTestTags {
   const val TIME_PICK_BUTTON = "time_pick_button"
   const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
   const val DELETE_SESSION_BUTTON = "delete_session_button"
+
+  fun chipsTag(uid: String) = "chip${uid}"
+
+  fun addParticipantTag(uid: String) = "add_participant_item:${uid}"
+
+  fun removeParticipantTag(uid: String) = "remove:${uid}"
 }
 
 /* =======================================================================
@@ -423,7 +429,7 @@ fun UserChipsGrid(
         participants.forEach { p ->
           UserChip(
               user = p,
-              modifier = Modifier.testTag("chip${p.uid}"),
+              modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
               onRemove = { if (editable) onRemove(p) },
               account = account,
               showRemoveBTN = editable)
@@ -475,7 +481,7 @@ fun UserChipsGrid(
                           showAddMenu = false
                           onAdd(member)
                         },
-                        modifier = Modifier.testTag("add_participant_item:${member.uid}"),
+                        modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
                         text = {
                           Row(verticalAlignment = Alignment.CenterVertically) {
                             AvatarBubble(member.name)
@@ -686,7 +692,9 @@ fun UserChip(
       trailingIcon = {
         if (showRemoveBTN && account.handle != user.handle) {
           IconButton(
-              onClick = onRemove, modifier = Modifier.size(18.dp).testTag("remove:${user.name}")) {
+              onClick = onRemove,
+              modifier =
+                  Modifier.size(18.dp).testTag(SessionTestTags.removeParticipantTag(user.name))) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove participant",

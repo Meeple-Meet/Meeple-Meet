@@ -102,6 +102,10 @@ object ComponentsTestTags {
   const val SEARCH_EMPTY = "comp_search_empty"
   const val SEARCH_LIST = "comp_search_list"
   const val SEARCH_ITEM_PREFIX = "comp_search_item_"
+
+  fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
+
+  fun searchItem(norm: String) = "$SEARCH_ITEM_PREFIX$norm"
 }
 
 /** Action for participant chip: add or remove. */
@@ -318,7 +322,7 @@ fun ParticipantChip(
         modifier =
             textModifier
                 .align(Alignment.Center)
-                .testTag("${ComponentsTestTags.PARTICIPANT_NAME}:${account.name}"),
+                .testTag(ComponentsTestTags.participantName(account.name)),
         style = MaterialTheme.typography.labelSmall,
         color = textColor,
         textAlign = TextAlign.Center,
@@ -651,7 +655,7 @@ fun <T> SearchDropdownField(
                                           expanded = false
                                         }
                                         .padding(horizontal = 12.dp, vertical = 10.dp)
-                                        .testTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}$norm"),
+                                        .testTag(ComponentsTestTags.searchItem(norm)),
                                 verticalAlignment = Alignment.CenterVertically) {
                                   if (itemContent != null) {
                                     itemContent(item)

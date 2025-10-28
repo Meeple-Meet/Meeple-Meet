@@ -62,6 +62,10 @@ const val DEFAULT_DISCUSSION_NAME = "Discussion"
 const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
 const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 
+object DiscussionOverviewTestTags {
+  const val ADD_DISCUSSION_BUTTON = "Add Discussion"
+}
+
 /* ================================================================
  * Screen: Discussions Overview
  * ================================================================ */
@@ -91,7 +95,8 @@ fun DiscussionsOverviewScreen(
   Scaffold(
       floatingActionButton = {
         FloatingActionButton(
-            onClick = onClickAddDiscussion, modifier = Modifier.testTag("Add Discussion")) {
+            onClick = onClickAddDiscussion,
+            modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Create")
             }
       },
@@ -150,7 +155,9 @@ fun DiscussionsOverviewScreen(
                       discussionName = discussionName,
                       lastMsg = msgText,
                       unreadMsgCount = preview.unreadCount,
-                      modifier = Modifier.fillMaxWidth().testTag("Discussion/$discussionName"),
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .testTag(DiscussionTestTags.discussionInfo(discussionName)),
                       onClick = { discussion?.let { onSelectDiscussion(it) } })
                 }
               }
