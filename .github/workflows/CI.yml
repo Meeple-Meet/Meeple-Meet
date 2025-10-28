@@ -414,13 +414,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            ./gradlew sonar \
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref }} \
-            --parallel --build-cache
-          else
-            ./gradlew sonar --parallel --build-cache
-          fi
+        run: ./gradlew sonar --parallel --build-cache
