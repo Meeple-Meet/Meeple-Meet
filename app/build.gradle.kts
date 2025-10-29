@@ -40,8 +40,11 @@ sonar {
 
         property("sonar.sourceEncoding", "UTF-8")
 
-        // Let SonarCloud automatically detect PR context via GitHub integration
-        // No manual PR configuration needed
+        // Explicitly set branch name to avoid PR detection issues
+        val branchName = System.getenv("SONAR_BRANCH_NAME")
+        if (!branchName.isNullOrBlank()) {
+            property("sonar.branch.name", branchName)
+        }
     }
 }
 
