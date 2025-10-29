@@ -59,7 +59,7 @@ class PostScreenTest {
       Account(uid = "u_dany", handle = "dany", name = "Dany", email = "dany@meeple.ch")
   private val ts = Timestamp(1_725_000_000, 0)
 
-  private fun c(id: String, text: String, author: Account, vararg children: Comment) =
+  private fun testComment(id: String, text: String, author: Account, vararg children: Comment) =
       Comment(
           id = id,
           text = text,
@@ -98,9 +98,9 @@ class PostScreenTest {
   }
 
   /* Query helpers */
-  private fun n(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true)
+  private fun findNodeByTag(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true)
 
-  private fun t(text: String, unmerged: Boolean = true) =
+  private fun findNodeByText(text: String, unmerged: Boolean = true) =
       compose.onNodeWithText(text, useUnmergedTree = unmerged)
 
   private fun settleAnimations() {
@@ -164,11 +164,11 @@ class PostScreenTest {
 
   @Before
   fun setup() {
-    val c1_1_1 = c("c1_1_1", "Deep reply about Spirit Island combos", dany)
-    val c1_1 = c("c1_1", "Marco: let's bring Slay the Spire IRL?", marco, c1_1_1)
-    val c1_2 = c("c1_2", "Alex: Root needs 4, I’m in", alex)
-    val c1 = c("c1", "Dany: root thread starter", dany, c1_1, c1_2)
-    val c2 = c("c2", "Marco: also up for Ark Nova", marco)
+    val c1_1_1 = testComment("c1_1_1", "Deep reply about Spirit Island combos", dany)
+    val c1_1 = testComment("c1_1", "Marco: let's bring Slay the Spire IRL?", marco, c1_1_1)
+    val c1_2 = testComment("c1_2", "Alex: Root needs 4, I’m in", alex)
+    val c1 = testComment("c1", "Dany: root thread starter", dany, c1_1, c1_2)
+    val c2 = testComment("c2", "Marco: also up for Ark Nova", marco)
 
     postByAlex =
         Post(
@@ -207,20 +207,20 @@ class PostScreenTest {
     val backCount = AtomicInteger(0)
     setContent(postId = "p1", onBack = { backCount.incrementAndGet() })
 
-    n(PostTags.SCREEN).assertExists()
-    n(PostTags.LOADING_BOX).assertExists()
-    n(PostTags.LOADING_SPINNER).assertExists()
+    findNodeByTag(PostTags.SCREEN).assertExists()
+    findNodeByTag(PostTags.LOADING_BOX).assertExists()
+    findNodeByTag(PostTags.LOADING_SPINNER).assertExists()
 
     postFlowP1.value = postByAlex
-    n(PostTags.LIST).assertExists()
-    n(PostTags.postCard("p1")).assertExists()
-    n(PostTags.POST_TITLE).assertIsDisplayed()
-    n(PostTags.POST_BODY).assertIsDisplayed()
+    findNodeByTag(PostTags.LIST).assertExists()
+    findNodeByTag(PostTags.postCard("p1")).assertExists()
+    findNodeByTag(PostTags.POST_TITLE).assertIsDisplayed()
+    findNodeByTag(PostTags.POST_BODY).assertIsDisplayed()
 
-    n(PostTags.TOP_BAR).assertExists()
-    n(PostTags.TOP_BAR_DIVIDER).assertExists()
-    n(PostTags.TOP_TITLE).assertExists()
-    n(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
+    findNodeByTag(PostTags.TOP_BAR).assertExists()
+    findNodeByTag(PostTags.TOP_BAR_DIVIDER).assertExists()
+    findNodeByTag(PostTags.TOP_TITLE).assertExists()
+    findNodeByTag(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
     compose.waitUntil(1_000) { backCount.get() == 1 }
   }
 
@@ -228,7 +228,7 @@ class PostScreenTest {
   fun topbar_back_default_onBack_no_crash() {
     renderHost(postId = "p1", initialOnBack = null)
     postFlowP1.value = postByAlex
-    n(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
+    findNodeByTag(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
   }
 
   @Test
@@ -236,20 +236,20 @@ class PostScreenTest {
     val host = renderHost(postId = "p1", initialOnBack = {})
     postFlowP1.value = postByAlex
 
-    n(PostTags.POST_TAGS_ROW).assertExists()
-    n(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
-    n(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
-    n(PostTags.POST_HEADER).assertExists()
-    n(PostTags.POST_AVATAR).assertExists()
-    n(PostTags.POST_AUTHOR).assertExists()
-    n(PostTags.POST_DATE).assertExists()
+    findNodeByTag(PostTags.POST_TAGS_ROW).assertExists()
+    findNodeByTag(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.POST_HEADER).assertExists()
+    findNodeByTag(PostTags.POST_AVATAR).assertExists()
+    findNodeByTag(PostTags.POST_AUTHOR).assertExists()
+    findNodeByTag(PostTags.POST_DATE).assertExists()
 
-    n(PostTags.POST_DELETE_BTN).assertDoesNotExist()
+    findNodeByTag(PostTags.POST_DELETE_BTN).assertDoesNotExist()
 
     val backCount = AtomicInteger(0)
     host.setOnBack { backCount.incrementAndGet() }
     host.setPostId("p2")
-    n(PostTags.POST_DELETE_BTN).assertExists().performClick()
+    findNodeByTag(PostTags.POST_DELETE_BTN).assertExists().performClick()
     verify(exactly = 1) { postVM.deletePost(marco, match { it.id == "p2" }) }
     compose.waitUntil(1_000) { backCount.get() == 1 }
   }
@@ -266,14 +266,14 @@ class PostScreenTest {
     }
     postFlowP1.value = postByAlex
 
-    n(PostTags.commentDeleteBtn("c2")).assertExists()
-    n(PostTags.commentDeleteBtn("c1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentDeleteBtn("c2")).assertExists()
+    findNodeByTag(PostTags.commentDeleteBtn("c1")).assertDoesNotExist()
 
     compose.runOnUiThread { setAcc(dany) }
     compose.waitForIdle()
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentDeleteBtn("c1")).assertExists()
+    findNodeByTag(PostTags.commentDeleteBtn("c1")).assertExists()
   }
 
   @Test
@@ -281,28 +281,28 @@ class PostScreenTest {
     val host = renderHost(postId = "p1", initialOnBack = {})
 
     // Pre-post: disabled & placeholder
-    n(PostTags.COMPOSER_BAR).assertExists()
-    t(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
-    n(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
-    n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
+    findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
+    findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
+    findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
+    findNodeByTag(PostTags.COMPOSER_SEND).assertIsNotEnabled()
 
     // Post arrives -> enabled, send by click with trimming
     postFlowP1.value = postByAlex
-    n(PostTags.COMPOSER_SEND).assertIsEnabled()
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("   slay the spire   ")
-    n(PostTags.COMPOSER_SEND).performClick()
+    findNodeByTag(PostTags.COMPOSER_SEND).assertIsEnabled()
+    findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("   slay the spire   ")
+    findNodeByTag(PostTags.COMPOSER_SEND).performClick()
     verify { postVM.addComment(marco, postByAlex, "p1", "slay the spire") }
 
     // Placeholder toggles & whitespace disables
-    t(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("x")
-    t(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertDoesNotExist()
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("     ")
-    n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
+    findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
+    findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("x")
+    findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertDoesNotExist()
+    findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("     ")
+    findNodeByTag(PostTags.COMPOSER_SEND).assertIsNotEnabled()
 
     // Attach (no-op visual)
-    n(PostTags.COMPOSER_ATTACH).assertExists().performClick()
-    n(PostTags.COMPOSER_BAR).assertExists()
+    findNodeByTag(PostTags.COMPOSER_ATTACH).assertExists().performClick()
+    findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
 
     // Swap a delaying repo -> send via IME; check disabled while sending
     val delayingRepo = mockk<FirestorePostRepository>(relaxed = true)
@@ -315,9 +315,9 @@ class PostScreenTest {
     injectPost("p1", MutableStateFlow(postByAlex))
     host.setPostVM(postVM)
 
-    n(PostTags.COMPOSER_INPUT).performTextReplacement("root meetup!")
-    n(PostTags.COMPOSER_INPUT).performImeAction()
-    n(PostTags.COMPOSER_SEND).assertIsNotEnabled()
+    findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("root meetup!")
+    findNodeByTag(PostTags.COMPOSER_INPUT).performImeAction()
+    findNodeByTag(PostTags.COMPOSER_SEND).assertIsNotEnabled()
     compose.mainClock.advanceTimeBy(500)
     verify { postVM.addComment(marco, postByAlex, "p1", "root meetup!") }
   }
@@ -328,46 +328,46 @@ class PostScreenTest {
     postFlowP1.value = postByAlex
 
     // Roots present
-    n(PostTags.threadCard("c1")).assertExists()
-    n(PostTags.threadCard("c2")).assertExists()
+    findNodeByTag(PostTags.threadCard("c1")).assertExists()
+    findNodeByTag(PostTags.threadCard("c2")).assertExists()
 
     // Expand c1 -> children visible
-    n(PostTags.commentText("c1_1")).assertDoesNotExist()
-    n(PostTags.commentText("c1_2")).assertDoesNotExist()
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentText("c1_1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentText("c1_2")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1")).assertExists()
-    n(PostTags.commentText("c1_2")).assertExists()
+    findNodeByTag(PostTags.commentText("c1_1")).assertExists()
+    findNodeByTag(PostTags.commentText("c1_2")).assertExists()
 
     // Expand c1_1 -> grandchild visible + gutters present
-    n(PostTags.commentText("c1_1_1")).assertDoesNotExist()
-    n(PostTags.commentCard("c1_1")).performClick()
+    findNodeByTag(PostTags.commentText("c1_1_1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentCard("c1_1")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1_1")).assertExists()
-    n(PostTags.treeDepth(1)).assertExists()
-    n(PostTags.gutterDepth(1)).assertExists()
-    n(PostTags.treeDepth(2)).assertExists()
-    n(PostTags.gutterDepth(2)).assertExists()
+    findNodeByTag(PostTags.commentText("c1_1_1")).assertExists()
+    findNodeByTag(PostTags.treeDepth(1)).assertExists()
+    findNodeByTag(PostTags.gutterDepth(1)).assertExists()
+    findNodeByTag(PostTags.treeDepth(2)).assertExists()
+    findNodeByTag(PostTags.gutterDepth(2)).assertExists()
 
     // Leaf click no-op
-    n(PostTags.commentCard("c1_2")).performClick()
+    findNodeByTag(PostTags.commentCard("c1_2")).performClick()
     settleAnimations()
-    n(PostTags.treeDepth(3)).assertDoesNotExist()
+    findNodeByTag(PostTags.treeDepth(3)).assertDoesNotExist()
 
     // Collapse nested -> hides only its branch
-    n(PostTags.commentCard("c1_1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1_1")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1_1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentText("c1_1_1")).assertDoesNotExist()
 
     // Collapse root -> hides children
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentText("c1_1")).assertDoesNotExist()
   }
 
   @Test
   fun threads_independent_expand_state_per_roots() {
-    val c2Child = c("c2_1", "Marco: Ark Nova engine?", marco)
+    val c2Child = testComment("c2_1", "Marco: Ark Nova engine?", marco)
     val c2WithChild =
         postByAlex.comments.first { it.id == "c2" }.copy(children = mutableListOf(c2Child))
     val c1Same = postByAlex.comments.first { it.id == "c1" }
@@ -376,14 +376,14 @@ class PostScreenTest {
 
     setContent(postId = "p_indep")
 
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1")).assertExists()
-    n(PostTags.commentText("c2_1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentText("c1_1")).assertExists()
+    findNodeByTag(PostTags.commentText("c2_1")).assertDoesNotExist()
 
-    n(PostTags.commentCard("c2")).performClick()
+    findNodeByTag(PostTags.commentCard("c2")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c2_1")).assertExists()
+    findNodeByTag(PostTags.commentText("c2_1")).assertExists()
   }
 
   @Test
@@ -391,18 +391,18 @@ class PostScreenTest {
     setContent(postId = "p1")
     postFlowP1.value = postByAlex
 
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentText("c1_1")).assertExists()
+    findNodeByTag(PostTags.commentText("c1_1")).assertExists()
 
     postFlowP1.value = postByAlex.copy(title = "Friday Root Night (updated)")
     compose.waitForIdle()
-    n(PostTags.commentText("c1_1")).assertExists()
+    findNodeByTag(PostTags.commentText("c1_1")).assertExists()
   }
 
   @Test
   fun threads_depth3_gutter_visible_when_deeper() {
-    val c1_1_1_1 = c("c1_1_1_1", "Dany: stack your relics!", dany)
+    val c1_1_1_1 = testComment("c1_1_1_1", "Dany: stack your relics!", dany)
 
     val c1_1_1_deeper =
         postByAlex.comments
@@ -440,13 +440,13 @@ class PostScreenTest {
 
     setContent(postId = "p_depth3")
 
-    n(PostTags.commentCard("c1")).performClick()
-    n(PostTags.commentCard("c1_1")).performClick()
-    n(PostTags.commentCard("c1_1_1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1_1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1_1_1")).performClick()
     settleAnimations()
 
-    n(PostTags.treeDepth(3)).assertExists()
-    n(PostTags.gutterDepth(3)).assertExists()
+    findNodeByTag(PostTags.treeDepth(3)).assertExists()
+    findNodeByTag(PostTags.gutterDepth(3)).assertExists()
   }
 
   @Test
@@ -455,35 +455,35 @@ class PostScreenTest {
     postFlowP1.value = postByAlex
 
     // Open root, toggle reply -> field + placeholder
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyToggle("c1")).performClick()
+    findNodeByTag(PostTags.commentReplyToggle("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyField("c1")).assertExists()
+    findNodeByTag(PostTags.commentReplyField("c1")).assertExists()
     compose.onNodeWithText(REPLY_TEXT_ZONE_PLACEHOLDER, useUnmergedTree = true).assertExists()
-    n(PostTags.commentReplySend("c1")).assertIsNotEnabled()
+    findNodeByTag(PostTags.commentReplySend("c1")).assertIsNotEnabled()
 
     // Send with trimming by click
-    n(PostTags.commentReplyField("c1")).performTextReplacement("   root is great   ")
-    n(PostTags.commentReplySend("c1")).performClick()
+    findNodeByTag(PostTags.commentReplyField("c1")).performTextReplacement("   root is great   ")
+    findNodeByTag(PostTags.commentReplySend("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyField("c1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentReplyField("c1")).assertDoesNotExist()
     verify { postVM.addComment(marco, postByAlex, "c1", "root is great") }
 
     // Open another node, IME send path
-    n(PostTags.commentReplyToggle("c1_1")).performClick()
+    findNodeByTag(PostTags.commentReplyToggle("c1_1")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyField("c1_1")).performTextReplacement("via ime send")
-    n(PostTags.commentReplyField("c1_1")).performImeAction()
+    findNodeByTag(PostTags.commentReplyField("c1_1")).performTextReplacement("via ime send")
+    findNodeByTag(PostTags.commentReplyField("c1_1")).performImeAction()
     verify { postVM.addComment(marco, postByAlex, "c1_1", "via ime send") }
 
     // Toggle twice closes, no send on blank
-    n(PostTags.commentReplyToggle("c1_2")).performClick()
+    findNodeByTag(PostTags.commentReplyToggle("c1_2")).performClick()
     settleAnimations()
-    n(PostTags.commentReplySend("c1_2")).assertIsNotEnabled()
-    n(PostTags.commentReplyToggle("c1_2")).performClick()
+    findNodeByTag(PostTags.commentReplySend("c1_2")).assertIsNotEnabled()
+    findNodeByTag(PostTags.commentReplyToggle("c1_2")).performClick()
     settleAnimations()
-    n(PostTags.commentReplyField("c1_2")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentReplyField("c1_2")).assertDoesNotExist()
   }
 
   @Test
@@ -491,16 +491,16 @@ class PostScreenTest {
     setContent(postId = "p1")
     postFlowP1.value = postByAlex
 
-    n(PostTags.commentDeleteBtn("c2")).assertExists().performClick()
+    findNodeByTag(PostTags.commentDeleteBtn("c2")).assertExists().performClick()
     val c2 = postByAlex.comments.first { it.id == "c2" }
     verify { postVM.removeComment(marco, postByAlex, c2) }
 
-    n(PostTags.commentDeleteBtn("c1")).assertDoesNotExist()
+    findNodeByTag(PostTags.commentDeleteBtn("c1")).assertDoesNotExist()
     verify(exactly = 1) { postVM.removeComment(any(), any(), any()) }
 
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentDeleteBtn("c1_1")).assertExists().performClick()
+    findNodeByTag(PostTags.commentDeleteBtn("c1_1")).assertExists().performClick()
     val c11 = postByAlex.comments.first { it.id == "c1" }.children.first { it.id == "c1_1" }
     verify { postVM.removeComment(marco, postByAlex, c11) }
   }
@@ -512,26 +512,26 @@ class PostScreenTest {
     compose.mainClock.advanceTimeByFrame()
     compose.waitForIdle()
 
-    n(PostTags.commentCard("c1")).performClick()
+    findNodeByTag(PostTags.commentCard("c1")).performClick()
     settleAnimations()
-    n(PostTags.commentAuthor("c1")).assertExists()
-    n(PostTags.commentAuthor("c1_1")).assertExists()
-    n(PostTags.commentAuthor("c1_2")).assertExists()
+    findNodeByTag(PostTags.commentAuthor("c1")).assertExists()
+    findNodeByTag(PostTags.commentAuthor("c1_1")).assertExists()
+    findNodeByTag(PostTags.commentAuthor("c1_2")).assertExists()
 
-    n(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
-    n(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
 
     val noTags = postByAlex.copy(id = "p_no_tags", tags = emptyList())
     injectStaticPost("p_no_tags", noTags)
     host.setPostId("p_no_tags")
-    n(PostTags.POST_TAGS_ROW).assertDoesNotExist()
+    findNodeByTag(PostTags.POST_TAGS_ROW).assertDoesNotExist()
 
     host.setPostId("p1")
     postFlowP1.value = postByAlex
     compose.waitForIdle()
     clearMocks(usersVM, answers = false, recordedCalls = true, verificationMarks = true)
 
-    val newChildFromDany = c("c2_dany_extra", "Dany adds Ark Nova tip", dany)
+    val newChildFromDany = testComment("c2_dany_extra", "Dany adds Ark Nova tip", dany)
     val c2orig = postByAlex.comments.first { it.id == "c2" }
     postFlowP1.value =
         postByAlex.copy(
@@ -557,7 +557,7 @@ class PostScreenTest {
     val nilUid = "u_nil"
     every { usersVM.getOtherAccount(eq(nilUid), any()) } answers { /* unresolved */}
     val nilComment =
-        c(
+        testComment(
                 "c_nil",
                 "Nil: anyone bringing Root expansion?",
                 Account(uid = nilUid, handle = "", name = "", email = ""))
@@ -575,7 +575,7 @@ class PostScreenTest {
         .assertExists()
     verify(atLeast = 1) { usersVM.getOtherAccount(eq(nilUid), any()) }
 
-    val blank = c("c_blank", "Anonymous meeple", marco.copy(uid = "")).copy(authorId = "")
+    val blank = testComment("c_blank", "Anonymous meeple", marco.copy(uid = "")).copy(authorId = "")
     val blankPost = postByAlex.copy(id = "p_blank", comments = listOf(blank))
     injectStaticPost("p_blank", blankPost)
     host.setPostId("p_blank")
@@ -605,14 +605,14 @@ class PostScreenTest {
 
     val host = renderHost(postId = "p_many_tags")
 
-    n(PostTags.POST_TAGS_ROW).assertExists()
-    n(PostTags.tagChip(manyTags.first())).assertExists().assertIsNotEnabled()
-    n(PostTags.tagChip(manyTags.last())).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.POST_TAGS_ROW).assertExists()
+    findNodeByTag(PostTags.tagChip(manyTags.first())).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip(manyTags.last())).assertExists().assertIsNotEnabled()
 
     val noComments = postByAlex.copy(id = "p_empty_comments", comments = emptyList())
     injectStaticPost("p_empty_comments", noComments)
     host.setPostId("p_empty_comments")
-    n(PostTags.threadCard("anything")).assertDoesNotExist()
-    n(PostTags.treeDepth(1)).assertDoesNotExist()
+    findNodeByTag(PostTags.threadCard("anything")).assertDoesNotExist()
+    findNodeByTag(PostTags.treeDepth(1)).assertDoesNotExist()
   }
 }
