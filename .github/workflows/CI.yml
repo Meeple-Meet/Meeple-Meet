@@ -410,11 +410,19 @@ jobs:
       - name: Generate coverage report
         run: ./gradlew jacocoTestReport
 
-      - name: Upload report to SonarCloud
+      - name: Upload report to SonarCloud (PR)
+        if: github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_PR_KEY: ${{ github.event.pull_request.number }}
           SONAR_PR_BRANCH: ${{ github.head_ref }}
           SONAR_PR_BASE: ${{ github.base_ref }}
+        run: ./gradlew sonar --parallel --build-cache
+
+      - name: Upload report to SonarCloud (Branch)
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonar --parallel --build-cache
