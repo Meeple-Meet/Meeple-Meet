@@ -10,6 +10,7 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionNoUid
 import com.github.meeplemeet.model.structures.DiscussionPreviewNoUid
 import com.github.meeplemeet.model.structures.Message
+import com.github.meeplemeet.model.structures.Poll
 import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.structures.toNoUid
 import com.github.meeplemeet.model.structures.toPreview
@@ -214,6 +215,7 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
 
   /**
    * Append a new message to the discussion and update unread counts in all participants' previews.
+   * Handles both regular messages and poll messages.
    */
   suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
     val message = Message(sender.uid, content)
@@ -234,6 +236,46 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
           ref,
           mapOf(
               "lastMessage" to message.content,
+              "lastMessageSender" to message.senderId,
+              "lastMessageAt" to message.createdAt,
+              "unreadCount" to unreadCountValue),
+          SetOptions.merge())
+    }
+
+    batch.commit().await()
+  }
+
+  /**
+   * Append a message (regular or poll) to the discussion and update previews. This overload accepts
+   * a pre-constructed Message object.
+   */
+  private suspend fun sendMessageToDiscussion(discussion: Discussion, message: Message) {
+    val batch = FirebaseFirestore.getInstance().batch()
+
+    // Append message
+    batch.update(
+        discussions.document(discussion.uid),
+        Discussion::messages.name,
+        FieldValue.arrayUnion(message))
+
+    // Update previews for all participants
+    discussion.participants.forEach { userId ->
+      val ref =
+          accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
+      val unreadCountValue = if (userId == message.senderId) 0 else FieldValue.increment(1)
+
+      // Use poll-specific preview text if message contains a poll
+      val previewText =
+          if (message.poll != null) {
+            "Poll: ${message.poll.question}"
+          } else {
+            message.content
+          }
+
+      batch.set(
+          ref,
+          mapOf(
+              "lastMessage" to previewText,
               "lastMessageSender" to message.senderId,
               "lastMessageAt" to message.createdAt,
               "unreadCount" to unreadCountValue),
@@ -450,5 +492,147 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    */
   private fun validHandle(handle: String): Boolean {
     return handle.all { it.isLetterOrDigit() || it == '_' }
+  }
+
+  // ============================================================================
+  // Poll Methods
+  // ============================================================================
+
+  /**
+   * Create a new poll in a discussion by sending a message with poll data.
+   *
+   * @param discussion The discussion where the poll will be created.
+   * @param creatorId The ID of the account creating the poll.
+   * @param question The poll question.
+   * @param options List of options users can vote for.
+   * @param allowMultipleVotes Whether users can vote multiple times.
+   * @return The created poll message.
+   */
+  suspend fun createPoll(
+      discussion: Discussion,
+      creatorId: String,
+      question: String,
+      options: List<String>,
+      allowMultipleVotes: Boolean = false
+  ): Message {
+    val poll =
+        Poll(
+            question = question,
+            options = options,
+            votes = emptyMap(),
+            allowMultipleVotes = allowMultipleVotes)
+
+    val message =
+        Message(senderId = creatorId, content = question, createdAt = Timestamp.now(), poll = poll)
+
+    sendMessageToDiscussion(discussion, message)
+
+    return message
+  }
+
+  /**
+   * Vote on a poll option.
+   *
+   * @param discussionId The ID of the discussion containing the poll.
+   * @param pollMessageTimestamp The timestamp of the message containing the poll (used as
+   *   identifier).
+   * @param userId The user's UID.
+   * @param optionIndex The index of the option to vote for.
+   */
+  suspend fun voteOnPoll(
+      discussionId: String,
+      pollMessageTimestamp: Timestamp,
+      userId: String,
+      optionIndex: Int
+  ) {
+    // Fetch discussion to get current state
+    val discussion = getDiscussion(discussionId)
+
+    // Find the message by timestamp (stable identifier)
+    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessageTimestamp }
+    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found")
+
+    val message = discussion.messages[messageIndex]
+    val poll = message.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+
+    if (optionIndex !in poll.options.indices) throw IllegalArgumentException("Invalid option index")
+
+    val updatedVotes = poll.votes.toMutableMap()
+    val currentVotes = updatedVotes[userId]?.toMutableList() ?: mutableListOf()
+
+    if (poll.allowMultipleVotes) {
+      // Multiple vote mode: add to user's votes if not already voted for this option
+      if (optionIndex !in currentVotes) {
+        currentVotes.add(optionIndex)
+        updatedVotes[userId] = currentVotes
+      }
+      // If already voted for this option, do nothing (idempotent)
+    } else {
+      // Single vote mode: replace with single option
+      updatedVotes[userId] = listOf(optionIndex)
+    }
+
+    val updatedPoll = poll.copy(votes = updatedVotes)
+    val updatedMessage = message.copy(poll = updatedPoll)
+    val updatedMessages = discussion.messages.toMutableList()
+    updatedMessages[messageIndex] = updatedMessage
+
+    discussions.document(discussionId).update(Discussion::messages.name, updatedMessages).await()
+  }
+
+  /**
+   * Remove a user's vote for a specific poll option. Called when user clicks an option they
+   * previously selected to deselect it.
+   *
+   * @param discussionId The ID of the discussion containing the poll.
+   * @param pollMessageTimestamp The timestamp of the message containing the poll (used as
+   *   identifier).
+   * @param userId The user's UID.
+   * @param optionIndex The specific option index to remove.
+   */
+  suspend fun removeVoteFromPoll(
+      discussionId: String,
+      pollMessageTimestamp: Timestamp,
+      userId: String,
+      optionIndex: Int
+  ) {
+    // Fetch discussion to get current state
+    val discussion = getDiscussion(discussionId)
+
+    // Find the message by timestamp (stable identifier)
+    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessageTimestamp }
+    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found")
+
+    val message = discussion.messages[messageIndex]
+    val poll = message.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+
+    // Check if user has voted
+    val currentVotes = poll.votes[userId]
+    if (currentVotes == null || currentVotes.isEmpty()) {
+      throw IllegalArgumentException("User has not voted on this poll")
+    }
+
+    // Verify user voted for this specific option
+    if (optionIndex !in currentVotes) {
+      throw IllegalArgumentException("User did not vote for option $optionIndex")
+    }
+
+    val updatedVotes = poll.votes.toMutableMap()
+    val updatedUserVotes = currentVotes.toMutableList()
+    updatedUserVotes.remove(optionIndex)
+
+    if (updatedUserVotes.isEmpty()) {
+      // If no votes left, remove user from votes map entirely
+      updatedVotes.remove(userId)
+    } else {
+      updatedVotes[userId] = updatedUserVotes
+    }
+
+    val updatedPoll = poll.copy(votes = updatedVotes)
+    val updatedMessage = message.copy(poll = updatedPoll)
+    val updatedMessages = discussion.messages.toMutableList()
+    updatedMessages[messageIndex] = updatedMessage
+
+    discussions.document(discussionId).update(Discussion::messages.name, updatedMessages).await()
   }
 }
