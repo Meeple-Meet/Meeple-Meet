@@ -24,6 +24,10 @@ const val SUGGESTIONS_LIMIT = 30
 class FirestoreViewModel(
     private val repository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) : ViewModel() {
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+
+  /** The currently loaded handle suggestions */
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
 
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
     return discussion.admins.contains(account.uid) || account.uid == discussion.creatorId
@@ -266,6 +270,91 @@ class FirestoreViewModel(
               scope = viewModelScope,
               started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
               initialValue = null)
+    }
+  }
+
+  /**
+   * Searches for user accounts whose handles start with the given [prefix].
+   *
+   * This function launches a coroutine in the [viewModelScope] to asynchronously fetch matching
+   * handles from the [repository]. The resulting list of suggestions is truncated to
+   * [SUGGESTIONS_LIMIT] items and posted to [_handleSuggestions].
+   *
+   * If the [prefix] is blank, the function returns immediately without performing a search.
+   *
+   * @param prefix The starting string of the handle to search for. Must not be blank.
+   */
+  fun searchByHandle(prefix: String) {
+    if (prefix.isBlank()) return
+    viewModelScope.launch {
+      repository.searchByHandle(prefix).collect { list ->
+        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
+      }
+    }
+  }
+
+  // ---------- Poll Methods ----------
+
+  /**
+   * Create a new poll in a discussion.
+   *
+   * @param discussion The discussion where the poll will be created.
+   * @param creatorId The ID of the account creating the poll.
+   * @param question The poll question.
+   * @param options List of options users can vote for.
+   * @param allowMultipleVotes Whether users can vote multiple times.
+   */
+  fun createPoll(
+      discussion: Discussion,
+      creatorId: String,
+      question: String,
+      options: List<String>,
+      allowMultipleVotes: Boolean = false
+  ) {
+    if (question.isBlank()) throw IllegalArgumentException("Poll question cannot be blank")
+    if (options.size < 2) throw IllegalArgumentException("Poll must have at least 2 options")
+
+    viewModelScope.launch {
+      repository.createPoll(discussion, creatorId, question, options, allowMultipleVotes)
+    }
+  }
+
+  /**
+   * Vote on a poll option.
+   *
+   * @param discussionId The ID of the discussion containing the poll.
+   * @param pollMessageTimestamp The timestamp of the message containing the poll.
+   * @param voterId The ID of the account voting.
+   * @param optionIndex The index of the option to vote for.
+   */
+  fun voteOnPoll(
+      discussionId: String,
+      pollMessageTimestamp: com.google.firebase.Timestamp,
+      voterId: String,
+      optionIndex: Int
+  ) {
+    viewModelScope.launch {
+      repository.voteOnPoll(discussionId, pollMessageTimestamp, voterId, optionIndex)
+    }
+  }
+
+  /**
+   * Remove a user's vote for a specific poll option. Called when user clicks an option they
+   * previously selected to deselect it.
+   *
+   * @param discussionId The ID of the discussion containing the poll.
+   * @param pollMessageTimestamp The timestamp of the message containing the poll.
+   * @param voterId The ID of the account whose vote to remove.
+   * @param optionIndex The specific option to remove.
+   */
+  fun removeVoteFromPoll(
+      discussionId: String,
+      pollMessageTimestamp: com.google.firebase.Timestamp,
+      voterId: String,
+      optionIndex: Int
+  ) {
+    viewModelScope.launch {
+      repository.removeVoteFromPoll(discussionId, pollMessageTimestamp, voterId, optionIndex)
     }
   }
 }
