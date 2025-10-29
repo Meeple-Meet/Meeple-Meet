@@ -38,7 +38,19 @@ sonar {
         property("sonar.exclusions", "**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.webp,**/*.ttf,**/*.otf,**/*.woff,**/*.woff2,**/*.eot,**/*.svg")
         property("sonar.test.exclusions", "**/androidTest/**,**/debug/**,**/test/**")
 
-        property("sonar.pullrequest.provider", "Github")
+        // Pull request analysis configuration
+        // These properties are set via environment variables from GitHub Actions
+        val prKey = System.getenv("SONAR_PR_KEY")
+        val prBranch = System.getenv("SONAR_PR_BRANCH")
+        val prBase = System.getenv("SONAR_PR_BASE")
+
+        if (!prKey.isNullOrEmpty()) {
+            property("sonar.pullrequest.key", prKey)
+            property("sonar.pullrequest.branch", prBranch ?: "")
+            property("sonar.pullrequest.base", prBase ?: "main")
+            property("sonar.pullrequest.provider", "Github")
+        }
+
         property("sonar.sourceEncoding", "UTF-8")
     }
 }
