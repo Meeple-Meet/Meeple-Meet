@@ -10,6 +10,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,8 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -46,8 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.*
@@ -421,6 +420,7 @@ private fun PostContent(
  * @param currentUser The current user's account information.
  * @param onDelete Lambda to invoke when deleting the post.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelete: () -> Unit) {
   MeepleCard {
@@ -442,12 +442,13 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
                 MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onBackground),
             modifier = Modifier.testTag(PostTags.POST_BODY))
+
         if (post.tags.isNotEmpty()) {
           Spacer(Modifier.height(12.dp))
           FlowRow(
-              horizontalGap = 8.dp,
-              verticalGap = 8.dp,
-              modifier = Modifier.testTag(PostTags.POST_TAGS_ROW)) {
+              modifier = Modifier.testTag(PostTags.POST_TAGS_ROW),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 post.tags.forEach { tag ->
                   AssistChip(
                       enabled = false,
@@ -465,6 +466,7 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
               }
         }
       }
+
       if (post.authorId == currentUser.uid) {
         IconButton(
             onClick = onDelete,
@@ -835,73 +837,6 @@ private fun MeepleCard(
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Column(Modifier.fillMaxWidth().padding(contentPadding), content = content)
       }
-}
-
-/**
- * A custom layout that arranges its children in a horizontal flow, wrapping to new lines as needed.
- *
- * @param modifier Modifier to be applied to the layout.
- * @param horizontalGap Horizontal gap between items.
- * @param verticalGap Vertical gap between rows.
- * @param content Composable content to be laid out.
- */
-@Composable
-private fun FlowRow(
-    modifier: Modifier = Modifier,
-    horizontalGap: Dp = 8.dp,
-    verticalGap: Dp = 8.dp,
-    content: @Composable () -> Unit
-) {
-  Layout(content = content, modifier = modifier) { measurables, constraints ->
-    val placeables = measurables.map { it.measure(constraints) }
-    val rows = mutableListOf<MutableList<Placeable>>()
-    val rowWidths = mutableListOf<Int>()
-    val rowHeights = mutableListOf<Int>()
-
-    var currentRow = mutableListOf<Placeable>()
-    var currentWidth = 0
-    var currentHeight = 0
-
-    placeables.forEach { p ->
-      val projected =
-          if (currentRow.isEmpty()) p.width else currentWidth + horizontalGap.roundToPx() + p.width
-      if (projected <= constraints.maxWidth) {
-        currentRow.add(p)
-        currentWidth = projected
-        currentHeight = maxOf(currentHeight, p.height)
-      } else {
-        rows.add(currentRow)
-        rowWidths.add(currentWidth)
-        rowHeights.add(currentHeight)
-        currentRow = mutableListOf(p)
-        currentWidth = p.width
-        currentHeight = p.height
-      }
-    }
-    if (currentRow.isNotEmpty()) {
-      rows.add(currentRow)
-      rowWidths.add(currentWidth)
-      rowHeights.add(currentHeight)
-    }
-
-    val rawWidth = rowWidths.maxOrNull() ?: 0
-    val rawHeight =
-        rowHeights.sum() + (rowHeights.size - 1).coerceAtLeast(0) * verticalGap.roundToPx()
-    val width = constraints.constrainWidth(rawWidth)
-    val height = constraints.constrainHeight(rawHeight)
-
-    layout(width, height) {
-      var y = 0
-      rows.forEachIndexed { idx, row ->
-        var x = 0
-        row.forEachIndexed { i, placeable ->
-          placeable.placeRelative(x, y)
-          x += placeable.width + if (i != row.lastIndex) horizontalGap.roundToPx() else 0
-        }
-        y += rowHeights[idx] + if (idx != rows.lastIndex) verticalGap.roundToPx() else 0
-      }
-    }
-  }
 }
 
 /**
