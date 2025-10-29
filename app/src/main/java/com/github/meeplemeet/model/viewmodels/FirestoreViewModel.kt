@@ -3,18 +3,13 @@ package com.github.meeplemeet.model.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.DiscussionPreview
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,23 +24,13 @@ const val SUGGESTIONS_LIMIT = 30
 class FirestoreViewModel(
     private val repository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) : ViewModel() {
-
-  private val _account = MutableStateFlow<Account?>(null)
-
-  /** The currently loaded account */
-  val account: StateFlow<Account?> = _account
-
-  private val _discussion = MutableStateFlow<Discussion?>(null)
-
-  /** The currently loaded discussion */
-  val discussion: StateFlow<Discussion?> = _discussion
-
   private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
 
+  /** The currently loaded handle suggestions */
   val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
 
   private fun isAdmin(account: Account, discussion: Discussion): Boolean {
-    return discussion.admins.contains(account.uid)
+    return discussion.admins.contains(account.uid) || account.uid == discussion.creatorId
   }
 
   /** Create a new discussion. */
@@ -55,24 +40,13 @@ class FirestoreViewModel(
       creator: Account,
       vararg participants: Account
   ) {
-    println("CREATE DISCUSSION: ${creator.handle} + ${participants.map { it.handle }}")
     viewModelScope.launch {
-      val (acc, disc) =
-          repository.createDiscussion(
-              name.ifBlank { "${creator.name}'s discussion" },
-              description,
-              creator.uid,
-              participants.map { it.uid })
-      _account.value = acc
-      _discussion.value = disc
+      repository.createDiscussion(
+          name.ifBlank { "${creator.name}'s discussion" },
+          description,
+          creator.uid,
+          participants.map { it.uid })
     }
-  }
-
-  /** Retrieve a discussion by ID. */
-  fun getDiscussion(id: String) {
-    if (id.isBlank()) throw IllegalArgumentException("Discussion id cannot be blank")
-
-    viewModelScope.launch { _discussion.value = repository.getDiscussion(id) }
   }
 
   /** Update discussion name (admin-only). */
@@ -81,10 +55,10 @@ class FirestoreViewModel(
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
     viewModelScope.launch {
-      _discussion.value =
-          repository.setDiscussionName(
-              discussion.uid,
-              name.ifBlank { "Discussion with: ${discussion.participants.joinToString(", ")}" })
+      /*_discussion.value =*/
+      repository.setDiscussionName(
+          discussion.uid,
+          name.ifBlank { "Discussion with: ${discussion.participants.joinToString(", ")}" })
     }
   }
 
@@ -97,9 +71,7 @@ class FirestoreViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    viewModelScope.launch {
-      _discussion.value = repository.setDiscussionDescription(discussion.uid, description)
-    }
+    viewModelScope.launch { repository.setDiscussionDescription(discussion.uid, description) }
   }
 
   /** Delete a discussion (admin-only). */
@@ -107,10 +79,7 @@ class FirestoreViewModel(
     if (discussion.creatorId != changeRequester.uid)
         throw PermissionDeniedException("Only discussion owner can perform this operation")
 
-    viewModelScope.launch {
-      repository.deleteDiscussion(discussion)
-      _discussion.value = null
-    }
+    viewModelScope.launch { repository.deleteDiscussion(discussion) }
   }
 
   /** Add a user to a discussion (admin-only). */
@@ -119,9 +88,7 @@ class FirestoreViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    viewModelScope.launch {
-      _discussion.value = repository.addUserToDiscussion(discussion, user.uid)
-    }
+    viewModelScope.launch { repository.addUserToDiscussion(discussion, user.uid) }
   }
 
   /** Remove a user from a discussion (admin-only). */
@@ -131,9 +98,7 @@ class FirestoreViewModel(
     if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
-    viewModelScope.launch {
-      _discussion.value = repository.removeUserFromDiscussion(discussion, user.uid)
-    }
+    viewModelScope.launch { repository.removeUserFromDiscussion(discussion, user.uid) }
   }
 
   /** Add multiple users (admin-only). */
@@ -147,9 +112,7 @@ class FirestoreViewModel(
     val usersToAdd = users.filter { it -> !discussion.participants.contains(it.uid) }.map { it.uid }
     if (usersToAdd.isEmpty()) return
 
-    viewModelScope.launch {
-      _discussion.value = repository.addUsersToDiscussion(discussion, usersToAdd)
-    }
+    viewModelScope.launch { repository.addUsersToDiscussion(discussion, usersToAdd) }
   }
 
   /** Remove multiple users (admin-only). */
@@ -163,9 +126,7 @@ class FirestoreViewModel(
     if (users.any { user -> discussion.creatorId == user.uid })
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
-    viewModelScope.launch {
-      _discussion.value = repository.removeUsersFromDiscussion(discussion, users.map { it.uid })
-    }
+    viewModelScope.launch { repository.removeUsersFromDiscussion(discussion, users.map { it.uid }) }
   }
 
   /** Add a single admin (admin-only). */
@@ -173,9 +134,7 @@ class FirestoreViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    viewModelScope.launch {
-      _discussion.value = repository.addAdminToDiscussion(discussion, admin.uid)
-    }
+    viewModelScope.launch { repository.addAdminToDiscussion(discussion, admin.uid) }
   }
 
   /** Remove a single admin (admin-only). */
@@ -185,9 +144,7 @@ class FirestoreViewModel(
     if (discussion.creatorId == admin.uid)
         throw PermissionDeniedException("Cannot demote the owner of this discussion")
 
-    viewModelScope.launch {
-      _discussion.value = repository.removeAdminFromDiscussion(discussion, admin.uid)
-    }
+    viewModelScope.launch { repository.removeAdminFromDiscussion(discussion, admin.uid) }
   }
 
   /** Add multiple admins (admin-only). */
@@ -199,9 +156,7 @@ class FirestoreViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    viewModelScope.launch {
-      _discussion.value = repository.addAdminsToDiscussion(discussion, admins.map { it.uid })
-    }
+    viewModelScope.launch { repository.addAdminsToDiscussion(discussion, admins.map { it.uid }) }
   }
 
   /** Remove multiple admins (admin-only). */
@@ -214,7 +169,7 @@ class FirestoreViewModel(
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
     viewModelScope.launch {
-      _discussion.value = repository.removeAdminsFromDiscussion(discussion, admins.map { it.uid })
+      repository.removeAdminsFromDiscussion(discussion, admins.map { it.uid })
     }
   }
 
@@ -224,19 +179,20 @@ class FirestoreViewModel(
 
     viewModelScope.launch {
       readDiscussionMessages(sender, discussion)
-      _discussion.value = repository.sendMessageToDiscussion(discussion, sender, content)
+      repository.sendMessageToDiscussion(discussion, sender, content)
     }
   }
 
   fun signOut() {
-    _account.value = null
+    discussionFlows.clear()
+    accountFlows.clear()
   }
 
   /** Retrieve an account by ID. */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
 
-    viewModelScope.launch { _account.value = repository.getAccount(id) }
+    viewModelScope.launch { repository.getAccount(id) }
   }
 
   /** Retrieve an account by ID without changing the current account state. */
@@ -246,25 +202,13 @@ class FirestoreViewModel(
     viewModelScope.launch { onResult(repository.getAccount(id)) }
   }
 
-  fun getDiscussionParticipants(discussion: Discussion, onResult: (List<Account>) -> Unit) {
-    viewModelScope.launch { onResult(repository.getAccounts(discussion.participants)) }
-  }
-
-  /** Get the current signed-in account. */
-  fun getCurrentAccount() {
-    if (Firebase.auth.currentUser == null)
-        throw NotSignedInException("A user must be signed in for the UI to call this function")
-
-    viewModelScope.launch {
-      _account.value = repository.getAccount(Firebase.auth.currentUser?.uid ?: "")
-    }
+  fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
+    viewModelScope.launch { onResult(repository.getAccounts(uids)) }
   }
 
   /** Update account name. */
   fun setAccountName(account: Account, newName: String) {
-    viewModelScope.launch {
-      _account.value = repository.setAccountName(account.uid, newName.ifBlank { "~" })
-    }
+    viewModelScope.launch { repository.setAccountName(account.uid, newName.ifBlank { "~" }) }
   }
 
   /** Delete an account. */
@@ -279,31 +223,32 @@ class FirestoreViewModel(
             "Account: ${account.uid} - ${account.name} is not a part of Discussion: ${discussion.uid} - ${discussion.name}")
 
     if (discussion.messages.isEmpty()) return
+    if (account.previews[discussion.uid]!!.unreadCount == 0) return
 
     viewModelScope.launch {
-      _account.value =
-          repository.readDiscussionMessages(account.uid, discussion.uid, discussion.messages.last())
+      repository.readDiscussionMessages(account.uid, discussion.uid, discussion.messages.last())
     }
   }
 
   // ---------- Real-time flows ----------
 
   /** Holds a [StateFlow] of discussion preview maps keyed by account ID. */
-  private val previewStates = mutableMapOf<String, StateFlow<Map<String, DiscussionPreview>>>()
+  private val accountFlows = mutableMapOf<String, StateFlow<Account?>>()
 
   /**
    * Real-time flow of all discussion previews for an account.
    *
    * Emits a new map whenever any preview changes in Firestore.
    */
-  fun previewsFlow(accountId: String): StateFlow<Map<String, DiscussionPreview>> {
-    return previewStates.getOrPut(accountId) {
+  fun accountFlow(accountId: String): StateFlow<Account?> {
+    if (accountId.isBlank()) return MutableStateFlow(null)
+    return accountFlows.getOrPut(accountId) {
       repository
-          .listenMyPreviews(accountId)
+          .listenAccount(accountId)
           .stateIn(
               scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(5_000),
-              initialValue = emptyMap())
+              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+              initialValue = null)
     }
   }
 
@@ -316,15 +261,17 @@ class FirestoreViewModel(
    * Emits a new [Discussion] on every snapshot change, or `null` if the discussion does not exist
    * yet.
    */
-  fun discussionFlow(discussionId: String): StateFlow<Discussion?> =
-      discussionFlows.getOrPut(discussionId) {
-        repository
-            .listenDiscussion(discussionId)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = null)
-      }
+  fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
+    if (discussionId.isBlank()) return MutableStateFlow(null)
+    return discussionFlows.getOrPut(discussionId) {
+      repository
+          .listenDiscussion(discussionId)
+          .stateIn(
+              scope = viewModelScope,
+              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+              initialValue = null)
+    }
+  }
 
   /**
    * Searches for user accounts whose handles start with the given [prefix].
