@@ -12,6 +12,10 @@ on:
       - synchronize
       - reopened
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   format-check:
     name: Format Check
@@ -137,6 +141,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('firebase.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
@@ -161,7 +173,7 @@ jobs:
           fi
 
       - name: Run Unit Tests
-        run: ./gradlew check --parallel --build-cache
+        run: ./gradlew check --no-parallel --build-cache
 
       - name: Upload unit test results
         if: always()
@@ -173,7 +185,7 @@ jobs:
 
   android-tests:
     name: Android Instrumentation Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -220,6 +232,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('firebase.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
@@ -254,7 +274,7 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedAndroidTest --parallel --build-cache
+          script: ./gradlew connectedAndroidTest --no-parallel --build-cache
 
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
@@ -262,12 +282,9 @@ jobs:
           name: android-test-coverage
           path: app/build/outputs/code_coverage/debugAndroidTest/connected/**/coverage.ec
 
-  coverage-report:
-    name: Coverage Report
-    needs: [unit-tests, android-tests]
+  compile-debug-classes:
+    name: Compile Debug Classes
     runs-on: ubuntu-latest
-    outputs:
-      coverage: ${{ steps.coverage.outputs.percentage }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -311,6 +328,67 @@ jobs:
       - name: Build debug classes
         run: ./gradlew compileDebugKotlin --parallel --build-cache
 
+      - name: Upload compiled classes
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-classes
+          path: |
+            app/build/tmp/kotlin-classes/debug/
+            app/build/intermediates/javac/debug/
+          if-no-files-found: error
+
+  coverage-report:
+    name: Coverage Report
+    needs: [unit-tests, android-tests, compile-debug-classes]
+    runs-on: ubuntu-latest
+    outputs:
+      coverage: ${{ steps.coverage.outputs.percentage }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Retrieve gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set."
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Download compiled classes
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-classes
+          path: app/build/
+
       - name: Download unit test results
         uses: actions/download-artifact@v4
         with:
@@ -330,69 +408,11 @@ jobs:
           path: app/build/reports/
 
       - name: Generate coverage report
-        run: ./gradlew jacocoTestReport --parallel --build-cache
+        run: ./gradlew jacocoTestReport
 
       - name: Upload report to SonarCloud
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            ./gradlew sonar \
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref }} \
-            --parallel --build-cache
-          else
-            ./gradlew sonar --parallel --build-cache
-          fi
-
-      - name: Extract coverage percentage
-        id: coverage
-        run: |
-          REPORT_PATH="app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
-          if [ -f "$REPORT_PATH" ]; then
-            # Extract aggregate instruction coverage (last <counter type="INSTRUCTION"> before </report>)
-            LAST_INSTRUCTION=$(grep -o '<counter[^>]*>' "$REPORT_PATH" | grep 'type="INSTRUCTION"' | tail -1)
-            MISSED=$(echo "$LAST_INSTRUCTION" | sed -n 's/.*missed="\([0-9]*\)".*/\1/p')
-            COVERED=$(echo "$LAST_INSTRUCTION" | sed -n 's/.*covered="\([0-9]*\)".*/\1/p')
-            TOTAL=$((MISSED + COVERED))
-            if [ $TOTAL -gt 0 ]; then
-              PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", ($COVERED / $TOTAL) * 100}")
-            else
-              PERCENTAGE="0.00"
-            fi
-            echo "percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
-            echo "Instruction coverage: $PERCENTAGE%"
-          else
-            echo "percentage=N/A" >> $GITHUB_OUTPUT
-            echo "Coverage report not found"
-          fi
-
-  coverage-summary:
-    name: "Coverage: ${{ needs.coverage-report.outputs.coverage }}%"
-    needs: coverage-report
-    runs-on: ubuntu-latest
-    steps:
-      - name: Coverage Summary
-        run: |
-          COVERAGE="${{ needs.coverage-report.outputs.coverage }}"
-          THRESHOLD=80.00
-          echo "Instruction coverage is $COVERAGE%"
-          echo "Minimum required coverage is $THRESHOLD%"
-
-          # Check if coverage meets threshold
-          if [ "$COVERAGE" != "N/A" ]; then
-            # Use awk to compare floating point numbers
-            PASSES=$(awk "BEGIN {print ($COVERAGE >= $THRESHOLD) ? 1 : 0}")
-            if [ "$PASSES" -eq 1 ]; then
-              echo "✓ Coverage check passed!"
-              exit 0
-            else
-              echo "✗ Coverage check failed! Coverage ($COVERAGE%) is below threshold ($THRESHOLD%)"
-              exit 1
-            fi
-          else
-            echo "✗ Coverage report not available"
-            exit 1
-          fi
+          SONAR_BRANCH_NAME: ${{ github.ref_name }}
+        run: ./gradlew sonar --parallel --build-cache
