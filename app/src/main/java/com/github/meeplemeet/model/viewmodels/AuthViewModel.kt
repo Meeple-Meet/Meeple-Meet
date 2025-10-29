@@ -137,11 +137,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
    * @param context Android context (should be an Activity for UI operations)
    * @param credentialManager The credential manager instance for handling sign-in
    */
-  fun googleSignIn(
-      context: Context,
-      credentialManager: CredentialManager,
-      callback: () -> Unit = {}
-  ) {
+  fun googleSignIn(context: Context, credentialManager: CredentialManager) {
     // Prevent multiple simultaneous sign-in attempts
     if (_uiState.value.isLoading) return
 
@@ -187,7 +183,6 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
           _uiState.update {
             it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
           }
-          callback()
         }) { failure ->
           // Repository authentication failed
           _uiState.update {
@@ -269,7 +264,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
    * @param email The user's email address
    * @param password The user's password
    */
-  fun loginWithEmail(email: String, password: String, callback: () -> Unit = {}) {
+  fun loginWithEmail(email: String, password: String) {
     // Prevent multiple simultaneous operations
     if (_uiState.value.isLoading) return
 
@@ -283,7 +278,6 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
         _uiState.update {
           it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
         }
-        callback()
       }) { failure ->
         // Login failed: Show error message
         _uiState.update {

@@ -37,7 +37,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -55,13 +54,13 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -81,32 +80,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-
-/** Extra test tags for components (kept separate to avoid breaking other tests). */
-object ComponentsTestTags {
-  const val UNDERLINED_LABEL = "comp_underlined_label"
-  const val LABELED_LABEL = "comp_labeled_label"
-  const val COUNT_BUBBLE_TEXT = "comp_count_bubble_text"
-
-  const val PILL_RANGE_SLIDER = "comp_pill_range_slider"
-
-  const val PARTICIPANT_NAME = "comp_participant_name"
-  const val PARTICIPANT_ACTION = "comp_participant_action"
-
-  const val DATE_PICKER = "comp_date_picker"
-  const val TIME_PICKER = "comp_time_picker"
-
-  const val SEARCH_POPUP_SURFACE = "comp_search_popup_surface"
-  const val SEARCH_LOADING = "comp_search_loading"
-  const val SEARCH_EMPTY = "comp_search_empty"
-  const val SEARCH_LIST = "comp_search_list"
-  const val SEARCH_ITEM_PREFIX = "comp_search_item_"
-
-  fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
-
-  fun searchItem(norm: String) = "$SEARCH_ITEM_PREFIX$norm"
-}
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
@@ -119,11 +92,11 @@ enum class ParticipantAction {
  * ======================================================================= */
 
 /**
- * A card-like section container with padding.
+ * A simple card-like section with padding.
  *
- * @param modifier Modifier to be applied to the Column.
- * @param contentPadding Padding values to be applied inside the Column.
- * @param content Composable content to be placed inside the Column.
+ * @param modifier the modifier to be applied to the section
+ * @param contentPadding the padding inside the section
+ * @param content the content of the section
  */
 @Composable
 fun SectionCard(
@@ -135,11 +108,11 @@ fun SectionCard(
 }
 
 /**
- * A text label with an underline decoration.
+ * A simple underlined label.
  *
- * @param text The text to be displayed in the label.
- * @param textStyle The style to be applied to the text.
- * @param textColor The color of the text.
+ * @param text the text of the label
+ * @param textStyle the style of the text
+ * @param textColor the color of the text
  */
 @Composable
 fun UnderlinedLabel(
@@ -149,7 +122,6 @@ fun UnderlinedLabel(
 ) {
   Text(
       text = text,
-      modifier = Modifier.testTag(ComponentsTestTags.UNDERLINED_LABEL),
       style = textStyle,
       color = textColor,
       textDecoration = TextDecoration.Underline,
@@ -159,15 +131,15 @@ fun UnderlinedLabel(
 /**
  * A labeled text field with a label above it.
  *
- * @param label The label text to be displayed above the text field.
- * @param value The current value of the text field.
- * @param onValueChange Callback function to be invoked when the text field value changes.
- * @param placeholder Placeholder text to be displayed when the text field is empty.
- * @param singleLine Whether the text field should be single line or multi-line.
- * @param labelTextStyle The style to be applied to the label text.
- * @param labelTextColor The color of the label text.
- * @param modifier Modifier to be applied to the OutlinedTextField.
- * @param outlinedTextStyle The style to be applied to the text inside the OutlinedTextField.
+ * @param label the label text
+ * @param value the current text field value
+ * @param onValueChange the callback to be invoked when the text field value changes
+ * @param placeholder the placeholder text
+ * @param singleLine whether the text field is single line
+ * @param labelTextStyle the style of the label text
+ * @param labelTextColor the color of the label text
+ * @param modifier the modifier to be applied to the text field
+ * @param outlinedTextStyle the style of the text field text
  */
 @Composable
 fun LabeledTextField(
@@ -182,11 +154,7 @@ fun LabeledTextField(
     outlinedTextStyle: TextStyle = MaterialTheme.typography.bodySmall
 ) {
   Column {
-    Text(
-        label,
-        style = labelTextStyle,
-        color = labelTextColor,
-        modifier = Modifier.testTag(ComponentsTestTags.LABELED_LABEL))
+    Text(label, style = labelTextStyle, color = labelTextColor)
     Spacer(Modifier.height(6.dp))
     OutlinedTextField(
         value = value,
@@ -202,14 +170,13 @@ fun LabeledTextField(
 /**
  * A text field with optional leading and trailing icons.
  *
- * @param value The current value of the text field.
- * @param onValueChange Callback function to be invoked when the text field value changes.
- * @param placeholder Placeholder text to be displayed when the text field is empty.
- * @param editable Whether the text field is editable or read-only.
- * @param leadingIcon Optional composable for the leading icon.
- * @param trailingIcon Optional composable for the trailing icon.
- * @param textStyle The style to be applied to the text inside the text field.
- * @param modifier Modifier to be applied to the OutlinedTextField.
+ * @param value the current text field value
+ * @param onValueChange the callback to be invoked when the text field value changes
+ * @param placeholder the placeholder text
+ * @param leadingIcon the leading icon composable
+ * @param trailingIcon the trailing icon composable
+ * @param textStyle the style of the text field text
+ * @param modifier the modifier to be applied to the text field
  */
 @Composable
 fun IconTextField(
@@ -234,12 +201,12 @@ fun IconTextField(
 }
 
 /**
- * A bubble displaying a count number.
+ * A small bubble displaying a count.
  *
- * @param count The count number to be displayed.
- * @param modifier Modifier to be applied to the Box containing the count.
- * @param colorText The color of the count text.
- * @param styleText The style to be applied to the count text.
+ * @param count the count to display
+ * @param modifier the modifier to be applied to the bubble
+ * @param colorText the color of the text
+ * @param styleText the style of the text
  */
 @Composable
 fun CountBubble(
@@ -248,34 +215,28 @@ fun CountBubble(
     colorText: Color = MaterialTheme.colorScheme.onBackground,
     styleText: TextStyle = MaterialTheme.typography.bodySmall
 ) {
-  Box(modifier = modifier) {
-    Text(
-        "$count",
-        modifier = Modifier.testTag(ComponentsTestTags.COUNT_BUBBLE_TEXT),
-        style = styleText,
-        color = colorText)
-  }
+  Box(modifier = modifier) { Text("$count", style = styleText, color = colorText) }
 }
 
 /**
- * A discrete pill-shaped range slider.
+ * A discrete pill-shaped slider for selecting a range of values.
  *
- * @param range The range of values for the slider.
- * @param values The current selected range values.
- * @param steps The number of discrete steps between the min and max values.
- * @param editable Whether the slider is editable or read-only.
- * @param onValuesChange Callback function to be invoked when the slider values change.
- * @param modifier Modifier to be applied to the surrounding Column.
- * @param sliderModifier Modifier to be applied to the RangeSlider.
- * @param sliderColors Colors to be applied to the RangeSlider.
+ * @param range the range of values for the slider
+ * @param values the current selected range of values
+ * @param steps the number of discrete steps between the min and max values
+ * @param onValuesChange the callback to be invoked when the selected range changes
+ * @param surroundModifier the modifier to be applied to the surrounding box
+ * @param sliderModifier the modifier to be applied to the slider itself
+ * @param sliderColors the colors to be used for the slider
  */
 @Composable
 fun DiscretePillSlider(
     range: ClosedFloatingPointRange<Float>,
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
-    modifier: Modifier = Modifier,
     editable: Boolean = false,
+    onValuesChange: (Float, Float) -> Unit,
+    surroundModifier: Modifier = Modifier,
     sliderModifier: Modifier = Modifier,
     sliderColors: SliderColors =
         SliderDefaults.colors(
@@ -283,16 +244,15 @@ fun DiscretePillSlider(
             inactiveTrackColor = MaterialTheme.colorScheme.outline,
             thumbColor = MaterialTheme.colorScheme.tertiary)
 ) {
-  Column(modifier = modifier) {
+  Column(modifier = surroundModifier) {
     Box(modifier = sliderModifier) {
       RangeSlider(
           value = values,
-          enabled = true,
-          onValueChange = {},
+          enabled = editable,
+          onValueChange = { if (editable) onValuesChange(it.start, it.endInclusive) },
           valueRange = range,
           steps = steps,
-          colors = sliderColors,
-          modifier = Modifier.testTag(ComponentsTestTags.PILL_RANGE_SLIDER))
+          colors = sliderColors)
     }
   }
 }
@@ -300,12 +260,12 @@ fun DiscretePillSlider(
 /**
  * A chip representing a participant with an action button.
  *
- * @param account The account of the participant.
- * @param action The action to be performed (add or remove).
- * @param onClick Callback function to be invoked when the action button is clicked.
- * @param modifier Modifier to be applied to the Box containing the chip.
- * @param textModifier Modifier to be applied to the Text displaying the participant's name.
- * @param textColor The color of the participant's name text.
+ * @param account the account of the participant
+ * @param action the action to perform (add or remove)
+ * @param onClick the callback to be invoked when the action button is clicked
+ * @param modifier the modifier to be applied to the chip
+ * @param textModifier the modifier to be applied to the text
+ * @param textColor the color of the text
  */
 @Composable
 fun ParticipantChip(
@@ -319,10 +279,7 @@ fun ParticipantChip(
   Box(modifier = modifier) {
     Text(
         account.name,
-        modifier =
-            textModifier
-                .align(Alignment.Center)
-                .testTag(ComponentsTestTags.participantName(account.name)),
+        modifier = textModifier.align(Alignment.Center),
         style = MaterialTheme.typography.labelSmall,
         color = textColor,
         textAlign = TextAlign.Center,
@@ -345,10 +302,7 @@ fun ParticipantChip(
               }
           IconButton(
               onClick = { onClick(account) },
-              modifier =
-                  Modifier.size(20.dp)
-                      .testTag(
-                          "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
+              modifier = Modifier.size(20.dp),
               colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
                 Icon(icon, contentDescription = null)
               }
@@ -357,13 +311,13 @@ fun ParticipantChip(
 }
 
 /**
- * A grid layout that arranges items in two columns per row.
+ * A grid displaying items in two columns per row.
  *
- * @param items The list of items to be displayed in the grid.
- * @param key A function to generate a unique key for each item.
- * @param modifier Modifier to be applied to the Column containing the grid.
- * @param rowsModifier Modifier to be applied to each Row in the grid.
- * @param content Composable content to be displayed for each item, with a modifier for layout.
+ * @param items the list of items to display
+ * @param key a function to extract a unique key for each item
+ * @param modifier the modifier to be applied to the LazyColumn
+ * @param rowsModifier the modifier to be applied to each row
+ * @param content the composable content for each item
  */
 @Composable
 fun <T> TwoPerRowGrid(
@@ -385,31 +339,29 @@ fun <T> TwoPerRowGrid(
 }
 
 /**
- * A date picker field that shows a date picker dialog when the "Pick" button is clicked.
+ * A date picker field that shows a date picker in a popup when clicked.
  *
- * @param value The currently selected date.
- * @param onValueChange Callback function to be invoked when a new date is selected.
- * @param label The label text for the date field.
- * @param editable Whether the date field is editable or read-only.
- * @param displayFormatter The formatter to display the selected date.
- * @param zoneId The time zone to be used for date selection.
+ * @param value the currently selected date
+ * @param onValueChange the callback to be invoked when the date changes
+ * @param label the label for the text field
+ * @param displayFormatter the formatter to display the date
+ * @param zoneId the time zone to use for date conversion
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
     label: String = "Date",
-    editable: Boolean = true,
+    editable: Boolean = true, // Marked as true to make Marco's tests pass
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: ""
-
+  // The text field
   IconTextField(
-      value = text,
-      onValueChange = {},
+      value = text.format(displayFormatter) ?: "",
+      onValueChange = {}, // we control it externally
       placeholder = label,
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
       trailingIcon = {
@@ -423,67 +375,71 @@ fun DatePickerDockedField(
       },
       modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
+  // The popup
   if (showDialogDate) {
-    AppDatePickerDialog(
-        zoneId = zoneId,
+    DatePickerDialog(
         onDismiss = { showDialogDate = false },
-        onDateSelected = { selectedDate -> onValueChange(selectedDate) })
+        onDateSelected = { selectedDate -> onValueChange(selectedDate) },
+        displayFormatter = displayFormatter,
+        zoneId = zoneId,
+    )
   }
 }
 
-/**
- * A date picker dialog that allows the user to select a date.
- *
- * @param onDismiss Callback function to be invoked when the dialog is dismissed.
- * @param onDateSelected Callback function to be invoked when a date is selected.
- * @param zoneId The time zone to be used for date selection.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppDatePickerDialog(
+fun DatePickerDialog(
     onDismiss: () -> Unit,
     onDateSelected: (LocalDate) -> Unit,
+    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
-  val state = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
+  val datePickerState = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
 
-  DatePickerDialog(
+  AlertDialog(
+      containerColor = AppColors.primary,
       onDismissRequest = onDismiss,
       confirmButton = {
         TextButton(
-            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON),
             onClick = {
-              state.selectedDateMillis?.let { ms ->
-                onDateSelected(Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate())
+              val millis = datePickerState.selectedDateMillis
+              if (millis != null) {
+                val date =
+                    Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate() // e.g. "2025-10-13"
+                onDateSelected(date)
               }
               onDismiss()
-            }) {
+            },
+            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON)) {
               Text("OK")
             }
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-  ) {
-    DatePicker(
-        state = state,
-        modifier = Modifier.testTag(ComponentsTestTags.DATE_PICKER),
-        colors =
-            DatePickerDefaults.colors(
-                containerColor = AppColors.primary,
-                titleContentColor = AppColors.textIconsFade,
-                headlineContentColor = AppColors.textIcons,
-                selectedDayContentColor = AppColors.primary,
-                selectedDayContainerColor = AppColors.neutral))
-  }
+      text = {
+        // Wrap DatePicker in a Box with fillMaxWidth and padding to avoid cropping
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+          DatePicker(
+              state = datePickerState,
+              modifier = Modifier.fillMaxWidth(),
+              colors =
+                  DatePickerDefaults.colors(
+                      containerColor = AppColors.primary,
+                      titleContentColor = AppColors.textIconsFade,
+                      headlineContentColor = AppColors.textIcons,
+                      selectedDayContentColor = AppColors.primary,
+                      selectedDayContainerColor = AppColors.neutral))
+        }
+      })
 }
 
 /**
- * A time picker field that shows a time picker dialog when the "Pick" button is clicked.
+ * A time picker field that shows a time picker dialog when clicked.
  *
- * @param value The currently selected time.
- * @param onValueChange Callback function to be invoked when a new time is selected.
- * @param label The label text for the time field.
- * @param is24Hour Whether to use 24-hour format or 12-hour format.
- * @param displayFormatter The formatter to display the selected time.
+ * @param value the currently selected time
+ * @param onValueChange the callback to be invoked when the time changes
+ * @param label the label for the text field
+ * @param is24Hour whether to use 24-hour format
+ * @param displayFormatter the formatter to display the time
  */
 @Composable
 fun TimePickerField(
@@ -512,14 +468,13 @@ fun TimePickerField(
               Text("Pick")
             }
       },
-      modifier = Modifier.fillMaxWidth().height(64.dp).testTag(SessionTestTags.TIME_FIELD))
+      modifier = Modifier.fillMaxWidth().height(64.dp))
 
   if (open) {
     AlertDialog(
         onDismissRequest = { open = false },
         confirmButton = {
           TextButton(
-              modifier = Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON),
               onClick = {
                 onValueChange(LocalTime.of(state.hour, state.minute))
                 open = false
@@ -528,28 +483,25 @@ fun TimePickerField(
               }
         },
         dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
-        text = {
-          TimePicker(state = state, modifier = Modifier.testTag(ComponentsTestTags.TIME_PICKER))
-        })
+        text = { TimePicker(state = state) })
   }
 }
 
 /**
- * A search dropdown field that shows suggestions based on the query input.
+ * A search field with a dropdown of suggestions.
  *
- * @param label The label text for the search field.
- * @param query The current query string.
- * @param onQueryChange Callback function to be invoked when the query changes.
- * @param suggestions The list of suggestions to be displayed.
- * @param onSuggestionClick Callback function to be invoked when a suggestion is clicked.
- * @param getPrimaryText Function to extract the primary text from a suggestion item.
- * @param modifier Modifier to be applied to the Box containing the search field.
- * @param modifierTxtField Modifier to be applied to the OutlinedTextField.
- * @param placeholder Placeholder text to be displayed in the text field.
- * @param isLoading Whether the search is currently loading results.
- * @param showWhenEmptyQuery Whether to show suggestions when the query is empty.
- * @param itemContent Optional composable content for each suggestion item.
- * @param emptyText Text to display when there are no suggestions.
+ * @param label the label for the text field
+ * @param query the current search query
+ * @param onQueryChange the callback to be invoked when the query changes
+ * @param suggestions the list of suggestions to display
+ * @param onSuggestionClick the callback to be invoked when a suggestion is clicked
+ * @param getPrimaryText a function to extract the primary text from a suggestion
+ * @param modifier the modifier to be applied to the text field
+ * @param placeholder the placeholder text
+ * @param isLoading whether the search is in a loading state
+ * @param showWhenEmptyQuery whether to show suggestions when the query is empty
+ * @param itemContent an optional custom composable for rendering each suggestion
+ * @param emptyText the text to display when there are no suggestions
  */
 @Composable
 fun <T> SearchDropdownField(
@@ -568,16 +520,11 @@ fun <T> SearchDropdownField(
     emptyText: String = "No results"
 ) {
   var expanded by remember { mutableStateOf(false) }
-  var internalQuery by remember { mutableStateOf(query) }
-
-  // Sync internalQuery with query parameter when it changes externally
-  LaunchedEffect(query) { internalQuery = query }
 
   Box(modifier = modifier) {
     OutlinedTextField(
-        value = internalQuery,
+        value = query,
         onValueChange = {
-          internalQuery = it
           onQueryChange(it)
           expanded = (showWhenEmptyQuery || it.isNotBlank())
         },
@@ -586,10 +533,9 @@ fun <T> SearchDropdownField(
         trailingIcon = {
           when {
             isLoading -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            internalQuery.isNotEmpty() ->
+            query.isNotEmpty() ->
                 IconButton(
                     onClick = {
-                      internalQuery = ""
                       onQueryChange("")
                       expanded = false
                     }) {
@@ -601,22 +547,20 @@ fun <T> SearchDropdownField(
         singleLine = true,
         modifier = Modifier.fillMaxWidth().height(64.dp).then(modifierTxtField))
 
-    val shouldShow = expanded && (isLoading || suggestions.isNotEmpty())
+    val shouldShow =
+        expanded && (isLoading || suggestions.isNotEmpty() || (query.isNotBlank() && !isLoading))
 
     if (shouldShow) {
       Popup(onDismissRequest = { expanded = false }, alignment = Alignment.TopStart) {
         Column(Modifier.fillMaxWidth().offset(y = 64.dp)) {
           Surface(
-              modifier = Modifier.fillMaxWidth().testTag(ComponentsTestTags.SEARCH_POPUP_SURFACE),
-              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
               tonalElevation = 4.dp,
               shadowElevation = 4.dp) {
                 when {
                   isLoading -> {
                     Row(
-                        Modifier.fillMaxWidth()
-                            .padding(16.dp)
-                            .testTag(ComponentsTestTags.SEARCH_LOADING),
+                        Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                           CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -626,10 +570,7 @@ fun <T> SearchDropdownField(
                   suggestions.isEmpty() -> {
                     Text(
                         emptyText,
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(16.dp)
-                                .testTag(ComponentsTestTags.SEARCH_EMPTY),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
@@ -638,15 +579,9 @@ fun <T> SearchDropdownField(
                         modifier =
                             Modifier.fillMaxWidth()
                                 .heightIn(max = 200.dp)
-                                .testTag(ComponentsTestTags.SEARCH_LIST),
+                                .background(MaterialTheme.colorScheme.surface),
                         contentPadding = PaddingValues(vertical = 6.dp)) {
                           items(suggestions) { item ->
-                            val raw = getPrimaryText(item)
-                            val norm =
-                                raw.lowercase(Locale.getDefault())
-                                    .replace(Regex("[^a-z0-9]+"), "_")
-                                    .trim('_')
-
                             Row(
                                 modifier =
                                     Modifier.fillMaxWidth()
@@ -654,14 +589,13 @@ fun <T> SearchDropdownField(
                                           onSuggestionClick(item)
                                           expanded = false
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                                        .testTag(ComponentsTestTags.searchItem(norm)),
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                   if (itemContent != null) {
                                     itemContent(item)
                                   } else {
                                     Text(
-                                        text = raw,
+                                        text = getPrimaryText(item),
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis)
@@ -681,13 +615,13 @@ fun <T> SearchDropdownField(
 /**
  * A search field specifically for searching games.
  *
- * @param query The current query string.
- * @param onQueryChange Callback function to be invoked when the query changes.
- * @param results The list of game results to be displayed.
- * @param onPick Callback function to be invoked when a game is picked.
- * @param modifier Modifier to be applied to the Box containing the search field.
- * @param isLoading Whether the search is currently loading results.
- * @param placeholder Placeholder text to be displayed in the text field.
+ * @param query the current search query
+ * @param onQueryChange the callback to be invoked when the query changes
+ * @param results the list of game results to display
+ * @param onPick the callback to be invoked when a game is picked
+ * @param modifier the modifier to be applied to the text field
+ * @param isLoading whether the search is in a loading state
+ * @param placeholder the placeholder text
  */
 @Composable
 fun GameSearchField(
@@ -715,13 +649,13 @@ fun GameSearchField(
 /**
  * A search field specifically for searching locations.
  *
- * @param query The current query string.
- * @param onQueryChange Callback function to be invoked when the query changes.
- * @param results The list of location results to be displayed.
- * @param onPick Callback function to be invoked when a location is picked.
- * @param modifier Modifier to be applied to the Box containing the search field.
- * @param isLoading Whether the search is currently loading results.
- * @param placeholder Placeholder text to be displayed in the text field.
+ * @param query the current search query
+ * @param onQueryChange the callback to be invoked when the query changes
+ * @param results the list of location results to display
+ * @param onPick the callback to be invoked when a location is picked
+ * @param modifier the modifier to be applied to the text field
+ * @param isLoading whether the search is in a loading state
+ * @param placeholder the placeholder text
  */
 @Composable
 fun LocationSearchField(
@@ -758,3 +692,187 @@ fun LocationSearchField(
         }
       })
 }
+
+/* =======================================================================
+ * Previews
+ * ======================================================================= */
+
+/* A tiny host to give all previews a pleasant surface + padding */
+// @Composable
+// private fun PreviewHost(content: @Composable ColumnScope.() -> Unit) {
+//  AppTheme {
+//    Surface { Column(modifier = Modifier.fillMaxWidth().padding(16.dp), content = content) }
+//  }
+// }
+//
+/// * 1) SectionCard */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_SectionCard() = PreviewHost {
+//  AppTheme {
+//    SectionCard(
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .clip(RoundedCornerShape(12.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)) {
+//          Text("This is a SectionCard")
+//          Spacer(Modifier.height(8.dp))
+//          Text("You can place any Column content here.")
+//        }
+//  }
+// }
+//
+/// * 2) UnderlinedLabel */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_UnderlinedLabel() = PreviewHost {
+//  AppTheme { UnderlinedLabel(text = "Underlined label") }
+// }
+//
+/// * 3) LabeledTextField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_LabeledTextField() = PreviewHost {
+//  var text by remember { mutableStateOf("Hello") }
+//  AppTheme {
+//    LabeledTextField(
+//        label = "Title",
+//        value = text,
+//        onValueChange = { text = it },
+//        placeholder = "Type here…",
+//        singleLine = true,
+//        modifier = Modifier.fillMaxWidth())
+//  }
+// }
+//
+/// * 4) IconTextField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_IconTextField() = PreviewHost {
+//  var text by remember { mutableStateOf("") }
+//  AppTheme {
+//    IconTextField(
+//        value = text,
+//        onValueChange = { text = it },
+//        placeholder = "With icons",
+//        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+//        trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+//        modifier = Modifier.fillMaxWidth())
+//  }
+// }
+//
+/// * 5) CountBubble */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_CountBubble() = PreviewHost {
+//  AppTheme {
+//    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+//      CountBubble(count = 0, modifier = Modifier.background(Color.Transparent))
+//      CountBubble(count = 3, modifier = Modifier.background(Color.Transparent))
+//      CountBubble(count = 42, modifier = Modifier.background(Color.Transparent))
+//    }
+//  }
+// }
+//
+/// * 6) DiscretePillSlider */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_DiscretePillSlider() = PreviewHost {
+//  var range by remember { mutableStateOf(2f..6f) }
+//  AppTheme {
+//    DiscretePillSlider(
+//        range = 0f..10f,
+//        values = range,
+//        steps = 9,
+//        onValuesChange = { start, end -> range = start..end },
+//        surroundModifier = Modifier.fillMaxWidth(),
+//        sliderModifier = Modifier.fillMaxWidth())
+//  }
+// }
+//
+/// * 7) ParticipantChip
+// * NOTE: Replace the Account(...) construction with your project's real constructor.
+// */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_ParticipantChip_Add() = PreviewHost {
+//  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
+//  AppTheme {
+//    ParticipantChip(
+//        account = sampleAccount,
+//        action = ParticipantAction.Add,
+//        onClick = {},
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .height(32.dp)
+//                .clip(RoundedCornerShape(999.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)
+//                .padding(horizontal = 8.dp))
+//  }
+// }
+//
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_ParticipantChip_Remove() = PreviewHost {
+//  val sampleAccount = Account("1", name = "Marco", email = "marco@epfl.ch", handle = "")
+//  AppTheme {
+//    ParticipantChip(
+//        account = sampleAccount,
+//        action = ParticipantAction.Remove,
+//        onClick = {},
+//        modifier =
+//            Modifier.fillMaxWidth()
+//                .height(32.dp)
+//                .clip(RoundedCornerShape(999.dp))
+//                .background(MaterialTheme.colorScheme.surfaceVariant)
+//                .padding(horizontal = 8.dp))
+//  }
+// }
+//
+/// * 8) TwoPerRowGrid (showing simple string items) */
+// @Preview(showBackground = true, heightDp = 320)
+// @Composable
+// private fun Preview_TwoPerRowGrid() = PreviewHost {
+//  val items = remember { (1..5).map { "Item $it" } }
+//  AppTheme {
+//    TwoPerRowGrid(
+//        items = items,
+//        key = { it },
+//        modifier = Modifier.fillMaxWidth(),
+//        rowsModifier = Modifier.fillMaxWidth()) { item, cellModifier ->
+//          Box(
+//              modifier =
+//                  cellModifier
+//                      .height(56.dp)
+//                      .clip(RoundedCornerShape(10.dp))
+//                      .background(MaterialTheme.colorScheme.secondaryContainer),
+//              contentAlignment = Alignment.Center) {
+//                Text(item, style = MaterialTheme.typography.bodyMedium)
+//              }
+//        }
+//  }
+// }
+//
+/// * 9) DatePickerDockedField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_DatePickerDockedField() = PreviewHost {
+//  var date by remember { mutableStateOf(LocalDate.now()) }
+//  AppTheme {
+//    DatePickerDockedField(value = date, onValueChange = { date = it })
+//    Spacer(Modifier.height(8.dp))
+//    Text("Selected: ${date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
+//  }
+// }
+//
+/// * 10) TimePickerField */
+// @Preview(showBackground = true)
+// @Composable
+// private fun Preview_TimePickerField() = PreviewHost {
+//  var time by remember { mutableStateOf(LocalTime.of(19, 0)) }
+//  AppTheme {
+//    TimePickerField(value = time, onValueChange = { time = it })
+//    Spacer(Modifier.height(8.dp))
+//    Text("Selected: ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}")
+//  }
+// }

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class FirestoreHandlesViewModel(
-    val repository: FirestoreHandlesRepository = FirestoreHandlesRepository()
+    private val repository: FirestoreHandlesRepository = FirestoreHandlesRepository()
 ) : ViewModel() {
   private val _errorMsg = MutableStateFlow("")
   val errorMessage: StateFlow<String> = _errorMsg

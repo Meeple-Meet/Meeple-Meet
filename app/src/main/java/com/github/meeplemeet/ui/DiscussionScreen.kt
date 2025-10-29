@@ -35,16 +35,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-
-object DiscussionTestTags {
-  const val INPUT_FIELD = "Input Field"
-  const val SEND_BUTTON = "Send Button"
-
-  fun discussionInfo(name: String) = "DiscussionInfo/$name"
-}
 
 /**
  * Composable screen that displays a discussion (chat) and allows sending messages.
@@ -53,16 +44,16 @@ object DiscussionTestTags {
  * displayed in a scrollable list. Users are cached locally for display purposes.
  *
  * @param viewModel FirestoreViewModel for fetching discussion and sending messages
- * @param discussion The discussion to display
- * @param account The currently logged-in user
+ * @param discussionId ID of the discussion to display
+ * @param currentUser The currently logged-in user
  * @param onBack Callback when the back button is pressed
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(
-    account: Account,
-    discussion: Discussion,
-    viewModel: FirestoreViewModel,
+    viewModel: FirestoreViewModel = viewModel(),
+    discussionId: String,
+    currentUser: Account,
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
@@ -75,7 +66,8 @@ fun DiscussionScreen(
   var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
 
-  viewModel.readDiscussionMessages(account, discussion)
+  /** Collect the discussion StateFlow as Compose state */
+  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
 
   /**
    * Update messages list and user cache whenever the discussion changes.
@@ -83,13 +75,13 @@ fun DiscussionScreen(
    * Scrolls to the last message automatically.
    */
   LaunchedEffect(discussion) {
-    discussion.let { disc ->
+    discussion?.let { disc ->
       messages.clear()
       messages.addAll(disc.messages)
       scope.launch { listState.animateScrollToItem(messages.size) }
 
       disc.messages.forEach { msg ->
-        if (!userCache.containsKey(msg.senderId) && msg.senderId != account.uid) {
+        if (!userCache.containsKey(msg.senderId) && msg.senderId != currentUser.uid) {
           try {
             viewModel.getOtherAccount(msg.senderId) { account -> userCache[msg.senderId] = account }
           } catch (_: Exception) {}
@@ -100,11 +92,6 @@ fun DiscussionScreen(
     }
   }
 
-  LaunchedEffect(discussion.uid, listState) {
-    snapshotFlow { listState.layoutInfo.totalItemsCount }.filter { it > 0 }.first()
-    listState.scrollToItem(maxOf(0, listState.layoutInfo.totalItemsCount - 1))
-  }
-
   Column(modifier = Modifier.fillMaxSize().background(AppColors.primary)) {
     /** Top bar showing discussion name and navigation back button */
     TopAppBar(
@@ -112,9 +99,9 @@ fun DiscussionScreen(
           Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier =
-                  Modifier.fillMaxSize()
-                      .testTag(DiscussionTestTags.discussionInfo(discussion.name))
-                      .clickable { onOpenDiscussionInfo(discussion) }) {
+                  Modifier.fillMaxSize().testTag("DiscussionInfo/${discussion?.name}").clickable {
+                    discussion?.let { onOpenDiscussionInfo(it) }
+                  }) {
                 Box(
                     modifier =
                         Modifier.size(40.dp)
@@ -139,13 +126,14 @@ fun DiscussionScreen(
         actions = {
           val icon =
               when {
-                discussion.session != null -> Icons.Default.Games
-                discussion.admins.contains(account.uid) -> Icons.Default.LibraryAdd
+                discussion == null -> null
+                discussion!!.session != null -> Icons.Default.Games
+                discussion!!.admins.contains(currentUser.uid) -> Icons.Default.LibraryAdd
                 else -> null
               }
 
           if (icon != null) {
-            IconButton(onClick = { onCreateSessionClick(discussion) }) {
+            IconButton(onClick = { onCreateSessionClick(discussion!!) }) {
               Icon(icon, contentDescription = "Session action")
             }
           }
@@ -158,7 +146,7 @@ fun DiscussionScreen(
         contentPadding = PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
           itemsIndexed(messages) { index, message ->
-            val isMine = message.senderId == account.uid
+            val isMine = message.senderId == currentUser.uid
             val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
             val showDateHeader =
@@ -193,7 +181,7 @@ fun DiscussionScreen(
           BasicTextField(
               value = messageText,
               onValueChange = { messageText = it },
-              modifier = Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
+              modifier = Modifier.weight(1f).testTag("Input Field"),
               singleLine = true,
               decorationBox = { innerTextField ->
                 if (messageText.isEmpty()) {
@@ -206,14 +194,14 @@ fun DiscussionScreen(
 
           /** Send button */
           IconButton(
-              modifier = Modifier.testTag(DiscussionTestTags.SEND_BUTTON),
+              modifier = Modifier.testTag("Send Button"),
               onClick = {
-                discussion.let { disc ->
+                discussion?.let { disc ->
                   if (messageText.isNotBlank() && !isSending) {
                     scope.launch {
                       isSending = true
                       try {
-                        viewModel.sendMessageToDiscussion(disc, account, messageText)
+                        viewModel.sendMessageToDiscussion(disc, currentUser, messageText)
                         messageText = ""
                       } finally {
                         isSending = false
@@ -256,7 +244,7 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
                   Modifier.shadow(elevation = 4.dp, shape = appShapes.large, clip = false)
                       .background(color = AppColors.secondary, shape = appShapes.large)
                       .padding(10.dp)
-                      .widthIn(min = 100.dp, max = 250.dp)) {
+                      .widthIn(max = 250.dp)) {
                 Column {
                   if (senderName != null) {
                     Text(
