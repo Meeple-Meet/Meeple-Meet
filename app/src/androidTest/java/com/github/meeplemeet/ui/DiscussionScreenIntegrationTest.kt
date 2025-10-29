@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.*
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.utils.FirestoreTests
+import java.util.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
