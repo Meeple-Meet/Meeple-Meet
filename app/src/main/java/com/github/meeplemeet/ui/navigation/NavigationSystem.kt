@@ -14,10 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
@@ -93,20 +91,20 @@ enum class MeepleMeetScreen(
     val icon: ImageVector? = null,
     val testTag: String? = null
 ) {
-  SignIn("Sign In"),
-  SignUp("Sign Up"),
-  CreateAccount("Create your Account"),
+  SignInScreen("Sign In"),
+  SignUpScreen("Sign Up"),
+  CreateAccountScreen("Create your Account"),
   DiscussionsOverview(
       "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
   SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
-  DiscoverFeeds("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
-  Profile("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
-  AddDiscussion("Add Discussion"),
-  Discussion("Discussion"),
-  DiscussionDetails("Discussion Details"),
-  AddSession("Add Session"),
-  Session("Session"),
-  SessionDetails("Session Details"),
+  DiscoverSessions("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
+  ProfileScreen("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
+  DiscussionAddScreen("Add Discussion"),
+  DiscussionScreen("Discussion"),
+  DiscussionInfoScreen("Discussion Details"),
+  SessionAddScreen("Add Session"),
+  SessionScreen("Session"),
+  SessionInfoScreen("Session Details"),
 }
 
 /**
@@ -152,7 +150,6 @@ fun BottomNavigationMenu(
  * @param navController The [NavHostController] used for Compose navigation.
  */
 open class NavigationActions(private val navController: NavHostController) {
-  private val scope = MainScope()
 
   /**
    * Navigates to the specified [screen].
@@ -163,22 +160,20 @@ open class NavigationActions(private val navController: NavHostController) {
    * @param screen The target screen to navigate to.
    */
   open fun navigateTo(screen: MeepleMeetScreen) {
-    scope.launch(Dispatchers.Main) {
-      if (screen.inBottomBar && currentRoute() == screen.name) {
-        // If the user is already on the top-level destination, do nothing
-        return@launch
+    if (screen.inBottomBar && currentRoute() == screen.name) {
+      // If the user is already on the top-level destination, do nothing
+      return
+    }
+    navController.navigate(screen.name) {
+      // Screens available through the bottom navigation bar are top-level destinations.
+      // When navigating to one of these, we want to clear the back stack to avoid building
+      // up a large stack of destinations as the user switches between them.
+      if (screen.inBottomBar) {
+        launchSingleTop = true
+        popUpTo(screen.name) { inclusive = true }
       }
-      navController.navigate(screen.name) {
-        // Screens available through the bottom navigation bar are top-level destinations.
-        // When navigating to one of these, we want to clear the back stack to avoid building
-        // up a large stack of destinations as the user switches between them.
-        if (screen.inBottomBar) {
-          launchSingleTop = true
-          popUpTo(screen.name) { inclusive = true }
-        }
 
-        restoreState = true
-      }
+      restoreState = true
     }
   }
 
@@ -192,17 +187,15 @@ open class NavigationActions(private val navController: NavHostController) {
    * Typical usage: called after a successful login or account creation.
    */
   open fun navigateOutOfAuthGraph() {
-    scope.launch(Dispatchers.Main) {
-      navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
-        popUpTo(0) { inclusive = true } // Empty stack
-        launchSingleTop = true
-      }
+    navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
+      popUpTo(0) { inclusive = true } // Empty stack
+      launchSingleTop = true
     }
   }
 
   /** Navigate back to the previous screen. */
   open fun goBack() {
-    scope.launch(Dispatchers.Main) { navController.popBackStack() }
+    navController.popBackStack()
   }
 
   /**
@@ -213,4 +206,10 @@ open class NavigationActions(private val navController: NavHostController) {
   open fun currentRoute(): String {
     return navController.currentDestination?.route ?: ""
   }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun BottomMenuPreview() {
+  BottomNavigationMenu(currentScreen = MeepleMeetScreen.SessionsOverview, onTabSelected = {})
 }

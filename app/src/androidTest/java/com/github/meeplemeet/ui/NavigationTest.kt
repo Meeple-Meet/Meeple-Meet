@@ -1,18 +1,13 @@
 package com.github.meeplemeet.ui
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.navigation.compose.ComposeNavigator
-import androidx.navigation.testing.TestNavHostController
-import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.MeepleMeetApp
-import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
@@ -42,9 +37,7 @@ import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionInf
 import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionScreen
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -60,54 +53,49 @@ import org.junit.Test
  *   instead of "Sessions"), update the asserted strings accordingly.
  * - Update test tags for better testability where applicable.
  */
-@Ignore
 class NavigationTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-  private lateinit var navController: TestNavHostController
   private lateinit var authVM: AuthViewModel
-  private lateinit var authRepository: AuthRepository
   private lateinit var firestoreVM: FirestoreViewModel
   private lateinit var repository: FirestoreRepository
 
   private lateinit var testAccount: Account
-  private val testEmail = "test${System.currentTimeMillis()}@example.com"
-  private val testPassword = "testPassword123"
   private lateinit var testDiscussion1Uid: String
   private lateinit var testDiscussion2Uid: String
 
   // ---------- Setup ----------
+
   @Before
   fun setUp() {
-    // Create repositories and ViewModels
+    // Create repository and ViewModels
     repository = FirestoreRepository()
-    authRepository = AuthRepository()
-    authVM = AuthViewModel(authRepository)
+    authVM = AuthViewModel()
     firestoreVM = FirestoreViewModel(repository)
     val handlesVM = FirestoreHandlesViewModel()
 
-    // Create test account with AuthRepository
+    // Create test data directly in Firestore
     runBlocking {
-      // Register the account (this creates both Firebase Auth user and Firestore account)
-      val result = authRepository.registerWithEmail(testEmail, testPassword)
-      testAccount = result.getOrThrow()
+      // Create test account
+      testAccount =
+          repository.createAccount(
+              userHandle = "test_user",
+              name = "Test User",
+              email = "test@example.com",
+              photoUrl = null)
 
-      // Create handle for the account
-      handlesVM.createAccountHandle(testAccount, "testhandle")
-
-      // Sign out after creating account so tests start from logged out state
-      FirebaseProvider.auth.signOut()
+      handlesVM.createAccountHandle(testAccount, "handle")
 
       // Create test discussions
-      val discussion1 =
+      val (_, discussion1) =
           repository.createDiscussion(
               name = "Fake Discussion 1",
               description = "Testing navigation from overview",
               creatorId = testAccount.uid)
       testDiscussion1Uid = discussion1.uid
 
-      val discussion2 =
+      val (_, discussion2) =
           repository.createDiscussion(
               name = "Fake Discussion 2",
               description = "Testing navigation with multiple discussions",
@@ -116,30 +104,30 @@ class NavigationTest : FirestoreTests() {
     }
 
     // Launch the app UI (starts at SignIn screen)
-    composeTestRule.setContent {
-      navController = TestNavHostController(LocalContext.current)
-      navController.navigatorProvider.addNavigator(ComposeNavigator())
-      MeepleMeetApp(authVM = authVM, firestoreVM = firestoreVM, navController = navController)
-    }
+    composeTestRule.setContent { MeepleMeetApp(authVM = authVM, firestoreVM = firestoreVM) }
     composeTestRule.waitForIdle()
   }
 
   // ===== Test helpers =====
 
   /**
-   * Simulate login by using the AuthViewModel to log in with email/password. This triggers the auth
-   * state listener in MainActivity which loads the account and navigates to DiscussionsOverview.
+   * Simulate login by loading the test account into the FirestoreViewModel. This triggers the
+   * navigation to DiscussionsOverview in MainActivity.
    */
   private fun login() {
-    runBlocking {
-      // Use AuthViewModel's login method (which calls AuthRepository)
-      authVM.loginWithEmail(testEmail, testPassword)
+    firestoreVM.getAccount(testAccount.uid)
 
-      // Wait for the auth state to update and navigation to complete
-      composeTestRule.waitForIdle()
-      Thread.sleep(1000)
-      composeTestRule.waitForIdle()
-    }
+    // Wait until the account is actually loaded in the ViewModel
+    composeTestRule.waitUntil(timeoutMillis = 5_000) { firestoreVM.account.value != null }
+
+    composeTestRule.waitForIdle()
+  }
+
+  /** Simulate logout by clearing the account from the ViewModels. */
+  private fun logout() {
+    firestoreVM.signOut()
+    authVM.logout()
+    composeTestRule.waitForIdle()
   }
 
   private fun pressSystemBack(shouldTerminate: Boolean = false) {
@@ -153,13 +141,13 @@ class NavigationTest : FirestoreTests() {
   // ---------- Auth screens navigation ----------
 
   @Test
-  fun startScreen_isSignIn_and_bottomBarNotDisplayed() = runTest {
+  fun startScreen_isSignIn_and_bottomBarNotDisplayed() {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule.checkBottomBarIsNotDisplayed()
   }
 
   @Test
-  fun signUpLink_navigatesToSignUp_and_bottomBarStillNotDisplayed() = runTest {
+  fun signUpLink_navigatesToSignUp_and_bottomBarStillNotDisplayed() {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule
         .onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON)
@@ -170,7 +158,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun backFromSignUp_toSignIn_keepsBottomBarNotDisplayed() = runTest {
+  fun backFromSignUp_toSignIn_keepsBottomBarNotDisplayed() {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
 
@@ -182,7 +170,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun signInFlow_navigatesToDiscussionsOverview() = runTest {
+  fun signInFlow_navigatesToDiscussionsOverview() {
     composeTestRule.checkSignInScreenIsDisplayed()
 
     // Simulate login
@@ -192,11 +180,10 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun signUpFlow_navigatesToDiscussionsOverview() = runTest {
+  fun signUpFlow_navigatesToDiscussionsOverview() {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
     composeTestRule.checkSignUpScreenIsDisplayed()
-    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).performClick()
 
     // Simulate login
     login()
@@ -207,7 +194,7 @@ class NavigationTest : FirestoreTests() {
   // ---------- BottomBar navigation ----------
 
   @Test
-  fun tabsAreClickable() = runTest {
+  fun tabsAreClickable() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
@@ -218,7 +205,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun canNavigateToAllTabs() = runTest {
+  fun canNavigateToAllTabs() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
@@ -241,7 +228,7 @@ class NavigationTest : FirestoreTests() {
 
   //
   @Test
-  fun canNavigateBackUsingSystemBack() = runTest {
+  fun canNavigateBackUsingSystemBack() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
@@ -271,7 +258,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun many_nav_between_two_tabs_then_system_back_pops_only_once() = runTest {
+  fun many_nav_between_two_tabs_then_system_back_pops_only_once() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
@@ -302,7 +289,7 @@ class NavigationTest : FirestoreTests() {
   // DiscussionsOverview navigation
 
   @Test
-  fun clickingOnDiscussionPreview_openDiscussionScreen() = runTest {
+  fun clickingOnDiscussionPreview_openDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -311,7 +298,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun clickingOnAdd_openDiscussionAddScreen() = runTest {
+  fun clickingOnAdd_openDiscussionAddScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToAddDiscussionScreen()
@@ -322,7 +309,7 @@ class NavigationTest : FirestoreTests() {
   // DiscussionAdd navigation
 
   @Test
-  fun canGoBack_fromDiscussionAdd_toDiscussionsOverview() = runTest {
+  fun canGoBack_fromDiscussionAdd_toDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToAddDiscussionScreen()
@@ -335,7 +322,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun backButton_fromDiscussionAdd_toDiscussionsOverview() = runTest {
+  fun backButton_fromDiscussionAdd_toDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToAddDiscussionScreen()
@@ -348,7 +335,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun createDiscussion_navigateToDiscussionsOverview() = runTest {
+  fun createDiscussion_navigateToDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToAddDiscussionScreen()
@@ -363,7 +350,7 @@ class NavigationTest : FirestoreTests() {
   // DiscussionScreen navigation
 
   @Test
-  fun canGoBack_fromDiscussionScreen_toDiscussionsOverview() = runTest {
+  fun canGoBack_fromDiscussionScreen_toDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -375,7 +362,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun backButton_fromDiscussionScreen_toDiscussionsOverview() = runTest {
+  fun backButton_fromDiscussionScreen_toDiscussionsOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -389,7 +376,7 @@ class NavigationTest : FirestoreTests() {
   // DiscussionInfo navigation
 
   @Test
-  fun clickingOnDiscussionInfo_opensDiscussionInfoScreen() = runTest {
+  fun clickingOnDiscussionInfo_opensDiscussionInfoScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -402,7 +389,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun canGoBack_fromDiscussionInfo_toDiscussionScreen() = runTest {
+  fun canGoBack_fromDiscussionInfo_toDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -418,7 +405,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun backButton_fromDiscussionInfo_toDiscussionScreen() = runTest {
+  fun backButton_fromDiscussionInfo_toDiscussionScreen() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -434,7 +421,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun deleteDiscussion_fromInfo_toOverview() = runTest {
+  fun deleteDiscussion_fromInfo_toOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -450,7 +437,7 @@ class NavigationTest : FirestoreTests() {
   }
 
   @Test
-  fun leaveDiscussion_fromInfo_toOverview() = runTest {
+  fun leaveDiscussion_fromInfo_toOverview() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
     composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
@@ -468,7 +455,7 @@ class NavigationTest : FirestoreTests() {
   // ---------- Discussions navigation ----------
 
   @Test
-  fun logout_fromProfile_toSignIn() = runTest {
+  fun logout_fromProfile_toSignIn() {
     login()
     composeTestRule.checkDiscussionsOverviewIsDisplayed()
 
@@ -483,7 +470,7 @@ class NavigationTest : FirestoreTests() {
   // ---------- Defensive checks ----------
 
   @Test
-  fun noUnexpectedErrorText_onStart() = runTest {
+  fun noUnexpectedErrorText_onStart() {
     // Ensure the generic error "An unknown error occurred" is NOT shown at start
     composeTestRule.onAllNodesWithText("An unknown error occurred").assertCountEquals(0)
   }

@@ -8,6 +8,7 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.AccountNoUid
 import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.DiscussionNoUid
+import com.github.meeplemeet.model.structures.DiscussionPreview
 import com.github.meeplemeet.model.structures.DiscussionPreviewNoUid
 import com.github.meeplemeet.model.structures.Message
 import com.github.meeplemeet.model.structures.fromNoUid
@@ -16,7 +17,6 @@ import com.github.meeplemeet.model.structures.toPreview
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -48,7 +48,7 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       description: String,
       creatorId: String,
       participants: List<String> = emptyList()
-  ): Discussion {
+  ): Pair<Account, Discussion> {
     val discussion =
         Discussion(
             newDiscussionUID(),
@@ -69,7 +69,7 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     }
     batch.commit().await()
 
-    return discussion
+    return Pair(getAccount(creatorId), discussion)
   }
 
   /** Retrieve a discussion document by ID. */
@@ -81,13 +81,15 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   /** Update a discussion's name. */
-  suspend fun setDiscussionName(id: String, name: String) {
+  suspend fun setDiscussionName(id: String, name: String): Discussion {
     discussions.document(id).update(Discussion::name.name, name).await()
+    return getDiscussion(id)
   }
 
   /** Update a discussion's description. */
-  suspend fun setDiscussionDescription(id: String, description: String) {
+  suspend fun setDiscussionDescription(id: String, description: String): Discussion {
     discussions.document(id).update(Discussion::description.name, description).await()
+    return getDiscussion(id)
   }
 
   /** Delete a discussion document. */
@@ -102,7 +104,7 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   /** Add a user to the participants array. */
-  suspend fun addUserToDiscussion(discussion: Discussion, userId: String) {
+  suspend fun addUserToDiscussion(discussion: Discussion, userId: String): Discussion {
     discussions
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(userId))
@@ -113,10 +115,11 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         .document(discussion.uid)
         .set(toPreview(discussion))
         .await()
+    return getDiscussion(discussion.uid)
   }
 
   /** Remove a user from the participants and admins array */
-  suspend fun removeUserFromDiscussion(discussion: Discussion, userId: String) {
+  suspend fun removeUserFromDiscussion(discussion: Discussion, userId: String): Discussion {
     discussions
         .document(discussion.uid)
         .update(
@@ -131,10 +134,11 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         .document(discussion.uid)
         .delete()
         .await()
+    return getDiscussion(discussion.uid)
   }
 
   /** Add multiple users to the participants array. */
-  suspend fun addUsersToDiscussion(discussion: Discussion, userIds: List<String>) {
+  suspend fun addUsersToDiscussion(discussion: Discussion, userIds: List<String>): Discussion {
     discussions
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(*userIds.toTypedArray()))
@@ -145,10 +149,11 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       batch.set(ref, toPreview(discussion))
     }
     batch.commit().await()
+    return getDiscussion(discussion.uid)
   }
 
   /** Remove multiple users from the participants and admins array. */
-  suspend fun removeUsersFromDiscussion(discussion: Discussion, userIds: List<String>) {
+  suspend fun removeUsersFromDiscussion(discussion: Discussion, userIds: List<String>): Discussion {
     discussions
         .document(discussion.uid)
         .update(
@@ -163,27 +168,31 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       batch.delete(ref)
     }
     batch.commit().await()
+
+    return getDiscussion(discussion.uid)
   }
 
   /** Add a user as admin (and participant if missing). */
-  suspend fun addAdminToDiscussion(discussion: Discussion, userId: String) {
+  suspend fun addAdminToDiscussion(discussion: Discussion, userId: String): Discussion {
     if (!discussion.participants.contains(userId)) addUserToDiscussion(discussion, userId)
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayUnion(userId))
         .await()
+    return getDiscussion(discussion.uid)
   }
 
   /** Remove a user from the admins array */
-  suspend fun removeAdminFromDiscussion(discussion: Discussion, userId: String) {
+  suspend fun removeAdminFromDiscussion(discussion: Discussion, userId: String): Discussion {
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayRemove(userId))
         .await()
+    return getDiscussion(discussion.uid)
   }
 
   /** Add multiple admins (and participants if missing). */
-  suspend fun addAdminsToDiscussion(discussion: Discussion, adminIds: List<String>) {
+  suspend fun addAdminsToDiscussion(discussion: Discussion, adminIds: List<String>): Discussion {
     val current = discussion.participants.toSet()
     val newParticipants = adminIds.filterNot { it in current }
     if (newParticipants.isNotEmpty()) {
@@ -202,20 +211,30 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
           .update(Discussion::admins.name, FieldValue.arrayUnion(*newAdmins.toTypedArray()))
           .await()
     }
+
+    return getDiscussion(discussion.uid)
   }
 
   /** Remove multiple users from the admins array. */
-  suspend fun removeAdminsFromDiscussion(discussion: Discussion, userIds: List<String>) {
+  suspend fun removeAdminsFromDiscussion(
+      discussion: Discussion,
+      userIds: List<String>
+  ): Discussion {
     discussions
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayRemove(*userIds.toTypedArray()))
         .await()
+    return getDiscussion(discussion.uid)
   }
 
   /**
    * Append a new message to the discussion and update unread counts in all participants' previews.
    */
-  suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
+  suspend fun sendMessageToDiscussion(
+      discussion: Discussion,
+      sender: Account,
+      content: String
+  ): Discussion {
     val message = Message(sender.uid, content)
     val batch = FirebaseFirestore.getInstance().batch()
 
@@ -229,18 +248,19 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     discussion.participants.forEach { userId ->
       val ref =
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
-      val unreadCountValue = if (userId == sender.uid) 0 else FieldValue.increment(1)
+      val unreadIncrement = if (userId == sender.uid) 0 else 1
       batch.set(
           ref,
           mapOf(
               "lastMessage" to message.content,
               "lastMessageSender" to message.senderId,
               "lastMessageAt" to message.createdAt,
-              "unreadCount" to unreadCountValue),
+              "unreadCount" to FieldValue.increment(unreadIncrement.toLong())),
           SetOptions.merge())
     }
 
     batch.commit().await()
+    return getDiscussion(discussion.uid)
   }
 
   /** Create a new account document. */
@@ -293,8 +313,9 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   /** Update account display name. */
-  suspend fun setAccountName(id: String, name: String) {
+  suspend fun setAccountName(id: String, name: String): Account {
     accounts.document(id).update(Account::name.name, name).await()
+    return getAccount(id)
   }
 
   /** Delete an account document. */
@@ -342,45 +363,27 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    *
    * Emits a map keyed by discussion ID whenever any preview changes.
    */
-  fun listenAccount(accountId: String): Flow<Account> = callbackFlow {
-    val accountRef = accounts.document(accountId)
-
-    var previewsListener: ListenerRegistration? = null
-
-    val accountListener =
-        accountRef.addSnapshotListener { snapshot, e ->
+  fun listenMyPreviews(accountId: String): Flow<Map<String, DiscussionPreview>> = callbackFlow {
+    val reg =
+        accounts.document(accountId).collection(Account::previews.name).addSnapshotListener { qs, e
+          ->
           if (e != null) {
             close(e)
             return@addSnapshotListener
           }
-          if (snapshot == null || !snapshot.exists()) return@addSnapshotListener
-
-          val accountNoUid = snapshot.toObject(AccountNoUid::class.java) ?: AccountNoUid()
-
-          // Remove old previews listener before adding a new one
-          previewsListener?.remove()
-          previewsListener =
-              accountRef.collection(Account::previews.name).addSnapshotListener { qs, e2 ->
-                if (e2 != null) {
-                  close(e2)
-                  return@addSnapshotListener
+          if (qs != null) {
+            val m =
+                qs.documents.associate { d ->
+                  d.id to
+                      fromNoUid(
+                          d.id,
+                          (d.toObject(DiscussionPreviewNoUid::class.java)
+                              ?: DiscussionPreviewNoUid()))
                 }
-                if (qs != null) {
-                  val previews =
-                      qs.documents.associate { d ->
-                        d.id to
-                            (d.toObject(DiscussionPreviewNoUid::class.java)
-                                ?: DiscussionPreviewNoUid())
-                      }
-                  trySend(fromNoUid(accountId, accountNoUid, previews))
-                }
-              }
+            trySend(m)
+          }
         }
-
-    awaitClose {
-      accountListener.remove()
-      previewsListener?.remove()
-    }
+    awaitClose { reg.remove() }
   }
 
   /**

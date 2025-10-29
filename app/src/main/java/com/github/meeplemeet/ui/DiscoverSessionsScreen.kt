@@ -22,7 +22,7 @@ fun DiscoverSessionsScreen(navigation: NavigationActions) {
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.DiscoverFeeds.title,
+                  text = MeepleMeetScreen.DiscoverSessions.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -30,7 +30,7 @@ fun DiscoverSessionsScreen(navigation: NavigationActions) {
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.DiscoverFeeds,
+            currentScreen = MeepleMeetScreen.DiscoverSessions,
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
         Text("WIP", modifier = Modifier.padding(innerPadding))

@@ -16,7 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * UI tests for [AddDiscussionScreen] using the real [FirestoreViewModel] and a seeded repository.
+ * UI tests for [DiscussionAddScreen] using the real [FirestoreViewModel] and a seeded repository.
  * These tests interact with the real ViewModel to verify full UI behavior including search
  * suggestions and member selection.
  */
@@ -81,8 +81,11 @@ class AddDiscussionScreenTest {
 
     realVm = FirestoreViewModel(repo)
     compose.setContent {
-      AddDiscussionScreen(
-          onBack = { nav.goBack() }, onCreate = { nav.goBack() }, viewModel = realVm, account = me)
+      DiscussionAddScreen(
+          onBack = { nav.goBack() },
+          onCreate = { nav.goBack() },
+          viewModel = realVm,
+          currentUser = me)
     }
   }
 

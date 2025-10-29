@@ -42,8 +42,6 @@ object UITestTags {
   const val LEAVE_DISCUSSION_CONFIRM_BUTTON = "confirm_leave_button"
   const val MAKE_ADMIN_BUTTON = "make_admin_button"
   const val DISCUSSION_NAME = "discussion_name"
-
-  fun memberRowTag(uid: String) = "member_row_$uid"
 }
 
 /**
@@ -51,20 +49,23 @@ object UITestTags {
  * members, and perform actions such as deleting or leaving the discussion.
  *
  * @param viewModel The FirestoreViewModel for data operations.
- * @param discussion The discussion to manage.
+ * @param discussionId The ID of the discussion to manage.
  * @param modifier Modifier for styling this composable.
  */
 @Composable
-fun DiscussionDetailsScreen(
+fun DiscussionSettingScreen(
     viewModel: FirestoreViewModel,
-    account: Account,
-    discussion: Discussion,
+    discussionId: String,
+    currentAccount: Account,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onLeave: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
   val coroutineScope = rememberCoroutineScope()
+
+  /** --- Data states --- */
+  val discussion by viewModel.discussionFlow(discussionId).collectAsState()
 
   /** --- Search state --- */
   var searchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -79,8 +80,8 @@ fun DiscussionDetailsScreen(
   var showLeaveDialog by remember { mutableStateOf(false) }
 
   /** Populate selectedMembers with current discussion participants */
-  LaunchedEffect(discussion.participants) {
-    val uids = discussion.participants
+  LaunchedEffect(discussion?.participants) {
+    val uids = discussion?.participants.orEmpty()
     selectedMembers.clear()
     for (uid in uids) {
       viewModel.getOtherAccount(uid) { acc ->
@@ -90,7 +91,7 @@ fun DiscussionDetailsScreen(
       }
     }
     /** Add current account only if not already present */
-    account.let {
+    currentAccount.let {
       if (selectedMembers.none { member -> member.uid == it.uid }) {
         selectedMembers.add(it)
       }
@@ -108,15 +109,15 @@ fun DiscussionDetailsScreen(
     isSearching = true
     viewModel.searchByHandle(searchQuery)
     viewModel.handleSuggestions.collect { list ->
-      searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
+      searchResults = list.filter { it.uid != currentAccount.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty()
       isSearching = false
     }
   }
 
-  discussion.let { d ->
-    val isAdmin = d.admins.contains(account.uid)
-    val isOwner = d.creatorId == account.uid
+  discussion?.let { d ->
+    val isAdmin = d.admins.contains(currentAccount.uid)
+    val isOwner = d.creatorId == currentAccount.uid
     val isMember = !isAdmin && !isOwner
 
     /** --- Name + Description --- */
@@ -131,11 +132,11 @@ fun DiscussionDetailsScreen(
                * Save Name and Description on back — this is the only time the DB is updated here
                */
               onReturn = {
-                if (discussion.admins.contains(account.uid)) {
+                if (discussion!!.admins.contains(currentAccount.uid)) {
                   viewModel.setDiscussionName(
-                      discussion = d, name = newName, changeRequester = account)
+                      discussion = d, name = newName, changeRequester = currentAccount)
                   viewModel.setDiscussionDescription(
-                      discussion = d, description = newDesc, changeRequester = account)
+                      discussion = d, description = newDesc, changeRequester = currentAccount)
                 }
                 onBack()
               })
@@ -146,7 +147,7 @@ fun DiscussionDetailsScreen(
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 /** The actual deletion happens only after the confirmation dialog */
                 /** Delete button only if not member */
-                if (discussion.creatorId == account.uid)
+                if (discussion!!.admins.contains(currentAccount.uid))
                     OutlinedButton(
                         onClick = { if (!isMember) showDeleteDialog = true },
                         enabled = !isMember,
@@ -286,7 +287,7 @@ fun DiscussionDetailsScreen(
                     color = AppColors.divider)
 
                 /** Row for search and member selection */
-                if (discussion.admins.contains(account.uid))
+                if (discussion!!.admins.contains(currentAccount.uid))
                     MemberSearchField(
                         searchQuery = searchQuery,
                         onQueryChange = { searchQuery = it },
@@ -294,9 +295,9 @@ fun DiscussionDetailsScreen(
                         isSearching = isSearching,
                         dropdownExpanded = dropdownExpanded,
                         onDismiss = { dropdownExpanded = false },
-                        onSelect = { newAccount ->
-                          selectedMembers.add(newAccount)
-                          viewModel.addUserToDiscussion(discussion, account, newAccount)
+                        onSelect = { account ->
+                          selectedMembers.add(account)
+                          viewModel.addUserToDiscussion(discussion!!, currentAccount, account)
                           searchQuery = ""
                           dropdownExpanded = false
                         })
@@ -313,7 +314,7 @@ fun DiscussionDetailsScreen(
                     isMember = isMember,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     viewModel = viewModel,
-                    currentAccount = account,
+                    currentAccount = currentAccount,
                     discussion = d)
 
                 /** --- Delete Discussion (confirm dialog) --- */
@@ -331,7 +332,7 @@ fun DiscussionDetailsScreen(
                             /** Only owner can delete */
                             onClick = {
                               coroutineScope.launch {
-                                viewModel.deleteDiscussion(d, account)
+                                viewModel.deleteDiscussion(d, currentAccount)
                                 onDelete()
                               }
                               showDeleteDialog = false
@@ -362,7 +363,8 @@ fun DiscussionDetailsScreen(
                               coroutineScope.launch {
 
                                 /** leave discussion */
-                                viewModel.removeUserFromDiscussion(d, account, account)
+                                viewModel.removeUserFromDiscussion(
+                                    d, currentAccount, currentAccount)
                                 onLeave()
                               }
                               showLeaveDialog = false
@@ -490,7 +492,7 @@ fun MemberList(
                 clickableModifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp, horizontal = 14.dp)
-                    .testTag(UITestTags.memberRowTag(member.uid)),
+                    .testTag("member_row_${member.uid}"),
             verticalAlignment = Alignment.CenterVertically) {
 
               /** --- Avatar Circle --- */

@@ -39,7 +39,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun createDiscussionCreatesNewDiscussion() = runBlocking {
-    val discussion = repository.createDiscussion("Test Discussion", "Description", testAccount1.uid)
+    val (account, discussion) =
+        repository.createDiscussion("Test Discussion", "Description", testAccount1.uid)
 
     assertNotNull(discussion.uid)
     assertEquals("Test Discussion", discussion.name)
@@ -48,14 +49,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertTrue(discussion.participants.contains(testAccount1.uid))
     assertTrue(discussion.admins.contains(testAccount1.uid))
     assertTrue(discussion.messages.isEmpty())
-
-    val account = repository.getAccount(testAccount1.uid)
     assertNotNull(account.previews[discussion.uid])
   }
 
   @Test
   fun getDiscussionRetrievesExistingDiscussion() = runBlocking {
-    val created = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, created) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
     val fetched = repository.getDiscussion(created.uid)
 
@@ -71,29 +70,27 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun setDiscussionNameUpdatesName() = runBlocking {
-    val discussion = repository.createDiscussion("Old Name", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Old Name", "Desc", testAccount1.uid)
 
-    repository.setDiscussionName(discussion.uid, "New Name")
+    val updated = repository.setDiscussionName(discussion.uid, "New Name")
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertEquals("New Name", updated.name)
     assertEquals(discussion.uid, updated.uid)
   }
 
   @Test
   fun setDiscussionDescriptionUpdatesDescription() = runBlocking {
-    val discussion = repository.createDiscussion("Name", "Old Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Name", "Old Desc", testAccount1.uid)
 
-    repository.setDiscussionDescription(discussion.uid, "New Description")
+    val updated = repository.setDiscussionDescription(discussion.uid, "New Description")
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertEquals("New Description", updated.description)
     assertEquals(discussion.uid, updated.uid)
   }
 
   @Test(expected = DiscussionNotFoundException::class)
   fun deleteDiscussionRemovesDiscussion() = runTest {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
     repository.deleteDiscussion(discussion)
     repository.getDiscussion(discussion.uid)
@@ -101,82 +98,76 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun addUserToDiscussionAddsParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val updated = repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertFalse(updated.admins.contains(testAccount2.uid))
   }
 
   @Test
   fun removeUserFromDiscussionRemovesParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val withUser = repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val withUser = repository.getDiscussion(discussion.uid)
-    repository.removeUserFromDiscussion(withUser, testAccount2.uid)
+    val updated = repository.removeUserFromDiscussion(withUser, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertFalse(updated.participants.contains(testAccount2.uid))
   }
 
   @Test
   fun addUsersToDiscussionAddsMultipleParticipants() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val updated =
+        repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.participants.contains(testAccount3.uid))
   }
 
   @Test
   fun removeUsersFromDiscussionRemovesMultipleParticipants() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val withUsers =
+        repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val withUsers = repository.getDiscussion(discussion.uid)
-    repository.removeUsersFromDiscussion(withUsers, listOf(testAccount2.uid, testAccount3.uid))
+    val updated =
+        repository.removeUsersFromDiscussion(withUsers, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertFalse(updated.participants.contains(testAccount2.uid))
     assertFalse(updated.participants.contains(testAccount3.uid))
   }
 
   @Test
   fun addAdminToDiscussionAddsAdminAndParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addAdminToDiscussion(discussion, testAccount2.uid)
+    val updated = repository.addAdminToDiscussion(discussion, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.admins.contains(testAccount2.uid))
   }
 
   @Test
   fun removeAdminFromDiscussionRemovesAdminButKeepsParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addAdminToDiscussion(discussion, testAccount2.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val withAdmin = repository.addAdminToDiscussion(discussion, testAccount2.uid)
 
-    val withAdmin = repository.getDiscussion(discussion.uid)
-    repository.removeAdminFromDiscussion(withAdmin, testAccount2.uid)
+    val updated = repository.removeAdminFromDiscussion(withAdmin, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertFalse(updated.admins.contains(testAccount2.uid))
   }
 
   @Test
   fun addAdminsToDiscussionAddsMultipleAdmins() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addAdminsToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val updated =
+        repository.addAdminsToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.participants.contains(testAccount3.uid))
     assertTrue(updated.admins.contains(testAccount2.uid))
@@ -185,13 +176,14 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun removeAdminsFromDiscussionRemovesMultipleAdmins() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addAdminsToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val withAdmins =
+        repository.addAdminsToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val withAdmins = repository.getDiscussion(discussion.uid)
-    repository.removeAdminsFromDiscussion(withAdmins, listOf(testAccount2.uid, testAccount3.uid))
+    val updated =
+        repository.removeAdminsFromDiscussion(
+            withAdmins, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.participants.contains(testAccount3.uid))
     assertFalse(updated.admins.contains(testAccount2.uid))
@@ -200,12 +192,11 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun sendMessageToDiscussionAppendsMessage() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.sendMessageToDiscussion(discussion, testAccount1, "Hello World")
+    val updated = repository.sendMessageToDiscussion(discussion, testAccount1, "Hello World")
 
-    val updated = repository.getDiscussion(discussion.uid)
     assertEquals(1, updated.messages.size)
     assertEquals("Hello World", updated.messages[0].content)
     assertEquals(testAccount1.uid, updated.messages[0].senderId)
@@ -243,9 +234,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
         repository.createAccount(
             "OldName", "OldName", email = "OldName@example.com", photoUrl = null)
 
-    repository.setAccountName(account.uid, "NewName")
+    val updated = repository.setAccountName(account.uid, "NewName")
 
-    val updated = repository.getAccount(account.uid)
     assertEquals("NewName", updated.name)
     assertEquals(account.uid, updated.uid)
   }
@@ -262,14 +252,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun readDiscussionMessagesResetsUnreadCount() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
     repository.sendMessageToDiscussion(discussion, testAccount1, "Hello")
 
     val message = Message(testAccount2.uid, "Read")
-    repository.readDiscussionMessages(testAccount2.uid, discussion.uid, message)
+    val updated = repository.readDiscussionMessages(testAccount2.uid, discussion.uid, message)
 
-    val updated = repository.getAccount(testAccount2.uid)
     val preview = updated.previews[discussion.uid]
     assertNotNull(preview)
     assertEquals(0, preview!!.unreadCount)
@@ -277,7 +266,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun listenDiscussionEmitsUpdates() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
     val flow = repository.listenDiscussion(discussion.uid)
     val firstEmission = withTimeout(5000) { flow.first() }
@@ -287,13 +276,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
   }
 
   @Test
-  fun listenAccountEmitsPreviewUpdates() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+  fun listenMyPreviewsEmitsPreviewUpdates() = runBlocking {
+    val (_, discussion) = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val flow = repository.listenAccount(testAccount1.uid)
+    val flow = repository.listenMyPreviews(testAccount1.uid)
     val firstEmission = withTimeout(5000) { flow.first() }
 
-    assertTrue(firstEmission.previews.containsKey(discussion.uid))
-    assertNotNull(firstEmission.previews[discussion.uid])
+    assertTrue(firstEmission.containsKey(discussion.uid))
+    assertNotNull(firstEmission[discussion.uid])
   }
 }

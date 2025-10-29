@@ -22,10 +22,6 @@ import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 
-object ProfileTestTags {
-  const val LOG_OUT_BUTTON = "Logout Button"
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -39,7 +35,7 @@ fun ProfileScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.Profile.title,
+                  text = MeepleMeetScreen.ProfileScreen.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -47,7 +43,7 @@ fun ProfileScreen(
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.Profile,
+            currentScreen = MeepleMeetScreen.ProfileScreen,
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
         Box(
@@ -55,11 +51,11 @@ fun ProfileScreen(
             contentAlignment = Alignment.Center) {
               Button(
                   onClick = {
-                    onSignOut()
                     firestoreViewModel.signOut()
                     authViewModel.logout()
+                    onSignOut()
                   },
-                  modifier = Modifier.testTag(ProfileTestTags.LOG_OUT_BUTTON),
+                  modifier = Modifier.testTag("Logout Button"),
                   colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
                     Text("Sign Out", color = Color.White)
                   }

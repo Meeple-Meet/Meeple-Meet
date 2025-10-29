@@ -59,8 +59,9 @@ class FirestoreSessionTests : FirestoreTests() {
           firestoreRepository.createAccount(
               "Thomas", "Thomas", email = "Thomas@example.com", photoUrl = null)
 
-      baseDiscussion =
+      val (_, discussion) =
           firestoreRepository.createDiscussion("Game Night", "Test Discussion", account1.uid)
+      baseDiscussion = discussion
     }
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")

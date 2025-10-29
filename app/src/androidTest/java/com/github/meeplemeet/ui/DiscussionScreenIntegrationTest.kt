@@ -5,63 +5,64 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.*
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.ui.navigation.NavigationActions
+import com.google.firebase.Timestamp
+import io.mockk.coEvery
+import io.mockk.mockk
+import io.mockk.verify
 import java.util.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class DiscussionScreenIntegrationTest : FirestoreTests() {
+class DiscussionScreenIntegrationTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
   private lateinit var repository: FirestoreRepository
   private lateinit var viewModel: FirestoreViewModel
+  private lateinit var mockNavigation: NavigationActions
   private lateinit var currentUser: Account
-  private lateinit var otherUser: Account
-  private lateinit var testDiscussion: Discussion
-  private var backPressed = false
+  private lateinit var safeDiscussion: Discussion
+  private lateinit var testScope: TestScope
 
   @Before
-  fun setup() = runBlocking {
-    repository = FirestoreRepository()
-    viewModel = FirestoreViewModel(repository)
-    backPressed = false
-
-    // Create test users
+  fun setup() {
+    val dispatcher = StandardTestDispatcher()
+    testScope = TestScope(dispatcher)
+    repository = mockk(relaxed = true)
+    mockNavigation = mockk(relaxed = true)
     currentUser =
-        repository.createAccount(
-            userHandle = "testuser_${System.currentTimeMillis()}",
-            name = "Alice",
-            email = "alice@test.com",
-            photoUrl = null)
+        Account(uid = "user1", handle = "user1", name = "Alice", email = "Alice@example.com")
 
-    otherUser =
-        repository.createAccount(
-            userHandle = "otheruser_${System.currentTimeMillis()}",
-            name = "Bob",
-            email = "bob@test.com",
-            photoUrl = null)
+    val messages =
+        listOf(
+            Message("user1", "Hi there!", Timestamp(Date())),
+            Message("user2", "Hey Alice!", Timestamp(Date())))
+    val participants = listOf(currentUser.uid, "user2")
 
-    // Create a test discussion with messages
-    testDiscussion =
-        repository.createDiscussion(
+    safeDiscussion =
+        Discussion(
+            uid = "disc1",
             name = "Test Discussion",
-            description = "A test discussion",
-            creatorId = currentUser.uid,
-            participants = listOf(otherUser.uid))
+            messages = messages,
+            participants = participants,
+            creatorId = currentUser.uid)
 
-    // Add some test messages
-    repository.sendMessageToDiscussion(testDiscussion, currentUser, "Hi there!")
-    repository.sendMessageToDiscussion(testDiscussion, otherUser, "Hey Alice!")
+    coEvery { repository.getDiscussion("disc1") } returns safeDiscussion
 
-    // Fetch updated discussion with messages
-    testDiscussion = repository.getDiscussion(testDiscussion.uid)
+    viewModel = FirestoreViewModel(repository)
 
-    currentUser = repository.getAccount(currentUser.uid)
-    otherUser = repository.getAccount(otherUser.uid)
+    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
+    discussionFlowsField.isAccessible = true
+    @Suppress("UNCHECKED_CAST")
+    val map =
+        discussionFlowsField.get(viewModel) as MutableMap<String, MutableStateFlow<Discussion>>
+    map["disc1"] = MutableStateFlow(safeDiscussion)
   }
 
   /** Tests that DiscussionScreen displays discussion title and messages */
@@ -69,13 +70,12 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
   fun discussionScreen_displays_messages_and_title() {
     composeTestRule.setContent {
       DiscussionScreen(
-          account = currentUser,
-          discussion = testDiscussion,
           viewModel = viewModel,
-          onBack = { backPressed = true })
+          discussionId = "disc1",
+          currentUser = currentUser,
+          onBack = { mockNavigation.goBack() })
     }
 
-    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Test Discussion").assertExists()
     composeTestRule.onNodeWithText("Hi there!").assertExists()
     composeTestRule.onNodeWithText("Hey Alice!").assertExists()
@@ -86,13 +86,11 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
   fun sendButton_clears_text_field_after_sending() = runTest {
     composeTestRule.setContent {
       DiscussionScreen(
-          account = currentUser,
-          discussion = testDiscussion,
           viewModel = viewModel,
-          onBack = { backPressed = true })
+          discussionId = "disc1",
+          currentUser = currentUser,
+          onBack = { mockNavigation.goBack() })
     }
-
-    composeTestRule.waitForIdle()
 
     val textField = composeTestRule.onNodeWithText("Type something...")
     val sendButton = composeTestRule.onNodeWithContentDescription("Send")
@@ -100,27 +98,21 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
     textField.performTextInput("Hello!")
     sendButton.performClick()
 
-    // Wait for the message to be sent via ViewModel -> Repository
-    composeTestRule.waitForIdle()
-
-    // Verify the text field is cleared
     composeTestRule.onNodeWithText("Type something...").assertExists()
   }
 
-  /** Tests that pressing the back button calls the onBack callback */
+  /** Tests that pressing the back button calls navigation.goBack */
   @Test
-  fun backButton_calls_onBack_callback() {
+  fun backButton_calls_navigation_goBack() {
     composeTestRule.setContent {
       DiscussionScreen(
-          account = currentUser,
-          discussion = testDiscussion,
           viewModel = viewModel,
-          onBack = { backPressed = true })
+          discussionId = "disc1",
+          currentUser = currentUser,
+          onBack = { mockNavigation.goBack() })
     }
 
-    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithContentDescription("Back").performClick()
-
-    assert(backPressed) { "Back button should trigger onBack callback" }
+    verify { mockNavigation.goBack() }
   }
 }
