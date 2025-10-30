@@ -121,7 +121,6 @@ class FirestoreHandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db
                   return@addSnapshotListener
                 }
 
-                FirebaseProvider.db.runBatch { batch -> }
                 FirebaseProvider.db
                     .collection(ACCOUNT_COLLECTION_PATH)
                     .whereIn(
