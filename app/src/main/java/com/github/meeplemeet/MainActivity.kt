@@ -33,6 +33,7 @@ import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.AddDiscussionScreen
 import com.github.meeplemeet.ui.AddSessionScreen
 import com.github.meeplemeet.ui.CreateAccountScreen
+import com.github.meeplemeet.ui.CreatePostScreen
 import com.github.meeplemeet.ui.DiscoverSessionsScreen
 import com.github.meeplemeet.ui.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.DiscussionScreen
@@ -199,16 +200,7 @@ fun MeepleMeetApp(
       )
     }
 
-    composable(MeepleMeetScreen.AddSession.name) {
-      sessionRepo?.let {
-        AddSessionScreen(
-            account = account!!,
-            discussion = discussion!!,
-            viewModel = firestoreVM,
-            sessionViewModel = sessionRepo,
-            onBack = { navigationActions.goBack() })
-      } ?: LoadingScreen()
-    }
+    composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
 
     composable(MeepleMeetScreen.Session.name) {
       sessionRepo?.let {
@@ -221,9 +213,28 @@ fun MeepleMeetApp(
       } ?: LoadingScreen()
     }
 
-    composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
+    composable(MeepleMeetScreen.AddSession.name) {
+      sessionRepo?.let {
+        AddSessionScreen(
+            account = account!!,
+            discussion = discussion!!,
+            viewModel = firestoreVM,
+            sessionViewModel = sessionRepo,
+            onBack = { navigationActions.goBack() })
+      } ?: LoadingScreen()
+    }
 
+    // TODO: To be replaced with the right DiscoverFeedsScreen/FeedsOverviewScren
     composable(MeepleMeetScreen.DiscoverFeeds.name) { DiscoverSessionsScreen(navigationActions) }
+
+    // TODO: change callback destination if the screen name is changed
+    composable(MeepleMeetScreen.CreatePost.name) {
+      CreatePostScreen(
+          account = account!!,
+          onPost = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverFeeds) },
+          onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverFeeds) },
+          onBack = { navigationActions.goBack() })
+    }
 
     composable(MeepleMeetScreen.Profile.name) {
       ProfileScreen(
