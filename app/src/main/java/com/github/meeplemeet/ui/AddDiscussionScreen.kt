@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,6 +29,14 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
+object AddDiscussionTestTags {
+  const val ADD_TITLE = "Add Title"
+  const val ADD_DESCRIPTION = "Add Description"
+  const val ADD_MEMBERS = "Add Members"
+  const val CREATE_DISCUSSION_BUTTON = "Create Discussion"
+  const val ADD_MEMBERS_ELEMENT = "Add Member Element"
+}
+
 /**
  * Screen for creating a new discussion with title, description, and selected members.
  *
@@ -38,16 +45,15 @@ import kotlinx.coroutines.launch
  * @param onBack Lambda called when back/discard is pressed
  * @param onCreate Lambda called when creation is successful
  * @param viewModel FirestoreViewModel for creating discussions
- * @param currentUser The currently logged-in user
+ * @param account The currently logged-in user
  */
-@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiscussionAddScreen(
-    onBack: () -> Unit,
-    onCreate: () -> Unit, // TODO: Pass created discussion ID for better navigation later on
+fun AddDiscussionScreen(
+    account: Account,
     viewModel: FirestoreViewModel = viewModel(),
-    currentUser: Account
+    onBack: () -> Unit = {},
+    onCreate: () -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
 
@@ -80,7 +86,7 @@ fun DiscussionAddScreen(
 
   LaunchedEffect(viewModel.handleSuggestions) {
     viewModel.handleSuggestions.collect { list ->
-      searchResults = list.filter { it.uid != currentUser.uid && it !in selectedMembers }
+      searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false
     }
@@ -108,7 +114,7 @@ fun DiscussionAddScreen(
                       navigationIconContentColor = AppColors.textIcons),
               title = {
                 Text(
-                    text = MeepleMeetScreen.DiscussionAddScreen.title,
+                    text = MeepleMeetScreen.AddDiscussion.title,
                     modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               },
               navigationIcon = {
@@ -148,7 +154,7 @@ fun DiscussionAddScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { title = it },
                   label = { Text("Title") },
-                  modifier = Modifier.testTag("Add Title").fillMaxWidth())
+                  modifier = Modifier.testTag(AddDiscussionTestTags.ADD_TITLE).fillMaxWidth())
 
               Spacer(modifier = Modifier.height(12.dp))
 
@@ -169,7 +175,10 @@ fun DiscussionAddScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { description = it },
                   label = { Text("Description (optional)") },
-                  modifier = Modifier.testTag("Add Description").fillMaxWidth().height(150.dp))
+                  modifier =
+                      Modifier.testTag(AddDiscussionTestTags.ADD_DESCRIPTION)
+                          .fillMaxWidth()
+                          .height(150.dp))
 
               Spacer(modifier = Modifier.height(16.dp))
 
@@ -256,7 +265,7 @@ fun DiscussionAddScreen(
                                 "Bug: null Account in selection"
                               }
                               viewModel.createDiscussion(
-                                  title, description, currentUser, *clean.toTypedArray())
+                                  title, description, account, *clean.toTypedArray())
                               isCreating = false
                               onCreate()
                             } catch (_: Exception) {
@@ -266,7 +275,9 @@ fun DiscussionAddScreen(
                           }
                         },
                         enabled = title.isNotBlank() && !isCreating,
-                        modifier = Modifier.testTag("Create Discussion").fillMaxWidth(0.5f),
+                        modifier =
+                            Modifier.testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
+                                .fillMaxWidth(0.5f),
                         shape = CircleShape,
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
@@ -310,7 +321,7 @@ fun MemberSearchField(
         modifier =
             Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                 .fillMaxWidth()
-                .testTag("Add Members"),
+                .testTag(AddDiscussionTestTags.ADD_MEMBERS),
         trailingIcon = {
           if (searchQuery.isNotBlank()) {
             Icon(
@@ -327,7 +338,7 @@ fun MemberSearchField(
         else ->
             searchResults.forEach { account ->
               DropdownMenuItem(
-                  modifier = Modifier.testTag("Add Member Element"),
+                  modifier = Modifier.testTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT),
                   text = { Text(account.handle) },
                   onClick = {
                     onSelect(account)

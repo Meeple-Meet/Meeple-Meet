@@ -1,8 +1,11 @@
 package com.github.meeplemeet.ui
-
+// Github Copilot was used for this file
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -12,9 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -22,8 +25,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 
 object SignUpScreenTestTags {
   const val EMAIL_FIELD = "email_field"
@@ -57,12 +62,10 @@ object SignUpScreenTestTags {
  * @param viewModel Authentication view model that manages auth state and operations
  * @param context Android context, used for Credential Manager and other platform services
  * @param credentialManager Credential manager instance for Google sign-up
- * @param modifier Modifier for customizing the composable's appearance and behavior
  */
 @Composable
 fun SignUpScreen(
     viewModel: AuthViewModel,
-    modifier: Modifier = Modifier,
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     onLogInClick: () -> Unit = {},
@@ -88,6 +91,17 @@ fun SignUpScreen(
 
   // Observe authentication state from the ViewModel
   val uiState by viewModel.uiState.collectAsState()
+
+  // Check if all credentials are valid in real-time
+  val isFormValid =
+      remember(email, password, confirmPassword) {
+        email.isNotBlank() &&
+            android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
+            password.isNotBlank() &&
+            password.length >= 6 &&
+            confirmPassword.isNotBlank() &&
+            password == confirmPassword
+      }
 
   // Snackbar state
   val snackbarHostState = remember { SnackbarHostState() }
@@ -155,19 +169,24 @@ fun SignUpScreen(
       containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         Column(
             modifier =
-                modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .padding(paddingValues)
                     .padding(24.dp)
                     .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween) {
               // Top spacing
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(8.dp))
 
-              // Placeholder logo/branding area
-              Box(modifier = Modifier.size(100.dp)) {
-                Surface(color = Color.LightGray, modifier = Modifier.fillMaxSize()) {}
+              // App logo - changes based on theme
+              val isDarkTheme = isSystemInDarkTheme()
+              Box(modifier = Modifier.size(250.dp)) {
+                Image(
+                    painter =
+                        painterResource(
+                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+                    contentDescription = "Meeple Meet Logo",
+                    modifier = Modifier.fillMaxSize())
               }
 
               Spacer(modifier = Modifier.height(24.dp))
@@ -175,7 +194,7 @@ fun SignUpScreen(
               // Welcome message
               Text(
                   "Welcome!",
-                  style = TextStyle(fontSize = 28.sp),
+                  style = TextStyle(fontSize = 56.sp),
                   modifier =
                       Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
@@ -184,7 +203,8 @@ fun SignUpScreen(
                   value = email,
                   onValueChange = {
                     email = it
-                    emailError = null // Clear validation error when user starts typing
+                    // Validate email in real-time as user types
+                    emailError = if (it.isNotEmpty()) validateEmail(it) else null
                   },
                   label = { Text("Email") },
                   singleLine = true,
@@ -203,14 +223,19 @@ fun SignUpScreen(
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
               }
 
-              Spacer(modifier = Modifier.height(8.dp))
+              Spacer(modifier = Modifier.height(12.dp))
 
               // Password input field with visibility toggle and validation
               OutlinedTextField(
                   value = password,
                   onValueChange = {
                     password = it
-                    passwordError = null // Clear validation error when user starts typing
+                    // Validate password in real-time as user types
+                    passwordError = if (it.isNotEmpty()) validatePassword(it) else null
+                    // Also re-validate confirm password if it's not empty
+                    if (confirmPassword.isNotEmpty()) {
+                      confirmPasswordError = validateConfirmPassword(it, confirmPassword)
+                    }
                   },
                   label = { Text("Password") },
                   singleLine = true,
@@ -257,7 +282,9 @@ fun SignUpScreen(
                   value = confirmPassword,
                   onValueChange = {
                     confirmPassword = it
-                    confirmPasswordError = null // Clear validation error when user starts typing
+                    // Validate confirm password in real-time as user types
+                    confirmPasswordError =
+                        if (it.isNotEmpty()) validateConfirmPassword(password, it) else null
                   },
                   label = { Text("Confirm Password") },
                   singleLine = true,
@@ -319,10 +346,16 @@ fun SignUpScreen(
                       viewModel.registerWithEmail(email, password, onRegister)
                     }
                   },
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = AppColors.affirmative,
+                          contentColor = AppColors.textIcons),
                   modifier =
-                      Modifier.fillMaxWidth()
+                      Modifier.fillMaxWidth(0.6f)
                           .testTag(SignUpScreenTestTags.SIGN_UP_BUTTON), // For UI testing
-                  enabled = !uiState.isLoading // Disable button during registration process
+                  enabled =
+                      isFormValid &&
+                          !uiState.isLoading // Enable only when form is valid and not loading
                   ) {
                     // Show loading indicator during registration
                     if (uiState.isLoading) {
@@ -341,26 +374,28 @@ fun SignUpScreen(
               Spacer(modifier = Modifier.height(12.dp))
               Text(
                   "OR",
-                  style = TextStyle(fontSize = 16.sp, color = Color.Gray),
+                  style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier = Modifier.padding(vertical = 4.dp))
 
               // Google Sign Up Button
-              Button(
+              OutlinedButton(
                   onClick = {
                     // Initiate Google sign-up flow through ViewModel
                     // Note: Google sign-up and sign-in use the same flow - if the account exists,
-                    // it
-                    // signs in,
-                    // if it doesn't exist, it creates a new account
-                    viewModel.googleSignIn(context, credentialManager)
+                    // it signs in, if it doesn't exist, it creates a new account
+                    viewModel.googleSignIn(context, credentialManager, onRegister)
                   },
-                  colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          containerColor = AppColors.primary, contentColor = AppColors.textIcons),
+                  border = BorderStroke(1.dp, AppColors.divider),
                   modifier =
-                      Modifier.fillMaxWidth()
+                      Modifier.fillMaxWidth(0.6f)
                           .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON), // For UI testing
                   enabled = !uiState.isLoading // Disable during any authentication process
                   ) {
-                    Text("Connect with Google", color = Color.Black)
+                    Text("Connect with Google")
                   }
 
               // Push navigation link to bottom
