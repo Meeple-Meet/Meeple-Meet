@@ -6,7 +6,6 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.structures.Account
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
 import kotlinx.coroutines.tasks.await
 
 /**

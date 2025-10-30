@@ -4,6 +4,7 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.repositories.ACCOUNT_COLLECTION_PATH
 import com.github.meeplemeet.model.repositories.DISCUSSIONS_COLLECTION_PATH
 import com.github.meeplemeet.model.repositories.HANDLES_COLLECTION_PATH
+import com.github.meeplemeet.model.repositories.POSTS_COLLECTION_PATH
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +22,8 @@ open class FirestoreTests {
   lateinit var auth: FirebaseAuth
 
   companion object {
+    private var cleared = false
+
     @BeforeClass
     @JvmStatic
     fun globalSetUp() {
@@ -32,6 +35,23 @@ open class FirestoreTests {
         authEmulatorLaunched = true
         FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
       }
+
+      if (!cleared) {
+        runBlocking {
+          val db = FirebaseProvider.db
+          deleteAllCollectionsOnce(db)
+        }
+        cleared = true
+      }
+    }
+
+    private suspend fun deleteAllCollectionsOnce(db: FirebaseFirestore) {
+      val cleaner = FirestoreTests()
+      cleaner.db = db
+      cleaner.deleteCollection(HANDLES_COLLECTION_PATH)
+      cleaner.deleteCollection(ACCOUNT_COLLECTION_PATH)
+      cleaner.deleteCollection(DISCUSSIONS_COLLECTION_PATH)
+      cleaner.deleteCollection(POSTS_COLLECTION_PATH)
     }
   }
 
@@ -42,11 +62,18 @@ open class FirestoreTests {
       val snapshot = collection.limit(batchSize).get().await()
       if (snapshot.isEmpty) break
 
-      val batch = db.batch()
       for (doc in snapshot.documents) {
-        batch.delete(doc.reference)
+        // known subcollections
+        when (path) {
+          POSTS_COLLECTION_PATH -> {
+            deleteCollection("$path/${doc.id}/fields", batchSize)
+          }
+          ACCOUNT_COLLECTION_PATH -> {
+            deleteCollection("$path/${doc.id}/previews", batchSize)
+          }
+        }
+        doc.reference.delete().await()
       }
-      batch.commit().await()
     }
   }
 
@@ -54,11 +81,5 @@ open class FirestoreTests {
   fun testsSetup() {
     db = FirebaseProvider.db
     auth = FirebaseProvider.auth
-
-    runBlocking {
-      deleteCollection(HANDLES_COLLECTION_PATH)
-      deleteCollection(ACCOUNT_COLLECTION_PATH)
-      deleteCollection(DISCUSSIONS_COLLECTION_PATH)
-    }
   }
 }
