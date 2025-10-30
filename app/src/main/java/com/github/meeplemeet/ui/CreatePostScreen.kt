@@ -51,11 +51,20 @@ object CreatePostTestTags {
   const val SNACKBAR_HOST = "create_post_snackbar_host"
 }
 
-//
 private const val TITLE_FIELD_PLACEHOLDER = "Choose a title for your post"
 private const val BODY_FIELD_PLACEHOLDER =
     "Look for people, ask about games, or just share what's on your mind..."
 
+/**
+ * Screen for creating a new post, including title, body, and tags. Tags can be freely added and are
+ * displayed as chips below the input field. Tags are directly formatted internally.
+ *
+ * @param account The account of the user creating the post.
+ * @param viewModel The view model managing the post creation logic.
+ * @param onPost Callback invoked when the post is successfully created.
+ * @param onDiscard Callback invoked when the discard button is pressed.
+ * @param onBack Callback invoked when the back button is pressed.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CreatePostScreen(
@@ -76,6 +85,13 @@ fun CreatePostScreen(
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
 
+  /**
+   * Normalizes a tag by trimming whitespace, removing leading hashes, and converting to lowercase
+   * with a single leading hash.
+   *
+   * @param input The raw tag input.
+   * @return The normalized tag, or an empty string if invalid.
+   */
   fun normalizeTag(input: String): String {
     val t = input.trim()
     if (t.isEmpty()) return ""
@@ -85,6 +101,10 @@ fun CreatePostScreen(
     return "#" + withoutHashes.lowercase()
   }
 
+  /**
+   * Adds the current tag input to the selected tags after normalization. Clears the tag input field
+   * afterwards.
+   */
   fun addTag() {
     val normalized = normalizeTag(tagInput)
     if (normalized.isNotEmpty() && normalized !in selectedTags) {
