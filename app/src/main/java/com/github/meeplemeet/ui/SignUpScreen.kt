@@ -1,6 +1,7 @@
 package com.github.meeplemeet.ui
 // Github Copilot was used for this file
 import android.content.Context
+import android.graphics.drawable.Icon
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,6 +10,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -193,13 +196,17 @@ fun SignUpScreen(
 
               // Welcome message
               Text(
-                  "Welcome!",
+                  "Sign Up",
                   style = TextStyle(fontSize = 56.sp),
+                  color = AppColors.neutral,
                   modifier =
                       Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
               // Email input field with validation
               OutlinedTextField(
+                  leadingIcon = {
+                    Icon(imageVector = Icons.Default.Email, contentDescription = null)
+                  },
                   value = email,
                   onValueChange = {
                     email = it
@@ -227,6 +234,9 @@ fun SignUpScreen(
 
               // Password input field with visibility toggle and validation
               OutlinedTextField(
+                  leadingIcon = {
+                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                  },
                   value = password,
                   onValueChange = {
                     password = it
@@ -279,6 +289,9 @@ fun SignUpScreen(
               // This ensures users enter their password correctly by requiring them to type it
               // twice
               OutlinedTextField(
+                  leadingIcon = {
+                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                  },
                   value = confirmPassword,
                   onValueChange = {
                     confirmPassword = it

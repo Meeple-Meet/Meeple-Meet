@@ -1,16 +1,21 @@
 /** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -254,12 +259,13 @@ fun AddDiscussionScreen(
               }
 
               /** Spacer to move buttons higher */
-              Spacer(modifier = Modifier.height(24.dp))
+              Spacer(modifier = Modifier.height(48.dp))
 
               /** Buttons section */
-              Column(
+              Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalAlignment = Alignment.CenterHorizontally) {
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = {
                           scope.launch {
@@ -282,16 +288,16 @@ fun AddDiscussionScreen(
                         enabled = title.isNotBlank() && !isCreating,
                         modifier =
                             Modifier.testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
-                                .fillMaxWidth(0.5f),
-                        shape = CircleShape,
+                                .fillMaxWidth(0.4f),
+                        shape = RoundedCornerShape(50.dp),
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
-                          Text(
-                              text = "Create Discussion",
-                              style = MaterialTheme.typography.bodySmall)
+                          Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text(text = "Create", style = MaterialTheme.typography.bodySmall)
                         }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
                     OutlinedButton(
                         onClick = onBack,
@@ -302,6 +308,8 @@ fun AddDiscussionScreen(
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 contentColor = AppColors.negative)) {
+                          Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
+                          Spacer(modifier = Modifier.width(8.dp))
                           Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
                         }
                   }
@@ -335,7 +343,7 @@ fun MemberSearchField(
                 Icons.Default.Close,
                 contentDescription = "Clear",
                 modifier = Modifier.clickable { onQueryChange("") })
-          }
+          } else Icon(imageVector = Icons.Default.Search, contentDescription = null)
         })
 
     ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = onDismiss) {
