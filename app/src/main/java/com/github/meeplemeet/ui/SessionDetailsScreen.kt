@@ -73,6 +73,7 @@ import com.github.meeplemeet.ui.components.GameSearchField
 import com.github.meeplemeet.ui.components.IconTextField
 import com.github.meeplemeet.ui.components.LocationSearchField
 import com.github.meeplemeet.ui.components.SectionCard
+import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
@@ -171,13 +172,14 @@ fun SessionDetailsScreen(
               title = session.name,
               date = date,
               time = time,
-              proposedGame = session.gameId,
+              proposedGameString = session.gameId,
               minPlayers = session.minParticipants,
               maxPlayers = session.maxParticipants,
               participants = accounts,
               locationText = session.location.name)
 
-      if (form.proposedGame.isNotBlank()) sessionViewModel.getGameFromId(form.proposedGame)
+      if (form.proposedGameString.isNotBlank())
+          sessionViewModel.getGameFromId(form.proposedGameString)
     }
 
     if (session.gameId.isNotBlank() && game == null) {
@@ -198,7 +200,7 @@ fun SessionDetailsScreen(
                     requester = account,
                     discussion = discussion,
                     name = form.title,
-                    gameId = form.proposedGame, // game?.uid ?: "Loading...",
+                    gameId = form.proposedGameString, // game?.uid ?: "Loading...",
                     date = toTimestamp(form.date, form.time),
                     location = Location(0.0, 0.0, form.locationText),
                     minParticipants = form.minPlayers,
@@ -238,7 +240,7 @@ fun SessionDetailsScreen(
               discussion = discussion,
               editable = isCurrUserAdmin,
               gameUIState = gameUIState) {
-                form = form.copy(proposedGame = it)
+                form = form.copy(proposedGameString = it)
               }
 
           // Participants section
@@ -355,7 +357,7 @@ fun ParticipantsSection(
           // Min/Max bubbles (below)
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             CountBubble(
-                count = form.minPlayers,
+                count = game.minPlayers,
                 modifier =
                     Modifier.clip(CircleShape)
                         .background(AppColors.secondary)
@@ -363,7 +365,7 @@ fun ParticipantsSection(
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                         .testTag(SessionTestTags.MIN_PLAYERS))
             CountBubble(
-                count = form.maxPlayers,
+                count = game.maxPlayers,
                 modifier =
                     Modifier.clip(CircleShape)
                         .background(AppColors.secondary)
@@ -385,7 +387,7 @@ fun ParticipantsSection(
             account = account,
             editable = editable,
             candidateMembers = candidateAccounts, // full discussion members as Accounts
-            maxPlayers = max,
+            maxPlayers = game?.maxPlayers ?: form.maxPlayers,
             modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
       }
 }
@@ -436,7 +438,7 @@ fun UserChipsGrid(
         }
 
         // "+" button: admins only, disappears when full
-        val canAdd = editable && participants.size < maxPlayers && !filteredCandidates.isEmpty()
+        val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
         if (canAdd) {
           Box(
               modifier =

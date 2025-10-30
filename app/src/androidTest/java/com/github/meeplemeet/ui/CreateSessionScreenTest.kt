@@ -15,6 +15,8 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.components.ComponentsTestTags
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Timestamp
 import io.mockk.*
@@ -171,8 +173,9 @@ class CreateSessionScreenTest {
     val backCount = AtomicInteger(0)
     setContent(onBack = { backCount.incrementAndGet() })
 
-    compose.onNodeWithTag(SessionCreationTestTags.TOP_APP_BAR).assertExists()
-    compose.onNodeWithTag(SessionCreationTestTags.TOP_APP_BAR_TITLE).assertExists()
+    compose.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+    compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
+    compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertExists()
     compose.onNodeWithTag(SessionCreationTestTags.SNACKBAR_HOST).assertExists()
     compose.onNodeWithTag(SessionCreationTestTags.CONTENT_COLUMN).assertExists()
 

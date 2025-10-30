@@ -78,7 +78,7 @@ object SessionCreationTestTags {
 
 data class SessionForm(
     val title: String = "",
-    val proposedGame: String = "",
+    val proposedGameString: String = "",
     val minPlayers: Int = 1,
     val maxPlayers: Int = 1,
     val participants: List<Account> = emptyList(),
@@ -152,9 +152,10 @@ fun AddSessionScreen(
     viewModel.getAccounts(discussion.participants) { fetched ->
       form = form.copy(participants = (fetched + account).distinctBy { it.uid })
     }
+    form = form.copy(maxPlayers = form.participants.size)
 
-    if (form.proposedGame.isNotBlank()) {
-      runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGame) }
+    if (form.proposedGameString.isNotBlank()) {
+      runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGameString) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
     }
   }
@@ -162,6 +163,10 @@ fun AddSessionScreen(
   Scaffold(
       modifier = Modifier.testTag(SessionCreationTestTags.SCAFFOLD),
       topBar = {
+        TopBarWithDivider(
+            text = "Create View",
+            onReturn = { onBack() },
+        )
         CenterAlignedTopAppBar(
             modifier = Modifier.testTag(SessionCreationTestTags.TOP_APP_BAR),
             title = {
@@ -213,8 +218,8 @@ fun AddSessionScreen(
                   sessionViewModel = sessionViewModel,
                   currentUser = account,
                   discussion = discussion,
-                  queryFallback = form.proposedGame,
-                  onQueryFallbackChange = { form = form.copy(proposedGame = it) },
+                  queryFallback = form.proposedGameString,
+                  onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
                   onError = showError,
                   modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
 
@@ -290,7 +295,7 @@ fun AddSessionScreen(
                                     name = form.title,
                                     gameId =
                                         selectedGameId.ifBlank {
-                                          form.proposedGame.ifBlank { "Unknown game" }
+                                          form.proposedGameString.ifBlank { "Unknown game" }
                                         },
                                     date = toTimestamp(form.date, form.time),
                                     location = selectedLocation ?: Location(),
@@ -337,6 +342,7 @@ fun GameSearchBar(
     queryFallback: String,
     onQueryFallbackChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    form: SessionForm = SessionForm(),
     onError: (String) -> Unit = {}
 ) {
   val gameUi by sessionViewModel.gameUIState.collectAsState()
@@ -347,7 +353,7 @@ fun GameSearchBar(
           .testTag(SessionCreationTestTags.GAME_SEARCH_SECTION)
           .fillMaxWidth()
           .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+          .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
         UnderlinedLabel("Proposed game:")
         Spacer(Modifier.height(12.dp))
 
@@ -366,6 +372,7 @@ fun GameSearchBar(
                 runCatching {
                       sessionViewModel.setGame(currentUser, disc, game)
                       sessionViewModel.getGameFromId(game.uid)
+                      form.copy(maxPlayers = gameUi.fetchedGame?.maxPlayers ?: form.maxPlayers)
                     }
                     .onFailure { e -> onError(e.message ?: "Failed to select game") }
               }
@@ -475,7 +482,7 @@ fun OrganisationSection(
           .testTag(SessionCreationTestTags.ORG_SECTION)
           .fillMaxWidth()
           .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+          .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
         UnderlinedLabel("$title:")
         Spacer(Modifier.height(12.dp))
 
@@ -525,6 +532,7 @@ fun OrganisationSection(
  */
 @Composable
 fun ParticipantsSection(
+    modifier: Modifier = Modifier,
     currentUserId: String,
     selected: List<Account>,
     allCandidates: List<Account>,
@@ -540,14 +548,13 @@ fun ParticipantsSection(
     sliderDescription: String,
     elevationSelected: Dp = Elevation.floating,
     elevationUnselected: Dp = Elevation.raised,
-    modifier: Modifier = Modifier
 ) {
   SectionCard(
       modifier
           .testTag(SessionCreationTestTags.PARTICIPANTS_SECTION)
           .fillMaxWidth()
           .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+          .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
 
         // Header
         Row(
@@ -594,7 +601,7 @@ fun ParticipantsSection(
                   steps = sliderSteps,
                   modifier = Modifier.weight(1f),
                   sliderModifier =
-                      Modifier.background(MaterialTheme.colorScheme.surface, CircleShape)
+                      Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
                           .padding(horizontal = 10.dp, vertical = 6.dp))
 
               CountBubble(
