@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,6 +18,15 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.theme.AppColors
+
+object CreateAccountTestTags {
+  const val IMAGE = "CreateAccountImage"
+  const val HANDLE_FIELD = "CreateAccountHandleField"
+  const val HANDLE_ERROR = "CreateAccountHandleError"
+  const val USERNAME_FIELD = "CreateAccountUsernameField"
+  const val USERNAME_ERROR = "CreateAccountUsernameError"
+  const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
+}
 
 /**
  * Composable screen for completing account creation by selecting a handle and username.
@@ -32,7 +42,7 @@ import com.github.meeplemeet.ui.theme.AppColors
 @Composable
 fun CreateAccountScreen(
     account: Account,
-    firstoreVM: FirestoreViewModel,
+    firestoreVM: FirestoreViewModel,
     handlesVM: FirestoreHandlesViewModel,
     onCreate: () -> Unit = {},
 ) {
@@ -70,7 +80,11 @@ fun CreateAccountScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         /** Placeholder image box displayed at the top of the screen. */
-        Box(modifier = Modifier.size(120.dp).background(Color(0xFFe0e0e0)))
+        Box(
+            modifier =
+                Modifier.size(120.dp)
+                    .background(Color(0xFFe0e0e0))
+                    .testTag(CreateAccountTestTags.IMAGE))
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -97,7 +111,7 @@ fun CreateAccountScreen(
                     focusedTextColor = AppColors.textIcons,
                     unfocusedTextColor = AppColors.textIconsFade),
             isError = showErrors && errorMessage.isNotBlank(),
-            modifier = Modifier.fillMaxWidth())
+            modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.HANDLE_FIELD))
 
         /** Error message displayed if handle validation fails. */
         if (showErrors && errorMessage.isNotBlank()) {
@@ -105,7 +119,10 @@ fun CreateAccountScreen(
               text = errorMessage,
               color = AppColors.textIconsFade,
               style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(start = 16.dp, top = 4.dp)
+                      .testTag(CreateAccountTestTags.HANDLE_ERROR))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -130,7 +147,7 @@ fun CreateAccountScreen(
                     unfocusedTextColor = AppColors.textIconsFade),
             isError = usernameError != null,
             textStyle = TextStyle(color = AppColors.textIcons),
-            modifier = Modifier.fillMaxWidth())
+            modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.USERNAME_FIELD))
 
         /** Error message displayed if username validation fails. */
         if (usernameError != null) {
@@ -138,7 +155,10 @@ fun CreateAccountScreen(
               text = usernameError!!,
               color = AppColors.textIconsFade,
               style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(start = 16.dp, top = 4.dp)
+                      .testTag(CreateAccountTestTags.USERNAME_ERROR))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -159,11 +179,11 @@ fun CreateAccountScreen(
               /** Create the handle and call onCreate if there are no errors */
               if ((errorMessage.isBlank()) && usernameValidation == null) {
                 handlesVM.createAccountHandle(account = account, handle = handle)
-                firstoreVM.setAccountName(account, username)
+                firestoreVM.setAccountName(account, username)
                 if (errorMessage.isBlank()) onCreate()
               }
             },
-            modifier = Modifier.fillMaxWidth(0.3f)) {
+            modifier = Modifier.fillMaxWidth(0.3f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
               Text("Let's go!")
             }
       }

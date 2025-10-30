@@ -2,9 +2,11 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
@@ -25,11 +27,16 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   private lateinit var otherUser: Account
   private lateinit var thirdUser: Account
   private lateinit var testDiscussion: Discussion
+  private lateinit var handlesRepository: FirestoreHandlesRepository
+  private lateinit var handlesViewModel: FirestoreHandlesViewModel
 
   @Before
   fun setup() = runBlocking {
     repository = FirestoreRepository()
+    handlesRepository = FirestoreHandlesRepository()
     viewModel = FirestoreViewModel(repository)
+
+    handlesViewModel = FirestoreHandlesViewModel(handlesRepository)
 
     // Create test users
     currentAccount =
@@ -87,7 +94,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun screen_displaysDiscussionName_andButtons() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = testDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -111,7 +121,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun clickingDeleteButton_showsDeleteDialog() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = testDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -126,7 +139,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun clickingLeaveButton_showsLeaveDialog() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = testDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -142,7 +158,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun memberList_displaysMembersWithBadges() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = testDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -157,7 +176,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun backButton_savesChanges() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = testDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = testDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -186,7 +208,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = updatedDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = updatedDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -229,7 +254,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = updatedDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = updatedDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()
@@ -264,7 +292,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel, discussion = updatedDiscussion, account = currentAccount)
+          viewModel = viewModel,
+          discussion = updatedDiscussion,
+          account = currentAccount,
+          handlesViewModel = handlesViewModel)
     }
 
     compose.waitForIdle()

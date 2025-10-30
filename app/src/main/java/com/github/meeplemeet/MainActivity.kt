@@ -186,7 +186,7 @@ fun MeepleMeetApp(
           viewModel = firestoreVM,
           onBack = { navigationActions.goBack() },
           onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-      )
+          handleViewModel = handlesVM)
     }
 
     composable(MeepleMeetScreen.DiscussionDetails.name) {
@@ -197,7 +197,7 @@ fun MeepleMeetApp(
           onBack = { navigationActions.goBack() },
           onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
           onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-      )
+          handlesViewModel = handlesVM)
     }
 
     composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }

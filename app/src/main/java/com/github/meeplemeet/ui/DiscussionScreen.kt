@@ -1,3 +1,4 @@
+/** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui
 
 import android.text.format.DateFormat

@@ -1,3 +1,4 @@
+/** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -35,6 +37,8 @@ object AddDiscussionTestTags {
   const val ADD_MEMBERS = "Add Members"
   const val CREATE_DISCUSSION_BUTTON = "Create Discussion"
   const val ADD_MEMBERS_ELEMENT = "Add Member Element"
+
+  const val DISCARD_BUTTON = "Discard Button"
 }
 
 /**
@@ -52,6 +56,7 @@ object AddDiscussionTestTags {
 fun AddDiscussionScreen(
     account: Account,
     viewModel: FirestoreViewModel = viewModel(),
+    handleViewModel: FirestoreHandlesViewModel = viewModel(),
     onBack: () -> Unit = {},
     onCreate: () -> Unit = {},
 ) {
@@ -81,11 +86,11 @@ fun AddDiscussionScreen(
       return@LaunchedEffect
     }
     isSearching = true
-    viewModel.searchByHandle(searchQuery)
+    handleViewModel.searchByHandle(searchQuery)
   }
 
-  LaunchedEffect(viewModel.handleSuggestions) {
-    viewModel.handleSuggestions.collect { list ->
+  LaunchedEffect(handleViewModel.handleSuggestions) {
+    handleViewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false
@@ -121,8 +126,8 @@ fun AddDiscussionScreen(
                 IconButton(onClick = onBack) {
                   Icon(
                       Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "Back",
-                      modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
+                      modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON),
+                      contentDescription = "Back")
                 }
               })
           HorizontalDivider(
@@ -290,7 +295,9 @@ fun AddDiscussionScreen(
 
                     OutlinedButton(
                         onClick = onBack,
-                        modifier = Modifier.fillMaxWidth(0.3f),
+                        modifier =
+                            Modifier.fillMaxWidth(0.3f)
+                                .testTag(AddDiscussionTestTags.DISCARD_BUTTON),
                         shape = CircleShape,
                         colors =
                             ButtonDefaults.outlinedButtonColors(
