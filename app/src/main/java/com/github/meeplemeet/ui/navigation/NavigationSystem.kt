@@ -1,21 +1,26 @@
 package com.github.meeplemeet.ui.navigation
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
@@ -94,16 +99,28 @@ enum class MeepleMeetScreen(
     val title: String,
     val inBottomBar: Boolean = false,
     val icon: ImageVector? = null,
+    val iconSelected: ImageVector? = null,
     val testTag: String? = null
 ) {
   SignIn("Sign In"),
   SignUp("Sign Up"),
   CreateAccount("Create your Account"),
   DiscussionsOverview(
-      "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
-  SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
-  PostsOverview("Posts", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
-  Profile("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
+      "",
+      true,
+      Icons.Outlined.ChatBubbleOutline,
+      Icons.Default.ChatBubbleOutline,
+      NavigationTestTags.DISCUSSIONS_TAB),
+  SessionsOverview(
+      "", true, Icons.Outlined.Groups, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
+  PostsOverview(
+      "", true, Icons.Outlined.Language, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
+  Profile(
+      "",
+      true,
+      Icons.Outlined.AccountCircle,
+      Icons.Default.AccountCircle,
+      NavigationTestTags.PROFILE_TAB),
   CreateDiscussion("Create Discussion"),
   Discussion("Discussion"),
   DiscussionDetails("Discussion Details"),
@@ -130,7 +147,11 @@ fun BottomNavigationMenu(
   NavigationBar(
       containerColor = AppColors.secondary,
       contentColor = AppColors.textIcons,
-      modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .height(64.dp)
+              .testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
         MeepleMeetScreen.entries
             .filter { it -> it.inBottomBar }
             .forEach { screen ->
@@ -139,13 +160,17 @@ fun BottomNavigationMenu(
                       NavigationBarItemColors(
                           selectedIconColor = AppColors.textIcons,
                           selectedTextColor = AppColors.textIcons,
-                          selectedIndicatorColor = AppColors.focus,
+                          selectedIndicatorColor = Color.Transparent,
                           disabledTextColor = Color.Transparent,
                           disabledIconColor = Color.Transparent,
-                          unselectedIconColor = AppColors.textIcons,
-                          unselectedTextColor = AppColors.textIcons),
-                  icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
-                  label = { Text(screen.title) },
+                          unselectedIconColor = AppColors.textIcons.copy(alpha = 0.5f),
+                          unselectedTextColor = AppColors.textIcons.copy(alpha = 0.5f)),
+                  icon = {
+                    val iconToUse =
+                        if (screen == currentScreen) screen.iconSelected ?: screen.icon
+                        else screen.icon
+                    iconToUse?.let { Icon(it, contentDescription = screen.title) }
+                  },
                   selected = screen == currentScreen,
                   onClick = { onTabSelected(screen) },
                   modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)

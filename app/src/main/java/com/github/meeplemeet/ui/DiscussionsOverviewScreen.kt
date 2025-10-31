@@ -103,7 +103,6 @@ fun DiscussionsOverviewScreen(
         FloatingActionButton(
             onClick = onClickAddDiscussion,
             contentColor = AppColors.textIcons,
-            shape = CircleShape,
             containerColor = AppColors.neutral,
             modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Create")
