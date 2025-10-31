@@ -230,7 +230,7 @@ fun MeepleMeetApp(
     // TODO: To be replaced with the right Discover screen later on
     // composable(MeepleMeetScreen.DiscoverFeeds.name) { DiscoverSessionsScreen(navigationActions) }
 
-    composable(MeepleMeetScreen.DiscoverPosts.name) {
+    composable(MeepleMeetScreen.PostsOverview.name) {
       FeedsOverviewScreen(
           account = account!!,
           navigation = navigationActions,
@@ -253,8 +253,8 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.CreatePost.name) {
       CreatePostScreen(
           account = account!!,
-          onPost = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverPosts) },
-          onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverPosts) },
+          onPost = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
+          onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
           onBack = { navigationActions.goBack() })
     }
 
