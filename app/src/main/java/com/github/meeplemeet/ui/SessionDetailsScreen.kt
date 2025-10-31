@@ -236,6 +236,7 @@ fun SessionDetailsScreen(
                               discussion = disc,
                               newParticipantList = updatedParticipants)
                       else sessionViewModel.deleteSession(account, disc)
+                      onBack()
                     }
                   },
                   shape = CircleShape,
