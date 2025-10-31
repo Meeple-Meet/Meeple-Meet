@@ -258,7 +258,7 @@ class SessionComponentsTest {
     val tfCalls = composeRule.onNode(hasTestTag("iconTF-calls") and hasSetTextAction())
     tfCalls.performTextInput("A")
     tfCalls.performTextInput("B")
-    tfCalls.assertTextEquals("AB")
+      tfCalls.assert(hasText("AB"))
     composeRule.runOnIdle { assert(calls >= 2 && recorded == "AB") }
     tfCalls.performTextReplacement("")
     composeRule.onNodeWithText("Find game", useUnmergedTree = true).assertExists()
@@ -267,20 +267,20 @@ class SessionComponentsTest {
     composeRule.onNodeWithContentDescription("trailing-only").assertExists()
     val ro = composeRule.onNodeWithTag("iconTF-readonly")
     ro.assert(hasSetTextAction().not())
-    ro.assertTextEquals("Locked")
+    ro.assert(hasText("Locked"))
 
     // (3) Toggle
     val toggle = composeRule.onNodeWithTag("iconTF-toggle")
     toggle.assert(hasSetTextAction().not())
-    toggle.assertTextEquals("RO")
+    toggle.assert(hasText("RO"))
     composeRule.onNodeWithContentDescription("leading-on").assertExists()
     composeRule.runOnUiThread { toggleValue = "EXT" }
-    toggle.assertTextEquals("EXT")
+    toggle.assert(hasText("EXT"))
     composeRule.runOnUiThread { toggleEditable = true }
     val editableNode = composeRule.onNode(hasTestTag("iconTF-toggle") and hasSetTextAction())
     editableNode.performTextInput("-ok")
-    editableNode.assertTextContains("EXT", substring = true)
-    editableNode.assertTextContains("-ok", substring = true)
+    editableNode.assert(hasText("EXT", substring = true))
+    editableNode.assert(hasText("-ok", substring = true))
 
     // CountBubble checks
     composeRule.onAllNodesWithTag(ComponentsTestTags.COUNT_BUBBLE_TEXT).assertCountEquals(3)
@@ -441,10 +441,11 @@ class SessionComponentsTest {
     val dateNode = composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
     val initialText = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
 
-    // Cancel
-    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
-    composeRule.onNodeWithText("Cancel").performClick()
-    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertTextEquals(initial.format(fmt))
+      // Open -> Cancel (use test tag in unmerged tree)
+      composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+      composeRule.waitForIdle()
+      composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
+      composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasText( initial.format(fmt)))
 
     // Confirm
     composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()

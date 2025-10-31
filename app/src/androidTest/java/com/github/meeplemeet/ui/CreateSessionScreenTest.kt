@@ -327,7 +327,7 @@ class CreateSessionScreenTest {
             onDateChange = {},
             onTimeChange = {},
             onLocationChange = {},
-            account =   me,
+            account = me,
             sessionViewModel = sessionVM,
             discussion = baseDiscussion,
             onLocationPicked = {},

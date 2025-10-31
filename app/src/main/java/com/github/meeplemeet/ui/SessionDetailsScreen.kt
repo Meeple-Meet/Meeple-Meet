@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,9 +44,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
-import androidx.compose.material3.TimePickerLayoutType
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -225,27 +222,18 @@ fun SessionDetailsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-          // Session title (centered, not editable for now).
-          Title(
-              text = form.title.ifEmpty { "New Session" },
+          // Organisation section
+          // editable for admins and the session creator, read-only for members
+          OrganizationSection(
+              form = form,
+              onFormChange = { form = it },
               editable = isCurrUserAdmin,
-              form,
-              onValueChange = { newTitle -> form = form.copy(title = newTitle) },
-              modifier =
-                  Modifier.align(Alignment.CenterHorizontally)
-                      .then(Modifier.testTag(SessionTestTags.TITLE)))
-
-          // Proposed game section
-          // background and border are primary for members since it blends with the screen bg
-          // proposed game is a text for members, it's not in a editable box
-          ProposedGameSection(
-              sessionViewModel = sessionViewModel,
-              currentUser = account,
               discussion = discussion,
-              editable = isCurrUserAdmin,
-              gameUIState = gameUIState) {
-                form = form.copy(proposedGameString = it)
-              }
+              account = account,
+              gameUIState = gameUIState,
+              onValueChangeTitle = { form = form.copy(title = it) },
+              isCurrUserAdmin = isCurrUserAdmin,
+              sessionViewModel = sessionViewModel)
 
           // Participants section
           ParticipantsSection(
@@ -260,42 +248,44 @@ fun SessionDetailsScreen(
               discussion = discussion,
               viewModel = viewModel)
 
-          // Organisation section
-          // editable for admins and the session creator, read-only for members
-          OrganizationSection(form, onFormChange = { form = it }, editable = isCurrUserAdmin)
-
           Spacer(Modifier.height(4.dp))
+          Row(
+              horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(
+                    onClick = {
+                      onBack()
+                      val updatedParticipants =
+                          form.participants.filterNot { it.uid == account.uid }
+                      discussion.let { disc ->
+                        if (updatedParticipants.isNotEmpty())
+                            sessionViewModel.updateSession(
+                                requester = account,
+                                discussion = disc,
+                                newParticipantList = updatedParticipants)
+                        else sessionViewModel.deleteSession(account, disc)
+                      }
+                      onBack()
+                    },
+                    shape = CircleShape,
+                    border = BorderStroke(1.5.dp, AppColors.negative),
+                    modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                      Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                      Spacer(Modifier.width(8.dp))
+                      Text("Leave", style = MaterialTheme.typography.bodyMedium)
+                    }
 
-          // Quit session button (all users)
-          OutlinedButton(
-              onClick = {
-                onBack()
-                val updatedParticipants = form.participants.filterNot { it.uid == account.uid }
-                discussion.let { disc ->
-                  if (updatedParticipants.isNotEmpty())
-                      sessionViewModel.updateSession(
-                          requester = account,
-                          discussion = disc,
-                          newParticipantList = updatedParticipants)
-                  else sessionViewModel.deleteSession(account, disc)
-                }
-                onBack()
-              },
-              shape = CircleShape,
-              border = BorderStroke(1.5.dp, AppColors.negative),
-              modifier = Modifier.testTag(SessionTestTags.QUIT_BUTTON).fillMaxWidth(),
-              colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Quit Session", style = MaterialTheme.typography.bodyMedium)
+                DeleteSessionBTN(
+                    sessionViewModel = sessionViewModel,
+                    currentUser = account,
+                    discussion = discussion,
+                    userIsAdmin = isCurrUserAdmin,
+                    onback = onBack,
+                    modifier = Modifier.weight(1f))
               }
-
-          DeleteSessionBTN(
-              sessionViewModel = sessionViewModel,
-              currentUser = account,
-              discussion = discussion,
-              userIsAdmin = isCurrUserAdmin,
-              onback = onBack)
         }
   }
 }
@@ -327,73 +317,69 @@ fun ParticipantsSection(
   }
 
   // UI shell
-  SectionCard(
-      modifier =
-          Modifier.clip(appShapes.extraLarge)
-              .background(AppColors.primary)
-              .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-          UnderlinedLabel(
-              text = "Participants:",
-              textColor = AppColors.textIcons,
-              textStyle = MaterialTheme.typography.titleLarge,
-          )
-          Spacer(Modifier.width(8.dp))
-          CountBubble(
-              count = currentCount,
-              modifier =
-                  Modifier.clip(CircleShape)
-                      .background(AppColors.affirmative)
-                      .border(1.dp, AppColors.affirmative, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp))
-        }
+  SectionCard(modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary)) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+      UnderlinedLabel(
+          text = "Participants:",
+          textColor = AppColors.textIcons,
+          textStyle = MaterialTheme.typography.titleLarge,
+      )
+      Spacer(Modifier.width(8.dp))
+      CountBubble(
+          count = currentCount,
+          modifier =
+              Modifier.clip(CircleShape)
+                  .background(AppColors.affirmative)
+                  .border(1.dp, AppColors.affirmative, CircleShape)
+                  .padding(horizontal = 10.dp, vertical = 6.dp))
+    }
 
-        Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(12.dp))
 
-        // Slider (visual-only)
-        if (game != null) {
-          PillSliderNoBackground(
-              title = "Number of players",
-              range = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
-              values = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
-              steps = (game.maxPlayers - game.minPlayers - 1).coerceAtLeast(0))
+    // Slider (visual-only)
+    if (game != null) {
+      PillSliderNoBackground(
+          title = "Number of players",
+          range = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
+          values = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
+          steps = (game.maxPlayers - game.minPlayers - 1).coerceAtLeast(0))
 
-          // Min/Max bubbles (below)
-          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            CountBubble(
-                count = game.minPlayers,
-                modifier =
-                    Modifier.clip(CircleShape)
-                        .background(AppColors.secondary)
-                        .border(1.dp, AppColors.secondary, CircleShape)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .testTag(SessionTestTags.MIN_PLAYERS))
-            CountBubble(
-                count = game.maxPlayers,
-                modifier =
-                    Modifier.clip(CircleShape)
-                        .background(AppColors.secondary)
-                        .border(1.dp, AppColors.secondary, CircleShape)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .testTag(SessionTestTags.MAX_PLAYERS))
-          }
-        } else {
-          Text("Loading slider...", color = AppColors.textIconsFade)
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // 👉 Delegate chips + add-button + dropdown to UserChipsGrid
-        UserChipsGrid(
-            participants = participants,
-            onRemove = onRemoveParticipant,
-            onAdd = onAddParticipant,
-            account = account,
-            editable = editable,
-            candidateMembers = candidateAccounts, // full discussion members as Accounts
-            maxPlayers = game?.maxPlayers ?: form.maxPlayers,
-            modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
+      // Min/Max bubbles (below)
+      Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        CountBubble(
+            count = game.minPlayers,
+            modifier =
+                Modifier.clip(CircleShape)
+                    .background(AppColors.secondary)
+                    .border(1.dp, AppColors.secondary, CircleShape)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .testTag(SessionTestTags.MIN_PLAYERS))
+        CountBubble(
+            count = game.maxPlayers,
+            modifier =
+                Modifier.clip(CircleShape)
+                    .background(AppColors.secondary)
+                    .border(1.dp, AppColors.secondary, CircleShape)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .testTag(SessionTestTags.MAX_PLAYERS))
       }
+    } else {
+      Text("Loading slider...", color = AppColors.textIconsFade)
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    // 👉 Delegate chips + add-button + dropdown to UserChipsGrid
+    UserChipsGrid(
+        participants = participants,
+        onRemove = onRemoveParticipant,
+        onAdd = onAddParticipant,
+        account = account,
+        editable = editable,
+        candidateMembers = candidateAccounts, // full discussion members as Accounts
+        maxPlayers = game?.maxPlayers ?: form.maxPlayers,
+        modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
+  }
 }
 
 /**
@@ -434,87 +420,82 @@ fun UserChipsGrid(
   val maxHeight = (chipHeight * maxRows) + (chipSpacing * (maxRows - 1))
   val scrollState = rememberScrollState()
 
-  Box(
-    modifier = modifier
-      .fillMaxWidth()
-      .heightIn(max = maxHeight)
-      .verticalScroll(scrollState)
-  ) {
+  Box(modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState)) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         // Remove scrollable from here; vertical scroll applied to parent Box
-        modifier = Modifier.fillMaxWidth()
-    ) {
-      // Existing participant chips
-      participants.forEach { p ->
-        UserChip(
-            user = p,
-            modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
-            onRemove = { if (editable) onRemove(p) },
-            account = account,
-            showRemoveBTN = editable)
-      }
+        modifier = Modifier.fillMaxWidth()) {
+          // Existing participant chips
+          participants.forEach { p ->
+            UserChip(
+                user = p,
+                modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
+                onRemove = { if (editable) onRemove(p) },
+                account = account,
+                showRemoveBTN = editable)
+          }
 
-      // "+" button: admins only, disappears when full
-      val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
-      if (canAdd) {
-        Box(
-            modifier =
-                Modifier.background(AppColors.primary)
-                    .padding(
-                        horizontal = 12.dp,
-                        vertical = 7.dp) // mimic chip padding to vertically align elements
-            ) {
-              IconButton(
-                  onClick = { showAddMenu = true },
-                  modifier =
-                      Modifier.size(32.dp)
-                          .border(1.dp, AppColors.divider, CircleShape)
-                          .clip(CircleShape)
-                          .background(AppColors.primary)
-                          .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
-                    Text("+", color = AppColors.textIcons, fontWeight = FontWeight.Bold)
+          // "+" button: admins only, disappears when full
+          val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
+          if (canAdd) {
+            Box(
+                modifier =
+                    Modifier.background(AppColors.primary)
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 7.dp) // mimic chip padding to vertically align elements
+                ) {
+                  IconButton(
+                      onClick = { showAddMenu = true },
+                      modifier =
+                          Modifier.size(32.dp)
+                              .border(1.dp, AppColors.divider, CircleShape)
+                              .clip(CircleShape)
+                              .background(AppColors.primary)
+                              .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
+                        Text("+", color = AppColors.textIcons, fontWeight = FontWeight.Bold)
+                      }
+
+                  DropdownMenu(
+                      expanded = showAddMenu,
+                      onDismissRequest = { showAddMenu = false },
+                      modifier = Modifier.background(AppColors.primary),
+                  ) {
+                    // Search (by handle only)
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search", color = AppColors.textIconsFade) },
+                        singleLine = true,
+                        modifier =
+                            Modifier.padding(horizontal = 12.dp)
+                                .fillMaxWidth()
+                                .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
+
+                    Spacer(Modifier.height(4.dp))
+
+                    // Candidates list
+                    filteredCandidates.forEach { member ->
+                      DropdownMenuItem(
+                          onClick = {
+                            showAddMenu = false
+                            onAdd(member)
+                          },
+                          modifier =
+                              Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
+                          text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                              AvatarBubble(member.name)
+                              Spacer(Modifier.width(10.dp))
+                              Text(member.handle, color = AppColors.textIcons)
+                            }
+                          })
+                    }
                   }
-
-              DropdownMenu(
-                  expanded = showAddMenu,
-                  onDismissRequest = { showAddMenu = false },
-                  modifier = Modifier.background(AppColors.primary),
-              ) {
-                // Search (by handle only)
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search", color = AppColors.textIconsFade) },
-                    singleLine = true,
-                    modifier =
-                        Modifier.padding(horizontal = 12.dp)
-                            .fillMaxWidth()
-                            .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
-
-                Spacer(Modifier.height(4.dp))
-
-                // Candidates list
-                filteredCandidates.forEach { member ->
-                  DropdownMenuItem(
-                      onClick = {
-                        showAddMenu = false
-                        onAdd(member)
-                      },
-                      modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
-                      text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                          AvatarBubble(member.name)
-                          Spacer(Modifier.width(10.dp))
-                          Text(member.handle, color = AppColors.textIcons)
-                        }
-                      })
                 }
-              }
-            }
-      }
-    }
+          }
+        }
   }
 }
 
@@ -539,40 +520,37 @@ private fun ProposedGameSection(
     gameUIState: GameUIState,
     onChooseGame: (String) -> Unit
 ) {
-  SectionCard(
-      modifier =
-          Modifier.clip(appShapes.extraLarge)
-              .background(AppColors.primary)
-              .border(1.dp, AppColors.primary)) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          UnderlinedLabel(
-              text = "Proposed game:",
-              textColor = AppColors.textIcons,
-              textStyle = MaterialTheme.typography.titleLarge)
 
-          Spacer(Modifier.height(8.dp))
-
-          if (editable) {
-            GameSearchField(
-                query = gameUIState.gameQuery,
-                onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
-                results = gameUIState.gameSuggestions,
-                onPick = {
-                  onChooseGame(it.uid)
-                  sessionViewModel.setGame(currentUser, discussion, it)
-                },
-                isLoading = false,
-                modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
-          } else {
-            val displayedName = gameUIState.fetchedGame?.name ?: "Loading..."
-            Text(
-                text = displayedName,
-                modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = AppColors.textIcons)
-          }
-        }
+  Column(modifier = Modifier.fillMaxWidth()) {
+    if (editable) {
+      GameSearchField(
+          query = gameUIState.gameQuery,
+          onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
+          results = gameUIState.gameSuggestions,
+          onPick = {
+            onChooseGame(it.uid)
+            sessionViewModel.setGame(currentUser, discussion, it)
+          },
+          isLoading = false,
+          modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
+    } else {
+      val displayedName = gameUIState.fetchedGame?.name ?: "Loading..."
+      Row {
+        UnderlinedLabel(
+            text = "Proposed Game:",
+            textColor = AppColors.textIcons,
+            textStyle = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = displayedName,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textIcons)
       }
+    }
+  }
 }
 
 /**
@@ -585,6 +563,12 @@ private fun ProposedGameSection(
  */
 @Composable
 fun OrganizationSection(
+    sessionViewModel: FirestoreSessionViewModel,
+    account: Account,
+    onValueChangeTitle: (String) -> Unit,
+    isCurrUserAdmin: Boolean,
+    gameUIState: GameUIState,
+    discussion: Discussion,
     form: SessionForm,
     onFormChange: (SessionForm) -> Unit,
     editable: Boolean = false
@@ -596,16 +580,26 @@ fun OrganizationSection(
           Location(46.5221, 6.5674, "Satellite Café"))
 
   SectionCard(
-      modifier =
-          Modifier.clip(appShapes.extraLarge)
-              .background(AppColors.primary)
-              .border(1.dp, AppColors.secondary, shape = appShapes.extraLarge)
-              .fillMaxWidth()) {
-        UnderlinedLabel(
-            text = "Organisation:",
-            textColor = AppColors.textIcons,
-            textStyle = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(12.dp))
+      modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary).fillMaxWidth()) {
+        Title(
+            text = form.title.ifEmpty { "New Session" },
+            editable = isCurrUserAdmin,
+            form,
+            onValueChange = { onValueChangeTitle(it) },
+            modifier =
+                Modifier.align(Alignment.CenterHorizontally)
+                    .then(Modifier.testTag(SessionTestTags.TITLE)))
+
+        Spacer(Modifier.height(10.dp))
+
+        ProposedGameSection(
+            sessionViewModel = sessionViewModel,
+            currentUser = account,
+            discussion = discussion,
+            editable = editable,
+            gameUIState = gameUIState) {}
+
+        Spacer(Modifier.height(10.dp))
 
         DatePickerDockedField(
             value = form.date,
@@ -668,8 +662,9 @@ fun Title(
   if (editable) {
     OutlinedTextField(
         value = text,
+        label = { Text("Title", color = AppColors.textIconsFade) },
         onValueChange = onValueChange,
-        textStyle = MaterialTheme.typography.headlineLarge,
+        textStyle = MaterialTheme.typography.bodyMedium,
         singleLine = true,
         modifier = modifier.fillMaxWidth())
   } else {
@@ -867,6 +862,7 @@ fun TimeField(
  * @param discussion Discussion the session is tied to
  * @param userIsAdmin Boolean to check whether the user can see this button
  * @param onback Callback function for navigation
+ * @param modifier Modifier for the button layout
  */
 @Composable
 fun DeleteSessionBTN(
@@ -874,7 +870,8 @@ fun DeleteSessionBTN(
     currentUser: Account,
     discussion: Discussion,
     userIsAdmin: Boolean,
-    onback: () -> Unit
+    onback: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
   if (userIsAdmin) {
     OutlinedButton(
@@ -884,11 +881,11 @@ fun DeleteSessionBTN(
         },
         shape = CircleShape,
         border = BorderStroke(1.5.dp, AppColors.negative),
-        modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DELETE_SESSION_BUTTON),
+        modifier = modifier.testTag(SessionTestTags.DELETE_SESSION_BUTTON),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
           Icon(Icons.Default.Delete, contentDescription = "Delete Session")
           Spacer(Modifier.width(8.dp))
-          Text("Delete Session", style = MaterialTheme.typography.bodyMedium)
+          Text("Delete", style = MaterialTheme.typography.bodyMedium)
         }
   }
 }

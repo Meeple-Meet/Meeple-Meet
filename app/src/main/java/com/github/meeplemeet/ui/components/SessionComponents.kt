@@ -38,7 +38,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerColors
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DisplayMode
@@ -56,7 +55,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
@@ -323,9 +321,7 @@ fun TopBarWithDivider(
   /** --- Top App Bar --- */
   Column {
     CenterAlignedTopAppBar(
-        modifier = Modifier
-            .testTag(ComponentsTestTags.TOP_APP_BAR)
-            .background(AppColors.primary),
+        modifier = Modifier.testTag(ComponentsTestTags.TOP_APP_BAR).background(AppColors.primary),
         navigationIcon = {
           IconButton(
               onClick = { onReturn() },
@@ -350,10 +346,9 @@ fun TopBarWithDivider(
     /** --- Divider --- */
     HorizontalDivider(
         modifier =
-        Modifier
-            .fillMaxWidth(0.7f) // 70% width to create middle effect
-            .padding(horizontal = 0.dp)
-            .align(Alignment.CenterHorizontally),
+            Modifier.fillMaxWidth(0.7f) // 70% width to create middle effect
+                .padding(horizontal = 0.dp)
+                .align(Alignment.CenterHorizontally),
         thickness = 1.dp,
         color = AppColors.textIconsFade)
   }
@@ -382,9 +377,9 @@ fun ParticipantChip(
     Text(
         account.name,
         modifier =
-        textModifier
-            .align(Alignment.Center)
-            .testTag(ComponentsTestTags.participantName(account.name)),
+            textModifier
+                .align(Alignment.Center)
+                .testTag(ComponentsTestTags.participantName(account.name)),
         style = MaterialTheme.typography.labelSmall,
         color = textColor,
         textAlign = TextAlign.Center,
@@ -396,10 +391,7 @@ fun ParticipantChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(18.dp)
-                    .background(MaterialTheme.colorScheme.tertiary, CircleShape))
+            Box(Modifier.size(18.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
             Spacer(Modifier.width(6.dp))
           }
 
@@ -411,11 +403,9 @@ fun ParticipantChip(
           IconButton(
               onClick = { onClick(account) },
               modifier =
-              Modifier
-                  .size(20.dp)
-                  .testTag(
-                      "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"
-                  ),
+                  Modifier.size(20.dp)
+                      .testTag(
+                          "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
               colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
                 Icon(icon, contentDescription = null)
               }
@@ -488,9 +478,7 @@ fun DatePickerDockedField(
               }
         }
       },
-      modifier = Modifier
-          .fillMaxWidth()
-          .testTag(SessionTestTags.DATE_FIELD))
+      modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
 
   if (showDialogDate) {
     AppDatePickerDialog(
@@ -518,14 +506,15 @@ fun AppDatePickerDialog(
 
   DatePickerDialog(
       onDismissRequest = onDismiss,
-      colors = DatePickerDefaults.colors(
-          todayContentColor = AppColors.textIcons,
-          todayDateBorderColor = AppColors.neutral,
-          containerColor = AppColors.primary,
-          titleContentColor = AppColors.textIconsFade,
-          headlineContentColor = AppColors.textIcons,
-          selectedDayContentColor = AppColors.primary,
-          selectedDayContainerColor = AppColors.neutral),
+      colors =
+          DatePickerDefaults.colors(
+              todayContentColor = AppColors.textIcons,
+              todayDateBorderColor = AppColors.neutral,
+              containerColor = AppColors.primary,
+              titleContentColor = AppColors.textIconsFade,
+              headlineContentColor = AppColors.textIcons,
+              selectedDayContentColor = AppColors.primary,
+              selectedDayContainerColor = AppColors.neutral),
       confirmButton = {
         TextButton(
             modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON),
@@ -538,7 +527,7 @@ fun AppDatePickerDialog(
               Text("OK")
             }
       },
-      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+      dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("date-picker-cancel")) { Text("Cancel") } },
   ) {
     DatePicker(
         state = state,
@@ -591,10 +580,7 @@ fun TimePickerField(
               Text("Pick")
             }
       },
-      modifier = Modifier
-          .fillMaxWidth()
-          .height(64.dp)
-          .testTag(SessionTestTags.TIME_FIELD))
+      modifier = Modifier.fillMaxWidth().height(64.dp).testTag(SessionTestTags.TIME_FIELD))
 
   if (open) {
     AlertDialog(
@@ -612,7 +598,9 @@ fun TimePickerField(
         },
         dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
         text = {
-          TimeInput(state = state, modifier = Modifier.testTag(ComponentsTestTags.TIME_PICKER),
+          TimeInput(
+              state = state,
+              modifier = Modifier.testTag(ComponentsTestTags.TIME_PICKER),
               TimePickerDefaults.colors(
                   clockDialColor = AppColors.secondary,
                   clockDialSelectedContentColor = AppColors.primary,
@@ -693,31 +681,22 @@ fun <T> SearchDropdownField(
         },
         placeholder = { if (placeholder.isNotEmpty()) Text(placeholder) },
         singleLine = true,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .then(modifierTxtField))
+        modifier = Modifier.fillMaxWidth().height(64.dp).then(modifierTxtField))
 
     val shouldShow = expanded && (isLoading || suggestions.isNotEmpty())
 
     if (shouldShow) {
       Popup(onDismissRequest = { expanded = false }, alignment = Alignment.TopStart) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .offset(y = 64.dp)) {
+        Column(Modifier.fillMaxWidth().offset(y = 64.dp)) {
           Surface(
-              modifier = Modifier
-                  .fillMaxWidth()
-                  .testTag(ComponentsTestTags.SEARCH_POPUP_SURFACE),
+              modifier = Modifier.fillMaxWidth().testTag(ComponentsTestTags.SEARCH_POPUP_SURFACE),
               shape = RoundedCornerShape(12.dp),
               tonalElevation = 4.dp,
               shadowElevation = 4.dp) {
                 when {
                   isLoading -> {
                     Row(
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .padding(16.dp)
                             .testTag(ComponentsTestTags.SEARCH_LOADING),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -730,20 +709,18 @@ fun <T> SearchDropdownField(
                     Text(
                         emptyText,
                         modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .testTag(ComponentsTestTags.SEARCH_EMPTY),
+                            Modifier.fillMaxWidth()
+                                .padding(16.dp)
+                                .testTag(ComponentsTestTags.SEARCH_EMPTY),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
                   else -> {
                     LazyColumn(
                         modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 200.dp)
-                            .testTag(ComponentsTestTags.SEARCH_LIST),
+                            Modifier.fillMaxWidth()
+                                .heightIn(max = 200.dp)
+                                .testTag(ComponentsTestTags.SEARCH_LIST),
                         contentPadding = PaddingValues(vertical = 6.dp)) {
                           items(suggestions) { item ->
                             val raw = getPrimaryText(item)
@@ -754,14 +731,13 @@ fun <T> SearchDropdownField(
 
                             Row(
                                 modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onSuggestionClick(item)
-                                        expanded = false
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                                    .testTag(ComponentsTestTags.searchItem(norm)),
+                                    Modifier.fillMaxWidth()
+                                        .clickable {
+                                          onSuggestionClick(item)
+                                          expanded = false
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                        .testTag(ComponentsTestTags.searchItem(norm)),
                                 verticalAlignment = Alignment.CenterVertically) {
                                   if (itemContent != null) {
                                     itemContent(item)

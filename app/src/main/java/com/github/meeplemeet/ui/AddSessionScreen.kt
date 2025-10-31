@@ -5,7 +5,6 @@
 
 package com.github.meeplemeet.ui
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -35,7 +33,6 @@ import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.firestoreSettings
 import java.time.*
 import java.util.Date
 import kotlin.random.Random
@@ -175,33 +172,32 @@ fun AddSessionScreen(
       }) { innerPadding ->
         Column(
             modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .verticalScroll(rememberScrollState())
-                .testTag(SessionCreationTestTags.CONTENT_COLUMN),
+                Modifier.fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState())
+                    .testTag(SessionCreationTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-            // Organisation section
-            OrganisationSection(
-                sessionViewModel = sessionViewModel,
-                account =  account,
-                discussion = discussion,
-                showError = showError,
-                onTitleChange = { form = form.copy(title = it) },
-                form = form,
-                onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
-                date = form.date,
-                time = form.time,
-                locationText = form.locationText,
-                onDateChange = { form = form.copy(date = it) },
-                onTimeChange = { form = form.copy(time = it) },
-                onLocationChange = { form = form.copy(locationText = it) },
-                onLocationPicked = { selectedLocation = it },
-                title = ORGANISATION_SECTION_NAME,
-                modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
+              // Organisation section
+              OrganisationSection(
+                  sessionViewModel = sessionViewModel,
+                  account = account,
+                  discussion = discussion,
+                  showError = showError,
+                  onTitleChange = { form = form.copy(title = it) },
+                  form = form,
+                  onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
+                  date = form.date,
+                  time = form.time,
+                  locationText = form.locationText,
+                  onDateChange = { form = form.copy(date = it) },
+                  onTimeChange = { form = form.copy(time = it) },
+                  onLocationChange = { form = form.copy(locationText = it) },
+                  onLocationPicked = { selectedLocation = it },
+                  title = ORGANISATION_SECTION_NAME,
+                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
               // Participants section
               ParticipantsSection(
@@ -235,59 +231,56 @@ fun AddSessionScreen(
               // Creation and Discard buttons
               Row(
                   horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                  modifier = Modifier
-                      .testTag(SessionCreationTestTags.BUTTON_ROW)
-                      .fillMaxWidth(),
-                  verticalAlignment = Alignment.CenterVertically
-              ) {
-                  val haveDateTime = form.date != null && form.time != null
-                  val withinBounds =
-                      form.participants.size >= form.minPlayers &&
-                          form.participants.size <= form.maxPlayers
+                  modifier = Modifier.testTag(SessionCreationTestTags.BUTTON_ROW).fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    val haveDateTime = form.date != null && form.time != null
+                    val withinBounds =
+                        form.participants.size >= form.minPlayers &&
+                            form.participants.size <= form.maxPlayers
 
-                  val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
+                    val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
 
-                  DiscardButton(
-                      modifier = Modifier.weight(1f),
-                      onDiscard = {
-                        form = SessionForm(participants = listOf(account))
-                        selectedLocation = null
-                        onBack()
-                      })
+                    DiscardButton(
+                        modifier = Modifier.weight(1f),
+                        onDiscard = {
+                          form = SessionForm(participants = listOf(account))
+                          selectedLocation = null
+                          onBack()
+                        })
 
-                  CreateSessionButton(
-                      formToSubmit = form,
-                      enabled = canCreate,
-                      onCreate = {
-                        runCatching {
-                              val selectedGameId =
-                                  sessionViewModel.gameUIState.value.selectedGameUid
-                              sessionViewModel.createSession(
-                                  requester = account,
-                                  discussion = discussion,
-                                  name = form.title,
-                                  gameId =
-                                      selectedGameId.ifBlank {
-                                        form.proposedGameString.ifBlank { "Unknown game" }
-                                      },
-                                  date = toTimestamp(form.date, form.time),
-                                  location = selectedLocation ?: Location(),
-                                  minParticipants = form.minPlayers,
-                                  maxParticipants = form.maxPlayers,
-                                  *form.participants.toTypedArray())
-                            }
-                            .onFailure { e ->
-                              showError(e.message ?: "Failed to create session")
-                              return@CreateSessionButton
-                            }
+                    CreateSessionButton(
+                        formToSubmit = form,
+                        enabled = canCreate,
+                        onCreate = {
+                          runCatching {
+                                val selectedGameId =
+                                    sessionViewModel.gameUIState.value.selectedGameUid
+                                sessionViewModel.createSession(
+                                    requester = account,
+                                    discussion = discussion,
+                                    name = form.title,
+                                    gameId =
+                                        selectedGameId.ifBlank {
+                                          form.proposedGameString.ifBlank { "Unknown game" }
+                                        },
+                                    date = toTimestamp(form.date, form.time),
+                                    location = selectedLocation ?: Location(),
+                                    minParticipants = form.minPlayers,
+                                    maxParticipants = form.maxPlayers,
+                                    *form.participants.toTypedArray())
+                              }
+                              .onFailure { e ->
+                                showError(e.message ?: "Failed to create session")
+                                return@CreateSessionButton
+                              }
 
-                        form = SessionForm(participants = listOf(account))
-                        selectedLocation = null
-                        onBack()
-                      },
-                      modifier = Modifier.weight(1f),
-                  )
-              }
+                          form = SessionForm(participants = listOf(account))
+                          selectedLocation = null
+                          onBack()
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                  }
             }
       }
 }
@@ -320,39 +313,39 @@ fun GameSearchBar(
 ) {
   val gameUi by sessionViewModel.gameUIState.collectAsState()
   val gameQuery = gameUi.gameQuery.ifBlank { queryFallback }
-        GameSearchField(
-            query = gameQuery,
-            onQueryChange = { q ->
-              onQueryFallbackChange(q)
-              discussion?.let { disc ->
-                runCatching { sessionViewModel.setGameQuery(currentUser, disc, q) }
-                    .onFailure { e -> onError(e.message ?: "Game search failed") }
+  GameSearchField(
+      query = gameQuery,
+      onQueryChange = { q ->
+        onQueryFallbackChange(q)
+        discussion?.let { disc ->
+          runCatching { sessionViewModel.setGameQuery(currentUser, disc, q) }
+              .onFailure { e -> onError(e.message ?: "Game search failed") }
+        }
+      },
+      results = gameUi.gameSuggestions,
+      onPick = { game ->
+        discussion?.let { disc ->
+          runCatching {
+                sessionViewModel.setGame(currentUser, disc, game)
+                sessionViewModel.getGameFromId(game.uid)
+                form.copy(maxPlayers = gameUi.fetchedGame?.maxPlayers ?: form.maxPlayers)
               }
-            },
-            results = gameUi.gameSuggestions,
-            onPick = { game ->
-              discussion?.let { disc ->
-                runCatching {
-                      sessionViewModel.setGame(currentUser, disc, game)
-                      sessionViewModel.getGameFromId(game.uid)
-                      form.copy(maxPlayers = gameUi.fetchedGame?.maxPlayers ?: form.maxPlayers)
-                    }
-                    .onFailure { e -> onError(e.message ?: "Failed to select game") }
-              }
-            },
-            isLoading = false,
-            placeholder = GAME_SEARCH_PLACEHOLDER,
-            modifier = Modifier.fillMaxWidth())
+              .onFailure { e -> onError(e.message ?: "Failed to select game") }
+        }
+      },
+      isLoading = false,
+      placeholder = GAME_SEARCH_PLACEHOLDER,
+      modifier = Modifier.fillMaxWidth())
 
-        gameUi.gameSearchError
-            ?.takeIf { it.isNotBlank() }
-            ?.let { msg ->
-              Spacer(Modifier.height(6.dp))
-              Text(
-                  msg,
-                  modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_ERROR),
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.error)
+  gameUi.gameSearchError
+      ?.takeIf { it.isNotBlank() }
+      ?.let { msg ->
+        Spacer(Modifier.height(6.dp))
+        Text(
+            msg,
+            modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_ERROR),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error)
       }
 }
 
@@ -454,39 +447,32 @@ fun OrganisationSection(
           .border(1.dp, MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
 
-      // Title field
-      IconTextField(
-          value = form.title,
-          onValueChange = { onTitleChange(it) },
-          placeholder = TITLE_PLACEHOLDER,
-          editable = true,
-          leadingIcon = {
-              Icon(
-                  imageVector = Icons.Default.Edit,
-                  contentDescription = "Edit Title"
-              )
-          },
-          modifier = Modifier
-              .fillMaxWidth()
-              .testTag(SessionCreationTestTags.FORM_TITLE_FIELD)
-      )
+        // Title field
+        IconTextField(
+            value = form.title,
+            onValueChange = { onTitleChange(it) },
+            placeholder = TITLE_PLACEHOLDER,
+            editable = true,
+            leadingIcon = {
+              Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Title")
+            },
+            modifier = Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
 
-      Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(10.dp))
 
-      // Game search
-      GameSearchBar(
-          sessionViewModel = sessionViewModel,
-          currentUser = account,
-          discussion = discussion,
-          queryFallback = form.proposedGameString,
-          onQueryFallbackChange = { onQueryFallbackChange(it) },
-          onError = showError,
-          modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
+        // Game search
+        GameSearchBar(
+            sessionViewModel = sessionViewModel,
+            currentUser = account,
+            discussion = discussion,
+            queryFallback = form.proposedGameString,
+            onQueryFallbackChange = { onQueryFallbackChange(it) },
+            onError = showError,
+            modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
 
-      Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(10.dp))
 
-
-      // Date picker
+        // Date picker
         DatePickerDockedField(
             value = date, onValueChange = onDateChange, label = "Date", editable = true)
 
@@ -571,12 +557,11 @@ fun ParticipantsSection(
           CountBubble(
               count = selected.size,
               modifier =
-              Modifier
-                  .shadow(Elevation.subtle, CircleShape, clip = false)
-                  .clip(CircleShape)
-                  .background(MaterialTheme.colorScheme.surface)
-                  .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                  .padding(horizontal = 10.dp, vertical = 6.dp))
+                  Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.surface)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp))
         }
 
         Spacer(Modifier.height(2.dp))
@@ -589,12 +574,11 @@ fun ParticipantsSection(
               CountBubble(
                   count = minPlayers,
                   modifier =
-                  Modifier
-                      .shadow(Elevation.subtle, CircleShape, clip = false)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.surface)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp))
+                      Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
+                          .clip(CircleShape)
+                          .background(MaterialTheme.colorScheme.surface)
+                          .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                          .padding(horizontal = 10.dp, vertical = 6.dp))
 
               DiscretePillSlider(
                   range = minSliderNumber..maxSliderNumber,
@@ -602,24 +586,23 @@ fun ParticipantsSection(
                   steps = sliderSteps,
                   modifier = Modifier.weight(1f),
                   sliderModifier =
-                  Modifier
-                      .background(MaterialTheme.colorScheme.background, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp))
+                      Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
+                          .padding(horizontal = 10.dp, vertical = 6.dp))
 
               CountBubble(
                   count = maxPlayers,
                   modifier =
-                  Modifier
-                      .shadow(Elevation.subtle, CircleShape, clip = false)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.surface)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp))
+                      Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
+                          .clip(CircleShape)
+                          .background(MaterialTheme.colorScheme.surface)
+                          .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                          .padding(horizontal = 10.dp, vertical = 6.dp))
             }
 
         Spacer(Modifier.height(12.dp))
 
         // All candidate chips
-      UserChipsGrid(participants = allCandidates, onRemove = onRemove, onAdd = onAdd, account = account)
+        UserChipsGrid(
+            participants = allCandidates, onRemove = onRemove, onAdd = onAdd, account = account)
       }
 }
