@@ -1,5 +1,6 @@
 package com.github.meeplemeet.model.structures
 // Github Copilot used for this file
+import com.google.firebase.firestore.Exclude
 import kotlinx.serialization.Serializable
 
 /**
@@ -14,7 +15,7 @@ import kotlinx.serialization.Serializable
 data class Poll(
     val question: String = "",
     val options: List<String> = emptyList(),
-    val votes: Map<String, List<Int>> = emptyMap(), // Changed to List<Int>
+    val votes: Map<String, List<Int>> = emptyMap(),
     val allowMultipleVotes: Boolean = false
 ) {
   /**
@@ -24,6 +25,7 @@ data class Poll(
    * @param optionIndex The index of the option.
    * @return List of user IDs who voted for this option.
    */
+  @Exclude
   fun getUsersWhoVotedFor(optionIndex: Int): List<String> {
     return votes.filter { (_, selectedOptions) -> optionIndex in selectedOptions }.keys.toList()
   }
@@ -33,6 +35,7 @@ data class Poll(
    *
    * @return Map of option index to number of votes.
    */
+  @Exclude
   fun getVoteCountsByOption(): Map<Int, Int> {
     val counts = mutableMapOf<Int, Int>()
     votes.values.forEach { selectedOptions ->
@@ -44,9 +47,11 @@ data class Poll(
   }
 
   /** Get the total number of votes cast (counts each selection). */
+  @Exclude
   fun getTotalVotes(): Int = votes.values.sumOf { it.size }
 
   /** Get the total number of users who voted. */
+  @Exclude
   fun getTotalVoters(): Int = votes.size
 
   /**
@@ -55,6 +60,7 @@ data class Poll(
    * @param userId The user's UID.
    * @return The list of option indices or null.
    */
+  @Exclude
   fun getUserVotes(userId: String): List<Int>? = votes[userId]
 
   /**
@@ -63,6 +69,7 @@ data class Poll(
    * @param userId The user's UID.
    * @return True if the user has voted.
    */
+  @Exclude
   fun hasUserVoted(userId: String): Boolean = votes.containsKey(userId)
 
   /**
@@ -72,6 +79,7 @@ data class Poll(
    * @param optionIndex The option index to check.
    * @return True if the user voted for this option.
    */
+  @Exclude
   fun hasUserVotedFor(userId: String, optionIndex: Int): Boolean {
     return votes[userId]?.contains(optionIndex) ?: false
   }

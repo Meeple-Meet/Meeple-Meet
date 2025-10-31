@@ -545,6 +545,7 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       userId: String,
       optionIndex: Int
   ) {
+
     // Fetch discussion to get current state
     val discussion = getDiscussion(discussionId)
 
@@ -573,7 +574,9 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     }
 
     val updatedPoll = poll.copy(votes = updatedVotes)
+
     val updatedMessage = message.copy(poll = updatedPoll)
+
     val updatedMessages = discussion.messages.toMutableList()
     updatedMessages[messageIndex] = updatedMessage
 
