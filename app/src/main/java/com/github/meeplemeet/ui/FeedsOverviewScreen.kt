@@ -91,7 +91,7 @@ fun FeedsOverviewScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.DiscoverPosts.title,
+                  text = MeepleMeetScreen.PostsOverview.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -99,7 +99,7 @@ fun FeedsOverviewScreen(
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.DiscoverPosts,
+            currentScreen = MeepleMeetScreen.PostsOverview,
             modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
