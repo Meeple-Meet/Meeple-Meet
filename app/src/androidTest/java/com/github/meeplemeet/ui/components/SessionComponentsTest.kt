@@ -258,7 +258,7 @@ class SessionComponentsTest {
     val tfCalls = composeRule.onNode(hasTestTag("iconTF-calls") and hasSetTextAction())
     tfCalls.performTextInput("A")
     tfCalls.performTextInput("B")
-      tfCalls.assert(hasText("AB"))
+    tfCalls.assert(hasText("AB"))
     composeRule.runOnIdle { assert(calls >= 2 && recorded == "AB") }
     tfCalls.performTextReplacement("")
     composeRule.onNodeWithText("Find game", useUnmergedTree = true).assertExists()
@@ -441,11 +441,11 @@ class SessionComponentsTest {
     val dateNode = composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
     val initialText = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
 
-      // Open -> Cancel (use test tag in unmerged tree)
-      composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
-      composeRule.waitForIdle()
-      composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
-      composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasText( initial.format(fmt)))
+    // Open -> Cancel (use test tag in unmerged tree)
+    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
+    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasText(initial.format(fmt)))
 
     // Confirm
     composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()

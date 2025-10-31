@@ -43,7 +43,7 @@ object SignUpScreenTestTags {
   const val CONFIRM_PASSWORD_FIELD = "confirm_password_field"
   const val CONFIRM_PASSWORD_VISIBILITY_TOGGLE = "confirm_password_visibility_toggle"
   const val SIGN_IN_BUTTON = "sign_in_button"
-    const val SIGN_UP_MESSAGE = "sign_up_message"
+  const val SIGN_UP_MESSAGE = "sign_up_message"
 }
 
 /**

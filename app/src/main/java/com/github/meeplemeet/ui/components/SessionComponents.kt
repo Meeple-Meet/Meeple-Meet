@@ -527,7 +527,11 @@ fun AppDatePickerDialog(
               Text("OK")
             }
       },
-      dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("date-picker-cancel")) { Text("Cancel") } },
+      dismissButton = {
+        TextButton(onClick = onDismiss, modifier = Modifier.testTag("date-picker-cancel")) {
+          Text("Cancel")
+        }
+      },
   ) {
     DatePicker(
         state = state,
