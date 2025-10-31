@@ -80,17 +80,17 @@ class FeedsOverviewScreenTest : FirestoreTests() {
   @OptIn(ExperimentalTestApi::class)
   @Test
   fun full_smoke_all_cases() = runBlocking {
-      compose.setContent {
-          AppTheme(themeMode = theme) {
-              FeedsOverviewScreen(
-                  postOverviewVM = postVm,
-                  firestoreViewModel = firestoreVm,
-                  account = me,
-                  navigation = nav,
-                  onClickAddPost = { fabClicked = true },
-                  onSelectPost = { clickedPost = it })
-          }
+    compose.setContent {
+      AppTheme(themeMode = theme) {
+        FeedsOverviewScreen(
+            postOverviewVM = postVm,
+            firestoreViewModel = firestoreVm,
+            account = me,
+            navigation = nav,
+            onClickAddPost = { fabClicked = true },
+            onSelectPost = { clickedPost = it })
       }
+    }
 
     /* 1  EMPTY STATE  ------------------------------------------------------ */
     checkpoint("Empty-state message shown") {

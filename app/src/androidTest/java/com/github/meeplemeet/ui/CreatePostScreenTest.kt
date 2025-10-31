@@ -417,13 +417,13 @@ class CreatePostScreenTest : FirestoreTests() {
   }
 
   @After
-    fun tearDown() = runBlocking {
+  fun tearDown() = runBlocking {
     // Clean up any created posts during tests
     val posts = repository.getPosts()
     for (post in posts) {
-        if (post.authorId == testAccount.uid) {
-            repository.deletePost(post.id)
-        }
+      if (post.authorId == testAccount.uid) {
+        repository.deletePost(post.id)
+      }
     }
   }
 }
