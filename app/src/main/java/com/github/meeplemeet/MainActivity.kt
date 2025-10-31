@@ -30,10 +30,10 @@ import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.ui.AddDiscussionScreen
-import com.github.meeplemeet.ui.AddSessionScreen
 import com.github.meeplemeet.ui.CreateAccountScreen
+import com.github.meeplemeet.ui.CreateDiscussionScreen
 import com.github.meeplemeet.ui.CreatePostScreen
+import com.github.meeplemeet.ui.CreateSessionScreen
 import com.github.meeplemeet.ui.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.DiscussionScreen
 import com.github.meeplemeet.ui.DiscussionsOverviewScreen
@@ -184,7 +184,7 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.AddDiscussion.name) {
-      AddDiscussionScreen(
+      CreateDiscussionScreen(
           account = account!!,
           viewModel = firestoreVM,
           onBack = { navigationActions.goBack() },
@@ -218,7 +218,7 @@ fun MeepleMeetApp(
 
     composable(MeepleMeetScreen.AddSession.name) {
       sessionRepo?.let {
-        AddSessionScreen(
+        CreateSessionScreen(
             account = account!!,
             discussion = discussion!!,
             viewModel = firestoreVM,
