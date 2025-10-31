@@ -272,7 +272,6 @@ fun CountBubble(
  * @param values The current selected range values.
  * @param steps The number of discrete steps between the min and max values.
  * @param editable Whether the slider is editable or read-only.
- * @param onValuesChange Callback function to be invoked when the slider values change.
  * @param modifier Modifier to be applied to the surrounding Column.
  * @param sliderModifier Modifier to be applied to the RangeSlider.
  * @param sliderColors Colors to be applied to the RangeSlider.
