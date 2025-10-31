@@ -47,12 +47,10 @@ data class Poll(
   }
 
   /** Get the total number of votes cast (counts each selection). */
-  @Exclude
-  fun getTotalVotes(): Int = votes.values.sumOf { it.size }
+  @Exclude fun getTotalVotes(): Int = votes.values.sumOf { it.size }
 
   /** Get the total number of users who voted. */
-  @Exclude
-  fun getTotalVoters(): Int = votes.size
+  @Exclude fun getTotalVoters(): Int = votes.size
 
   /**
    * Get the option indices the user voted for, or null if they haven't voted.
@@ -60,8 +58,7 @@ data class Poll(
    * @param userId The user's UID.
    * @return The list of option indices or null.
    */
-  @Exclude
-  fun getUserVotes(userId: String): List<Int>? = votes[userId]
+  @Exclude fun getUserVotes(userId: String): List<Int>? = votes[userId]
 
   /**
    * Check if a user has voted in this poll.
@@ -69,8 +66,7 @@ data class Poll(
    * @param userId The user's UID.
    * @return True if the user has voted.
    */
-  @Exclude
-  fun hasUserVoted(userId: String): Boolean = votes.containsKey(userId)
+  @Exclude fun hasUserVoted(userId: String): Boolean = votes.containsKey(userId)
 
   /**
    * Check if a user voted for a specific option.
