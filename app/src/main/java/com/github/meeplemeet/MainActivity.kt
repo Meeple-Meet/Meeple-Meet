@@ -30,16 +30,15 @@ import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
 import com.github.meeplemeet.ui.AddDiscussionScreen
 import com.github.meeplemeet.ui.AddSessionScreen
 import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreatePostScreen
-import com.github.meeplemeet.ui.DiscoverSessionsScreen
 import com.github.meeplemeet.ui.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.DiscussionScreen
 import com.github.meeplemeet.ui.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.FeedsOverviewScreen
+import com.github.meeplemeet.ui.PostScreen
 import com.github.meeplemeet.ui.ProfileScreen
 import com.github.meeplemeet.ui.SessionDetailsScreen
 import com.github.meeplemeet.ui.SessionsOverviewScreen
@@ -80,7 +79,6 @@ fun MeepleMeetApp(
     authVM: AuthViewModel = viewModel(),
     firestoreVM: FirestoreViewModel = viewModel(),
     handlesVM: FirestoreHandlesViewModel = viewModel(),
-    postsOverviewVM: PostOverviewViewModel = viewModel(),
     navController: NavHostController = rememberNavController()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
@@ -102,6 +100,8 @@ fun MeepleMeetApp(
   val discussion by discussionFlow.collectAsStateWithLifecycle()
   val sessionRepo =
       remember(discussion) { discussion?.let { FirestoreSessionViewModel(discussion!!) } }
+
+  var postId by remember { mutableStateOf("") }
 
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
@@ -227,26 +227,35 @@ fun MeepleMeetApp(
       } ?: LoadingScreen()
     }
 
-    // TODO: To be replaced with the right DiscoverFeedsScreen/FeedsOverviewScren
-    composable(MeepleMeetScreen.DiscoverFeeds.name) { DiscoverSessionsScreen(navigationActions) }
+    // TODO: To be replaced with the right Discover screen later on
+    // composable(MeepleMeetScreen.DiscoverFeeds.name) { DiscoverSessionsScreen(navigationActions) }
 
-    // TODO: change callback destination if the screen name is changed
-    composable(MeepleMeetScreen.CreatePost.name) {
-      CreatePostScreen(
-          account = account!!,
-          onPost = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverFeeds) },
-          onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverFeeds) },
-          onBack = { navigationActions.goBack() })
-    }
-    // TODO: Add post selection callback
-    composable(MeepleMeetScreen.FeedsOverview.name) {
+    composable(MeepleMeetScreen.DiscoverPosts.name) {
       FeedsOverviewScreen(
           account = account!!,
           navigation = navigationActions,
           firestoreViewModel = firestoreVM,
-          postOverviewVM = postsOverviewVM,
           onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
-          onSelectPost = {})
+          onSelectPost = {
+            postId = it.id
+            navigationActions.navigateTo(MeepleMeetScreen.Post)
+          })
+    }
+
+    composable(MeepleMeetScreen.Post.name) {
+      PostScreen(
+          account = account!!,
+          postId = postId,
+          usersViewModel = firestoreVM,
+          onBack = { navigationActions.goBack() })
+    }
+
+    composable(MeepleMeetScreen.CreatePost.name) {
+      CreatePostScreen(
+          account = account!!,
+          onPost = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverPosts) },
+          onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverPosts) },
+          onBack = { navigationActions.goBack() })
     }
 
     composable(MeepleMeetScreen.Profile.name) {

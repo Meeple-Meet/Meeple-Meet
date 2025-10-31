@@ -102,7 +102,7 @@ enum class MeepleMeetScreen(
   DiscussionsOverview(
       "Discussions", true, Icons.Default.ChatBubbleOutline, NavigationTestTags.DISCUSSIONS_TAB),
   SessionsOverview("Sessions", true, Icons.Default.Groups, NavigationTestTags.SESSIONS_TAB),
-  DiscoverFeeds("Discover", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
+  DiscoverPosts("Discover posts", true, Icons.Default.Language, NavigationTestTags.DISCOVER_TAB),
   Profile("Profile", true, Icons.Default.AccountCircle, NavigationTestTags.PROFILE_TAB),
   AddDiscussion("Add Discussion"),
   Discussion("Discussion"),
@@ -110,8 +110,8 @@ enum class MeepleMeetScreen(
   AddSession("Add Session"),
   Session("Session"),
   SessionDetails("Session Details"),
-  FeedsOverview("Feeds"),
-  CreatePost("Create post")
+  CreatePost("Create post"),
+  Post("Post")
 }
 
 /**

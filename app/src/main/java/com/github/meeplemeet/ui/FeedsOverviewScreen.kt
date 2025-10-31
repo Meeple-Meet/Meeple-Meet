@@ -93,7 +93,7 @@ fun FeedsOverviewScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.FeedsOverview.title,
+                  text = MeepleMeetScreen.DiscoverPosts.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -101,7 +101,7 @@ fun FeedsOverviewScreen(
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.FeedsOverview,
+            currentScreen = MeepleMeetScreen.DiscoverPosts,
             modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
@@ -329,73 +329,74 @@ private fun FeedCardPreview() {
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true, name = "Overview – scaffold mock")
-@Composable
-private fun FeedsOverviewPreview() {
-  AppTheme {
-    Scaffold(
-        topBar = {
-          CenterAlignedTopAppBar(
-              title = {
-                Text(
-                    text = MeepleMeetScreen.FeedsOverview.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary)
-              })
-        },
-        bottomBar = {
-          BottomNavigationMenu(
-              currentScreen = MeepleMeetScreen.FeedsOverview, onTabSelected = { /* preview only */})
-        }) { inner ->
-          LazyColumn(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .background(MaterialTheme.colorScheme.background)
-                      .padding(inner),
-              verticalArrangement = Arrangement.spacedBy(10.dp),
-              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
-                item {
-                  FeedCard(
-                      authorName = "Catan Crew",
-                      postTitle = "Catan Crew",
-                      lastMsg = "You: I’ll bring wheat 🍞",
-                      commentCount = 0,
-                      date = "31/10/2025",
-                      firstTag = "board-games",
-                      modifier = Modifier.fillMaxWidth())
-                }
-                item {
-                  FeedCard(
-                      authorName = "Alice",
-                      postTitle = "Gloomhaven Sunday",
-                      lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
-                      commentCount = 3,
-                      date = "30/10/2025",
-                      firstTag = "rpg",
-                      modifier = Modifier.fillMaxWidth())
-                }
-                item {
-                  FeedCard(
-                      authorName = "Ben",
-                      postTitle = "Arkham Horror Night",
-                      lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
-                      commentCount = 1,
-                      date = "29/10/2025",
-                      firstTag = "horror",
-                      modifier = Modifier.fillMaxWidth())
-                }
-                item {
-                  FeedCard(
-                      authorName = "System",
-                      postTitle = "Ticket to Ride: Europe",
-                      lastMsg = "(No messages yet)",
-                      commentCount = 0,
-                      date = "28/10/2025",
-                      firstTag = null,
-                      modifier = Modifier.fillMaxWidth())
-                }
-              }
-        }
-  }
-}
+// @OptIn(ExperimentalMaterial3Api::class)
+// @Preview(showBackground = true, name = "Overview – scaffold mock")
+// @Composable
+// private fun FeedsOverviewPreview() {
+//  AppTheme {
+//    Scaffold(
+//        topBar = {
+//          CenterAlignedTopAppBar(
+//              title = {
+//                Text(
+//                    text = MeepleMeetScreen.DiscoverPosts.name,
+//                    style = MaterialTheme.typography.bodyMedium,
+//                    color = MaterialTheme.colorScheme.onPrimary)
+//              })
+//        },
+//        bottomBar = {
+//          BottomNavigationMenu(
+//              currentScreen = MeepleMeetScreen.DiscoverPosts, onTabSelected = { /* preview only
+// */})
+//        }) { inner ->
+//          LazyColumn(
+//              modifier =
+//                  Modifier.fillMaxSize()
+//                      .background(MaterialTheme.colorScheme.background)
+//                      .padding(inner),
+//              verticalArrangement = Arrangement.spacedBy(10.dp),
+//              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+//                item {
+//                  FeedCard(
+//                      authorName = "Catan Crew",
+//                      postTitle = "Catan Crew",
+//                      lastMsg = "You: I’ll bring wheat 🍞",
+//                      commentCount = 0,
+//                      date = "31/10/2025",
+//                      firstTag = "board-games",
+//                      modifier = Modifier.fillMaxWidth())
+//                }
+//                item {
+//                  FeedCard(
+//                      authorName = "Alice",
+//                      postTitle = "Gloomhaven Sunday",
+//                      lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
+//                      commentCount = 3,
+//                      date = "30/10/2025",
+//                      firstTag = "rpg",
+//                      modifier = Modifier.fillMaxWidth())
+//                }
+//                item {
+//                  FeedCard(
+//                      authorName = "Ben",
+//                      postTitle = "Arkham Horror Night",
+//                      lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
+//                      commentCount = 1,
+//                      date = "29/10/2025",
+//                      firstTag = "horror",
+//                      modifier = Modifier.fillMaxWidth())
+//                }
+//                item {
+//                  FeedCard(
+//                      authorName = "System",
+//                      postTitle = "Ticket to Ride: Europe",
+//                      lastMsg = "(No messages yet)",
+//                      commentCount = 0,
+//                      date = "28/10/2025",
+//                      firstTag = null,
+//                      modifier = Modifier.fillMaxWidth())
+//                }
+//              }
+//        }
+//  }
+// }
