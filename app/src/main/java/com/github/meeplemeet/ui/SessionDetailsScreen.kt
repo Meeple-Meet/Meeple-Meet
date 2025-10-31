@@ -186,8 +186,6 @@ fun SessionDetailsScreen(
               date = date,
               time = time,
               proposedGameString = session.gameId,
-              minPlayers = session.minParticipants,
-              maxPlayers = session.maxParticipants,
               participants = accounts,
               locationText = session.location.name)
 
@@ -218,8 +216,6 @@ fun SessionDetailsScreen(
                     gameId = form.proposedGameString,
                     date = toTimestamp(form.date, form.time),
                     location = Location(0.0, 0.0, form.locationText),
-                    minParticipants = form.minPlayers,
-                    maxParticipants = form.maxPlayers,
                     newParticipantList = form.participants.ifEmpty { emptyList() })
               }
               onBack()
@@ -326,7 +322,7 @@ fun ParticipantsSection(
 ) {
   val participants = form.participants
   val currentCount = participants.size
-  val max = form.maxPlayers
+  val max = game?.maxPlayers ?: 0
 
   // Fetch discussion members (UID -> Account) once and keep in state
   var candidateAccounts by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -358,9 +354,9 @@ fun ParticipantsSection(
     if (game != null) {
       PillSliderNoBackground(
           title = "Number of players",
-          range = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
+          range = (game.minPlayers.toFloat() - 1)..(game.maxPlayers.toFloat() + 1),
           values = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
-          steps = (game.maxPlayers - game.minPlayers - 1).coerceAtLeast(0))
+          steps = (game.maxPlayers - game.minPlayers + 1).coerceAtLeast(0))
 
       // Min/Max bubbles (below)
       Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -395,7 +391,6 @@ fun ParticipantsSection(
         account = account,
         editable = editable,
         candidateMembers = candidateAccounts, // full discussion members as Accounts
-        maxPlayers = game?.maxPlayers ?: form.maxPlayers,
         modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
   }
 }
