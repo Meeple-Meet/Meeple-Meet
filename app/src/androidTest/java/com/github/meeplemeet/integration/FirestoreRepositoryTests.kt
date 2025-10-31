@@ -296,4 +296,269 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertTrue(firstEmission.previews.containsKey(discussion.uid))
     assertNotNull(firstEmission.previews[discussion.uid])
   }
+
+  // Polling Tests
+
+  @Test
+  fun createPollCreatesMessageWithPoll() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val options = listOf("Option 1", "Option 2", "Option 3")
+    val question = "What is your favorite?"
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = question,
+            options = options,
+            allowMultipleVotes = false)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    assertEquals(1, updated.messages.size)
+    val pollMessage = updated.messages[0]
+    assertNotNull(pollMessage.poll)
+    assertEquals(question, pollMessage.poll?.question)
+    assertEquals(options, pollMessage.poll?.options)
+    assertFalse(pollMessage.poll?.allowMultipleVotes ?: true)
+    assertTrue(pollMessage.poll?.votes?.isEmpty() ?: false)
+  }
+
+  @Test
+  fun createPollWithMultipleVotesAllowed() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Select all that apply",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = true)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    assertTrue(updated.messages[0].poll?.allowMultipleVotes ?: false)
+  }
+
+  @Test
+  fun voteOnPollSingleVoteMode() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Pick one",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = false)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    assertEquals(1, poll?.votes?.size)
+    assertEquals(listOf(1), poll?.votes?.get(testAccount2.uid))
+  }
+
+  @Test
+  fun voteOnPollMultipleVoteMode() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Select all",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = true)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    assertEquals(1, poll?.votes?.size)
+    assertEquals(2, poll?.votes?.get(testAccount2.uid)?.size)
+    assertTrue(poll?.votes?.get(testAccount2.uid)?.contains(0) ?: false)
+    assertTrue(poll?.votes?.get(testAccount2.uid)?.contains(2) ?: false)
+  }
+
+  @Test
+  fun voteOnPollSingleVoteReplacesPreviousVote() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Pick one",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = false)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    assertEquals(listOf(2), poll?.votes?.get(testAccount2.uid))
+  }
+
+  @Test
+  fun voteOnPollMultipleUsersCanVote() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Vote",
+            options = listOf("A", "B"),
+            allowMultipleVotes = false)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount1.uid, 0)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount3.uid, 0)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    assertEquals(3, poll?.votes?.size)
+    assertEquals(listOf(0), poll?.votes?.get(testAccount1.uid))
+    assertEquals(listOf(1), poll?.votes?.get(testAccount2.uid))
+    assertEquals(listOf(0), poll?.votes?.get(testAccount3.uid))
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun voteOnPollThrowsForInvalidOptionIndex() = runTest {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Pick one",
+            options = listOf("A", "B"),
+            allowMultipleVotes = false)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 5)
+  }
+
+  @Test
+  fun removeVoteFromPollRemovesSpecificOption() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Select all",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = true)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+
+    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    val userVotes = poll?.votes?.get(testAccount2.uid)
+    assertEquals(2, userVotes?.size)
+    assertTrue(userVotes?.contains(0) ?: false)
+    assertTrue(userVotes?.contains(2) ?: false)
+    assertFalse(userVotes?.contains(1) ?: true)
+  }
+
+  @Test
+  fun removeVoteFromPollRemovesUserIfNoVotesLeft() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Pick one",
+            options = listOf("A", "B"),
+            allowMultipleVotes = false)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+
+    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+
+    assertNotNull(poll)
+    assertTrue(poll?.votes?.isEmpty() ?: false)
+    assertFalse(poll?.votes?.containsKey(testAccount2.uid) ?: true)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun removeVoteFromPollThrowsIfUserHasNotVoted() = runTest {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Pick one",
+            options = listOf("A", "B"),
+            allowMultipleVotes = false)
+
+    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun removeVoteFromPollThrowsIfUserDidNotVoteForThatOption() = runTest {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Select all",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = true)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+  }
+
+  @Test
+  fun pollVoteCountsAreCorrect() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+
+    val message =
+        repository.createPoll(
+            discussion = discussion,
+            creatorId = testAccount1.uid,
+            question = "Vote",
+            options = listOf("A", "B", "C"),
+            allowMultipleVotes = false)
+
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount1.uid, 0)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount3.uid, 1)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    val voteCounts = poll?.getVoteCountsByOption()
+    assertEquals(2, voteCounts?.get(0))
+    assertEquals(1, voteCounts?.get(1))
+    assertEquals(null, voteCounts?.get(2))
+    assertEquals(3, poll?.getTotalVotes())
+    assertEquals(3, poll?.getTotalVoters())
+  }
 }
