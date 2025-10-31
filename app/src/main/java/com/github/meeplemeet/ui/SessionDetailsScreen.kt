@@ -287,9 +287,13 @@ fun SessionDetailsScreen(
                   game = game,
                   onRemoveParticipant = { p ->
                     form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
+                    sessionViewModel.updateSession(
+                        account, discussion, newParticipantList = form.participants)
                   },
                   onAddParticipant = { p ->
                     form = form.copy(participants = form.participants + p)
+                    sessionViewModel.updateSession(
+                        account, discussion, newParticipantList = form.participants)
                   },
                   discussion = discussion,
                   viewModel = viewModel)
