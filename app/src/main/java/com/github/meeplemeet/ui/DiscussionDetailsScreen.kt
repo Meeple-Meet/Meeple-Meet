@@ -151,7 +151,8 @@ fun DiscussionDetailsScreen(
                     OutlinedButton(
                         onClick = { if (!isMember) showDeleteDialog = true },
                         enabled = !isMember,
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative),
                         modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
                           Icon(
                               imageVector = Icons.Default.Delete,
@@ -468,7 +469,7 @@ fun MemberList(
 
               /** --- Status Badge --- */
               val status =
-                  remember(member) {
+                  remember(member, discussion.admins) {
                     when {
                       discussion.creatorId == member.uid -> "Owner"
                       discussion.admins.contains(member.uid) -> "Admin"
