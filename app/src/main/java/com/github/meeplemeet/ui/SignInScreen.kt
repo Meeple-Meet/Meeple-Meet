@@ -9,6 +9,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -140,11 +142,13 @@ fun SignInScreen(
         // Welcome message
         Text(
             "Welcome!",
+            color = AppColors.neutral,
             style = TextStyle(fontSize = 56.sp),
             modifier = Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
 
         // Email input field with validation
         OutlinedTextField(
+            leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
             value = email,
             onValueChange = {
               email = it
@@ -171,6 +175,7 @@ fun SignInScreen(
 
         // Password input field with visibility toggle and validation
         OutlinedTextField(
+            leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
             value = password,
             onValueChange = {
               password = it

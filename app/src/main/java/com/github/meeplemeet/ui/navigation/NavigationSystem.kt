@@ -9,12 +9,15 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavHostController
+import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -124,11 +127,22 @@ fun BottomNavigationMenu(
     modifier: Modifier = Modifier
 ) {
   NavigationBar(
+      containerColor = AppColors.secondary,
+      contentColor = AppColors.textIcons,
       modifier = modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
         MeepleMeetScreen.entries
             .filter { it -> it.inBottomBar }
             .forEach { screen ->
               NavigationBarItem(
+                  colors =
+                      NavigationBarItemColors(
+                          selectedIconColor = AppColors.textIcons,
+                          selectedTextColor = AppColors.textIcons,
+                          selectedIndicatorColor = AppColors.focus,
+                          disabledTextColor = Color.Transparent,
+                          disabledIconColor = Color.Transparent,
+                          unselectedIconColor = AppColors.textIcons,
+                          unselectedTextColor = AppColors.textIcons),
                   icon = { screen.icon?.let { Icon(it, contentDescription = screen.title) } },
                   label = { Text(screen.title) },
                   selected = screen == currentScreen,

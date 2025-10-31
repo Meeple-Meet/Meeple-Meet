@@ -5,7 +5,6 @@
 
 package com.github.meeplemeet.ui
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,9 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -78,7 +77,7 @@ object SessionCreationTestTags {
 
 data class SessionForm(
     val title: String = "",
-    val proposedGame: String = "",
+    val proposedGameString: String = "",
     val minPlayers: Int = 1,
     val maxPlayers: Int = 1,
     val participants: List<Account> = emptyList(),
@@ -97,6 +96,13 @@ const val MIN_SLIDER_NUMBER: Float = 1f
 const val SLIDER_STEPS: Int = (MAX_SLIDER_NUMBER - MIN_SLIDER_NUMBER - 1).toInt()
 
 /** TODO: change this to a truly location searcher later when coded */
+/**
+ * Returns a list of mock location suggestions based on a query string.
+ *
+ * @param query The input string to base the suggestions on.
+ * @param max The maximum number of location suggestions to return.
+ * @return A list of [Location] objects with randomized coordinates.
+ */
 private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
   if (query.isBlank()) return emptyList()
   val rng = Random(query.hashCode())
@@ -107,6 +113,15 @@ private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Locat
   }
 }
 
+/**
+ * Converts a [LocalDate] and [LocalTime] to a Firebase [Timestamp].
+ *
+ * @param date The date of the session, or null.
+ * @param time The time of the session, or null.
+ * @param zoneId The time zone to use for conversion (defaults to system default).
+ * @return A [Timestamp] corresponding to the combined date and time, or the current timestamp if
+ *   either is null.
+ */
 fun toTimestamp(
     date: LocalDate?,
     time: LocalTime?,
@@ -127,6 +142,9 @@ fun toTimestamp(
 /**
  * Composable function representing the Add Session screen.
  *
+ * This screen allows the user to create a new session, including setting a title, selecting a game,
+ * specifying the date and time, choosing a location, and managing participants.
+ *
  * @param account The current user's account.
  * @param discussion The discussion context for the session.
  * @param viewModel The FirestoreViewModel for data operations.
@@ -141,20 +159,26 @@ fun AddSessionScreen(
     sessionViewModel: FirestoreSessionViewModel,
     onBack: () -> Unit = {}
 ) {
+  // Holds the form state for the session
   var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
+  // Holds the selected location (may be null)
   var selectedLocation by remember { mutableStateOf<Location?>(null) }
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  // Helper to show error messages in a snackbar
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
+  // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
     viewModel.getAccounts(discussion.participants) { fetched ->
       form = form.copy(participants = (fetched + account).distinctBy { it.uid })
     }
+    form = form.copy(maxPlayers = form.participants.size)
 
-    if (form.proposedGame.isNotBlank()) {
-      runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGame) }
+    // If a game query was already entered, trigger search
+    if (form.proposedGameString.isNotBlank()) {
+      runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGameString) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
     }
   }
@@ -162,28 +186,10 @@ fun AddSessionScreen(
   Scaffold(
       modifier = Modifier.testTag(SessionCreationTestTags.SCAFFOLD),
       topBar = {
-        CenterAlignedTopAppBar(
-            modifier = Modifier.testTag(SessionCreationTestTags.TOP_APP_BAR),
-            title = {
-              Text(
-                  "Create Session",
-                  modifier = Modifier.testTag(SessionCreationTestTags.TOP_APP_BAR_TITLE),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onPrimary)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = onBack,
-                  modifier = Modifier.testTag(SessionCreationTestTags.NAV_BACK_BTN)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onPrimary)
-                  }
-            },
-            colors =
-                TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface))
+        TopBarWithDivider(
+            text = "Create View",
+            onReturn = { onBack() },
+        )
       },
       snackbarHost = {
         SnackbarHost(snackbar, modifier = Modifier.testTag(SessionCreationTestTags.SNACKBAR_HOST))
@@ -198,28 +204,28 @@ fun AddSessionScreen(
                     .testTag(SessionCreationTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-              // Title
-              LabeledTextField(
-                  label = "Title",
-                  value = form.title,
-                  onValueChange = { form = form.copy(title = it) },
-                  placeholder = TITLE_PLACEHOLDER,
-                  singleLine = true,
-                  modifier =
-                      Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
-
-              // Game search
-              GameSearchBar(
+              // Organisation section (title, game, date, time, location)
+              OrganisationSection(
                   sessionViewModel = sessionViewModel,
-                  currentUser = account,
+                  account = account,
                   discussion = discussion,
-                  queryFallback = form.proposedGame,
-                  onQueryFallbackChange = { form = form.copy(proposedGame = it) },
-                  onError = showError,
-                  modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
+                  showError = showError,
+                  onTitleChange = { form = form.copy(title = it) },
+                  form = form,
+                  onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
+                  date = form.date,
+                  time = form.time,
+                  locationText = form.locationText,
+                  onDateChange = { form = form.copy(date = it) },
+                  onTimeChange = { form = form.copy(time = it) },
+                  onLocationChange = { form = form.copy(locationText = it) },
+                  onLocationPicked = { selectedLocation = it },
+                  title = ORGANISATION_SECTION_NAME,
+                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
-              // Participants section
+              // Participants section (player selection and slider)
               ParticipantsSection(
+                  account = account,
                   currentUserId = account.uid,
                   selected = form.participants,
                   allCandidates = form.participants,
@@ -244,24 +250,14 @@ fun AddSessionScreen(
                   },
                   modifier = Modifier.testTag(SessionCreationTestTags.PARTICIPANTS_SECTION))
 
-              // Organisation section
-              OrganisationSection(
-                  date = form.date,
-                  time = form.time,
-                  locationText = form.locationText,
-                  onDateChange = { form = form.copy(date = it) },
-                  onTimeChange = { form = form.copy(time = it) },
-                  onLocationChange = { form = form.copy(locationText = it) },
-                  onLocationPicked = { selectedLocation = it },
-                  title = ORGANISATION_SECTION_NAME,
-                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
-
               Spacer(Modifier.height(4.dp))
 
-              // Creation and Discard buttons
+              // Row with Discard and Create buttons
               Row(
-                  horizontalArrangement = Arrangement.spacedBy(12.dp),
-                  modifier = Modifier.testTag(SessionCreationTestTags.BUTTON_ROW)) {
+                  horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                  modifier = Modifier.testTag(SessionCreationTestTags.BUTTON_ROW).fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    // Whether form is ready for creation
                     val haveDateTime = form.date != null && form.time != null
                     val withinBounds =
                         form.participants.size >= form.minPlayers &&
@@ -269,14 +265,16 @@ fun AddSessionScreen(
 
                     val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
 
+                    // Reset form and go back on discard
                     DiscardButton(
-                        modifier = Modifier.weight(0.8f),
+                        modifier = Modifier.weight(1f),
                         onDiscard = {
                           form = SessionForm(participants = listOf(account))
                           selectedLocation = null
                           onBack()
                         })
 
+                    // Create a new session if form is valid
                     CreateSessionButton(
                         formToSubmit = form,
                         enabled = canCreate,
@@ -290,7 +288,7 @@ fun AddSessionScreen(
                                     name = form.title,
                                     gameId =
                                         selectedGameId.ifBlank {
-                                          form.proposedGame.ifBlank { "Unknown game" }
+                                          form.proposedGameString.ifBlank { "Unknown game" }
                                         },
                                     date = toTimestamp(form.date, form.time),
                                     location = selectedLocation ?: Location(),
@@ -307,7 +305,7 @@ fun AddSessionScreen(
                           selectedLocation = null
                           onBack()
                         },
-                        modifier = Modifier.weight(1.20f),
+                        modifier = Modifier.weight(1f),
                     )
                   }
             }
@@ -337,53 +335,44 @@ fun GameSearchBar(
     queryFallback: String,
     onQueryFallbackChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    form: SessionForm = SessionForm(),
     onError: (String) -> Unit = {}
 ) {
   val gameUi by sessionViewModel.gameUIState.collectAsState()
   val gameQuery = gameUi.gameQuery.ifBlank { queryFallback }
-
-  SectionCard(
-      modifier
-          .testTag(SessionCreationTestTags.GAME_SEARCH_SECTION)
-          .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
-        UnderlinedLabel("Proposed game:")
-        Spacer(Modifier.height(12.dp))
-
-        GameSearchField(
-            query = gameQuery,
-            onQueryChange = { q ->
-              onQueryFallbackChange(q)
-              discussion?.let { disc ->
-                runCatching { sessionViewModel.setGameQuery(currentUser, disc, q) }
-                    .onFailure { e -> onError(e.message ?: "Game search failed") }
+  GameSearchField(
+      query = gameQuery,
+      onQueryChange = { q ->
+        onQueryFallbackChange(q)
+        discussion?.let { disc ->
+          runCatching { sessionViewModel.setGameQuery(currentUser, disc, q) }
+              .onFailure { e -> onError(e.message ?: "Game search failed") }
+        }
+      },
+      results = gameUi.gameSuggestions,
+      onPick = { game ->
+        discussion?.let { disc ->
+          runCatching {
+                sessionViewModel.setGame(currentUser, disc, game)
+                sessionViewModel.getGameFromId(game.uid)
+                form.copy(maxPlayers = gameUi.fetchedGame?.maxPlayers ?: form.maxPlayers)
               }
-            },
-            results = gameUi.gameSuggestions,
-            onPick = { game ->
-              discussion?.let { disc ->
-                runCatching {
-                      sessionViewModel.setGame(currentUser, disc, game)
-                      sessionViewModel.getGameFromId(game.uid)
-                    }
-                    .onFailure { e -> onError(e.message ?: "Failed to select game") }
-              }
-            },
-            isLoading = false,
-            placeholder = GAME_SEARCH_PLACEHOLDER,
-            modifier = Modifier.fillMaxWidth())
+              .onFailure { e -> onError(e.message ?: "Failed to select game") }
+        }
+      },
+      isLoading = false,
+      placeholder = GAME_SEARCH_PLACEHOLDER,
+      modifier = Modifier.fillMaxWidth())
 
-        gameUi.gameSearchError
-            ?.takeIf { it.isNotBlank() }
-            ?.let { msg ->
-              Spacer(Modifier.height(6.dp))
-              Text(
-                  msg,
-                  modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_ERROR),
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.error)
-            }
+  gameUi.gameSearchError
+      ?.takeIf { it.isNotBlank() }
+      ?.let { msg ->
+        Spacer(Modifier.height(6.dp))
+        Text(
+            msg,
+            modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_ERROR),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error)
       }
 }
 
@@ -417,7 +406,7 @@ fun CreateSessionButton(
             contentDescription = null,
             modifier = Modifier.testTag(SessionCreationTestTags.CREATE_ICON))
         Spacer(Modifier.width(8.dp))
-        Text("Create Session", style = MaterialTheme.typography.bodyMedium)
+        Text("Create", style = MaterialTheme.typography.bodyMedium)
       }
 }
 
@@ -448,18 +437,35 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 /**
  * Composable function representing the organisation section of the session creation form.
  *
+ * This section allows the user to enter the session title, search and select a game, pick date and
+ * time, and search for a location.
+ *
+ * @param form The current session form state.
+ * @param sessionViewModel The FirestoreSessionViewModel for session-specific operations.
+ * @param account The current user's account.
+ * @param onQueryFallbackChange Callback when the game query fallback changes.
+ * @param discussion The discussion context for the session.
+ * @param showError Callback for error handling.
+ * @param onTitleChange Callback when the session title changes.
  * @param date The selected date for the session.
  * @param time The selected time for the session.
  * @param locationText The text input for the location search.
- * @param onDateChange Callback function to be invoked when the date changes.
- * @param onTimeChange Callback function to be invoked when the time changes.
- * @param onLocationChange Callback function to be invoked when the location text changes.
+ * @param onDateChange Callback when the date changes.
+ * @param onTimeChange Callback when the time changes.
+ * @param onLocationChange Callback when the location text changes.
  * @param title The title of the organisation section.
  * @param modifier Modifier for styling the composable.
- * @param onLocationPicked Optional callback function to be invoked when a location is picked.
+ * @param onLocationPicked Optional callback when a location is picked.
  */
 @Composable
 fun OrganisationSection(
+    form: SessionForm = SessionForm(),
+    sessionViewModel: FirestoreSessionViewModel,
+    account: Account,
+    onQueryFallbackChange: (String) -> Unit = {},
+    discussion: Discussion,
+    showError: (String) -> Unit = {},
+    onTitleChange: (String) -> Unit = {},
     date: LocalDate?,
     time: LocalTime?,
     locationText: String,
@@ -474,20 +480,47 @@ fun OrganisationSection(
       modifier
           .testTag(SessionCreationTestTags.ORG_SECTION)
           .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
-        UnderlinedLabel("$title:")
-        Spacer(Modifier.height(12.dp))
+          // border is now background color to create no border effect
+          .border(1.dp, MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)
+          .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
 
+        // Title field for session name
+        IconTextField(
+            value = form.title,
+            onValueChange = { onTitleChange(it) },
+            placeholder = TITLE_PLACEHOLDER,
+            editable = true,
+            leadingIcon = {
+              Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Title")
+            },
+            modifier = Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
+
+        Spacer(Modifier.height(10.dp))
+
+        // Game search section
+        GameSearchBar(
+            sessionViewModel = sessionViewModel,
+            currentUser = account,
+            discussion = discussion,
+            queryFallback = form.proposedGameString,
+            onQueryFallbackChange = { onQueryFallbackChange(it) },
+            onError = showError,
+            modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
+
+        Spacer(Modifier.height(10.dp))
+
+        // Date picker for session date
         DatePickerDockedField(
             value = date, onValueChange = onDateChange, label = "Date", editable = true)
 
         Spacer(Modifier.height(10.dp))
 
+        // Time picker for session time
         TimePickerField(value = time, onValueChange = onTimeChange, label = "Time")
 
         Spacer(Modifier.height(10.dp))
 
+        // Location search field with suggestions
         val locationResults = remember(locationText) { mockLocationSuggestionsFrom(locationText) }
         LocationSearchField(
             query = locationText,
@@ -525,6 +558,8 @@ fun OrganisationSection(
  */
 @Composable
 fun ParticipantsSection(
+    modifier: Modifier = Modifier,
+    account: Account,
     currentUserId: String,
     selected: List<Account>,
     allCandidates: List<Account>,
@@ -540,14 +575,14 @@ fun ParticipantsSection(
     sliderDescription: String,
     elevationSelected: Dp = Elevation.floating,
     elevationUnselected: Dp = Elevation.raised,
-    modifier: Modifier = Modifier
 ) {
   SectionCard(
       modifier
           .testTag(SessionCreationTestTags.PARTICIPANTS_SECTION)
           .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)) {
+          // border is now background color to create no border effect
+          .border(1.dp, MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)
+          .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
 
         // Header
         Row(
@@ -566,12 +601,6 @@ fun ParticipantsSection(
                       .padding(horizontal = 10.dp, vertical = 6.dp))
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = sliderDescription,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(2.dp))
 
         // Slider row
@@ -594,7 +623,7 @@ fun ParticipantsSection(
                   steps = sliderSteps,
                   modifier = Modifier.weight(1f),
                   sliderModifier =
-                      Modifier.background(MaterialTheme.colorScheme.surface, CircleShape)
+                      Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
                           .padding(horizontal = 10.dp, vertical = 6.dp))
 
               CountBubble(
@@ -609,50 +638,8 @@ fun ParticipantsSection(
 
         Spacer(Modifier.height(12.dp))
 
-        // Selected chips
-        val animElev by animateDpAsState(targetValue = elevationSelected, label = "chipElevation")
-        TwoPerRowGrid(
-            items = selected,
-            key = { it.uid },
-            modifier = Modifier.fillMaxWidth(),
-            rowsModifier = Modifier.fillMaxWidth(),
-        ) { acc, itemModifier ->
-          ParticipantChip(
-              account = acc,
-              action = ParticipantAction.Remove,
-              onClick = { toRemove -> if (toRemove.uid != currentUserId) onRemove(toRemove) },
-              modifier =
-                  itemModifier
-                      .shadow(animElev, MaterialTheme.shapes.large, clip = false)
-                      .background(MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-                      .padding(horizontal = 8.dp, vertical = 4.dp),
-              textModifier = Modifier.fillMaxWidth())
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Candidates
-        val selectedIds by remember(selected) { derivedStateOf { selected.map { it.uid }.toSet() } }
-        val candidates by
-            remember(allCandidates, selectedIds, currentUserId) {
-              derivedStateOf {
-                allCandidates.filter { it.uid != currentUserId && it.uid !in selectedIds }
-              }
-            }
-
-        TwoPerRowGrid(items = candidates, key = { it.uid }) { acc, itemModifier ->
-          ParticipantChip(
-              account = acc,
-              action = ParticipantAction.Add,
-              onClick = onAdd,
-              modifier =
-                  itemModifier
-                      .shadow(elevationUnselected, MaterialTheme.shapes.large, clip = false)
-                      .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-                      .padding(horizontal = 8.dp, vertical = 4.dp),
-              textModifier = Modifier.fillMaxWidth())
-        }
+        // All candidate chips
+        UserChipsGrid(
+            participants = allCandidates, onRemove = onRemove, onAdd = onAdd, account = account)
       }
 }

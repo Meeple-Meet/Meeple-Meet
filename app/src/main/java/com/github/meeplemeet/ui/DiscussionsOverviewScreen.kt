@@ -52,6 +52,7 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Elevation
 
 /* ================================================================
@@ -96,6 +97,9 @@ fun DiscussionsOverviewScreen(
       floatingActionButton = {
         FloatingActionButton(
             onClick = onClickAddDiscussion,
+            contentColor = AppColors.textIcons,
+            shape = CircleShape,
+            containerColor = AppColors.neutral,
             modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Create")
             }

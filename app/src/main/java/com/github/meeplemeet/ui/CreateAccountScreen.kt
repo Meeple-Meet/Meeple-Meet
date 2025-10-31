@@ -1,7 +1,9 @@
 /** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -11,9 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
@@ -79,13 +83,16 @@ fun CreateAccountScreen(
       verticalArrangement = Arrangement.Center) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        /** Placeholder image box displayed at the top of the screen. */
-        Box(
-            modifier =
-                Modifier.size(120.dp)
-                    .background(Color(0xFFe0e0e0))
-                    .testTag(CreateAccountTestTags.IMAGE))
-
+        // App logo displayed on top of text.
+        val isDarkTheme = isSystemInDarkTheme()
+        Box(modifier = Modifier.size(250.dp)) {
+          Image(
+              painter =
+                  painterResource(
+                      id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+              contentDescription = "Meeple Meet Logo",
+              modifier = Modifier.fillMaxSize())
+        }
         Spacer(modifier = Modifier.height(32.dp))
 
         /** Title text shown below the image placeholder. */
@@ -107,6 +114,10 @@ fun CreateAccountScreen(
                     unfocusedIndicatorColor = AppColors.textIconsFade,
                     cursorColor = AppColors.textIcons,
                     focusedLabelColor = AppColors.textIcons,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    errorContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
                     unfocusedLabelColor = AppColors.textIconsFade,
                     focusedTextColor = AppColors.textIcons,
                     unfocusedTextColor = AppColors.textIconsFade),
@@ -125,7 +136,7 @@ fun CreateAccountScreen(
                       .testTag(CreateAccountTestTags.HANDLE_ERROR))
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         /** Input field for entering the user's display username. */
         OutlinedTextField(
@@ -142,6 +153,10 @@ fun CreateAccountScreen(
                     unfocusedIndicatorColor = AppColors.textIconsFade,
                     cursorColor = AppColors.textIcons,
                     focusedLabelColor = AppColors.textIcons,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    errorContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
                     unfocusedLabelColor = AppColors.textIconsFade,
                     focusedTextColor = AppColors.textIcons,
                     unfocusedTextColor = AppColors.textIconsFade),
@@ -161,7 +176,7 @@ fun CreateAccountScreen(
                       .testTag(CreateAccountTestTags.USERNAME_ERROR))
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         /** Submit button to create the account once inputs are valid. */
         Button(

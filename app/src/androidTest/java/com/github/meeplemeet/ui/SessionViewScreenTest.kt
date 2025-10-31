@@ -16,6 +16,7 @@ import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Session
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.viewmodels.GameUIState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -87,7 +88,7 @@ class SessionDetailsScreenTest {
   private val initialForm =
       SessionForm(
           title = "Friday Night Meetup",
-          proposedGame = "",
+          proposedGameString = "",
           minPlayers = 3,
           maxPlayers = 6,
           participants =
@@ -217,8 +218,18 @@ class SessionDetailsScreenTest {
 
   @Test
   fun time_open_and_confirm_closes_dialog() {
+    val gameUIState = GameUIState()
     composeTestRule.setContent {
-      OrganizationSection(form = initialForm, onFormChange = {}, editable = true)
+      OrganizationSection(
+          form = initialForm,
+          onFormChange = {},
+          editable = true,
+          sessionViewModel = sessionVM,
+          discussion = baseDiscussion,
+          account = admin,
+          gameUIState = gameUIState,
+          isCurrUserAdmin = true,
+          onValueChangeTitle = {})
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.TIME_PICK_BUTTON).performClick()
@@ -478,7 +489,7 @@ class SessionDetailsScreenTest {
 
     val min = readIntFromText(SessionTestTags.MIN_PLAYERS)
     val max = readIntFromText(SessionTestTags.MAX_PLAYERS)
-    assert(min == 3)
+    assert(min == 2)
     assert(max == 6)
   }
 

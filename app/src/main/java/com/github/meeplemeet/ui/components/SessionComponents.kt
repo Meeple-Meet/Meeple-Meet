@@ -28,18 +28,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -51,7 +54,9 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -75,6 +80,7 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.ui.SessionTestTags
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import java.time.Instant
 import java.time.LocalDate
@@ -88,6 +94,8 @@ object ComponentsTestTags {
   const val UNDERLINED_LABEL = "comp_underlined_label"
   const val LABELED_LABEL = "comp_labeled_label"
   const val COUNT_BUBBLE_TEXT = "comp_count_bubble_text"
+
+  const val TOP_APP_BAR = "comp_top_app_bar"
 
   const val PILL_RANGE_SLIDER = "comp_pill_range_slider"
 
@@ -229,7 +237,7 @@ fun IconTextField(
       readOnly = !editable,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
-      placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+      label = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
       textStyle = textStyle)
 }
 
@@ -294,6 +302,55 @@ fun DiscretePillSlider(
           colors = sliderColors,
           modifier = Modifier.testTag(ComponentsTestTags.PILL_RANGE_SLIDER))
     }
+  }
+}
+
+/**
+ * Displays a top app bar with a title and a back button.
+ *
+ * @param text The title text to display in the top bar.
+ * @param onReturn Callback invoked when the back button is pressed.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopBarWithDivider(
+    text: String,
+    onReturn: () -> Unit = {},
+    trailingIcons: @Composable () -> Unit = {}
+) {
+  /** --- Top App Bar --- */
+  Column {
+    CenterAlignedTopAppBar(
+        modifier = Modifier.testTag(ComponentsTestTags.TOP_APP_BAR).background(AppColors.primary),
+        navigationIcon = {
+          IconButton(
+              onClick = { onReturn() },
+              modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = AppColors.textIcons)
+              }
+        },
+        title = {
+          Text(
+              text = text,
+              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE),
+              style = MaterialTheme.typography.bodyMedium,
+              color = AppColors.textIcons)
+        },
+        actions = { /* Add trailing icons here if needed */
+          trailingIcons()
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AppColors.primary))
+    /** --- Divider --- */
+    HorizontalDivider(
+        modifier =
+            Modifier.fillMaxWidth(0.7f) // 70% width to create middle effect
+                .padding(horizontal = 0.dp)
+                .align(Alignment.CenterHorizontally),
+        thickness = 1.dp,
+        color = AppColors.textIconsFade)
   }
 }
 
@@ -449,6 +506,15 @@ fun AppDatePickerDialog(
 
   DatePickerDialog(
       onDismissRequest = onDismiss,
+      colors =
+          DatePickerDefaults.colors(
+              todayContentColor = AppColors.textIcons,
+              todayDateBorderColor = AppColors.neutral,
+              containerColor = AppColors.primary,
+              titleContentColor = AppColors.textIconsFade,
+              headlineContentColor = AppColors.textIcons,
+              selectedDayContentColor = AppColors.primary,
+              selectedDayContainerColor = AppColors.neutral),
       confirmButton = {
         TextButton(
             modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON),
@@ -461,13 +527,19 @@ fun AppDatePickerDialog(
               Text("OK")
             }
       },
-      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+      dismissButton = {
+        TextButton(onClick = onDismiss, modifier = Modifier.testTag("date-picker-cancel")) {
+          Text("Cancel")
+        }
+      },
   ) {
     DatePicker(
         state = state,
         modifier = Modifier.testTag(ComponentsTestTags.DATE_PICKER),
         colors =
             DatePickerDefaults.colors(
+                todayContentColor = AppColors.textIcons,
+                todayDateBorderColor = AppColors.neutral,
                 containerColor = AppColors.primary,
                 titleContentColor = AppColors.textIconsFade,
                 headlineContentColor = AppColors.textIcons,
@@ -517,6 +589,7 @@ fun TimePickerField(
   if (open) {
     AlertDialog(
         onDismissRequest = { open = false },
+        containerColor = AppColors.primary,
         confirmButton = {
           TextButton(
               modifier = Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON),
@@ -529,7 +602,20 @@ fun TimePickerField(
         },
         dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
         text = {
-          TimePicker(state = state, modifier = Modifier.testTag(ComponentsTestTags.TIME_PICKER))
+          TimeInput(
+              state = state,
+              modifier = Modifier.testTag(ComponentsTestTags.TIME_PICKER),
+              TimePickerDefaults.colors(
+                  clockDialColor = AppColors.secondary,
+                  clockDialSelectedContentColor = AppColors.primary,
+                  clockDialUnselectedContentColor = AppColors.textIconsFade,
+                  selectorColor = AppColors.neutral,
+                  periodSelectorBorderColor = AppColors.textIconsFade,
+                  periodSelectorSelectedContainerColor = AppColors.secondary,
+                  periodSelectorSelectedContentColor = AppColors.negative,
+                  timeSelectorSelectedContainerColor = AppColors.neutral,
+                  timeSelectorUnselectedContainerColor = AppColors.secondary,
+              ))
         })
   }
 }
