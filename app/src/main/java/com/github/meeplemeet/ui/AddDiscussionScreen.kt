@@ -301,7 +301,7 @@ fun AddDiscussionScreen(
                     OutlinedButton(
                         onClick = onBack,
                         modifier =
-                            Modifier.fillMaxWidth(0.3f)
+                            Modifier.fillMaxWidth(0.75f)
                                 .testTag(AddDiscussionTestTags.DISCARD_BUTTON),
                         shape = CircleShape,
                         colors =
