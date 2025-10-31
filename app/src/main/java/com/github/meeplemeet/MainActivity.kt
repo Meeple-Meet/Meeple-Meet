@@ -30,6 +30,7 @@ import com.github.meeplemeet.model.viewmodels.AuthViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
 import com.github.meeplemeet.ui.AddDiscussionScreen
 import com.github.meeplemeet.ui.AddSessionScreen
 import com.github.meeplemeet.ui.CreateAccountScreen
@@ -38,6 +39,7 @@ import com.github.meeplemeet.ui.DiscoverSessionsScreen
 import com.github.meeplemeet.ui.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.DiscussionScreen
 import com.github.meeplemeet.ui.DiscussionsOverviewScreen
+import com.github.meeplemeet.ui.FeedsOverviewScreen
 import com.github.meeplemeet.ui.ProfileScreen
 import com.github.meeplemeet.ui.SessionDetailsScreen
 import com.github.meeplemeet.ui.SessionsOverviewScreen
@@ -78,6 +80,7 @@ fun MeepleMeetApp(
     authVM: AuthViewModel = viewModel(),
     firestoreVM: FirestoreViewModel = viewModel(),
     handlesVM: FirestoreHandlesViewModel = viewModel(),
+    postsOverviewVM: PostOverviewViewModel = viewModel(),
     navController: NavHostController = rememberNavController()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
@@ -234,6 +237,16 @@ fun MeepleMeetApp(
           onPost = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverFeeds) },
           onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.DiscoverFeeds) },
           onBack = { navigationActions.goBack() })
+    }
+    // TODO: Add post selection callback
+    composable(MeepleMeetScreen.FeedsOverview.name) {
+      FeedsOverviewScreen(
+          account = account!!,
+          navigation = navigationActions,
+          firestoreViewModel = firestoreVM,
+          postOverviewVM = postsOverviewVM,
+          onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
+          onSelectPost = {})
     }
 
     composable(MeepleMeetScreen.Profile.name) {

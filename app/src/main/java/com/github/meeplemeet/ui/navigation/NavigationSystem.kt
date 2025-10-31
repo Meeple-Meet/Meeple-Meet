@@ -110,6 +110,7 @@ enum class MeepleMeetScreen(
   AddSession("Add Session"),
   Session("Session"),
   SessionDetails("Session Details"),
+  FeedsOverview("Feeds"),
   CreatePost("Create post")
 }
 
