@@ -57,7 +57,7 @@ object AddDiscussionTestTags {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddDiscussionScreen(
+fun CreateDiscussionScreen(
     account: Account,
     viewModel: FirestoreViewModel = viewModel(),
     handleViewModel: FirestoreHandlesViewModel = viewModel(),
@@ -258,13 +258,28 @@ fun AddDiscussionScreen(
               }
 
               /** Spacer to move buttons higher */
-              Spacer(modifier = Modifier.height(48.dp))
+              Spacer(modifier = Modifier.weight(1f))
 
               /** Buttons section */
               Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween,
                   verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier =
+                            Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
+                        shape = RoundedCornerShape(percent = 50),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = AppColors.negative)) {
+                          Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
+                        }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
                     Button(
                         onClick = {
                           scope.launch {
@@ -286,30 +301,14 @@ fun AddDiscussionScreen(
                         },
                         enabled = title.isNotBlank() && !isCreating,
                         modifier =
-                            Modifier.testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
-                                .fillMaxWidth(0.4f),
-                        shape = RoundedCornerShape(50.dp),
+                            Modifier.weight(1f)
+                                .testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON),
+                        shape = RoundedCornerShape(percent = 50),
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
                           Icon(imageVector = Icons.Default.Check, contentDescription = null)
                           Spacer(modifier = Modifier.width(8.dp))
                           Text(text = "Create", style = MaterialTheme.typography.bodySmall)
-                        }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    OutlinedButton(
-                        onClick = onBack,
-                        modifier =
-                            Modifier.fillMaxWidth(0.75f)
-                                .testTag(AddDiscussionTestTags.DISCARD_BUTTON),
-                        shape = CircleShape,
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = AppColors.negative)) {
-                          Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
-                          Spacer(modifier = Modifier.width(8.dp))
-                          Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
                         }
                   }
             }

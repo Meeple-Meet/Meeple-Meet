@@ -86,7 +86,7 @@ class CreateSessionScreenTest {
   private fun setContent(discussion: Discussion = baseDiscussion, onBack: () -> Unit = {}) {
     compose.setContent {
       AppTheme {
-        AddSessionScreen(
+        CreateSessionScreen(
             viewModel = viewModel,
             sessionViewModel = sessionVM,
             account = me,
@@ -220,7 +220,7 @@ class CreateSessionScreenTest {
       AppTheme {
         var disc by remember { mutableStateOf(baseDiscussion) }
         updateDiscussion = { newDisc -> disc = newDisc }
-        AddSessionScreen(
+        CreateSessionScreen(
             viewModel = viewModel,
             sessionViewModel = sessionVM,
             account = me,

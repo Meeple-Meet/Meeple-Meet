@@ -152,7 +152,7 @@ fun toTimestamp(
  * @param onBack Callback function to be invoked when navigating back.
  */
 @Composable
-fun AddSessionScreen(
+fun CreateSessionScreen(
     account: Account,
     discussion: Discussion,
     viewModel: FirestoreViewModel,
