@@ -634,6 +634,10 @@ fun ParticipantsSection(
 
         // All candidate chips
         UserChipsGrid(
-            participants = allCandidates, onRemove = onRemove, onAdd = onAdd, account = account)
+            participants = allCandidates,
+            onRemove = onRemove,
+            onAdd = onAdd,
+            account = account,
+            editable = true)
       }
 }
