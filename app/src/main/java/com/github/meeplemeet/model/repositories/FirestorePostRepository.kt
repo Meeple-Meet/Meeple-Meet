@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.structures.PostNoUid
 import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.structures.toNoUid
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
@@ -113,6 +114,7 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
         .document(commentId)
         .set(comment)
         .await()
+    posts.document(postId).update(PostNoUid::commentCount.name, FieldValue.increment(1)).await()
     return commentId
   }
 
@@ -137,6 +139,7 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
     replies.documents.forEach { batch.delete(it.reference) }
     batch.delete(commentDoc.reference)
     batch.commit().await()
+    posts.document(postId).update(PostNoUid::commentCount.name, FieldValue.increment(-1)).await()
   }
 
   /**
