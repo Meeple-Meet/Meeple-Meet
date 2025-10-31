@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
@@ -34,7 +33,6 @@ import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Elevation
 import java.text.SimpleDateFormat
 import java.util.*
@@ -93,7 +91,7 @@ fun FeedsOverviewScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.FeedsOverview.title,
+                  text = MeepleMeetScreen.DiscoverPosts.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -101,7 +99,7 @@ fun FeedsOverviewScreen(
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.FeedsOverview,
+            currentScreen = MeepleMeetScreen.DiscoverPosts,
             modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
@@ -309,93 +307,4 @@ private fun FeedCard(
           }
         }
       }
-}
-
-/* ==========  PREVIEWS  ======================================================= */
-@Preview(showBackground = true, name = "Card – AppColors")
-@Composable
-private fun FeedCardPreview() {
-  AppTheme {
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-      FeedCard(
-          authorName = "Alice",
-          postTitle = "Tomorrow party !",
-          lastMsg = "Be on time please",
-          commentCount = 12,
-          date = "31/10/2025",
-          firstTag = "board-games",
-          modifier = Modifier.fillMaxWidth())
-    }
-  }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true, name = "Overview – scaffold mock")
-@Composable
-private fun FeedsOverviewPreview() {
-  AppTheme {
-    Scaffold(
-        topBar = {
-          CenterAlignedTopAppBar(
-              title = {
-                Text(
-                    text = MeepleMeetScreen.FeedsOverview.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary)
-              })
-        },
-        bottomBar = {
-          BottomNavigationMenu(
-              currentScreen = MeepleMeetScreen.FeedsOverview, onTabSelected = { /* preview only */})
-        }) { inner ->
-          LazyColumn(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .background(MaterialTheme.colorScheme.background)
-                      .padding(inner),
-              verticalArrangement = Arrangement.spacedBy(10.dp),
-              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
-                item {
-                  FeedCard(
-                      authorName = "Catan Crew",
-                      postTitle = "Catan Crew",
-                      lastMsg = "You: I’ll bring wheat 🍞",
-                      commentCount = 0,
-                      date = "31/10/2025",
-                      firstTag = "board-games",
-                      modifier = Modifier.fillMaxWidth())
-                }
-                item {
-                  FeedCard(
-                      authorName = "Alice",
-                      postTitle = "Gloomhaven Sunday",
-                      lastMsg = "Alice: Scenario 12 tonight? Need traps disarmed.",
-                      commentCount = 3,
-                      date = "30/10/2025",
-                      firstTag = "rpg",
-                      modifier = Modifier.fillMaxWidth())
-                }
-                item {
-                  FeedCard(
-                      authorName = "Ben",
-                      postTitle = "Arkham Horror Night",
-                      lastMsg = "Ben: Chaos bag updated. Don’t forget new weakness cards!",
-                      commentCount = 1,
-                      date = "29/10/2025",
-                      firstTag = "horror",
-                      modifier = Modifier.fillMaxWidth())
-                }
-                item {
-                  FeedCard(
-                      authorName = "System",
-                      postTitle = "Ticket to Ride: Europe",
-                      lastMsg = "(No messages yet)",
-                      commentCount = 0,
-                      date = "28/10/2025",
-                      firstTag = null,
-                      modifier = Modifier.fillMaxWidth())
-                }
-              }
-        }
-  }
 }
