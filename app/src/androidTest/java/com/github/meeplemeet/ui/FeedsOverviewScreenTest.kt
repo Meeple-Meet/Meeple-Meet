@@ -72,6 +72,9 @@ class FeedsOverviewScreenTest : FirestoreTests() {
     bob = accountRepo.createAccount("bobUID", "Bob", "bob@test.com", null)
     createdAccounts += alice
     createdAccounts += bob
+    awaitAccountExists(me.uid)
+    awaitAccountExists(alice.uid)
+    awaitAccountExists(bob.uid)
 
     /* SINGLE setContent – will be updated by changing the state vars */
     compose.setContent {
@@ -181,5 +184,16 @@ class FeedsOverviewScreenTest : FirestoreTests() {
   /* ---------------- helper ---------------- */
   private inline fun checkpoint(name: String, crossinline block: () -> Unit) {
     runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
+  }
+
+  private suspend fun awaitAccountExists(uid: String, maxAttempts: Int = 5) {
+    repeat(maxAttempts) {
+      runCatching { accountRepo.getAccount(uid) }
+          .onSuccess {
+            return
+          }
+      kotlinx.coroutines.delay(500)
+    }
+    throw IllegalStateException("Account $uid never appeared in Firestore")
   }
 }
