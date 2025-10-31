@@ -222,84 +222,78 @@ fun SessionDetailsScreen(
             },
         )
       },
-  ) { innerPadding ->
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .background(AppColors.primary)
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-
-          // Organisation section (session info and controls)
-          // Editable for admins and the session creator, read-only for members.
-          OrganizationSection(
-              form = form,
-              onFormChange = { form = it },
-              editable = isCurrUserAdmin,
-              discussion = discussion,
-              account = account,
-              gameUIState = gameUIState,
-              onValueChangeTitle = { form = form.copy(title = it) },
-              isCurrUserAdmin = isCurrUserAdmin,
-              sessionViewModel = sessionViewModel)
-
-          // Participants section (chips, add/remove)
-          ParticipantsSection(
-              form = form,
-              editable = isCurrUserAdmin,
-              account = account,
-              game = game,
-              onRemoveParticipant = { p ->
-                form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
-              },
-              onAddParticipant = { p -> form = form.copy(participants = form.participants + p) },
-              discussion = discussion,
-              viewModel = viewModel)
-
-          Spacer(Modifier.height(4.dp))
-          // Row with Leave and Delete buttons.
-          // - "Leave" is available to all users and removes the current user from participants.
-          //   If the user is the last participant, the session is deleted.
-          // - "Delete" is shown only to admins/owners (see DeleteSessionBTN for logic).
-          Row(
-              horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(
-                    onClick = {
-                      val updatedParticipants =
-                          form.participants.filterNot { it.uid == account.uid }
-                      discussion.let { disc ->
-                        if (updatedParticipants.isNotEmpty())
-                            sessionViewModel.updateSession(
-                                requester = account,
-                                discussion = disc,
-                                newParticipantList = updatedParticipants)
-                        else sessionViewModel.deleteSession(account, disc)
-                      }
-                    },
-                    shape = CircleShape,
-                    border = BorderStroke(1.5.dp, AppColors.negative),
-                    modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                      Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                      Spacer(Modifier.width(8.dp))
-                      Text("Leave", style = MaterialTheme.typography.bodyMedium)
+      bottomBar = {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              OutlinedButton(
+                  onClick = {
+                    val updatedParticipants = form.participants.filterNot { it.uid == account.uid }
+                    discussion.let { disc ->
+                      if (updatedParticipants.isNotEmpty())
+                          sessionViewModel.updateSession(
+                              requester = account,
+                              discussion = disc,
+                              newParticipantList = updatedParticipants)
+                      else sessionViewModel.deleteSession(account, disc)
                     }
+                  },
+                  shape = CircleShape,
+                  border = BorderStroke(1.5.dp, AppColors.negative),
+                  modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Leave", style = MaterialTheme.typography.bodyMedium)
+                  }
 
-                // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
-                DeleteSessionBTN(
-                    sessionViewModel = sessionViewModel,
-                    currentUser = account,
-                    discussion = discussion,
-                    userIsAdmin = isCurrUserAdmin,
-                    modifier = Modifier.weight(1f))
-              }
-        }
-  }
+              // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
+              DeleteSessionBTN(
+                  sessionViewModel = sessionViewModel,
+                  currentUser = account,
+                  discussion = discussion,
+                  userIsAdmin = isCurrUserAdmin,
+                  modifier = Modifier.weight(1f))
+            }
+      }) { innerPadding ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .background(AppColors.primary)
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+              // Organisation section (session info and controls)
+              // Editable for admins and the session creator, read-only for members.
+              OrganizationSection(
+                  form = form,
+                  onFormChange = { form = it },
+                  editable = isCurrUserAdmin,
+                  discussion = discussion,
+                  account = account,
+                  gameUIState = gameUIState,
+                  onValueChangeTitle = { form = form.copy(title = it) },
+                  isCurrUserAdmin = isCurrUserAdmin,
+                  sessionViewModel = sessionViewModel)
+
+              // Participants section (chips, add/remove)
+              ParticipantsSection(
+                  form = form,
+                  editable = isCurrUserAdmin,
+                  account = account,
+                  game = game,
+                  onRemoveParticipant = { p ->
+                    form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
+                  },
+                  onAddParticipant = { p ->
+                    form = form.copy(participants = form.participants + p)
+                  },
+                  discussion = discussion,
+                  viewModel = viewModel)
+            }
+      }
 }
 
 /* =======================================================================
@@ -712,7 +706,7 @@ fun UserChip(
             }
       },
       trailingIcon = {
-        if (showRemoveBTN && account.uid != user.uid) {
+        if (showRemoveBTN && account.handle != user.handle) {
           IconButton(
               onClick = onRemove,
               modifier =
