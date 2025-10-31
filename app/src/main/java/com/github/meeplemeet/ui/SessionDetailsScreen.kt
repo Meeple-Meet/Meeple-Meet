@@ -279,7 +279,6 @@ fun SessionDetailsScreen(
                                 newParticipantList = updatedParticipants)
                         else sessionViewModel.deleteSession(account, disc)
                       }
-                      onBack()
                     },
                     shape = CircleShape,
                     border = BorderStroke(1.5.dp, AppColors.negative),
@@ -297,7 +296,6 @@ fun SessionDetailsScreen(
                     currentUser = account,
                     discussion = discussion,
                     userIsAdmin = isCurrUserAdmin,
-                    onback = onBack,
                     modifier = Modifier.weight(1f))
               }
         }
@@ -322,7 +320,6 @@ fun ParticipantsSection(
 ) {
   val participants = form.participants
   val currentCount = participants.size
-  val max = game?.maxPlayers ?: 0
 
   // Fetch discussion members (UID -> Account) once and keep in state
   var candidateAccounts by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -377,8 +374,6 @@ fun ParticipantsSection(
                     .padding(horizontal = 10.dp, vertical = 6.dp)
                     .testTag(SessionTestTags.MAX_PLAYERS))
       }
-    } else {
-      Text("Loading slider...", color = AppColors.textIconsFade)
     }
 
     Spacer(Modifier.height(12.dp))
@@ -659,7 +654,6 @@ fun OrganizationSection(
  *
  * @param text Title text
  * @param editable Whether the field is editable
- * @param form Current session form data
  * @param onValueChange Callback triggered when the title changes
  * @param modifier Modifier applied to the composable
  */
@@ -880,7 +874,6 @@ fun TimeField(
  * @param currentUser User performing the action
  * @param discussion Discussion the session is tied to
  * @param userIsAdmin Boolean to check whether the user can see this button
- * @param onback Callback function for navigation
  * @param modifier Modifier for the button layout
  */
 @Composable
@@ -889,15 +882,11 @@ fun DeleteSessionBTN(
     currentUser: Account,
     discussion: Discussion,
     userIsAdmin: Boolean,
-    onback: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   if (userIsAdmin) {
     OutlinedButton(
-        onClick = {
-          sessionViewModel.deleteSession(currentUser, discussion)
-          onback()
-        },
+        onClick = { sessionViewModel.deleteSession(currentUser, discussion) },
         shape = CircleShape,
         border = BorderStroke(1.5.dp, AppColors.negative),
         modifier = modifier.testTag(SessionTestTags.DELETE_SESSION_BUTTON),

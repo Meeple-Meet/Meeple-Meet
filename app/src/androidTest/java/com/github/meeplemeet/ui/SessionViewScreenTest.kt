@@ -528,7 +528,7 @@ class SessionDetailsScreenTest {
           currentUser = admin,
           discussion = baseDiscussion,
           userIsAdmin = true,
-          onback = { backCalled = true })
+          onBack = { backCalled = true })
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.DELETE_SESSION_BUTTON).assertExists()
