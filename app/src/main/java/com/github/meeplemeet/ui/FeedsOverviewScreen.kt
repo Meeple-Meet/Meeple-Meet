@@ -39,6 +39,11 @@ import com.github.meeplemeet.ui.theme.Elevation
 import java.text.SimpleDateFormat
 import java.util.*
 
+object FeedsOverviewTestTags {
+  const val ADD_POST_BUTTON = "AddPostButton"
+  const val POST_CARD_PREFIX = "Post/"
+}
+
 /* ==========  CONSTANTS  ====================================================== */
 /** Placeholder text shown when a post has no comments yet. */
 private const val NO_COMMENTS_DEFAULT_TEXT = "(No comments yet)"
@@ -78,7 +83,9 @@ fun FeedsOverviewScreen(
   Scaffold(
       floatingActionButton = {
         FloatingActionButton(
-            onClick = onClickAddPost, modifier = Modifier.testTag("AddPostButton")) {
+            onClick = onClickAddPost,
+            modifier = Modifier.testTag(FeedsOverviewTestTags.ADD_POST_BUTTON),
+            containerColor = AppColors.neutral) {
               Icon(Icons.Default.Add, contentDescription = "Create")
             }
       },
@@ -95,6 +102,7 @@ fun FeedsOverviewScreen(
       bottomBar = {
         BottomNavigationMenu(
             currentScreen = MeepleMeetScreen.FeedsOverview,
+            modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
         if (postsSorted.isEmpty()) {
@@ -149,7 +157,9 @@ fun FeedsOverviewScreen(
                       commentCount = post.comments.size,
                       date = dateFormatted,
                       firstTag = post.tags.firstOrNull(),
-                      modifier = Modifier.fillMaxWidth().testTag("Post/${post.id}"),
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .testTag(FeedsOverviewTestTags.POST_CARD_PREFIX + post.id),
                       onClick = { onSelectPost(post) })
                 }
               }
@@ -278,6 +288,7 @@ private fun FeedCard(
                 modifier =
                     Modifier.align(Alignment.TopEnd)
                         .padding(8.dp)
+                        .widthIn(min = 48.dp, max = 110.dp)
                         .height(24.dp)
                         .clip(MaterialTheme.shapes.large)
                         .background(AppColors.neutral)
