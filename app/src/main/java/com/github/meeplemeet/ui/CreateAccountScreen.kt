@@ -104,7 +104,15 @@ fun CreateAccountScreen(
         /** Input field for entering the user's unique handle. */
         OutlinedTextField(
             value = handle,
-            onValueChange = { handle = it },
+            onValueChange = {
+              handle = it
+              if (it.isNotBlank()) {
+                showErrors = true
+                handlesVM.checkHandleAvailable(it)
+              } else {
+                showErrors = false
+              }
+            },
             label = { Text("Handle") },
             singleLine = true,
             textStyle = TextStyle(color = AppColors.textIcons),
@@ -180,7 +188,7 @@ fun CreateAccountScreen(
 
         /** Submit button to create the account once inputs are valid. */
         Button(
-            enabled = handle.isNotBlank() && username.isNotBlank(),
+            enabled = handle.isNotBlank() && username.isNotBlank() && errorMessage.isBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
             shape = CircleShape,
             elevation =
