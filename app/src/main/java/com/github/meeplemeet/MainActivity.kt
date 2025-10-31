@@ -214,19 +214,6 @@ fun MeepleMeetApp(
           handlesViewModel = handlesVM)
     }
 
-    composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
-
-    composable(MeepleMeetScreen.Session.name) {
-      sessionRepo?.let {
-        SessionDetailsScreen(
-            account = account!!,
-            discussion = discussion!!,
-            viewModel = firestoreVM,
-            sessionViewModel = sessionRepo,
-            onBack = { navigationActions.goBack() })
-      } ?: LoadingScreen()
-    }
-
     composable(MeepleMeetScreen.CreateSession.name) {
       sessionRepo?.let {
         CreateSessionScreen(
@@ -238,8 +225,20 @@ fun MeepleMeetApp(
       } ?: LoadingScreen()
     }
 
-    // TODO: To be replaced with the right Discover screen later on
-    // composable(MeepleMeetScreen.DiscoverFeeds.name) { DiscoverSessionsScreen(navigationActions) }
+    composable(MeepleMeetScreen.Session.name) {
+      sessionRepo?.let {
+        discussion!!.session?.let {
+          SessionDetailsScreen(
+              account = account!!,
+              discussion = discussion!!,
+              viewModel = firestoreVM,
+              sessionViewModel = sessionRepo,
+              onBack = { navigationActions.goBack() })
+        } ?: navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+      } ?: LoadingScreen()
+    }
+
+    composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
 
     composable(MeepleMeetScreen.PostsOverview.name) {
       PostsOverviewScreen(

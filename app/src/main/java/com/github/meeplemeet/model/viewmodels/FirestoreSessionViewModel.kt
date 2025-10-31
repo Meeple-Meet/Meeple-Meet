@@ -93,31 +93,17 @@ class FirestoreSessionViewModel(
       gameId: String,
       date: Timestamp,
       location: Location,
-      minParticipants: Int = 1,
-      maxParticipants: Int = 10,
       vararg participants: Account
   ) {
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
-
-    if (minParticipants > maxParticipants)
-        throw IllegalArgumentException(
-            "The minimum number of participants can not be more than the maximum number of participants")
 
     val participantsList = participants.toList().map { it -> it.uid }
     if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
 
     viewModelScope.launch {
       _discussion.value =
-          repository.updateSession(
-              discussion.uid,
-              name,
-              gameId,
-              date,
-              location,
-              minParticipants,
-              maxParticipants,
-              participantsList)
+          repository.updateSession(discussion.uid, name, gameId, date, location, participantsList)
     }
   }
 
@@ -145,39 +131,18 @@ class FirestoreSessionViewModel(
       gameId: String? = null,
       date: Timestamp? = null,
       location: Location? = null,
-      minParticipants: Int? = null,
-      maxParticipants: Int? = null,
       newParticipantList: List<Account>? = null
   ) {
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    if ((minParticipants ?: discussion.session!!.minParticipants) >
-        (maxParticipants ?: discussion.session!!.maxParticipants))
-        throw IllegalArgumentException(
-            "The minimum number of participants can not be more than the maximum number of participants")
-
     var participantsList: List<String>? = null
-    if (newParticipantList != null) {
-      participantsList = newParticipantList.toList().map { it -> it.uid }
-      if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
-      if (participantsList.size < (minParticipants ?: discussion.session!!.minParticipants))
-          throw IllegalArgumentException("To little participants")
-      if (participantsList.size > (maxParticipants ?: discussion.session!!.maxParticipants))
-          throw IllegalArgumentException("To many participants")
-    }
+    if (newParticipantList != null)
+        participantsList = newParticipantList.toList().map { it -> it.uid }
 
     viewModelScope.launch {
       _discussion.value =
-          repository.updateSession(
-              discussion.uid,
-              name,
-              gameId,
-              date,
-              location,
-              minParticipants,
-              maxParticipants,
-              participantsList)
+          repository.updateSession(discussion.uid, name, gameId, date, location, participantsList)
     }
   }
 
