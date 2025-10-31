@@ -501,7 +501,7 @@ private fun PostHeader(post: Post, author: Account?) {
         Spacer(Modifier.width(10.dp))
         Column {
           Text(
-              text = author?.handle ?: UNKNOWN_USER_PLACEHOLDER,
+              text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
               style =
                   MaterialTheme.typography.labelLarge.copy(
                       color = MaterialTheme.colorScheme.onBackground,
@@ -724,7 +724,7 @@ private fun CommentItem(
           Spacer(Modifier.width(8.dp))
           Column(Modifier.weight(1f)) {
             Text(
-                text = author?.handle ?: UNKNOWN_USER_PLACEHOLDER,
+                text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
                 style =
                     MaterialTheme.typography.labelMedium.copy(
                         color = MaterialTheme.colorScheme.onBackground,
