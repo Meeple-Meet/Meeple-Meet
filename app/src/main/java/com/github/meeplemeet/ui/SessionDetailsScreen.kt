@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,8 +44,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.TimePickerLayoutType
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -423,79 +427,95 @@ fun UserChipsGrid(
           .filter { m -> participants.none { it.uid == m.uid } }
           .filter { m -> m.handle.contains(searchQuery, ignoreCase = true) }
 
-  FlowRow(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = modifier.fillMaxWidth()) {
-        // Existing participant chips
-        participants.forEach { p ->
-          UserChip(
-              user = p,
-              modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
-              onRemove = { if (editable) onRemove(p) },
-              account = account,
-              showRemoveBTN = editable)
-        }
+  // Set up vertical scroll with a maximum height of 3 rows of chips.
+  val chipHeight = 40.dp
+  val chipSpacing = 8.dp
+  val maxRows = 3
+  val maxHeight = (chipHeight * maxRows) + (chipSpacing * (maxRows - 1))
+  val scrollState = rememberScrollState()
 
-        // "+" button: admins only, disappears when full
-        val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
-        if (canAdd) {
-          Box(
-              modifier =
-                  Modifier.background(AppColors.primary)
-                      .padding(
-                          horizontal = 12.dp,
-                          vertical = 7.dp) // mimic chip padding to vertically align elements
-              ) {
-                IconButton(
-                    onClick = { showAddMenu = true },
-                    modifier =
-                        Modifier.size(32.dp)
-                            .border(1.dp, AppColors.divider, CircleShape)
-                            .clip(CircleShape)
-                            .background(AppColors.primary)
-                            .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
-                      Text("+", color = AppColors.textIcons, fontWeight = FontWeight.Bold)
-                    }
+  Box(
+    modifier = modifier
+      .fillMaxWidth()
+      .heightIn(max = maxHeight)
+      .verticalScroll(scrollState)
+  ) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        // Remove scrollable from here; vertical scroll applied to parent Box
+        modifier = Modifier.fillMaxWidth()
+    ) {
+      // Existing participant chips
+      participants.forEach { p ->
+        UserChip(
+            user = p,
+            modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
+            onRemove = { if (editable) onRemove(p) },
+            account = account,
+            showRemoveBTN = editable)
+      }
 
-                DropdownMenu(
-                    expanded = showAddMenu,
-                    onDismissRequest = { showAddMenu = false },
-                    modifier = Modifier.background(AppColors.primary),
-                ) {
-                  // Search (by handle only)
-                  OutlinedTextField(
-                      value = searchQuery,
-                      onValueChange = { searchQuery = it },
-                      placeholder = { Text("Search", color = AppColors.textIconsFade) },
-                      singleLine = true,
-                      modifier =
-                          Modifier.padding(horizontal = 12.dp)
-                              .fillMaxWidth()
-                              .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
-
-                  Spacer(Modifier.height(4.dp))
-
-                  // Candidates list
-                  filteredCandidates.forEach { member ->
-                    DropdownMenuItem(
-                        onClick = {
-                          showAddMenu = false
-                          onAdd(member)
-                        },
-                        modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
-                        text = {
-                          Row(verticalAlignment = Alignment.CenterVertically) {
-                            AvatarBubble(member.name)
-                            Spacer(Modifier.width(10.dp))
-                            Text(member.handle, color = AppColors.textIcons)
-                          }
-                        })
+      // "+" button: admins only, disappears when full
+      val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
+      if (canAdd) {
+        Box(
+            modifier =
+                Modifier.background(AppColors.primary)
+                    .padding(
+                        horizontal = 12.dp,
+                        vertical = 7.dp) // mimic chip padding to vertically align elements
+            ) {
+              IconButton(
+                  onClick = { showAddMenu = true },
+                  modifier =
+                      Modifier.size(32.dp)
+                          .border(1.dp, AppColors.divider, CircleShape)
+                          .clip(CircleShape)
+                          .background(AppColors.primary)
+                          .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
+                    Text("+", color = AppColors.textIcons, fontWeight = FontWeight.Bold)
                   }
+
+              DropdownMenu(
+                  expanded = showAddMenu,
+                  onDismissRequest = { showAddMenu = false },
+                  modifier = Modifier.background(AppColors.primary),
+              ) {
+                // Search (by handle only)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search", color = AppColors.textIconsFade) },
+                    singleLine = true,
+                    modifier =
+                        Modifier.padding(horizontal = 12.dp)
+                            .fillMaxWidth()
+                            .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
+
+                Spacer(Modifier.height(4.dp))
+
+                // Candidates list
+                filteredCandidates.forEach { member ->
+                  DropdownMenuItem(
+                      onClick = {
+                        showAddMenu = false
+                        onAdd(member)
+                      },
+                      modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
+                      text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                          AvatarBubble(member.name)
+                          Spacer(Modifier.width(10.dp))
+                          Text(member.handle, color = AppColors.textIcons)
+                        }
+                      })
                 }
               }
-        }
+            }
       }
+    }
+  }
 }
 
 @Composable
@@ -782,7 +802,7 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
       text = {
         // Use the Material3 TimePicker (dial) inside the dialog
-        TimePicker(
+        TimeInput(
             state = timePickerState,
             colors =
                 TimePickerDefaults.colors(

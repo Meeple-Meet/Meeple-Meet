@@ -72,7 +72,7 @@ class CreateSessionScreenTest {
 
   private fun discardBtn() = compose.onNodeWithTag(SessionCreationTestTags.DISCARD_BUTTON)
 
-  private fun backBtn() = compose.onNodeWithTag(SessionCreationTestTags.NAV_BACK_BTN)
+  private fun backBtn() = compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON)
 
   // Game/Location come from reusable components
   private fun allInputs() = compose.onAllNodes(hasSetTextAction())
@@ -273,12 +273,9 @@ class CreateSessionScreenTest {
 
   // Game search
   @Test
-  fun game_search_header_clear_and_error() {
+  fun game_search_clear_and_error() {
     setContent()
     compose.waitForIdle()
-
-    // Header present
-    compose.onAllNodesWithText("Proposed game:").onFirst().assertExists()
 
     // Type and clear
     gameInput().performTextInput("Cascadia")
@@ -330,6 +327,9 @@ class CreateSessionScreenTest {
             onDateChange = {},
             onTimeChange = {},
             onLocationChange = {},
+            account =   me,
+            sessionViewModel = sessionVM,
+            discussion = baseDiscussion,
             onLocationPicked = {},
             title = ORGANISATION_SECTION_NAME)
       }

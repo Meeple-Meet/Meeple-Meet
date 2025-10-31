@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.firestoreSettings
 import java.time.*
 import java.util.Date
 import kotlin.random.Random
@@ -167,64 +169,43 @@ fun AddSessionScreen(
             text = "Create View",
             onReturn = { onBack() },
         )
-        CenterAlignedTopAppBar(
-            modifier = Modifier.testTag(SessionCreationTestTags.TOP_APP_BAR),
-            title = {
-              Text(
-                  "Create Session",
-                  modifier = Modifier.testTag(SessionCreationTestTags.TOP_APP_BAR_TITLE),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onPrimary)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = onBack,
-                  modifier = Modifier.testTag(SessionCreationTestTags.NAV_BACK_BTN)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onPrimary)
-                  }
-            },
-            colors =
-                TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface))
       },
       snackbarHost = {
         SnackbarHost(snackbar, modifier = Modifier.testTag(SessionCreationTestTags.SNACKBAR_HOST))
       }) { innerPadding ->
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .verticalScroll(rememberScrollState())
-                    .testTag(SessionCreationTestTags.CONTENT_COLUMN),
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState())
+                .testTag(SessionCreationTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-              // Title
-              LabeledTextField(
-                  label = "Title",
-                  value = form.title,
-                  onValueChange = { form = form.copy(title = it) },
-                  placeholder = TITLE_PLACEHOLDER,
-                  singleLine = true,
-                  modifier =
-                      Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
-
-              // Game search
-              GameSearchBar(
-                  sessionViewModel = sessionViewModel,
-                  currentUser = account,
-                  discussion = discussion,
-                  queryFallback = form.proposedGameString,
-                  onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
-                  onError = showError,
-                  modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
+            // Organisation section
+            OrganisationSection(
+                sessionViewModel = sessionViewModel,
+                account =  account,
+                discussion = discussion,
+                showError = showError,
+                onTitleChange = { form = form.copy(title = it) },
+                form = form,
+                onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
+                date = form.date,
+                time = form.time,
+                locationText = form.locationText,
+                onDateChange = { form = form.copy(date = it) },
+                onTimeChange = { form = form.copy(time = it) },
+                onLocationChange = { form = form.copy(locationText = it) },
+                onLocationPicked = { selectedLocation = it },
+                title = ORGANISATION_SECTION_NAME,
+                modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
               // Participants section
               ParticipantsSection(
+                  account = account,
                   currentUserId = account.uid,
                   selected = form.participants,
                   allCandidates = form.participants,
@@ -249,72 +230,64 @@ fun AddSessionScreen(
                   },
                   modifier = Modifier.testTag(SessionCreationTestTags.PARTICIPANTS_SECTION))
 
-              // Organisation section
-              OrganisationSection(
-                  date = form.date,
-                  time = form.time,
-                  locationText = form.locationText,
-                  onDateChange = { form = form.copy(date = it) },
-                  onTimeChange = { form = form.copy(time = it) },
-                  onLocationChange = { form = form.copy(locationText = it) },
-                  onLocationPicked = { selectedLocation = it },
-                  title = ORGANISATION_SECTION_NAME,
-                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
-
               Spacer(Modifier.height(4.dp))
 
               // Creation and Discard buttons
               Row(
-                  horizontalArrangement = Arrangement.spacedBy(12.dp),
-                  modifier = Modifier.testTag(SessionCreationTestTags.BUTTON_ROW)) {
-                    val haveDateTime = form.date != null && form.time != null
-                    val withinBounds =
-                        form.participants.size >= form.minPlayers &&
-                            form.participants.size <= form.maxPlayers
+                  horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                  modifier = Modifier
+                      .testTag(SessionCreationTestTags.BUTTON_ROW)
+                      .fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically
+              ) {
+                  val haveDateTime = form.date != null && form.time != null
+                  val withinBounds =
+                      form.participants.size >= form.minPlayers &&
+                          form.participants.size <= form.maxPlayers
 
-                    val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
+                  val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
 
-                    DiscardButton(
-                        modifier = Modifier.weight(0.8f),
-                        onDiscard = {
-                          form = SessionForm(participants = listOf(account))
-                          selectedLocation = null
-                          onBack()
-                        })
+                  DiscardButton(
+                      modifier = Modifier.weight(1f),
+                      onDiscard = {
+                        form = SessionForm(participants = listOf(account))
+                        selectedLocation = null
+                        onBack()
+                      })
 
-                    CreateSessionButton(
-                        formToSubmit = form,
-                        enabled = canCreate,
-                        onCreate = {
-                          runCatching {
-                                val selectedGameId =
-                                    sessionViewModel.gameUIState.value.selectedGameUid
-                                sessionViewModel.createSession(
-                                    requester = account,
-                                    discussion = discussion,
-                                    name = form.title,
-                                    gameId =
-                                        selectedGameId.ifBlank {
-                                          form.proposedGameString.ifBlank { "Unknown game" }
-                                        },
-                                    date = toTimestamp(form.date, form.time),
-                                    location = selectedLocation ?: Location(),
-                                    minParticipants = form.minPlayers,
-                                    maxParticipants = form.maxPlayers,
-                                    *form.participants.toTypedArray())
-                              }
-                              .onFailure { e ->
-                                showError(e.message ?: "Failed to create session")
-                                return@CreateSessionButton
-                              }
+                  CreateSessionButton(
+                      formToSubmit = form,
+                      enabled = canCreate,
+                      onCreate = {
+                        runCatching {
+                              val selectedGameId =
+                                  sessionViewModel.gameUIState.value.selectedGameUid
+                              sessionViewModel.createSession(
+                                  requester = account,
+                                  discussion = discussion,
+                                  name = form.title,
+                                  gameId =
+                                      selectedGameId.ifBlank {
+                                        form.proposedGameString.ifBlank { "Unknown game" }
+                                      },
+                                  date = toTimestamp(form.date, form.time),
+                                  location = selectedLocation ?: Location(),
+                                  minParticipants = form.minPlayers,
+                                  maxParticipants = form.maxPlayers,
+                                  *form.participants.toTypedArray())
+                            }
+                            .onFailure { e ->
+                              showError(e.message ?: "Failed to create session")
+                              return@CreateSessionButton
+                            }
 
-                          form = SessionForm(participants = listOf(account))
-                          selectedLocation = null
-                          onBack()
-                        },
-                        modifier = Modifier.weight(1.20f),
-                    )
-                  }
+                        form = SessionForm(participants = listOf(account))
+                        selectedLocation = null
+                        onBack()
+                      },
+                      modifier = Modifier.weight(1f),
+                  )
+              }
             }
       }
 }
@@ -347,16 +320,6 @@ fun GameSearchBar(
 ) {
   val gameUi by sessionViewModel.gameUIState.collectAsState()
   val gameQuery = gameUi.gameQuery.ifBlank { queryFallback }
-
-  SectionCard(
-      modifier
-          .testTag(SessionCreationTestTags.GAME_SEARCH_SECTION)
-          .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-          .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
-        UnderlinedLabel("Proposed game:")
-        Spacer(Modifier.height(12.dp))
-
         GameSearchField(
             query = gameQuery,
             onQueryChange = { q ->
@@ -390,7 +353,6 @@ fun GameSearchBar(
                   modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_ERROR),
                   style = MaterialTheme.typography.labelSmall,
                   color = MaterialTheme.colorScheme.error)
-            }
       }
 }
 
@@ -424,7 +386,7 @@ fun CreateSessionButton(
             contentDescription = null,
             modifier = Modifier.testTag(SessionCreationTestTags.CREATE_ICON))
         Spacer(Modifier.width(8.dp))
-        Text("Create Session", style = MaterialTheme.typography.bodyMedium)
+        Text("Create", style = MaterialTheme.typography.bodyMedium)
       }
 }
 
@@ -467,6 +429,13 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
  */
 @Composable
 fun OrganisationSection(
+    form: SessionForm = SessionForm(),
+    sessionViewModel: FirestoreSessionViewModel,
+    account: Account,
+    onQueryFallbackChange: (String) -> Unit = {},
+    discussion: Discussion,
+    showError: (String) -> Unit = {},
+    onTitleChange: (String) -> Unit = {},
     date: LocalDate?,
     time: LocalTime?,
     locationText: String,
@@ -481,20 +450,54 @@ fun OrganisationSection(
       modifier
           .testTag(SessionCreationTestTags.ORG_SECTION)
           .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+          // border is now background color to create no border effect
+          .border(1.dp, MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
-        UnderlinedLabel("$title:")
-        Spacer(Modifier.height(12.dp))
 
+      // Title field
+      IconTextField(
+          value = form.title,
+          onValueChange = { onTitleChange(it) },
+          placeholder = TITLE_PLACEHOLDER,
+          editable = true,
+          leadingIcon = {
+              Icon(
+                  imageVector = Icons.Default.Edit,
+                  contentDescription = "Edit Title"
+              )
+          },
+          modifier = Modifier
+              .fillMaxWidth()
+              .testTag(SessionCreationTestTags.FORM_TITLE_FIELD)
+      )
+
+      Spacer(Modifier.height(10.dp))
+
+      // Game search
+      GameSearchBar(
+          sessionViewModel = sessionViewModel,
+          currentUser = account,
+          discussion = discussion,
+          queryFallback = form.proposedGameString,
+          onQueryFallbackChange = { onQueryFallbackChange(it) },
+          onError = showError,
+          modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
+
+      Spacer(Modifier.height(10.dp))
+
+
+      // Date picker
         DatePickerDockedField(
             value = date, onValueChange = onDateChange, label = "Date", editable = true)
 
         Spacer(Modifier.height(10.dp))
 
+        // Time picker
         TimePickerField(value = time, onValueChange = onTimeChange, label = "Time")
 
         Spacer(Modifier.height(10.dp))
 
+        // Location search
         val locationResults = remember(locationText) { mockLocationSuggestionsFrom(locationText) }
         LocationSearchField(
             query = locationText,
@@ -533,6 +536,7 @@ fun OrganisationSection(
 @Composable
 fun ParticipantsSection(
     modifier: Modifier = Modifier,
+    account: Account,
     currentUserId: String,
     selected: List<Account>,
     allCandidates: List<Account>,
@@ -553,7 +557,8 @@ fun ParticipantsSection(
       modifier
           .testTag(SessionCreationTestTags.PARTICIPANTS_SECTION)
           .fillMaxWidth()
-          .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
+          // border is now background color to create no border effect
+          .border(1.dp, MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
 
         // Header
@@ -566,19 +571,14 @@ fun ParticipantsSection(
           CountBubble(
               count = selected.size,
               modifier =
-                  Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.surface)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                      .padding(horizontal = 10.dp, vertical = 6.dp))
+              Modifier
+                  .shadow(Elevation.subtle, CircleShape, clip = false)
+                  .clip(CircleShape)
+                  .background(MaterialTheme.colorScheme.surface)
+                  .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                  .padding(horizontal = 10.dp, vertical = 6.dp))
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = sliderDescription,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(2.dp))
 
         // Slider row
@@ -589,11 +589,12 @@ fun ParticipantsSection(
               CountBubble(
                   count = minPlayers,
                   modifier =
-                      Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                          .clip(CircleShape)
-                          .background(MaterialTheme.colorScheme.surface)
-                          .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                          .padding(horizontal = 10.dp, vertical = 6.dp))
+                  Modifier
+                      .shadow(Elevation.subtle, CircleShape, clip = false)
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.surface)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp))
 
               DiscretePillSlider(
                   range = minSliderNumber..maxSliderNumber,
@@ -601,65 +602,24 @@ fun ParticipantsSection(
                   steps = sliderSteps,
                   modifier = Modifier.weight(1f),
                   sliderModifier =
-                      Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
-                          .padding(horizontal = 10.dp, vertical = 6.dp))
+                  Modifier
+                      .background(MaterialTheme.colorScheme.background, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp))
 
               CountBubble(
                   count = maxPlayers,
                   modifier =
-                      Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                          .clip(CircleShape)
-                          .background(MaterialTheme.colorScheme.surface)
-                          .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                          .padding(horizontal = 10.dp, vertical = 6.dp))
+                  Modifier
+                      .shadow(Elevation.subtle, CircleShape, clip = false)
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.surface)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                      .padding(horizontal = 10.dp, vertical = 6.dp))
             }
 
         Spacer(Modifier.height(12.dp))
 
-        // Selected chips
-        val animElev by animateDpAsState(targetValue = elevationSelected, label = "chipElevation")
-        TwoPerRowGrid(
-            items = selected,
-            key = { it.uid },
-            modifier = Modifier.fillMaxWidth(),
-            rowsModifier = Modifier.fillMaxWidth(),
-        ) { acc, itemModifier ->
-          ParticipantChip(
-              account = acc,
-              action = ParticipantAction.Remove,
-              onClick = { toRemove -> if (toRemove.uid != currentUserId) onRemove(toRemove) },
-              modifier =
-                  itemModifier
-                      .shadow(animElev, MaterialTheme.shapes.large, clip = false)
-                      .background(MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-                      .padding(horizontal = 8.dp, vertical = 4.dp),
-              textModifier = Modifier.fillMaxWidth())
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Candidates
-        val selectedIds by remember(selected) { derivedStateOf { selected.map { it.uid }.toSet() } }
-        val candidates by
-            remember(allCandidates, selectedIds, currentUserId) {
-              derivedStateOf {
-                allCandidates.filter { it.uid != currentUserId && it.uid !in selectedIds }
-              }
-            }
-
-        TwoPerRowGrid(items = candidates, key = { it.uid }) { acc, itemModifier ->
-          ParticipantChip(
-              account = acc,
-              action = ParticipantAction.Add,
-              onClick = onAdd,
-              modifier =
-                  itemModifier
-                      .shadow(elevationUnselected, MaterialTheme.shapes.large, clip = false)
-                      .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.large)
-                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large)
-                      .padding(horizontal = 8.dp, vertical = 4.dp),
-              textModifier = Modifier.fillMaxWidth())
-        }
+        // All candidate chips
+      UserChipsGrid(participants = allCandidates, onRemove = onRemove, onAdd = onAdd, account = account)
       }
 }

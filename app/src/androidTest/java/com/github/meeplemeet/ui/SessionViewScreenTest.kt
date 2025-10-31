@@ -87,7 +87,7 @@ class SessionDetailsScreenTest {
   private val initialForm =
       SessionForm(
           title = "Friday Night Meetup",
-          proposedGame = "",
+          proposedGameString = "",
           minPlayers = 3,
           maxPlayers = 6,
           participants =
