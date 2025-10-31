@@ -9,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
@@ -17,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
@@ -262,16 +265,24 @@ fun SignInScreen(
             enabled =
                 isFormValid && !uiState.isLoading // Enable only when form is valid and not loading
             ) {
-              // Show loading indicator during authentication
-              if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier =
-                        Modifier.size(16.dp)
-                            .testTag(SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
-                    color = MaterialTheme.colorScheme.onPrimary)
-                Spacer(modifier = Modifier.width(8.dp))
+              Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.align(Alignment.CenterStart)) {
+                      Icon(imageVector = Icons.AutoMirrored.Filled.Login, contentDescription = null)
+                    }
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Show loading indicator during authentication
+                if (uiState.isLoading) {
+                  CircularProgressIndicator(
+                      modifier =
+                          Modifier.size(16.dp)
+                              .testTag(SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
+                      color = MaterialTheme.colorScheme.onPrimary)
+                }
+                Text("Sign In")
               }
-              Text("Sign In")
             }
 
         // Divider between authentication methods
@@ -297,7 +308,21 @@ fun SignInScreen(
                     .testTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON), // For UI testing
             enabled = !uiState.isLoading // Disable during any authentication process
             ) {
-              Text("Connect with Google")
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.Start,
+                  modifier = Modifier.fillMaxWidth()) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.google_logo),
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(22.dp))
+                    //                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        "Connect with Google",
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center)
+                  }
             }
 
         // Push navigation link to bottom
