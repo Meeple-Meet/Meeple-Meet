@@ -453,7 +453,7 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
                   AssistChip(
                       enabled = false,
                       onClick = {},
-                      label = { Text("#$tag") },
+                      label = { Text(tag) },
                       colors =
                           AssistChipDefaults.assistChipColors(
                               containerColor = MaterialTheme.colorScheme.tertiary,
