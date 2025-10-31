@@ -299,7 +299,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
    * This method calls the repository to sign out from Firebase Auth and updates the UI state to
    * reflect the signed-out status.
    */
-  fun logout() {
+  fun signOut() {
     // Prevent multiple simultaneous operations
     if (_uiState.value.isLoading) return
 

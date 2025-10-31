@@ -158,7 +158,7 @@ fun DiscussionDetailsScreen(
                               contentDescription = null,
                               tint = AppColors.textIcons)
                           Spacer(modifier = Modifier.width(8.dp))
-                          Text("Delete Discussion", color = AppColors.textIcons)
+                          Text("Delete", color = AppColors.textIcons)
                         }
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
@@ -167,7 +167,7 @@ fun DiscussionDetailsScreen(
                     enabled = true,
                     colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
                     modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                      Text("Leave Discussion", color = AppColors.textIcons)
+                      Text("Leave", color = AppColors.textIcons)
                     }
               }
         }) { padding ->

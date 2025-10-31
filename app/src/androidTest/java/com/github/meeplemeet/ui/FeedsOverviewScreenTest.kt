@@ -83,7 +83,7 @@ class FeedsOverviewScreenTest : FirestoreTests() {
   fun full_smoke_all_cases() = runBlocking {
     compose.setContent {
       AppTheme(themeMode = theme) {
-        FeedsOverviewScreen(
+        PostsOverviewScreen(
             postOverviewVM = postVm,
             firestoreViewModel = firestoreVm,
             account = me,

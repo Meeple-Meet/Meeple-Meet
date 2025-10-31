@@ -144,6 +144,55 @@ fun CreatePostScreen(
               color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
         }
       },
+      bottomBar = {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              OutlinedButton(
+                  onClick = onDiscard,
+                  modifier = Modifier.weight(1f).testTag(CreatePostTestTags.DISCARD_BUTTON),
+                  shape = CircleShape,
+                  border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          contentColor = MaterialTheme.colorScheme.error)) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Discard", style = MaterialTheme.typography.titleMedium)
+                  }
+
+              // Post button
+              Button(
+                  onClick = {
+                    scope.launch {
+                      isPosting = true
+                      try {
+                        viewModel.createPost(
+                            title = title,
+                            body = body,
+                            author = account,
+                            tags = selectedTags.toList())
+                        onPost()
+                      } catch (e: Exception) {
+                        snackbarHostState.showSnackbar(e.message ?: "Failed to create post")
+                      } finally {
+                        isPosting = false
+                      }
+                    }
+                  },
+                  enabled = title.isNotBlank() && body.isNotBlank() && !isPosting,
+                  modifier = Modifier.weight(1f).testTag(CreatePostTestTags.POST_BUTTON),
+                  shape = CircleShape,
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.secondary,
+                          contentColor = MaterialTheme.colorScheme.onBackground)) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Post", style = MaterialTheme.typography.titleMedium)
+                  }
+            }
+      },
       snackbarHost = {
         SnackbarHost(
             hostState = snackbarHostState,
@@ -276,62 +325,6 @@ fun CreatePostScreen(
                           }
                     }
               }
-
-              Spacer(Modifier.height(24.dp))
-
-              // Buttons row
-              Row(
-                  modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                  horizontalArrangement = Arrangement.SpaceEvenly) {
-
-                    // Discard button
-                    OutlinedButton(
-                        onClick = onDiscard,
-                        modifier =
-                            Modifier.widthIn(min = 120.dp)
-                                .testTag(CreatePostTestTags.DISCARD_BUTTON),
-                        shape = CircleShape,
-                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error)) {
-                          Icon(Icons.Default.Delete, contentDescription = null)
-                          Spacer(Modifier.width(8.dp))
-                          Text("Discard", style = MaterialTheme.typography.titleMedium)
-                        }
-
-                    // Post button
-                    Button(
-                        onClick = {
-                          scope.launch {
-                            isPosting = true
-                            try {
-                              viewModel.createPost(
-                                  title = title,
-                                  body = body,
-                                  author = account,
-                                  tags = selectedTags.toList())
-                              onPost()
-                            } catch (e: Exception) {
-                              snackbarHostState.showSnackbar(e.message ?: "Failed to create post")
-                            } finally {
-                              isPosting = false
-                            }
-                          }
-                        },
-                        enabled = title.isNotBlank() && body.isNotBlank() && !isPosting,
-                        modifier =
-                            Modifier.widthIn(min = 120.dp).testTag(CreatePostTestTags.POST_BUTTON),
-                        shape = CircleShape,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                contentColor = MaterialTheme.colorScheme.onBackground)) {
-                          Icon(Icons.Default.Check, contentDescription = null)
-                          Spacer(Modifier.width(8.dp))
-                          Text("Post", style = MaterialTheme.typography.titleMedium)
-                        }
-                  }
             }
       }
 }
