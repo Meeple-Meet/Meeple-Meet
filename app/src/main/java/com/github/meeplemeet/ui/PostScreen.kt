@@ -383,6 +383,7 @@ private fun PostContent(
     modifier: Modifier = Modifier
 ) {
   val listState = rememberLazyListState()
+  val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
 
   LazyColumn(
       state = listState,
@@ -407,7 +408,8 @@ private fun PostContent(
               currentUser = currentUser,
               resolveUser = resolveUser,
               onReply = onReply,
-              onDelete = onDeleteComment)
+              onDelete = onDeleteComment,
+              expandedStates = expandedStates)
         }
       }
 }
@@ -527,6 +529,7 @@ private fun PostHeader(post: Post, author: Account?) {
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDelete Lambda to invoke when deleting a comment.
+ * @param expandedStates Map storing the expanded state for all comments.
  * @param gutterColor The color of the gutter lines.
  */
 @Composable
@@ -536,18 +539,22 @@ private fun ThreadCard(
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
+    expandedStates: MutableMap<String, Boolean>,
     gutterColor: Color = MaterialTheme.colorScheme.outline
 ) {
-  var expanded by rememberSaveable(root.id) { mutableStateOf(false) }
+  val expanded = expandedStates[root.id] ?: false
 
   MeepleCard(modifier = Modifier.testTag(PostTags.threadCard(root.id))) {
     CommentItem(
         comment = root,
         author = resolveUser(root.authorId),
         isMine = (root.authorId == currentUser.uid),
-        onReply = { text -> onReply(root.id, text) },
+        onReply = { text ->
+          onReply(root.id, text)
+          expandedStates[root.id] = true
+        },
         onDelete = { onDelete(root) },
-        onCardClick = { expanded = !expanded })
+        onCardClick = { expandedStates[root.id] = !expanded })
 
     AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
       if (root.children.isNotEmpty()) {
@@ -558,6 +565,7 @@ private fun ThreadCard(
             resolveUser = resolveUser,
             onReply = onReply,
             onDelete = onDelete,
+            expandedStates = expandedStates,
             depth = 1,
             gutterColor = gutterColor)
       }
@@ -573,6 +581,7 @@ private fun ThreadCard(
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDelete Lambda to invoke when deleting a comment.
+ * @param expandedStates Map storing the expanded state for all comments.
  * @param depth The current depth in the comment tree.
  * @param gutterColor The color of the gutter lines.
  */
@@ -583,6 +592,7 @@ private fun CommentsTree(
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
+    expandedStates: MutableMap<String, Boolean>,
     depth: Int = 0,
     gutterColor: Color = MaterialTheme.colorScheme.outline
 ) {
@@ -596,17 +606,20 @@ private fun CommentsTree(
 
       Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         comments.forEach { c ->
-          var expanded by rememberSaveable(c.id) { mutableStateOf(false) }
+          val expanded = expandedStates[c.id] ?: false
 
           CommentItem(
               comment = c,
               author = resolveUser(c.authorId),
               isMine = (c.authorId == currentUser.uid),
-              onReply = { text -> onReply(c.id, text) },
+              onReply = { text ->
+                onReply(c.id, text)
+                expandedStates[c.id] = true
+              },
               onDelete = { onDelete(c) },
               onCardClick =
                   if (c.children.isNotEmpty()) {
-                    { expanded = !expanded }
+                    { expandedStates[c.id] = !expanded }
                   } else null)
 
           if (c.children.isNotEmpty()) {
@@ -618,6 +631,7 @@ private fun CommentsTree(
                       resolveUser = resolveUser,
                       onReply = onReply,
                       onDelete = onDelete,
+                      expandedStates = expandedStates,
                       depth = depth + 1,
                       gutterColor = gutterColor)
                 }
@@ -644,6 +658,7 @@ private fun CommentsTree(
                   resolveUser = resolveUser,
                   onReply = onReply,
                   onDelete = onDelete,
+                  expandedStates = expandedStates,
                   depth = 1,
                   gutterColor = gutterColor)
             }
