@@ -204,14 +204,22 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.DiscussionDetails.name) {
-      DiscussionDetailsScreen(
-          account = account!!,
-          discussion = discussion!!,
-          viewModel = firestoreVM,
-          onBack = { navigationActions.goBack() },
-          onLeave = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-          onDelete = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-          handlesViewModel = handlesVM)
+      discussion?.let {
+        DiscussionDetailsScreen(
+            account = account!!,
+            discussion = discussion!!,
+            viewModel = firestoreVM,
+            onBack = { navigationActions.goBack() },
+            onLeave = {
+              discussionId = ""
+              navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+            },
+            onDelete = {
+              discussionId = ""
+              navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+            },
+            handlesViewModel = handlesVM)
+      } ?: navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
     }
 
     composable(MeepleMeetScreen.CreateSession.name) {
