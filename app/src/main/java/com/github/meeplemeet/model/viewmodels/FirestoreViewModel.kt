@@ -89,7 +89,7 @@ class FirestoreViewModel(
 
   /** Remove a user from a discussion (admin-only). */
   fun removeUserFromDiscussion(discussion: Discussion, changeRequester: Account, user: Account) {
-    if (!isAdmin(changeRequester, discussion))
+    if (changeRequester != user && !isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
     if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
