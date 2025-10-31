@@ -712,7 +712,7 @@ fun UserChip(
             }
       },
       trailingIcon = {
-        if (showRemoveBTN && account.handle != user.handle) {
+        if (showRemoveBTN && account.uid != user.uid) {
           IconButton(
               onClick = onRemove,
               modifier =
