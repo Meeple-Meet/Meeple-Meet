@@ -46,9 +46,10 @@ class FeedsOverviewScreenTest : FirestoreTests() {
   /* -------------- semantic helpers -------------- */
   private fun screenTitle() = compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
 
-  private fun addPostFab() = compose.onNodeWithTag("AddPostButton")
+  private fun addPostFab() = compose.onNodeWithTag(FeedsOverviewTestTags.ADD_POST_BUTTON)
 
-  private fun postCard(postId: String) = compose.onNodeWithTag("Post/$postId")
+  private fun postCard(postId: String) =
+      compose.onNodeWithTag(FeedsOverviewTestTags.POST_CARD_PREFIX + postId)
 
   /* dynamic state for ONE setContent */
   private var theme by mutableStateOf(ThemeMode.LIGHT)
@@ -116,7 +117,7 @@ class FeedsOverviewScreenTest : FirestoreTests() {
             tags = listOf("very-long-tag-name"))
 
     // normal post with comments
-    val normal =
+    var normal =
         postRepo.createPost(
             title = "Normal post",
             content = "Has comments",
@@ -124,10 +125,8 @@ class FeedsOverviewScreenTest : FirestoreTests() {
             tags = listOf("board-games", "strategy"))
     postRepo.addComment(normal.id, "First!", me.uid, parentId = normal.id)
     createdPosts += normal
-
+    normal = postRepo.getPost(normal.id)
     val first = createdPosts.first()
-    val last = createdPosts.last()
-
     postVm.getPosts()
 
     /* 3  LIGHT THEME  ------------------------------------------------------ */
