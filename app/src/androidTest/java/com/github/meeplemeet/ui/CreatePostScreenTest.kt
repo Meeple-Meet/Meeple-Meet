@@ -14,6 +14,7 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -413,5 +414,16 @@ class CreatePostScreenTest : FirestoreTests() {
     assert(createdPost?.tags?.contains("#boardgames") == true)
     assert(createdPost?.tags?.contains("#strategy") == true)
     assert(createdPost?.tags?.contains("#coop") == false)
+  }
+
+  @After
+    fun tearDown() = runBlocking {
+    // Clean up any created posts during tests
+    val posts = repository.getPosts()
+    for (post in posts) {
+        if (post.authorId == testAccount.uid) {
+            repository.deletePost(post.id)
+        }
+    }
   }
 }
