@@ -214,9 +214,8 @@ class FirestoreViewModel(
 
   /** Mark all messages as read for a given discussion. */
   fun readDiscussionMessages(account: Account, discussion: Discussion) {
-    if (!discussion.participants.contains(account.uid))
-        throw PermissionDeniedException(
-            "Account: ${account.uid} - ${account.name} is not a part of Discussion: ${discussion.uid} - ${discussion.name}")
+    // Return early if user is not part of discussion (can happen during navigation transitions)
+    if (!discussion.participants.contains(account.uid)) return
 
     if (discussion.messages.isEmpty()) return
     if (account.previews[discussion.uid]!!.unreadCount == 0) return

@@ -148,6 +148,16 @@ fun DiscussionDetailsScreen(
           Row(
               modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                /** The actual leave operation happens only after the confirmation dialog */
+                /** Leave button is always enabled */
+                OutlinedButton(
+                    onClick = { showLeaveDialog = true },
+                    enabled = true,
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
+                    modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
+                      Text("Leave", color = AppColors.textIcons)
+                    }
+
                 /** The actual deletion happens only after the confirmation dialog */
                 /** Delete button only if not member */
                 if (discussion.creatorId == account.uid)
@@ -164,15 +174,6 @@ fun DiscussionDetailsScreen(
                           Spacer(modifier = Modifier.width(8.dp))
                           Text("Delete", color = AppColors.textIcons)
                         }
-                /** The actual leave operation happens only after the confirmation dialog */
-                /** Leave button is always enabled */
-                OutlinedButton(
-                    onClick = { showLeaveDialog = true },
-                    enabled = true,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-                    modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                      Text("Leave", color = AppColors.textIcons)
-                    }
               }
         }) { padding ->
 
