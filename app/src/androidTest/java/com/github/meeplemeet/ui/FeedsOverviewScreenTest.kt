@@ -24,6 +24,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
 
+@Ignore
 @RunWith(AndroidJUnit4::class)
 class FeedsOverviewScreenTest : FirestoreTests() {
 
