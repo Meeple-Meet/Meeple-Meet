@@ -133,8 +133,22 @@ class FirestoreSessionViewModel(
       location: Location? = null,
       newParticipantList: List<Account>? = null
   ) {
-    if (!isAdmin(requester, discussion))
+    if (!isAdmin(requester, discussion)) {
+      // Allow non-admin to remove themselves if only updating participants and they're not in the
+      // new list
+      val isRemovingSelfOnly =
+          newParticipantList != null &&
+              discussion.session?.participants?.toSet() ==
+                  (newParticipantList.map { it.uid } + requester.uid).toSet() &&
+              name == null &&
+              gameId == null &&
+              date == null &&
+              location == null
+
+      if (!isRemovingSelfOnly) {
         throw PermissionDeniedException("Only discussion admins can perform this operation")
+      }
+    }
 
     var participantsList: List<String>? = null
     if (newParticipantList != null)
