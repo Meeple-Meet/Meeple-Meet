@@ -31,6 +31,7 @@ import com.github.meeplemeet.model.structures.Location
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.components.*
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
 import java.time.*
@@ -187,12 +188,70 @@ fun CreateSessionScreen(
       modifier = Modifier.testTag(SessionCreationTestTags.SCAFFOLD),
       topBar = {
         TopBarWithDivider(
-            text = "Create View",
+            text = MeepleMeetScreen.CreateSession.title,
             onReturn = { onBack() },
         )
       },
       snackbarHost = {
         SnackbarHost(snackbar, modifier = Modifier.testTag(SessionCreationTestTags.SNACKBAR_HOST))
+      },
+      bottomBar = {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 25.dp)
+                    .testTag(SessionCreationTestTags.BUTTON_ROW),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              // Whether form is ready for creation
+              val haveDateTime = form.date != null && form.time != null
+              val withinBounds =
+                  form.participants.size >= form.minPlayers &&
+                      form.participants.size <= form.maxPlayers
+
+              val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
+
+              // Reset form and go back on discard
+              DiscardButton(
+                  modifier = Modifier.weight(1f),
+                  onDiscard = {
+                    form = SessionForm(participants = listOf(account))
+                    selectedLocation = null
+                    onBack()
+                  })
+
+              // Create a new session if form is valid
+              CreateSessionButton(
+                  formToSubmit = form,
+                  enabled = canCreate,
+                  onCreate = {
+                    runCatching {
+                          val selectedGameId = sessionViewModel.gameUIState.value.selectedGameUid
+                          sessionViewModel.createSession(
+                              requester = account,
+                              discussion = discussion,
+                              name = form.title,
+                              gameId =
+                                  selectedGameId.ifBlank {
+                                    form.proposedGameString.ifBlank { "Unknown game" }
+                                  },
+                              date = toTimestamp(form.date, form.time),
+                              location = selectedLocation ?: Location(),
+                              minParticipants = form.minPlayers,
+                              maxParticipants = form.maxPlayers,
+                              *form.participants.toTypedArray())
+                        }
+                        .onFailure { e ->
+                          showError(e.message ?: "Failed to create session")
+                          return@CreateSessionButton
+                        }
+
+                    form = SessionForm(participants = listOf(account))
+                    selectedLocation = null
+                    onBack()
+                  },
+                  modifier = Modifier.weight(1f),
+              )
+            }
       }) { innerPadding ->
         Column(
             modifier =
@@ -249,65 +308,6 @@ fun CreateSessionScreen(
                             participants = form.participants.filterNot { it.uid == toRemove.uid })
                   },
                   modifier = Modifier.testTag(SessionCreationTestTags.PARTICIPANTS_SECTION))
-
-              Spacer(Modifier.height(4.dp))
-
-              // Row with Discard and Create buttons
-              Row(
-                  horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                  modifier = Modifier.testTag(SessionCreationTestTags.BUTTON_ROW).fillMaxWidth(),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    // Whether form is ready for creation
-                    val haveDateTime = form.date != null && form.time != null
-                    val withinBounds =
-                        form.participants.size >= form.minPlayers &&
-                            form.participants.size <= form.maxPlayers
-
-                    val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
-
-                    // Reset form and go back on discard
-                    DiscardButton(
-                        modifier = Modifier.weight(1f),
-                        onDiscard = {
-                          form = SessionForm(participants = listOf(account))
-                          selectedLocation = null
-                          onBack()
-                        })
-
-                    // Create a new session if form is valid
-                    CreateSessionButton(
-                        formToSubmit = form,
-                        enabled = canCreate,
-                        onCreate = {
-                          runCatching {
-                                val selectedGameId =
-                                    sessionViewModel.gameUIState.value.selectedGameUid
-                                sessionViewModel.createSession(
-                                    requester = account,
-                                    discussion = discussion,
-                                    name = form.title,
-                                    gameId =
-                                        selectedGameId.ifBlank {
-                                          form.proposedGameString.ifBlank { "Unknown game" }
-                                        },
-                                    date = toTimestamp(form.date, form.time),
-                                    location = selectedLocation ?: Location(),
-                                    minParticipants = form.minPlayers,
-                                    maxParticipants = form.maxPlayers,
-                                    *form.participants.toTypedArray())
-                              }
-                              .onFailure { e ->
-                                showError(e.message ?: "Failed to create session")
-                                return@CreateSessionButton
-                              }
-
-                          form = SessionForm(participants = listOf(account))
-                          selectedLocation = null
-                          onBack()
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                  }
             }
       }
 }

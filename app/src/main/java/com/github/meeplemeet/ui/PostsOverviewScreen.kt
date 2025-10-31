@@ -65,7 +65,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedsOverviewScreen(
+fun PostsOverviewScreen(
     postOverviewVM: PostOverviewViewModel = viewModel(),
     firestoreViewModel: FirestoreViewModel = viewModel(),
     account: Account,

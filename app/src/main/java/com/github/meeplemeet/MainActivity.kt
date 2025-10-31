@@ -37,8 +37,8 @@ import com.github.meeplemeet.ui.CreateSessionScreen
 import com.github.meeplemeet.ui.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.DiscussionScreen
 import com.github.meeplemeet.ui.DiscussionsOverviewScreen
-import com.github.meeplemeet.ui.FeedsOverviewScreen
 import com.github.meeplemeet.ui.PostScreen
+import com.github.meeplemeet.ui.PostsOverviewScreen
 import com.github.meeplemeet.ui.ProfileScreen
 import com.github.meeplemeet.ui.SessionDetailsScreen
 import com.github.meeplemeet.ui.SessionsOverviewScreen
@@ -143,9 +143,17 @@ fun MeepleMeetApp(
 
     composable(MeepleMeetScreen.CreateAccount.name) {
       if (account != null) {
-        CreateAccountScreen(account!!, firestoreVM, handlesVM) {
-          navigationActions.navigateOutOfAuthGraph()
-        }
+        CreateAccountScreen(
+            account!!,
+            firestoreVM,
+            handlesVM,
+            onCreate = { navigationActions.navigateOutOfAuthGraph() },
+            onBack = {
+              firestoreVM.signOut()
+              authVM.signOut()
+              FirebaseProvider.auth.signOut()
+              navigationActions.goBack()
+            })
       } else {
         LoadingScreen()
       }
@@ -156,7 +164,9 @@ fun MeepleMeetApp(
           account!!,
           navigationActions,
           firestoreVM,
-          onClickAddDiscussion = { navigationActions.navigateTo(MeepleMeetScreen.AddDiscussion) },
+          onClickAddDiscussion = {
+            navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
+          },
           onSelectDiscussion = {
             discussionId = it.uid
             navigationActions.navigateTo(MeepleMeetScreen.Discussion)
@@ -177,13 +187,14 @@ fun MeepleMeetApp(
             onCreateSessionClick = {
               discussionId = it.uid
               navigationActions.navigateTo(
-                  if (it.session != null) MeepleMeetScreen.Session else MeepleMeetScreen.AddSession)
+                  if (it.session != null) MeepleMeetScreen.Session
+                  else MeepleMeetScreen.CreateSession)
             },
         )
       } ?: LoadingScreen()
     }
 
-    composable(MeepleMeetScreen.AddDiscussion.name) {
+    composable(MeepleMeetScreen.CreateDiscussion.name) {
       CreateDiscussionScreen(
           account = account!!,
           viewModel = firestoreVM,
@@ -216,7 +227,7 @@ fun MeepleMeetApp(
       } ?: LoadingScreen()
     }
 
-    composable(MeepleMeetScreen.AddSession.name) {
+    composable(MeepleMeetScreen.CreateSession.name) {
       sessionRepo?.let {
         CreateSessionScreen(
             account = account!!,
@@ -231,7 +242,7 @@ fun MeepleMeetApp(
     // composable(MeepleMeetScreen.DiscoverFeeds.name) { DiscoverSessionsScreen(navigationActions) }
 
     composable(MeepleMeetScreen.PostsOverview.name) {
-      FeedsOverviewScreen(
+      PostsOverviewScreen(
           account = account!!,
           navigation = navigationActions,
           firestoreViewModel = firestoreVM,
