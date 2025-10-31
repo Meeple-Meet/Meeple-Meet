@@ -38,8 +38,23 @@ sonar {
         property("sonar.exclusions", "**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.webp,**/*.ttf,**/*.otf,**/*.woff,**/*.woff2,**/*.eot,**/*.svg")
         property("sonar.test.exclusions", "**/androidTest/**,**/debug/**,**/test/**")
 
-        property("sonar.pullrequest.provider", "Github")
         property("sonar.sourceEncoding", "UTF-8")
+
+        // Handle PR vs branch analysis differently
+        val prKey = System.getenv("SONAR_PR_KEY")
+        val prBranch = System.getenv("SONAR_PR_BRANCH")
+        val prBase = System.getenv("SONAR_PR_BASE")
+        val branchName = System.getenv("SONAR_BRANCH_NAME")
+
+        if (!prKey.isNullOrBlank() && !prBranch.isNullOrBlank() && !prBase.isNullOrBlank()) {
+            // Pull request analysis
+            property("sonar.pullrequest.key", prKey)
+            property("sonar.pullrequest.branch", prBranch)
+            property("sonar.pullrequest.base", prBase)
+        } else if (!branchName.isNullOrBlank()) {
+            // Branch analysis
+            property("sonar.branch.name", branchName)
+        }
     }
 }
 
@@ -87,22 +102,41 @@ android {
         }
     }
 
+    // Disable Proguard check for demo purpose
+//    buildTypes {
+//        getByName("release") {
+//            isMinifyEnabled = true
+//            proguardFiles(
+//                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+//            )
+//            // Only apply signing config if keystore is configured
+//            if (System.getenv("KEYSTORE_PATH") != null) {
+//                signingConfig = signingConfigs.getByName("release")
+//            }
+//        }
+//        debug {
+//            enableUnitTestCoverage = true
+//            enableAndroidTestCoverage = true
+//        }
+//    }
+
+
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true
+        release {
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
             )
-            // Only apply signing config if keystore is configured
-            if (System.getenv("KEYSTORE_PATH") != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

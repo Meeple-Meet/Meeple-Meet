@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -27,8 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
@@ -57,6 +57,7 @@ object UITestTags {
 @Composable
 fun DiscussionDetailsScreen(
     viewModel: FirestoreViewModel,
+    handlesViewModel: FirestoreHandlesViewModel,
     account: Account,
     discussion: Discussion,
     modifier: Modifier = Modifier,
@@ -106,8 +107,8 @@ fun DiscussionDetailsScreen(
     }
 
     isSearching = true
-    viewModel.searchByHandle(searchQuery)
-    viewModel.handleSuggestions.collect { list ->
+    handlesViewModel.searchByHandle(searchQuery)
+    handlesViewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty()
       isSearching = false
@@ -378,54 +379,6 @@ fun DiscussionDetailsScreen(
                 }
               }
         }
-  }
-}
-
-/**
- * Displays a top app bar with a title and a back button.
- *
- * @param text The title text to display in the top bar.
- * @param onReturn Callback invoked when the back button is pressed.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TopBarWithDivider(
-    text: String,
-    onReturn: () -> Unit = {},
-    trailingIcons: @Composable () -> Unit = {}
-) {
-  /** --- Top App Bar --- */
-  Column {
-    CenterAlignedTopAppBar(
-        navigationIcon = {
-          IconButton(
-              onClick = { onReturn() },
-              modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = AppColors.textIcons)
-              }
-        },
-        title = {
-          Text(
-              text = text,
-              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE),
-              style = MaterialTheme.typography.bodyMedium,
-              color = AppColors.textIcons)
-        },
-        actions = { /* Add trailing icons here if needed */
-          trailingIcons()
-        },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AppColors.primary))
-    /** --- Divider --- */
-    HorizontalDivider(
-        modifier =
-            Modifier.fillMaxWidth(0.7f) // 70% width to create middle effect
-                .padding(horizontal = 0.dp)
-                .align(Alignment.CenterHorizontally),
-        thickness = 1.dp,
-        color = AppColors.textIconsFade)
   }
 }
 

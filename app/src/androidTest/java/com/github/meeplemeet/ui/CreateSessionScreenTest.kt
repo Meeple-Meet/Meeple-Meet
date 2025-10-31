@@ -15,6 +15,8 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.components.ComponentsTestTags
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Timestamp
 import io.mockk.*
@@ -70,7 +72,7 @@ class CreateSessionScreenTest {
 
   private fun discardBtn() = compose.onNodeWithTag(SessionCreationTestTags.DISCARD_BUTTON)
 
-  private fun backBtn() = compose.onNodeWithTag(SessionCreationTestTags.NAV_BACK_BTN)
+  private fun backBtn() = compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON)
 
   // Game/Location come from reusable components
   private fun allInputs() = compose.onAllNodes(hasSetTextAction())
@@ -171,8 +173,9 @@ class CreateSessionScreenTest {
     val backCount = AtomicInteger(0)
     setContent(onBack = { backCount.incrementAndGet() })
 
-    compose.onNodeWithTag(SessionCreationTestTags.TOP_APP_BAR).assertExists()
-    compose.onNodeWithTag(SessionCreationTestTags.TOP_APP_BAR_TITLE).assertExists()
+    compose.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+    compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
+    compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertExists()
     compose.onNodeWithTag(SessionCreationTestTags.SNACKBAR_HOST).assertExists()
     compose.onNodeWithTag(SessionCreationTestTags.CONTENT_COLUMN).assertExists()
 
@@ -270,12 +273,9 @@ class CreateSessionScreenTest {
 
   // Game search
   @Test
-  fun game_search_header_clear_and_error() {
+  fun game_search_clear_and_error() {
     setContent()
     compose.waitForIdle()
-
-    // Header present
-    compose.onAllNodesWithText("Proposed game:").onFirst().assertExists()
 
     // Type and clear
     gameInput().performTextInput("Cascadia")
@@ -327,6 +327,9 @@ class CreateSessionScreenTest {
             onDateChange = {},
             onTimeChange = {},
             onLocationChange = {},
+            account = me,
+            sessionViewModel = sessionVM,
+            discussion = baseDiscussion,
             onLocationPicked = {},
             title = ORGANISATION_SECTION_NAME)
       }

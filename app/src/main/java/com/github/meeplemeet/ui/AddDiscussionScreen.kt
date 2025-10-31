@@ -1,3 +1,4 @@
+/** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui
 
 import androidx.compose.foundation.background
@@ -6,10 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -23,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -35,6 +41,8 @@ object AddDiscussionTestTags {
   const val ADD_MEMBERS = "Add Members"
   const val CREATE_DISCUSSION_BUTTON = "Create Discussion"
   const val ADD_MEMBERS_ELEMENT = "Add Member Element"
+
+  const val DISCARD_BUTTON = "Discard Button"
 }
 
 /**
@@ -52,6 +60,7 @@ object AddDiscussionTestTags {
 fun AddDiscussionScreen(
     account: Account,
     viewModel: FirestoreViewModel = viewModel(),
+    handleViewModel: FirestoreHandlesViewModel = viewModel(),
     onBack: () -> Unit = {},
     onCreate: () -> Unit = {},
 ) {
@@ -81,11 +90,11 @@ fun AddDiscussionScreen(
       return@LaunchedEffect
     }
     isSearching = true
-    viewModel.searchByHandle(searchQuery)
+    handleViewModel.searchByHandle(searchQuery)
   }
 
-  LaunchedEffect(viewModel.handleSuggestions) {
-    viewModel.handleSuggestions.collect { list ->
+  LaunchedEffect(handleViewModel.handleSuggestions) {
+    handleViewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false
@@ -121,8 +130,8 @@ fun AddDiscussionScreen(
                 IconButton(onClick = onBack) {
                   Icon(
                       Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "Back",
-                      modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
+                      modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON),
+                      contentDescription = "Back")
                 }
               })
           HorizontalDivider(
@@ -249,12 +258,13 @@ fun AddDiscussionScreen(
               }
 
               /** Spacer to move buttons higher */
-              Spacer(modifier = Modifier.height(24.dp))
+              Spacer(modifier = Modifier.height(48.dp))
 
               /** Buttons section */
-              Column(
+              Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalAlignment = Alignment.CenterHorizontally) {
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = {
                           scope.launch {
@@ -277,24 +287,28 @@ fun AddDiscussionScreen(
                         enabled = title.isNotBlank() && !isCreating,
                         modifier =
                             Modifier.testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
-                                .fillMaxWidth(0.5f),
-                        shape = CircleShape,
+                                .fillMaxWidth(0.4f),
+                        shape = RoundedCornerShape(50.dp),
                         colors =
                             ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
-                          Text(
-                              text = "Create Discussion",
-                              style = MaterialTheme.typography.bodySmall)
+                          Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text(text = "Create", style = MaterialTheme.typography.bodySmall)
                         }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
                     OutlinedButton(
                         onClick = onBack,
-                        modifier = Modifier.fillMaxWidth(0.3f),
+                        modifier =
+                            Modifier.fillMaxWidth(0.75f)
+                                .testTag(AddDiscussionTestTags.DISCARD_BUTTON),
                         shape = CircleShape,
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 contentColor = AppColors.negative)) {
+                          Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
+                          Spacer(modifier = Modifier.width(8.dp))
                           Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
                         }
                   }
@@ -328,7 +342,7 @@ fun MemberSearchField(
                 Icons.Default.Close,
                 contentDescription = "Clear",
                 modifier = Modifier.clickable { onQueryChange("") })
-          }
+          } else Icon(imageVector = Icons.Default.Search, contentDescription = null)
         })
 
     ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = onDismiss) {

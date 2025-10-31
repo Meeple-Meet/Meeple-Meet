@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.viewmodels.AuthUIState
 import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
@@ -74,7 +75,7 @@ class SignUpScreenTest {
 
   @Test
   fun initialState_welcomeTextDisplayed() {
-    compose.onNodeWithText("Welcome!").assertExists()
+    compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
   }
 
   @Test
@@ -364,7 +365,7 @@ class SignUpScreenTest {
     compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).assertExists()
     compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists()
     compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertExists()
-    compose.onNodeWithText("Welcome!").assertExists()
+    compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
     compose.onNodeWithText("OR").assertExists()
     compose.onNodeWithText("Already have an account? ").assertExists()
     compose.onNodeWithText("Log in.").assertExists()
