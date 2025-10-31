@@ -121,6 +121,12 @@ object SessionTestTags {
  * Helpers
  * ======================================================================= */
 
+/**
+ * Helper function to convert a Firebase Timestamp to a LocalDate and LocalTime pair.
+ *
+ * @param timestamp The Firebase Timestamp to convert.
+ * @return Pair containing the corresponding LocalDate and LocalTime.
+ */
 fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
   val instant = Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
   val zone = ZoneId.systemDefault()
@@ -130,7 +136,8 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
 
 /**
  * Main composable for the Session View screen. Displays session details, participants, proposed
- * game, and organizational info.
+ * game, and organizational info. Handles data loading and user interactions for both admins and
+ * regular members.
  *
  * @param viewModel Global FirestoreViewModel for retrieving discussions
  * @param sessionViewModel ViewModel managing session-specific operations
@@ -153,7 +160,9 @@ fun SessionDetailsScreen(
   var form by remember { mutableStateOf(initial) }
   val gameUIState by sessionViewModel.gameUIState.collectAsState()
 
-  // Fetch game as soon as we know the proposed game
+  // Fetch game as soon as we know the proposed game.
+  // This LaunchedEffect triggers whenever the session's gameId changes,
+  // ensuring the UI always has the latest game info.
   val sessionGameId = discussion.session?.gameId.orEmpty()
   LaunchedEffect(sessionGameId) {
     if (sessionGameId.isNotBlank()) {
@@ -164,6 +173,9 @@ fun SessionDetailsScreen(
   val game = gameUIState.fetchedGame
   val session = discussion.session!!
 
+  // This LaunchedEffect block updates the form state when the session or game changes.
+  // It fetches participant accounts and updates the UI fields accordingly.
+  // If the game info is missing, it triggers a fetch for the proposed game.
   LaunchedEffect(session.gameId, game) {
     val (date, time) = timestampToLocal(session.date)
 
@@ -188,20 +200,22 @@ fun SessionDetailsScreen(
     }
   }
 
+  // Determine if the current user is an admin or the creator of the discussion.
   val isCurrUserAdmin =
       account.uid == discussion.creatorId || discussion.admins.contains(account.uid)
 
   Scaffold(
       topBar = {
         TopBarWithDivider(
-            text = "Session View",
+            text = "Session Details",
             onReturn = {
+              // Only admins/owners can persist changes to the session on back navigation.
               if (isCurrUserAdmin) {
                 sessionViewModel.updateSession(
                     requester = account,
                     discussion = discussion,
                     name = form.title,
-                    gameId = form.proposedGameString, // game?.uid ?: "Loading...",
+                    gameId = form.proposedGameString,
                     date = toTimestamp(form.date, form.time),
                     location = Location(0.0, 0.0, form.locationText),
                     minParticipants = form.minPlayers,
@@ -222,8 +236,8 @@ fun SessionDetailsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-          // Organisation section
-          // editable for admins and the session creator, read-only for members
+          // Organisation section (session info and controls)
+          // Editable for admins and the session creator, read-only for members.
           OrganizationSection(
               form = form,
               onFormChange = { form = it },
@@ -235,7 +249,7 @@ fun SessionDetailsScreen(
               isCurrUserAdmin = isCurrUserAdmin,
               sessionViewModel = sessionViewModel)
 
-          // Participants section
+          // Participants section (chips, add/remove)
           ParticipantsSection(
               form = form,
               editable = isCurrUserAdmin,
@@ -249,13 +263,16 @@ fun SessionDetailsScreen(
               viewModel = viewModel)
 
           Spacer(Modifier.height(4.dp))
+          // Row with Leave and Delete buttons.
+          // - "Leave" is available to all users and removes the current user from participants.
+          //   If the user is the last participant, the session is deleted.
+          // - "Delete" is shown only to admins/owners (see DeleteSessionBTN for logic).
           Row(
               horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
               modifier = Modifier.fillMaxWidth(),
               verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
                     onClick = {
-                      onBack()
                       val updatedParticipants =
                           form.participants.filterNot { it.uid == account.uid }
                       discussion.let { disc ->
@@ -278,6 +295,7 @@ fun SessionDetailsScreen(
                       Text("Leave", style = MaterialTheme.typography.bodyMedium)
                     }
 
+                // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
                 DeleteSessionBTN(
                     sessionViewModel = sessionViewModel,
                     currentUser = account,
@@ -584,7 +602,6 @@ fun OrganizationSection(
         Title(
             text = form.title.ifEmpty { "New Session" },
             editable = isCurrUserAdmin,
-            form,
             onValueChange = { onValueChangeTitle(it) },
             modifier =
                 Modifier.align(Alignment.CenterHorizontally)
@@ -655,7 +672,6 @@ fun OrganizationSection(
 fun Title(
     text: String,
     editable: Boolean = false,
-    form: SessionForm,
     onValueChange: (String) -> Unit = {},
     modifier: Modifier
 ) {
@@ -766,10 +782,16 @@ fun PillSliderNoBackground(
   }
 }
 
+/**
+ * Dialog composable for picking a time using the Material3 TimePicker.
+ *
+ * @param onDismiss Callback when the dialog is dismissed.
+ * @param onTimeSelected Callback with the selected LocalTime.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit) {
-  // initialize state with current time
+  // Initialize state with current time
   val calendar = Calendar.getInstance()
   val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
   val initialMinute = calendar.get(Calendar.MINUTE)
@@ -815,13 +837,14 @@ fun TimePickerDialog(onDismiss: () -> Unit, onTimeSelected: (LocalTime) -> Unit)
 }
 
 /**
- * Composable used to display an interactive timefield
+ * Composable used to display an interactive time field. Shows a time value and, if editable, allows
+ * the user to pick a new time via a dialog.
  *
- * @param value Time set
- * @param onValueChange callback fn when time is changed
+ * @param value Time set (as a string)
+ * @param onValueChange Callback fn when time is changed
  * @param modifier Modifiers that want to be passed to the composable
  * @param editable Whether the composable should be made editable depending on the current user's
- *   perms
+ *   permissions
  */
 @Composable
 fun TimeField(
@@ -848,6 +871,7 @@ fun TimeField(
       },
       modifier = modifier.testTag(SessionTestTags.TIME_FIELD))
 
+  // Show the time picker dialog when requested.
   if (showDialogTime) {
     TimePickerDialog(
         onDismiss = { showDialogTime = false }, onTimeSelected = { sel -> onValueChange(sel) })

@@ -96,6 +96,13 @@ const val MIN_SLIDER_NUMBER: Float = 1f
 const val SLIDER_STEPS: Int = (MAX_SLIDER_NUMBER - MIN_SLIDER_NUMBER - 1).toInt()
 
 /** TODO: change this to a truly location searcher later when coded */
+/**
+ * Returns a list of mock location suggestions based on a query string.
+ *
+ * @param query The input string to base the suggestions on.
+ * @param max The maximum number of location suggestions to return.
+ * @return A list of [Location] objects with randomized coordinates.
+ */
 private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
   if (query.isBlank()) return emptyList()
   val rng = Random(query.hashCode())
@@ -106,6 +113,15 @@ private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Locat
   }
 }
 
+/**
+ * Converts a [LocalDate] and [LocalTime] to a Firebase [Timestamp].
+ *
+ * @param date The date of the session, or null.
+ * @param time The time of the session, or null.
+ * @param zoneId The time zone to use for conversion (defaults to system default).
+ * @return A [Timestamp] corresponding to the combined date and time, or the current timestamp if
+ *   either is null.
+ */
 fun toTimestamp(
     date: LocalDate?,
     time: LocalTime?,
@@ -126,6 +142,9 @@ fun toTimestamp(
 /**
  * Composable function representing the Add Session screen.
  *
+ * This screen allows the user to create a new session, including setting a title, selecting a game,
+ * specifying the date and time, choosing a location, and managing participants.
+ *
  * @param account The current user's account.
  * @param discussion The discussion context for the session.
  * @param viewModel The FirestoreViewModel for data operations.
@@ -140,19 +159,24 @@ fun AddSessionScreen(
     sessionViewModel: FirestoreSessionViewModel,
     onBack: () -> Unit = {}
 ) {
+  // Holds the form state for the session
   var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
+  // Holds the selected location (may be null)
   var selectedLocation by remember { mutableStateOf<Location?>(null) }
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  // Helper to show error messages in a snackbar
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
+  // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
     viewModel.getAccounts(discussion.participants) { fetched ->
       form = form.copy(participants = (fetched + account).distinctBy { it.uid })
     }
     form = form.copy(maxPlayers = form.participants.size)
 
+    // If a game query was already entered, trigger search
     if (form.proposedGameString.isNotBlank()) {
       runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGameString) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
@@ -180,7 +204,7 @@ fun AddSessionScreen(
                     .testTag(SessionCreationTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-              // Organisation section
+              // Organisation section (title, game, date, time, location)
               OrganisationSection(
                   sessionViewModel = sessionViewModel,
                   account = account,
@@ -199,7 +223,7 @@ fun AddSessionScreen(
                   title = ORGANISATION_SECTION_NAME,
                   modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
-              // Participants section
+              // Participants section (player selection and slider)
               ParticipantsSection(
                   account = account,
                   currentUserId = account.uid,
@@ -228,11 +252,12 @@ fun AddSessionScreen(
 
               Spacer(Modifier.height(4.dp))
 
-              // Creation and Discard buttons
+              // Row with Discard and Create buttons
               Row(
                   horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                   modifier = Modifier.testTag(SessionCreationTestTags.BUTTON_ROW).fillMaxWidth(),
                   verticalAlignment = Alignment.CenterVertically) {
+                    // Whether form is ready for creation
                     val haveDateTime = form.date != null && form.time != null
                     val withinBounds =
                         form.participants.size >= form.minPlayers &&
@@ -240,6 +265,7 @@ fun AddSessionScreen(
 
                     val canCreate = haveDateTime && withinBounds && form.title.isNotBlank()
 
+                    // Reset form and go back on discard
                     DiscardButton(
                         modifier = Modifier.weight(1f),
                         onDiscard = {
@@ -248,6 +274,7 @@ fun AddSessionScreen(
                           onBack()
                         })
 
+                    // Create a new session if form is valid
                     CreateSessionButton(
                         formToSubmit = form,
                         enabled = canCreate,
@@ -410,15 +437,25 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 /**
  * Composable function representing the organisation section of the session creation form.
  *
+ * This section allows the user to enter the session title, search and select a game, pick date and
+ * time, and search for a location.
+ *
+ * @param form The current session form state.
+ * @param sessionViewModel The FirestoreSessionViewModel for session-specific operations.
+ * @param account The current user's account.
+ * @param onQueryFallbackChange Callback when the game query fallback changes.
+ * @param discussion The discussion context for the session.
+ * @param showError Callback for error handling.
+ * @param onTitleChange Callback when the session title changes.
  * @param date The selected date for the session.
  * @param time The selected time for the session.
  * @param locationText The text input for the location search.
- * @param onDateChange Callback function to be invoked when the date changes.
- * @param onTimeChange Callback function to be invoked when the time changes.
- * @param onLocationChange Callback function to be invoked when the location text changes.
+ * @param onDateChange Callback when the date changes.
+ * @param onTimeChange Callback when the time changes.
+ * @param onLocationChange Callback when the location text changes.
  * @param title The title of the organisation section.
  * @param modifier Modifier for styling the composable.
- * @param onLocationPicked Optional callback function to be invoked when a location is picked.
+ * @param onLocationPicked Optional callback when a location is picked.
  */
 @Composable
 fun OrganisationSection(
@@ -447,7 +484,7 @@ fun OrganisationSection(
           .border(1.dp, MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
 
-        // Title field
+        // Title field for session name
         IconTextField(
             value = form.title,
             onValueChange = { onTitleChange(it) },
@@ -460,7 +497,7 @@ fun OrganisationSection(
 
         Spacer(Modifier.height(10.dp))
 
-        // Game search
+        // Game search section
         GameSearchBar(
             sessionViewModel = sessionViewModel,
             currentUser = account,
@@ -472,18 +509,18 @@ fun OrganisationSection(
 
         Spacer(Modifier.height(10.dp))
 
-        // Date picker
+        // Date picker for session date
         DatePickerDockedField(
             value = date, onValueChange = onDateChange, label = "Date", editable = true)
 
         Spacer(Modifier.height(10.dp))
 
-        // Time picker
+        // Time picker for session time
         TimePickerField(value = time, onValueChange = onTimeChange, label = "Time")
 
         Spacer(Modifier.height(10.dp))
 
-        // Location search
+        // Location search field with suggestions
         val locationResults = remember(locationText) { mockLocationSuggestionsFrom(locationText) }
         LocationSearchField(
             query = locationText,
