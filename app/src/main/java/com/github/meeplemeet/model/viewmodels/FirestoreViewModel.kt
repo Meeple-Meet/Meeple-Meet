@@ -322,39 +322,37 @@ class FirestoreViewModel(
   /**
    * Vote on a poll option.
    *
-   * @param discussionId The ID of the discussion containing the poll.
-   * @param pollMessageTimestamp The timestamp of the message containing the poll.
-   * @param voterId The ID of the account voting.
+   * @param discussion The discussion containing the poll.
+   * @param pollMessage The message containing the poll.
+   * @param voter The account voting.
    * @param optionIndex The index of the option to vote for.
    */
   fun voteOnPoll(
-      discussionId: String,
-      pollMessageTimestamp: com.google.firebase.Timestamp,
-      voterId: String,
+      discussion: Discussion,
+      pollMessage: com.github.meeplemeet.model.structures.Message,
+      voter: Account,
       optionIndex: Int
   ) {
-    viewModelScope.launch {
-      repository.voteOnPoll(discussionId, pollMessageTimestamp, voterId, optionIndex)
-    }
+    viewModelScope.launch { repository.voteOnPoll(discussion, pollMessage, voter.uid, optionIndex) }
   }
 
   /**
    * Remove a user's vote for a specific poll option. Called when user clicks an option they
    * previously selected to deselect it.
    *
-   * @param discussionId The ID of the discussion containing the poll.
-   * @param pollMessageTimestamp The timestamp of the message containing the poll.
-   * @param voterId The ID of the account whose vote to remove.
+   * @param discussion The discussion containing the poll.
+   * @param pollMessage The message containing the poll.
+   * @param voter The account whose vote to remove.
    * @param optionIndex The specific option to remove.
    */
   fun removeVoteFromPoll(
-      discussionId: String,
-      pollMessageTimestamp: com.google.firebase.Timestamp,
-      voterId: String,
+      discussion: Discussion,
+      pollMessage: com.github.meeplemeet.model.structures.Message,
+      voter: Account,
       optionIndex: Int
   ) {
     viewModelScope.launch {
-      repository.removeVoteFromPoll(discussionId, pollMessageTimestamp, voterId, optionIndex)
+      repository.removeVoteFromPoll(discussion, pollMessage, voter.uid, optionIndex)
     }
   }
 }

@@ -533,84 +533,83 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   /**
    * Vote on a poll option.
    *
-   * @param discussionId The ID of the discussion containing the poll.
-   * @param pollMessageTimestamp The timestamp of the message containing the poll (used as
-   *   identifier).
+   * @param discussion The discussion containing the poll.
+   * @param pollMessage The message containing the poll.
    * @param userId The user's UID.
    * @param optionIndex The index of the option to vote for.
    */
   suspend fun voteOnPoll(
-      discussionId: String,
-      pollMessageTimestamp: Timestamp,
+      discussion: Discussion,
+      pollMessage: Message,
       userId: String,
       optionIndex: Int
   ) {
-
-    // Fetch discussion to get current state
-    val discussion = getDiscussion(discussionId)
-
-    // Find the message by timestamp (stable identifier)
-    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessageTimestamp }
-    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found")
-
-    val message = discussion.messages[messageIndex]
-    val poll = message.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+    val poll = pollMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
 
     if (optionIndex !in poll.options.indices) throw IllegalArgumentException("Invalid option index")
 
-    val updatedVotes = poll.votes.toMutableMap()
+    // Find the message index in the discussion
+    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessage.createdAt }
+    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found in discussion")
+
+    // Get the latest discussion state
+    val latestDiscussion = getDiscussion(discussion.uid)
+    val currentMessage = latestDiscussion.messages[messageIndex]
+    val currentPoll =
+        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+
+    // Calculate updated votes
+    val updatedVotes = currentPoll.votes.toMutableMap()
     val currentVotes = updatedVotes[userId]?.toMutableList() ?: mutableListOf()
 
-    if (poll.allowMultipleVotes) {
+    if (currentPoll.allowMultipleVotes) {
       // Multiple vote mode: add to user's votes if not already voted for this option
       if (optionIndex !in currentVotes) {
         currentVotes.add(optionIndex)
         updatedVotes[userId] = currentVotes
       }
-      // If already voted for this option, do nothing (idempotent)
     } else {
       // Single vote mode: replace with single option
       updatedVotes[userId] = listOf(optionIndex)
     }
 
-    val updatedPoll = poll.copy(votes = updatedVotes)
-
-    val updatedMessage = message.copy(poll = updatedPoll)
-
-    val updatedMessages = discussion.messages.toMutableList()
+    // Update the message with new poll data
+    val updatedPoll = currentPoll.copy(votes = updatedVotes)
+    val updatedMessage = currentMessage.copy(poll = updatedPoll)
+    val updatedMessages = latestDiscussion.messages.toMutableList()
     updatedMessages[messageIndex] = updatedMessage
 
-    discussions.document(discussionId).update(Discussion::messages.name, updatedMessages).await()
+    // Update the entire messages array
+    discussions.document(discussion.uid).update(Discussion::messages.name, updatedMessages).await()
   }
 
   /**
    * Remove a user's vote for a specific poll option. Called when user clicks an option they
    * previously selected to deselect it.
    *
-   * @param discussionId The ID of the discussion containing the poll.
-   * @param pollMessageTimestamp The timestamp of the message containing the poll (used as
-   *   identifier).
+   * @param discussion The discussion containing the poll.
+   * @param pollMessage The message containing the poll.
    * @param userId The user's UID.
    * @param optionIndex The specific option index to remove.
    */
   suspend fun removeVoteFromPoll(
-      discussionId: String,
-      pollMessageTimestamp: Timestamp,
+      discussion: Discussion,
+      pollMessage: Message,
       userId: String,
       optionIndex: Int
   ) {
-    // Fetch discussion to get current state
-    val discussion = getDiscussion(discussionId)
+    // Find the message index in the discussion
+    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessage.createdAt }
+    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found in discussion")
 
-    // Find the message by timestamp (stable identifier)
-    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessageTimestamp }
-    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found")
-
-    val message = discussion.messages[messageIndex]
-    val poll = message.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+    // Get the latest discussion state
+    val latestDiscussion = getDiscussion(discussion.uid)
+    val currentMessage = latestDiscussion.messages[messageIndex]
+    val currentPoll =
+        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
 
     // Check if user has voted
-    val currentVotes = poll.votes[userId]
+    val currentVotes = currentPoll.votes[userId]
     if (currentVotes == null || currentVotes.isEmpty()) {
       throw IllegalArgumentException("User has not voted on this poll")
     }
@@ -620,7 +619,8 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       throw IllegalArgumentException("User did not vote for option $optionIndex")
     }
 
-    val updatedVotes = poll.votes.toMutableMap()
+    // Calculate updated votes
+    val updatedVotes = currentPoll.votes.toMutableMap()
     val updatedUserVotes = currentVotes.toMutableList()
     updatedUserVotes.remove(optionIndex)
 
@@ -631,11 +631,13 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       updatedVotes[userId] = updatedUserVotes
     }
 
-    val updatedPoll = poll.copy(votes = updatedVotes)
-    val updatedMessage = message.copy(poll = updatedPoll)
-    val updatedMessages = discussion.messages.toMutableList()
+    // Update the message with new poll data
+    val updatedPoll = currentPoll.copy(votes = updatedVotes)
+    val updatedMessage = currentMessage.copy(poll = updatedPoll)
+    val updatedMessages = latestDiscussion.messages.toMutableList()
     updatedMessages[messageIndex] = updatedMessage
 
-    discussions.document(discussionId).update(Discussion::messages.name, updatedMessages).await()
+    // Update the entire messages array
+    discussions.document(discussion.uid).update(Discussion::messages.name, updatedMessages).await()
   }
 }

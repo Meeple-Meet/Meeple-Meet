@@ -305,13 +305,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val options = listOf("Option 1", "Option 2", "Option 3")
     val question = "What is your favorite?"
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = question,
-            options = options,
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = question,
+        options = options,
+        allowMultipleVotes = false)
 
     val updated = repository.getDiscussion(discussion.uid)
     assertEquals(1, updated.messages.size)
@@ -327,13 +326,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun createPollWithMultipleVotesAllowed() = runBlocking {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Select all that apply",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = true)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Select all that apply",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = true)
 
     val updated = repository.getDiscussion(discussion.uid)
     assertTrue(updated.messages[0].poll?.allowMultipleVotes ?: false)
@@ -344,15 +342,16 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Pick one",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Pick one",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = false)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
+    val updatedDiscussion = repository.getDiscussion(discussion.uid)
+    val message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
@@ -366,16 +365,19 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Select all",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = true)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Select all",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = true)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
@@ -391,16 +393,19 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Pick one",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Pick one",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = false)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
@@ -413,17 +418,22 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Vote",
-            options = listOf("A", "B"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Vote",
+        options = listOf("A", "B"),
+        allowMultipleVotes = false)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount1.uid, 0)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount3.uid, 0)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 0)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
@@ -438,15 +448,16 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun voteOnPollThrowsForInvalidOptionIndex() = runTest {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Pick one",
-            options = listOf("A", "B"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Pick one",
+        options = listOf("A", "B"),
+        allowMultipleVotes = false)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 5)
+    val updatedDiscussion = repository.getDiscussion(discussion.uid)
+    val message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 5)
   }
 
   @Test
@@ -454,19 +465,26 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Select all",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = true)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Select all",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = true)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
 
-    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 1)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 1)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
@@ -483,17 +501,20 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Pick one",
-            options = listOf("A", "B"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Pick one",
+        options = listOf("A", "B"),
+        allowMultipleVotes = false)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
 
-    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
@@ -507,31 +528,35 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun removeVoteFromPollThrowsIfUserHasNotVoted() = runTest {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Pick one",
-            options = listOf("A", "B"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Pick one",
+        options = listOf("A", "B"),
+        allowMultipleVotes = false)
 
-    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
+    val updatedDiscussion = repository.getDiscussion(discussion.uid)
+    val message = updatedDiscussion.messages[0]
+    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun removeVoteFromPollThrowsIfUserDidNotVoteForThatOption() = runTest {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Select all",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = true)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Select all",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = true)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
-    repository.removeVoteFromPoll(discussion.uid, message.createdAt, testAccount2.uid, 2)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 2)
   }
 
   @Test
@@ -539,17 +564,22 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
     repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val message =
-        repository.createPoll(
-            discussion = discussion,
-            creatorId = testAccount1.uid,
-            question = "Vote",
-            options = listOf("A", "B", "C"),
-            allowMultipleVotes = false)
+    repository.createPoll(
+        discussion = discussion,
+        creatorId = testAccount1.uid,
+        question = "Vote",
+        options = listOf("A", "B", "C"),
+        allowMultipleVotes = false)
 
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount1.uid, 0)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount2.uid, 0)
-    repository.voteOnPoll(discussion.uid, message.createdAt, testAccount3.uid, 1)
+    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    message = updatedDiscussion.messages[0]
+    repository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 1)
 
     val updated = repository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
