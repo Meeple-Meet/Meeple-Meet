@@ -411,3 +411,70 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonar --parallel --build-cache
+
+      - name: Wait for SonarCloud analysis to complete
+        if: github.event_name == 'pull_request'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          echo "Waiting for SonarCloud to process the analysis..."
+          RETRIES=0
+          MAX_RETRIES=30
+          while [ $RETRIES -lt $MAX_RETRIES ]; do
+            sleep 10
+            RETRIES=$((RETRIES+1))
+            echo "Checking analysis status (attempt $RETRIES/$MAX_RETRIES)..."
+
+            # Check if the pull request analysis is available
+            RESPONSE=$(curl -s -u "$SONAR_TOKEN:" \
+              "https://sonarcloud.io/api/measures/component?component=Meeple-Meet_Meeple-Meet&pullRequest=${{ github.event.pull_request.number }}&metricKeys=new_line_coverage")
+
+            if echo "$RESPONSE" | jq -e '.component.measures[0].value' > /dev/null 2>&1; then
+              echo "Analysis is ready!"
+              break
+            fi
+
+            if [ $RETRIES -eq $MAX_RETRIES ]; then
+              echo "::warning::Timeout waiting for SonarCloud analysis to complete"
+            fi
+          done
+
+      - name: Check new line coverage threshold
+        id: coverage_check
+        if: github.event_name == 'pull_request'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          echo "Fetching new line coverage from SonarCloud..."
+
+          RESPONSE=$(curl -s -u "$SONAR_TOKEN:" \
+            "https://sonarcloud.io/api/measures/component?component=Meeple-Meet_Meeple-Meet&pullRequest=${{ github.event.pull_request.number }}&metricKeys=new_line_coverage")
+
+          echo "API Response: $RESPONSE"
+
+          COVERAGE=$(echo "$RESPONSE" | jq -r '.component.measures[0].value // "N/A"')
+
+          if [ "$COVERAGE" = "N/A" ]; then
+            echo "::warning::Could not retrieve new line coverage from SonarCloud. This might be because there are no new lines to cover."
+            echo "Skipping coverage check."
+            echo "coverage=N/A" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+          echo "New line coverage: $COVERAGE%"
+
+          # Compare coverage with threshold (80%)
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "::error::New line coverage ($COVERAGE%) is below the required threshold of 80%"
+            echo "::error::Please add more tests to cover the new code"
+            echo "View detailed coverage report: https://sonarcloud.io/component_measures?metric=new_line_coverage&view=list&pullRequest=${{ github.event.pull_request.number }}&id=Meeple-Meet_Meeple-Meet"
+            exit 1
+          else
+            echo "::notice::New line coverage ($COVERAGE%) meets the required threshold of 80%"
+          fi
+
+      - name: "Coverage Result: ${{ steps.coverage_check.outputs.coverage }}%"
+        if: github.event_name == 'pull_request' && steps.coverage_check.outputs.coverage != 'N/A'
+        run: echo "New line coverage is ${{ steps.coverage_check.outputs.coverage }}%"
