@@ -188,7 +188,8 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
   @Test
   fun voteOnPollMultipleTimesInMultipleVoteMode() = runBlocking {
     val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    viewModel.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C", "D"), true)
+    viewModel.createPoll(
+        discussion, testAccount1.uid, "Select all", listOf("A", "B", "C", "D"), true)
     delay(500)
 
     val d1 = repository.getDiscussion(discussion.uid)
