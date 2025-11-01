@@ -231,4 +231,37 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
         }
         .sortedByDescending { it.timestamp }
   }
+
+  /**
+   * Creates a Flow that emits real-time updates for all posts without their comments.
+   *
+   * This function sets up a Firestore listener for the posts collection, emitting a new list
+   * whenever posts are added, modified, or removed. Comments are not loaded to improve performance
+   * when displaying multiple posts.
+   *
+   * @return A [Flow] that emits a list of [Post] objects without comments, sorted by timestamp
+   *   (newest first).
+   */
+  fun listenPosts(): Flow<List<Post>> = callbackFlow {
+    val listener =
+        posts.addSnapshotListener { snapshot, e ->
+          if (e != null) {
+            close(e)
+            return@addSnapshotListener
+          }
+          if (snapshot != null) {
+            val postsList =
+                snapshot.documents
+                    .mapNotNull { postDoc ->
+                      val postNoUid =
+                          postDoc.toObject(PostNoUid::class.java) ?: return@mapNotNull null
+                      fromNoUid(postNoUid, emptyList())
+                    }
+                    .sortedByDescending { it.timestamp }
+            trySend(postsList)
+          }
+        }
+
+    awaitClose { listener.remove() }
+  }
 }
