@@ -178,9 +178,9 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
    *
    * @param postId The ID of the post to listen to.
    * @return A [Flow] that emits the complete [Post] object with nested comments whenever updates
-   *   occur.
+   *   occur, or null if the post no longer exists.
    */
-  fun listenPost(postId: String): Flow<Post> = callbackFlow {
+  fun listenPost(postId: String): Flow<Post?> = callbackFlow {
     val feedRef = posts.document(postId)
     val commentsRef = feedRef.collection(COMMENTS_COLLECTION_PATH)
 
@@ -192,7 +192,11 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
             close(e)
             return@addSnapshotListener
           }
-          if (feedSnap == null || !feedSnap.exists()) return@addSnapshotListener
+          if (feedSnap == null || !feedSnap.exists()) {
+            commentsListener?.remove()
+            trySend(null)
+            return@addSnapshotListener
+          }
 
           val postNoUid = feedSnap.toObject(PostNoUid::class.java) ?: return@addSnapshotListener
 
