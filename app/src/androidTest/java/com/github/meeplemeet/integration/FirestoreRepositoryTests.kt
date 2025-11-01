@@ -591,4 +591,148 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(3, poll?.getTotalVotes())
     assertEquals(3, poll?.getTotalVoters())
   }
+
+  // Error Handling Tests
+
+  @Test(expected = IllegalArgumentException::class)
+  fun voteOnPollThrowsWhenMessageDoesNotContainPoll() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val regularMessage = d1.messages[0]
+
+    repository.voteOnPoll(d1, regularMessage, testAccount1.uid, 0)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun voteOnPollThrowsWhenOptionIndexIsNegative() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val pollMessage = d1.messages[0]
+
+    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, -1)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun voteOnPollThrowsWhenOptionIndexTooLarge() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val pollMessage = d1.messages[0]
+
+    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 5)
+  }
+
+  @Test
+  fun voteOnPollDoesNotAddDuplicateVoteInMultipleVoteMode() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val pollMessage = d1.messages[0]
+
+    // Vote on same option twice
+    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+    val d2 = repository.getDiscussion(discussion.uid)
+    repository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 0) // Same option again
+
+    val final = repository.getDiscussion(discussion.uid)
+    val poll = final.messages[0].poll
+    assertNotNull(poll)
+    // Should only have one vote for option 0
+    assertEquals(listOf(0), poll!!.votes[testAccount1.uid])
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun removeVoteFromPollThrowsWhenMessageDoesNotContainPoll() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val regularMessage = d1.messages[0]
+
+    repository.removeVoteFromPoll(d1, regularMessage, testAccount1.uid, 0)
+  }
+
+  // Poll Helper Methods Tests
+
+  @Test
+  fun pollGetUserVotesReturnsCorrectVotes() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    repository.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val pollMessage = d1.messages[0]
+    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+    val d2 = repository.getDiscussion(discussion.uid)
+    repository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 2)
+
+    val final = repository.getDiscussion(discussion.uid)
+    val poll = final.messages[0].poll
+    assertNotNull(poll)
+
+    val user1Votes = poll!!.getUserVotes(testAccount1.uid)
+    assertNotNull(user1Votes)
+    assertEquals(2, user1Votes!!.size)
+    assertTrue(user1Votes.contains(0))
+    assertTrue(user1Votes.contains(2))
+
+    val user2Votes = poll.getUserVotes(testAccount2.uid)
+    assertEquals(null, user2Votes)
+  }
+
+  @Test
+  fun pollHasUserVotedWorksCorrectly() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    repository.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
+
+    val d1 = repository.getDiscussion(discussion.uid)
+    val pollMessage = d1.messages[0]
+    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+
+    val final = repository.getDiscussion(discussion.uid)
+    val poll = final.messages[0].poll
+    assertNotNull(poll)
+
+    assertTrue(poll!!.hasUserVoted(testAccount1.uid))
+    assertFalse(poll.hasUserVoted(testAccount2.uid))
+  }
+
+  // Edge Cases
+
+  @Test
+  fun createPollWithEmptyContentWorks() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val question = "What do you think?"
+    val options = listOf("Yes", "No")
+
+    repository.createPoll(discussion, testAccount1.uid, question, options, false)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    assertEquals(1, updated.messages.size)
+    val message = updated.messages[0]
+    assertNotNull(message.poll)
+    assertEquals(question, message.poll?.question)
+    // Content should be set to question
+    assertEquals(question, message.content)
+  }
+
+  @Test
+  fun pollWithManyOptions() = runBlocking {
+    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val options = (1..20).map { "Option $it" }
+
+    repository.createPoll(discussion, testAccount1.uid, "Pick one", options, false)
+
+    val updated = repository.getDiscussion(discussion.uid)
+    val poll = updated.messages[0].poll
+    assertNotNull(poll)
+    assertEquals(20, poll!!.options.size)
+  }
 }
