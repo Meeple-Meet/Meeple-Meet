@@ -73,7 +73,6 @@ class PostOverviewViewModel(
    * @deprecated This method is no longer needed as the ViewModel automatically listens to posts on
    *   initialization. Kept for backward compatibility.
    */
-  @Deprecated("Posts are automatically listened to on initialization")
   fun getPosts() {
     viewModelScope.launch {
       try {
