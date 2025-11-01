@@ -165,6 +165,19 @@ fun PostScreen(
   var topComment by rememberSaveable { mutableStateOf("") }
   var isSending by remember { mutableStateOf(false) }
 
+  // Track if post was ever loaded to distinguish between loading and deleted states
+  var postEverLoaded by remember { mutableStateOf(false) }
+
+  // Auto-navigate back if post is deleted after being loaded
+  LaunchedEffect(post) {
+    if (post != null) {
+      postEverLoaded = true
+    } else if (postEverLoaded) {
+      // Post was loaded but is now null (deleted)
+      onBack()
+    }
+  }
+
   // Ensure current user is in cache
   LaunchedEffect(account.uid) { userCache[account.uid] = account }
 
@@ -253,7 +266,6 @@ fun PostScreen(
               onDeletePost = {
                 scope.launch {
                   runCatching { postViewModel.deletePost(account, currentPost) }
-                      .onSuccess { onBack() }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
                 }
               },
