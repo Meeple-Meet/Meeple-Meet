@@ -134,7 +134,7 @@ class FeedsOverviewScreenTest : FirestoreTests() {
 
     checkpoint("Light-theme screen title") {
       compose.waitUntilAtLeastOneExists(hasTestTag("Post/${first.id}"), 5_000)
-      screenTitle().assertTextEquals(MeepleMeetScreen.FeedsOverview.title)
+      screenTitle().assertTextEquals(MeepleMeetScreen.DiscoverPosts.title)
     }
 
     checkpoint("Post without comments shows 0") {

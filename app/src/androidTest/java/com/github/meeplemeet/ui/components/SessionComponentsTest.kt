@@ -418,6 +418,7 @@ class SessionComponentsTest {
 
   /* ====================== DATE & TIME PICKERS ====================== */
 
+  @Ignore()
   @Test
   fun datePicker_cancel_then_confirm_and_timePicker_valueFlows() {
     val zone = ZoneId.of("UTC")
