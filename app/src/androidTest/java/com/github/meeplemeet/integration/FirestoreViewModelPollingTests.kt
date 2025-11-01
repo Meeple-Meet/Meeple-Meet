@@ -105,4 +105,3 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     assertTrue(poll!!.votes[testAccount1.uid]?.isEmpty() ?: true)
   }
 }
-
