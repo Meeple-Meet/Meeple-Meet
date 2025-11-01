@@ -72,7 +72,7 @@ class DiscussionAddScreenTest : FirestoreTests() {
     me = frank
 
     compose.setContent {
-      AddDiscussionScreen(
+      CreateDiscussionScreen(
           onBack = { nav.goBack() },
           onCreate = { nav.goBack() },
           viewModel = vm,

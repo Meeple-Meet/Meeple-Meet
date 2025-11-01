@@ -206,7 +206,7 @@ class AuthViewModelTest {
   fun `logout success updates signedOut`() =
       testScope.runTest {
         coEvery { repo.logout() } returns Result.success(Unit)
-        viewModel.logout()
+        viewModel.signOut()
         testDispatcher.scheduler.advanceUntilIdle()
         Assert.assertEquals(true, viewModel.uiState.value.signedOut)
         Assert.assertEquals(null, viewModel.uiState.value.account)
@@ -219,7 +219,7 @@ class AuthViewModelTest {
       testScope.runTest {
         val error = Exception("Logout failed")
         coEvery { repo.logout() } returns Result.failure(error)
-        viewModel.logout()
+        viewModel.signOut()
         testDispatcher.scheduler.advanceUntilIdle()
         Assert.assertEquals(false, viewModel.uiState.value.signedOut)
         Assert.assertEquals("Logout failed", viewModel.uiState.value.errorMsg)

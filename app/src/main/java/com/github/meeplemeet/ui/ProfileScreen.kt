@@ -57,7 +57,7 @@ fun ProfileScreen(
                   onClick = {
                     onSignOut()
                     firestoreViewModel.signOut()
-                    authViewModel.logout()
+                    authViewModel.signOut()
                   },
                   modifier = Modifier.testTag(ProfileTestTags.LOG_OUT_BUTTON),
                   colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {

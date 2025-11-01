@@ -83,7 +83,7 @@ class FeedsOverviewScreenTest : FirestoreTests() {
   fun full_smoke_all_cases() = runBlocking {
     compose.setContent {
       AppTheme(themeMode = theme) {
-        FeedsOverviewScreen(
+        PostsOverviewScreen(
             postOverviewVM = postVm,
             firestoreViewModel = firestoreVm,
             account = me,
@@ -134,7 +134,7 @@ class FeedsOverviewScreenTest : FirestoreTests() {
 
     checkpoint("Light-theme screen title") {
       compose.waitUntilAtLeastOneExists(hasTestTag("Post/${first.id}"), 5_000)
-      screenTitle().assertTextEquals(MeepleMeetScreen.FeedsOverview.title)
+      screenTitle().assertTextEquals(MeepleMeetScreen.PostsOverview.title)
     }
 
     checkpoint("Post without comments shows 0") {

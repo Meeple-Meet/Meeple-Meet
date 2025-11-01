@@ -12,9 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 
@@ -44,23 +42,23 @@ class FirestorePostTests : FirestoreTests() {
         repository.createPost(
             "Test Title", "Test Content", testAccount1.uid, listOf("tag1", "tag2"))
 
-    assertNotNull(post.id)
-    assertEquals("Test Title", post.title)
-    assertEquals("Test Content", post.body)
-    assertEquals(testAccount1.uid, post.authorId)
-    assertEquals(listOf("tag1", "tag2"), post.tags)
-    assertTrue(post.comments.isEmpty())
+    Assert.assertNotNull(post.id)
+    Assert.assertEquals("Test Title", post.title)
+    Assert.assertEquals("Test Content", post.body)
+    Assert.assertEquals(testAccount1.uid, post.authorId)
+    Assert.assertEquals(listOf("tag1", "tag2"), post.tags)
+    Assert.assertTrue(post.comments.isEmpty())
   }
 
   @Test
   fun testCreatePostWithoutTags() = runTest {
     val post = repository.createPost("No Tags", "Content", testAccount1.uid)
 
-    assertNotNull(post.id)
-    assertEquals("No Tags", post.title)
-    assertEquals("Content", post.body)
-    assertEquals(testAccount1.uid, post.authorId)
-    assertTrue(post.tags.isEmpty())
+    Assert.assertNotNull(post.id)
+    Assert.assertEquals("No Tags", post.title)
+    Assert.assertEquals("Content", post.body)
+    Assert.assertEquals(testAccount1.uid, post.authorId)
+    Assert.assertTrue(post.tags.isEmpty())
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -76,14 +74,14 @@ class FirestorePostTests : FirestoreTests() {
     val post = repository.createPost("Post with Comment", "Content", testAccount1.uid)
     val commentId = repository.addComment(post.id, "Top level comment", testAccount2.uid, post.id)
 
-    assertNotNull(commentId)
+    Assert.assertNotNull(commentId)
 
     // Verify comment was added by getting the post
     val updatedPost = repository.getPost(post.id)
 
-    assertEquals(1, updatedPost.comments.size)
-    assertEquals("Top level comment", updatedPost.comments[0].text)
-    assertEquals(testAccount2.uid, updatedPost.comments[0].authorId)
+    Assert.assertEquals(1, updatedPost.comments.size)
+    Assert.assertEquals("Top level comment", updatedPost.comments[0].text)
+    Assert.assertEquals(testAccount2.uid, updatedPost.comments[0].authorId)
   }
 
   @Test
@@ -94,17 +92,18 @@ class FirestorePostTests : FirestoreTests() {
     val replyId =
         repository.addComment(post.id, "Reply to comment", testAccount1.uid, parentCommentId)
 
-    assertNotNull(replyId)
+    Assert.assertNotNull(replyId)
 
     // Verify nested comment structure
     val updatedPost = repository.getPost(post.id)
+    delay(1000)
 
-    assertEquals(1, updatedPost.comments.size)
+    Assert.assertEquals(1, updatedPost.comments.size)
     val parentComment = updatedPost.comments[0]
-    assertEquals("Parent comment", parentComment.text)
-    assertEquals(1, parentComment.children.size)
-    assertEquals("Reply to comment", parentComment.children[0].text)
-    assertEquals(testAccount1.uid, parentComment.children[0].authorId)
+    Assert.assertEquals("Parent comment", parentComment.text)
+    Assert.assertEquals(1, parentComment.children.size)
+    Assert.assertEquals("Reply to comment", parentComment.children[0].text)
+    Assert.assertEquals(testAccount1.uid, parentComment.children[0].authorId)
   }
 
   @Test
@@ -116,7 +115,7 @@ class FirestorePostTests : FirestoreTests() {
 
     // Verify comment was removed
     val updatedPost = repository.getPost(post.id)
-    assertTrue(updatedPost.comments.isEmpty())
+    Assert.assertTrue(updatedPost.comments.isEmpty())
   }
 
   @Test
@@ -130,7 +129,7 @@ class FirestorePostTests : FirestoreTests() {
     repository.removeComment(post.id, parentCommentId)
 
     val updatedPost = repository.getPost(post.id)
-    assertTrue(updatedPost.comments.isEmpty())
+    Assert.assertTrue(updatedPost.comments.isEmpty())
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -149,16 +148,16 @@ class FirestorePostTests : FirestoreTests() {
 
     val retrievedPost = repository.getPost(post.id)
 
-    assertEquals(post.id, retrievedPost.id)
-    assertEquals("Get Test", retrievedPost.title)
-    assertEquals("Content", retrievedPost.body)
-    assertEquals(testAccount1.uid, retrievedPost.authorId)
-    assertEquals(listOf("test"), retrievedPost.tags)
-    assertEquals(2, retrievedPost.comments.size)
+    Assert.assertEquals(post.id, retrievedPost.id)
+    Assert.assertEquals("Get Test", retrievedPost.title)
+    Assert.assertEquals("Content", retrievedPost.body)
+    Assert.assertEquals(testAccount1.uid, retrievedPost.authorId)
+    Assert.assertEquals(listOf("test"), retrievedPost.tags)
+    Assert.assertEquals(2, retrievedPost.comments.size)
 
     val commentWithChild = retrievedPost.comments.find { it.children.isNotEmpty() }
-    assertNotNull(commentWithChild)
-    assertEquals(1, commentWithChild!!.children.size)
+    Assert.assertNotNull(commentWithChild)
+    Assert.assertEquals(1, commentWithChild!!.children.size)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -204,14 +203,14 @@ class FirestorePostTests : FirestoreTests() {
   }
 
   @Test
-  fun testAddCommentToPost() = runTest {
+  fun testAddCommentToPost() = runBlocking {
     val post = repository.createPost("Post", "Content", testAccount1.uid)
     postVM.addComment(testAccount2, post, post.id, "VM Comment")
-    advanceUntilIdle()
+    delay(1000)
 
     val updatedPost = repository.getPost(post.id)
-    assertEquals(1, updatedPost.comments.size)
-    assertEquals("VM Comment", updatedPost.comments[0].text)
+    Assert.assertEquals(1, updatedPost.comments.size)
+    Assert.assertEquals("VM Comment", updatedPost.comments[0].text)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -233,7 +232,7 @@ class FirestorePostTests : FirestoreTests() {
     delay(1000)
 
     val updatedPost = repository.getPost(post.id)
-    assertTrue(updatedPost.comments.isEmpty())
+    Assert.assertTrue(updatedPost.comments.isEmpty())
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -261,33 +260,33 @@ class FirestorePostTests : FirestoreTests() {
     val posts = repository.getPosts()
 
     // Verify we get all posts
-    assertTrue(posts.size >= 3)
+    Assert.assertTrue(posts.size >= 3)
 
     // Verify posts are sorted by timestamp (newest first)
     val retrievedPost3 = posts.find { it.id == post3.id }
     val retrievedPost2 = posts.find { it.id == post2.id }
     val retrievedPost1 = posts.find { it.id == post1.id }
 
-    assertNotNull(retrievedPost1)
-    assertNotNull(retrievedPost2)
-    assertNotNull(retrievedPost3)
+    Assert.assertNotNull(retrievedPost1)
+    Assert.assertNotNull(retrievedPost2)
+    Assert.assertNotNull(retrievedPost3)
 
     // Verify post content
-    assertEquals("Post 1", retrievedPost1!!.title)
-    assertEquals("Content 1", retrievedPost1.body)
-    assertEquals(testAccount1.uid, retrievedPost1.authorId)
-    assertEquals(listOf("tag1"), retrievedPost1.tags)
+    Assert.assertEquals("Post 1", retrievedPost1!!.title)
+    Assert.assertEquals("Content 1", retrievedPost1.body)
+    Assert.assertEquals(testAccount1.uid, retrievedPost1.authorId)
+    Assert.assertEquals(listOf("tag1"), retrievedPost1.tags)
 
     // Verify comments are NOT loaded (empty list)
-    assertTrue(retrievedPost1.comments.isEmpty())
-    assertTrue(retrievedPost2!!.comments.isEmpty())
-    assertTrue(retrievedPost3!!.comments.isEmpty())
+    Assert.assertTrue(retrievedPost1.comments.isEmpty())
+    Assert.assertTrue(retrievedPost2!!.comments.isEmpty())
+    Assert.assertTrue(retrievedPost3!!.comments.isEmpty())
   }
 
   @Test
   fun testGetPostsReturnsEmptyListWhenNoPosts() = runTest {
     val posts = repository.getPosts()
-    assertNotNull(posts)
+    Assert.assertNotNull(posts)
   }
 
   @Test
@@ -298,16 +297,16 @@ class FirestorePostTests : FirestoreTests() {
 
     // Verify posts StateFlow is updated
     val posts = repository.getPosts()
-    assertTrue(posts.size >= 2)
+    Assert.assertTrue(posts.size >= 2)
 
     // Verify posts don't have comments loaded
-    posts.forEach { post -> assertTrue(post.comments.isEmpty()) }
+    posts.forEach { post -> Assert.assertTrue(post.comments.isEmpty()) }
   }
 
   @Test
   fun testGetPostsViewModelInitialState() = runTest {
     // Verify initial state is empty list
     val initialPosts = overviewVM.posts.value
-    assertTrue(initialPosts.isEmpty())
+    Assert.assertTrue(initialPosts.isEmpty())
   }
 }

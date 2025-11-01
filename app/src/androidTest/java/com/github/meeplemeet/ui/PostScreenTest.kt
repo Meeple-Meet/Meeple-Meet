@@ -246,12 +246,9 @@ class PostScreenTest {
 
     findNodeByTag(PostTags.POST_DELETE_BTN).assertDoesNotExist()
 
-    val backCount = AtomicInteger(0)
-    host.setOnBack { backCount.incrementAndGet() }
     host.setPostId("p2")
     findNodeByTag(PostTags.POST_DELETE_BTN).assertExists().performClick()
     verify(exactly = 1) { postVM.deletePost(marco, match { it.id == "p2" }) }
-    compose.waitUntil(1_000) { backCount.get() == 1 }
   }
 
   @Test

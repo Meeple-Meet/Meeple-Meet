@@ -26,7 +26,8 @@ data class Post(
     val timestamp: Timestamp,
     val authorId: String,
     val tags: List<String>,
-    val comments: List<Comment> = emptyList()
+    val comments: List<Comment> = emptyList(),
+    val commentCount: Int = 0,
 )
 
 /**
@@ -50,6 +51,7 @@ data class PostNoUid(
     val timestamp: Timestamp = Timestamp.now(),
     val tags: List<String> = emptyList(),
     val authorId: String = "",
+    val commentCount: Int = 0,
 )
 
 /**
@@ -70,7 +72,8 @@ fun toNoUid(post: Post): Pair<PostNoUid, List<CommentNoUid>> {
           body = post.body,
           timestamp = post.timestamp,
           authorId = post.authorId,
-          tags = post.tags)
+          tags = post.tags,
+          commentCount = post.comments.size)
   return postNoUid to toNoUid(post.id, post.comments)
 }
 
@@ -93,4 +96,4 @@ fun fromNoUid(postNoUid: PostNoUid, commentDocs: List<CommentNoUid>): Post =
         authorId = postNoUid.authorId,
         tags = postNoUid.tags,
         comments = fromNoUid(postNoUid.id, commentDocs),
-    )
+        commentCount = postNoUid.commentCount)

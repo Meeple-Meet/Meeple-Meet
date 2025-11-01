@@ -57,7 +57,7 @@ object AddDiscussionTestTags {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddDiscussionScreen(
+fun CreateDiscussionScreen(
     account: Account,
     viewModel: FirestoreViewModel = viewModel(),
     handleViewModel: FirestoreHandlesViewModel = viewModel(),
@@ -123,7 +123,7 @@ fun AddDiscussionScreen(
                       navigationIconContentColor = AppColors.textIcons),
               title = {
                 Text(
-                    text = MeepleMeetScreen.AddDiscussion.title,
+                    text = MeepleMeetScreen.CreateDiscussion.title,
                     modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               },
               navigationIcon = {
@@ -142,6 +142,50 @@ fun AddDiscussionScreen(
               thickness = 1.dp,
               color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
         }
+      },
+      bottomBar = {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              OutlinedButton(
+                  onClick = onBack,
+                  modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
+                  shape = RoundedCornerShape(percent = 50),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                    Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
+                  }
+
+              Button(
+                  onClick = {
+                    scope.launch {
+                      try {
+                        isCreating = true
+                        val clean = selectedMembers.toList()
+                        require(clean.size == selectedMembers.size) {
+                          "Bug: null Account in selection"
+                        }
+                        viewModel.createDiscussion(
+                            title, description, account, *clean.toTypedArray())
+                        isCreating = false
+                        onCreate()
+                      } catch (_: Exception) {
+                        isCreating = false
+                        creationError = "Failed to create discussion"
+                      }
+                    }
+                  },
+                  enabled = title.isNotBlank() && !isCreating,
+                  modifier =
+                      Modifier.weight(1f).testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON),
+                  shape = RoundedCornerShape(percent = 50),
+                  colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
+                    Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Create", style = MaterialTheme.typography.bodySmall)
+                  }
+            }
       }) { padding ->
         Column(
             modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
@@ -256,62 +300,6 @@ fun AddDiscussionScreen(
                   }
                 }
               }
-
-              /** Spacer to move buttons higher */
-              Spacer(modifier = Modifier.height(48.dp))
-
-              /** Buttons section */
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = {
-                          scope.launch {
-                            try {
-                              isCreating = true
-                              val clean = selectedMembers.toList()
-                              require(clean.size == selectedMembers.size) {
-                                "Bug: null Account in selection"
-                              }
-                              viewModel.createDiscussion(
-                                  title, description, account, *clean.toTypedArray())
-                              isCreating = false
-                              onCreate()
-                            } catch (_: Exception) {
-                              isCreating = false
-                              creationError = "Failed to create discussion"
-                            }
-                          }
-                        },
-                        enabled = title.isNotBlank() && !isCreating,
-                        modifier =
-                            Modifier.testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
-                                .fillMaxWidth(0.4f),
-                        shape = RoundedCornerShape(50.dp),
-                        colors =
-                            ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
-                          Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                          Spacer(modifier = Modifier.width(8.dp))
-                          Text(text = "Create", style = MaterialTheme.typography.bodySmall)
-                        }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    OutlinedButton(
-                        onClick = onBack,
-                        modifier =
-                            Modifier.fillMaxWidth(0.75f)
-                                .testTag(AddDiscussionTestTags.DISCARD_BUTTON),
-                        shape = CircleShape,
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = AppColors.negative)) {
-                          Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
-                          Spacer(modifier = Modifier.width(8.dp))
-                          Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
-                        }
-                  }
             }
       }
 }

@@ -21,7 +21,5 @@ data class Session(
     val gameId: String = "",
     val date: Timestamp = Timestamp.now(),
     val location: Location = Location(),
-    val minParticipants: Int = 0,
-    val maxParticipants: Int = 0,
     val participants: List<String> = emptyList()
 )

@@ -12,12 +12,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -371,17 +373,25 @@ fun SignUpScreen(
                       isFormValid &&
                           !uiState.isLoading // Enable only when form is valid and not loading
                   ) {
-                    // Show loading indicator during registration
-                    if (uiState.isLoading) {
-                      CircularProgressIndicator(
-                          modifier =
-                              Modifier.size(16.dp)
-                                  .testTag(
-                                      SignUpScreenTestTags.LOADING_INDICATOR), // For UI testing
-                          color = MaterialTheme.colorScheme.onPrimary)
-                      Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                      Row(
+                          verticalAlignment = Alignment.CenterVertically,
+                          modifier = Modifier.align(Alignment.CenterStart)) {
+                            Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null)
+                          }
+                      Spacer(modifier = Modifier.width(16.dp))
+
+                      // Show loading indicator during authentication
+                      if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier =
+                                Modifier.size(16.dp)
+                                    .testTag(
+                                        SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
+                            color = MaterialTheme.colorScheme.onPrimary)
+                      }
+                      Text("Sign Up")
                     }
-                    Text("Sign Up")
                   }
 
               // Divider between authentication methods
@@ -409,6 +419,12 @@ fun SignUpScreen(
                           .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON), // For UI testing
                   enabled = !uiState.isLoading // Disable during any authentication process
                   ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.google_logo),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified)
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text("Connect with Google")
                   }
 
