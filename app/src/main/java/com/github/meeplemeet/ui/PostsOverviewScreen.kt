@@ -71,7 +71,6 @@ fun PostsOverviewScreen(
     onSelectPost: (Post) -> Unit = {},
 ) {
 
-  LaunchedEffect(Unit) { postOverviewVM.getPosts() }
   val posts by postOverviewVM.posts.collectAsState()
   val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
 
