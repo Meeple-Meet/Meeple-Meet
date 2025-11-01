@@ -442,19 +442,16 @@ jobs:
       - name: Check new line coverage threshold
         id: coverage_check
         if: github.event_name == 'pull_request'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           echo "Fetching new line coverage from SonarCloud..."
 
-          RESPONSE=$(curl -s -u "$SONAR_TOKEN:" \
-            "https://sonarcloud.io/api/measures/component?component=Meeple-Meet_Meeple-Meet&pullRequest=${{ github.event.pull_request.number }}&metricKeys=new_line_coverage")
+          # Fetch the HTML page
+          HTML=$(curl -s "https://sonarcloud.io/component_measures?metric=new_line_coverage&view=list&pullRequest=${{ github.event.pull_request.number }}&id=Meeple-Meet_Meeple-Meet")
 
-          echo "API Response: $RESPONSE"
+          # Extract coverage from the span element with class js-measure-details-value
+          COVERAGE=$(echo "$HTML" | grep -o 'aria-label="Has value: [0-9.]*%"' | grep -o '[0-9.]*' | head -1)
 
-          COVERAGE=$(echo "$RESPONSE" | jq -r '.component.measures[0].value // "N/A"')
-
-          if [ "$COVERAGE" = "N/A" ]; then
+          if [ -z "$COVERAGE" ]; then
             echo "::warning::Could not retrieve new line coverage from SonarCloud. This might be because there are no new lines to cover."
             echo "Skipping coverage check."
             echo "coverage=N/A" >> $GITHUB_OUTPUT
