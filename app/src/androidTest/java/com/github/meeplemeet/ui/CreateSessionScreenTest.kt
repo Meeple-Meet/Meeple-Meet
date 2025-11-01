@@ -15,6 +15,7 @@ import com.github.meeplemeet.model.structures.Discussion
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.viewmodels.GameUIState
 import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -331,7 +332,8 @@ class CreateSessionScreenTest {
             sessionViewModel = sessionVM,
             discussion = baseDiscussion,
             onLocationPicked = {},
-            title = ORGANISATION_SECTION_NAME)
+            title = ORGANISATION_SECTION_NAME,
+            gameUi = GameUIState())
       }
     }
     compose.onAllNodesWithText("Location").onFirst().assertExists()
@@ -353,7 +355,7 @@ class CreateSessionScreenTest {
     @JvmStatic
     @BeforeClass
     fun cacheReflection() {
-      val cls = Class.forName("com.github.meeplemeet.ui.AddSessionScreenKt")
+      val cls = Class.forName("com.github.meeplemeet.ui.CreateSessionScreenKt")
       toTs =
           cls.getDeclaredMethod(
                   "toTimestamp", LocalDate::class.java, LocalTime::class.java, ZoneId::class.java)
