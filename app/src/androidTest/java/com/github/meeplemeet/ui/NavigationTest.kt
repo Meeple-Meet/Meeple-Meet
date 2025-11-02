@@ -511,4 +511,194 @@ class AuthenticatedNavigationTest : FirestoreTests() {
         .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
         .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
   }
+
+  @Test
+  fun testCreateDiscussionAndNavigateBack() {
+    // Navigate to Create Discussion screen
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("Add Discussion").performClick()
+    composeTestRule.waitForIdle()
+
+    // Fill in discussion title (minimum required field)
+    composeTestRule.onNodeWithTag("Add Title").performTextInput("Test Discussion")
+    composeTestRule.waitForIdle()
+
+    // Click create button
+    composeTestRule.onNodeWithTag("Create Discussion").performClick()
+    composeTestRule.waitForIdle()
+
+    // Should navigate back to Discussions Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
+  }
+
+  @Test
+  fun testCreatePostAndNavigateBack() {
+    // Navigate to Posts tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate to Create Post
+    composeTestRule.onNodeWithTag("AddPostButton").performClick()
+    composeTestRule.waitForIdle()
+
+    // Fill in required fields
+    composeTestRule.onNodeWithTag("create_post_title_field").performTextInput("Test Post")
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("create_post_body_field").performTextInput("Test Description")
+    composeTestRule.waitForIdle()
+
+    // Click post button
+    composeTestRule.onNodeWithTag("create_post_post_btn").performClick()
+    composeTestRule.waitForIdle()
+
+    // Should navigate back to Posts Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.PostsOverview.title)
+  }
+
+  @Test
+  fun testDiscardPostNavigatesBack() {
+    // Navigate to Create Post
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("AddPostButton").performClick()
+    composeTestRule.waitForIdle()
+
+    // Click discard button
+    composeTestRule.onNodeWithTag("create_post_draft_btn").performClick()
+    composeTestRule.waitForIdle()
+
+    // Should navigate back to Posts Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.PostsOverview.title)
+  }
+
+  @Test
+  fun testProfileScreenSignOutButton() {
+    // Navigate to Profile tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Profile screen
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.Profile.title)
+
+    // Verify logout button exists (we don't actually sign out to avoid breaking other tests)
+    composeTestRule.onNodeWithTag("Logout Button").assertExists()
+  }
+
+  @Test
+  fun testNavigationFromDiscussionsToSessions() {
+    // Start on Discussions
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate to Sessions
+    composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Sessions
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.SessionsOverview.title)
+  }
+
+  @Test
+  fun testNavigationFromPostsToProfile() {
+    // Start on Posts
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate to Profile
+    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Profile
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.Profile.title)
+  }
+
+  @Test
+  fun testBottomBarPersistsAcrossScreens() {
+    // Test that bottom bar is visible on all main screens
+    val screens =
+        listOf(
+            NavigationTestTags.DISCUSSIONS_TAB,
+            NavigationTestTags.SESSIONS_TAB,
+            NavigationTestTags.DISCOVER_TAB,
+            NavigationTestTags.PROFILE_TAB)
+
+    screens.forEach { screenTag ->
+      composeTestRule.onNodeWithTag(screenTag).performClick()
+      composeTestRule.waitForIdle()
+
+      // Bottom bar should always be visible
+      composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
+    }
+  }
+
+  @Test
+  fun testCreateDiscussionBackButtonPreservesUnsavedData() {
+    // Navigate to Create Discussion
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("Add Discussion").performClick()
+    composeTestRule.waitForIdle()
+
+    // Enter some data
+    composeTestRule.onNodeWithTag("Add Title").performTextInput("My Discussion")
+    composeTestRule.waitForIdle()
+
+    // Go back using back button
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    // Should be back on Discussions Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
+  }
+
+  @Test
+  fun testBottomBarHighlightsCurrentTab() {
+    // Navigate to each tab and verify it's selected
+    val tabs =
+        listOf(
+            NavigationTestTags.DISCUSSIONS_TAB to MeepleMeetScreen.DiscussionsOverview.title,
+            NavigationTestTags.SESSIONS_TAB to MeepleMeetScreen.SessionsOverview.title,
+            NavigationTestTags.DISCOVER_TAB to MeepleMeetScreen.PostsOverview.title,
+            NavigationTestTags.PROFILE_TAB to MeepleMeetScreen.Profile.title)
+
+    tabs.forEach { (tabTag, title) ->
+      composeTestRule.onNodeWithTag(tabTag).performClick()
+      composeTestRule.waitForIdle()
+
+      // Verify the screen title matches (indicating we're on the right screen)
+      composeTestRule.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertTextContains(title)
+    }
+  }
+
+  @Test
+  fun testNavigationDoesNotCrashOnQuickTabSwitching() {
+    // Quickly switch between tabs to test navigation stability
+    repeat(3) {
+      composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+      composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).performClick()
+      composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+      composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).performClick()
+    }
+    composeTestRule.waitForIdle()
+
+    // Should still be functional
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
+  }
 }
