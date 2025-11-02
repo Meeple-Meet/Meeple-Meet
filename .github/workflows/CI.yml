@@ -335,7 +335,7 @@ jobs:
 
   coverage-report:
     name: Coverage Report
-    needs: [unit-tests, android-tests, compile-debug-classes]
+    needs: [unit-tests, android-tests, compile-debug-classes, assemble-lint]
     runs-on: ubuntu-latest
     outputs:
       coverage: ${{ steps.coverage.outputs.percentage }}
