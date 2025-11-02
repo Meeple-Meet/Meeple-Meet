@@ -98,7 +98,7 @@ fun MeepleMeetApp(
         if (!signedOut) firestoreVM.discussionFlow(discussionId) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
-  val sessionRepo =
+  val sessionVM =
       remember(discussion) { discussion?.let { FirestoreSessionViewModel(discussion!!) } }
 
   var postId by remember { mutableStateOf("") }
@@ -196,6 +196,7 @@ fun MeepleMeetApp(
                 },
                 onCreateSessionClick = {
                   discussionId = it.uid
+                  if (it.session == null && sessionVM != null) sessionVM.clear()
                   navigationActions.navigateTo(
                       if (it.session != null) MeepleMeetScreen.Session
                       else MeepleMeetScreen.CreateSession)
@@ -225,25 +226,25 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.CreateSession.name) {
-      sessionRepo?.let {
+      sessionVM?.let {
         CreateSessionScreen(
             account = account!!,
             discussion = discussion!!,
             viewModel = firestoreVM,
-            sessionViewModel = sessionRepo,
+            sessionViewModel = sessionVM,
             onBack = { navigationActions.goBack() })
       } ?: LoadingScreen()
     }
 
     composable(MeepleMeetScreen.Session.name) {
-      sessionRepo?.let {
+      sessionVM?.let {
         if (discussion!!.session != null &&
             discussion!!.session!!.participants.contains(account!!.uid))
             SessionDetailsScreen(
                 account = account!!,
                 discussion = discussion!!,
                 viewModel = firestoreVM,
-                sessionViewModel = sessionRepo,
+                sessionViewModel = sessionVM,
                 onBack = { navigationActions.goBack() })
         else navigationActions.navigateTo(MeepleMeetScreen.Discussion)
       } ?: LoadingScreen()

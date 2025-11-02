@@ -71,6 +71,10 @@ class FirestoreSessionViewModel(
     return discussion.admins.contains(requester.uid)
   }
 
+  fun clear() {
+    _gameUIState.value = GameUIState()
+  }
+
   /**
    * Creates a new gaming session within the discussion.
    *
