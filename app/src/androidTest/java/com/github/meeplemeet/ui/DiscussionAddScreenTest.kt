@@ -15,6 +15,7 @@ import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.coVerify
 import io.mockk.mockk
 import java.util.UUID
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
@@ -155,7 +156,7 @@ class DiscussionAddScreenTest : FirestoreTests() {
     println(
         "Smoke: ${report.size - failed.size}/${report.size} OK" +
             (if (failed.isNotEmpty()) " → $failed" else ""))
-    Assert.assertTrue("Failures: $failed", failed.isEmpty())
+    assertTrue("Failures: $failed", failed.isEmpty())
   }
 
   @After

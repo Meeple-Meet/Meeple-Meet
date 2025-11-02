@@ -27,9 +27,9 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.mockk
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -178,7 +178,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     println(
         "Smoke: ${report.size - failed.size}/${report.size} OK" +
             (if (failed.isNotEmpty()) " → $failed" else ""))
-    Assert.assertTrue("Failures: $failed", failed.isEmpty())
+    assertTrue("Failures: $failed", failed.isEmpty())
   }
 
   @After

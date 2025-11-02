@@ -190,7 +190,7 @@ fun MeepleMeetApp(
                 account!!,
                 discussion!!,
                 firestoreVM,
-                onBack = { navigationActions.goBack() },
+                onBack = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
                 onOpenDiscussionInfo = {
                   navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
                 },

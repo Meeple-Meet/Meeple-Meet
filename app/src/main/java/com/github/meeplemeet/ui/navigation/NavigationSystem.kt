@@ -211,17 +211,17 @@ open class NavigationActions(private val navController: NavHostController) {
    *
    * @param screen The target screen to navigate to.
    */
-  open fun navigateTo(screen: MeepleMeetScreen) {
+  open fun navigateTo(screen: MeepleMeetScreen, popUpTo: Boolean = screen.inBottomBar) {
     scope.launch(Dispatchers.Main) {
-      if (screen.inBottomBar && currentRoute() == screen.name) {
-        // If the user is already on the top-level destination, do nothing
+      if (currentRoute() == screen.name) {
+        // If the user is already on this screen, do nothing to avoid consecutive duplicates
         return@launch
       }
       navController.navigate(screen.name) {
         // Screens available through the bottom navigation bar are top-level destinations.
         // When navigating to one of these, we want to clear the back stack to avoid building
         // up a large stack of destinations as the user switches between them.
-        if (screen.inBottomBar) {
+        if (popUpTo) {
           launchSingleTop = true
           popUpTo(screen.name) { inclusive = true }
         }
@@ -249,7 +249,7 @@ open class NavigationActions(private val navController: NavHostController) {
     }
   }
 
-  /** Navigate back to the previous screen. */
+  /** Navigate back to the previous screen, skipping consecutive duplicates. */
   open fun goBack() {
     scope.launch(Dispatchers.Main) { navController.popBackStack() }
   }
