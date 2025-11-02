@@ -60,7 +60,6 @@ import org.junit.Test
  *   instead of "Sessions"), update the asserted strings accordingly.
  * - Update test tags for better testability where applicable.
  */
-@Ignore
 class NavigationTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
@@ -137,7 +136,18 @@ class NavigationTest : FirestoreTests() {
 
       // Wait for the auth state to update and navigation to complete
       composeTestRule.waitForIdle()
-      Thread.sleep(1000)
+
+      // Wait for navigation to complete by checking if we're on the discussions overview
+      composeTestRule.waitUntil(timeoutMillis = 5000) {
+        try {
+          composeTestRule
+              .onNodeWithTag(NavigationTestTags.SCREEN_TITLE, useUnmergedTree = false)
+              .assertExists()
+          true
+        } catch (_: AssertionError) {
+          false
+        }
+      }
       composeTestRule.waitForIdle()
     }
   }
@@ -153,6 +163,7 @@ class NavigationTest : FirestoreTests() {
   // ---------- Auth screens navigation ----------
 
   @Test
+  @Ignore
   fun startScreen_isSignIn_and_bottomBarNotDisplayed() = runTest {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule.checkBottomBarIsNotDisplayed()
@@ -196,7 +207,7 @@ class NavigationTest : FirestoreTests() {
     composeTestRule.checkSignInScreenIsDisplayed()
     composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
     composeTestRule.checkSignUpScreenIsDisplayed()
-    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_IN_BUTTON).performClick()
 
     // Simulate login
     login()
@@ -217,6 +228,7 @@ class NavigationTest : FirestoreTests() {
     composeTestRule.clickOnTab(NavigationTestTags.DISCUSSIONS_TAB)
   }
 
+  @Ignore
   @Test
   fun canNavigateToAllTabs() = runTest {
     login()

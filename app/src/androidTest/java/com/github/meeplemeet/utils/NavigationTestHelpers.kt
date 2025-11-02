@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import com.github.meeplemeet.ui.DiscussionTestTags
 import com.github.meeplemeet.ui.UITestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -48,7 +49,7 @@ object NavigationTestHelpers {
   }
 
   fun ComposeTestRule.checkSignUpScreenIsDisplayed() {
-    checkScreenIsDisplayed("Welcome!")
+    checkScreenIsDisplayed("Sign Up")
   }
 
   fun ComposeTestRule.checkDiscussionsOverviewIsDisplayed() {
@@ -142,7 +143,7 @@ object NavigationTestHelpers {
   fun ComposeTestRule.navigateToDiscussionScreen(discussionName: String) {
     waitForIdle()
 
-    val tag = "Discussion/$discussionName" // TODO better test tag
+    val tag = DiscussionTestTags.discussionInfo(discussionName) // TODO better test tag
     val foundInMergedTree =
         try {
           onNodeWithTag(tag, useUnmergedTree = false).assertIsDisplayed().performClick()
@@ -283,8 +284,19 @@ object NavigationTestHelpers {
   fun ComposeTestRule.fillAddDiscussionForm(title: String, description: String) {
     waitForIdle()
 
-    onNodeWithTag("Add Title").performTextInput(title)
-    onNodeWithTag("Add Description").performTextInput(description)
+    // Try merged tree first for title field
+    try {
+      onNodeWithTag("Add Title", useUnmergedTree = false).performTextInput(title)
+    } catch (_: AssertionError) {
+      onNodeWithTag("Add Title", useUnmergedTree = true).performTextInput(title)
+    }
+
+    // Try merged tree first for description field
+    try {
+      onNodeWithTag("Add Description", useUnmergedTree = false).performTextInput(description)
+    } catch (_: AssertionError) {
+      onNodeWithTag("Add Description", useUnmergedTree = true).performTextInput(description)
+    }
 
     waitForIdle()
   }
