@@ -39,24 +39,20 @@ class AuthIntegrationTest : FirestoreTests() {
   private val wrongPassword = "WrongPassword456!"
 
   @Before
-  fun setup() {
+  fun setup() = runBlocking {
     // Initialize repositories
     firestoreRepo = FirestoreRepository(db)
     authRepo = AuthRepository(auth = auth, firestoreRepository = firestoreRepo)
 
     // Ensure clean state for each test
-    runBlocking {
-      auth.signOut()
-      clearTestData()
-    }
+    auth.signOut()
+    clearTestData()
   }
 
   @After
-  fun cleanup() {
-    runBlocking {
-      auth.signOut()
-      clearTestData()
-    }
+  fun cleanup() = runBlocking {
+    auth.signOut()
+    clearTestData()
   }
 
   /** Cleans up test data from Firestore to ensure test isolation */

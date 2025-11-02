@@ -22,8 +22,6 @@ open class FirestoreTests {
   lateinit var auth: FirebaseAuth
 
   companion object {
-    private var cleared = false
-
     @BeforeClass
     @JvmStatic
     fun globalSetUp() {
@@ -36,12 +34,9 @@ open class FirestoreTests {
         FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
       }
 
-      if (!cleared) {
-        runBlocking {
-          val db = FirebaseProvider.db
-          deleteAllCollectionsOnce(db)
-        }
-        cleared = true
+      runBlocking {
+        val db = FirebaseProvider.db
+        deleteAllCollectionsOnce(db)
       }
     }
 
