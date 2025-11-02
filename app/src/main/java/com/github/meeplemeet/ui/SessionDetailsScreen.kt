@@ -747,7 +747,6 @@ fun PillSliderNoBackground(
     range: ClosedFloatingPointRange<Float>,
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
-    editable: Boolean = true,
 ) {
   Column {
     Text(title, style = MaterialTheme.typography.labelSmall, color = AppColors.textIconsFade)

@@ -282,7 +282,6 @@ fun DiscretePillSlider(
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
     modifier: Modifier = Modifier,
-    editable: Boolean = false,
     sliderModifier: Modifier = Modifier,
     sliderColors: SliderColors =
         SliderDefaults.colors(
@@ -424,7 +423,6 @@ fun ParticipantChip(
 @Composable
 fun <T> TwoPerRowGrid(
     items: List<T>,
-    key: (T) -> Any,
     modifier: Modifier = Modifier,
     rowsModifier: Modifier = Modifier,
     content: @Composable (item: T, modifier: Modifier) -> Unit,

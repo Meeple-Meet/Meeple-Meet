@@ -253,7 +253,6 @@ fun MeepleMeetApp(
 
     composable(MeepleMeetScreen.PostsOverview.name) {
       PostsOverviewScreen(
-          account = account!!,
           navigation = navigationActions,
           firestoreViewModel = firestoreVM,
           onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },

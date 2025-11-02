@@ -309,13 +309,7 @@ fun DiscussionDetailsScreen(
 
                 /** --- Members List --- */
                 MemberList(
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it },
                     selectedMembers = selectedMembers,
-                    searchResults = searchResults,
-                    dropdownExpanded = dropdownExpanded,
-                    onDropdownExpandedChange = { dropdownExpanded = it },
-                    isSearching = isSearching,
                     isMember = isMember,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     viewModel = viewModel,
@@ -448,13 +442,7 @@ fun DiscussionDetailsScreen(
 /**
  * Displays the list of discussion members and allows searching, adding, and managing members.
  *
- * @param searchQuery The current search query for member autocomplete.
- * @param onSearchQueryChange Callback invoked when the search query changes.
  * @param selectedMembers The list of currently selected (discussion) members.
- * @param searchResults The list of accounts matching the search query.
- * @param dropdownExpanded Whether the dropdown for search results is expanded.
- * @param onDropdownExpandedChange Callback to update dropdown expanded state.
- * @param isSearching Whether a search is currently in progress.
  * @param isMember Whether the current user is a regular member (not admin/owner).
  * @param modifier Modifier for styling this composable.
  * @param viewModel The FirestoreViewModel for data operations.
@@ -463,13 +451,7 @@ fun DiscussionDetailsScreen(
  */
 @Composable
 fun MemberList(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
     selectedMembers: MutableList<Account>,
-    searchResults: List<Account>,
-    dropdownExpanded: Boolean,
-    onDropdownExpandedChange: (Boolean) -> Unit,
-    isSearching: Boolean,
     isMember: Boolean,
     modifier: Modifier = Modifier,
     viewModel: FirestoreViewModel = viewModel(),

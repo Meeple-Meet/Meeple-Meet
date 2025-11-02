@@ -241,4 +241,70 @@ class FirestoreDiscussionTests : FirestoreTests() {
     assertFalse(updated.admins.contains(account2.uid))
     assertFalse(updated.admins.contains(account3.uid))
   }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun nonAdminUserCanRemoveThemselves() = runTest {
+    val discussion = repository.createDiscussion("Test", "", account1.uid)
+    repository.addUserToDiscussion(discussion, account2.uid)
+
+    val withUser = repository.getDiscussion(discussion.uid)
+    assertTrue(withUser.participants.contains(account2.uid))
+
+    // account2 is not an admin but should be able to remove themselves
+    viewModel.removeUserFromDiscussion(withUser, account2, account2)
+    advanceUntilIdle()
+
+    val updated = repository.getDiscussion(discussion.uid)
+    assertFalse(updated.participants.contains(account2.uid))
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test(expected = com.github.meeplemeet.model.PermissionDeniedException::class)
+  fun nonAdminUserCannotRemoveOtherUsers() = runTest {
+    val discussion = repository.createDiscussion("Test", "", account1.uid)
+    repository.addUsersToDiscussion(discussion, listOf(account2.uid, account3.uid))
+
+    val withUsers = repository.getDiscussion(discussion.uid)
+
+    // account2 tries to remove account3 - should fail
+    viewModel.removeUserFromDiscussion(withUsers, account2, account3)
+    advanceUntilIdle()
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun readDiscussionMessagesHandlesNonParticipant() = runTest {
+    val discussion = repository.createDiscussion("Test", "", account1.uid)
+    repository.sendMessageToDiscussion(discussion, account1, "Test message")
+
+    val withMessage = repository.getDiscussion(discussion.uid)
+
+    // account2 is not a participant, but calling readDiscussionMessages should not throw
+    viewModel.readDiscussionMessages(account2, withMessage)
+    advanceUntilIdle()
+
+    // No exception should be thrown - method returns early
+    assertTrue(true)
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun readDiscussionMessagesWorksForParticipants() = runTest {
+    val discussion = repository.createDiscussion("Test", "", account1.uid, listOf(account2.uid))
+    repository.sendMessageToDiscussion(discussion, account1, "Test message")
+
+    val withMessage = repository.getDiscussion(discussion.uid)
+
+    // Get account2 with the unread preview
+    val acc2WithPreviews = repository.getAccount(account2.uid)
+
+    // account2 is a participant and should be able to read messages
+    viewModel.readDiscussionMessages(acc2WithPreviews, withMessage)
+    advanceUntilIdle()
+
+    // Verify unread count is now 0
+    val updatedAccount = repository.getAccount(account2.uid)
+    assertEquals(0, updatedAccount.previews[discussion.uid]?.unreadCount ?: -1)
+  }
 }

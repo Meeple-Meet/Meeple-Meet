@@ -977,4 +977,83 @@ class FirestoreSessionTests : FirestoreTests() {
     assertNull(state.fetchedGame)
     assertEquals("Failed to fetch game details", state.gameFetchError)
   }
+
+  @Test
+  fun nonAdminCanLeaveSession() = runTest {
+    val originalSession =
+        Session(
+            name = "Catan Night",
+            gameId = "game123",
+            date = testTimestamp,
+            location = testLocation,
+            participants = listOf(account1.uid, account2.uid))
+
+    val discussionWithSession = baseDiscussion.copy(session = originalSession)
+    viewModel = FirestoreSessionViewModel(discussionWithSession, sessionRepository)
+
+    // account2 removes themselves from the session (they're not an admin)
+    val updatedSession = originalSession.copy(participants = listOf(account1.uid))
+    val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
+
+    coEvery {
+      sessionRepository.updateSession(
+          discussionWithSession.uid, null, null, null, null, listOf(account1.uid))
+    } returns updatedDiscussion
+
+    // Non-admin account2 should be able to remove themselves
+    viewModel.updateSession(account2, discussionWithSession, newParticipantList = listOf(account1))
+    advanceUntilIdle()
+
+    val result = viewModel.discussion.value
+    assertEquals(1, result.session?.participants?.size)
+    assertEquals(listOf(account1.uid), result.session?.participants)
+  }
+
+  @Test(expected = PermissionDeniedException::class)
+  fun nonAdminCannotRemoveOtherParticipants() = runTest {
+    val originalSession =
+        Session(
+            name = "Catan Night",
+            gameId = "game123",
+            date = testTimestamp,
+            location = testLocation,
+            participants = listOf(account1.uid, account2.uid, account3.uid))
+
+    val discussionWithSession =
+        baseDiscussion.copy(
+            participants = listOf(account1.uid, account2.uid, account3.uid),
+            session = originalSession)
+
+    viewModel = FirestoreSessionViewModel(discussionWithSession, sessionRepository)
+
+    // account2 tries to remove account3 (not themselves) - should fail
+    viewModel.updateSession(
+        account2, discussionWithSession, newParticipantList = listOf(account1, account2))
+    advanceUntilIdle()
+  }
+
+  @Test(expected = PermissionDeniedException::class)
+  fun nonAdminCannotModifySessionFields() = runTest {
+    val originalSession =
+        Session(
+            name = "Catan Night",
+            gameId = "game123",
+            date = testTimestamp,
+            location = testLocation,
+            participants = listOf(account1.uid, account2.uid))
+
+    val discussionWithSession =
+        baseDiscussion.copy(
+            participants = listOf(account1.uid, account2.uid), session = originalSession)
+
+    viewModel = FirestoreSessionViewModel(discussionWithSession, sessionRepository)
+
+    // account2 tries to change the name while also leaving - should fail
+    viewModel.updateSession(
+        account2,
+        discussionWithSession,
+        name = "Modified Name",
+        newParticipantList = listOf(account1))
+    advanceUntilIdle()
+  }
 }

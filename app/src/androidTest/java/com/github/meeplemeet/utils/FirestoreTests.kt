@@ -33,11 +33,6 @@ open class FirestoreTests {
         authEmulatorLaunched = true
         FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
       }
-
-      runBlocking {
-        val db = FirebaseProvider.db
-        deleteAllCollectionsOnce(db)
-      }
     }
 
     private suspend fun deleteAllCollectionsOnce(db: FirebaseFirestore) {
@@ -76,5 +71,10 @@ open class FirestoreTests {
   fun testsSetup() {
     db = FirebaseProvider.db
     auth = FirebaseProvider.auth
+
+    runBlocking {
+      val db = FirebaseProvider.db
+      deleteAllCollectionsOnce(db)
+    }
   }
 }

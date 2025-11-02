@@ -7,12 +7,14 @@ import com.github.meeplemeet.model.viewmodels.CreatePostViewModel
 import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
 import com.github.meeplemeet.model.viewmodels.PostViewModel
 import com.github.meeplemeet.utils.FirestoreTests
+import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
+import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Test
 
@@ -115,7 +117,7 @@ class FirestorePostTests : FirestoreTests() {
 
     // Verify comment was removed
     val updatedPost = repository.getPost(post.id)
-    Assert.assertTrue(updatedPost.comments.isEmpty())
+    Assert.assertTrue(updatedPost.comments[0].authorId.isEmpty())
   }
 
   @Test
@@ -124,12 +126,14 @@ class FirestorePostTests : FirestoreTests() {
     val parentCommentId = repository.addComment(post.id, "Parent", testAccount2.uid, post.id)
     repository.addComment(post.id, "Reply 1", testAccount1.uid, parentCommentId)
     repository.addComment(post.id, "Reply 2", testAccount2.uid, parentCommentId)
+    val withComments = repository.getPost(post.id)
 
     // Remove parent comment should also remove all replies
     repository.removeComment(post.id, parentCommentId)
 
     val updatedPost = repository.getPost(post.id)
-    Assert.assertTrue(updatedPost.comments.isEmpty())
+    assertEquals(withComments.comments.size, updatedPost.comments.size)
+    assertNotEquals(withComments.comments[0], updatedPost.comments[0])
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -232,7 +236,7 @@ class FirestorePostTests : FirestoreTests() {
     delay(1000)
 
     val updatedPost = repository.getPost(post.id)
-    Assert.assertTrue(updatedPost.comments.isEmpty())
+    assertNotEquals(comment, updatedPost.comments[0])
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -308,5 +312,102 @@ class FirestorePostTests : FirestoreTests() {
     // Verify initial state is empty list
     val initialPosts = overviewVM.posts.value
     Assert.assertTrue(initialPosts.isEmpty())
+  }
+
+  @Test
+  fun testCommentCountIncrementsWhenAddingComment() = runTest {
+    val post = repository.createPost("Test Post", "Content", testAccount1.uid)
+    Assert.assertEquals(0, post.commentCount)
+
+    // Add first comment
+    repository.addComment(post.id, "First comment", testAccount2.uid, post.id)
+    delay(500)
+
+    val updatedPost1 = repository.getPost(post.id)
+    Assert.assertEquals(1, updatedPost1.commentCount)
+
+    // Add second comment
+    repository.addComment(post.id, "Second comment", testAccount1.uid, post.id)
+    delay(500)
+
+    val updatedPost2 = repository.getPost(post.id)
+    Assert.assertEquals(2, updatedPost2.commentCount)
+  }
+
+  @Test
+  fun testCommentCountDecrementsWhenRemovingComment() = runTest {
+    val post = repository.createPost("Test Post", "Content", testAccount1.uid)
+
+    // Add two comments
+    val comment1Id = repository.addComment(post.id, "First comment", testAccount2.uid, post.id)
+    repository.addComment(post.id, "Second comment", testAccount1.uid, post.id)
+    delay(500)
+
+    val postWith2Comments = repository.getPost(post.id)
+    Assert.assertEquals(2, postWith2Comments.commentCount)
+
+    // Remove one comment
+    repository.removeComment(post.id, comment1Id)
+    delay(500)
+
+    val postWith1Comment = repository.getPost(post.id)
+    Assert.assertEquals(1, postWith1Comment.commentCount)
+  }
+
+  @Test
+  fun testCommentCountWithNestedReplies() = runTest {
+    val post = repository.createPost("Test Post", "Content", testAccount1.uid)
+
+    // Add parent comment
+    val parentId = repository.addComment(post.id, "Parent", testAccount2.uid, post.id)
+    delay(500)
+
+    val postWith1Comment = repository.getPost(post.id)
+    Assert.assertEquals(1, postWith1Comment.commentCount)
+
+    // Add reply to parent
+    repository.addComment(post.id, "Reply", testAccount1.uid, parentId)
+    delay(500)
+
+    val postWith2Comments = repository.getPost(post.id)
+    Assert.assertEquals(2, postWith2Comments.commentCount)
+
+    // Remove parent (should also remove reply but only decrement by 1)
+    repository.removeComment(post.id, parentId)
+    delay(500)
+
+    val postWith0Comments = repository.getPost(post.id)
+    Assert.assertEquals(1, postWith0Comments.commentCount)
+  }
+
+  @Test
+  fun testCommentCountInPostStructure() = runTest {
+    val post = repository.createPost("Test Post", "Content", testAccount1.uid)
+    Assert.assertEquals(0, post.commentCount)
+
+    // Add comments
+    repository.addComment(post.id, "Comment 1", testAccount2.uid, post.id)
+    repository.addComment(post.id, "Comment 2", testAccount1.uid, post.id)
+    delay(500)
+
+    // Verify commentCount field is populated correctly
+    val updatedPost = repository.getPost(post.id)
+    Assert.assertEquals(2, updatedPost.commentCount)
+    Assert.assertEquals(2, updatedPost.comments.size)
+  }
+
+  @Test
+  fun testGetPostsReturnsCommentCount() = runTest {
+    val post = repository.createPost("Post with Count", "Content", testAccount1.uid)
+    repository.addComment(post.id, "Comment", testAccount2.uid, post.id)
+    delay(500)
+
+    // Fetch posts without comments
+    val posts = repository.getPosts()
+    val foundPost = posts.find { it.id == post.id }
+
+    Assert.assertNotNull(foundPost)
+    Assert.assertEquals(1, foundPost!!.commentCount)
+    Assert.assertTrue(foundPost.comments.isEmpty()) // Comments not loaded
   }
 }

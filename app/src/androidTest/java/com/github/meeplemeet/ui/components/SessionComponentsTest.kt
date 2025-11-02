@@ -396,7 +396,6 @@ class SessionComponentsTest {
     set {
       TwoPerRowGrid(
           items = data,
-          key = { it },
           modifier = Modifier.testTag("grid"),
           rowsModifier = Modifier.testTag("rowMod")) { item, mod ->
             Box(mod.semantics {}) { Text("Cell $item") }

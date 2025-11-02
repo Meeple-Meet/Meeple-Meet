@@ -332,7 +332,6 @@ class CreateSessionScreenTest {
             sessionViewModel = sessionVM,
             discussion = baseDiscussion,
             onLocationPicked = {},
-            title = ORGANISATION_SECTION_NAME,
             gameUi = GameUIState())
       }
     }

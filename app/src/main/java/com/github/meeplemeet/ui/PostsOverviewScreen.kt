@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Post
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
@@ -65,7 +64,6 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 fun PostsOverviewScreen(
     postOverviewVM: PostOverviewViewModel = viewModel(),
     firestoreViewModel: FirestoreViewModel = viewModel(),
-    account: Account,
     navigation: NavigationActions,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},

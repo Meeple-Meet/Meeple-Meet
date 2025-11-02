@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Discussion
@@ -88,12 +87,8 @@ data class SessionForm(
 
 const val TITLE_PLACEHOLDER: String = "Title"
 const val PARTICIPANT_SECTION_NAME: String = "Participants"
-const val SLIDER_DESCRIPTION: String = "Number of players"
 const val ORGANISATION_SECTION_NAME: String = "Organisation"
 const val GAME_SEARCH_PLACEHOLDER: String = "Search games…"
-const val MAX_SLIDER_NUMBER: Float = 9f
-const val MIN_SLIDER_NUMBER: Float = 1f
-const val SLIDER_STEPS: Int = (MAX_SLIDER_NUMBER - MIN_SLIDER_NUMBER - 1).toInt()
 
 /** TODO: change this to a truly location searcher later when coded */
 /**
@@ -272,27 +267,20 @@ fun CreateSessionScreen(
                   onTimeChange = { form = form.copy(time = it) },
                   onLocationChange = { form = form.copy(locationText = it) },
                   onLocationPicked = { selectedLocation = it },
-                  title = ORGANISATION_SECTION_NAME,
                   modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
               // Participants section (player selection and slider)
               ParticipantsSection(
                   account = account,
-                  currentUserId = account.uid,
                   selected = form.participants,
                   allCandidates = form.participants,
                   minPlayers = gameUi.fetchedGame?.minPlayers ?: 0,
                   maxPlayers = gameUi.fetchedGame?.maxPlayers ?: 0,
-                  onMinMaxChange = { min, max -> },
-                  minSliderNumber = MIN_SLIDER_NUMBER,
-                  maxSliderNumber = MAX_SLIDER_NUMBER,
-                  sliderSteps = SLIDER_STEPS,
                   onAdd = { toAdd ->
                     form =
                         form.copy(participants = (form.participants + toAdd).distinctBy { it.uid })
                   },
                   mainSectionTitle = PARTICIPANT_SECTION_NAME,
-                  sliderDescription = SLIDER_DESCRIPTION,
                   onRemove = { toRemove ->
                     form =
                         form.copy(
@@ -326,8 +314,6 @@ fun GameSearchBar(
     discussion: Discussion?,
     queryFallback: String,
     onQueryFallbackChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    form: SessionForm = SessionForm(),
     onError: (String) -> Unit = {}
 ) {
   val gameQuery = gameUi.gameQuery.ifBlank { queryFallback }
@@ -453,7 +439,6 @@ fun OrganisationSection(
     sessionViewModel: FirestoreSessionViewModel,
     account: Account,
     discussion: Discussion,
-    title: String,
     date: LocalDate?,
     time: LocalTime?,
     locationText: String,
@@ -496,8 +481,7 @@ fun OrganisationSection(
             discussion = discussion,
             queryFallback = form.proposedGameString,
             onQueryFallbackChange = { onQueryFallbackChange(it) },
-            onError = showError,
-            modifier = Modifier.testTag(SessionCreationTestTags.GAME_SEARCH_SECTION))
+            onError = showError)
 
         Spacer(Modifier.height(10.dp))
 
@@ -531,42 +515,26 @@ fun OrganisationSection(
 /**
  * Composable function representing the participants section of the session creation form.
  *
- * @param currentUserId The ID of the current user.
  * @param selected The list of currently selected participants.
  * @param allCandidates The list of all candidate participants.
  * @param minPlayers The minimum number of players.
  * @param maxPlayers The maximum number of players.
- * @param onMinMaxChange Callback function to be invoked when the min/max player counts change.
  * @param onAdd Callback function to be invoked when a participant is added.
  * @param onRemove Callback function to be invoked when a participant is removed.
- * @param minSliderNumber The minimum value for the player count slider.
- * @param maxSliderNumber The maximum value for the player count slider.
- * @param sliderSteps The number of steps for the player count slider.
  * @param mainSectionTitle The title of the participants section.
- * @param sliderDescription The description for the player count slider.
- * @param elevationSelected The elevation for selected participant chips.
- * @param elevationUnselected The elevation for unselected participant chips.
  * @param modifier Modifier for styling the composable.
  */
 @Composable
 fun ParticipantsSection(
     modifier: Modifier = Modifier,
     account: Account,
-    currentUserId: String,
     selected: List<Account>,
     allCandidates: List<Account>,
     minPlayers: Int,
     maxPlayers: Int,
-    onMinMaxChange: (Int, Int) -> Unit,
     onAdd: (Account) -> Unit,
     onRemove: (Account) -> Unit,
-    minSliderNumber: Float,
-    maxSliderNumber: Float,
-    sliderSteps: Int,
     mainSectionTitle: String,
-    sliderDescription: String,
-    elevationSelected: Dp = Elevation.floating,
-    elevationUnselected: Dp = Elevation.raised,
 ) {
   SectionCard(
       modifier

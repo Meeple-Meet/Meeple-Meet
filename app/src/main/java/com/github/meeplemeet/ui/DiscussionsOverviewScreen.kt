@@ -219,7 +219,7 @@ private fun DiscussionCard(
   val spacingBetween = 12.dp
   val dividerStart = horizontalPadding + pfpSize + spacingBetween
 
-  Column() {
+  Column {
     Card(
         onClick = onClick,
         modifier = modifier,
