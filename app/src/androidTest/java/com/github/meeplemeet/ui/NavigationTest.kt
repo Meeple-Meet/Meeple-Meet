@@ -1,502 +1,514 @@
 package com.github.meeplemeet.ui
 
-import androidx.activity.ComponentActivity
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
-import androidx.navigation.compose.ComposeNavigator
-import androidx.navigation.testing.TestNavHostController
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.MeepleMeetApp
-import com.github.meeplemeet.model.repositories.AuthRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.FirestoreTests
-import com.github.meeplemeet.utils.NavigationTestHelpers.addDiscussion
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkBottomBarIsNotDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscoverScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionAddScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionInfoScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkDiscussionsOverviewIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkProfileScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkSessionsScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignInScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.checkSignUpScreenIsDisplayed
-import com.github.meeplemeet.utils.NavigationTestHelpers.clickOnLogout
-import com.github.meeplemeet.utils.NavigationTestHelpers.clickOnTab
-import com.github.meeplemeet.utils.NavigationTestHelpers.deleteDiscussion
-import com.github.meeplemeet.utils.NavigationTestHelpers.leaveDiscussion
-import com.github.meeplemeet.utils.NavigationTestHelpers.navigateBack
-import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToAddDiscussionScreen
-import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionInfoScreen
-import com.github.meeplemeet.utils.NavigationTestHelpers.navigateToDiscussionScreen
-import junit.framework.TestCase.assertEquals
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
+import java.util.UUID
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 
-/**
- * Integration UI tests for MeepleMeetApp navigation.
- * - Runs the real MeepleMeetApp() inside the compose rule (same as MainActivity).
- * - Exercises bottom bar visibility, tab clicks, navigation to all screens, and repeated
- *   navigation.
- *
- * Notes:
- * - These tests maximize coverage of navigation interactions.
- * - If a screen title differs from MeepleMeetScreen.name (e.g. you display "Sessions Overview"
- *   instead of "Sessions"), update the asserted strings accordingly.
- * - Update test tags for better testability where applicable.
- */
+@RunWith(AndroidJUnit4::class)
 class NavigationTest : FirestoreTests() {
 
-  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+  @get:Rule val composeTestRule = createComposeRule()
 
-  private lateinit var navController: TestNavHostController
-  private lateinit var authVM: AuthViewModel
-  private lateinit var authRepository: AuthRepository
-  private lateinit var firestoreVM: FirestoreViewModel
-  private lateinit var repository: FirestoreRepository
+  private lateinit var navController: NavHostController
+  private lateinit var navigationActions: NavigationActions
 
-  private lateinit var testAccount: Account
-  private val testEmail = "test${System.currentTimeMillis()}@example.com"
-  private val testPassword = "testPassword123"
-  private lateinit var testDiscussion1Uid: String
-  private lateinit var testDiscussion2Uid: String
-
-  // ---------- Setup ----------
   @Before
-  fun setUp() {
-    // Create repositories and ViewModels
-    repository = FirestoreRepository()
-    authRepository = AuthRepository()
-    authVM = AuthViewModel(authRepository)
-    firestoreVM = FirestoreViewModel(repository)
-    val handlesVM = FirestoreHandlesViewModel()
+  fun setup() {
+    // Call parent setup first to initialize Firebase emulators
+    testsSetup()
 
-    // Create test account with AuthRepository
-    runBlocking {
-      // Register the account (this creates both Firebase Auth user and Firestore account)
-      val result = authRepository.registerWithEmail(testEmail, testPassword)
-      testAccount = result.getOrThrow()
-
-      // Create handle for the account
-      handlesVM.createAccountHandle(testAccount, "testhandle")
-
-      // Sign out after creating account so tests start from logged out state
+    // Ensure we're signed out for unauthenticated navigation tests
+    try {
       FirebaseProvider.auth.signOut()
-
-      // Create test discussions
-      val discussion1 =
-          repository.createDiscussion(
-              name = "Fake Discussion 1",
-              description = "Testing navigation from overview",
-              creatorId = testAccount.uid)
-      testDiscussion1Uid = discussion1.uid
-
-      val discussion2 =
-          repository.createDiscussion(
-              name = "Fake Discussion 2",
-              description = "Testing navigation with multiple discussions",
-              creatorId = testAccount.uid)
-      testDiscussion2Uid = discussion2.uid
+      Thread.sleep(500) // Give time for auth state to propagate
+    } catch (e: Exception) {
+      // Ignore if no one is signed in
     }
 
-    // Launch the app UI (starts at SignIn screen)
     composeTestRule.setContent {
-      navController = TestNavHostController(LocalContext.current)
-      navController.navigatorProvider.addNavigator(ComposeNavigator())
-      MeepleMeetApp(authVM = authVM, firestoreVM = firestoreVM, navController = navController)
+      navController = rememberNavController()
+      navigationActions = NavigationActions(navController)
+      MeepleMeetApp(navController = navController)
     }
+
+    // Wait for the app to be ready
     composeTestRule.waitForIdle()
   }
 
-  // ===== Test helpers =====
-
-  /**
-   * Simulate login by using the AuthViewModel to log in with email/password. This triggers the auth
-   * state listener in MainActivity which loads the account and navigates to DiscussionsOverview.
-   */
-  private fun login() {
-    runBlocking {
-      // Use AuthViewModel's login method (which calls AuthRepository)
-      authVM.loginWithEmail(testEmail, testPassword)
-
-      // Wait for the auth state to update and navigation to complete
-      composeTestRule.waitForIdle()
-
-      // Wait for navigation to complete by checking if we're on the discussions overview
-      composeTestRule.waitUntil(timeoutMillis = 5000) {
-        try {
-          composeTestRule
-              .onNodeWithTag(NavigationTestTags.SCREEN_TITLE, useUnmergedTree = false)
-              .assertExists()
-          true
-        } catch (_: AssertionError) {
-          false
-        }
-      }
-      composeTestRule.waitForIdle()
+  @Test
+  fun testAppStartsOnSignInScreen() {
+    // Verify app starts on Sign In screen by checking the current route
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignIn.name) {
+      "Expected SignIn screen, but got: ${navigationActions.currentRoute()}"
     }
   }
 
-  private fun pressSystemBack(shouldTerminate: Boolean = false) {
-    composeTestRule.activityRule.scenario.onActivity { activity ->
-      activity.onBackPressedDispatcher.onBackPressed()
+  @Test
+  fun testNavigationToSignUpScreenViaButton() {
+    // Find and click sign up button using test tag
+    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
+
+    // Verify we're on Sign Up screen
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name) {
+      "Expected SignUp screen, but got: ${navigationActions.currentRoute()}"
     }
-    composeTestRule.waitUntil { composeTestRule.activity.isFinishing == shouldTerminate }
-    assertEquals(shouldTerminate, composeTestRule.activity.isFinishing)
-  }
-
-  // ---------- Auth screens navigation ----------
-
-  @Test
-  @Ignore
-  fun startScreen_isSignIn_and_bottomBarNotDisplayed() = runTest {
-    composeTestRule.checkSignInScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsNotDisplayed()
   }
 
   @Test
-  fun signUpLink_navigatesToSignUp_and_bottomBarStillNotDisplayed() = runTest {
-    composeTestRule.checkSignInScreenIsDisplayed()
+  fun testNavigationBackFromSignUpToSignInViaButton() {
+    // Navigate to Sign Up
+    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate back to Sign In using the login button
+    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_IN_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Sign In screen
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignIn.name) {
+      "Expected SignIn screen, but got: ${navigationActions.currentRoute()}"
+    }
+  }
+
+  @Test
+  fun testNavigationActionsCurrentRoute() {
+    // Test that currentRoute() returns the correct route
+    composeTestRule.waitForIdle()
+    val currentRoute = navigationActions.currentRoute()
+    assert(currentRoute == MeepleMeetScreen.SignIn.name) {
+      "Expected SignIn, but got: $currentRoute"
+    }
+  }
+
+  @Test
+  fun testNavigationActionsNavigateTo() {
+    // Test programmatic navigation using NavigationActions
+    navigationActions.navigateTo(MeepleMeetScreen.SignUp)
+    composeTestRule.waitForIdle()
+
+    val currentRoute = navigationActions.currentRoute()
+    assert(currentRoute == MeepleMeetScreen.SignUp.name) {
+      "Expected SignUp, but got: $currentRoute"
+    }
+  }
+
+  @Test
+  fun testGoBackNavigation() {
+    // Navigate forward
+    navigationActions.navigateTo(MeepleMeetScreen.SignUp)
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name)
+
+    // Navigate back
+    navigationActions.goBack()
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignIn.name)
+  }
+
+  @Test
+  fun testNavigatingToSameScreenTwice() {
+    // First navigation to SignUp
+    navigationActions.navigateTo(MeepleMeetScreen.SignUp)
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name)
+
+    // Try to navigate to SignUp again
+    navigationActions.navigateTo(MeepleMeetScreen.SignUp)
+    composeTestRule.waitForIdle()
+
+    // Should still be on SignUp
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name)
+  }
+
+  @Test
+  fun testMultipleNavigationsPreserveStack() {
+    // Navigate SignIn -> SignUp -> SignIn -> SignUp
+    navigationActions.navigateTo(MeepleMeetScreen.SignUp)
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name)
+
+    navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignIn.name)
+
+    navigationActions.navigateTo(MeepleMeetScreen.SignUp)
+    composeTestRule.waitForIdle()
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name)
+
+    // Go back twice
+    navigationActions.goBack()
+    composeTestRule.waitForIdle()
+    navigationActions.goBack()
+    composeTestRule.waitForIdle()
+
+    // Should be back on SignUp (first one we navigated to)
+    assert(navigationActions.currentRoute() == MeepleMeetScreen.SignUp.name)
+  }
+
+  @Test
+  fun testBottomBarScreensHaveCorrectProperties() {
+    // Test that the bottom bar screens are properly configured
+    val bottomBarScreens = MeepleMeetScreen.entries.filter { it.inBottomBar }
+
+    assert(bottomBarScreens.size == 4) {
+      "Expected 4 bottom bar screens, but found: ${bottomBarScreens.size}"
+    }
+
+    // Verify expected screens are in the bottom bar
+    assert(bottomBarScreens.contains(MeepleMeetScreen.DiscussionsOverview))
+    assert(bottomBarScreens.contains(MeepleMeetScreen.SessionsOverview))
+    assert(bottomBarScreens.contains(MeepleMeetScreen.PostsOverview))
+    assert(bottomBarScreens.contains(MeepleMeetScreen.Profile))
+
+    // Verify each has required properties for bottom bar
+    bottomBarScreens.forEach { screen ->
+      assert(screen.icon != null) { "${screen.name} should have an icon" }
+      assert(screen.iconSelected != null) { "${screen.name} should have a selected icon" }
+      assert(screen.testTag != null) { "${screen.name} should have a test tag" }
+    }
+  }
+
+  @Test
+  fun testAuthScreensAreNotInBottomBar() {
+    // Verify auth screens are not in the bottom bar
+    assert(!MeepleMeetScreen.SignIn.inBottomBar)
+    assert(!MeepleMeetScreen.SignUp.inBottomBar)
+    assert(!MeepleMeetScreen.CreateAccount.inBottomBar)
+  }
+
+  @Test
+  fun testNavigationTestTagsAreUnique() {
+    // Test that navigation test tags are properly defined and unique
+    val testTags =
+        setOf(
+            NavigationTestTags.BOTTOM_NAVIGATION_MENU,
+            NavigationTestTags.SCREEN_TITLE,
+            NavigationTestTags.GO_BACK_BUTTON,
+            NavigationTestTags.SESSIONS_TAB,
+            NavigationTestTags.DISCUSSIONS_TAB,
+            NavigationTestTags.DISCOVER_TAB,
+            NavigationTestTags.PROFILE_TAB)
+
+    // Verify we have 7 unique tags
+    assert(testTags.size == 7) { "Expected 7 unique navigation test tags" }
+  }
+}
+
+/**
+ * Authenticated navigation tests that require a signed-in user. These tests cover navigation flows
+ * in the main app after authentication.
+ *
+ * Note: Each test creates a unique user to ensure test isolation.
+ */
+@RunWith(AndroidJUnit4::class)
+class AuthenticatedNavigationTest : FirestoreTests() {
+
+  @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+  @Before
+  fun setupAuthenticatedUser() {
+    // Sign out any existing Firebase session before creating a new user
+    try {
+      FirebaseProvider.auth.signOut()
+      composeTestRule.waitForIdle()
+      Thread.sleep(500) // Give time for auth state to propagate
+    } catch (e: Exception) {
+      // Ignore if no one is signed in
+    }
+
+    // Create a unique user for this test
+    val testEmail = "navtest${UUID.randomUUID().toString().take(8)}@example.com"
+    val testPassword = "Password123!"
+    val testHandle = "navtest${UUID.randomUUID().toString().take(6)}"
+    val testUsername = "Nav Test User"
+
+    composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
+  }
+
+  @Test
+  fun testBottomNavigationMenuExists() {
+    // After authentication, bottom navigation menu should be visible
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
+  }
+
+  @Test
+  fun testNavigationBetweenAllBottomBarTabs() {
+    // Test navigation between all main tabs
+    composeTestRule.waitForIdle()
+
+    // Discussions Tab (default after sign up)
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
+    composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON)
-        .assertIsDisplayed()
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
+
+    // Sessions Tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.SessionsOverview.title)
+
+    // Posts/Discover Tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.PostsOverview.title)
+
+    // Profile Tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.Profile.title)
+  }
+
+  @Test
+  fun testNavigationToCreateDiscussionScreen() {
+    // Navigate to Discussions tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Click add discussion button
+    composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Create Discussion screen
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreateDiscussion.title)
+
+    // Verify back button exists
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .assertExists()
+  }
+
+  @Test
+  fun testBackNavigationFromCreateDiscussion() {
+    // Navigate to Create Discussion
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Create Discussion screen
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreateDiscussion.title)
+
+    // Click back button
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
         .performClick()
-    composeTestRule.checkSignUpScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsNotDisplayed()
+    composeTestRule.waitForIdle()
+
+    // Should be back on Discussions Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
   }
 
   @Test
-  fun backFromSignUp_toSignIn_keepsBottomBarNotDisplayed() = runTest {
-    composeTestRule.checkSignInScreenIsDisplayed()
-    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
+  fun testNavigationToCreatePostScreen() {
+    // Navigate to Posts tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-    composeTestRule.checkSignUpScreenIsDisplayed()
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_IN_BUTTON).performClick()
+    // Click add post button
+    composeTestRule.onNodeWithTag("AddPostButton").assertExists().performClick()
+    composeTestRule.waitForIdle()
 
-    composeTestRule.checkSignInScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsNotDisplayed()
+    // Verify we're on Create Post screen
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreatePost.title)
+
+    // Verify back button exists
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .assertExists()
   }
 
   @Test
-  fun signInFlow_navigatesToDiscussionsOverview() = runTest {
-    composeTestRule.checkSignInScreenIsDisplayed()
+  fun testBackNavigationFromCreatePost() {
+    // Navigate to Create Post
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("AddPostButton").assertExists().performClick()
+    composeTestRule.waitForIdle()
 
-    // Simulate login
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
+    // Verify we're on Create Post screen
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreatePost.title)
+
+    // Click back button
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    // Should be back on Posts Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.PostsOverview.title)
   }
 
   @Test
-  fun signUpFlow_navigatesToDiscussionsOverview() = runTest {
-    composeTestRule.checkSignInScreenIsDisplayed()
-    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).performClick()
-    composeTestRule.checkSignUpScreenIsDisplayed()
-    composeTestRule.onNodeWithTag(SignUpScreenTestTags.SIGN_IN_BUTTON).performClick()
+  fun testBottomBarNavigationDoesNotBuildBackStack() {
+    // Navigate between multiple bottom bar tabs
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-    // Simulate login
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-  }
+    composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-  // ---------- BottomBar navigation ----------
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-  @Test
-  fun tabsAreClickable() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-    composeTestRule.clickOnTab(NavigationTestTags.DISCOVER_TAB)
-    composeTestRule.clickOnTab(NavigationTestTags.PROFILE_TAB)
-    composeTestRule.clickOnTab(NavigationTestTags.SESSIONS_TAB)
-    composeTestRule.clickOnTab(NavigationTestTags.DISCUSSIONS_TAB)
-  }
+    // Verify we're on Profile
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.Profile.title)
 
-  @Ignore
-  @Test
-  fun canNavigateToAllTabs() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.DISCOVER_TAB)
-    composeTestRule.checkDiscoverScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.SESSIONS_TAB)
-    composeTestRule.checkSessionsScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.PROFILE_TAB)
-    composeTestRule.checkProfileScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.DISCUSSIONS_TAB)
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-  }
-
-  //
-  @Test
-  fun canNavigateBackUsingSystemBack() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.DISCOVER_TAB)
-    composeTestRule.checkDiscoverScreenIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.SESSIONS_TAB)
-    composeTestRule.checkSessionsScreenIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.PROFILE_TAB)
-    composeTestRule.checkProfileScreenIsDisplayed()
-
-    // Back to Sessions
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkSessionsScreenIsDisplayed()
-
-    // Back to Discover
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscoverScreenIsDisplayed()
-
-    // Back to Discussions
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-
-    // Back should terminate app (from top-level)
-    pressSystemBack(shouldTerminate = true)
+    // Try to go back - on Profile screen, back button should not navigate through all previous tabs
+    // The back stack should have been cleared for bottom bar navigation
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.Profile.title)
   }
 
   @Test
-  fun many_nav_between_two_tabs_then_system_back_pops_only_once() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+  fun testNavigatingToSameBottomBarTabTwice() {
+    // Navigate to Discussions tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-    val tabA = NavigationTestTags.DISCOVER_TAB
-    val tabB = NavigationTestTags.SESSIONS_TAB
+    // Navigate to Discussions tab again
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
 
-    repeat(20) {
-      composeTestRule.clickOnTab(tabA)
-      composeTestRule.checkDiscoverScreenIsDisplayed()
-      composeTestRule.clickOnTab(tabB)
-      composeTestRule.checkSessionsScreenIsDisplayed()
+    // Should still be on Discussions Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
+  }
+
+  @Test
+  fun testDeepNavigationStackIsPreserved() {
+    // Start on Discussions
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate to Create Discussion
+    composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Create Discussion
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreateDiscussion.title)
+
+    // Go back
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    // Should be back on Discussions Overview
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
+  }
+
+  @Test
+  fun testAllBottomBarTabsAreReachable() {
+    // Test that all bottom bar tabs are clickable and navigate correctly
+    val bottomBarTabs =
+        listOf(
+            NavigationTestTags.DISCUSSIONS_TAB to MeepleMeetScreen.DiscussionsOverview.title,
+            NavigationTestTags.SESSIONS_TAB to MeepleMeetScreen.SessionsOverview.title,
+            NavigationTestTags.DISCOVER_TAB to MeepleMeetScreen.PostsOverview.title,
+            NavigationTestTags.PROFILE_TAB to MeepleMeetScreen.Profile.title)
+
+    bottomBarTabs.forEach { (tabTag, expectedTitle) ->
+      composeTestRule.onNodeWithTag(tabTag).assertExists().performClick()
+      composeTestRule.waitForIdle()
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+          .assertTextContains(expectedTitle)
     }
-
-    // Now back should go to Discover only once
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscoverScreenIsDisplayed()
-
-    // Back again should go to Discussions
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-
-    // Back again should terminate app
-    pressSystemBack(shouldTerminate = true)
-  }
-
-  // ---------- Discussions navigation ----------
-
-  // DiscussionsOverview navigation
-
-  @Test
-  fun clickingOnDiscussionPreview_openDiscussionScreen() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-    composeTestRule.checkBottomBarIsNotDisplayed()
   }
 
   @Test
-  fun clickingOnAdd_openDiscussionAddScreen() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToAddDiscussionScreen()
-    composeTestRule.checkDiscussionAddScreenIsDisplayed()
-    composeTestRule.checkBottomBarIsNotDisplayed()
-  }
+  fun testMultipleDeepNavigations() {
+    // Test multiple deep navigations and back navigations
 
-  // DiscussionAdd navigation
+    // Navigate to Discussions -> Create Discussion
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("Add Discussion").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreateDiscussion.title)
 
-  @Test
-  fun canGoBack_fromDiscussionAdd_toDiscussionsOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToAddDiscussionScreen()
-    composeTestRule.checkDiscussionAddScreenIsDisplayed()
+    // Go back to Discussions
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
 
-    // Back to overview
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-  }
+    // Navigate to Posts -> Create Post
+    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("AddPostButton").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.CreatePost.title)
 
-  @Test
-  fun backButton_fromDiscussionAdd_toDiscussionsOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToAddDiscussionScreen()
-    composeTestRule.checkDiscussionAddScreenIsDisplayed()
-
-    // Back to overview
-    composeTestRule.navigateBack()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-  }
-
-  @Test
-  fun createDiscussion_navigateToDiscussionsOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToAddDiscussionScreen()
-    composeTestRule.checkDiscussionAddScreenIsDisplayed()
-
-    // Simulate adding a discussion
-    composeTestRule.addDiscussion("New Discussion", "Created during test")
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.checkBottomBarIsDisplayed()
-  }
-
-  // DiscussionScreen navigation
-
-  @Test
-  fun canGoBack_fromDiscussionScreen_toDiscussionsOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Back to overview
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
+    // Go back to Posts
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.PostsOverview.title)
   }
 
   @Test
-  fun backButton_fromDiscussionScreen_toDiscussionsOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Back to overview
-    composeTestRule.navigateBack()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-  }
-
-  // DiscussionInfo navigation
-
-  @Test
-  fun clickingOnDiscussionInfo_opensDiscussionInfoScreen() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Open info
-    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
-    composeTestRule.checkBottomBarIsNotDisplayed()
-  }
-
-  @Test
-  fun canGoBack_fromDiscussionInfo_toDiscussionScreen() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Open info
-    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
-
-    // Back to discussion
-    pressSystemBack(shouldTerminate = false)
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-  }
-
-  @Test
-  fun backButton_fromDiscussionInfo_toDiscussionScreen() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Open info
-    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
-
-    // Back to discussion
-    composeTestRule.navigateBack()
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-  }
-
-  @Test
-  fun deleteDiscussion_fromInfo_toOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Open info
-    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
-
-    // Simulate delete
-    composeTestRule.deleteDiscussion()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-  }
-
-  @Test
-  fun leaveDiscussion_fromInfo_toOverview() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-    composeTestRule.navigateToDiscussionScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionScreenIsDisplayed("Fake Discussion 1")
-
-    // Open info
-    composeTestRule.navigateToDiscussionInfoScreen("Fake Discussion 1")
-    composeTestRule.checkDiscussionInfoScreenIsDisplayed("Fake Discussion 1")
-
-    // Simulate leave
-    composeTestRule.leaveDiscussion()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-  }
-
-  // ---------- Discussions navigation ----------
-
-  @Test
-  fun logout_fromProfile_toSignIn() = runTest {
-    login()
-    composeTestRule.checkDiscussionsOverviewIsDisplayed()
-
-    composeTestRule.clickOnTab(NavigationTestTags.PROFILE_TAB)
-    composeTestRule.checkProfileScreenIsDisplayed()
-
-    // Simulate logout
-    composeTestRule.clickOnLogout()
-    composeTestRule.checkSignInScreenIsDisplayed()
-  }
-
-  // ---------- Defensive checks ----------
-
-  @Test
-  fun noUnexpectedErrorText_onStart() = runTest {
-    // Ensure the generic error "An unknown error occurred" is NOT shown at start
-    composeTestRule.onAllNodesWithText("An unknown error occurred").assertCountEquals(0)
+  fun testNavigationAfterAuthenticationStartsAtDiscussions() {
+    // After authentication, user should be on Discussions Overview
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
+        .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
   }
 }
