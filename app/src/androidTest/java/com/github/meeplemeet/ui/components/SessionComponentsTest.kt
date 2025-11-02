@@ -11,7 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -592,6 +594,85 @@ class SessionComponentsTest {
     composeRule
         .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
         .assertCountEquals(0)
+  }
+
+  /* ====================== DISCRETE PILL SLIDER ====================== */
+
+  @Test
+  fun discretePillSlider_renders_with_default_and_custom_colors() {
+    val range = 1f..10f
+    val values = 3f..7f
+    val steps = 8
+
+    set {
+      Column {
+        // Default colors
+        DiscretePillSlider(
+            range = range,
+            values = values,
+            steps = steps,
+            modifier = Modifier.testTag("slider-default"))
+
+        // Custom colors
+        DiscretePillSlider(
+            range = range,
+            values = values,
+            steps = steps,
+            sliderColors =
+                SliderDefaults.colors(
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.secondary,
+                    thumbColor = MaterialTheme.colorScheme.error),
+            modifier = Modifier.testTag("slider-custom"),
+            sliderModifier = Modifier.testTag("slider-inner"))
+      }
+    }
+
+    composeRule.onNodeWithTag("slider-default").assertExists()
+    composeRule.onNodeWithTag("slider-custom").assertExists()
+    composeRule.onNodeWithTag("slider-inner").assertExists()
+  }
+
+  /* ====================== TOP BAR WITH DIVIDER ====================== */
+
+  @Test
+  fun topBarWithDivider_displays_title_and_back_button() {
+    var backPressed = false
+
+    set { TopBarWithDivider(text = "Session Details", onReturn = { backPressed = true }) }
+
+    composeRule.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+    composeRule.onNodeWithText("Session Details").assertExists()
+    composeRule
+        .onNodeWithTag(com.github.meeplemeet.ui.navigation.NavigationTestTags.GO_BACK_BUTTON)
+        .assertExists()
+        .performClick()
+
+    composeRule.runOnIdle { assert(backPressed) }
+  }
+
+  @Test
+  fun topBarWithDivider_displays_with_trailing_icons() {
+    var iconClicked = false
+
+    set {
+      TopBarWithDivider(
+          text = "Edit Session",
+          onReturn = {},
+          trailingIcons = {
+            IconButton(
+                onClick = { iconClicked = true },
+                modifier = Modifier.testTag("trailing-icon-btn")) {
+                  Icon(Icons.Default.Close, contentDescription = "Close")
+                }
+          })
+    }
+
+    composeRule.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+    composeRule.onNodeWithText("Edit Session").assertExists()
+    composeRule.onNodeWithTag("trailing-icon-btn").assertExists().performClick()
+
+    composeRule.runOnIdle { assert(iconClicked) }
   }
 
   /* ====================== GAME & LOCATION ====================== */
