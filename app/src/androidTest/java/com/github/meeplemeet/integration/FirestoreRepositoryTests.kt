@@ -735,25 +735,4 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertNotNull(poll)
     assertEquals(20, poll!!.options.size)
   }
-
-  @Test
-  fun searchByHandleWithInvalidHandleReturnsEmpty() = runBlocking {
-    // Covers: validHandle() returning false, trySend(emptyList()), close()
-    repository.createAccount("Alice", "alice123", email = "alice@test.com", photoUrl = null)
-
-    val flow = repository.searchByHandle("al@#$")
-    val results = withTimeout(3000) { flow.first() }
-
-    assertTrue(results.isEmpty())
-  }
-
-  @Test
-  fun searchByHandleReturnsEmptyWhenNoMatches() = runBlocking {
-    repository.createAccount("Alice", "alice123", email = "alice@test.com", photoUrl = null)
-
-    val flow = repository.searchByHandle("xyz")
-    val results = withTimeout(3000) { flow.first() }
-
-    assertTrue(results.isEmpty())
-  }
 }

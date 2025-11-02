@@ -272,26 +272,6 @@ class FirestoreViewModel(
     }
   }
 
-  /**
-   * Searches for user accounts whose handles start with the given [prefix].
-   *
-   * This function launches a coroutine in the [viewModelScope] to asynchronously fetch matching
-   * handles from the [repository]. The resulting list of suggestions is truncated to
-   * [SUGGESTIONS_LIMIT] items and posted to [_handleSuggestions].
-   *
-   * If the [prefix] is blank, the function returns immediately without performing a search.
-   *
-   * @param prefix The starting string of the handle to search for. Must not be blank.
-   */
-  fun searchByHandle(prefix: String) {
-    if (prefix.isBlank()) return
-    viewModelScope.launch {
-      repository.searchByHandle(prefix).collect { list ->
-        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
-      }
-    }
-  }
-
   // ---------- Poll Methods ----------
 
   /**
