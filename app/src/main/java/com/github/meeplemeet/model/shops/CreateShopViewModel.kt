@@ -55,7 +55,7 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
     if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
 
     if (address == Location())
-        throw IllegalArgumentException("An address it required to create a shop")
+        throw IllegalArgumentException("An address is required to create a shop")
 
     viewModelScope.launch {
       shopRepo.createShop(owner, name, phone, email, website, address, openingHours, gameCollection)

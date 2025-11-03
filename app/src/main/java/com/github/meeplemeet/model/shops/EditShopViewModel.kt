@@ -69,7 +69,7 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
     }
 
     if (address != null && address == Location())
-        throw IllegalArgumentException("An address it required to create a shop")
+        throw IllegalArgumentException("An address is required to create a shop")
 
     viewModelScope.launch {
       repository.updateShop(
