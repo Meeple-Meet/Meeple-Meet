@@ -36,6 +36,7 @@ import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreateDiscussionScreen
@@ -100,6 +101,9 @@ object RepositoryProvider {
 
   /** Lazily initialized repository for post operations. */
   val posts: PostRepository by lazy { PostRepository() }
+
+  /** Lazily initialized repository for shop operations. */
+  val shops: ShopRepository by lazy { ShopRepository() }
 
   /** Lazily initialized repository for space renter operations. */
   val spaceRenters: SpaceRenterRepository by lazy { SpaceRenterRepository() }

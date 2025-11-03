@@ -48,7 +48,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     createSpaceRenterViewModel = CreateSpaceRenterViewModel(spaceRenterRepository)
     spaceRenterViewModel = SpaceRenterViewModel(spaceRenterRepository)
     editSpaceRenterViewModel = EditSpaceRenterViewModel(spaceRenterRepository)
-    mapViewModel = MapViewModel(spaceRenterRepository)
+    mapViewModel = MapViewModel(spaceRenterRepository = spaceRenterRepository)
 
     runBlocking {
       // Create test accounts

@@ -20,8 +20,19 @@ import kotlinx.coroutines.launch
  * @property spaceRenterRepository The repository used for space renter operations.
  */
 class MapViewModel(
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
     private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters
 ) : ViewModel() {
+  private val _shops = MutableStateFlow<List<Shop>?>(null)
+
+  /**
+   * StateFlow exposing the list of shops.
+   *
+   * This flow emits null initially and updates with the shop list once [getShops] is called and
+   * completes successfully.
+   */
+  val shops: StateFlow<List<Shop>?> = _shops
+
   private val _spaceRenters = MutableStateFlow<List<SpaceRenter>?>(null)
 
   /**
@@ -42,5 +53,17 @@ class MapViewModel(
    */
   fun getSpaceRenters(count: UInt) {
     viewModelScope.launch { _spaceRenters.value = spaceRenterRepository.getSpaceRenters(count) }
+  }
+
+  /**
+   * Retrieves a list of shops from Firestore.
+   *
+   * This operation is performed asynchronously in the viewModelScope. Upon successful retrieval,
+   * the shops are emitted through [shops].
+   *
+   * @param count The maximum number of shops to retrieve.
+   */
+  fun getShops(count: UInt) {
+    viewModelScope.launch { _shops.value = shopRepository.getShops(count) }
   }
 }
