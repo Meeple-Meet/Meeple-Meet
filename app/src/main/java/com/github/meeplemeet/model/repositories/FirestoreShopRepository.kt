@@ -6,6 +6,7 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Game
 import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.model.structures.OpeningHours
 import com.github.meeplemeet.model.structures.Shop
 import com.github.meeplemeet.model.structures.ShopNoUid
 import com.github.meeplemeet.model.structures.fromNoUid
@@ -55,7 +56,7 @@ class FirestoreShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       email: String = "",
       website: String = "",
       address: Location,
-      openingHours: List<Pair<String, String>>,
+      openingHours: List<OpeningHours>,
       gameCollection: List<Pair<Game, Int>> = emptyList()
   ): Shop {
     val shop =
@@ -122,7 +123,7 @@ class FirestoreShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       email: String? = null,
       website: String? = null,
       address: Location? = null,
-      openingHours: List<Pair<String, String>>? = null,
+      openingHours: List<OpeningHours>? = null,
       gameCollection: List<Pair<Game, Int>>? = null,
   ) {
     val updates = mutableMapOf<String, Any>()
