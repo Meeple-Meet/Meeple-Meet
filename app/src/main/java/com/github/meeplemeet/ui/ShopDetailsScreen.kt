@@ -63,7 +63,7 @@ object ShopTestTags {
  * @param onEdit Callback invoked when the edit button is pressed.
  */
 @Composable
-fun ShopScreen(
+fun ShopDetailsScreen(
     shopId: String,
     account: Account,
     viewModel: ShopViewModel,

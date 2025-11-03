@@ -198,7 +198,7 @@ class ShopScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       CompositionLocalProvider(LocalClipboardManager provides fakeClipboard) {
-        ShopScreen(
+        ShopDetailsScreen(
             shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
       }
     }
@@ -292,7 +292,7 @@ class ShopScreenTest : FirestoreTests() {
   fun test_shopScreenEditButtonVisibleForOwner() {
     var edit = false
     composeTestRule.setContent {
-      ShopScreen(
+      ShopDetailsScreen(
           shopId = shop.id,
           account = owner, // Pass the owner account
           onBack = {},
