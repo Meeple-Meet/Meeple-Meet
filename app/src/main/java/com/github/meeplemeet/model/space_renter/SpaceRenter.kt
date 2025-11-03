@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
  * @property seats The number of seats available in the space.
  * @property costPerHour The rental cost per hour for the space.
  */
-@Serializable data class Space(val seats: UInt = 0u, val costPerHour: Double = 0.0)
+@Serializable data class Space(val seats: Int = 0, val costPerHour: Double = 0.0)
 
 /**
  * Represents a space rental business that provides areas for board game sessions.
