@@ -37,6 +37,7 @@ import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreateDiscussionScreen
 import com.github.meeplemeet.ui.CreatePostScreen
@@ -103,6 +104,9 @@ object RepositoryProvider {
 
   /** Lazily initialized repository for shop operations. */
   val shops: ShopRepository by lazy { ShopRepository() }
+
+  /** Lazily initialized repository for space renter operations. */
+  val spaceRenters: SpaceRenterRepository by lazy { SpaceRenterRepository() }
 }
 
 const val LOADING_SCREEN_TAG = "Loading Screen"
