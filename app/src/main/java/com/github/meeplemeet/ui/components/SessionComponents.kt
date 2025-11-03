@@ -272,7 +272,6 @@ fun CountBubble(
  * @param values The current selected range values.
  * @param steps The number of discrete steps between the min and max values.
  * @param editable Whether the slider is editable or read-only.
- * @param onValuesChange Callback function to be invoked when the slider values change.
  * @param modifier Modifier to be applied to the surrounding Column.
  * @param sliderModifier Modifier to be applied to the RangeSlider.
  * @param sliderColors Colors to be applied to the RangeSlider.
@@ -283,7 +282,6 @@ fun DiscretePillSlider(
     values: ClosedFloatingPointRange<Float>,
     steps: Int,
     modifier: Modifier = Modifier,
-    editable: Boolean = false,
     sliderModifier: Modifier = Modifier,
     sliderColors: SliderColors =
         SliderDefaults.colors(
@@ -425,7 +423,6 @@ fun ParticipantChip(
 @Composable
 fun <T> TwoPerRowGrid(
     items: List<T>,
-    key: (T) -> Any,
     modifier: Modifier = Modifier,
     rowsModifier: Modifier = Modifier,
     content: @Composable (item: T, modifier: Modifier) -> Unit,
@@ -459,7 +456,9 @@ fun DatePickerDockedField(
     label: String = "Date",
     editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-    zoneId: ZoneId = ZoneId.systemDefault()
+    zoneId: ZoneId = ZoneId.systemDefault(),
+    testTagPick: String = SessionTestTags.DATE_PICK_BUTTON,
+    testTagDate: String = SessionTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: ""
@@ -472,13 +471,12 @@ fun DatePickerDockedField(
       trailingIcon = {
         if (editable) {
           TextButton(
-              onClick = { showDialogDate = true },
-              modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+              onClick = { showDialogDate = true }, modifier = Modifier.testTag(testTagPick)) {
                 Text("Pick")
               }
         }
       },
-      modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
+      modifier = Modifier.fillMaxWidth().testTag(testTagDate))
 
   if (showDialogDate) {
     AppDatePickerDialog(
@@ -590,32 +588,93 @@ fun TimePickerField(
     AlertDialog(
         onDismissRequest = { open = false },
         containerColor = AppColors.primary,
+        shape = RoundedCornerShape(24.dp),
         confirmButton = {
-          TextButton(
-              modifier = Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON),
-              onClick = {
-                onValueChange(LocalTime.of(state.hour, state.minute))
-                open = false
-              }) {
-                Text("OK")
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+              horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Cancel button
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = AppColors.secondary,
+                    modifier = Modifier.weight(1f)) {
+                      TextButton(
+                          onClick = { open = false },
+                          modifier = Modifier.fillMaxWidth(),
+                          contentPadding = PaddingValues(vertical = 8.dp)) {
+                            Text(
+                                "Cancel",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = AppColors.textIconsFade)
+                          }
+                    }
+
+                // OK button
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = AppColors.neutral,
+                    modifier = Modifier.weight(1f)) {
+                      TextButton(
+                          modifier =
+                              Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON)
+                                  .fillMaxWidth(),
+                          contentPadding = PaddingValues(vertical = 8.dp),
+                          onClick = {
+                            onValueChange(LocalTime.of(state.hour, state.minute))
+                            open = false
+                          }) {
+                            Text(
+                                "OK",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = AppColors.primary)
+                          }
+                    }
               }
         },
-        dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
+        dismissButton = {},
         text = {
-          TimeInput(
-              state = state,
-              modifier = Modifier.testTag(ComponentsTestTags.TIME_PICKER),
-              TimePickerDefaults.colors(
-                  clockDialColor = AppColors.secondary,
-                  clockDialSelectedContentColor = AppColors.primary,
-                  clockDialUnselectedContentColor = AppColors.textIconsFade,
-                  selectorColor = AppColors.neutral,
-                  periodSelectorBorderColor = AppColors.textIconsFade,
-                  periodSelectorSelectedContainerColor = AppColors.secondary,
-                  periodSelectorSelectedContentColor = AppColors.negative,
-                  timeSelectorSelectedContainerColor = AppColors.neutral,
-                  timeSelectorUnselectedContainerColor = AppColors.secondary,
-              ))
+          Column(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+              horizontalAlignment = Alignment.CenterHorizontally) {
+                // Header with icon and label
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center) {
+                      Icon(
+                          Icons.Default.Timer,
+                          contentDescription = null,
+                          tint = AppColors.neutral,
+                          modifier = Modifier.size(28.dp))
+                      Spacer(Modifier.width(12.dp))
+                      Text(
+                          "Select Time",
+                          style = MaterialTheme.typography.titleLarge,
+                          color = AppColors.textIcons)
+                    }
+
+                // Time input without background
+                TimeInput(
+                    state = state,
+                    modifier =
+                        Modifier.testTag(ComponentsTestTags.TIME_PICKER)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    TimePickerDefaults.colors(
+                        clockDialColor = AppColors.primary,
+                        clockDialSelectedContentColor = AppColors.primary,
+                        clockDialUnselectedContentColor = AppColors.textIconsFade,
+                        selectorColor = AppColors.neutral,
+                        periodSelectorBorderColor = AppColors.neutral,
+                        periodSelectorSelectedContainerColor = AppColors.neutral,
+                        periodSelectorSelectedContentColor = AppColors.primary,
+                        periodSelectorUnselectedContainerColor = AppColors.secondary,
+                        periodSelectorUnselectedContentColor = AppColors.textIconsFade,
+                        timeSelectorSelectedContainerColor = AppColors.neutral,
+                        timeSelectorUnselectedContainerColor = AppColors.secondary,
+                        timeSelectorSelectedContentColor = AppColors.primary,
+                        timeSelectorUnselectedContentColor = AppColors.textIcons,
+                    ))
+              }
         })
   }
 }

@@ -71,6 +71,10 @@ class FirestoreSessionViewModel(
     return discussion.admins.contains(requester.uid)
   }
 
+  fun clear() {
+    _gameUIState.value = GameUIState()
+  }
+
   /**
    * Creates a new gaming session within the discussion.
    *
@@ -93,31 +97,17 @@ class FirestoreSessionViewModel(
       gameId: String,
       date: Timestamp,
       location: Location,
-      minParticipants: Int = 1,
-      maxParticipants: Int = 10,
       vararg participants: Account
   ) {
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
-
-    if (minParticipants > maxParticipants)
-        throw IllegalArgumentException(
-            "The minimum number of participants can not be more than the maximum number of participants")
 
     val participantsList = participants.toList().map { it -> it.uid }
     if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
 
     viewModelScope.launch {
       _discussion.value =
-          repository.updateSession(
-              discussion.uid,
-              name,
-              gameId,
-              date,
-              location,
-              minParticipants,
-              maxParticipants,
-              participantsList)
+          repository.updateSession(discussion.uid, name, gameId, date, location, participantsList)
     }
   }
 
@@ -145,39 +135,32 @@ class FirestoreSessionViewModel(
       gameId: String? = null,
       date: Timestamp? = null,
       location: Location? = null,
-      minParticipants: Int? = null,
-      maxParticipants: Int? = null,
       newParticipantList: List<Account>? = null
   ) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) {
+      // Allow non-admin to remove themselves if only updating participants and they're not in the
+      // new list
+      val isRemovingSelfOnly =
+          newParticipantList != null &&
+              discussion.session?.participants?.toSet() ==
+                  (newParticipantList.map { it.uid } + requester.uid).toSet() &&
+              name == null &&
+              gameId == null &&
+              date == null &&
+              location == null
 
-    if ((minParticipants ?: discussion.session!!.minParticipants) >
-        (maxParticipants ?: discussion.session!!.maxParticipants))
-        throw IllegalArgumentException(
-            "The minimum number of participants can not be more than the maximum number of participants")
+      if (!isRemovingSelfOnly) {
+        throw PermissionDeniedException("Only discussion admins can perform this operation")
+      }
+    }
 
     var participantsList: List<String>? = null
-    if (newParticipantList != null) {
-      participantsList = newParticipantList.toList().map { it -> it.uid }
-      if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
-      if (participantsList.size < (minParticipants ?: discussion.session!!.minParticipants))
-          throw IllegalArgumentException("To little participants")
-      if (participantsList.size > (maxParticipants ?: discussion.session!!.maxParticipants))
-          throw IllegalArgumentException("To many participants")
-    }
+    if (newParticipantList != null)
+        participantsList = newParticipantList.toList().map { it -> it.uid }
 
     viewModelScope.launch {
       _discussion.value =
-          repository.updateSession(
-              discussion.uid,
-              name,
-              gameId,
-              date,
-              location,
-              minParticipants,
-              maxParticipants,
-              participantsList)
+          repository.updateSession(discussion.uid, name, gameId, date, location, participantsList)
     }
   }
 

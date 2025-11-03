@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.model.structures.Post
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
@@ -43,9 +42,6 @@ object FeedsOverviewTestTags {
 }
 
 /* ==========  CONSTANTS  ====================================================== */
-/** Placeholder text shown when a post has no comments yet. */
-private const val NO_COMMENTS_DEFAULT_TEXT = "(No comments yet)"
-
 /** Placeholder text shown when the feed contains zero posts. */
 private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 
@@ -65,16 +61,14 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedsOverviewScreen(
+fun PostsOverviewScreen(
     postOverviewVM: PostOverviewViewModel = viewModel(),
     firestoreViewModel: FirestoreViewModel = viewModel(),
-    account: Account,
     navigation: NavigationActions,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
 
-  LaunchedEffect(Unit) { postOverviewVM.getPosts() }
   val posts by postOverviewVM.posts.collectAsState()
   val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
 
@@ -91,7 +85,7 @@ fun FeedsOverviewScreen(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  text = MeepleMeetScreen.DiscoverPosts.title,
+                  text = MeepleMeetScreen.PostsOverview.title,
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
@@ -99,7 +93,7 @@ fun FeedsOverviewScreen(
       },
       bottomBar = {
         BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.DiscoverPosts,
+            currentScreen = MeepleMeetScreen.PostsOverview,
             modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
@@ -114,29 +108,6 @@ fun FeedsOverviewScreen(
               verticalArrangement = Arrangement.spacedBy(10.dp),
               contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
                 items(postsSorted, key = { it.id }) { post ->
-                  val lastComment = post.comments.maxByOrNull { it.timestamp }
-
-                  val senderId = lastComment?.authorId ?: ""
-                  val isMe = (senderId == account.uid)
-                  val senderName by
-                      produceState(
-                          key1 = senderId, initialValue = if (isMe) MY_MSG_USERNAME else null) {
-                            if (senderId.isNotBlank() && !isMe) {
-                              firestoreViewModel.getOtherAccount(senderId) { acc ->
-                                value = acc.name
-                              }
-                            }
-                          }
-
-                  val msgText = buildString {
-                    if (lastComment == null) append(NO_COMMENTS_DEFAULT_TEXT)
-                    else {
-                      if (isMe) append("$MY_MSG_USERNAME: ")
-                      else if (!senderName.isNullOrBlank()) append("$senderName: ")
-                      append(lastComment.text)
-                    }
-                  }
-
                   val dateFormatted =
                       SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                           .format(post.timestamp.toDate())
@@ -151,8 +122,7 @@ fun FeedsOverviewScreen(
                   FeedCard(
                       authorName = authorName ?: post.authorId,
                       postTitle = post.title,
-                      lastMsg = msgText,
-                      commentCount = post.comments.size,
+                      commentCount = post.commentCount,
                       date = dateFormatted,
                       firstTag = post.tags.firstOrNull(),
                       modifier =
@@ -187,7 +157,7 @@ private fun EmptyFeedListText() {
  * Layout (top → bottom):
  * 1. Row(author avatar + author name)
  * 2. Post title (bold, single line)
- * 3. Last message (single line, ellipsised)
+ * 3. Last message (single line, ellipsis)
  * 4. Row(comment counter + date)
  *
  * A coloured pill in the top-right corner shows the first tag (max 4 chars, ellipsis if longer).
@@ -195,7 +165,6 @@ private fun EmptyFeedListText() {
  *
  * @param authorName Display name of the post creator.
  * @param postTitle Title of the post.
- * @param lastMsg Text of the most recent comment (or fallback).
  * @param commentCount Total number of comments on the post.
  * @param date Post creation date formatted as dd/MM/yyyy.
  * @param firstTag First tag of the post (nullable). Shown in a pill.
@@ -206,7 +175,6 @@ private fun EmptyFeedListText() {
 private fun FeedCard(
     authorName: String,
     postTitle: String,
-    lastMsg: String,
     commentCount: Int,
     date: String,
     firstTag: String?,
@@ -244,15 +212,6 @@ private fun FeedCard(
                 maxLines = 1)
 
             Spacer(modifier = Modifier.height(6.dp))
-
-            /* last message */
-            Text(
-                text = lastMsg,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textIconsFade,
-                maxLines = 1)
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             /* bottom row */
             Row(

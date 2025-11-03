@@ -235,24 +235,4 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     assertNotNull(poll)
     assertEquals(listOf(1), poll!!.votes[testAccount1.uid])
   }
-
-  @Test
-  fun searchByHandleWithBlankPrefixReturnsImmediately() = runBlocking {
-    // Covers: if (prefix.isBlank()) return
-    viewModel.searchByHandle("   ")
-    delay(100)
-
-    val suggestions = viewModel.handleSuggestions.value
-    assertTrue(suggestions.isEmpty())
-  }
-
-  @Test
-  fun searchByHandleWithEmptyStringDoesNotSearch() = runBlocking {
-    repository.createAccount("Test", "testhandle", email = "test@test.com", photoUrl = null)
-
-    viewModel.searchByHandle("")
-    delay(500)
-
-    assertTrue(viewModel.handleSuggestions.value.isEmpty())
-  }
 }

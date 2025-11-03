@@ -8,9 +8,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -145,21 +148,6 @@ fun DiscussionDetailsScreen(
           Row(
               modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
               horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                /** The actual deletion happens only after the confirmation dialog */
-                /** Delete button only if not member */
-                if (discussion.creatorId == account.uid)
-                    OutlinedButton(
-                        onClick = { if (!isMember) showDeleteDialog = true },
-                        enabled = !isMember,
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative),
-                        modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
-                          Icon(
-                              imageVector = Icons.Default.Delete,
-                              contentDescription = null,
-                              tint = AppColors.textIcons)
-                          Spacer(modifier = Modifier.width(8.dp))
-                          Text("Delete Discussion", color = AppColors.textIcons)
-                        }
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
                 OutlinedButton(
@@ -167,8 +155,25 @@ fun DiscussionDetailsScreen(
                     enabled = true,
                     colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
                     modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                      Text("Leave Discussion", color = AppColors.textIcons)
+                      Text("Leave", color = AppColors.textIcons)
                     }
+
+                /** The actual deletion happens only after the confirmation dialog */
+                /** Delete button only if not member */
+                if (discussion.creatorId == account.uid)
+                    OutlinedButton(
+                        onClick = { if (!isMember) showDeleteDialog = true },
+                        enabled = !isMember,
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative),
+                        modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
+                          Icon(
+                              imageVector = Icons.Default.Delete,
+                              contentDescription = null,
+                              tint = AppColors.textIcons)
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text("Delete", color = AppColors.textIcons)
+                        }
               }
         }) { padding ->
 
@@ -304,13 +309,7 @@ fun DiscussionDetailsScreen(
 
                 /** --- Members List --- */
                 MemberList(
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it },
                     selectedMembers = selectedMembers,
-                    searchResults = searchResults,
-                    dropdownExpanded = dropdownExpanded,
-                    onDropdownExpandedChange = { dropdownExpanded = it },
-                    isSearching = isSearching,
                     isMember = isMember,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     viewModel = viewModel,
@@ -321,14 +320,33 @@ fun DiscussionDetailsScreen(
                 if (showDeleteDialog) {
                   AlertDialog(
                       onDismissRequest = { showDeleteDialog = false },
-                      title = { Text("Delete Discussion") },
                       modifier = Modifier.testTag(UITestTags.DELETE_DISCUSSION_DISPLAY),
+                      containerColor = AppColors.primary,
+                      title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 8.dp)) {
+                              Icon(
+                                  imageVector = Icons.Default.Delete,
+                                  contentDescription = null,
+                                  tint = AppColors.negative,
+                                  modifier = Modifier.size(28.dp))
+                              Spacer(modifier = Modifier.width(12.dp))
+                              Text(
+                                  "Delete Discussion",
+                                  style = MaterialTheme.typography.titleLarge,
+                                  fontWeight = FontWeight.Bold,
+                                  color = AppColors.textIcons)
+                            }
+                      },
                       text = {
                         Text(
-                            "Are you sure you want to delete ${d.name}? This action cannot be undone.")
+                            "Are you sure you want to delete ${d.name}? This action cannot be undone.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AppColors.textIcons)
                       },
                       confirmButton = {
-                        TextButton(
+                        Button(
                             /** Only owner can delete */
                             onClick = {
                               coroutineScope.launch {
@@ -337,27 +355,56 @@ fun DiscussionDetailsScreen(
                               }
                               showDeleteDialog = false
                             },
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.negative,
+                                    contentColor = AppColors.textIcons),
                             modifier =
                                 Modifier.testTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON)) {
-                              Text("Delete")
+                              Text("Delete", fontWeight = FontWeight.SemiBold)
                             }
                       },
                       dismissButton = {
-                        TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                        OutlinedButton(
+                            onClick = { showDeleteDialog = false },
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = AppColors.textIconsFade)) {
+                              Text("Cancel", fontWeight = FontWeight.Medium)
+                            }
                       })
                 }
                 /** --- Leave Discussion (confirm dialog) --- */
                 if (showLeaveDialog) {
                   AlertDialog(
                       onDismissRequest = { showLeaveDialog = false },
-                      title = { Text("Leave Discussion") },
                       modifier = Modifier.testTag(UITestTags.LEAVE_DISCUSSION_DISPLAY),
+                      containerColor = AppColors.primary,
+                      title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 8.dp)) {
+                              Icon(
+                                  imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                  contentDescription = null,
+                                  tint = AppColors.affirmative,
+                                  modifier = Modifier.size(28.dp))
+                              Spacer(modifier = Modifier.width(12.dp))
+                              Text(
+                                  "Leave Discussion",
+                                  style = MaterialTheme.typography.titleLarge,
+                                  fontWeight = FontWeight.Bold,
+                                  color = AppColors.textIcons)
+                            }
+                      },
                       text = {
                         Text(
-                            "Are you sure you want to leave ${d.name}? You will no longer see messages or members.")
+                            "Are you sure you want to leave ${d.name}? You will no longer see messages or members.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AppColors.textIcons)
                       },
                       confirmButton = {
-                        TextButton(
+                        Button(
                             /** Everyone can leave */
                             onClick = {
                               coroutineScope.launch {
@@ -368,13 +415,23 @@ fun DiscussionDetailsScreen(
                               }
                               showLeaveDialog = false
                             },
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.affirmative,
+                                    contentColor = AppColors.textIcons),
                             modifier =
                                 Modifier.testTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON)) {
-                              Text("Leave")
+                              Text("Leave", fontWeight = FontWeight.SemiBold)
                             }
                       },
                       dismissButton = {
-                        TextButton(onClick = { showLeaveDialog = false }) { Text("Cancel") }
+                        OutlinedButton(
+                            onClick = { showLeaveDialog = false },
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = AppColors.textIconsFade)) {
+                              Text("Cancel", fontWeight = FontWeight.Medium)
+                            }
                       })
                 }
               }
@@ -385,13 +442,7 @@ fun DiscussionDetailsScreen(
 /**
  * Displays the list of discussion members and allows searching, adding, and managing members.
  *
- * @param searchQuery The current search query for member autocomplete.
- * @param onSearchQueryChange Callback invoked when the search query changes.
  * @param selectedMembers The list of currently selected (discussion) members.
- * @param searchResults The list of accounts matching the search query.
- * @param dropdownExpanded Whether the dropdown for search results is expanded.
- * @param onDropdownExpandedChange Callback to update dropdown expanded state.
- * @param isSearching Whether a search is currently in progress.
  * @param isMember Whether the current user is a regular member (not admin/owner).
  * @param modifier Modifier for styling this composable.
  * @param viewModel The FirestoreViewModel for data operations.
@@ -400,13 +451,7 @@ fun DiscussionDetailsScreen(
  */
 @Composable
 fun MemberList(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
     selectedMembers: MutableList<Account>,
-    searchResults: List<Account>,
-    dropdownExpanded: Boolean,
-    onDropdownExpandedChange: (Boolean) -> Unit,
-    isSearching: Boolean,
     isMember: Boolean,
     modifier: Modifier = Modifier,
     viewModel: FirestoreViewModel = viewModel(),
@@ -468,7 +513,7 @@ fun MemberList(
 
               /** --- Status Badge --- */
               val status =
-                  remember(member) {
+                  remember(member, discussion.admins) {
                     when {
                       discussion.creatorId == member.uid -> "Owner"
                       discussion.admins.contains(member.uid) -> "Admin"
@@ -514,65 +559,100 @@ fun MemberList(
     val selectedIsAdmin = discussion.admins.contains(selectedMember!!.uid)
     val selectedIsOwner = discussion.creatorId == selectedMember!!.uid
 
+    /** Determine if current user can remove selected member */
+    val canRemove =
+        when {
+          discussion.creatorId == currentAccount.uid -> true // Owner can remove anyone
+          discussion.admins.contains(currentAccount.uid) && !selectedIsAdmin && !selectedIsOwner ->
+              true // Admin can remove members only
+          else -> false
+        }
+
     /** --- Dialog to manage selected member --- */
     AlertDialog(
         onDismissRequest = { selectedMember = null },
+        containerColor = AppColors.primary,
         title = {
-
           /** --- Selected Member Info --- */
-          Row(verticalAlignment = Alignment.CenterVertically) {
-
-            /** --- Avatar Circle --- */
-            Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(AppColors.primary),
-                contentAlignment = Alignment.Center) {
-                  /** First letter of name or A if name is empty */
-                  Text(
-                      text = selectedMember?.name?.firstOrNull()?.toString() ?: "A",
-                      color = AppColors.affirmative,
-                      fontWeight = FontWeight.Bold)
-                }
-            Spacer(modifier = Modifier.width(12.dp))
-            /** Member name */
+          Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier.padding(bottom = 8.dp)) {
+                /** --- Avatar Circle --- */
+                Box(
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(AppColors.primary),
+                    contentAlignment = Alignment.Center) {
+                      /** First letter of name or A if name is empty */
+                      Text(
+                          text = selectedMember?.name?.firstOrNull()?.toString() ?: "A",
+                          color = AppColors.affirmative,
+                          fontWeight = FontWeight.Bold,
+                          style = MaterialTheme.typography.titleMedium)
+                    }
+                Spacer(modifier = Modifier.width(12.dp))
+                /** Member name */
+                Text(
+                    text = selectedMember?.name ?: "",
+                    maxLines = 1,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.textIcons)
+              }
+        },
+        text = {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = selectedMember?.name ?: "",
-                maxLines = 1,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.textIcons)
-          }
-        },
-        text = {},
-        confirmButton = {
-          /** OWNER or ADMIN can make admin, but only if the target is not already admin or owner */
-          if (!selectedIsAdmin && !selectedIsOwner) {
-            TextButton(
-                onClick = {
-                  viewModel.addAdminToDiscussion(discussion, currentAccount, selectedMember!!)
-                  selectedMember = null
-                }) {
-                  Text(
-                      "Make Admin",
-                      modifier = Modifier.testTag(UITestTags.MAKE_ADMIN_BUTTON),
-                      color = AppColors.textIcons)
-                }
-          }
-        },
-        dismissButton = {
-          Row {
-            /** Determine if current user can remove selected member */
-            val canRemove =
-                when {
-                  discussion.creatorId == currentAccount.uid -> true // Owner can remove anyone
-                  discussion.admins.contains(currentAccount.uid) &&
-                      !selectedIsAdmin &&
-                      !selectedIsOwner -> true // Admin can remove members only
-                  else -> false
-                }
+                "Manage member permissions and actions",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.textIconsFade)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            /**
+             * OWNER or ADMIN can make admin, but only if the target is not already admin or owner
+             */
+            if (!selectedIsAdmin && !selectedIsOwner) {
+              Button(
+                  onClick = {
+                    viewModel.addAdminToDiscussion(discussion, currentAccount, selectedMember!!)
+                    selectedMember = null
+                  },
+                  modifier = Modifier.fillMaxWidth().testTag(UITestTags.MAKE_ADMIN_BUTTON),
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = AppColors.neutral, contentColor = AppColors.textIcons)) {
+                    Icon(
+                        imageVector = Icons.Default.PersonAdd,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Make Admin", fontWeight = FontWeight.SemiBold)
+                  }
+            }
+
+            /** --- Only the owner can remove admin privileges --- */
+            if (discussion.creatorId == currentAccount.uid && selectedIsAdmin) {
+              OutlinedButton(
+                  onClick = {
+                    viewModel.removeAdminFromDiscussion(
+                        discussion = discussion,
+                        admin = selectedMember!!,
+                        changeRequester = currentAccount)
+                    selectedMember = null
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                    Icon(
+                        imageVector = Icons.Default.PersonRemove,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Remove Admin", fontWeight = FontWeight.Medium)
+                  }
+            }
 
             /** Only owner or admin (with restrictions) can remove members */
             if (canRemove) {
-              TextButton(
+              OutlinedButton(
                   onClick = {
                     viewModel.removeUserFromDiscussion(
                         discussion = discussion,
@@ -580,30 +660,23 @@ fun MemberList(
                         changeRequester = currentAccount)
                     selectedMembers.remove(selectedMember!!)
                     selectedMember = null
-                  }) {
-                    Text("Remove from Group", color = AppColors.negative)
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                    Icon(
+                        imageVector = Icons.Default.PersonRemove,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Remove from Group", fontWeight = FontWeight.Medium)
                   }
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            /** --- Only the owner can remove admin privileges --- */
-            if (discussion.creatorId == currentAccount.uid && selectedIsAdmin) {
-              TextButton(
-                  onClick = {
-                    viewModel.removeAdminFromDiscussion(
-                        discussion = discussion,
-                        admin = selectedMember!!,
-                        changeRequester = currentAccount)
-                    selectedMember = null
-                  }) {
-                    Text("Remove Admin", color = AppColors.negative)
-                  }
-            }
-            /** Cancel button */
-            TextButton(onClick = { selectedMember = null }) {
-              Text("Cancel", color = AppColors.textIconsFade)
-            }
+          }
+        },
+        confirmButton = {},
+        dismissButton = {
+          TextButton(onClick = { selectedMember = null }) {
+            Text("Close", color = AppColors.textIconsFade, fontWeight = FontWeight.Medium)
           }
         })
   }

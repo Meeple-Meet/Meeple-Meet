@@ -1,7 +1,11 @@
 package com.github.meeplemeet.ui
 // Github Copilot used for this file
 import com.github.meeplemeet.model.structures.Poll
-import org.junit.Assert
+import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import org.junit.Test
 
 /** Unit tests for the Poll data class and its helper functions. */
@@ -18,13 +22,13 @@ class PollTest {
             votes = mapOf("user1" to listOf(0), "user2" to listOf(1), "user3" to listOf(0)))
 
     val usersForOptionA = poll.getUsersWhoVotedFor(0)
-    Assert.assertEquals(2, usersForOptionA.size)
-    Assert.assertTrue(usersForOptionA.contains("user1"))
-    Assert.assertTrue(usersForOptionA.contains("user3"))
+    assertEquals(2, usersForOptionA.size)
+    assertTrue(usersForOptionA.contains("user1"))
+    assertTrue(usersForOptionA.contains("user3"))
 
     val usersForOptionB = poll.getUsersWhoVotedFor(1)
-    Assert.assertEquals(1, usersForOptionB.size)
-    Assert.assertTrue(usersForOptionB.contains("user2"))
+    assertEquals(1, usersForOptionB.size)
+    assertTrue(usersForOptionB.contains("user2"))
   }
 
   @Test
@@ -37,12 +41,12 @@ class PollTest {
             allowMultipleVotes = true)
 
     val usersForOptionA = poll.getUsersWhoVotedFor(0)
-    Assert.assertEquals(2, usersForOptionA.size)
-    Assert.assertTrue(usersForOptionA.containsAll(listOf("user1", "user2")))
+    assertEquals(2, usersForOptionA.size)
+    assertTrue(usersForOptionA.containsAll(listOf("user1", "user2")))
 
     val usersForOptionC = poll.getUsersWhoVotedFor(2)
-    Assert.assertEquals(2, usersForOptionC.size)
-    Assert.assertTrue(usersForOptionC.containsAll(listOf("user1", "user3")))
+    assertEquals(2, usersForOptionC.size)
+    assertTrue(usersForOptionC.containsAll(listOf("user1", "user3")))
   }
 
   @Test
@@ -50,7 +54,7 @@ class PollTest {
     val poll = Poll(question = "Test?", options = listOf("A", "B"), votes = emptyMap())
 
     val users = poll.getUsersWhoVotedFor(0)
-    Assert.assertTrue(users.isEmpty())
+    assertTrue(users.isEmpty())
   }
 
   @Test
@@ -67,10 +71,10 @@ class PollTest {
                     "user4" to listOf(2)))
 
     val counts = poll.getVoteCountsByOption()
-    Assert.assertEquals(3, counts.size)
-    Assert.assertEquals(2, counts[0])
-    Assert.assertEquals(1, counts[1])
-    Assert.assertEquals(1, counts[2])
+    assertEquals(3, counts.size)
+    assertEquals(2, counts[0])
+    assertEquals(1, counts[1])
+    assertEquals(1, counts[2])
   }
 
   @Test
@@ -84,10 +88,10 @@ class PollTest {
             allowMultipleVotes = true)
 
     val counts = poll.getVoteCountsByOption()
-    Assert.assertEquals(3, counts.size)
-    Assert.assertEquals(2, counts[0]) // Options 0: 2 votes
-    Assert.assertEquals(2, counts[1]) // Option 1: 2 votes
-    Assert.assertEquals(2, counts[2]) // Option 2: 2 votes
+    assertEquals(3, counts.size)
+    assertEquals(2, counts[0]) // Options 0: 2 votes
+    assertEquals(2, counts[1]) // Option 1: 2 votes
+    assertEquals(2, counts[2]) // Option 2: 2 votes
   }
 
   @Test
@@ -95,7 +99,7 @@ class PollTest {
     val poll = Poll(question = "Test?", options = listOf("A", "B"), votes = emptyMap())
 
     val counts = poll.getVoteCountsByOption()
-    Assert.assertTrue(counts.isEmpty())
+    assertTrue(counts.isEmpty())
   }
 
   @Test
@@ -112,14 +116,14 @@ class PollTest {
                     ),
             allowMultipleVotes = true)
 
-    Assert.assertEquals(6, poll.getTotalVotes()) // Total: 3 + 1 + 2 = 6
+    assertEquals(6, poll.getTotalVotes()) // Total: 3 + 1 + 2 = 6
   }
 
   @Test
   fun `getTotalVotes returns zero when no votes`() {
     val poll = Poll(question = "Test?", options = listOf("A", "B"), votes = emptyMap())
 
-    Assert.assertEquals(0, poll.getTotalVotes())
+    assertEquals(0, poll.getTotalVotes())
   }
 
   @Test
@@ -136,14 +140,14 @@ class PollTest {
                     ),
             allowMultipleVotes = true)
 
-    Assert.assertEquals(3, poll.getTotalVoters()) // 3 users voted
+    assertEquals(3, poll.getTotalVoters()) // 3 users voted
   }
 
   @Test
   fun `getTotalVoters returns zero when no votes`() {
     val poll = Poll(question = "Test?", options = listOf("A", "B"), votes = emptyMap())
 
-    Assert.assertEquals(0, poll.getTotalVoters())
+    assertEquals(0, poll.getTotalVoters())
   }
 
   @Test
@@ -156,14 +160,14 @@ class PollTest {
             allowMultipleVotes = true)
 
     val user1Votes = poll.getUserVotes("user1")
-    Assert.assertNotNull(user1Votes)
-    Assert.assertEquals(2, user1Votes?.size)
-    Assert.assertTrue(user1Votes?.containsAll(listOf(0, 2)) ?: false)
+    assertNotNull(user1Votes)
+    assertEquals(2, user1Votes?.size)
+    assertTrue(user1Votes?.containsAll(listOf(0, 2)) ?: false)
 
     val user2Votes = poll.getUserVotes("user2")
-    Assert.assertNotNull(user2Votes)
-    Assert.assertEquals(1, user2Votes?.size)
-    Assert.assertEquals(1, user2Votes?.get(0))
+    assertNotNull(user2Votes)
+    assertEquals(1, user2Votes?.size)
+    assertEquals(1, user2Votes?.get(0))
   }
 
   @Test
@@ -172,7 +176,7 @@ class PollTest {
         Poll(question = "Test?", options = listOf("A", "B"), votes = mapOf("user1" to listOf(0)))
 
     val votes = poll.getUserVotes("user2")
-    Assert.assertNull(votes)
+    assertNull(votes)
   }
 
   @Test
@@ -180,7 +184,7 @@ class PollTest {
     val poll =
         Poll(question = "Test?", options = listOf("A", "B"), votes = mapOf("user1" to listOf(0)))
 
-    Assert.assertTrue(poll.hasUserVoted("user1"))
+    assertTrue(poll.hasUserVoted("user1"))
   }
 
   @Test
@@ -188,7 +192,7 @@ class PollTest {
     val poll =
         Poll(question = "Test?", options = listOf("A", "B"), votes = mapOf("user1" to listOf(0)))
 
-    Assert.assertFalse(poll.hasUserVoted("user2"))
+    assertFalse(poll.hasUserVoted("user2"))
   }
 
   @Test
@@ -200,9 +204,9 @@ class PollTest {
             votes = mapOf("user1" to listOf(0, 2)),
             allowMultipleVotes = true)
 
-    Assert.assertTrue(poll.hasUserVotedFor("user1", 0))
-    Assert.assertTrue(poll.hasUserVotedFor("user1", 2))
-    Assert.assertFalse(poll.hasUserVotedFor("user1", 1))
+    assertTrue(poll.hasUserVotedFor("user1", 0))
+    assertTrue(poll.hasUserVotedFor("user1", 2))
+    assertFalse(poll.hasUserVotedFor("user1", 1))
   }
 
   @Test
@@ -210,7 +214,7 @@ class PollTest {
     val poll =
         Poll(question = "Test?", options = listOf("A", "B"), votes = mapOf("user1" to listOf(0)))
 
-    Assert.assertFalse(poll.hasUserVotedFor("user2", 0))
+    assertFalse(poll.hasUserVotedFor("user2", 0))
   }
 
   // ==================== Vote Behavior Tests ====================
@@ -230,8 +234,8 @@ class PollTest {
 
     val updatedPoll = poll.copy(votes = updatedVotes)
 
-    Assert.assertEquals(1, updatedPoll.getUserVotes("user1")?.size)
-    Assert.assertEquals(1, updatedPoll.getUserVotes("user1")?.get(0))
+    assertEquals(1, updatedPoll.getUserVotes("user1")?.size)
+    assertEquals(1, updatedPoll.getUserVotes("user1")?.get(0))
   }
 
   @Test
@@ -251,8 +255,8 @@ class PollTest {
 
     val updatedPoll = poll.copy(votes = updatedVotes)
 
-    Assert.assertEquals(2, updatedPoll.getUserVotes("user1")?.size)
-    Assert.assertTrue(updatedPoll.getUserVotes("user1")?.containsAll(listOf(0, 2)) ?: false)
+    assertEquals(2, updatedPoll.getUserVotes("user1")?.size)
+    assertTrue(updatedPoll.getUserVotes("user1")?.containsAll(listOf(0, 2)) ?: false)
   }
 
   @Test
@@ -270,8 +274,8 @@ class PollTest {
 
     val updatedPoll = poll.copy(votes = updatedVotes)
 
-    Assert.assertFalse(updatedPoll.hasUserVoted("user1"))
-    Assert.assertNull(updatedPoll.getUserVotes("user1"))
+    assertFalse(updatedPoll.hasUserVoted("user1"))
+    assertNull(updatedPoll.getUserVotes("user1"))
   }
 
   @Test
@@ -291,9 +295,9 @@ class PollTest {
 
     val updatedPoll = poll.copy(votes = updatedVotes)
 
-    Assert.assertEquals(2, updatedPoll.getUserVotes("user1")?.size)
-    Assert.assertTrue(updatedPoll.getUserVotes("user1")?.containsAll(listOf(0, 2)) ?: false)
-    Assert.assertFalse(updatedPoll.hasUserVotedFor("user1", 1))
+    assertEquals(2, updatedPoll.getUserVotes("user1")?.size)
+    assertTrue(updatedPoll.getUserVotes("user1")?.containsAll(listOf(0, 2)) ?: false)
+    assertFalse(updatedPoll.hasUserVotedFor("user1", 1))
   }
 
   @Test
@@ -318,7 +322,7 @@ class PollTest {
 
     val updatedPoll = poll.copy(votes = updatedVotes)
 
-    Assert.assertFalse(updatedPoll.hasUserVoted("user1"))
+    assertFalse(updatedPoll.hasUserVoted("user1"))
   }
 
   // ==================== Edge Cases ====================
@@ -327,9 +331,9 @@ class PollTest {
   fun `poll with no options has no votes`() {
     val poll = Poll(question = "Empty poll?", options = emptyList(), votes = emptyMap())
 
-    Assert.assertEquals(0, poll.getTotalVotes())
-    Assert.assertEquals(0, poll.getTotalVoters())
-    Assert.assertTrue(poll.getVoteCountsByOption().isEmpty())
+    assertEquals(0, poll.getTotalVotes())
+    assertEquals(0, poll.getTotalVoters())
+    assertTrue(poll.getVoteCountsByOption().isEmpty())
   }
 
   @Test
@@ -337,9 +341,9 @@ class PollTest {
     val votes = (1..100).associate { "user$it" to listOf(0) }
     val poll = Poll(question = "Popular option?", options = listOf("A", "B"), votes = votes)
 
-    Assert.assertEquals(100, poll.getUsersWhoVotedFor(0).size)
-    Assert.assertEquals(100, poll.getTotalVoters())
-    Assert.assertEquals(100, poll.getVoteCountsByOption()[0])
+    assertEquals(100, poll.getUsersWhoVotedFor(0).size)
+    assertEquals(100, poll.getTotalVoters())
+    assertEquals(100, poll.getVoteCountsByOption()[0])
   }
 
   @Test
@@ -351,21 +355,21 @@ class PollTest {
             votes = mapOf("user1" to listOf(0, 1, 2, 3)),
             allowMultipleVotes = true)
 
-    Assert.assertEquals(4, poll.getUserVotes("user1")?.size)
-    Assert.assertEquals(4, poll.getTotalVotes())
-    Assert.assertTrue(poll.hasUserVotedFor("user1", 0))
-    Assert.assertTrue(poll.hasUserVotedFor("user1", 1))
-    Assert.assertTrue(poll.hasUserVotedFor("user1", 2))
-    Assert.assertTrue(poll.hasUserVotedFor("user1", 3))
+    assertEquals(4, poll.getUserVotes("user1")?.size)
+    assertEquals(4, poll.getTotalVotes())
+    assertTrue(poll.hasUserVotedFor("user1", 0))
+    assertTrue(poll.hasUserVotedFor("user1", 1))
+    assertTrue(poll.hasUserVotedFor("user1", 2))
+    assertTrue(poll.hasUserVotedFor("user1", 3))
   }
 
   @Test
   fun `empty question and options creates valid poll`() {
     val poll = Poll(question = "", options = emptyList(), votes = emptyMap())
 
-    Assert.assertNotNull(poll)
-    Assert.assertEquals("", poll.question)
-    Assert.assertTrue(poll.options.isEmpty())
-    Assert.assertFalse(poll.allowMultipleVotes)
+    assertNotNull(poll)
+    assertEquals("", poll.question)
+    assertTrue(poll.options.isEmpty())
+    assertFalse(poll.allowMultipleVotes)
   }
 }

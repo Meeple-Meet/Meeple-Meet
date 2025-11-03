@@ -57,8 +57,7 @@ class SessionDetailsScreenTest {
             creatorId = currentUser.uid,
             participants = listOf(currentUser.uid, member.uid),
             admins = listOf(currentUser.uid),
-            session =
-                Session(participants = listOf(currentUser.uid, member.uid), maxParticipants = 5))
+            session = Session(participants = listOf(currentUser.uid, member.uid)))
 
     val field = viewModel::class.java.getDeclaredField("discussionFlows")
     field.isAccessible = true
@@ -89,8 +88,6 @@ class SessionDetailsScreenTest {
       SessionForm(
           title = "Friday Night Meetup",
           proposedGameString = "",
-          minPlayers = 3,
-          maxPlayers = 6,
           participants =
               listOf(
                   Account(uid = "1", handle = "user1", name = "user1", email = "user1@example.com"),
@@ -286,7 +283,7 @@ class SessionDetailsScreenTest {
 
     composeTestRule.setContent {
       ParticipantsSection(
-          form = initialForm.copy(minPlayers = 3, maxPlayers = 6),
+          form = initialForm,
           account = admin,
           editable = true,
           game = Game("g1", "Test", "x", "", 2, 6, 1, 4),
@@ -464,7 +461,7 @@ class SessionDetailsScreenTest {
 
     composeTestRule.setContent {
       ParticipantsSection(
-          form = initialForm.copy(minPlayers = 3, maxPlayers = 6),
+          form = initialForm,
           account = admin,
           editable = true,
           game =
@@ -515,24 +512,6 @@ class SessionDetailsScreenTest {
 
     composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).assertExists()
     composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).performClick()
-    assert(backCalled)
-  }
-
-  @Test
-  fun delete_button_click_is_wired_and_calls_onback() {
-    var backCalled = false
-
-    composeTestRule.setContent {
-      DeleteSessionBTN(
-          sessionViewModel = sessionVM,
-          currentUser = admin,
-          discussion = baseDiscussion,
-          userIsAdmin = true,
-          onback = { backCalled = true })
-    }
-
-    composeTestRule.onNodeWithTag(SessionTestTags.DELETE_SESSION_BUTTON).assertExists()
-    composeTestRule.onNodeWithTag(SessionTestTags.DELETE_SESSION_BUTTON).performClick()
     assert(backCalled)
   }
 
@@ -611,7 +590,7 @@ class SessionDetailsScreenTest {
 
     composeTestRule.setContent {
       ParticipantsSection(
-          form = initialForm.copy(maxPlayers = 5),
+          form = initialForm,
           account = admin,
           editable = true,
           game =

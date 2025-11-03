@@ -165,6 +165,19 @@ fun PostScreen(
   var topComment by rememberSaveable { mutableStateOf("") }
   var isSending by remember { mutableStateOf(false) }
 
+  // Track if post was ever loaded to distinguish between loading and deleted states
+  var postEverLoaded by remember { mutableStateOf(false) }
+
+  // Auto-navigate back if post is deleted after being loaded
+  LaunchedEffect(post) {
+    if (post != null) {
+      postEverLoaded = true
+    } else if (postEverLoaded) {
+      // Post was loaded but is now null (deleted)
+      onBack()
+    }
+  }
+
   // Ensure current user is in cache
   LaunchedEffect(account.uid) { userCache[account.uid] = account }
 
@@ -253,7 +266,6 @@ fun PostScreen(
               onDeletePost = {
                 scope.launch {
                   runCatching { postViewModel.deletePost(account, currentPost) }
-                      .onSuccess { onBack() }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
                 }
               },
@@ -383,6 +395,7 @@ private fun PostContent(
     modifier: Modifier = Modifier
 ) {
   val listState = rememberLazyListState()
+  val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
 
   LazyColumn(
       state = listState,
@@ -407,7 +420,8 @@ private fun PostContent(
               currentUser = currentUser,
               resolveUser = resolveUser,
               onReply = onReply,
-              onDelete = onDeleteComment)
+              onDelete = onDeleteComment,
+              expandedStates = expandedStates)
         }
       }
 }
@@ -453,7 +467,7 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
                   AssistChip(
                       enabled = false,
                       onClick = {},
-                      label = { Text("#$tag") },
+                      label = { Text(tag) },
                       colors =
                           AssistChipDefaults.assistChipColors(
                               containerColor = MaterialTheme.colorScheme.tertiary,
@@ -501,7 +515,7 @@ private fun PostHeader(post: Post, author: Account?) {
         Spacer(Modifier.width(10.dp))
         Column {
           Text(
-              text = author?.handle ?: UNKNOWN_USER_PLACEHOLDER,
+              text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
               style =
                   MaterialTheme.typography.labelLarge.copy(
                       color = MaterialTheme.colorScheme.onBackground,
@@ -527,6 +541,7 @@ private fun PostHeader(post: Post, author: Account?) {
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDelete Lambda to invoke when deleting a comment.
+ * @param expandedStates Map storing the expanded state for all comments.
  * @param gutterColor The color of the gutter lines.
  */
 @Composable
@@ -536,18 +551,22 @@ private fun ThreadCard(
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
+    expandedStates: MutableMap<String, Boolean>,
     gutterColor: Color = MaterialTheme.colorScheme.outline
 ) {
-  var expanded by rememberSaveable(root.id) { mutableStateOf(false) }
+  val expanded = expandedStates[root.id] ?: false
 
   MeepleCard(modifier = Modifier.testTag(PostTags.threadCard(root.id))) {
     CommentItem(
         comment = root,
         author = resolveUser(root.authorId),
         isMine = (root.authorId == currentUser.uid),
-        onReply = { text -> onReply(root.id, text) },
+        onReply = { text ->
+          onReply(root.id, text)
+          expandedStates[root.id] = true
+        },
         onDelete = { onDelete(root) },
-        onCardClick = { expanded = !expanded })
+        onCardClick = { expandedStates[root.id] = !expanded })
 
     AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
       if (root.children.isNotEmpty()) {
@@ -558,6 +577,7 @@ private fun ThreadCard(
             resolveUser = resolveUser,
             onReply = onReply,
             onDelete = onDelete,
+            expandedStates = expandedStates,
             depth = 1,
             gutterColor = gutterColor)
       }
@@ -573,6 +593,7 @@ private fun ThreadCard(
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDelete Lambda to invoke when deleting a comment.
+ * @param expandedStates Map storing the expanded state for all comments.
  * @param depth The current depth in the comment tree.
  * @param gutterColor The color of the gutter lines.
  */
@@ -583,6 +604,7 @@ private fun CommentsTree(
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
+    expandedStates: MutableMap<String, Boolean>,
     depth: Int = 0,
     gutterColor: Color = MaterialTheme.colorScheme.outline
 ) {
@@ -596,17 +618,20 @@ private fun CommentsTree(
 
       Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         comments.forEach { c ->
-          var expanded by rememberSaveable(c.id) { mutableStateOf(false) }
+          val expanded = expandedStates[c.id] ?: false
 
           CommentItem(
               comment = c,
               author = resolveUser(c.authorId),
               isMine = (c.authorId == currentUser.uid),
-              onReply = { text -> onReply(c.id, text) },
+              onReply = { text ->
+                onReply(c.id, text)
+                expandedStates[c.id] = true
+              },
               onDelete = { onDelete(c) },
               onCardClick =
                   if (c.children.isNotEmpty()) {
-                    { expanded = !expanded }
+                    { expandedStates[c.id] = !expanded }
                   } else null)
 
           if (c.children.isNotEmpty()) {
@@ -618,6 +643,7 @@ private fun CommentsTree(
                       resolveUser = resolveUser,
                       onReply = onReply,
                       onDelete = onDelete,
+                      expandedStates = expandedStates,
                       depth = depth + 1,
                       gutterColor = gutterColor)
                 }
@@ -644,6 +670,7 @@ private fun CommentsTree(
                   resolveUser = resolveUser,
                   onReply = onReply,
                   onDelete = onDelete,
+                  expandedStates = expandedStates,
                   depth = 1,
                   gutterColor = gutterColor)
             }
@@ -724,7 +751,7 @@ private fun CommentItem(
           Spacer(Modifier.width(8.dp))
           Column(Modifier.weight(1f)) {
             Text(
-                text = author?.handle ?: UNKNOWN_USER_PLACEHOLDER,
+                text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
                 style =
                     MaterialTheme.typography.labelMedium.copy(
                         color = MaterialTheme.colorScheme.onBackground,

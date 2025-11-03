@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.structures.PostNoUid
 import com.github.meeplemeet.model.structures.fromNoUid
 import com.github.meeplemeet.model.structures.toNoUid
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
@@ -113,14 +114,12 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
         .document(commentId)
         .set(comment)
         .await()
+    posts.document(postId).update(PostNoUid::commentCount.name, FieldValue.increment(1)).await()
     return commentId
   }
 
   /**
-   * Removes a comment and all its direct replies from a post.
-   *
-   * This operation cascades to delete all replies to the specified comment. The operation is
-   * performed as a batch write to ensure atomicity.
+   * Marks a comment as deleted in the database
    *
    * @param postId The ID of the post containing the comment.
    * @param commentId The ID of the comment to remove.
@@ -131,12 +130,15 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
     val commentDoc = fieldsRef.document(commentId).get().await()
     if (!commentDoc.exists()) throw IllegalArgumentException("No such comment")
 
-    val replies = fieldsRef.whereEqualTo("parentId", commentId).get().await()
-
-    val batch = db.batch()
-    replies.documents.forEach { batch.delete(it.reference) }
-    batch.delete(commentDoc.reference)
-    batch.commit().await()
+    fieldsRef
+        .document(commentId)
+        .update(
+            CommentNoUid::text.name,
+            "This comment has been deleted",
+            CommentNoUid::authorId.name,
+            "")
+        .await()
+    posts.document(postId).update(PostNoUid::commentCount.name, FieldValue.increment(-1)).await()
   }
 
   /**
@@ -175,9 +177,9 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
    *
    * @param postId The ID of the post to listen to.
    * @return A [Flow] that emits the complete [Post] object with nested comments whenever updates
-   *   occur.
+   *   occur, or null if the post no longer exists.
    */
-  fun listenPost(postId: String): Flow<Post> = callbackFlow {
+  fun listenPost(postId: String): Flow<Post?> = callbackFlow {
     val feedRef = posts.document(postId)
     val commentsRef = feedRef.collection(COMMENTS_COLLECTION_PATH)
 
@@ -189,7 +191,11 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
             close(e)
             return@addSnapshotListener
           }
-          if (feedSnap == null || !feedSnap.exists()) return@addSnapshotListener
+          if (feedSnap == null || !feedSnap.exists()) {
+            commentsListener?.remove()
+            trySend(null)
+            return@addSnapshotListener
+          }
 
           val postNoUid = feedSnap.toObject(PostNoUid::class.java) ?: return@addSnapshotListener
 
@@ -227,5 +233,38 @@ class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvid
           fromNoUid(postNoUid, emptyList())
         }
         .sortedByDescending { it.timestamp }
+  }
+
+  /**
+   * Creates a Flow that emits real-time updates for all posts without their comments.
+   *
+   * This function sets up a Firestore listener for the posts collection, emitting a new list
+   * whenever posts are added, modified, or removed. Comments are not loaded to improve performance
+   * when displaying multiple posts.
+   *
+   * @return A [Flow] that emits a list of [Post] objects without comments, sorted by timestamp
+   *   (newest first).
+   */
+  fun listenPosts(): Flow<List<Post>> = callbackFlow {
+    val listener =
+        posts.addSnapshotListener { snapshot, e ->
+          if (e != null) {
+            close(e)
+            return@addSnapshotListener
+          }
+          if (snapshot != null) {
+            val postsList =
+                snapshot.documents
+                    .mapNotNull { postDoc ->
+                      val postNoUid =
+                          postDoc.toObject(PostNoUid::class.java) ?: return@mapNotNull null
+                      fromNoUid(postNoUid, emptyList())
+                    }
+                    .sortedByDescending { it.timestamp }
+            trySend(postsList)
+          }
+        }
+
+    awaitClose { listener.remove() }
   }
 }

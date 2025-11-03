@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.structures.*
 import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -128,6 +129,6 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         println(
             "Smoke: ${report.size - failed.size}/${report.size} OK" +
                 (if (failed.isNotEmpty()) " → $failed" else ""))
-        Assert.assertTrue("Failures: $failed", failed.isEmpty())
+        assertTrue("Failures: $failed", failed.isEmpty())
       }
 }

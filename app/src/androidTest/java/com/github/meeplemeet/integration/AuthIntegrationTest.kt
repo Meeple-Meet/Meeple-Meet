@@ -5,10 +5,14 @@ import com.github.meeplemeet.model.repositories.AuthRepository
 import com.github.meeplemeet.model.repositories.FirestoreRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertNull
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.After
-import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,24 +43,20 @@ class AuthIntegrationTest : FirestoreTests() {
   private val wrongPassword = "WrongPassword456!"
 
   @Before
-  fun setup() {
+  fun setup() = runBlocking {
     // Initialize repositories
     firestoreRepo = FirestoreRepository(db)
     authRepo = AuthRepository(auth = auth, firestoreRepository = firestoreRepo)
 
     // Ensure clean state for each test
-    runBlocking {
-      auth.signOut()
-      clearTestData()
-    }
+    auth.signOut()
+    clearTestData()
   }
 
   @After
-  fun cleanup() {
-    runBlocking {
-      auth.signOut()
-      clearTestData()
-    }
+  fun cleanup() = runBlocking {
+    auth.signOut()
+    clearTestData()
   }
 
   /** Cleans up test data from Firestore to ensure test isolation */

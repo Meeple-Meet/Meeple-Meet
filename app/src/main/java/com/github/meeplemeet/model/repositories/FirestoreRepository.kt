@@ -424,47 +424,6 @@ class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
       previewsListener?.remove()
     }
   }
-
-  /**
-   * Searches for accounts whose handles start with the specified [handle] string.
-   *
-   * The search uses Firestore queries with a range between [handle] and the next lexicographical
-   * string to efficiently find matching handles. Results are returned as a [Flow] of [List] of
-   * [Account] objects and update in real-time when Firestore data changes.
-   *
-   * If the provided [handle] is invalid (contains characters other than letters, digits, or
-   * underscores), the flow emits an empty list and closes immediately.
-   *
-   * @param handle The handle prefix to search for.
-   * @return A [Flow] emitting lists of matching [Account] objects.
-   */
-  fun searchByHandle(handle: String): Flow<List<Account>> = callbackFlow {
-    if (!validHandle(handle)) {
-      trySend(emptyList())
-      close()
-      return@callbackFlow
-    }
-
-    val reg =
-        accounts
-            .whereGreaterThanOrEqualTo(Account::handle.name, handle)
-            .whereLessThanOrEqualTo(Account::handle.name, nextString(handle))
-            .addSnapshotListener { qs, e ->
-              if (e != null) {
-                close(e)
-                return@addSnapshotListener
-              }
-              if (qs != null) {
-                val list =
-                    qs.documents.mapNotNull { d ->
-                      d.toObject(AccountNoUid::class.java)?.let { fromNoUid(d.id, it, emptyMap()) }
-                    }
-                trySend(list)
-              }
-            }
-    awaitClose { reg.remove() }
-  }
-
   /**
    * Calculates the next lexicographical string after [s].
    *

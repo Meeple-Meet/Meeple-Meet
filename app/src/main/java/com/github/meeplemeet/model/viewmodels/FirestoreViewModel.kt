@@ -93,7 +93,7 @@ class FirestoreViewModel(
 
   /** Remove a user from a discussion (admin-only). */
   fun removeUserFromDiscussion(discussion: Discussion, changeRequester: Account, user: Account) {
-    if (!isAdmin(changeRequester, discussion))
+    if (changeRequester != user && !isAdmin(changeRequester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
     if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
@@ -218,9 +218,8 @@ class FirestoreViewModel(
 
   /** Mark all messages as read for a given discussion. */
   fun readDiscussionMessages(account: Account, discussion: Discussion) {
-    if (!discussion.participants.contains(account.uid))
-        throw PermissionDeniedException(
-            "Account: ${account.uid} - ${account.name} is not a part of Discussion: ${discussion.uid} - ${discussion.name}")
+    // Return early if user is not part of discussion (can happen during navigation transitions)
+    if (!discussion.participants.contains(account.uid)) return
 
     if (discussion.messages.isEmpty()) return
     if (account.previews[discussion.uid]!!.unreadCount == 0) return
@@ -270,26 +269,6 @@ class FirestoreViewModel(
               scope = viewModelScope,
               started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
               initialValue = null)
-    }
-  }
-
-  /**
-   * Searches for user accounts whose handles start with the given [prefix].
-   *
-   * This function launches a coroutine in the [viewModelScope] to asynchronously fetch matching
-   * handles from the [repository]. The resulting list of suggestions is truncated to
-   * [SUGGESTIONS_LIMIT] items and posted to [_handleSuggestions].
-   *
-   * If the [prefix] is blank, the function returns immediately without performing a search.
-   *
-   * @param prefix The starting string of the handle to search for. Must not be blank.
-   */
-  fun searchByHandle(prefix: String) {
-    if (prefix.isBlank()) return
-    viewModelScope.launch {
-      repository.searchByHandle(prefix).collect { list ->
-        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
-      }
     }
   }
 

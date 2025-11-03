@@ -6,6 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -49,6 +52,7 @@ fun CreateAccountScreen(
     firestoreVM: FirestoreViewModel,
     handlesVM: FirestoreHandlesViewModel,
     onCreate: () -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
   var handle by remember { mutableStateOf("") }
   var username by remember { mutableStateOf("") }
@@ -77,129 +81,154 @@ fun CreateAccountScreen(
   }
 
   /** Root layout column for aligning all UI components vertically. */
-  Column(
-      modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center) {
-        Spacer(modifier = Modifier.height(24.dp))
+  Scaffold(
+      bottomBar = {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              OutlinedButton(
+                  onClick = onBack,
+                  modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
+                  shape = RoundedCornerShape(percent = 50),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Back", style = MaterialTheme.typography.bodySmall)
+                  }
 
-        // App logo displayed on top of text.
-        val isDarkTheme = isSystemInDarkTheme()
-        Box(modifier = Modifier.size(250.dp)) {
-          Image(
-              painter =
-                  painterResource(
-                      id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-              contentDescription = "Meeple Meet Logo",
-              modifier = Modifier.fillMaxSize())
-        }
-        Spacer(modifier = Modifier.height(32.dp))
+              Button(
+                  enabled = handle.isNotBlank() && username.isNotBlank() && errorMessage.isBlank(),
+                  colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
+                  shape = CircleShape,
+                  elevation =
+                      ButtonDefaults.buttonElevation(
+                          defaultElevation = 4.dp, pressedElevation = 0.dp),
+                  onClick = {
+                    showErrors = true
+                    validateHandle(handle)
+                    val usernameValidation = validateUsername(username)
+                    usernameError = usernameValidation
 
-        /** Title text shown below the image placeholder. */
-        Text(
-            "You're almost there!",
-            style = TextStyle(fontSize = 36.sp, color = AppColors.neutral),
-            modifier = Modifier.padding(bottom = 16.dp))
+                    /** Create the handle and call onCreate if there are no errors */
+                    if ((errorMessage.isBlank()) && usernameValidation == null) {
+                      handlesVM.createAccountHandle(account = account, handle = handle)
+                      firestoreVM.setAccountName(account, username)
+                      if (errorMessage.isBlank()) onCreate()
+                    }
+                  },
+                  modifier = Modifier.weight(1f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
+                    Text("Let's go!")
+                  }
+            }
+      }) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center) {
+              Spacer(modifier = Modifier.height(24.dp))
 
-        /** Input field for entering the user's unique handle. */
-        OutlinedTextField(
-            value = handle,
-            onValueChange = { handle = it },
-            label = { Text("Handle") },
-            singleLine = true,
-            textStyle = TextStyle(color = AppColors.textIcons),
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = AppColors.textIcons,
-                    unfocusedIndicatorColor = AppColors.textIconsFade,
-                    cursorColor = AppColors.textIcons,
-                    focusedLabelColor = AppColors.textIcons,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    errorContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    unfocusedLabelColor = AppColors.textIconsFade,
-                    focusedTextColor = AppColors.textIcons,
-                    unfocusedTextColor = AppColors.textIconsFade),
-            isError = showErrors && errorMessage.isNotBlank(),
-            modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.HANDLE_FIELD))
-
-        /** Error message displayed if handle validation fails. */
-        if (showErrors && errorMessage.isNotBlank()) {
-          Text(
-              text = errorMessage,
-              color = AppColors.textIconsFade,
-              style = MaterialTheme.typography.bodySmall,
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(start = 16.dp, top = 4.dp)
-                      .testTag(CreateAccountTestTags.HANDLE_ERROR))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        /** Input field for entering the user's display username. */
-        OutlinedTextField(
-            value = username,
-            onValueChange = {
-              username = it
-              usernameError = validateUsername(username)
-            },
-            label = { Text("Username") },
-            singleLine = true,
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = AppColors.textIcons,
-                    unfocusedIndicatorColor = AppColors.textIconsFade,
-                    cursorColor = AppColors.textIcons,
-                    focusedLabelColor = AppColors.textIcons,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    errorContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    unfocusedLabelColor = AppColors.textIconsFade,
-                    focusedTextColor = AppColors.textIcons,
-                    unfocusedTextColor = AppColors.textIconsFade),
-            isError = usernameError != null,
-            textStyle = TextStyle(color = AppColors.textIcons),
-            modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.USERNAME_FIELD))
-
-        /** Error message displayed if username validation fails. */
-        if (usernameError != null) {
-          Text(
-              text = usernameError!!,
-              color = AppColors.textIconsFade,
-              style = MaterialTheme.typography.bodySmall,
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(start = 16.dp, top = 4.dp)
-                      .testTag(CreateAccountTestTags.USERNAME_ERROR))
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        /** Submit button to create the account once inputs are valid. */
-        Button(
-            enabled = handle.isNotBlank() && username.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-            shape = CircleShape,
-            elevation =
-                ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 0.dp),
-            onClick = {
-              showErrors = true
-              validateHandle(handle)
-              val usernameValidation = validateUsername(username)
-              usernameError = usernameValidation
-
-              /** Create the handle and call onCreate if there are no errors */
-              if ((errorMessage.isBlank()) && usernameValidation == null) {
-                handlesVM.createAccountHandle(account = account, handle = handle)
-                firestoreVM.setAccountName(account, username)
-                if (errorMessage.isBlank()) onCreate()
+              // App logo displayed on top of text.
+              val isDarkTheme = isSystemInDarkTheme()
+              Box(modifier = Modifier.size(250.dp)) {
+                Image(
+                    painter =
+                        painterResource(
+                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+                    contentDescription = "Meeple Meet Logo",
+                    modifier = Modifier.fillMaxSize())
               }
-            },
-            modifier = Modifier.fillMaxWidth(0.3f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
-              Text("Let's go!")
+              Spacer(modifier = Modifier.height(32.dp))
+
+              /** Title text shown below the image placeholder. */
+              Text(
+                  "You're almost there!",
+                  style = TextStyle(fontSize = 36.sp, color = AppColors.neutral),
+                  modifier = Modifier.padding(bottom = 16.dp))
+
+              /** Input field for entering the user's unique handle. */
+              OutlinedTextField(
+                  value = handle,
+                  onValueChange = {
+                    handle = it
+                    if (it.isNotBlank()) {
+                      showErrors = true
+                      handlesVM.checkHandleAvailable(it)
+                    } else {
+                      showErrors = false
+                    }
+                  },
+                  label = { Text("Handle") },
+                  singleLine = true,
+                  textStyle = TextStyle(color = AppColors.textIcons),
+                  colors =
+                      TextFieldDefaults.colors(
+                          focusedIndicatorColor = AppColors.textIcons,
+                          unfocusedIndicatorColor = AppColors.textIconsFade,
+                          cursorColor = AppColors.textIcons,
+                          focusedLabelColor = AppColors.textIcons,
+                          unfocusedContainerColor = Color.Transparent,
+                          focusedContainerColor = Color.Transparent,
+                          errorContainerColor = Color.Transparent,
+                          disabledContainerColor = Color.Transparent,
+                          unfocusedLabelColor = AppColors.textIconsFade,
+                          focusedTextColor = AppColors.textIcons,
+                          unfocusedTextColor = AppColors.textIconsFade),
+                  isError = showErrors && errorMessage.isNotBlank(),
+                  modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.HANDLE_FIELD))
+
+              /** Error message displayed if handle validation fails. */
+              if (showErrors && errorMessage.isNotBlank()) {
+                Text(
+                    text = errorMessage,
+                    color = AppColors.textIconsFade,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(start = 16.dp, top = 4.dp)
+                            .testTag(CreateAccountTestTags.HANDLE_ERROR))
+              }
+
+              Spacer(modifier = Modifier.height(16.dp))
+
+              /** Input field for entering the user's display username. */
+              OutlinedTextField(
+                  value = username,
+                  onValueChange = {
+                    username = it
+                    usernameError = validateUsername(username)
+                  },
+                  label = { Text("Username") },
+                  singleLine = true,
+                  colors =
+                      TextFieldDefaults.colors(
+                          focusedIndicatorColor = AppColors.textIcons,
+                          unfocusedIndicatorColor = AppColors.textIconsFade,
+                          cursorColor = AppColors.textIcons,
+                          focusedLabelColor = AppColors.textIcons,
+                          unfocusedContainerColor = Color.Transparent,
+                          focusedContainerColor = Color.Transparent,
+                          errorContainerColor = Color.Transparent,
+                          disabledContainerColor = Color.Transparent,
+                          unfocusedLabelColor = AppColors.textIconsFade,
+                          focusedTextColor = AppColors.textIcons,
+                          unfocusedTextColor = AppColors.textIconsFade),
+                  isError = usernameError != null,
+                  textStyle = TextStyle(color = AppColors.textIcons),
+                  modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.USERNAME_FIELD))
+
+              /** Error message displayed if username validation fails. */
+              if (usernameError != null) {
+                Text(
+                    text = usernameError!!,
+                    color = AppColors.textIconsFade,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(start = 16.dp, top = 4.dp)
+                            .testTag(CreateAccountTestTags.USERNAME_ERROR))
+              }
             }
       }
 }
