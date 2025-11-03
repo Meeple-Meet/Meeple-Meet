@@ -1,10 +1,10 @@
 package com.github.meeplemeet.utils
 
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.repositories.ACCOUNT_COLLECTION_PATH
-import com.github.meeplemeet.model.repositories.DISCUSSIONS_COLLECTION_PATH
-import com.github.meeplemeet.model.repositories.HANDLES_COLLECTION_PATH
-import com.github.meeplemeet.model.repositories.POSTS_COLLECTION_PATH
+import com.github.meeplemeet.model.auth.HANDLES_COLLECTION_PATH
+import com.github.meeplemeet.model.discussions.ACCOUNT_COLLECTION_PATH
+import com.github.meeplemeet.model.discussions.DISCUSSIONS_COLLECTION_PATH
+import com.github.meeplemeet.model.posts.POSTS_COLLECTION_PATH
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.ExperimentalCoroutinesApi

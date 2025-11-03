@@ -5,10 +5,10 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
@@ -26,8 +26,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var vm: FirestoreViewModel
-  private lateinit var repo: FirestoreRepository
+  private lateinit var vm: DiscussionViewModel
+  private lateinit var repo: DiscussionRepository
   private lateinit var nav: NavigationActions
 
   private lateinit var me: Account
@@ -40,8 +40,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = FirestoreRepository()
-    vm = FirestoreViewModel(repo)
+    repo = DiscussionRepository()
+    vm = DiscussionViewModel(repo)
     nav = mockk(relaxed = true)
 
     // Create test users using repository

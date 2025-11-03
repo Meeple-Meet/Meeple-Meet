@@ -60,13 +60,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.Game
-import com.github.meeplemeet.model.structures.Location
-import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.GameUIState
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.sessions.GameUIState
+import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
@@ -152,8 +152,8 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
 fun SessionDetailsScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: FirestoreViewModel,
-    sessionViewModel: FirestoreSessionViewModel,
+    viewModel: DiscussionViewModel,
+    sessionViewModel: SessionViewModel,
     initial: SessionForm = SessionForm(),
     onBack: () -> Unit = {},
 ) {
@@ -315,7 +315,7 @@ fun ParticipantsSection(
     onRemoveParticipant: (Account) -> Unit,
     onAddParticipant: (Account) -> Unit,
     discussion: Discussion,
-    viewModel: FirestoreViewModel
+    viewModel: DiscussionViewModel
 ) {
   val participants = form.participants
   val currentCount = participants.size
@@ -520,7 +520,7 @@ private fun AvatarBubble(name: String) {
 
 @Composable
 private fun ProposedGameSection(
-    sessionViewModel: FirestoreSessionViewModel,
+    sessionViewModel: SessionViewModel,
     currentUser: Account,
     discussion: Discussion,
     editable: Boolean,
@@ -570,7 +570,7 @@ private fun ProposedGameSection(
  */
 @Composable
 fun OrganizationSection(
-    sessionViewModel: FirestoreSessionViewModel,
+    sessionViewModel: SessionViewModel,
     account: Account,
     onValueChangeTitle: (String) -> Unit,
     isCurrUserAdmin: Boolean,
@@ -876,7 +876,7 @@ fun TimeField(
  */
 @Composable
 fun DeleteSessionBTN(
-    sessionViewModel: FirestoreSessionViewModel,
+    sessionViewModel: SessionViewModel,
     currentUser: Account,
     discussion: Discussion,
     userIsAdmin: Boolean,

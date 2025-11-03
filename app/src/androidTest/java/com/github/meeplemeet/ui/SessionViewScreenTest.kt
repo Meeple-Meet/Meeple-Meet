@@ -7,16 +7,16 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.github.meeplemeet.model.repositories.FirestoreGameRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.repositories.FirestoreSessionRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.Game
-import com.github.meeplemeet.model.structures.Session
-import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.GameUIState
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.sessions.FirestoreGameRepository
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.sessions.GameUIState
+import com.github.meeplemeet.model.sessions.Session
+import com.github.meeplemeet.model.sessions.SessionRepository
+import com.github.meeplemeet.model.sessions.SessionViewModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -28,11 +28,11 @@ import org.junit.Rule
 import org.junit.Test
 
 class SessionDetailsScreenTest {
-  private lateinit var firestoreRepo: FirestoreRepository
-  private lateinit var viewModel: FirestoreViewModel
-  private lateinit var sessionRepo: FirestoreSessionRepository
+  private lateinit var firestoreRepo: DiscussionRepository
+  private lateinit var viewModel: DiscussionViewModel
+  private lateinit var sessionRepo: SessionRepository
   private lateinit var gameRepo: FirestoreGameRepository
-  private lateinit var sessionVM: FirestoreSessionViewModel
+  private lateinit var sessionVM: SessionViewModel
 
   private val member = Account(uid = "user2", handle = "", name = "Alex", email = "alex@epfl.ch")
   private val admin = Account(uid = "user1", handle = "Alice", name = "Alice", email = "*")
@@ -47,7 +47,7 @@ class SessionDetailsScreenTest {
   @Before
   fun setUp() {
     firestoreRepo = mockk(relaxed = true)
-    viewModel = spyk(FirestoreViewModel(firestoreRepo))
+    viewModel = spyk(DiscussionViewModel(firestoreRepo))
 
     baseDiscussion =
         Discussion(
@@ -68,7 +68,7 @@ class SessionDetailsScreenTest {
 
     sessionRepo = mockk(relaxed = true)
     gameRepo = mockk(relaxed = true)
-    sessionVM = spyk(FirestoreSessionViewModel(baseDiscussion, sessionRepo, gameRepo))
+    sessionVM = spyk(SessionViewModel(baseDiscussion, sessionRepo, gameRepo))
   }
 
   private fun readIntFromText(tag: String): Int =
@@ -100,7 +100,7 @@ class SessionDetailsScreenTest {
           locationText = "Student Lounge")
 
   // helper to DRY account stubbing
-  private fun stubGetAccountsReturn(viewModel: FirestoreViewModel, accounts: List<Account>) {
+  private fun stubGetAccountsReturn(viewModel: DiscussionViewModel, accounts: List<Account>) {
     every { viewModel.getAccounts(any(), any()) } answers
         {
           secondArg<(List<Account>) -> Unit>().invoke(accounts)

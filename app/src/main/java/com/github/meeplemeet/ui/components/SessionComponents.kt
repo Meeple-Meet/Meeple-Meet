@@ -76,9 +76,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Game
-import com.github.meeplemeet.model.structures.Location
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors

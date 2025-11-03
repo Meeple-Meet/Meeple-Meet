@@ -25,7 +25,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.LocalDate
@@ -779,11 +781,11 @@ class SessionComponentsTest {
   fun game_and_location_fields_wrappers_cover_items_and_coordinates() {
     var qGame by mutableStateOf("")
     var qLoc by mutableStateOf("")
-    var pickedGame: com.github.meeplemeet.model.structures.Game? = null
-    var pickedLoc: com.github.meeplemeet.model.structures.Location? = null
+    var pickedGame: Game? = null
+    var pickedLoc: Location? = null
 
     val g1 =
-        com.github.meeplemeet.model.structures.Game(
+        Game(
             uid = "g1",
             name = "Catan",
             description = "",
@@ -794,7 +796,7 @@ class SessionComponentsTest {
             averagePlayTime = 60,
             genres = emptyList())
     val g2 =
-        com.github.meeplemeet.model.structures.Game(
+        Game(
             uid = "g2",
             name = "Carcassonne",
             description = "",
@@ -805,9 +807,7 @@ class SessionComponentsTest {
             averagePlayTime = 45,
             genres = emptyList())
 
-    val loc =
-        com.github.meeplemeet.model.structures.Location(
-            name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668)
+    val loc = Location(name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668)
 
     set {
       Column {

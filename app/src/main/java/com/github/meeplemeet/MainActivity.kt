@@ -26,10 +26,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.model.auth.HandlesRepository
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.sessions.FirestoreGameRepository
+import com.github.meeplemeet.model.sessions.SessionRepository
+import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreateDiscussionScreen
 import com.github.meeplemeet.ui.CreatePostScreen
@@ -54,9 +61,48 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 
+/**
+ * Provider object for Firebase services.
+ *
+ * This object provides lazily initialized singleton instances of Firebase services to be used
+ * throughout the application, ensuring a single source of truth for Firebase connections.
+ */
 object FirebaseProvider {
+  /** Lazily initialized Firebase Firestore instance for database operations. */
   val db: FirebaseFirestore by lazy { Firebase.firestore }
+
+  /** Lazily initialized Firebase Auth instance for authentication operations. */
   val auth: FirebaseAuth by lazy { Firebase.auth }
+}
+
+/**
+ * Provider object for repository instances.
+ *
+ * This object provides lazily initialized singleton instances of all repositories used in the
+ * application, ensuring consistent data access throughout the app and facilitating dependency
+ * injection for ViewModels.
+ */
+object RepositoryProvider {
+  /** Lazily initialized repository for account/authentication operations. */
+  val accounts: AuthRepository by lazy { AuthRepository() }
+
+  /** Lazily initialized repository for user handle operations. */
+  val handles: HandlesRepository by lazy { HandlesRepository() }
+
+  /** Lazily initialized repository for discussion operations. */
+  val discussions: DiscussionRepository by lazy { DiscussionRepository() }
+
+  /** Lazily initialized repository for gaming session operations. */
+  val sessions: SessionRepository by lazy { SessionRepository() }
+
+  /** Lazily initialized repository for board game data operations. */
+  val games: FirestoreGameRepository by lazy { FirestoreGameRepository() }
+
+  /** Lazily initialized repository for post operations. */
+  val posts: PostRepository by lazy { PostRepository() }
+
+  /** Lazily initialized repository for shop operations. */
+  val shops: ShopRepository by lazy { ShopRepository() }
 }
 
 const val LOADING_SCREEN_TAG = "Loading Screen"
@@ -77,8 +123,8 @@ class MainActivity : ComponentActivity() {
 fun MeepleMeetApp(
     context: Context = LocalContext.current,
     authVM: AuthViewModel = viewModel(),
-    firestoreVM: FirestoreViewModel = viewModel(),
-    handlesVM: FirestoreHandlesViewModel = viewModel(),
+    firestoreVM: DiscussionViewModel = viewModel(),
+    handlesVM: HandlesViewModel = viewModel(),
     navController: NavHostController = rememberNavController()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
@@ -98,8 +144,7 @@ fun MeepleMeetApp(
         if (!signedOut) firestoreVM.discussionFlow(discussionId) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
-  val sessionVM =
-      remember(discussion) { discussion?.let { FirestoreSessionViewModel(discussion!!) } }
+  val sessionVM = remember(discussion) { discussion?.let { SessionViewModel(discussion!!) } }
 
   var postId by remember { mutableStateOf("") }
 
@@ -255,7 +300,7 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.PostsOverview.name) {
       PostsOverviewScreen(
           navigation = navigationActions,
-          firestoreViewModel = firestoreVM,
+          discussionViewModel = firestoreVM,
           onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
           onSelectPost = {
             postId = it.id

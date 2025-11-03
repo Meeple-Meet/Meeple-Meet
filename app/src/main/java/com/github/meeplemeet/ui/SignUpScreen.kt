@@ -1,7 +1,6 @@
 package com.github.meeplemeet.ui
 // Github Copilot was used for this file
 import android.content.Context
-import android.graphics.drawable.Icon
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.auth.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 

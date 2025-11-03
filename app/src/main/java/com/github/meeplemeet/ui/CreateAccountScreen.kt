@@ -21,9 +21,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.theme.AppColors
 
 object CreateAccountTestTags {
@@ -39,8 +39,8 @@ object CreateAccountTestTags {
  * Composable screen for completing account creation by selecting a handle and username.
  *
  * This screen collects a handle and username from the user, validates them, and interacts with the
- * [FirestoreHandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate]
- * to continue the account creation flow.
+ * [HandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate] to
+ * continue the account creation flow.
  *
  * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
  * @param account The [Account] object representing the user creating an account.
@@ -49,8 +49,8 @@ object CreateAccountTestTags {
 @Composable
 fun CreateAccountScreen(
     account: Account,
-    firestoreVM: FirestoreViewModel,
-    handlesVM: FirestoreHandlesViewModel,
+    firestoreVM: DiscussionViewModel,
+    handlesVM: HandlesViewModel,
     onCreate: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {

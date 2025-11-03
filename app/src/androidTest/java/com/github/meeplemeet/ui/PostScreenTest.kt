@@ -20,12 +20,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
-import com.github.meeplemeet.model.repositories.FirestorePostRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Comment
-import com.github.meeplemeet.model.structures.Post
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.PostViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.posts.Comment
+import com.github.meeplemeet.model.posts.Post
+import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Timestamp
 import io.mockk.clearMocks
@@ -47,7 +47,7 @@ class PostScreenTest {
 
   /* ViewModels and flows */
   private lateinit var postVM: PostViewModel
-  private lateinit var usersVM: FirestoreViewModel
+  private lateinit var usersVM: DiscussionViewModel
   private lateinit var postFlowP1: MutableStateFlow<Post?>
 
   /* Canonical accounts for examples */
@@ -121,7 +121,7 @@ class PostScreenTest {
       initialAccount: Account = marco,
       postId: String = "p1",
       initialPostVM: PostViewModel = postVM,
-      initialUsersVM: FirestoreViewModel = usersVM,
+      initialUsersVM: DiscussionViewModel = usersVM,
       initialOnBack: (() -> Unit)? = {}
   ): HostControls {
     lateinit var controls: HostControls
@@ -181,7 +181,7 @@ class PostScreenTest {
             comments = listOf(c1, c2))
     postByMarco = postByAlex.copy(id = "p2", authorId = marco.uid)
 
-    val repo = mockk<FirestorePostRepository>(relaxed = true)
+    val repo = mockk<PostRepository>(relaxed = true)
     postVM = spyk(PostViewModel(repo))
     postFlowP1 = MutableStateFlow(null)
     injectPost("p1", postFlowP1)
@@ -302,7 +302,7 @@ class PostScreenTest {
     findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
 
     // Swap a delaying repo -> send via IME; check disabled while sending
-    val delayingRepo = mockk<FirestorePostRepository>(relaxed = true)
+    val delayingRepo = mockk<PostRepository>(relaxed = true)
     coEvery { delayingRepo.addComment(any(), any(), any(), any()) } coAnswers
         {
           kotlinx.coroutines.delay(400)

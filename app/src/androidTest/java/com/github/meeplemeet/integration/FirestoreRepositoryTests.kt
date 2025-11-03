@@ -2,9 +2,9 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Message
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
@@ -18,14 +18,14 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreRepositoryTests : FirestoreTests() {
-  private lateinit var repository: FirestoreRepository
+  private lateinit var repository: DiscussionRepository
   private lateinit var testAccount1: Account
   private lateinit var testAccount2: Account
   private lateinit var testAccount3: Account
 
   @Before
   fun setup() {
-    repository = FirestoreRepository()
+    repository = DiscussionRepository()
     runBlocking {
       testAccount1 =
           repository.createAccount("Alice", "Alice", email = "Alice@example.com", photoUrl = null)
