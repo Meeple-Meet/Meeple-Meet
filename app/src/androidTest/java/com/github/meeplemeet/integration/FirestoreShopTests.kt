@@ -575,7 +575,11 @@ class FirestoreShopTests : FirestoreTests() {
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenNameIsBlank() {
     createShopViewModel.createShop(
-        owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
+        owner = testAccount1,
+        name = "",
+        email = "test@test.com",
+        address = testLocation1,
+        openingHours = testOpeningHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -584,7 +588,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "   ",
         address = testLocation1,
-        openingHours = testOpeningHours)
+        openingHours = testOpeningHours,
+        email = "test@test.com")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -599,7 +604,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "Test Shop",
         address = testLocation1,
-        openingHours = incompleteHours)
+        openingHours = incompleteHours,
+        email = "test@test.com")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -620,7 +626,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "Test Shop",
         address = testLocation1,
-        openingHours = tooManyHours)
+        openingHours = tooManyHours,
+        email = "test@test.com")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -639,7 +646,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "Test Shop",
         address = testLocation1,
-        openingHours = duplicateDays)
+        openingHours = duplicateDays,
+        email = "test@test.com")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -648,7 +656,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "Test Shop",
         address = Location(), // Default empty location
-        openingHours = testOpeningHours)
+        openingHours = testOpeningHours,
+        email = "test@test.com")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -657,7 +666,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "Test Shop",
         address = testLocation1,
-        openingHours = emptyList())
+        openingHours = emptyList(),
+        email = "test@test.com")
   }
 
   @Test
@@ -716,7 +726,8 @@ class FirestoreShopTests : FirestoreTests() {
         owner = testAccount1,
         name = "Minimal Shop",
         address = testLocation1,
-        openingHours = fullWeekHours)
+        openingHours = fullWeekHours,
+        email = "test@test.com")
 
     // Give it time to complete the async operation
     kotlinx.coroutines.delay(1000)
@@ -1194,7 +1205,7 @@ class FirestoreShopTests : FirestoreTests() {
     try {
       shopRepository.getShop(shop.id)
       throw AssertionError("Shop should have been deleted")
-    } catch (e: IllegalArgumentException) {
+    } catch (_: IllegalArgumentException) {
       // Expected - shop doesn't exist anymore
     }
   }
@@ -1318,7 +1329,7 @@ class FirestoreShopTests : FirestoreTests() {
 
     val firstShops = mapViewModel.shops.value
     assertNotNull(firstShops)
-    assertTrue(firstShops!!.size >= 1)
+    assertTrue(firstShops!!.isNotEmpty())
 
     // Create more shops
     shopRepository.createShop(
