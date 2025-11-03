@@ -86,10 +86,10 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
               // Fetch all games in the game collection
               val gameCollection =
                   shopNoUid.gameCollection
-                      .map { (gameId, count) ->
+                      .map { gameItem ->
                         async {
-                          val game = gameRepo.getGameById(gameId)
-                          game to count
+                          val game = gameRepo.getGameById(gameItem.gameId)
+                          game to gameItem.quantity
                         }
                       }
                       .awaitAll()
@@ -126,10 +126,10 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     // Fetch all games in the game collection
     val gameCollection = coroutineScope {
       shopNoUid.gameCollection
-          .map { (gameId, count) ->
+          .map { gameItem ->
             async {
-              val game = gameRepo.getGameById(gameId)
-              game to count
+              val game = gameRepo.getGameById(gameItem.gameId)
+              game to gameItem.quantity
             }
           }
           .awaitAll()
@@ -175,7 +175,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     openingHours?.let { updates[ShopNoUid::openingHours.name] = openingHours }
     gameCollection?.let {
       updates[ShopNoUid::gameCollection.name] =
-          gameCollection.map { (game, count) -> game.uid to count }
+          gameCollection.map { (game, count) -> GameItem(game.uid, count) }
     }
 
     if (updates.isEmpty())
