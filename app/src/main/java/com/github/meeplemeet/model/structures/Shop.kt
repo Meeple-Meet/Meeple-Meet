@@ -4,6 +4,9 @@ package com.github.meeplemeet.model.structures
 
 import kotlinx.serialization.Serializable
 
+@Serializable
+data class OpeningHours(val day: Int = 0, val open: String? = null, val close: String? = null)
+
 /**
  * Represents a board game shop or game cafe.
  *
@@ -25,7 +28,7 @@ data class Shop(
     val email: String,
     val website: String,
     val address: Location,
-    val openingHours: List<Pair<String, String>>,
+    val openingHours: List<OpeningHours>,
     val gameCollection: List<Pair<Game, Int>>
 )
 
@@ -50,7 +53,7 @@ data class ShopNoUid(
     val email: String = "",
     val website: String = "",
     val address: Location = Location(),
-    val openingHours: List<Pair<String, String>> = emptyList(),
+    val openingHours: List<OpeningHours> = emptyList(),
     val gameCollection: List<Pair<String, Int>> = emptyList()
 )
 
