@@ -43,7 +43,7 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
       owner: Account,
       name: String,
       phone: String = "",
-      email: String = "",
+      email: String,
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
