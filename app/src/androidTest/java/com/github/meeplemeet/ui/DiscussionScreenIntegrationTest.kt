@@ -6,8 +6,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
@@ -23,7 +23,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  private lateinit var repository: DiscussionRepository
+  private lateinit var repository: FirestoreRepository
   private lateinit var viewModel: DiscussionViewModel
   private lateinit var currentUser: Account
   private lateinit var testScope: TestScope
@@ -41,7 +41,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
   fun setup() = runBlocking {
     val dispatcher = StandardTestDispatcher()
     testScope = TestScope(dispatcher)
-    repository = DiscussionRepository()
+    repository = FirestoreRepository()
     viewModel = DiscussionViewModel(repository)
     backPressed = false
 

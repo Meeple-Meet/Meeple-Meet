@@ -9,12 +9,12 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.sessions.FirestoreSessionRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.GameRepository
 import com.github.meeplemeet.model.sessions.GameUIState
-import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -40,9 +40,9 @@ class CreateSessionScreenTest {
   @get:Rule val compose = createComposeRule()
 
   // Repos / VMs
-  private lateinit var firestoreRepo: DiscussionRepository
+  private lateinit var firestoreRepo: FirestoreRepository
   private lateinit var viewModel: DiscussionViewModel
-  private lateinit var sessionRepo: SessionRepository
+  private lateinit var sessionRepo: FirestoreSessionRepository
   private lateinit var fakeGameRepo: FakeGameRepository
   private lateinit var sessionVM: SessionViewModel
 

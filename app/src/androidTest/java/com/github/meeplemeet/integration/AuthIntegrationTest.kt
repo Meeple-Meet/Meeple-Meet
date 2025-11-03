@@ -2,7 +2,7 @@ package com.github.meeplemeet.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.AuthRepository
-import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
 import junit.framework.TestCase.assertEquals
@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AuthIntegrationTest : FirestoreTests() {
   private lateinit var authRepo: AuthRepository
-  private lateinit var firestoreRepo: DiscussionRepository
+  private lateinit var firestoreRepo: FirestoreRepository
 
   // Test user credentials - using random emails to avoid conflicts
   private val testEmail = "integration_test_${UUID.randomUUID()}@example.com"
@@ -45,8 +45,8 @@ class AuthIntegrationTest : FirestoreTests() {
   @Before
   fun setup() = runBlocking {
     // Initialize repositories
-    firestoreRepo = DiscussionRepository(db)
-    authRepo = AuthRepository(auth = auth, discussionRepository = firestoreRepo)
+    firestoreRepo = FirestoreRepository(db)
+    authRepo = AuthRepository(auth = auth, firestoreRepository = firestoreRepo)
 
     // Ensure clean state for each test
     auth.signOut()

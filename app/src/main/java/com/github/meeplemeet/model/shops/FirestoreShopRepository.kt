@@ -1,16 +1,13 @@
-package com.github.meeplemeet.model.repositories
+package com.github.meeplemeet.model.shops
 
 // Claude Code generated the documentation
 
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Game
-import com.github.meeplemeet.model.structures.Location
-import com.github.meeplemeet.model.structures.OpeningHours
-import com.github.meeplemeet.model.structures.Shop
-import com.github.meeplemeet.model.structures.ShopNoUid
-import com.github.meeplemeet.model.structures.fromNoUid
-import com.github.meeplemeet.model.structures.toNoUid
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.sessions.FirestoreGameRepository
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.Location
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

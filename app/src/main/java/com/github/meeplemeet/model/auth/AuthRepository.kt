@@ -3,7 +3,7 @@ package com.github.meeplemeet.model.auth
 import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
@@ -17,13 +17,12 @@ import kotlinx.coroutines.tasks.await
  *
  * @param auth Firebase Auth instance for authentication operations
  * @param helper Helper for processing Google sign-in credentials
- * @param discussionRepository Repository for managing account data in Firestore
+ * @param firestoreRepository Repository for managing account data in Firestore
  */
 class AuthRepository(
     private val auth: FirebaseAuth = FirebaseProvider.auth,
     private val helper: GoogleSignInHelper = DefaultGoogleSignInHelper(),
-    private val discussionRepository: DiscussionRepository =
-        DiscussionRepository(FirebaseProvider.db)
+    private val firestoreRepository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
 ) {
 
   companion object {
@@ -112,7 +111,7 @@ class AuthRepository(
       try {
         // Delegate account creation to FirestoreRepository - this MUST succeed
         val account =
-            discussionRepository.createAccount(
+            firestoreRepository.createAccount(
                 userHandle = firebaseUser.uid,
                 name = name,
                 email = email,
@@ -151,7 +150,7 @@ class AuthRepository(
 
       try {
         // Fetch the account from Firestore
-        val account = discussionRepository.getAccount(firebaseUser.uid)
+        val account = firestoreRepository.getAccount(firebaseUser.uid)
         Result.success(account)
       } catch (firestoreException: Exception) {
         // Account exists in Firebase Auth but not in Firestore - this is an error condition
@@ -192,12 +191,12 @@ class AuthRepository(
         val account =
             try {
               // Try to fetch existing account
-              discussionRepository.getAccount(firebaseUser.uid)
+              firestoreRepository.getAccount(firebaseUser.uid)
             } catch (_: Exception) {
               // Account doesn't exist - first-time Google sign-in
               val name =
                   firebaseUser.email?.substringBefore('@') ?: firebaseUser.displayName ?: "User"
-              discussionRepository.createAccount(
+              firestoreRepository.createAccount(
                   userHandle = firebaseUser.uid,
                   name = name,
                   email =

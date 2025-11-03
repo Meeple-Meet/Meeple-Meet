@@ -2,8 +2,8 @@
 
 package com.github.meeplemeet.model.shops
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
@@ -15,10 +15,11 @@ import kotlinx.coroutines.launch
  * This ViewModel handles the creation of board game shops with validation logic to ensure all
  * required fields are properly provided.
  *
- * @property shopRepo The repository used for shop operations.
+ * @property repository The repository used for shop operations.
  */
-class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvider.shops) :
-    ShopGameViewModel() {
+class CreateShopViewModel(
+    private val repository: FirestoreShopRepository = FirestoreShopRepository()
+) : ViewModel() {
   /**
    * Creates a new shop in Firestore.
    *
@@ -43,7 +44,7 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
       owner: Account,
       name: String,
       phone: String = "",
-      email: String,
+      email: String = "",
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
@@ -55,10 +56,11 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
     if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
 
     if (address == Location())
-        throw IllegalArgumentException("An address is required to create a shop")
+        throw IllegalArgumentException("An address it required to create a shop")
 
     viewModelScope.launch {
-      shopRepo.createShop(owner, name, phone, email, website, address, openingHours, gameCollection)
+      repository.createShop(
+          owner, name, phone, email, website, address, openingHours, gameCollection)
     }
   }
 }

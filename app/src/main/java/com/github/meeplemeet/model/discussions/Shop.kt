@@ -1,7 +1,10 @@
-package com.github.meeplemeet.model.structures
+package com.github.meeplemeet.model.shops
 
 // Claude Code generated the documentation
 
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.Location
 import kotlinx.serialization.Serializable
 
 @Serializable
