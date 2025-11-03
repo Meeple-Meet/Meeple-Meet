@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
+import com.github.meeplemeet.model.shops.TimeSlot
 
 
 object TestTags {
@@ -290,12 +291,12 @@ val address = Location(
 )
 
 val dummyOpeningHours = listOf(
-    OpeningHours(day = 0, hours = listOf(Pair("09:00", "18:00"), Pair("19:00", "21:00"))),
-    OpeningHours(day = 1, hours = listOf(Pair("09:00", "18:00"))),
-    OpeningHours(day = 2, hours = listOf(Pair("09:00", "18:00"))),
-    OpeningHours(day = 3, hours = listOf(Pair("09:00", "18:00"))),
-    OpeningHours(day = 4, hours = listOf(Pair("09:00", "18:00"))),
-    OpeningHours(day = 5, hours = listOf(Pair("10:00", "16:00"))),
+    OpeningHours(day = 0, hours = listOf(TimeSlot("09:00", "18:00"), TimeSlot("19:00", "21:00"))),
+    OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 5, hours = listOf(TimeSlot("10:00", "16:00"))),
     OpeningHours(day = 6, hours = emptyList())
 )
 

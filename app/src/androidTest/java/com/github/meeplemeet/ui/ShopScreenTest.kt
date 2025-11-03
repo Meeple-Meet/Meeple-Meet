@@ -16,6 +16,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
+import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.FirebaseFirestore
@@ -42,15 +43,16 @@ class ShopScreenIntegrationTest: FirestoreTests() {
         name = "123 Meeple St, Boardgame City"
     )
 
-    val dummyOpeningHours = listOf(
-        OpeningHours(day = 0, hours = listOf(Pair("09:00", "18:00"), Pair("19:00", "21:00"))),
-        OpeningHours(day = 1, hours = listOf(Pair("09:00", "18:00"))),
-        OpeningHours(day = 2, hours = listOf(Pair("09:00", "18:00"))),
-        OpeningHours(day = 3, hours = listOf(Pair("09:00", "18:00"))),
-        OpeningHours(day = 4, hours = listOf(Pair("09:00", "18:00"))),
-        OpeningHours(day = 5, hours = listOf(Pair("10:00", "16:00"))),
-        OpeningHours(day = 6, hours = emptyList())
+        val dummyOpeningHours = listOf(
+            OpeningHours(day = 0, hours = listOf(TimeSlot("09:00", "18:00"), TimeSlot("19:00", "21:00"))),
+    OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
+    OpeningHours(day = 5, hours = listOf(TimeSlot("10:00", "16:00"))),
+    OpeningHours(day = 6, hours = emptyList())
     )
+
 
     val dummyGame = Game(uid = "g1", name = "Catan", imageURL = "test", description = "this game is cool", minPlayers = 1, maxPlayers = 4, recommendedPlayers = null, averagePlayTime = null, genres = emptyList())
     private val dummyGames = listOf(
@@ -152,7 +154,7 @@ class ShopScreenIntegrationTest: FirestoreTests() {
             if (openingHours.hours.isEmpty()) {
                 composeTestRule.onNodeWithTag(hoursTag).assertTextEquals("Closed")
             } else {
-                val hoursText = openingHours.hours.joinToString(", ") { "${it.first} - ${it.second}" }
+                val hoursText = openingHours.hours.joinToString(", ") { "${it.open} - ${it.close}" }
                 composeTestRule.onNodeWithTag(hoursTag).assertTextEquals(hoursText)
             }
         }
