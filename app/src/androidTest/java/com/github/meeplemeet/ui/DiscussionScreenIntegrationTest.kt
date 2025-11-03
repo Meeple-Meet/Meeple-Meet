@@ -15,14 +15,14 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
+import kotlin.io.println
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.*
 import org.junit.runner.RunWith
-import kotlin.io.println
-import kotlin.time.Duration.Companion.seconds
 
 @RunWith(AndroidJUnit4::class)
 class DiscussionScreenIntegrationTest : FirestoreTests() {
@@ -144,7 +144,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
       testScope.runTest(timeout = 30.seconds) {
         composeTestRule.setContent {
           val discussionFlow = viewModel.discussionFlow(testDiscussion.uid)
-            val latestDiscussion by discussionFlow.collectAsState(initial = testDiscussion)
+          val latestDiscussion by discussionFlow.collectAsState(initial = testDiscussion)
           AppTheme(themeMode = ThemeMode.LIGHT) {
             DiscussionScreen(
                 viewModel = viewModel,
