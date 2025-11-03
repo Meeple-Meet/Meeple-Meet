@@ -1,7 +1,7 @@
 package com.github.meeplemeet.utils
 
-import com.github.meeplemeet.model.repositories.GameRepository
-import com.github.meeplemeet.model.structures.Game
+import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.sessions.GameRepository
 
 class FakeGameRepo() : GameRepository {
   var returnedGames: List<Game> = emptyList()

@@ -24,9 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Post
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.posts.Post
+import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -53,7 +53,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  * sorted newest-first.
  *
  * @param postOverviewVM ViewModel that supplies the list of posts.
- * @param firestoreViewModel ViewModel used to resolve author names.
+ * @param discussionViewModel ViewModel used to resolve author names.
  * @param account Currently logged-in account.
  * @param navigation Actions for navigation events.
  * @param onClickAddPost Callback fired when the FAB is tapped.
@@ -63,7 +63,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 @Composable
 fun PostsOverviewScreen(
     postOverviewVM: PostOverviewViewModel = viewModel(),
-    firestoreViewModel: FirestoreViewModel = viewModel(),
+    discussionViewModel: DiscussionViewModel = viewModel(),
     navigation: NavigationActions,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
@@ -114,7 +114,7 @@ fun PostsOverviewScreen(
 
                   val authorName by
                       produceState<String?>(key1 = post.authorId, initialValue = null) {
-                        firestoreViewModel.getOtherAccount(post.authorId) { acc ->
+                        discussionViewModel.getOtherAccount(post.authorId) { acc ->
                           value = acc.name
                         }
                       }

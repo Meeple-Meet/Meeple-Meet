@@ -49,9 +49,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.*
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.PostViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.posts.Comment
+import com.github.meeplemeet.model.posts.Post
+import com.github.meeplemeet.model.posts.PostViewModel
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 
@@ -152,7 +154,7 @@ fun PostScreen(
     account: Account,
     postId: String,
     postViewModel: PostViewModel = viewModel(),
-    usersViewModel: FirestoreViewModel = viewModel(),
+    usersViewModel: DiscussionViewModel = viewModel(),
     onBack: () -> Unit = {}
 ) {
   val post: Post? by postViewModel.postFlow(postId).collectAsState()

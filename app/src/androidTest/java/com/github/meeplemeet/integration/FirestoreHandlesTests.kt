@@ -2,11 +2,11 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.HandleAlreadyTakenException
-import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.repositories.HANDLES_COLLECTION_PATH
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.FirestoreHandlesRepository
+import com.github.meeplemeet.model.auth.HANDLES_COLLECTION_PATH
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
@@ -21,14 +21,14 @@ import org.junit.Test
 class FirestoreHandlesTests : FirestoreTests() {
   private lateinit var handlesRepo: FirestoreHandlesRepository
   private lateinit var accountRepo: FirestoreRepository
-  private lateinit var handlesVM: FirestoreHandlesViewModel
+  private lateinit var handlesVM: HandlesViewModel
   private lateinit var testAccount: Account
   private lateinit var testAccount2: Account
 
   @Before
   fun setup() {
     handlesRepo = FirestoreHandlesRepository()
-    handlesVM = FirestoreHandlesViewModel(handlesRepo)
+    handlesVM = HandlesViewModel(handlesRepo)
     accountRepo = FirestoreRepository()
     runBlocking {
       testAccount =

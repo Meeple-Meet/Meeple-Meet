@@ -3,10 +3,10 @@ package com.github.meeplemeet.authentication
 import android.os.Bundle
 import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
-import com.github.meeplemeet.model.repositories.AuthRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.repositories.GoogleSignInHelper
-import com.github.meeplemeet.model.structures.Account
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.auth.GoogleSignInHelper
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential

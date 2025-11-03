@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.auth.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 

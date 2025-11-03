@@ -1,8 +1,8 @@
 package com.github.meeplemeet.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.repositories.AuthRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
+import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
 import junit.framework.TestCase.assertEquals

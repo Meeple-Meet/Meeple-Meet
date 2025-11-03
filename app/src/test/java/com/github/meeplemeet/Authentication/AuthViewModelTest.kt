@@ -9,10 +9,10 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.repositories.AuthRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.AuthUIState
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.auth.AuthUIState
+import com.github.meeplemeet.model.auth.AuthViewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import io.mockk.coEvery

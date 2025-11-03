@@ -4,11 +4,11 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.FirestoreHandlesRepository
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
@@ -28,8 +28,8 @@ class DiscussionAddScreenTest : FirestoreTests() {
 
   private lateinit var repo: FirestoreRepository
   private lateinit var handlesRepo: FirestoreHandlesRepository
-  private lateinit var vm: FirestoreViewModel
-  private lateinit var handlesVm: FirestoreHandlesViewModel
+  private lateinit var vm: DiscussionViewModel
+  private lateinit var handlesVm: HandlesViewModel
   private lateinit var me: Account
 
   private val createdAccounts = mutableListOf<Account>()
@@ -58,8 +58,8 @@ class DiscussionAddScreenTest : FirestoreTests() {
   fun setup() = runBlocking {
     repo = FirestoreRepository()
     handlesRepo = FirestoreHandlesRepository()
-    vm = FirestoreViewModel(repo)
-    handlesVm = FirestoreHandlesViewModel(handlesRepo)
+    vm = DiscussionViewModel(repo)
+    handlesVm = HandlesViewModel(handlesRepo)
 
     val alice = newAccount("Alice", "alice")
     val frank = newAccount("Frank", "frank")

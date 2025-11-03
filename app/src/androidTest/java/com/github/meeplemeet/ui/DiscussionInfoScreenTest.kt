@@ -2,12 +2,12 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.github.meeplemeet.model.repositories.FirestoreHandlesRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.FirestoreHandlesRepository
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
@@ -21,22 +21,22 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var viewModel: FirestoreViewModel
+  private lateinit var viewModel: DiscussionViewModel
   private lateinit var repository: FirestoreRepository
   private lateinit var currentAccount: Account
   private lateinit var otherUser: Account
   private lateinit var thirdUser: Account
   private lateinit var testDiscussion: Discussion
   private lateinit var handlesRepository: FirestoreHandlesRepository
-  private lateinit var handlesViewModel: FirestoreHandlesViewModel
+  private lateinit var handlesViewModel: HandlesViewModel
 
   @Before
   fun setup() = runBlocking {
     repository = FirestoreRepository()
     handlesRepository = FirestoreHandlesRepository()
-    viewModel = FirestoreViewModel(repository)
+    viewModel = DiscussionViewModel(repository)
 
-    handlesViewModel = FirestoreHandlesViewModel(handlesRepository)
+    handlesViewModel = HandlesViewModel(handlesRepository)
 
     // Create test users
     currentAccount =

@@ -10,9 +10,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.github.meeplemeet.model.repositories.AuthRepository
-import com.github.meeplemeet.model.viewmodels.AuthUIState
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
+import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.auth.AuthUIState
+import com.github.meeplemeet.model.auth.AuthViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before

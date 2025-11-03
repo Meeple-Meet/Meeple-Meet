@@ -27,10 +27,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
@@ -59,8 +59,8 @@ object UITestTags {
  */
 @Composable
 fun DiscussionDetailsScreen(
-    viewModel: FirestoreViewModel,
-    handlesViewModel: FirestoreHandlesViewModel,
+    viewModel: DiscussionViewModel,
+    handlesViewModel: HandlesViewModel,
     account: Account,
     discussion: Discussion,
     modifier: Modifier = Modifier,
@@ -454,7 +454,7 @@ fun MemberList(
     selectedMembers: MutableList<Account>,
     isMember: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: FirestoreViewModel = viewModel(),
+    viewModel: DiscussionViewModel = viewModel(),
     currentAccount: Account,
     discussion: Discussion,
 ) {

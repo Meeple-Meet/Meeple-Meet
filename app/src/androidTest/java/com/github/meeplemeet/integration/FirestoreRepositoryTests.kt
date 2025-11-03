@@ -2,9 +2,9 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Message
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse

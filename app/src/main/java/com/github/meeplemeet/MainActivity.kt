@@ -26,10 +26,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreateDiscussionScreen
 import com.github.meeplemeet.ui.CreatePostScreen
@@ -77,8 +77,8 @@ class MainActivity : ComponentActivity() {
 fun MeepleMeetApp(
     context: Context = LocalContext.current,
     authVM: AuthViewModel = viewModel(),
-    firestoreVM: FirestoreViewModel = viewModel(),
-    handlesVM: FirestoreHandlesViewModel = viewModel(),
+    firestoreVM: DiscussionViewModel = viewModel(),
+    handlesVM: HandlesViewModel = viewModel(),
     navController: NavHostController = rememberNavController()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
@@ -98,8 +98,7 @@ fun MeepleMeetApp(
         if (!signedOut) firestoreVM.discussionFlow(discussionId) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
-  val sessionVM =
-      remember(discussion) { discussion?.let { FirestoreSessionViewModel(discussion!!) } }
+  val sessionVM = remember(discussion) { discussion?.let { SessionViewModel(discussion!!) } }
 
   var postId by remember { mutableStateOf("") }
 
@@ -255,7 +254,7 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.PostsOverview.name) {
       PostsOverviewScreen(
           navigation = navigationActions,
-          firestoreViewModel = firestoreVM,
+          discussionViewModel = firestoreVM,
           onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
           onSelectPost = {
             postId = it.id

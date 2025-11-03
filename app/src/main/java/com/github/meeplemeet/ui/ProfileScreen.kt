@@ -15,8 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import com.github.meeplemeet.model.viewmodels.AuthViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -31,7 +31,7 @@ object ProfileTestTags {
 fun ProfileScreen(
     navigation: NavigationActions,
     authViewModel: AuthViewModel,
-    firestoreViewModel: FirestoreViewModel,
+    discussionViewModel: DiscussionViewModel,
     onSignOut: () -> Unit
 ) {
   Scaffold(
@@ -56,7 +56,7 @@ fun ProfileScreen(
               Button(
                   onClick = {
                     onSignOut()
-                    firestoreViewModel.signOut()
+                    discussionViewModel.signOut()
                     authViewModel.signOut()
                   },
                   modifier = Modifier.testTag(ProfileTestTags.LOG_OUT_BUTTON),

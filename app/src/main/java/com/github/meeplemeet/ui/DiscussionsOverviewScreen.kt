@@ -46,9 +46,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -79,7 +79,7 @@ object DiscussionOverviewTestTags {
 /**
  * Screen that shows an overview of all discussions the user is part of
  *
- * @param viewModel [FirestoreViewModel] instance to interact with Firestore
+ * @param viewModel [DiscussionViewModel] instance to interact with Firestore
  * @param account The currently logged-in user ([Account])
  * @param navigation [NavigationActions] instance to navigate to other screens
  * @param onSelectDiscussion Callback function when a discussion is clicked
@@ -89,7 +89,7 @@ object DiscussionOverviewTestTags {
 fun DiscussionsOverviewScreen(
     account: Account,
     navigation: NavigationActions,
-    viewModel: FirestoreViewModel = viewModel(),
+    viewModel: DiscussionViewModel = viewModel(),
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {

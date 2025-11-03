@@ -1,6 +1,6 @@
 package com.github.meeplemeet.ui
 // Github Copilot used for this file
-import com.github.meeplemeet.model.structures.Poll
+import com.github.meeplemeet.model.discussions.Poll
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import kotlin.test.assertEquals

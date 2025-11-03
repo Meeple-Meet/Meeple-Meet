@@ -6,9 +6,9 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.repositories.FirestorePostRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.CreatePostViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.posts.CreatePostViewModel
+import com.github.meeplemeet.model.posts.FirestorePostRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests

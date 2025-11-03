@@ -1,11 +1,11 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.PermissionDeniedException
-import com.github.meeplemeet.model.repositories.FirestorePostRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.CreatePostViewModel
-import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
-import com.github.meeplemeet.model.viewmodels.PostViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.posts.CreatePostViewModel
+import com.github.meeplemeet.model.posts.FirestorePostRepository
+import com.github.meeplemeet.model.posts.PostOverviewViewModel
+import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull

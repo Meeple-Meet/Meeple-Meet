@@ -27,9 +27,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.viewmodels.FirestoreHandlesViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -59,8 +59,8 @@ object AddDiscussionTestTags {
 @Composable
 fun CreateDiscussionScreen(
     account: Account,
-    viewModel: FirestoreViewModel = viewModel(),
-    handleViewModel: FirestoreHandlesViewModel = viewModel(),
+    viewModel: DiscussionViewModel = viewModel(),
+    handleViewModel: HandlesViewModel = viewModel(),
     onBack: () -> Unit = {},
     onCreate: () -> Unit = {},
 ) {

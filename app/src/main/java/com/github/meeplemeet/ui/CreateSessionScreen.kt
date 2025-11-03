@@ -24,12 +24,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.Location
-import com.github.meeplemeet.model.viewmodels.FirestoreSessionViewModel
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.GameUIState
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.sessions.GameUIState
+import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Elevation
@@ -150,8 +150,8 @@ fun toTimestamp(
 fun CreateSessionScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: FirestoreViewModel,
-    sessionViewModel: FirestoreSessionViewModel,
+    viewModel: DiscussionViewModel,
+    sessionViewModel: SessionViewModel,
     onBack: () -> Unit = {}
 ) {
   // Holds the form state for the session
@@ -308,7 +308,7 @@ fun CreateSessionScreen(
  */
 @Composable
 fun GameSearchBar(
-    sessionViewModel: FirestoreSessionViewModel,
+    sessionViewModel: SessionViewModel,
     gameUi: GameUIState,
     currentUser: Account,
     discussion: Discussion?,
@@ -436,7 +436,7 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 @Composable
 fun OrganisationSection(
     gameUi: GameUIState,
-    sessionViewModel: FirestoreSessionViewModel,
+    sessionViewModel: SessionViewModel,
     account: Account,
     discussion: Discussion,
     date: LocalDate?,

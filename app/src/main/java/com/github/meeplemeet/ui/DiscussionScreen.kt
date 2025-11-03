@@ -24,11 +24,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Discussion
-import com.github.meeplemeet.model.structures.Message
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.appShapes
@@ -50,7 +49,7 @@ object DiscussionTestTags {
 /**
  * Composable screen that displays a discussion (chat) and allows sending messages.
  *
- * Messages are collected from [FirestoreViewModel] via a [kotlinx.coroutines.flow.StateFlow] and
+ * Messages are collected from [DiscussionViewModel] via a [kotlinx.coroutines.flow.StateFlow] and
  * displayed in a scrollable list. Users are cached locally for display purposes.
  *
  * @param viewModel FirestoreViewModel for fetching discussion and sending messages
@@ -63,7 +62,7 @@ object DiscussionTestTags {
 fun DiscussionScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: FirestoreViewModel,
+    viewModel: DiscussionViewModel,
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},

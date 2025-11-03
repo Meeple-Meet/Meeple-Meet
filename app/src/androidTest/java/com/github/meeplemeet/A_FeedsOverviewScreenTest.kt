@@ -12,12 +12,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.repositories.FirestorePostRepository
-import com.github.meeplemeet.model.repositories.FirestoreRepository
-import com.github.meeplemeet.model.structures.Account
-import com.github.meeplemeet.model.structures.Post
-import com.github.meeplemeet.model.viewmodels.FirestoreViewModel
-import com.github.meeplemeet.model.viewmodels.PostOverviewViewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.posts.FirestorePostRepository
+import com.github.meeplemeet.model.posts.Post
+import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.FeedsOverviewTestTags
 import com.github.meeplemeet.ui.PostsOverviewScreen
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -46,7 +46,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   private lateinit var postRepo: FirestorePostRepository
   private lateinit var accountRepo: FirestoreRepository
   private lateinit var postVm: PostOverviewViewModel
-  private lateinit var firestoreVm: FirestoreViewModel
+  private lateinit var firestoreVm: DiscussionViewModel
 
   private lateinit var me: Account
   private lateinit var alice: Account
@@ -75,7 +75,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     postRepo = FirestorePostRepository()
     accountRepo = FirestoreRepository()
     postVm = PostOverviewViewModel(postRepo)
-    firestoreVm = FirestoreViewModel(accountRepo)
+    firestoreVm = DiscussionViewModel(accountRepo)
 
     me = accountRepo.createAccount("meUID", "Me", "me@test.com", null)
     createdAccounts += me
@@ -96,7 +96,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
       AppTheme(themeMode = theme) {
         PostsOverviewScreen(
             postOverviewVM = postVm,
-            firestoreViewModel = firestoreVm,
+            discussionViewModel = firestoreVm,
             navigation = nav,
             onClickAddPost = { fabClicked = true },
             onSelectPost = { clickedPost = it })
