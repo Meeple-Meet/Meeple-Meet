@@ -456,7 +456,9 @@ fun DatePickerDockedField(
     label: String = "Date",
     editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-    zoneId: ZoneId = ZoneId.systemDefault()
+    zoneId: ZoneId = ZoneId.systemDefault(),
+    testTagPick: String = SessionTestTags.DATE_PICK_BUTTON,
+    testTagDate: String = SessionTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: ""
@@ -469,13 +471,12 @@ fun DatePickerDockedField(
       trailingIcon = {
         if (editable) {
           TextButton(
-              onClick = { showDialogDate = true },
-              modifier = Modifier.testTag(SessionTestTags.DATE_PICK_BUTTON)) {
+              onClick = { showDialogDate = true }, modifier = Modifier.testTag(testTagPick)) {
                 Text("Pick")
               }
         }
       },
-      modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.DATE_FIELD))
+      modifier = Modifier.fillMaxWidth().testTag(testTagDate))
 
   if (showDialogDate) {
     AppDatePickerDialog(

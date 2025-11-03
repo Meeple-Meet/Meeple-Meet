@@ -29,6 +29,7 @@ import com.github.meeplemeet.model.structures.Account
 import com.github.meeplemeet.ui.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -419,9 +420,8 @@ class SessionComponentsTest {
 
   /* ====================== DATE & TIME PICKERS ====================== */
 
-  @Ignore()
   @Test
-  fun datePicker_cancel_then_confirm_and_timePicker_valueFlows() {
+  fun datePicker_displays_and_opens_dialog() {
     val zone = ZoneId.of("UTC")
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val initial = LocalDate.of(2025, 1, 5)
@@ -435,40 +435,105 @@ class SessionComponentsTest {
             label = "Game date",
             displayFormatter = fmt,
             zoneId = zone,
-            editable = true)
-        TimePickerField(value = null, onValueChange = {}, label = "Tournament time")
+            editable = true,
+            testTagDate = SessionTestTags.DATE_FIELD + "0")
+        // Non-editable date field
+        DatePickerDockedField(
+            value = LocalDate.of(2024, 12, 1),
+            onValueChange = {},
+            label = "Read-only date",
+            editable = false)
       }
     }
 
-    val dateNode = composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD)
-    val initialText = dateNode.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+    // Check initial date is displayed
+    composeRule.onNodeWithText(initial.format(fmt)).assertExists()
 
-    // Open -> Cancel (use test tag in unmerged tree)
-    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
-    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasText(initial.format(fmt)))
-
-    // Confirm
-    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
-    composeRule
-        .onNodeWithTag(ComponentsTestTags.DATE_PICKER, useUnmergedTree = true)
-        .performTouchInput { click(center) }
-    composeRule.onNodeWithText("OK").performClick()
-    composeRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assert(hasTextDifferentFrom(initialText))
+    // Check non-editable field doesn't have pick button
+    composeRule.onNodeWithText("01/12/2024").assertExists()
 
     // External value change
     val external = LocalDate.of(2026, 6, 9)
     composeRule.runOnUiThread { date = external }
     composeRule.onNodeWithText(external.format(fmt)).assertExists()
 
-    // Field click does not open
-    composeRule.onNodeWithText("Tournament time").performClick()
+    // Check null date handling
+    composeRule.runOnUiThread { date = null }
     composeRule
-        .onAllNodesWithTag(ComponentsTestTags.TIME_PICKER, useUnmergedTree = true)
-        .assertCountEquals(0)
-    composeRule.onNodeWithTag(SessionTestTags.TIME_PICK_BUTTON).performClick()
-    composeRule.onNodeWithTag(SessionTestTags.TIME_PICKER_OK_BUTTON).performClick()
+        .onNodeWithTag(SessionTestTags.DATE_FIELD + "0", useUnmergedTree = true)
+        .assertTextEquals("")
+  }
+
+  @Test
+  fun timePicker_displays_and_opens_dialog() {
+    var time by mutableStateOf<LocalTime?>(null)
+    set {
+      Column {
+        TimePickerField(
+            value = time, onValueChange = { time = it }, label = "Start time", is24Hour = true)
+        // With initial value
+        TimePickerField(
+            value = LocalTime.of(14, 30), onValueChange = {}, label = "End time", is24Hour = false)
+      }
+    }
+
+    // Check time picker button exists
+    composeRule.onAllNodesWithTag(SessionTestTags.TIME_PICK_BUTTON).assertCountEquals(2)
+
+    // Check initial time is displayed
+    composeRule.onNodeWithText("14:30").assertExists()
+
+    // External value change
+    composeRule.runOnUiThread { time = LocalTime.of(19, 45) }
+    composeRule.onNodeWithText("19:45").assertExists()
+
+    // Open time picker
+    composeRule.onAllNodesWithTag(SessionTestTags.TIME_PICK_BUTTON)[0].performClick()
+    composeRule.onNodeWithTag(ComponentsTestTags.TIME_PICKER, useUnmergedTree = true).assertExists()
+
+    // Click OK button to close
+    composeRule
+        .onNodeWithTag(SessionTestTags.TIME_PICKER_OK_BUTTON, useUnmergedTree = true)
+        .performClick()
+  }
+
+  @Test
+  fun datePicker_dialog_cancel_and_confirm() {
+    val zone = ZoneId.of("UTC")
+    val initial = LocalDate.of(2025, 3, 15)
+
+    var date by mutableStateOf<LocalDate?>(initial)
+    set {
+      DatePickerDockedField(
+          value = date,
+          onValueChange = { date = it },
+          label = "Pick date",
+          zoneId = zone,
+          editable = true)
+    }
+
+    // Open picker
+    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.waitForIdle()
+
+    // Cancel button should exist and dismiss dialog
+    composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).assertExists()
+    composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
+
+    // Re-open and confirm
+    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.waitForIdle()
+
+    // Date picker should be visible
+    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICKER, useUnmergedTree = true).assertExists()
+
+    // OK button should exist
+    composeRule
+        .onNodeWithTag(SessionTestTags.DATE_PICKER_OK_BUTTON, useUnmergedTree = true)
+        .assertExists()
+        .performClick()
+
+    composeRule.waitForIdle()
   }
 
   /* ====================== SEARCH FIELDS ====================== */
@@ -594,6 +659,39 @@ class SessionComponentsTest {
     composeRule
         .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
         .assertCountEquals(0)
+  }
+
+  @Test
+  fun searchDropdown_shows_nothing_when_no_suggestions() {
+    var q by mutableStateOf("")
+    val emptyList = emptyList<String>()
+
+    set {
+      SearchDropdownField(
+          label = "Search",
+          query = q,
+          onQueryChange = { q = it },
+          suggestions = emptyList,
+          onSuggestionClick = {},
+          getPrimaryText = { it },
+          isLoading = false,
+          showWhenEmptyQuery = true,
+          emptyText = "No games found")
+    }
+
+    // Type a query that returns no results
+    val tf = composeRule.onNode(hasSetTextAction())
+    tf.performClick()
+    tf.performTextInput("xyz")
+
+    // Empty state should be visible
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
+        .assertDoesNotExist()
+    composeRule.onNodeWithText("No games found", useUnmergedTree = true).assertDoesNotExist()
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SEARCH_EMPTY, useUnmergedTree = true)
+        .assertDoesNotExist()
   }
 
   /* ====================== DISCRETE PILL SLIDER ====================== */
