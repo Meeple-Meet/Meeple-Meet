@@ -6,8 +6,6 @@ import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shops.MapViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.model.shops.SHOP_COLLECTION_PATH
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.CreateSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.EditSpaceRenterViewModel
@@ -30,7 +28,6 @@ import org.junit.Test
 class FirestoreSpaceRenterTests : FirestoreTests() {
   private lateinit var spaceRenterRepository: SpaceRenterRepository
   private lateinit var discussionRepository: DiscussionRepository
-  private lateinit var shopRepository: ShopRepository
   private lateinit var createSpaceRenterViewModel: CreateSpaceRenterViewModel
   private lateinit var spaceRenterViewModel: SpaceRenterViewModel
   private lateinit var editSpaceRenterViewModel: EditSpaceRenterViewModel
@@ -48,11 +45,9 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   fun setup() {
     spaceRenterRepository = SpaceRenterRepository(db)
     discussionRepository = DiscussionRepository()
-    shopRepository = ShopRepository(db)
     createSpaceRenterViewModel = CreateSpaceRenterViewModel(spaceRenterRepository)
     spaceRenterViewModel = SpaceRenterViewModel(spaceRenterRepository)
     editSpaceRenterViewModel = EditSpaceRenterViewModel(spaceRenterRepository)
-    mapViewModel = MapViewModel(shopRepository, spaceRenterRepository)
 
     runBlocking {
       // Create test accounts
@@ -87,12 +82,6 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
       val batch = db.batch()
       snapshot.documents.forEach { batch.delete(it.reference) }
       batch.commit().await()
-
-      // Clean up shops collection
-      val shopsSnapshot = db.collection(SHOP_COLLECTION_PATH).get().await()
-      val shopsBatch = db.batch()
-      shopsSnapshot.documents.forEach { shopsBatch.delete(it.reference) }
-      shopsBatch.commit().await()
     }
   }
 
