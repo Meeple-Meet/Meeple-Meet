@@ -319,8 +319,6 @@ fun PollBubble(
   val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
   val counts = poll.getVoteCountsByOption()
   val total = poll.getTotalVotes()
-  println(
-      ">>>> PollBubble recomposing – total=${poll.getTotalVotes()}, counts=${poll.getVoteCountsByOption()}")
 
   Row(
       modifier = Modifier.fillMaxWidth(),
