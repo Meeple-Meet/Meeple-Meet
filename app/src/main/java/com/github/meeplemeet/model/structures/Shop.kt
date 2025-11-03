@@ -19,6 +19,7 @@ import kotlinx.serialization.Serializable
  */
 data class Shop(
     val id: String,
+    val owner: Account,
     val name: String,
     val phone: String,
     val email: String,
@@ -43,6 +44,7 @@ data class Shop(
  */
 @Serializable
 data class ShopNoUid(
+    val ownerId: String = "",
     val name: String = "",
     val phone: String = "",
     val email: String = "",
@@ -61,6 +63,7 @@ data class ShopNoUid(
  */
 fun toNoUid(shop: Shop): ShopNoUid =
     ShopNoUid(
+        shop.owner.uid,
         shop.name,
         shop.phone,
         shop.email,
@@ -78,9 +81,15 @@ fun toNoUid(shop: Shop): ShopNoUid =
  * @param collection The collection of games with their quantities as Game objects.
  * @return A Shop with the provided ID and data.
  */
-fun fromNoUid(id: String, shopNoUid: ShopNoUid, collection: List<Pair<Game, Int>>): Shop =
+fun fromNoUid(
+    id: String,
+    shopNoUid: ShopNoUid,
+    owner: Account,
+    collection: List<Pair<Game, Int>>
+): Shop =
     Shop(
         id,
+        owner,
         shopNoUid.name,
         shopNoUid.phone,
         shopNoUid.email,
