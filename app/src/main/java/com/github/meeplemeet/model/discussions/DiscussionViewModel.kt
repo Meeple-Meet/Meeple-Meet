@@ -2,7 +2,7 @@ package com.github.meeplemeet.model.discussions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +20,7 @@ const val SUGGESTIONS_LIMIT = 30
  * listeners are exposed as [StateFlow] streams.
  */
 class DiscussionViewModel(
-    private val repository: FirestoreRepository = FirestoreRepository(FirebaseProvider.db)
+    private val repository: DiscussionRepository = RepositoryProvider.discussions
 ) : ViewModel() {
   private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
 

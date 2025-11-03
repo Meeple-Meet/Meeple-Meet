@@ -13,11 +13,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.discussions.FirestoreRepository
-import com.github.meeplemeet.model.posts.FirestorePostRepository
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
+import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.ui.FeedsOverviewTestTags
 import com.github.meeplemeet.ui.PostsOverviewScreen
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -43,8 +43,8 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   private val nav: NavigationActions = mockk(relaxed = true)
 
   /* repos & VMs */
-  private lateinit var postRepo: FirestorePostRepository
-  private lateinit var accountRepo: FirestoreRepository
+  private lateinit var postRepo: PostRepository
+  private lateinit var accountRepo: DiscussionRepository
   private lateinit var postVm: PostOverviewViewModel
   private lateinit var firestoreVm: DiscussionViewModel
 
@@ -72,8 +72,8 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    postRepo = FirestorePostRepository()
-    accountRepo = FirestoreRepository()
+    postRepo = PostRepository()
+    accountRepo = DiscussionRepository()
     postVm = PostOverviewViewModel(postRepo)
     firestoreVm = DiscussionViewModel(accountRepo)
 

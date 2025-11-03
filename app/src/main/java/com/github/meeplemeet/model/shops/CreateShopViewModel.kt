@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for shop operations.
  */
-class CreateShopViewModel(private val repository: ShopRepository = ShopRepository()) : ViewModel() {
+class CreateShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
+    ViewModel() {
   /**
    * Creates a new shop in Firestore.
    *

@@ -1,7 +1,7 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
@@ -9,7 +9,7 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreDiscussionPreviewTests : FirestoreTests() {
-  private lateinit var repository: FirestoreRepository
+  private lateinit var repository: DiscussionRepository
 
   private lateinit var account1: Account
   private lateinit var account2: Account
@@ -17,7 +17,7 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    repository = FirestoreRepository()
+    repository = DiscussionRepository()
     runBlocking {
       account1 =
           repository.createAccount(

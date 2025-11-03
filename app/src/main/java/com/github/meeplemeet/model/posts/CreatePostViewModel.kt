@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.posts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -16,9 +17,8 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for post operations.
  */
-class CreatePostViewModel(
-    private val repository: FirestorePostRepository = FirestorePostRepository()
-) : ViewModel() {
+class CreatePostViewModel(private val repository: PostRepository = RepositoryProvider.posts) :
+    ViewModel() {
   /**
    * Creates a new post in Firestore.
    *

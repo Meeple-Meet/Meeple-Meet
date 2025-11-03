@@ -3,8 +3,8 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
-import com.github.meeplemeet.model.posts.FirestorePostRepository
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
+import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
@@ -21,7 +21,7 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FirestorePostTests : FirestoreTests() {
-  private lateinit var repository: FirestorePostRepository
+  private lateinit var repository: PostRepository
   private lateinit var createVM: CreatePostViewModel
   private lateinit var postVM: PostViewModel
   private lateinit var overviewVM: PostOverviewViewModel
@@ -33,7 +33,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    repository = FirestorePostRepository()
+    repository = PostRepository()
     createVM = CreatePostViewModel(repository)
     postVM = PostViewModel(repository)
     overviewVM = PostOverviewViewModel(repository)
