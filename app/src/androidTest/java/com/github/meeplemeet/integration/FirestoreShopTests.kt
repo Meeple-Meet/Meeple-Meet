@@ -739,7 +739,7 @@ class FirestoreShopTests : FirestoreTests() {
     assertNotNull(createdShop)
     assertEquals("Minimal Shop", createdShop!!.name)
     assertEquals("", createdShop.phone)
-    assertEquals("", createdShop.email)
+    assertEquals("test@test.com", createdShop.email)
     assertEquals("", createdShop.website)
     assertTrue(createdShop.gameCollection.isEmpty())
   }
