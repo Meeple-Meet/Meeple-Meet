@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -15,7 +16,8 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for shop operations.
  */
-class ShopViewModel(private val repository: ShopRepository = ShopRepository()) : ViewModel() {
+class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
+    ViewModel() {
   private val _shop = MutableStateFlow<Shop?>(null)
 
   /**

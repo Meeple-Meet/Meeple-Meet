@@ -8,7 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
-import com.github.meeplemeet.model.posts.FirestorePostRepository
+import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
@@ -32,7 +32,7 @@ class CreatePostScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var repository: FirestorePostRepository
+  private lateinit var repository: PostRepository
   private lateinit var viewModel: CreatePostViewModel
   private lateinit var testAccount: Account
 
@@ -62,7 +62,7 @@ class CreatePostScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repository = FirestorePostRepository()
+    repository = PostRepository()
     viewModel = CreatePostViewModel(repository)
     testAccount = Account("testuser", "test_user", "Test User", "test@example.com")
 

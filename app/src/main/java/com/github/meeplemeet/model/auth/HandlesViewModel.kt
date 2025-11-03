@@ -2,6 +2,7 @@ package com.github.meeplemeet.model.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.HandleAlreadyTakenException
 import com.github.meeplemeet.model.InvalidHandleFormatException
@@ -10,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class HandlesViewModel(val repository: FirestoreHandlesRepository = FirestoreHandlesRepository()) :
+class HandlesViewModel(val repository: HandlesRepository = RepositoryProvider.handles) :
     ViewModel() {
   private val _errorMsg = MutableStateFlow("")
   val errorMessage: StateFlow<String> = _errorMsg

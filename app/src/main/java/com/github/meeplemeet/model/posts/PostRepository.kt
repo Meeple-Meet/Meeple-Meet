@@ -27,7 +27,7 @@ private const val COMMENTS_COLLECTION_PATH = "comments"
  *
  * @property db The Firestore database instance to use for operations.
  */
-class FirestorePostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
+class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
   private val posts = db.collection(POSTS_COLLECTION_PATH)
 
   /** Generates a new unique ID for a post or comment. */

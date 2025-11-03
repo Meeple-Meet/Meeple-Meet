@@ -3,11 +3,11 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.FirestoreHandlesRepository
+import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
@@ -22,18 +22,18 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
 
   private lateinit var viewModel: DiscussionViewModel
-  private lateinit var repository: FirestoreRepository
+  private lateinit var repository: DiscussionRepository
   private lateinit var currentAccount: Account
   private lateinit var otherUser: Account
   private lateinit var thirdUser: Account
   private lateinit var testDiscussion: Discussion
-  private lateinit var handlesRepository: FirestoreHandlesRepository
+  private lateinit var handlesRepository: HandlesRepository
   private lateinit var handlesViewModel: HandlesViewModel
 
   @Before
   fun setup() = runBlocking {
-    repository = FirestoreRepository()
-    handlesRepository = FirestoreHandlesRepository()
+    repository = DiscussionRepository()
+    handlesRepository = HandlesRepository()
     viewModel = DiscussionViewModel(repository)
 
     handlesViewModel = HandlesViewModel(handlesRepository)

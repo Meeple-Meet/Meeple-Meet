@@ -5,10 +5,10 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.FirestoreHandlesRepository
+import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
@@ -23,9 +23,9 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var repo: FirestoreRepository
+  private lateinit var repo: DiscussionRepository
   private lateinit var firestoreVm: DiscussionViewModel
-  private lateinit var handlesRepo: FirestoreHandlesRepository
+  private lateinit var handlesRepo: HandlesRepository
   private lateinit var handlesVm: HandlesViewModel
   private lateinit var me: Account
 
@@ -50,12 +50,12 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = FirestoreRepository()
+    repo = DiscussionRepository()
     firestoreVm = DiscussionViewModel(repo)
-    handlesRepo = FirestoreHandlesRepository()
+    handlesRepo = HandlesRepository()
     handlesVm = HandlesViewModel(handlesRepo)
 
-    val bootstrapRepo = FirestoreRepository()
+    val bootstrapRepo = DiscussionRepository()
     val uid = "uid_" + UUID.randomUUID().toString().take(8)
     me = bootstrapRepo.createAccount(uid, "Frank", "frank@test.com", null)
 

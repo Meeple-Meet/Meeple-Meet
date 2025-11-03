@@ -7,8 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
@@ -27,7 +27,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
 
   private lateinit var vm: DiscussionViewModel
-  private lateinit var repo: FirestoreRepository
+  private lateinit var repo: DiscussionRepository
   private lateinit var nav: NavigationActions
 
   private lateinit var me: Account
@@ -40,7 +40,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = FirestoreRepository()
+    repo = DiscussionRepository()
     vm = DiscussionViewModel(repo)
     nav = mockk(relaxed = true)
 

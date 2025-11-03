@@ -4,7 +4,7 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.discussions.DISCUSSIONS_COLLECTION_PATH
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionNoUid
-import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.shared.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -15,9 +15,9 @@ import kotlinx.coroutines.tasks.await
  *
  * Handles CRUD operations for sessions that are nested within discussion documents.
  */
-class FirestoreSessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
+class SessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val discussions = db.collection(DISCUSSIONS_COLLECTION_PATH)
-  private val discussionRepo = FirestoreRepository()
+  private val discussionRepo = DiscussionRepository()
 
   /**
    * Creates a new session within a discussion.

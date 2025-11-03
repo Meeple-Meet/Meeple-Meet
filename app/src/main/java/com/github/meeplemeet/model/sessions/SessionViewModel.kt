@@ -2,6 +2,7 @@ package com.github.meeplemeet.model.sessions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -47,8 +48,8 @@ data class GameUIState(
  */
 class SessionViewModel(
     initDiscussion: Discussion,
-    private val repository: FirestoreSessionRepository = FirestoreSessionRepository(),
-    private val gameRepository: GameRepository = FirestoreGameRepository()
+    private val repository: SessionRepository = RepositoryProvider.sessions,
+    private val gameRepository: GameRepository = RepositoryProvider.games
 ) : ViewModel() {
   /** Observable discussion state that updates when session operations complete. */
   private val _discussion = MutableStateFlow(initDiscussion)

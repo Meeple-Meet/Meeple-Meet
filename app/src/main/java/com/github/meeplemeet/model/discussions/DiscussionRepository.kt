@@ -30,7 +30,7 @@ const val DISCUSSIONS_COLLECTION_PATH = "discussions"
  * Provides suspend functions for one-shot reads/writes and Flow-based listeners for real-time
  * updates.
  */
-class FirestoreRepository(db: FirebaseFirestore = FirebaseProvider.db) {
+class DiscussionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val accounts = db.collection(ACCOUNT_COLLECTION_PATH)
   private val discussions = db.collection(DISCUSSIONS_COLLECTION_PATH)
 

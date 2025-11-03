@@ -23,8 +23,8 @@ import androidx.compose.ui.test.performTextReplacement
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Comment
-import com.github.meeplemeet.model.posts.FirestorePostRepository
 import com.github.meeplemeet.model.posts.Post
+import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Timestamp
@@ -181,7 +181,7 @@ class PostScreenTest {
             comments = listOf(c1, c2))
     postByMarco = postByAlex.copy(id = "p2", authorId = marco.uid)
 
-    val repo = mockk<FirestorePostRepository>(relaxed = true)
+    val repo = mockk<PostRepository>(relaxed = true)
     postVM = spyk(PostViewModel(repo))
     postFlowP1 = MutableStateFlow(null)
     injectPost("p1", postFlowP1)
@@ -302,7 +302,7 @@ class PostScreenTest {
     findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
 
     // Swap a delaying repo -> send via IME; check disabled while sending
-    val delayingRepo = mockk<FirestorePostRepository>(relaxed = true)
+    val delayingRepo = mockk<PostRepository>(relaxed = true)
     coEvery { delayingRepo.addComment(any(), any(), any(), any()) } coAnswers
         {
           kotlinx.coroutines.delay(400)

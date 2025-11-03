@@ -9,13 +9,13 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.discussions.FirestoreRepository
 import com.github.meeplemeet.model.sessions.FirestoreGameRepository
-import com.github.meeplemeet.model.sessions.FirestoreSessionRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.GameUIState
 import com.github.meeplemeet.model.sessions.Session
+import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import io.mockk.every
 import io.mockk.mockk
@@ -28,9 +28,9 @@ import org.junit.Rule
 import org.junit.Test
 
 class SessionDetailsScreenTest {
-  private lateinit var firestoreRepo: FirestoreRepository
+  private lateinit var firestoreRepo: DiscussionRepository
   private lateinit var viewModel: DiscussionViewModel
-  private lateinit var sessionRepo: FirestoreSessionRepository
+  private lateinit var sessionRepo: SessionRepository
   private lateinit var gameRepo: FirestoreGameRepository
   private lateinit var sessionVM: SessionViewModel
 

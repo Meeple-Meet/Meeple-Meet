@@ -4,7 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.FirestoreRepository
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
@@ -27,7 +27,7 @@ const val SHOP_COLLECTION_PATH = "shops"
  */
 class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val shops = db.collection(SHOP_COLLECTION_PATH)
-  private val accountRepo = FirestoreRepository()
+  private val accountRepo = DiscussionRepository()
   private val gameRepo = FirestoreGameRepository()
 
   private fun newUUID() = shops.document().id
@@ -60,6 +60,46 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         Shop(newUUID(), owner, name, phone, email, website, address, openingHours, gameCollection)
     shops.document(shop.id).set(toNoUid(shop)).await()
     return shop
+  }
+
+  /**
+   * Retrieves a list of shops from Firestore.
+   *
+   * Fetches up to N shops, then retrieves owner accounts and game collections for each shop in
+   * parallel for optimal performance.
+   *
+   * @param maxResults The maximum number of shops to retrieve.
+   * @return A list of Shop objects, up to maxResults in size.
+   */
+  suspend fun getShops(maxResults: UInt): List<Shop> {
+    val snapshot = shops.limit(maxResults.toLong()).get().await()
+
+    return coroutineScope {
+      snapshot.documents
+          .map { doc ->
+            async {
+              val shopNoUid = doc.toObject(ShopNoUid::class.java) ?: return@async null
+
+              // Fetch the owner account
+              val owner = accountRepo.getAccount(shopNoUid.ownerId)
+
+              // Fetch all games in the game collection
+              val gameCollection =
+                  shopNoUid.gameCollection
+                      .map { (gameId, count) ->
+                        async {
+                          val game = gameRepo.getGameById(gameId)
+                          game to count
+                        }
+                      }
+                      .awaitAll()
+
+              fromNoUid(doc.id, shopNoUid, owner, gameCollection)
+            }
+          }
+          .awaitAll()
+          .filterNotNull()
+    }
   }
 
   /**

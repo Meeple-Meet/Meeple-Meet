@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
@@ -18,7 +19,8 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for shop operations.
  */
-class EditShopViewModel(private val repository: ShopRepository = ShopRepository()) : ViewModel() {
+class EditShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
+    ViewModel() {
 
   /**
    * Updates one or more fields of an existing shop.

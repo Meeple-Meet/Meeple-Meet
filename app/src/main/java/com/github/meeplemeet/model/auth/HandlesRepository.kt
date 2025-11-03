@@ -14,7 +14,7 @@ import kotlinx.coroutines.tasks.await
 
 const val HANDLES_COLLECTION_PATH = "handles"
 
-class FirestoreHandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
+class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
   private val handles = db.collection(HANDLES_COLLECTION_PATH)
   private val accounts = db.collection(ACCOUNT_COLLECTION_PATH)
 

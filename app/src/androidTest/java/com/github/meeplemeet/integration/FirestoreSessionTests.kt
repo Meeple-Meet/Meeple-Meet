@@ -6,10 +6,10 @@ import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.FirestoreRepository
-import com.github.meeplemeet.model.sessions.FirestoreSessionRepository
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.Session
+import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.utils.FakeGameRepo
@@ -42,25 +42,25 @@ class FirestoreSessionTests : FirestoreTests() {
   lateinit var testLocation: Location
   lateinit var testTimestamp: Timestamp
 
-  private val firestoreRepository = FirestoreRepository()
-  private val sessionRepository = mockk<FirestoreSessionRepository>()
+  private val discussionRepository = DiscussionRepository()
+  private val sessionRepository = mockk<SessionRepository>()
   private lateinit var viewModel: SessionViewModel
 
   @Before
   fun setup() {
     runBlocking {
       account1 =
-          firestoreRepository.createAccount(
+          discussionRepository.createAccount(
               "Antoine", "Antoine", email = "Antoine@example.com", photoUrl = null)
       account2 =
-          firestoreRepository.createAccount(
+          discussionRepository.createAccount(
               "Marco", "Marco", email = "Marco@example.com", photoUrl = null)
       account3 =
-          firestoreRepository.createAccount(
+          discussionRepository.createAccount(
               "Thomas", "Thomas", email = "Thomas@example.com", photoUrl = null)
 
       baseDiscussion =
-          firestoreRepository.createDiscussion("Game Night", "Test Discussion", account1.uid)
+          discussionRepository.createDiscussion("Game Night", "Test Discussion", account1.uid)
     }
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
@@ -609,7 +609,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanCreateSession() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val updatedDiscussion =
         realSessionRepo.createSession(
@@ -630,7 +630,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanUpdateSessionName() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     // First create a session
     val withSession =
@@ -652,7 +652,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanUpdateSessionLocation() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -667,7 +667,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanUpdateSessionDate() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -681,7 +681,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanUpdateSessionGameId() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -695,7 +695,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanUpdateSessionParticipants() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -711,7 +711,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanUpdateMultipleSessionFields() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -741,7 +741,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun repositoryThrowsWhenNoFieldsProvided() = runTest {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -753,7 +753,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanDeleteSession() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val withSession =
         realSessionRepo.createSession(
@@ -764,13 +764,13 @@ class FirestoreSessionTests : FirestoreTests() {
     realSessionRepo.deleteSession(withSession.uid)
 
     // Verify session was deleted by fetching the discussion
-    val afterDelete = firestoreRepository.getDiscussion(baseDiscussion.uid)
+    val afterDelete = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertNull(afterDelete.session)
   }
 
   @Test
   fun repositoryCanCreateSessionWithEmptyParticipants() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val updatedDiscussion =
         realSessionRepo.createSession(
@@ -782,7 +782,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryUpdatePreservesUnchangedFields() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     val originalName = "Original Session"
     val originalGameId = "game123"
@@ -810,7 +810,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun repositoryCanReplaceSession() = runBlocking {
-    val realSessionRepo = FirestoreSessionRepository()
+    val realSessionRepo = SessionRepository()
 
     // Create first session
     val firstSession =
