@@ -1,6 +1,5 @@
 package com.github.meeplemeet.model.sessions
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -10,32 +9,7 @@ import com.github.meeplemeet.model.shared.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-/**
- * UI state for the session game picker.
- *
- * @property gameQuery Current text in the game search text field (what the user typed).
- * @property gameSuggestions List of candidate [Game] objects returned by the repository for the
- *   current query.
- * @property selectedGameUid If a game has been selected, holds its UID (Firestore document id).
- *   Empty string when nothing is selected.
- * @property gameSearchError If a search error occurred, holds the error message. Null otherwise.
- * @property fetchedGame The last fetched [Game] by ID, or null if none fetched or an error
- *   occurred.
- * @property gameFetchError If an error occurred during fetching a game by ID, holds the error
- *   message.
- */
-data class GameUIState(
-    val gameQuery: String = "",
-    val gameSuggestions: List<Game> = emptyList(),
-    val selectedGameUid: String = "",
-    val gameSearchError: String? = null,
-    val fetchedGame: Game? = null,
-    val gameFetchError: String? = null,
-    val isSearching: Boolean = false
-)
 
 /**
  * ViewModel for managing gaming sessions within a discussion.
@@ -50,14 +24,10 @@ class SessionViewModel(
     initDiscussion: Discussion,
     private val repository: SessionRepository = RepositoryProvider.sessions,
     private val gameRepository: GameRepository = RepositoryProvider.games
-) : ViewModel() {
+) : GameViewModel(gameRepository) {
   /** Observable discussion state that updates when session operations complete. */
   private val _discussion = MutableStateFlow(initDiscussion)
   val discussion: StateFlow<Discussion> = _discussion
-
-  /** UI state for game selection within the session. */
-  private val _gameUIState = MutableStateFlow(GameUIState())
-  val gameUIState: StateFlow<GameUIState> = _gameUIState.asStateFlow()
 
   /**
    * Checks if an account has admin privileges for a discussion.
@@ -66,10 +36,6 @@ class SessionViewModel(
    */
   private fun isAdmin(requester: Account, discussion: Discussion): Boolean {
     return discussion.admins.contains(requester.uid)
-  }
-
-  fun clear() {
-    _gameUIState.value = GameUIState()
   }
 
   /**
@@ -193,7 +159,7 @@ class SessionViewModel(
   fun setGame(requester: Account, discussion: Discussion, game: Game) {
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
-    _gameUIState.value = _gameUIState.value.copy(selectedGameUid = game.uid, gameQuery = game.name)
+    setGame(game)
   }
 
   /**
@@ -220,49 +186,6 @@ class SessionViewModel(
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    _gameUIState.value = _gameUIState.value.copy(gameQuery = query)
-
-    if (query.isNotBlank()) {
-      viewModelScope.launch {
-        try {
-          val results = gameRepository.searchGamesByNameContains(query)
-          _gameUIState.value = _gameUIState.value.copy(gameSuggestions = results)
-        } catch (_: Exception) {
-          _gameUIState.value =
-              _gameUIState.value.copy(
-                  gameSuggestions = emptyList(),
-                  gameSearchError = "Game search failed due to a repository error")
-        }
-      }
-    } else {
-      _gameUIState.value = _gameUIState.value.copy(gameSuggestions = emptyList())
-    }
-  }
-
-  /**
-   * Fetches a [Game] by its Firestore document ID and updates the UI state accordingly.
-   *
-   * This method allows the UI layer to retrieve the full [Game] details for a given `gameId`
-   * reference stored in a session.
-   *
-   * The result (if successful) is reflected in [gameUIState]:
-   * - `fetchedGame` is set to the retrieved [Game].
-   * - In case of an error, `gameFetchError` is set.
-   *
-   * @param gameId The Firestore document ID of the game to retrieve.
-   */
-  fun getGameFromId(gameId: String) {
-    viewModelScope.launch {
-      try {
-        val game = gameRepository.getGameById(gameId)
-        _gameUIState.value =
-            _gameUIState.value.copy(
-                fetchedGame = game, gameFetchError = null, gameQuery = game.name)
-      } catch (_: Exception) {
-        _gameUIState.value =
-            _gameUIState.value.copy(
-                fetchedGame = null, gameFetchError = "Failed to fetch game details")
-      }
-    }
+    setGameQuery(query)
   }
 }

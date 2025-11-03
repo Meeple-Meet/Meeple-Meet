@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.shops
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -20,7 +19,7 @@ import kotlinx.coroutines.launch
  * @property repository The repository used for shop operations.
  */
 class EditShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ViewModel() {
+    ShopGameViewModel() {
 
   /**
    * Updates one or more fields of an existing shop.
@@ -70,19 +69,11 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
     }
 
     if (address != null && address == Location())
-        throw IllegalArgumentException("An address it required to create a shop")
+        throw IllegalArgumentException("An address is required to create a shop")
 
     viewModelScope.launch {
       repository.updateShop(
-          shop.id,
-          owner?.uid ?: "",
-          name,
-          phone,
-          email,
-          website,
-          address,
-          openingHours,
-          gameCollection)
+          shop.id, owner?.uid, name, phone, email, website, address, openingHours, gameCollection)
     }
   }
 

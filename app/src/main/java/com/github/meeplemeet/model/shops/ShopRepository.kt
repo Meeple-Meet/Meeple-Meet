@@ -3,9 +3,8 @@ package com.github.meeplemeet.model.shops
 // Claude Code generated the documentation
 
 import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
 import com.google.firebase.firestore.FirebaseFirestore
@@ -27,8 +26,8 @@ const val SHOP_COLLECTION_PATH = "shops"
  */
 class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val shops = db.collection(SHOP_COLLECTION_PATH)
-  private val accountRepo = DiscussionRepository()
-  private val gameRepo = FirestoreGameRepository()
+  private val accountRepo = RepositoryProvider.discussions
+  private val gameRepo = RepositoryProvider.games
 
   private fun newUUID() = shops.document().id
 
@@ -86,10 +85,10 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
               // Fetch all games in the game collection
               val gameCollection =
                   shopNoUid.gameCollection
-                      .map { (gameId, count) ->
+                      .map { gameItem ->
                         async {
-                          val game = gameRepo.getGameById(gameId)
-                          game to count
+                          val game = gameRepo.getGameById(gameItem.gameId)
+                          game to gameItem.quantity
                         }
                       }
                       .awaitAll()
@@ -126,10 +125,10 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     // Fetch all games in the game collection
     val gameCollection = coroutineScope {
       shopNoUid.gameCollection
-          .map { (gameId, count) ->
+          .map { gameItem ->
             async {
-              val game = gameRepo.getGameById(gameId)
-              game to count
+              val game = gameRepo.getGameById(gameItem.gameId)
+              game to gameItem.quantity
             }
           }
           .awaitAll()
@@ -175,7 +174,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     openingHours?.let { updates[ShopNoUid::openingHours.name] = openingHours }
     gameCollection?.let {
       updates[ShopNoUid::gameCollection.name] =
-          gameCollection.map { (game, count) -> game.uid to count }
+          gameCollection.map { (game, count) -> GameItem(game.uid, count) }
     }
 
     if (updates.isEmpty())

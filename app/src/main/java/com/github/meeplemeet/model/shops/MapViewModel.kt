@@ -10,15 +10,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for displaying shops on a map.
+ * ViewModel for displaying shops and space renters on a map.
  *
- * This ViewModel retrieves and exposes a list of shops through a [StateFlow] for UI observation,
- * typically for rendering shop markers on a map interface.
+ * This ViewModel retrieves and exposes lists of shops and space renters through [StateFlow]s for UI
+ * observation, typically for rendering markers on a map interface.
  *
- * @property repository The repository used for shop operations.
+ * @property shopRepository The repository used for shop operations.
  */
-class MapViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ViewModel() {
+class MapViewModel(
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
+) : ViewModel() {
   private val _shops = MutableStateFlow<List<Shop>?>(null)
 
   /**
@@ -38,6 +39,6 @@ class MapViewModel(private val repository: ShopRepository = RepositoryProvider.s
    * @param count The maximum number of shops to retrieve.
    */
   fun getShops(count: UInt) {
-    viewModelScope.launch { _shops.value = repository.getShops(count) }
+    viewModelScope.launch { _shops.value = shopRepository.getShops(count) }
   }
 }

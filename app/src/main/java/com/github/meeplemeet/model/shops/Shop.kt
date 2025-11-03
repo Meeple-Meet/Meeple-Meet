@@ -7,7 +7,11 @@ import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
 import kotlinx.serialization.Serializable
 
-@Serializable data class OpeningHours(val day: Int = 0, val hours: List<Pair<String?, String?>>)
+@Serializable data class TimeSlot(val open: String? = null, val close: String? = null)
+
+@Serializable data class OpeningHours(val day: Int = 0, val hours: List<TimeSlot> = emptyList())
+
+@Serializable data class GameItem(val gameId: String = "", val quantity: Int = 0)
 
 /**
  * Represents a board game shop or game cafe.
@@ -56,7 +60,7 @@ data class ShopNoUid(
     val website: String = "",
     val address: Location = Location(),
     val openingHours: List<OpeningHours> = emptyList(),
-    val gameCollection: List<Pair<String, Int>> = emptyList()
+    val gameCollection: List<GameItem> = emptyList()
 )
 
 /**
@@ -75,7 +79,7 @@ fun toNoUid(shop: Shop): ShopNoUid =
         shop.website,
         shop.address,
         shop.openingHours,
-        shop.gameCollection.map { (game, count) -> game.uid to count })
+        shop.gameCollection.map { (game, count) -> GameItem(game.uid, count) })
 
 /**
  * Converts a ShopNoUid and game collection to a Shop. Reconstructs Game objects from the provided
