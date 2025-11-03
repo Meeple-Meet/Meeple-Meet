@@ -25,7 +25,7 @@ const val SHOP_COLLECTION_PATH = "shops"
  *
  * @property db The Firestore database instance to use for operations.
  */
-class FirestoreShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
+class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val shops = db.collection(SHOP_COLLECTION_PATH)
   private val accountRepo = FirestoreRepository()
   private val gameRepo = FirestoreGameRepository()
@@ -116,6 +116,7 @@ class FirestoreShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   suspend fun updateShop(
       id: String,
       ownerId: String? = null,
+      name: String? = null,
       phone: String? = null,
       email: String? = null,
       website: String? = null,
@@ -126,6 +127,7 @@ class FirestoreShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     val updates = mutableMapOf<String, Any>()
 
     ownerId?.let { updates[ShopNoUid::ownerId.name] = ownerId }
+    name?.let { updates[ShopNoUid::name.name] = name }
     phone?.let { updates[ShopNoUid::phone.name] = phone }
     email?.let { updates[ShopNoUid::email.name] = email }
     website?.let { updates[ShopNoUid::website.name] = website }
