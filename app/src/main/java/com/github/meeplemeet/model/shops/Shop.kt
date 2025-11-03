@@ -7,8 +7,7 @@ import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class OpeningHours(val day: Int = 0, val open: String? = null, val close: String? = null)
+@Serializable data class OpeningHours(val day: Int = 0, val hours: List<Pair<String?, String?>>)
 
 /**
  * Represents a board game shop or game cafe.
