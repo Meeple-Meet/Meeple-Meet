@@ -130,6 +130,7 @@ class CreateAccountScreenTest : FirestoreTests() {
       usernameError().assertTextContains("Username cannot be empty", substring = true)
     }
 
+    /* === 7. using the checkbox properly updates account roles */
     ownerCheckbox().performClick()
     compose.waitForIdle()
     checkpoint("Owner checkbox has an impact on account") {
@@ -145,6 +146,21 @@ class CreateAccountScreenTest : FirestoreTests() {
       runBlocking {
         val acc = firestoreVm.accountFlow(me.uid).value
         acc?.spaceRenter == true
+      }
+    }
+
+    // Owner checkbox is pressed thrice -> on
+    // Renter checkbox is pressed twice -> off
+    ownerCheckbox().performClick()
+    renterCheckbox().performClick()
+    ownerCheckbox().performClick()
+    renterCheckbox().performClick()
+    ownerCheckbox().performClick()
+    compose.waitForIdle()
+    checkpoint("Multiple checkbox clicks have an impact on account") {
+      runBlocking {
+        val acc = firestoreVm.accountFlow(me.uid).value
+        acc?.shopOwner == true && acc?.spaceRenter == false
       }
     }
 
