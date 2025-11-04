@@ -23,8 +23,9 @@ import kotlinx.coroutines.launch
  */
 class SessionViewModel(
     initDiscussion: Discussion,
-    private val repository: SessionRepository = RepositoryProvider.sessions
-) : SearchViewModel() {
+    private val repository: SessionRepository = RepositoryProvider.sessions,
+    gameRepository: GameRepository = RepositoryProvider.games
+) : SearchViewModel(gameRepository) {
   /** Observable discussion state that updates when session operations complete. */
   private val _discussion = MutableStateFlow(initDiscussion)
   val discussion: StateFlow<Discussion> = _discussion
