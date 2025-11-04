@@ -183,9 +183,10 @@ fun DiscussionScreen(
         contentPadding = PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
           itemsIndexed(
-              items = messages, key = { _, msg -> "${msg.senderId}-${msg.createdAt.seconds}-${msg.createdAt.nanoseconds}" }) {
-                  index,
-                  message ->
+              items = messages,
+              key = { _, msg ->
+                "${msg.senderId}-${msg.createdAt.seconds}-${msg.createdAt.nanoseconds}"
+              }) { index, message ->
                 val isMine = message.senderId == account.uid
                 val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
