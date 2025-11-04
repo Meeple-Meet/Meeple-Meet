@@ -72,7 +72,7 @@ object DiscussionTestTags {
  * Messages are collected from [DiscussionViewModel] via a [kotlinx.coroutines.flow.StateFlow] and
  * displayed in a scrollable list. Users are cached locally for display purposes.
  *
- * @param viewModel FirestoreViewModel for fetching discussion and sending messages
+ * @param viewModel DiscussionViewModel for fetching discussion and sending messages
  * @param discussion The discussion to display
  * @param account The currently logged-in user
  * @param onBack Callback when the back button is pressed
@@ -306,6 +306,16 @@ fun DiscussionScreen(
   }
 }
 
+/**
+ * Visual bubble for a poll message.
+ *
+ * @param msgIndex Position inside the message list (used for test tags).
+ * @param poll The poll data.
+ * @param authorName Display name of the creator.
+ * @param currentUserId Id of the viewer (to show personal vote).
+ * @param createdAt Time-stamp shown under the card.
+ * @param onVote Callback when an option is tapped (index, isRemoving).
+ */
 @Composable
 fun PollBubble(
     msgIndex: Int,
@@ -319,6 +329,8 @@ fun PollBubble(
   val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
   val counts = poll.getVoteCountsByOption()
   val total = poll.getTotalVotes()
+  println(
+      ">>>> PollBubble recomposing – total=${poll.getTotalVotes()}, counts=${poll.getVoteCountsByOption()}")
 
   Row(
       modifier = Modifier.fillMaxWidth(),
@@ -419,6 +431,13 @@ fun PollBubble(
       }
 }
 
+/**
+ * Ordinary chat message bubble (text only).
+ *
+ * @param message Content to render.
+ * @param isMine Whether the message was sent by the current user (aligns right).
+ * @param senderName Display name of the sender (null for own messages).
+ */
 @Composable
 private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
   Row(
@@ -469,7 +488,11 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
       }
 }
 
-/** Shows a date separator between messages. */
+/**
+ * Sticky date header inside the message list.
+ *
+ * @param date Calendar to format.
+ */
 @Composable
 private fun DateSeparator(date: Date) {
   Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -483,6 +506,12 @@ private fun DateSeparator(date: Date) {
   }
 }
 
+/**
+ * Dialog to create a new poll.
+ *
+ * @param onDismiss Close without creating.
+ * @param onCreate Create poll with non-blank options.
+ */
 @Composable
 fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boolean) -> Unit) {
   var question by remember { mutableStateOf("") }
@@ -585,6 +614,9 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
       modifier = Modifier.testTag(DiscussionTestTags.DIALOG_ROOT))
 }
 
+/**
+ * Formats a date as “Today”, “Yesterday” or “MMM dd, yyyy”.
+ */
 fun formatDateBubble(date: Date): String {
   val today = Calendar.getInstance()
   val cal = Calendar.getInstance().apply { time = date }
@@ -596,6 +628,9 @@ fun formatDateBubble(date: Date): String {
   }
 }
 
+/**
+ * Returns true if [current] and [previous] are on different calendar days.
+ */
 fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
   if (previous == null) return true
   val calCurrent = Calendar.getInstance().apply { time = current }
@@ -604,6 +639,9 @@ fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
       calCurrent.get(Calendar.DAY_OF_YEAR) == calPrev.get(Calendar.DAY_OF_YEAR))
 }
 
+/**
+ * Returns true if two [Calendar] instances represent the same day.
+ */
 fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
   return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
       cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
