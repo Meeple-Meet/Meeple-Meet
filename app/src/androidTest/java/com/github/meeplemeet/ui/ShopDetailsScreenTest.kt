@@ -25,6 +25,8 @@ import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.runBlocking
@@ -122,11 +124,11 @@ class ShopScreenTest : FirestoreTests() {
             "genres" to emptyList<Int>())
     val g2 =
         mapOf(
-            "name" to "Carcassone",
-            "imageURL" to "https://example.com/carcassone.png",
-            "description" to "tile placement game",
+            "name" to "Chess",
+            "imageURL" to "https://example.com/chess.png",
+            "description" to "mind game",
             "minPlayers" to 2,
-            "maxPlayers" to 5,
+            "maxPlayers" to 2,
             "recommendedPlayers" to null,
             "averagePlayTime" to null,
             "genres" to emptyList<Int>())
@@ -198,8 +200,10 @@ class ShopScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       CompositionLocalProvider(LocalClipboardManager provides fakeClipboard) {
-        ShopDetailsScreen(
-            shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
+        AppTheme(themeMode = ThemeMode.DARK) {
+          ShopDetailsScreen(
+              shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
+        }
       }
     }
     composeTestRule.waitForIdle()
