@@ -65,7 +65,7 @@ class SessionViewModel(
     if (!isAdmin(requester, discussion))
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
-    val participantsList = participants.toList().map { it -> it.uid }
+    val participantsList = participants.toList().map { it.uid }
     if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
 
     viewModelScope.launch {
@@ -118,8 +118,7 @@ class SessionViewModel(
     }
 
     var participantsList: List<String>? = null
-    if (newParticipantList != null)
-        participantsList = newParticipantList.toList().map { it -> it.uid }
+    if (newParticipantList != null) participantsList = newParticipantList.toList().map { it.uid }
 
     viewModelScope.launch {
       _discussion.value =
@@ -150,7 +149,8 @@ class SessionViewModel(
    * Updates the game UI state with the selected game's UID and name (requires admin privileges).
    *
    * Note: This method does **not** update the session itself with the selected game. It only
-   * updates the [GameUIState] to reflect the user's current selection in the UI.
+   * updates the [com.github.meeplemeet.model.shared.GameUIState] to reflect the user's current
+   * selection in the UI.
    *
    * @param requester The account requesting to update the session
    * @param discussion The discussion containing the session
@@ -168,7 +168,7 @@ class SessionViewModel(
    *
    * The UI should call `setGameQuery` whenever the user types into the game search field. This
    * method:
-   * - updates the visible `gameQuery` in [GameUIState],
+   * - updates the visible `gameQuery` in [com.github.meeplemeet.model.shared.GameUIState],
    * - triggers a background search on the injected [GameRepository],
    * - updates `gameSuggestions` with the results (or empties the list on error or blank query),
    * - shows any search-related error message in `gameSearchError`.
@@ -187,5 +187,47 @@ class SessionViewModel(
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
     setGameQuery(query)
+  }
+
+  /**
+   * Sets the selected location for the session (requires admin privileges).
+   *
+   * Updates the location UI state with the selected location object. This method does **not**
+   * update the session itself with the selected location.
+   *
+   * @param requester The account requesting to update the session
+   * @param discussion The discussion containing the session
+   * @param location The [Location] object to select
+   * @throws PermissionDeniedException if requester is not a discussion admin
+   */
+  fun setLocation(requester: Account, discussion: Discussion, location: Location) {
+    if (!isAdmin(requester, discussion))
+        throw PermissionDeniedException("Only discussion admins can perform this operation")
+
+    setLocation(location)
+  }
+
+  /**
+   * Updates the location search query and asynchronously fetches suggestions (requires admin
+   * privileges).
+   *
+   * The UI should call `setLocationQuery` whenever the user types into the location search field.
+   * This method:
+   * - updates the visible `locationQuery` in [com.github.meeplemeet.model.shared.LocationUIState],
+   * - triggers a background search on the injected
+   *   [com.github.meeplemeet.model.map.LocationRepository],
+   * - updates `locationSuggestions` with the results (or empties the list on error or blank query),
+   * - shows any search-related error message in `locationSearchError`.
+   *
+   * @param requester The account requesting to update the session
+   * @param discussion The discussion containing the session
+   * @param query The substring to search for in location names.
+   * @throws PermissionDeniedException if requester is not a discussion admin
+   */
+  fun setLocationQuery(requester: Account, discussion: Discussion, query: String) {
+    if (!isAdmin(requester, discussion))
+        throw PermissionDeniedException("Only discussion admins can perform this operation")
+
+    setLocationQuery(query)
   }
 }
