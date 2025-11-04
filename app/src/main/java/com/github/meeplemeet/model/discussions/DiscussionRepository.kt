@@ -333,15 +333,11 @@ class DiscussionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   /** Update account roles (space renter & shop owner) */
-  suspend fun setAccountRole(id: String, isShopOwner: Boolean, isSpaceRenter: Boolean) {
-    accounts
-        .document(id)
-        .update(
-            AccountNoUid::isShopOwner.name,
-            isShopOwner,
-            AccountNoUid::isSpaceRenter.name,
-            isSpaceRenter)
-        .await()
+  suspend fun setAccountRole(id: String, isShopOwner: Boolean?, isSpaceRenter: Boolean?) {
+    val updates = mutableMapOf<String, Any>()
+    isShopOwner?.let { updates[AccountNoUid::isShopOwner.name] = isShopOwner }
+    isSpaceRenter?.let { updates[AccountNoUid::isSpaceRenter.name] = isSpaceRenter }
+    accounts.document(id).update(updates).await()
   }
 
   /** Delete an account document. */
