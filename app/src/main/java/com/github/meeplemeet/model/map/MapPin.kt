@@ -20,6 +20,10 @@ data class MapPin(
     val ref: String
 )
 
+/** Extension method to only fetch the document ID, without the collections paths */
+val MapPin.refId: String
+  get() = ref.substringAfterLast("/")
+
 /**
  * Minimal serializable form of [MapPin] without the UID, used for Firestore storage.
  *
