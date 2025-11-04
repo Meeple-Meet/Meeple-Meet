@@ -12,6 +12,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,11 +26,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.sessions.Game
@@ -48,7 +56,7 @@ import java.util.Locale
  * Test tags
  * ============================================================================= */
 
-object ShopTestTags {
+object ShopComponentsTestTags {
   // Section header
   const val SECTION_HEADER = "shop_section_header"
   const val SECTION_HEADER_LABEL = "shop_section_header_label"
@@ -128,7 +136,6 @@ object ShopTestTags {
   const val QTY_SLIDER = "shop_qty_slider"
 
   // Game stock dialog
-  const val GAME_ADD_BUTTON = "shop_game_add_button"
   const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
   const val GAME_DIALOG_BODY = "shop_game_dialog_body"
   const val GAME_DIALOG_SEARCH = "shop_game_dialog_search"
@@ -136,6 +143,10 @@ object ShopTestTags {
   const val GAME_DIALOG_SAVE = "shop_game_dialog_save"
   const val GAME_DIALOG_CANCEL = "shop_game_dialog_cancel"
   const val GAME_DIALOG_HELPER = "shop_game_dialog_helper"
+
+  // Game list
+  const val SHOP_GAME_PREFIX = "SHOP_GAME_"
+  const val SHOP_GAME_DELETE = "shop_game_delete"
 }
 
 /* =============================================================================
@@ -394,15 +405,15 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
   val density = LocalDensity.current
   var textWidth by remember { mutableStateOf(0.dp) }
 
-  Column(modifier = modifier.testTag(ShopTestTags.sectionHeader(title))) {
+  Column(modifier = modifier.testTag(ShopComponentsTestTags.sectionHeader(title))) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
         onTextLayout = { layout -> textWidth = with(density) { layout.size.width.toDp() } },
-        modifier = Modifier.testTag(ShopTestTags.SECTION_HEADER_LABEL))
+        modifier = Modifier.testTag(ShopComponentsTestTags.SECTION_HEADER_LABEL))
     Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
     HorizontalDivider(
-        modifier = Modifier.width(textWidth).testTag(ShopTestTags.SECTION_HEADER_DIVIDER),
+        modifier = Modifier.width(textWidth).testTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER),
         thickness = ShopUiDefaults.DimensionsMagicNumbers.sectionHeaderDivider,
         color = MaterialTheme.colorScheme.outlineVariant)
     Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
@@ -433,7 +444,7 @@ fun LabeledField(
     singleLine: Boolean = true,
     minLines: Int = 1,
 ) {
-  Box(modifier.fillMaxWidth().testTag(ShopTestTags.labeledField(label))) {
+  Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -447,7 +458,7 @@ fun LabeledField(
                 .padding(
                     top = ShopUiDefaults.DimensionsMagicNumbers.fieldTop,
                     bottom = ShopUiDefaults.DimensionsMagicNumbers.fieldBottom)
-                .testTag(ShopTestTags.LABELED_FIELD_INPUT))
+                .testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
 
     Box(
         modifier =
@@ -463,7 +474,7 @@ fun LabeledField(
                   Modifier.padding(
                           horizontal = ShopUiDefaults.DimensionsMagicNumbers.space4,
                           vertical = ShopUiDefaults.DimensionsMagicNumbers.space2)
-                      .testTag(ShopTestTags.LABELED_FIELD_LABEL))
+                      .testTag(ShopComponentsTestTags.LABELED_FIELD_LABEL))
         }
   }
 }
@@ -478,26 +489,26 @@ fun LabeledField(
  */
 @Composable
 fun TimeField(label: String, value: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-  Column(modifier = modifier.testTag(ShopTestTags.timeField(label))) {
+  Column(modifier = modifier.testTag(ShopComponentsTestTags.timeField(label))) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(ShopTestTags.TIME_FIELD_LABEL))
+        modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_LABEL))
     OutlinedCard(
         onClick = onClick,
         modifier =
             Modifier.fillMaxWidth()
                 .padding(top = ShopUiDefaults.DimensionsMagicNumbers.space4)
                 .height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
-                .testTag(ShopTestTags.TIME_FIELD_CARD),
+                .testTag(ShopComponentsTestTags.TIME_FIELD_CARD),
         shape = MaterialTheme.shapes.medium) {
           Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 value,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag(ShopTestTags.TIME_FIELD_VALUE))
+                modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_VALUE))
           }
         }
   }
@@ -524,27 +535,28 @@ fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifie
               .fillMaxWidth()
               .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space12)
               .clickable(onClick = onEdit)
-              .testTag(ShopTestTags.dayRow(dayName)),
+              .testTag(ShopComponentsTestTags.dayRow(dayName)),
       verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = dayName,
-            modifier = Modifier.weight(1f).testTag(ShopTestTags.DAY_ROW_NAME),
+            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DAY_ROW_NAME),
             style = MaterialTheme.typography.bodyLarge)
         Text(
             text = value,
             modifier =
                 Modifier.weight(2f)
                     .padding(end = ShopUiDefaults.DimensionsMagicNumbers.space8)
-                    .testTag(ShopTestTags.DAY_ROW_VALUE),
+                    .testTag(ShopComponentsTestTags.DAY_ROW_VALUE),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
             maxLines = 2)
-        IconButton(onClick = onEdit, modifier = Modifier.testTag(ShopTestTags.DAY_ROW_EDIT)) {
-          Icon(
-              imageVector = Icons.Outlined.Edit,
-              contentDescription = ShopUiDefaults.StringsMagicNumbers.EDIT_HOURS)
-        }
+        IconButton(
+            onClick = onEdit, modifier = Modifier.testTag(ShopComponentsTestTags.DAY_ROW_EDIT)) {
+              Icon(
+                  imageVector = Icons.Outlined.Edit,
+                  contentDescription = ShopUiDefaults.StringsMagicNumbers.EDIT_HOURS)
+            }
       }
 }
 
@@ -579,19 +591,19 @@ fun HourRow(
       modifier =
           Modifier.fillMaxWidth()
               .then(
-                  if (rowIndex != null) Modifier.testTag(ShopTestTags.hourRow(rowIndex))
-                  else Modifier.testTag(ShopTestTags.HOUR_ROW))) {
+                  if (rowIndex != null) Modifier.testTag(ShopComponentsTestTags.hourRow(rowIndex))
+                  else Modifier.testTag(ShopComponentsTestTags.HOUR_ROW))) {
         TimeField(
             label = ShopUiDefaults.StringsMagicNumbers.OPEN_TIME,
             value = start.display(),
             onClick = onPickStart,
-            modifier = Modifier.weight(1f).testTag(ShopTestTags.HOUR_ROW_OPEN_FIELD))
+            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_OPEN_FIELD))
         Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space12))
         TimeField(
             label = ShopUiDefaults.StringsMagicNumbers.CLOSE_TIME,
             value = end.display(),
             onClick = onPickEnd,
-            modifier = Modifier.weight(1f).testTag(ShopTestTags.HOUR_ROW_CLOSE_FIELD))
+            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_CLOSE_FIELD))
         Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space4))
 
         Column(
@@ -606,7 +618,7 @@ fun HourRow(
                         onClick = onRemove,
                         modifier =
                             Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.removeIconTouch)
-                                .testTag(ShopTestTags.HOUR_ROW_REMOVE)) {
+                                .testTag(ShopComponentsTestTags.HOUR_ROW_REMOVE)) {
                           Icon(Icons.Filled.Close, contentDescription = "Remove interval")
                         }
                   }
@@ -626,7 +638,7 @@ fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
       modifier =
           Modifier.fillMaxWidth()
               .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space4)
-              .testTag(ShopTestTags.DAYS_SELECTOR),
+              .testTag(ShopComponentsTestTags.DAYS_SELECTOR),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically) {
         ShopUiDefaults.DaysMagicNumbers.short.forEachIndexed { idx, short ->
@@ -644,7 +656,7 @@ fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
               modifier =
                   Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.dayChip)
                       .clickable { onToggle(idx) }
-                      .testTag(ShopTestTags.dayChip(idx))) {
+                      .testTag(ShopComponentsTestTags.dayChip(idx))) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                   Text(
                       text = short,
@@ -696,7 +708,7 @@ fun OpeningHoursDialog(
       shape = MaterialTheme.shapes.extraLarge,
       title = {
         Box(
-            Modifier.fillMaxWidth().testTag(ShopTestTags.DIALOG_TITLE),
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG_TITLE),
             contentAlignment = Alignment.Center) {
               Text(
                   ShopUiDefaults.StringsMagicNumbers.DIALOG_TITLE,
@@ -705,8 +717,8 @@ fun OpeningHoursDialog(
             }
       },
       text = {
-        Column(Modifier.fillMaxWidth().testTag(ShopTestTags.DIALOG)) {
-          Column(Modifier.testTag(ShopTestTags.DIALOG_DAYS)) {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG)) {
+          Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_DAYS)) {
             DaysSelector(
                 selected = selectedDays, onToggle = { d -> selectedDays = selectedDays.toggled(d) })
           }
@@ -715,7 +727,7 @@ fun OpeningHoursDialog(
 
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(
-                modifier = Modifier.weight(1f).testTag(ShopTestTags.DIALOG_OPEN24_ROW),
+                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center) {
                   Checkbox(
@@ -730,12 +742,12 @@ fun OpeningHoursDialog(
                                       ShopUiDefaults.TimeMagicNumbers.open24End)
                         }
                       },
-                      modifier = Modifier.testTag(ShopTestTags.DIALOG_OPEN24_CHECKBOX))
+                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
                   Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                   Text(ShopUiDefaults.StringsMagicNumbers.OPEN_24, maxLines = 1)
                 }
             Row(
-                modifier = Modifier.weight(1f).testTag(ShopTestTags.DIALOG_CLOSED_ROW),
+                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center) {
                   Checkbox(
@@ -750,7 +762,7 @@ fun OpeningHoursDialog(
                                       ShopUiDefaults.TimeMagicNumbers.defaultEnd)
                         }
                       },
-                      modifier = Modifier.testTag(ShopTestTags.DIALOG_CLOSED_CHECKBOX))
+                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
                   Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                   Text(ShopUiDefaults.StringsMagicNumbers.CLOSED, maxLines = 1)
                 }
@@ -759,7 +771,7 @@ fun OpeningHoursDialog(
           Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
 
           AnimatedVisibility(visible = !isClosed && !is24h) {
-            Column(Modifier.testTag(ShopTestTags.DIALOG_INTERVALS)) {
+            Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_INTERVALS)) {
               intervals.forEachIndexed { idx, (start, end) ->
                 HourRow(
                     start = start,
@@ -794,7 +806,7 @@ fun OpeningHoursDialog(
                     intervals = intervals + (defaultStart to defaultEnd)
                   },
                   contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-                  modifier = Modifier.testTag(ShopTestTags.DIALOG_ADD_HOURS)) {
+                  modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ADD_HOURS)) {
                     Icon(Icons.Filled.Add, contentDescription = null)
                     Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                     Text(ShopUiDefaults.StringsMagicNumbers.ADD_HOURS)
@@ -808,14 +820,16 @@ fun OpeningHoursDialog(
                 it,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.testTag(ShopTestTags.DIALOG_ERROR))
+                modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ERROR))
           }
         }
       },
       dismissButton = {
-        TextButton(onClick = onDismiss, modifier = Modifier.testTag(ShopTestTags.DIALOG_CANCEL)) {
-          Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
-        }
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CANCEL)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
+            }
       },
       confirmButton = {
         TextButton(
@@ -836,7 +850,7 @@ fun OpeningHoursDialog(
                 errorText = e.message ?: ShopUiDefaults.StringsMagicNumbers.INVALID_TIME_RANGES
               }
             },
-            modifier = Modifier.testTag(ShopTestTags.DIALOG_SAVE)) {
+            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_SAVE)) {
               Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }
       })
@@ -862,7 +876,7 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
         Row(
             Modifier.fillMaxWidth()
                 .padding(ShopUiDefaults.DimensionsMagicNumbers.actionBarPadding)
-                .testTag(ShopTestTags.ACTION_BAR),
+                .testTag(ShopComponentsTestTags.ACTION_BAR),
             verticalAlignment = Alignment.CenterVertically) {
               Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 OutlinedButton(
@@ -870,7 +884,7 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
                     colors =
                         ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.testTag(ShopTestTags.ACTION_DISCARD)) {
+                    modifier = Modifier.testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
                       Icon(Icons.Filled.Delete, contentDescription = null)
                       Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                       Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
@@ -890,7 +904,7 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
                     enabled = enabled,
                     shape = RoundedCornerShape(20.dp),
                     colors = createColors,
-                    modifier = Modifier.testTag(ShopTestTags.ACTION_CREATE)) {
+                    modifier = Modifier.testTag(ShopComponentsTestTags.ACTION_CREATE)) {
                       Icon(Icons.Filled.Check, contentDescription = null)
                       Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                       Text(ShopUiDefaults.StringsMagicNumbers.BTN_CREATE)
@@ -945,13 +959,13 @@ private fun GameSearchOneLine(
               Icon(
                   Icons.Filled.Search,
                   contentDescription = null,
-                  modifier = Modifier.testTag(ShopTestTags.GAME_SEARCH_LEADING))
+                  modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_LEADING))
             },
             trailingIcon = {
               when {
                 isLoading ->
                     CircularProgressIndicator(
-                        Modifier.size(18.dp).testTag(ShopTestTags.GAME_SEARCH_PROGRESS),
+                        Modifier.size(18.dp).testTag(ShopComponentsTestTags.GAME_SEARCH_PROGRESS),
                         strokeWidth = 2.dp)
                 query.isNotEmpty() ->
                     IconButton(
@@ -959,7 +973,7 @@ private fun GameSearchOneLine(
                           onQueryChange("")
                           expanded = false
                         },
-                        modifier = Modifier.testTag(ShopTestTags.GAME_SEARCH_CLEAR)) {
+                        modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_CLEAR)) {
                           Icon(Icons.Filled.Close, contentDescription = "Clear")
                         }
               }
@@ -969,12 +983,12 @@ private fun GameSearchOneLine(
                 Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true)
                     .fillMaxWidth()
                     .heightIn(min = 56.dp)
-                    .testTag(ShopTestTags.GAME_SEARCH_FIELD))
+                    .testTag(ShopComponentsTestTags.GAME_SEARCH_FIELD))
 
         ExposedDropdownMenu(
             expanded = expanded && (isLoading || results.isNotEmpty()),
             onDismissRequest = { expanded = false },
-            modifier = Modifier.testTag(ShopTestTags.GAME_SEARCH_MENU)) {
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_MENU)) {
               results.forEachIndexed { idx, g ->
                 val enabled = isItemEnabled(g)
                 DropdownMenuItem(
@@ -999,7 +1013,7 @@ private fun GameSearchOneLine(
                         focusManager.clearFocus()
                       }
                     },
-                    modifier = Modifier.testTag("${ShopTestTags.GAME_SEARCH_ITEM}:$idx"))
+                    modifier = Modifier.testTag("${ShopComponentsTestTags.GAME_SEARCH_ITEM}:$idx"))
               }
             }
       }
@@ -1020,27 +1034,27 @@ fun QuantitySlider(
     range: IntRange,
     modifier: Modifier = Modifier
 ) {
-  Column(modifier.testTag(ShopTestTags.QTY_CONTAINER)) {
+  Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ShopUiDefaults.DimensionsMagicNumbers.space8),
-        modifier = Modifier.testTag(ShopTestTags.QTY_LABEL_ROW)) {
+        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL_ROW)) {
           Text(
               ShopUiDefaults.StringsMagicNumbers.QUANTITY,
               style = MaterialTheme.typography.labelSmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.testTag(ShopTestTags.QTY_LABEL))
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
           Text(
               value.toString(),
               style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.testTag(ShopTestTags.QTY_VALUE))
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_VALUE))
         }
     Slider(
         value = value.toFloat(),
         onValueChange = { onValueChange(it.toInt().coerceIn(range)) },
         valueRange = range.first.toFloat()..range.last.toFloat(),
         steps = (range.last - range.first - 1).coerceAtLeast(0),
-        modifier = Modifier.testTag(ShopTestTags.QTY_SLIDER))
+        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_SLIDER))
   }
 }
 
@@ -1090,7 +1104,7 @@ fun GameStockDialog(
       shape = MaterialTheme.shapes.extraLarge,
       title = {
         Box(
-            Modifier.fillMaxWidth().testTag(ShopTestTags.GAME_DIALOG_TITLE),
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE),
             contentAlignment = Alignment.Center) {
               Text(
                   ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
@@ -1098,7 +1112,7 @@ fun GameStockDialog(
             }
       },
       text = {
-        Column(Modifier.fillMaxWidth().testTag(ShopTestTags.GAME_DIALOG_BODY)) {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
           GameSearchOneLine(
               query = query,
               onQueryChange = onQueryChange,
@@ -1110,7 +1124,9 @@ fun GameStockDialog(
               },
               placeholder = ShopUiDefaults.StringsMagicNumbers.SEARCH_GAMES_PLACEHOLDER,
               modifier =
-                  Modifier.fillMaxWidth().height(56.dp).testTag(ShopTestTags.GAME_DIALOG_SEARCH))
+                  Modifier.fillMaxWidth()
+                      .height(56.dp)
+                      .testTag(ShopComponentsTestTags.GAME_DIALOG_SEARCH))
 
           if (isDuplicate) {
             Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
@@ -1118,7 +1134,7 @@ fun GameStockDialog(
                 ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.testTag(ShopTestTags.GAME_DIALOG_HELPER))
+                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
           }
 
           Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space16))
@@ -1127,12 +1143,13 @@ fun GameStockDialog(
               value = quantity,
               onValueChange = onQuantityChange,
               range = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog,
-              modifier = Modifier.testTag(ShopTestTags.GAME_DIALOG_SLIDER))
+              modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER))
         }
       },
       dismissButton = {
         TextButton(
-            onClick = onDismiss, modifier = Modifier.testTag(ShopTestTags.GAME_DIALOG_CANCEL)) {
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL)) {
               Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
             }
       },
@@ -1140,8 +1157,156 @@ fun GameStockDialog(
         TextButton(
             onClick = onSave,
             enabled = selectedGame != null && !isDuplicate && quantity > 0,
-            modifier = Modifier.testTag(ShopTestTags.GAME_DIALOG_SAVE)) {
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
               Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }
       })
+}
+
+/* =============================================================================
+ * Games: grid + item (with optional delete)
+ * ============================================================================= */
+
+/**
+ * A composable function that displays a section of games in a grid or list format, with optional
+ * title and delete buttons.
+ *
+ * @param games A list of pairs containing [Game] objects and their corresponding quantities.
+ * @param modifier The modifier to be applied to the game list section.
+ * @param clickableGames A boolean indicating whether the game items are clickable.
+ * @param title An optional title for the game list section.
+ * @param hasDeleteButton A boolean indicating whether the game items have delete buttons.
+ * @param onClick A callback function that is invoked when a game item is clicked.
+ * @param onDelete A callback function that is invoked when a game item is deleted.
+ */
+@Composable
+fun GameListSection(
+    games: List<Pair<Game, Int>>,
+    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+    clickableGames: Boolean = false,
+    title: String? = null,
+    hasDeleteButton: Boolean = false,
+    onClick: (Game) -> Unit = {},
+    onDelete: (Game) -> Unit = {},
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier) {
+    if (title != null) {
+      Text(
+          title,
+          style = MaterialTheme.typography.titleLarge,
+          fontWeight = FontWeight.SemiBold,
+          textDecoration = TextDecoration.Underline)
+    }
+
+    if (hasDeleteButton) {
+      LazyColumn(
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(bottom = 16.dp),
+          modifier = Modifier.heightIn(max = 600.dp)) {
+            items(items = games, key = { it.first.uid }) { (game, count) ->
+              GameItem(
+                  game = game,
+                  count = count,
+                  clickable = clickableGames,
+                  onClick = onClick,
+                  hasDeleteButton = true,
+                  onDelete = onDelete // ← only notify parent
+                  )
+            }
+          }
+    } else {
+      LazyVerticalGrid(
+          columns = GridCells.Fixed(2),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(bottom = 16.dp),
+          modifier = Modifier.heightIn(max = 600.dp)) {
+            items(items = games, key = { it.first.uid }) { (game, count) ->
+              GameItem(
+                  game = game,
+                  count = count,
+                  clickable = clickableGames,
+                  onClick = onClick,
+                  hasDeleteButton = false,
+                  onDelete = { /* no-op */})
+            }
+          }
+    }
+  }
+}
+
+/**
+ * A composable function that displays a game item with its name, icon, quantity badge, and optional
+ * delete button.
+ *
+ * @param game The [Game] object to be displayed.
+ * @param count The quantity of the game.
+ * @param modifier The modifier to be applied to the game item.
+ * @param clickable A boolean indicating whether the game item is clickable.
+ * @param onClick A callback function that is invoked when the game item is clicked.
+ * @param hasDeleteButton A boolean indicating whether the game item has a delete button.
+ * @param onDelete A callback function that is invoked when the delete button is clicked.
+ */
+@Composable
+fun GameItem(
+    game: Game,
+    count: Int,
+    modifier: Modifier = Modifier,
+    clickable: Boolean = false,
+    onClick: (Game) -> Unit = {},
+    hasDeleteButton: Boolean = false,
+    onDelete: (Game) -> Unit = {},
+) {
+  Card(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+              .clickable(enabled = clickable, onClick = { onClick(game) }),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+          // Icon + badge
+          Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            BadgedBox(
+                badge = {
+                  if (count > 0) {
+                    Badge(
+                        modifier = Modifier.offset(x = 8.dp, y = (-6).dp).size(20.dp),
+                        containerColor = MaterialTheme.colorScheme.inversePrimary) {
+                          Text(count.toString())
+                        }
+                  }
+                }) {
+                  Icon(Icons.Filled.VideogameAsset, contentDescription = null)
+                }
+          }
+
+          Spacer(Modifier.width(8.dp))
+
+          // Name centered
+          Column(
+              modifier = Modifier.weight(1f),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.Center) {
+                Text(
+                    game.name,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center)
+              }
+
+          // Optional delete
+          if (hasDeleteButton) {
+            IconButton(
+                onClick = { onDelete(game) },
+                modifier =
+                    Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
+                colors =
+                    IconButtonDefaults.iconButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error)) {
+                  Icon(Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
+                }
+          }
+        }
+      }
 }
