@@ -2,6 +2,7 @@
 package com.github.meeplemeet.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -279,7 +280,12 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
  * @param games List of pairs of Game and available count.
  */
 @Composable
-fun GameListSection(games: List<Pair<Game, Int>>, horizontalPadding: Dp = 30.dp) {
+fun GameListSection(
+    games: List<Pair<Game, Int>>,
+    horizontalPadding: Dp = 30.dp,
+    clickableGames: Boolean = false,
+    onClick: (Game) -> Unit = {}
+) {
   Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
       modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding)) {
@@ -295,7 +301,7 @@ fun GameListSection(games: List<Pair<Game, Int>>, horizontalPadding: Dp = 30.dp)
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.heightIn(max = 600.dp)) {
               // For each game-count pair, display a GameItem
-              items(games) { (game, count) -> GameItem(game, count) }
+              items(games) { (game, count) -> GameItem(game, count, clickableGames, onClick) }
             }
       }
 }
@@ -307,9 +313,12 @@ fun GameListSection(games: List<Pair<Game, Int>>, horizontalPadding: Dp = 30.dp)
  * @param count The number of copies available.
  */
 @Composable
-fun GameItem(game: Game, count: Int) {
+fun GameItem(game: Game, count: Int, clickable: Boolean = false, onClick: (Game) -> Unit = {}) {
   Card(
-      modifier = Modifier.fillMaxWidth().testTag("${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}"),
+      modifier =
+          Modifier.fillMaxWidth()
+              .testTag("${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}")
+              .clickable(enabled = clickable, onClick = { onClick(game) }),
       colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
           // Placeholder box for game image or icon
@@ -323,7 +332,7 @@ fun GameItem(game: Game, count: Int) {
                   // Show badge only if count is greater than zero
                   if (count > 0) {
                     Badge(
-                        modifier = Modifier.offset(x = 8.dp, y = (-6).dp),
+                        modifier = Modifier.offset(x = 8.dp, y = (-6).dp).size(20.dp),
                         containerColor = AppColors.focus) {
                           Text(count.toString())
                         }
