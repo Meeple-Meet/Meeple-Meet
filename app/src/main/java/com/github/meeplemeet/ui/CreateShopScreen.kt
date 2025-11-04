@@ -3,7 +3,6 @@
 // Docstrings were generated using copilot from Android studio
 package com.github.meeplemeet.ui
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
@@ -20,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
@@ -30,12 +28,11 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.DayRow
+import com.github.meeplemeet.ui.components.GameListSection
 import com.github.meeplemeet.ui.components.GameStockDialog
 import com.github.meeplemeet.ui.components.LabeledField
 import com.github.meeplemeet.ui.components.LocationSearchField
 import com.github.meeplemeet.ui.components.OpeningHoursDialog
-import com.github.meeplemeet.ui.theme.AppTheme
-import com.github.meeplemeet.ui.theme.ThemeMode
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -435,7 +432,10 @@ fun AddShopContent(
                     },
                     content = {
                       GamesSection(
-                          stock = stock, emptyTextTag = CreateShopScreenTestTags.GAMES_EMPTY_TEXT)
+                          stock = stock,
+                          onDelete = { gameToRemove ->
+                            stock = stock.filterNot { it.first.uid == gameToRemove.uid }
+                          })
                     },
                     testTag = CreateShopScreenTestTags.SECTION_GAMES)
               }
@@ -572,18 +572,23 @@ private fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit)
  * Composable function representing the games section of the Add Shop screen.
  *
  * @param stock List of pairs containing games and their quantities in stock.
- * @param emptyTextTag Test tag for the empty state text.
+ * @param onDelete Callback function to handle deletion of a game from the stock list.
  */
 @Composable
-private fun GamesSection(stock: List<Pair<Game, Int>>, emptyTextTag: String) {
+private fun GamesSection(stock: List<Pair<Game, Int>>, onDelete: (Game) -> Unit) {
   if (stock.isNotEmpty()) {
     GameListSection(
-        games = stock, horizontalPadding = 0.dp, withTitle = false, clickableGames = false)
+        hasDeleteButton = true,
+        onDelete = onDelete,
+        games = stock,
+        clickableGames = false,
+        modifier = Modifier.fillMaxWidth(),
+    )
   } else {
     Text(
         AddShopUi.Strings.EmptyGames,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(emptyTextTag))
+        modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT))
   }
 }
 
@@ -774,84 +779,4 @@ private fun CollapsibleSection(
           content = content)
     }
   }
-}
-
-/* ================================================================================================
- * Previews
- * ================================================================================================ */
-@Preview(
-    name = "AddShopScreen – Light",
-    showBackground = true,
-    backgroundColor = 0xFFFFFFFF,
-    widthDp = 360)
-@Composable
-private fun AddShop_Light_Preview() {
-  AppTheme(themeMode = ThemeMode.LIGHT) {
-    AddShopContent(
-        onBack = {},
-        onCreated = {},
-        onCreate = { _, _, _, _, _ -> null },
-        gameQuery = "",
-        gameSuggestions = emptyList(),
-        isSearching = false,
-        onSetGameQuery = {},
-        onSetGame = {})
-  }
-}
-
-@Preview(
-    name = "AddShopScreen – Dark",
-    showBackground = true,
-    backgroundColor = 0xFF000000,
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    widthDp = 360)
-@Composable
-private fun AddShop_Dark_Preview() {
-  AppTheme(themeMode = ThemeMode.DARK) {
-    AddShopContent(
-        onBack = {},
-        onCreated = {},
-        onCreate = { _, _, _, _, _ -> null },
-        gameQuery = "",
-        gameSuggestions = emptyList(),
-        isSearching = false,
-        onSetGameQuery = {},
-        onSetGame = {})
-  }
-}
-
-@Preview(
-    name = "AddShop – Games section (Light)",
-    showBackground = true,
-    backgroundColor = 0xFFFFFFFF,
-    widthDp = 360)
-@Composable
-private fun AddShop_Games_Light_Preview() {
-  AppTheme(themeMode = ThemeMode.LIGHT) {
-    val g1 = Game("g1", "Catan", "Trade and build.", "", 3, 4, null, 60, emptyList())
-    val g2 = Game("g2", "Ticket to Ride", "Route building.", "", 2, 5, null, 45, emptyList())
-    val g3 = Game("g3", "Azul", "Tile drafting.", "", 2, 4, null, 30, emptyList())
-
-    AddShopContent(
-        onBack = {},
-        onCreated = {},
-        onCreate = { _, _, _, _, _ -> null },
-        gameQuery = "",
-        gameSuggestions = emptyList(),
-        isSearching = false,
-        onSetGameQuery = {},
-        onSetGame = {},
-        initialStock = listOf(g1 to 2, g2 to 3, g3 to 1))
-  }
-}
-
-@Preview(
-    name = "AddShop – Games section (Dark)",
-    showBackground = true,
-    backgroundColor = 0xFF000000,
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    widthDp = 360)
-@Composable
-private fun AddShop_Games_Dark_Preview() {
-  AppTheme(themeMode = ThemeMode.DARK) { AddShop_Games_Light_Preview() }
 }
