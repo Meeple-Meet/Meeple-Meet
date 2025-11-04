@@ -183,7 +183,7 @@ fun DiscussionScreen(
         contentPadding = PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
           itemsIndexed(
-              items = messages, key = { _, msg -> "${msg.senderId}-${msg.createdAt.seconds}" }) {
+              items = messages, key = { _, msg -> "${msg.senderId}-${msg.createdAt.seconds}-${msg.createdAt.nanoseconds}" }) {
                   index,
                   message ->
                 val isMine = message.senderId == account.uid
