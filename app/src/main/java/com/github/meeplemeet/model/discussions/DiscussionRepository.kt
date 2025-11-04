@@ -334,8 +334,14 @@ class DiscussionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
 
   /** Update account roles (space renter & shop owner) */
   suspend fun setAccountRole(id: String, isShopOwner: Boolean, isSpaceRenter: Boolean) {
-    accounts.document(id).update(Account::isShopOwner.name, isShopOwner).await()
-    accounts.document(id).update(Account::isSpaceRenter.name, isSpaceRenter).await()
+    accounts
+        .document(id)
+        .update(
+            AccountNoUid::isShopOwner.name,
+            isShopOwner,
+            AccountNoUid::isSpaceRenter.name,
+            isSpaceRenter)
+        .await()
   }
 
   /** Delete an account document. */

@@ -122,7 +122,7 @@ fun CreateAccountScreen(
                       discussionVM.setAccountName(account, username)
                       discussionVM.setAccountRole(
                           account, isSpaceRenter = isSpaceRented, isShopOwner = isShopChecked)
-                      if (errorMessage.isBlank()) onCreate()
+                      onCreate()
                     }
                   },
                   modifier = Modifier.weight(1f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
