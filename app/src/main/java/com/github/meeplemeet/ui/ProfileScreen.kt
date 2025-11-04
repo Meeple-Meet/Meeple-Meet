@@ -15,7 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -76,13 +75,13 @@ fun ProfileScreen(
                     Text(text = "Roles", style = MaterialTheme.typography.bodyMedium)
                     Log.d(
                         "Roles",
-                        "Shopowner: ${account.isShopOwner}, SpaceRenter: ${account.isSpaceRenter}")
+                        "Shopowner: ${account.shopOwner}, SpaceRenter: ${account.spaceRenter}")
                     Text(
                         text =
                             buildString {
-                              if (account.isShopOwner) append("Shop Owner\n")
-                              if (account.isSpaceRenter) append("Space Renter\n")
-                              if (!account.isShopOwner && !account.isSpaceRenter) append("None")
+                              if (account.shopOwner) append("Shop Owner\n")
+                              if (account.spaceRenter) append("Space Renter\n")
+                              if (!account.shopOwner && !account.spaceRenter) append("None")
                             },
                         style = MaterialTheme.typography.bodySmall)
 

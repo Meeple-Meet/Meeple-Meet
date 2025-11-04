@@ -17,8 +17,8 @@ import kotlinx.serialization.Serializable
  *   participates in.
  * @property photoUrl User's profile picture
  * @property description A user's description about himself
- * @property isShopOwner Tells if this account is a shop owner
- * @property isSpaceRenter Tells if this account is a space renter
+ * @property shopOwner Tells if this account is a shop owner
+ * @property spaceRenter Tells if this account is a space renter
  */
 data class Account(
     val uid: String,
@@ -28,8 +28,8 @@ data class Account(
     val previews: Map<String, DiscussionPreview> = emptyMap(),
     var photoUrl: String? = null,
     var description: String? = null,
-    var isShopOwner: Boolean = false,
-    var isSpaceRenter: Boolean = false
+    var shopOwner: Boolean = false,
+    var spaceRenter: Boolean = false
 )
 
 /**
@@ -44,8 +44,8 @@ data class AccountNoUid(
     val email: String = "",
     val photoUrl: String? = null,
     val description: String? = null,
-    val isShopOwner: Boolean = false,
-    val isSpaceRenter: Boolean = false
+    val shopOwner: Boolean = false,
+    val spaceRenter: Boolean = false
 )
 
 /**
@@ -69,6 +69,6 @@ fun fromNoUid(
         previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
         photoUrl = accountNoUid.photoUrl,
         description = accountNoUid.description,
-        isShopOwner = accountNoUid.isShopOwner,
-        isSpaceRenter = accountNoUid.isSpaceRenter,
+        shopOwner = accountNoUid.shopOwner,
+        spaceRenter = accountNoUid.spaceRenter,
     )

@@ -135,7 +135,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     checkpoint("Owner checkbox has an impact on account") {
       runBlocking {
         val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.isShopOwner == true
+        acc?.shopOwner == true
       }
     }
 
@@ -144,7 +144,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     checkpoint("Renter checkbox has an impact on account") {
       runBlocking {
         val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.isSpaceRenter == true
+        acc?.spaceRenter == true
       }
     }
 

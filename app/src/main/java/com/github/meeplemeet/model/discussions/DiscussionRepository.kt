@@ -335,8 +335,8 @@ class DiscussionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   /** Update account roles (space renter & shop owner) */
   suspend fun setAccountRole(id: String, isShopOwner: Boolean?, isSpaceRenter: Boolean?) {
     val updates = mutableMapOf<String, Any>()
-    isShopOwner?.let { updates[AccountNoUid::isShopOwner.name] = isShopOwner }
-    isSpaceRenter?.let { updates[AccountNoUid::isSpaceRenter.name] = isSpaceRenter }
+    isShopOwner?.let { updates[AccountNoUid::shopOwner.name] = isShopOwner }
+    isSpaceRenter?.let { updates[AccountNoUid::spaceRenter.name] = isSpaceRenter }
     accounts.document(id).update(updates).await()
   }
 
