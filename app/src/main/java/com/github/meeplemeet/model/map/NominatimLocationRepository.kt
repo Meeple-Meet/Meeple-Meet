@@ -11,6 +11,7 @@ import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
+import org.json.JSONException
 
 /**
  * Implementation of [LocationRepository] using the Nominatim API.
@@ -19,13 +20,23 @@ import org.json.JSONArray
  * caching to avoid repeated requests for the same query. Complies with Nominatim's usage policy by
  * setting a proper User-Agent header.
  *
+ * The [baseUrl] parameter is configurable for testing purposes. In production, it defaults to the
+ * official Nominatim endpoint.
+ *
  * Note: Cache is local to the app instance and cleared on app restart.
  */
-class NominatimLocationRepository(private val client: OkHttpClient) : LocationRepository {
+class NominatimLocationRepository(
+    private val client: OkHttpClient,
+    private val baseUrl: HttpUrl = DEFAULT_URL
+) : LocationRepository {
 
   /**
-   * User-Agent header required by Nominatim usage policy. Referer is optional but recommended. See
-   * https://operations.osmfoundation.org/policies/nominatim/
+   * Constants used for Nominatim API requests.
+   *
+   * Includes the default base URL, user-agent string (required by Nominatim usage policy), and
+   * optional referer header.
+   *
+   * See: https://operations.osmfoundation.org/policies/nominatim/
    */
   companion object {
     private const val APP_NAME = "MeepleMeet"
@@ -33,6 +44,10 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
     private const val CONTACT = "thomas.picart90@gmail.com"
     private const val REFERER = ""
     private val USER_AGENT = "$APP_NAME/$APP_VERSION ($CONTACT)"
+
+    /** Default base URL for Nominatim API (used in production) */
+    val DEFAULT_URL: HttpUrl =
+        HttpUrl.Builder().scheme("https").host("nominatim.openstreetmap.org").build()
   }
 
   // In-memory LRU cache (max 50 entries) to reduce network usage
@@ -68,9 +83,8 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
         }
 
         val url =
-            HttpUrl.Builder()
-                .scheme("https")
-                .host("nominatim.openstreetmap.org")
+            baseUrl
+                .newBuilder()
                 .addPathSegment("search")
                 .addQueryParameter("q", query)
                 .addQueryParameter("format", "json")
@@ -90,7 +104,12 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
             }
 
             val body = response.body?.string()
-            val results = if (body != null) parseBody(body) else emptyList()
+            val results =
+                try {
+                  if (body != null) parseBody(body) else emptyList()
+                } catch (e: JSONException) {
+                  throw LocationSearchException("Failed to parse location response", e)
+                }
 
             // Update cache
             cacheMutex.withLock { cache[query] = results }
