@@ -39,11 +39,12 @@ class MapPinRepository(private val db: FirebaseFirestore = FirebaseProvider.db) 
    * @param ref ID of the external object this pin is linked to (e.g. the shop or session it
    *   represents).
    */
-  suspend fun createMapPin(type: PinType, location: Location, label: String, ref: String) {
+  suspend fun createMapPin(type: PinType, location: Location, label: String, ref: String): MapPin {
     val pin = MapPin(uid = newUUID(), type = type, location = location, label = label, ref = ref)
 
     mapPinCollection.document(pin.uid).set(toNoUid(pin)).await()
     setGeoLocation(pin.uid, pin.location)
+    return pin
   }
 
   /**
@@ -74,8 +75,8 @@ class MapPinRepository(private val db: FirebaseFirestore = FirebaseProvider.db) 
    * @param uid Unique ID of the pin to delete.
    */
   suspend fun deleteMapPin(uid: String) {
-    mapPinCollection.document(uid).delete().await()
     removeGeoLocation(uid)
+    mapPinCollection.document(uid).delete().await()
   }
 
   /**
