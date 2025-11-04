@@ -5,15 +5,17 @@ package com.github.meeplemeet.model.shops
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shared.SearchViewModel
 
 /**
  * Base ViewModel for shop-related screens that need game selection functionality.
  *
- * Extends [GameViewModel] to provide game search and selection with shop owner permission
- * validation. This ViewModel ensures that only the shop owner can modify game-related data.
+ * Extends [SearchViewModel] to provide game/location search and selection with shop owner
+ * permission validation. This ViewModel ensures that only the shop owner can modify
+ * game/location-related data.
  */
-open class ShopGameViewModel() : SearchViewModel() {
+open class ShopSearchViewModel() : SearchViewModel() {
 
   /**
    * Sets the selected game for a shop with permission validation.
@@ -49,5 +51,41 @@ open class ShopGameViewModel() : SearchViewModel() {
         throw PermissionDeniedException("Only the shop's owner can edit his own shop")
 
     setGameQuery(query)
+  }
+
+  /**
+   * Sets the selected location for a shop with permission validation.
+   *
+   * Only the shop owner can select location for their shop. Updates the location UI state with the
+   * selected location.
+   *
+   * @param shop The shop to modify.
+   * @param requester The account requesting the change.
+   * @param location The location to select.
+   * @throws PermissionDeniedException if the requester is not the shop owner.
+   */
+  fun setLocation(shop: Shop, requester: Account, location: Location) {
+    if (shop.owner.uid != requester.uid)
+        throw PermissionDeniedException("Only the shop's owner can edit his own shop")
+
+    setLocation(location)
+  }
+
+  /**
+   * Updates the location search query for a shop with permission validation.
+   *
+   * Only the shop owner can search for location to add to their shop. This method updates the
+   * visible location query in the UI state and triggers a background search for matching location.
+   *
+   * @param shop The shop context.
+   * @param requester The account requesting the search.
+   * @param query The search query string.
+   * @throws PermissionDeniedException if the requester is not the shop owner.
+   */
+  fun setLocationQuery(shop: Shop, requester: Account, query: String) {
+    if (shop.owner.uid != requester.uid)
+        throw PermissionDeniedException("Only the shop's owner can edit his own shop")
+
+    setLocationQuery(query)
   }
 }
