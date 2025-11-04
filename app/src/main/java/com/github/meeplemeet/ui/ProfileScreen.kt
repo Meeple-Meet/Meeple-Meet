@@ -32,6 +32,16 @@ object ProfileTestTags {
   const val LOG_OUT_BUTTON = "Logout Button"
 }
 
+/**
+ * Composable function to display the Profile Screen. The screen displays information
+ * about your account, as well as allowing you to sign out.
+ *
+ * @param navigation Navigation actions for screen transitions.
+ * @param authViewModel ViewModel for authentication-related operations.
+ * @param account The current user's account.
+ * @param discussionViewModel ViewModel for discussion-related operations.
+ * @param onSignOut Callback function to be invoked on sign out.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -73,9 +83,6 @@ fun ProfileScreen(
                     Text(text = "@${account.handle}", style = MaterialTheme.typography.bodySmall)
 
                     Text(text = "Roles", style = MaterialTheme.typography.bodyMedium)
-                    Log.d(
-                        "Roles",
-                        "Shopowner: ${account.shopOwner}, SpaceRenter: ${account.spaceRenter}")
                     Text(
                         text =
                             buildString {

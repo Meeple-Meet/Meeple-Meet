@@ -44,9 +44,11 @@ object CreateAccountTestTags {
  * [HandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate] to
  * continue the account creation flow.
  *
- * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
  * @param account The [Account] object representing the user creating an account.
- * @param onCreate Lambda to be executed when account creation is successfully validated.
+ * @param discussionVM The viewModel for managing discussions and account details.
+ * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
+ * @param onCreate Callback function to be executed when account creation is successfully validated.
+ * @param onBack Callback function to be executed when the user wants to go back to the previous screen.
  */
 @Composable
 fun CreateAccountScreen(
