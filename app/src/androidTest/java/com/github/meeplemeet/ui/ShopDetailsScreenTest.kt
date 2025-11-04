@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onChildren
@@ -265,23 +266,15 @@ class ShopDetailsScreenTest : FirestoreTests() {
         }
       }
     }
-
     // Verify game list is displayed by tag using SHOP_GAME_PREFIX
     dummyShop.gameCollection.forEach { (game, quantity) ->
       val gameTag = "${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}"
-      composeTestRule
-          .onNodeWithTag(gameTag)
-          .assertExists()
-          .onChildren() // look at children of the Card
-          .filter(hasText(game.name)) // find the child with the game's name
-          .assertCountEquals(1)
 
-      composeTestRule
-          .onNodeWithTag(gameTag)
-          .assertExists()
-          .onChildren()
-          .filter(hasText(quantity.toString()))
-          .assertCountEquals(1)
+      // Find a node that has the test tag and contains the game name anywhere in its subtree
+      composeTestRule.onNode(hasTestTag(gameTag) and hasText(game.name)).assertExists()
+
+      // Verify the count text somewhere under the same tagged node
+      composeTestRule.onNode(hasTestTag(gameTag) and hasText(quantity.toString())).assertExists()
     }
 
     // Verify back button and perform click

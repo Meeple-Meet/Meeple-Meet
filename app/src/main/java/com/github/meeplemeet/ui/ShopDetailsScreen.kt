@@ -284,16 +284,20 @@ fun GameListSection(
     games: List<Pair<Game, Int>>,
     horizontalPadding: Dp = 30.dp,
     clickableGames: Boolean = false,
+    withTitle: Boolean = true,
+    title: String = "Games:",
     onClick: (Game) -> Unit = {}
 ) {
   Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
       modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding)) {
-        Text(
-            "Games:",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            textDecoration = TextDecoration.Underline)
+        if (withTitle) {
+          Text(
+              title,
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.SemiBold,
+              textDecoration = TextDecoration.Underline)
+        }
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
