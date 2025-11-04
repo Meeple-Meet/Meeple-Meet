@@ -48,7 +48,8 @@ object CreateAccountTestTags {
  * @param discussionVM The viewModel for managing discussions and account details.
  * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
  * @param onCreate Callback function to be executed when account creation is successfully validated.
- * @param onBack Callback function to be executed when the user wants to go back to the previous screen.
+ * @param onBack Callback function to be executed when the user wants to go back to the previous
+ *   screen.
  */
 @Composable
 fun CreateAccountScreen(

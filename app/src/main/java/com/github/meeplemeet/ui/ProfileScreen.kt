@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,8 +32,8 @@ object ProfileTestTags {
 }
 
 /**
- * Composable function to display the Profile Screen. The screen displays information
- * about your account, as well as allowing you to sign out.
+ * Composable function to display the Profile Screen. The screen displays information about your
+ * account, as well as allowing you to sign out.
  *
  * @param navigation Navigation actions for screen transitions.
  * @param authViewModel ViewModel for authentication-related operations.
