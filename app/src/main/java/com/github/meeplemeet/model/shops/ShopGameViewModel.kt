@@ -5,7 +5,7 @@ package com.github.meeplemeet.model.shops
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.sessions.GameViewModel
+import com.github.meeplemeet.model.shared.SearchViewModel
 
 /**
  * Base ViewModel for shop-related screens that need game selection functionality.
@@ -13,7 +13,7 @@ import com.github.meeplemeet.model.sessions.GameViewModel
  * Extends [GameViewModel] to provide game search and selection with shop owner permission
  * validation. This ViewModel ensures that only the shop owner can modify game-related data.
  */
-open class ShopGameViewModel() : GameViewModel() {
+open class ShopGameViewModel() : SearchViewModel() {
 
   /**
    * Sets the selected game for a shop with permission validation.

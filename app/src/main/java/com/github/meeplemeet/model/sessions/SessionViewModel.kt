@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.SearchViewModel
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,9 +23,8 @@ import kotlinx.coroutines.launch
  */
 class SessionViewModel(
     initDiscussion: Discussion,
-    private val repository: SessionRepository = RepositoryProvider.sessions,
-    private val gameRepository: GameRepository = RepositoryProvider.games
-) : GameViewModel(gameRepository) {
+    private val repository: SessionRepository = RepositoryProvider.sessions
+) : SearchViewModel() {
   /** Observable discussion state that updates when session operations complete. */
   private val _discussion = MutableStateFlow(initDiscussion)
   val discussion: StateFlow<Discussion> = _discussion
