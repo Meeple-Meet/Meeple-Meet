@@ -33,6 +33,8 @@ object CreateAccountTestTags {
   const val USERNAME_FIELD = "CreateAccountUsernameField"
   const val USERNAME_ERROR = "CreateAccountUsernameError"
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
+  const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
+  const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
 }
 
 /**
@@ -49,7 +51,7 @@ object CreateAccountTestTags {
 @Composable
 fun CreateAccountScreen(
     account: Account,
-    firestoreVM: DiscussionViewModel,
+    discussionVM: DiscussionViewModel,
     handlesVM: HandlesViewModel,
     onCreate: () -> Unit = {},
     onBack: () -> Unit = {}
@@ -60,6 +62,9 @@ fun CreateAccountScreen(
 
   val errorMessage by handlesVM.errorMessage.collectAsState()
   var showErrors by remember { mutableStateOf(false) }
+
+  var isShopChecked by remember { mutableStateOf(false) }
+  var isSpaceRented by remember { mutableStateOf(false) }
 
   /** Checks the handle availability and updates the ViewModel state. */
   fun validateHandle(handle: String) {
@@ -84,7 +89,7 @@ fun CreateAccountScreen(
   Scaffold(
       bottomBar = {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)) {
               OutlinedButton(
                   onClick = onBack,
@@ -114,7 +119,9 @@ fun CreateAccountScreen(
                     /** Create the handle and call onCreate if there are no errors */
                     if ((errorMessage.isBlank()) && usernameValidation == null) {
                       handlesVM.createAccountHandle(account = account, handle = handle)
-                      firestoreVM.setAccountName(account, username)
+                      discussionVM.setAccountName(account, username)
+                      discussionVM.setAccountRole(
+                          account, isSpaceRenter = isSpaceRented, isShopOwner = isShopChecked)
                       if (errorMessage.isBlank()) onCreate()
                     }
                   },
@@ -127,7 +134,6 @@ fun CreateAccountScreen(
             modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
-              Spacer(modifier = Modifier.height(24.dp))
 
               // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
@@ -139,7 +145,7 @@ fun CreateAccountScreen(
                     contentDescription = "Meeple Meet Logo",
                     modifier = Modifier.fillMaxSize())
               }
-              Spacer(modifier = Modifier.height(32.dp))
+              Spacer(modifier = Modifier.height(28.dp))
 
               /** Title text shown below the image placeholder. */
               Text(
@@ -229,6 +235,69 @@ fun CreateAccountScreen(
                             .padding(start = 16.dp, top = 4.dp)
                             .testTag(CreateAccountTestTags.USERNAME_ERROR))
               }
+
+              // Spacing between input fields and text
+              Spacer(modifier = Modifier.height(24.dp))
+
+              Text(
+                  text = "I also want to:",
+                  color = AppColors.textIcons,
+                  style = MaterialTheme.typography.bodyMedium,
+                  modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier.fillMaxWidth()) {
+                    // Checkbox for shop owners
+                    Checkbox(
+                        checked = isShopChecked,
+                        modifier = Modifier.testTag(CreateAccountTestTags.CHECKBOX_OWNER),
+                        onCheckedChange = { checked -> isShopChecked = checked },
+                        colors =
+                            CheckboxDefaults.colors(
+                                checkedColor = AppColors.affirmative,
+                                uncheckedColor = AppColors.textIcons,
+                                checkmarkColor = AppColors.textIcons))
+                    Column {
+                      Text(
+                          text = "Sell items (Become a Shop Owner)",
+                          color = AppColors.textIcons,
+                          style = MaterialTheme.typography.bodyMedium)
+                      Text(
+                          text = "List your shop and the games you sell.",
+                          color = AppColors.textIconsFade,
+                          style = MaterialTheme.typography.bodySmall)
+                    }
+                  }
+
+              Spacer(modifier = Modifier.height(16.dp))
+
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier.fillMaxWidth()) {
+                    // Checkbox for space renters
+                    Checkbox(
+                        checked = isSpaceRented,
+                        modifier = Modifier.testTag(CreateAccountTestTags.CHECKBOX_RENTER),
+                        onCheckedChange = { checked -> isSpaceRented = checked },
+                        colors =
+                            CheckboxDefaults.colors(
+                                checkedColor = AppColors.affirmative,
+                                uncheckedColor = AppColors.textIcons,
+                                checkmarkColor = AppColors.textIcons))
+                    Column {
+                      Text(
+                          text = "Rent out spaces (Become a Space Host)",
+                          color = AppColors.textIcons,
+                          style = MaterialTheme.typography.bodyMedium)
+                      Text(
+                          text = "Offer your play spaces for other players to book.",
+                          color = AppColors.textIconsFade,
+                          style = MaterialTheme.typography.bodySmall)
+                    }
+                  }
+
+              Spacer(modifier = Modifier.height(16.dp))
             }
       }
 }

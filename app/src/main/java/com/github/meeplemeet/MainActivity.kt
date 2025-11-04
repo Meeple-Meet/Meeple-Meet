@@ -338,7 +338,8 @@ fun MeepleMeetApp(
       ProfileScreen(
           navigation = navigationActions,
           authViewModel = authVM,
-          firestoreVM,
+          discussionViewModel = firestoreVM,
+          account = account!!,
           onSignOut = {
             signedOut = true
             navigationActions.navigateTo(MeepleMeetScreen.SignIn)

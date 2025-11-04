@@ -209,6 +209,22 @@ class DiscussionViewModel(
     viewModelScope.launch { repository.setAccountName(account.uid, newName.ifBlank { "~" }) }
   }
 
+  /** Update account roles. */
+  fun setAccountRole(
+      account: Account,
+      isShopOwner: Boolean? = null,
+      isSpaceRenter: Boolean? = null
+  ) {
+    val shopOwner = isShopOwner ?: account.isShopOwner
+    val spacerRenter = isSpaceRenter ?: account.isSpaceRenter
+
+    account.isShopOwner = shopOwner
+    account.isSpaceRenter = spacerRenter
+    viewModelScope.launch {
+      repository.setAccountRole(account.uid, isShopOwner = shopOwner, isSpaceRenter = spacerRenter)
+    }
+  }
+
   /** Delete an account. */
   fun deleteAccount(account: Account) {
     viewModelScope.launch { repository.deleteAccount(account.uid) }
