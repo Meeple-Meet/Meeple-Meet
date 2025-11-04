@@ -5,4 +5,4 @@ app/build
 local.properties
 app/google-services.json
 firebase-debug.log
-firestore-debug.log.config/
+firestore-debug.log
