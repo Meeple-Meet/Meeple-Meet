@@ -210,18 +210,10 @@ class DiscussionViewModel(
   }
 
   /** Update account roles. */
-  fun setAccountRole(
-      account: Account,
-      isShopOwner: Boolean? = null,
-      isSpaceRenter: Boolean? = null
-  ) {
-    val shopOwner = isShopOwner ?: account.isShopOwner
-    val spacerRenter = isSpaceRenter ?: account.isSpaceRenter
-
-    account.isShopOwner = shopOwner
-    account.isSpaceRenter = spacerRenter
+  fun setAccountRole(account: Account, isShopOwner: Boolean, isSpaceRenter: Boolean) {
     viewModelScope.launch {
-      repository.setAccountRole(account.uid, isShopOwner = shopOwner, isSpaceRenter = spacerRenter)
+      repository.setAccountRole(
+          account.uid, isShopOwner = isShopOwner, isSpaceRenter = isSpaceRenter)
     }
   }
 

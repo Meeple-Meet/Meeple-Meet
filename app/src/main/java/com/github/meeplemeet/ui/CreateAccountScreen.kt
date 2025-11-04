@@ -145,8 +145,6 @@ fun CreateAccountScreen(
                     contentDescription = "Meeple Meet Logo",
                     modifier = Modifier.fillMaxSize())
               }
-              Spacer(modifier = Modifier.height(28.dp))
-
               /** Title text shown below the image placeholder. */
               Text(
                   "You're almost there!",
@@ -245,22 +243,22 @@ fun CreateAccountScreen(
                   style = MaterialTheme.typography.bodyMedium,
                   modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
 
-              Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  modifier = Modifier.fillMaxWidth()) {
-                    // Checkbox for shop owners
-                    Checkbox(
-                        checked = isShopChecked,
-                        modifier = Modifier.testTag(CreateAccountTestTags.CHECKBOX_OWNER),
-                        onCheckedChange = { checked -> isShopChecked = checked },
-                        colors =
-                            CheckboxDefaults.colors(
-                                checkedColor = AppColors.affirmative,
-                                uncheckedColor = AppColors.textIcons,
-                                checkmarkColor = AppColors.textIcons))
-                    Column {
+              Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+                // Checkbox for shop owners
+                Checkbox(
+                    checked = isShopChecked,
+                    modifier = Modifier.testTag(CreateAccountTestTags.CHECKBOX_OWNER).padding(2.dp),
+                    onCheckedChange = { checked -> isShopChecked = checked },
+                    colors =
+                        CheckboxDefaults.colors(
+                            checkedColor = AppColors.affirmative,
+                            uncheckedColor = AppColors.textIcons,
+                            checkmarkColor = AppColors.textIcons))
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.Center) {
                       Text(
-                          text = "Sell items (Become a Shop Owner)",
+                          text = "Sell items",
                           color = AppColors.textIcons,
                           style = MaterialTheme.typography.bodyMedium)
                       Text(
@@ -268,26 +266,27 @@ fun CreateAccountScreen(
                           color = AppColors.textIconsFade,
                           style = MaterialTheme.typography.bodySmall)
                     }
-                  }
+              }
 
               Spacer(modifier = Modifier.height(16.dp))
 
-              Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  modifier = Modifier.fillMaxWidth()) {
-                    // Checkbox for space renters
-                    Checkbox(
-                        checked = isSpaceRented,
-                        modifier = Modifier.testTag(CreateAccountTestTags.CHECKBOX_RENTER),
-                        onCheckedChange = { checked -> isSpaceRented = checked },
-                        colors =
-                            CheckboxDefaults.colors(
-                                checkedColor = AppColors.affirmative,
-                                uncheckedColor = AppColors.textIcons,
-                                checkmarkColor = AppColors.textIcons))
-                    Column {
+              Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+                // Checkbox for space renters
+                Checkbox(
+                    checked = isSpaceRented,
+                    modifier =
+                        Modifier.testTag(CreateAccountTestTags.CHECKBOX_RENTER).padding(top = 2.dp),
+                    onCheckedChange = { checked -> isSpaceRented = checked },
+                    colors =
+                        CheckboxDefaults.colors(
+                            checkedColor = AppColors.affirmative,
+                            uncheckedColor = AppColors.textIcons,
+                            checkmarkColor = AppColors.textIcons))
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.Center) {
                       Text(
-                          text = "Rent out spaces (Become a Space Host)",
+                          text = "Rent out spaces",
                           color = AppColors.textIcons,
                           style = MaterialTheme.typography.bodyMedium)
                       Text(
@@ -295,7 +294,7 @@ fun CreateAccountScreen(
                           color = AppColors.textIconsFade,
                           style = MaterialTheme.typography.bodySmall)
                     }
-                  }
+              }
 
               Spacer(modifier = Modifier.height(16.dp))
             }
