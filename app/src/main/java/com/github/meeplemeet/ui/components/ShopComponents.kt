@@ -855,35 +855,49 @@ fun OpeningHoursDialog(
  */
 @Composable
 fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
-  Surface(tonalElevation = ShopUiDefaults.DimensionsMagicNumbers.actionBarElevation) {
-    Row(
-        Modifier.fillMaxWidth()
-            .padding(ShopUiDefaults.DimensionsMagicNumbers.actionBarPadding)
-            .testTag(ShopTestTags.ACTION_BAR),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween) {
-          OutlinedButton(
-              onClick = onDiscard,
-              colors =
-                  ButtonDefaults.outlinedButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error),
-              modifier = Modifier.testTag(ShopTestTags.ACTION_DISCARD)) {
-                Icon(Icons.Filled.Delete, contentDescription = null)
-                Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
+  Surface(
+      color = MaterialTheme.colorScheme.outline,
+      contentColor = MaterialTheme.colorScheme.onSurface,
+      tonalElevation = ShopUiDefaults.DimensionsMagicNumbers.actionBarElevation) {
+        Row(
+            Modifier.fillMaxWidth()
+                .padding(ShopUiDefaults.DimensionsMagicNumbers.actionBarPadding)
+                .testTag(ShopTestTags.ACTION_BAR),
+            verticalAlignment = Alignment.CenterVertically) {
+              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                OutlinedButton(
+                    onClick = onDiscard,
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.testTag(ShopTestTags.ACTION_DISCARD)) {
+                      Icon(Icons.Filled.Delete, contentDescription = null)
+                      Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                      Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
+                    }
               }
 
-          Button(
-              onClick = onCreate,
-              enabled = enabled,
-              shape = RoundedCornerShape(20.dp),
-              modifier = Modifier.testTag(ShopTestTags.ACTION_CREATE)) {
-                Icon(Icons.Filled.Check, contentDescription = null)
-                Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_CREATE)
+              val createColors =
+                  if (enabled)
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.secondary,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)
+                  else ButtonDefaults.buttonColors()
+
+              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Button(
+                    onClick = onCreate,
+                    enabled = enabled,
+                    shape = RoundedCornerShape(20.dp),
+                    colors = createColors,
+                    modifier = Modifier.testTag(ShopTestTags.ACTION_CREATE)) {
+                      Icon(Icons.Filled.Check, contentDescription = null)
+                      Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                      Text(ShopUiDefaults.StringsMagicNumbers.BTN_CREATE)
+                    }
               }
-        }
-  }
+            }
+      }
 }
 
 /* =============================================================================
