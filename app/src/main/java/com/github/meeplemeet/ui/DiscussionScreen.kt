@@ -2,6 +2,7 @@
 package com.github.meeplemeet.ui
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,15 +25,24 @@ import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -45,6 +55,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
 
+/** Test-tag constants for the Discussion screen and its poll sub-components. */
 object DiscussionTestTags {
   const val INPUT_FIELD = "Input Field"
   const val SEND_BUTTON = "Send Button"
@@ -67,22 +78,21 @@ object DiscussionTestTags {
 }
 
 /**
- * Composable screen that displays a discussion (chat) and allows sending messages.
+ * Root screen for a single discussion.
  *
- * Messages are collected from [DiscussionViewModel] via a [kotlinx.coroutines.flow.StateFlow] and
- * displayed in a scrollable list. Users are cached locally for display purposes.
- *
- * @param viewModel DiscussionViewModel for fetching discussion and sending messages
- * @param discussion The discussion to display
- * @param account The currently logged-in user
- * @param onBack Callback when the back button is pressed
+ * @param account Current logged-in user.
+ * @param discussion Discussion to display.
+ * @param viewModel discussion source of truth.
+ * @param onBack Navigation – upward finish.
+ * @param onOpenDiscussionInfo Opens details bottom-sheet.
+ * @param onCreateSessionClick Opens / creates a game session when the user is admin or participant.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscussionScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: DiscussionViewModel,
+    viewModel: DiscussionViewModel = viewModel(),
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
@@ -121,7 +131,6 @@ fun DiscussionScreen(
   }
 
   Column(modifier = Modifier.fillMaxSize().background(AppColors.primary)) {
-    /** Top bar showing discussion name and navigation back button */
     TopAppBar(
         title = {
           Row(
@@ -133,8 +142,7 @@ fun DiscussionScreen(
                 Box(
                     modifier =
                         Modifier.size(40.dp)
-                            .background(color = Color(0xFF800080), shape = CircleShape))
-                /** TODO: Placeholder for avatar */
+                            .background(color = AppColors.focus, shape = CircleShape))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = discussionName,
@@ -231,24 +239,31 @@ fun DiscussionScreen(
                       tint = AppColors.textIconsFade)
                 }
 
-            DropdownMenu(
-                expanded = showAttachmentMenu,
-                onDismissRequest = { showAttachmentMenu = false },
-                containerColor = AppColors.secondary) {
-                  DropdownMenuItem(
-                      colors =
-                          MenuDefaults.itemColors(
-                              textColor = AppColors.textIcons,
-                              disabledTextColor = AppColors.textIconsFade,
-                              leadingIconColor = AppColors.textIcons,
-                              disabledLeadingIconColor = AppColors.textIconsFade),
-                      text = { Text("Create poll") },
-                      onClick = {
-                        showAttachmentMenu = false
-                        showPollDialog = true
-                      },
-                      modifier = Modifier.testTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION))
-                }
+            if (showAttachmentMenu) {
+              val popupOffset = IntOffset(x = -30, y = -170) // ↓ shift down
+              Popup(
+                  onDismissRequest = { showAttachmentMenu = false },
+                  offset = popupOffset,
+                  properties = PopupProperties(focusable = true)) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = AppColors.secondary,
+                        border = BorderStroke(1.dp, AppColors.textIconsFade),
+                        modifier = Modifier.widthIn(min = 40.dp, max = 100.dp) // ← kill the 8 dp
+                        ) {
+                          Column {
+                            DropdownMenuItem(
+                                text = { Text("Create poll") },
+                                onClick = {
+                                  showAttachmentMenu = false
+                                  showPollDialog = true
+                                },
+                                modifier =
+                                    Modifier.testTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION))
+                          }
+                        }
+                  }
+            }
           }
 
           if (showPollDialog) {
@@ -267,7 +282,6 @@ fun DiscussionScreen(
 
           Spacer(Modifier.width(8.dp))
 
-          /** Text input field */
           BasicTextField(
               value = messageText,
               onValueChange = { messageText = it },
@@ -329,11 +343,9 @@ fun PollBubble(
   val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
   val counts = poll.getVoteCountsByOption()
   val total = poll.getTotalVotes()
-  println(
-      ">>>> PollBubble recomposing – total=${poll.getTotalVotes()}, counts=${poll.getVoteCountsByOption()}")
 
   Row(
-      modifier = Modifier.fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
 
@@ -398,13 +410,48 @@ fun PollBubble(
                               horizontalArrangement = Arrangement.SpaceBetween,
                               verticalAlignment = Alignment.CenterVertically) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                  val col = AppColors.affirmative
+                                  val affirmative = AppColors.affirmative
+                                  val primary = AppColors.primary
+                                  val isCheckBox = poll.allowMultipleVotes
+                                  val shapeSize = 18.dp
+                                  val stroke = 1.dp
+
                                   Canvas(
                                       modifier =
-                                          Modifier.size(18.dp)
-                                              .border(1.dp, AppColors.textIcons, CircleShape)
+                                          Modifier.size(shapeSize)
+                                              .border(
+                                                  stroke,
+                                                  AppColors.textIcons,
+                                                  if (isCheckBox) RoundedCornerShape(4.dp)
+                                                  else CircleShape)
                                               .padding(3.dp)) {
-                                        if (selected) drawCircle(color = col)
+                                        if (selected) {
+                                          if (isCheckBox) {
+                                            // draw check-box fill + check mark
+                                            drawRoundRect(
+                                                color = affirmative,
+                                                size = size,
+                                                cornerRadius =
+                                                    CornerRadius(4.dp.toPx(), 4.dp.toPx()))
+                                            // simple check mark (two lines)
+                                            val check =
+                                                Path().apply {
+                                                  moveTo(size.width * .25f, size.height * .5f)
+                                                  lineTo(size.width * .45f, size.height * .7f)
+                                                  lineTo(size.width * .75f, size.height * .3f)
+                                                }
+                                            drawPath(
+                                                check,
+                                                color = primary,
+                                                style =
+                                                    Stroke(
+                                                        width = 2.dp.toPx(), cap = StrokeCap.Round))
+                                          } else {
+                                            // original radio dot
+                                            drawCircle(
+                                                color = affirmative, radius = size.minDimension / 2)
+                                          }
+                                        }
                                       }
                                   Spacer(Modifier.width(6.dp))
                                   Text(label, color = AppColors.textIcons, fontSize = 14.sp)
@@ -482,8 +529,7 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
           Spacer(Modifier.width(6.dp))
           Box(
               modifier =
-                  Modifier.size(32.dp).background(color = Color(0xFF800080), shape = CircleShape))
-          /** TODO: Placeholder for avatar */
+                  Modifier.size(32.dp).background(color = AppColors.focus, shape = CircleShape))
         }
       }
 }
@@ -614,9 +660,7 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
       modifier = Modifier.testTag(DiscussionTestTags.DIALOG_ROOT))
 }
 
-/**
- * Formats a date as “Today”, “Yesterday” or “MMM dd, yyyy”.
- */
+/** Formats a date as “Today”, “Yesterday” or “MMM dd, yyyy”. */
 fun formatDateBubble(date: Date): String {
   val today = Calendar.getInstance()
   val cal = Calendar.getInstance().apply { time = date }
@@ -628,9 +672,7 @@ fun formatDateBubble(date: Date): String {
   }
 }
 
-/**
- * Returns true if [current] and [previous] are on different calendar days.
- */
+/** Returns true if [current] and [previous] are on different calendar days. */
 fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
   if (previous == null) return true
   val calCurrent = Calendar.getInstance().apply { time = current }
@@ -639,9 +681,7 @@ fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
       calCurrent.get(Calendar.DAY_OF_YEAR) == calPrev.get(Calendar.DAY_OF_YEAR))
 }
 
-/**
- * Returns true if two [Calendar] instances represent the same day.
- */
+/** Returns true if two [Calendar] instances represent the same day. */
 fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
   return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
       cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)

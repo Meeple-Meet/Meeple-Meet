@@ -16,6 +16,7 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
 import kotlin.io.println
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -54,14 +55,14 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
     // Create test users
     currentUser =
         repository.createAccount(
-            userHandle = "testuser_${System.currentTimeMillis()}",
+            userHandle = "testuser_${Random.nextInt(1000000)}",
             name = "Alice",
             email = "alice@test.com",
             photoUrl = null)
 
     otherUser =
         repository.createAccount(
-            userHandle = "otheruser_${System.currentTimeMillis()}",
+            userHandle = "otheruser_${Random.nextInt(1000000)}",
             name = "Bob",
             email = "bob@test.com",
             photoUrl = null)
