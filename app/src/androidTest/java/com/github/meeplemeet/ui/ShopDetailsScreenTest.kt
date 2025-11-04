@@ -47,7 +47,7 @@ class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
   }
 }
 
-class ShopScreenTest : FirestoreTests() {
+class ShopDetailsScreenTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()
   private lateinit var vm: ShopViewModel

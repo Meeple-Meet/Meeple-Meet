@@ -18,8 +18,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -277,10 +279,10 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
  * @param games List of pairs of Game and available count.
  */
 @Composable
-fun GameListSection(games: List<Pair<Game, Int>>) {
+fun GameListSection(games: List<Pair<Game, Int>>, horizontalPadding: Dp = 30.dp) {
   Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
+      modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding)) {
         Text(
             "Games:",
             style = MaterialTheme.typography.titleLarge,
@@ -320,9 +322,11 @@ fun GameItem(game: Game, count: Int) {
                 badge = {
                   // Show badge only if count is greater than zero
                   if (count > 0) {
-                    Badge(modifier = Modifier.offset(x = 8.dp, y = (-6).dp)) {
-                      Text(count.toString())
-                    }
+                    Badge(
+                        modifier = Modifier.offset(x = 8.dp, y = (-6).dp),
+                        containerColor = AppColors.focus) {
+                          Text(count.toString())
+                        }
                   }
                 }) {
                   Icon(Icons.Default.VideogameAsset, contentDescription = null)
@@ -330,7 +334,16 @@ fun GameItem(game: Game, count: Int) {
           }
 
           Spacer(modifier = Modifier.width(8.dp))
-          Column { Text(game.name, fontWeight = FontWeight.SemiBold) }
+          Column(
+              modifier = Modifier.weight(1f),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.Center) {
+                Text(
+                    game.name,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center)
+              }
         }
       }
 }
