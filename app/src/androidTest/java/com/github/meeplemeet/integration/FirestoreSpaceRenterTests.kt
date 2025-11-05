@@ -3,6 +3,7 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shops.MapViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -519,6 +520,67 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     assertNotNull(spaceRenters)
     assertTrue(spaceRenters.isEmpty())
+  }
+
+  @Test
+  fun createSpaceRenterAlsoCreatesGeoPin() = runTest {
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "GeoPin Space",
+            address = testLocation1,
+            openingHours = testOpeningHours,
+            spaces = listOf(testSpace1))
+
+    val geoPinSnapshot =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id).get().await()
+
+    assert(geoPinSnapshot.exists())
+    assertEquals("SPACE", geoPinSnapshot.getString("type"))
+  }
+
+  @Test
+  fun deleteSpaceRenterAlsoDeletesGeoPin() = runTest {
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "To Delete Space",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val beforeDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id).get().await()
+    assert(beforeDelete.exists())
+
+    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+
+    val afterDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id).get().await()
+    assert(!afterDelete.exists())
+  }
+
+  @Test
+  fun updateSpaceRenterOnlyUpdatesGeoPinIfAddressProvided() = runTest {
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "GeoPin Update Space",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id)
+
+    // Location unchanged
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, name = "Updated Name")
+
+    val pinAfterNameUpdate = geoPinRef.get().await()
+    assert(pinAfterNameUpdate.exists())
+    assertEquals("SPACE", pinAfterNameUpdate.getString("type"))
+
+    // Location changed
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, address = testLocation2)
+
+    val pinAfterLocationUpdate = geoPinRef.get().await()
+    assert(pinAfterLocationUpdate.exists())
+    assertEquals("SPACE", pinAfterLocationUpdate.getString("type"))
   }
 
   // ========================================================================

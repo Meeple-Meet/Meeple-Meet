@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -24,6 +25,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -839,6 +841,69 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals("Second Session", secondSession.session?.name)
     assertEquals("game222", secondSession.session?.gameId)
     assertEquals(listOf(account2.uid), secondSession.session?.participants)
+  }
+
+  @Test
+  fun createSessionAlsoCreatesGeoPin() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val updatedDiscussion =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "GeoPin Session",
+            "game456",
+            testTimestamp,
+            testLocation,
+            account1.uid)
+
+    val geoPinSnapshot =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+
+    assert(geoPinSnapshot.exists())
+    assertEquals("SESSION", geoPinSnapshot.getString("type"))
+  }
+
+  @Test
+  fun deleteSessionAlsoDeletesGeoPin() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    realSessionRepo.createSession(
+        baseDiscussion.uid, "To Delete", "game123", testTimestamp, testLocation, account1.uid)
+
+    val beforeDelete =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    assert(beforeDelete.exists())
+
+    realSessionRepo.deleteSession(baseDiscussion.uid)
+
+    val afterDelete =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    assert(!afterDelete.exists())
+  }
+
+  @Test
+  fun updateSessionOnlyUpdatesGeoPinIfLocationProvided() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    realSessionRepo.createSession(
+        baseDiscussion.uid, "Session", "game123", testTimestamp, testLocation, account1.uid)
+
+    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid)
+
+    // Location unchanged
+    realSessionRepo.updateSession(baseDiscussion.uid, name = "Updated Name")
+
+    val pinAfterNameUpdate = geoPinRef.get().await()
+    assert(pinAfterNameUpdate.exists())
+    assertEquals("SESSION", pinAfterNameUpdate.getString("type"))
+
+    // Location changed
+    val newLocation = Location(latitude = 48.8566, longitude = 2.3522, name = "Paris")
+    realSessionRepo.updateSession(baseDiscussion.uid, location = newLocation)
+
+    val pinAfterLocationUpdate = geoPinRef.get().await()
+    assert(pinAfterLocationUpdate.exists())
+    assertEquals("SESSION", pinAfterLocationUpdate.getString("type"))
   }
 
   // ------------------------

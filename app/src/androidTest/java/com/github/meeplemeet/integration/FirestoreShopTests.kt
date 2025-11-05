@@ -3,6 +3,7 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.sessions.Game
@@ -566,6 +567,65 @@ class FirestoreShopTests : FirestoreTests() {
 
     assertNotNull(shops)
     assertTrue(shops.isEmpty())
+  }
+
+  @Test
+  fun createShopAlsoCreatesGeoPin() = runTest {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "GeoPin Shop",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val geoPinSnapshot = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id).get().await()
+
+    assert(geoPinSnapshot.exists())
+    assertEquals("SHOP", geoPinSnapshot.getString("type"))
+  }
+
+  @Test
+  fun deleteShopAlsoDeletesGeoPin() = runTest {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "To Delete Pin",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val beforeDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id).get().await()
+    assert(beforeDelete.exists())
+
+    shopRepository.deleteShop(shop.id)
+
+    val afterDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id).get().await()
+    assert(!afterDelete.exists())
+  }
+
+  @Test
+  fun updateShopOnlyUpdatesGeoPinIfAddressProvided() = runTest {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "GeoPin Update Test",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id)
+
+    // Location unchanged
+    shopRepository.updateShop(shop.id, name = "Updated Name")
+
+    val pinAfterNameUpdate = geoPinRef.get().await()
+    assert(pinAfterNameUpdate.exists())
+    assertEquals("SHOP", pinAfterNameUpdate.getString("type"))
+
+    // Location changed
+    shopRepository.updateShop(shop.id, address = testLocation2)
+
+    val pinAfterLocationUpdate = geoPinRef.get().await()
+    assert(pinAfterLocationUpdate.exists())
+    assertEquals("SHOP", pinAfterLocationUpdate.getString("type"))
   }
 
   // ========================================================================
