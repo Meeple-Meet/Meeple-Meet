@@ -12,6 +12,9 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 /**
  * Resolves a StorableGeoPin into a MarkerPreview by fetching and transforming the linked entity.
@@ -30,10 +33,85 @@ class MarkerPreviewRepository(
 ) {
 
   /**
-   * Resolves the given geo-pin into a MarkerPreview.
+   * Transforms a list of [StorableGeoPin]s into their corresponding [MarkerPreview]s in parallel.
    *
-   * @param pin The geo-pin to resolve
-   * @return A MarkerPreview containing minimal info for display, or null if resolution fails
+   * Each pin is fetched according to its type:
+   * - [PinType.SHOP] → fetches the shop and builds a [ShopMarkerPreview]
+   * - [PinType.SESSION] → fetches the session and game to build a [SessionMarkerPreview]
+   * - [PinType.SPACE] → fetches the space renter and builds a [SpaceMarkerPreview]
+   *
+   * @param pins List of pins to transform
+   * @return List of [MarkerPreview?]s. A preview may be `null` if the corresponding entity could
+   *   not be fetched.
+   */
+  suspend fun getMarkerPreviews(pins: List<StorableGeoPin>): List<MarkerPreview?> = coroutineScope {
+    val shopPins = pins.filter { it.type == PinType.SHOP }
+    val sessionPins = pins.filter { it.type == PinType.SESSION }
+    val spacePins = pins.filter { it.type == PinType.SPACE }
+
+    // Launch 3 request in parallel
+    val shopsDeferred = async {
+      shopPins
+          .map { pin ->
+            async {
+              val shop = shopRepository.getShop(pin.uid)
+              ShopMarkerPreview(
+                  name = shop.name,
+                  address = shop.address.name,
+                  open = isOpenNow(shop.openingHours))
+            }
+          }
+          .awaitAll()
+    }
+
+    val sessionsDeferred = async {
+      sessionPins
+          .map { pin ->
+            async {
+              val session = discussionRepository.getDiscussion(pin.uid).session
+              session?.let {
+                val gameName = gameRepository.getGameById(it.gameId).name
+                SessionMarkerPreview(
+                    title = it.name,
+                    address = it.location.name,
+                    game = gameName,
+                    date = formatTimeStamp(it.date))
+              }
+            }
+          }
+          .awaitAll()
+    }
+
+    val spacesDeferred = async {
+      spacePins
+          .map { pin ->
+            async {
+              val space = spaceRenterRepository.getSpaceRenter(pin.uid)
+              SpaceMarkerPreview(
+                  name = space.name,
+                  address = space.address.name,
+                  open = isOpenNow(space.openingHours))
+            }
+          }
+          .awaitAll()
+    }
+
+    // Merge all results, order not guaranteed
+    val shopResults = shopsDeferred.await()
+    val sessionResults = sessionsDeferred.await()
+    val spaceResults = spacesDeferred.await()
+
+    shopResults + sessionResults + spaceResults
+  }
+
+  /**
+   * Transforms a single [StorableGeoPin] into a [MarkerPreview].
+   *
+   * This function fetches the linked entity (Shop, Session, or SpaceRenter) and builds a minimal
+   * preview for map display. It does not filter sessions by user participation.
+   *
+   * @param pin The geo-pin to transform.
+   * @return A [MarkerPreview] for the pin, or null if resolution fails.
    */
   suspend fun getMarkerPreview(pin: StorableGeoPin): MarkerPreview? {
     return when (pin.type) {
