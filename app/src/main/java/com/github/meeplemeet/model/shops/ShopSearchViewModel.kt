@@ -11,6 +11,8 @@ import com.github.meeplemeet.model.sessions.GameRepository
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shared.SearchViewModel
 
+private const val PERMISSION_DENIED_MESSAGE = "Only the shop's owner can edit his own shop"
+
 /**
  * Base ViewModel for shop-related screens that need game selection functionality.
  *
@@ -35,8 +37,7 @@ open class ShopSearchViewModel(
    * @throws PermissionDeniedException if the requester is not the shop owner.
    */
   fun setGame(shop: Shop, requester: Account, game: Game) {
-    if (shop.owner.uid != requester.uid)
-        throw PermissionDeniedException("Only the shop's owner can edit his own shop")
+    if (shop.owner.uid != requester.uid) throw PermissionDeniedException(PERMISSION_DENIED_MESSAGE)
 
     setGame(game)
   }
@@ -53,8 +54,7 @@ open class ShopSearchViewModel(
    * @throws PermissionDeniedException if the requester is not the shop owner.
    */
   fun setGameQuery(shop: Shop, requester: Account, query: String) {
-    if (shop.owner.uid != requester.uid)
-        throw PermissionDeniedException("Only the shop's owner can edit his own shop")
+    if (shop.owner.uid != requester.uid) throw PermissionDeniedException(PERMISSION_DENIED_MESSAGE)
 
     setGameQuery(query)
   }
@@ -71,8 +71,7 @@ open class ShopSearchViewModel(
    * @throws PermissionDeniedException if the requester is not the shop owner.
    */
   fun setLocation(shop: Shop, requester: Account, location: Location) {
-    if (shop.owner.uid != requester.uid)
-        throw PermissionDeniedException("Only the shop's owner can edit his own shop")
+    if (shop.owner.uid != requester.uid) throw PermissionDeniedException(PERMISSION_DENIED_MESSAGE)
 
     setLocation(location)
   }
@@ -89,8 +88,7 @@ open class ShopSearchViewModel(
    * @throws PermissionDeniedException if the requester is not the shop owner.
    */
   fun setLocationQuery(shop: Shop, requester: Account, query: String) {
-    if (shop.owner.uid != requester.uid)
-        throw PermissionDeniedException("Only the shop's owner can edit his own shop")
+    if (shop.owner.uid != requester.uid) throw PermissionDeniedException(PERMISSION_DENIED_MESSAGE)
 
     setLocationQuery(query)
   }
