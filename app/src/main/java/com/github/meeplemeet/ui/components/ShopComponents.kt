@@ -895,7 +895,7 @@ fun OpeningHoursDialog(
 @Composable
 fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
   Surface(
-      color = MaterialTheme.colorScheme.outline,
+      color = MaterialTheme.colorScheme.background,
       contentColor = MaterialTheme.colorScheme.onSurface,
       tonalElevation = ShopUiDefaults.DimensionsMagicNumbers.actionBarElevation) {
         Row(
@@ -908,6 +908,7 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
                     onClick = onDiscard,
                     colors =
                         ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.outline,
                             contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
                       Icon(Icons.Filled.Delete, contentDescription = null)
@@ -921,7 +922,10 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.secondary,
                           contentColor = MaterialTheme.colorScheme.onSecondary)
-                  else ButtonDefaults.buttonColors()
+                  else
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.outline,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)
 
               Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Button(
