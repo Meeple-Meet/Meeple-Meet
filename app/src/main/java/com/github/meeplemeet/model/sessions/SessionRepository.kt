@@ -1,10 +1,12 @@
 package com.github.meeplemeet.model.sessions
 
 import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.DISCUSSIONS_COLLECTION_PATH
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionNoUid
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -18,6 +20,7 @@ import kotlinx.coroutines.tasks.await
 class SessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val discussions = db.collection(DISCUSSIONS_COLLECTION_PATH)
   private val discussionRepo = DiscussionRepository()
+  private val geoPinsRepo = RepositoryProvider.geoPins
 
   /**
    * Creates a new session within a discussion.
@@ -34,6 +37,9 @@ class SessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   ): Discussion {
     val session = Session(name, gameId, date, location, participants.toList())
     discussions.document(discussionId).update(DiscussionNoUid::session.name, session).await()
+
+    geoPinsRepo.upsertGeoPin(ref = discussionId, type = PinType.SESSION, location = location)
+
     return discussionRepo.getDiscussion(discussionId)
   }
 
@@ -65,11 +71,15 @@ class SessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         throw IllegalArgumentException("At least one field must be provided for update")
 
     discussions.document(discussionId).update(updates).await()
+
+    if (location != null) geoPinsRepo.upsertGeoPin(discussionId, PinType.SESSION, location)
+
     return discussionRepo.getDiscussion(discussionId)
   }
 
   /** Deletes the session from a discussion by setting it to null. */
   suspend fun deleteSession(discussionId: String) {
+    geoPinsRepo.deleteGeoPin(discussionId)
     discussions.document(discussionId).update(DiscussionNoUid::session.name, null).await()
   }
 }

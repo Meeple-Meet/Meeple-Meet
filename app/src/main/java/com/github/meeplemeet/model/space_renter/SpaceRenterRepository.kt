@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.space_renter
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.google.firebase.firestore.FirebaseFirestore
@@ -27,6 +28,7 @@ const val SPACE_RENTER_COLLECTION_PATH = "space_renters"
 class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val spaceRenters = db.collection(SPACE_RENTER_COLLECTION_PATH)
   private val accountRepo = RepositoryProvider.discussions
+  private val geoPinsRepo = RepositoryProvider.geoPins
 
   private fun newUUID() = spaceRenters.document().id
 
@@ -58,6 +60,9 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     val spaceRenter =
         SpaceRenter(newUUID(), owner, name, phone, email, website, address, openingHours, spaces)
     spaceRenters.document(spaceRenter.id).set(toNoUid(spaceRenter)).await()
+
+    geoPinsRepo.upsertGeoPin(ref = spaceRenter.id, type = PinType.SPACE, location = address)
+
     return spaceRenter
   }
 
@@ -157,6 +162,8 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         throw IllegalArgumentException("At least one field must be provided for update")
 
     spaceRenters.document(id).update(updates).await()
+
+    if (address != null) geoPinsRepo.upsertGeoPin(id, PinType.SPACE, address)
   }
 
   /**
@@ -165,6 +172,7 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @param id The unique identifier of the space renter to delete.
    */
   suspend fun deleteSpaceRenter(id: String) {
+    geoPinsRepo.deleteGeoPin(id)
     spaceRenters.document(id).delete().await()
   }
 }
