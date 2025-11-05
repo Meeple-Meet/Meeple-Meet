@@ -243,7 +243,7 @@ object ShopUiDefaults {
   }
 
   object RangesMagicNumbers {
-    val qtyGameDialog: IntRange = 1..50
+    val qtyGameDialog: IntRange = 1..40
   }
 }
 
@@ -1218,8 +1218,7 @@ fun GameListSection(
                   clickable = clickableGames,
                   onClick = onClick,
                   hasDeleteButton = true,
-                  onDelete = onDelete // ← only notify parent
-                  )
+                  onDelete = onDelete)
             }
           }
     } else {
@@ -1273,15 +1272,26 @@ fun GameItem(
               .clickable(enabled = clickable, onClick = { onClick(game) }),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+
           // Icon + badge
           Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
             BadgedBox(
                 badge = {
+                  // Only show badge if count > 0
                   if (count > 0) {
+                    val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+                    val label = if (count > max) "$max+" else count.toString()
                     Badge(
-                        modifier = Modifier.offset(x = 8.dp, y = (-6).dp).size(20.dp),
+                        modifier =
+                            Modifier.offset(x = 8.dp, y = (-6).dp)
+                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp),
                         containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                          Text(count.toString())
+                          Text(
+                              label,
+                              style = MaterialTheme.typography.labelSmall,
+                              maxLines = 1,
+                              softWrap = false,
+                              modifier = Modifier.padding(horizontal = 4.dp))
                         }
                   }
                 }) {
