@@ -246,60 +246,51 @@ fun CreateAccountScreen(
                   style = MaterialTheme.typography.bodyMedium,
                   modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
 
-              Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
-                // Checkbox for shop owners
-                Checkbox(
-                    checked = isShopChecked,
-                    modifier = Modifier.testTag(CreateAccountTestTags.CHECKBOX_OWNER).padding(2.dp),
-                    onCheckedChange = { checked -> isShopChecked = checked },
-                    colors =
-                        CheckboxDefaults.colors(
-                            checkedColor = AppColors.affirmative,
-                            uncheckedColor = AppColors.textIcons,
-                            checkmarkColor = AppColors.textIcons))
-                Column(
-                    modifier = Modifier.padding(top = 12.dp),
-                    verticalArrangement = Arrangement.Center) {
-                      Text(
-                          text = "Sell items",
-                          color = AppColors.textIcons,
-                          style = MaterialTheme.typography.bodyMedium)
-                      Text(
-                          text = "List your shop and the games you sell.",
-                          color = AppColors.textIconsFade,
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-              }
+              RoleCheckBox(
+                  isChecked = isShopChecked,
+                  onCheckedChange = { checked: Boolean -> isShopChecked = checked },
+                  label = "Sell items",
+                  description = "List your shop and the games you sell.",
+                  testTag = CreateAccountTestTags.CHECKBOX_OWNER)
 
               Spacer(modifier = Modifier.height(16.dp))
 
-              Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
-                // Checkbox for space renters
-                Checkbox(
-                    checked = isSpaceRented,
-                    modifier =
-                        Modifier.testTag(CreateAccountTestTags.CHECKBOX_RENTER).padding(top = 2.dp),
-                    onCheckedChange = { checked -> isSpaceRented = checked },
-                    colors =
-                        CheckboxDefaults.colors(
-                            checkedColor = AppColors.affirmative,
-                            uncheckedColor = AppColors.textIcons,
-                            checkmarkColor = AppColors.textIcons))
-                Column(
-                    modifier = Modifier.padding(top = 12.dp),
-                    verticalArrangement = Arrangement.Center) {
-                      Text(
-                          text = "Rent out spaces",
-                          color = AppColors.textIcons,
-                          style = MaterialTheme.typography.bodyMedium)
-                      Text(
-                          text = "Offer your play spaces for other players to book.",
-                          color = AppColors.textIconsFade,
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-              }
+              RoleCheckBox(
+                  isChecked = isSpaceRented,
+                  onCheckedChange = { checked: Boolean -> isSpaceRented = checked },
+                  label = "Rent out spaces",
+                  description = "Offer your play spaces for other players to book.",
+                  testTag = CreateAccountTestTags.CHECKBOX_RENTER)
 
               Spacer(modifier = Modifier.height(16.dp))
             }
       }
+}
+
+@Composable
+fun RoleCheckBox(
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+    description: String,
+    testTag: String
+) {
+  Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+    Checkbox(
+        checked = isChecked,
+        modifier = Modifier.testTag(testTag).padding(top = 2.dp),
+        onCheckedChange = onCheckedChange,
+        colors =
+            CheckboxDefaults.colors(
+                checkedColor = AppColors.affirmative,
+                uncheckedColor = AppColors.textIcons,
+                checkmarkColor = AppColors.textIcons))
+    Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.Center) {
+      Text(text = label, color = AppColors.textIcons, style = MaterialTheme.typography.bodyMedium)
+      Text(
+          text = description,
+          color = AppColors.textIconsFade,
+          style = MaterialTheme.typography.bodySmall)
+    }
+  }
 }
