@@ -1,7 +1,7 @@
 package com.github.meeplemeet.model.map
 
 import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.PinPreview.*
+import com.github.meeplemeet.model.map.MarkerPreview.*
 import com.github.meeplemeet.model.sessions.GameRepository
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.ShopRepository
@@ -13,7 +13,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Resolves a MapPin into a PinPreview by fetching and transforming the linked entity.
+ * Resolves a StorableGeoPin into a MarkerPreview by fetching and transforming the linked entity.
  *
  * Combines data from Shop, Session, SpaceRenter and Game repositories to build a minimal preview
  * model for map display.
@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter
  * This class does not cache or persist data. It assumes session pins are already filtered by
  * participation before resolution.
  */
-class PinPreviewRepository(
+class MarkerPreviewRepository(
     private val shopRepository: ShopRepository,
     private val discussionRepository: DiscussionRepository,
     private val spaceRenterRepository: SpaceRenterRepository,
@@ -29,12 +29,12 @@ class PinPreviewRepository(
 ) {
 
   /**
-   * Resolves the given MapPin into a PinPreview.
+   * Resolves the given geo-pin into a MarkerPreview.
    *
-   * @param pin The MapPin to resolve
-   * @return A PinPreview containing minimal info for display, or null if resolution fails
+   * @param pin The geo-pin to resolve
+   * @return A MarkerPreview containing minimal info for display, or null if resolution fails
    */
-  suspend fun getPinPreview(pin: MapPin): PinPreview? {
+  suspend fun getMarkerPreview(pin: StorableGeoPin): MarkerPreview? {
     return when (pin.type) {
       PinType.SHOP -> {
         val shop = shopRepository.getShop(pin.uid)

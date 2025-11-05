@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
  * @property location Geographical coordinates of the pin.
  * @property label Human-readable label displayed on the map.
  */
-data class MapPin(
+data class StorableGeoPin(
     val uid: String,
     val type: PinType,
     val location: Location,
@@ -19,34 +19,35 @@ data class MapPin(
 )
 
 /**
- * Minimal serializable form of [MapPin] without the UID, used for Firestore storage.
+ * Minimal serializable form of [StorableGeoPin] without the UID, used for Firestore storage.
  *
  * Firestore stores the UID as the document ID, so it is omitted from the stored object.
  */
 @Serializable
-data class MapPinNoUid(
+data class StorableGeoPinNoUid(
     val type: PinType = PinType.SHOP,
     val location: Location = Location(),
     val label: String = ""
 )
 
 /**
- * Converts a full [MapPin] into its Firestore-storable form [MapPinNoUid].
+ * Converts a full [StorableGeoPin] into its Firestore-storable form [StorableGeoPinNoUid].
  *
  * @param pin The map pin instance to convert.
  * @return The stripped-down form without UID for storage.
  */
-fun toNoUid(pin: MapPin): MapPinNoUid = MapPinNoUid(pin.type, pin.location, pin.label)
+fun toNoUid(pin: StorableGeoPin): StorableGeoPinNoUid =
+    StorableGeoPinNoUid(pin.type, pin.location, pin.label)
 
 /**
- * Reconstructs a full [MapPin] object from its Firestore representation.
+ * Reconstructs a full [StorableGeoPin] object from its Firestore representation.
  *
  * @param id The Firestore document ID (used as pin UID).
- * @param noUid The deserialized [MapPinNoUid] data from Firestore.
- * @return A fully constructed [MapPin] instance.
+ * @param noUid The deserialized [StorableGeoPinNoUid] data from Firestore.
+ * @return A fully constructed [StorableGeoPin] instance.
  */
-fun fromNoUid(id: String, noUid: MapPinNoUid): MapPin =
-    MapPin(id, noUid.type, noUid.location, noUid.label)
+fun fromNoUid(id: String, noUid: StorableGeoPinNoUid): StorableGeoPin =
+    StorableGeoPin(id, noUid.type, noUid.location, noUid.label)
 
 /** Enum representing the type of entity linked to a map pin. */
 enum class PinType {

@@ -3,10 +3,10 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.map.MAP_PIN_COLLECTION_PATH
-import com.github.meeplemeet.model.map.MapPinNoUid
-import com.github.meeplemeet.model.map.MapPinRepository
+import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.StorableGeoPinNoUid
+import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.CollectionReference
@@ -19,10 +19,10 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 
-class FirestoreMapPinTest : FirestoreTests() {
+class FirestoreGeoPinTest : FirestoreTests() {
 
   private lateinit var firestore: FirebaseFirestore
-  private lateinit var repository: MapPinRepository
+  private lateinit var repository: StorableGeoPinRepository
   private lateinit var collection: CollectionReference
 
   private val testLocation1 = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
@@ -32,29 +32,26 @@ class FirestoreMapPinTest : FirestoreTests() {
   @Before
   fun setup() {
     firestore = FirebaseProvider.db
-    repository = MapPinRepository(firestore)
-    collection = firestore.collection(MAP_PIN_COLLECTION_PATH)
+    repository = StorableGeoPinRepository(firestore)
+    collection = firestore.collection(GEO_PIN_COLLECTION_PATH)
   }
 
   /* ========== Test 1: Pin Creation ========== */
   @Test
-  fun upsertMapPinCreatesAllPinTypes() = runTest {
+  fun upsertGeoPinCreatesAllPinTypes() = runTest {
     // Create SHOP pin
-    repository.upsertMapPin(
-        ref = "shop123",
-        type = PinType.SHOP,
-        location = testLocation1,
-        label = "Board Game Shop")
+    repository.upsertGeoPin(
+        ref = "shop123", type = PinType.SHOP, location = testLocation1, label = "Board Game Shop")
 
     // Create SPACE pin
-    repository.upsertMapPin(
+    repository.upsertGeoPin(
         ref = "=space456",
         type = PinType.SPACE,
         location = testLocation2,
         label = "Gaming Space Paris")
 
     // Create SESSION pin
-    repository.upsertMapPin(
+    repository.upsertGeoPin(
         ref = "session789",
         type = PinType.SESSION,
         location = testLocation3,
@@ -67,15 +64,15 @@ class FirestoreMapPinTest : FirestoreTests() {
 
   /* ========== Test 2: Pin Update ========== */
   @Test
-  fun upsertMapPinUpdatesAllFields() = runTest {
+  fun upsertGeoPinUpdatesAllFields() = runTest {
     // Create initial pin
     val pinId = "pin-update-test"
-    repository.upsertMapPin(pinId, PinType.SHOP, testLocation1, "Original Shop")
-    repository.upsertMapPin(pinId, PinType.SPACE, testLocation2, "Updated Space")
+    repository.upsertGeoPin(pinId, PinType.SHOP, testLocation1, "Original Shop")
+    repository.upsertGeoPin(pinId, PinType.SPACE, testLocation2, "Updated Space")
 
     // Verify update
     val snapshot = collection.document(pinId).get().await()
-    val pin = snapshot.toObject(MapPinNoUid::class.java)
+    val pin = snapshot.toObject(StorableGeoPinNoUid::class.java)
 
     assertNotNull(pin)
     assertEquals(PinType.SPACE, pin!!.type)
@@ -85,17 +82,17 @@ class FirestoreMapPinTest : FirestoreTests() {
 
   /* ========== Test 3: Pin Deletion ========== */
   @Test
-  fun deleteMapPinRemovesFromFirestoreAndGeoFirestore() = runTest {
+  fun deleteGeoPinRemovesFromFirestoreAndGeoFirestore() = runTest {
     // Create pin
     val pinId = "pin-delete-test"
-    repository.upsertMapPin(pinId, PinType.SESSION, testLocation1, "Temporary Session")
+    repository.upsertGeoPin(pinId, PinType.SESSION, testLocation1, "Temporary Session")
 
     // Verify exists
     val beforeDelete = collection.document(pinId).get().await()
     assert(beforeDelete.exists())
 
     // Delete pin
-    repository.deleteMapPin(pinId)
+    repository.deleteGeoPin(pinId)
 
     // Verify deleted
     val afterDelete = collection.document(pinId).get().await()
@@ -105,16 +102,16 @@ class FirestoreMapPinTest : FirestoreTests() {
   /* ========== Test 4: Multiple Pins Management ========== */
   @Test
   fun createMultiplePinsAllStoredCorrectly() = runTest {
-    val pins = listOf(
-      Triple("shop1", PinType.SHOP, testLocation1),
-      Triple("shop2", PinType.SHOP, testLocation2),
-      Triple("space1", PinType.SPACE, testLocation3),
-      Triple("session1", PinType.SESSION, testLocation1),
-      Triple("session2", PinType.SESSION, testLocation2)
-    )
+    val pins =
+        listOf(
+            Triple("shop1", PinType.SHOP, testLocation1),
+            Triple("shop2", PinType.SHOP, testLocation2),
+            Triple("space1", PinType.SPACE, testLocation3),
+            Triple("session1", PinType.SESSION, testLocation1),
+            Triple("session2", PinType.SESSION, testLocation2))
 
     pins.forEach { (id, type, location) ->
-      repository.upsertMapPin(id, type, location, "Label for $id")
+      repository.upsertGeoPin(id, type, location, "Label for $id")
     }
 
     // Verify count
@@ -128,10 +125,10 @@ class FirestoreMapPinTest : FirestoreTests() {
     val preciseLocation = Location(46.51970123456789, 6.56650987654321, "Precise Location")
     val pinId = "pin-precision-test"
 
-    repository.upsertMapPin(pinId, PinType.SHOP, preciseLocation, "Precise Shop")
+    repository.upsertGeoPin(pinId, PinType.SHOP, preciseLocation, "Precise Shop")
 
     val snapshot = collection.document(pinId).get().await()
-    val pin = snapshot.toObject(MapPinNoUid::class.java)
+    val pin = snapshot.toObject(StorableGeoPinNoUid::class.java)
 
     assertNotNull(pin)
     assertEquals(preciseLocation.latitude, pin!!.location.latitude, 0.0000001)
@@ -141,7 +138,7 @@ class FirestoreMapPinTest : FirestoreTests() {
   /* ========== Test 6: Edge Cases - Empty Strings ========== */
   @Test
   fun createPinWithEmptyLabel_succeeds() = runTest {
-    repository.upsertMapPin("empty-label-pin", PinType.SHOP, testLocation1, "")
+    repository.upsertGeoPin("empty-label-pin", PinType.SHOP, testLocation1, "")
 
     // Should not throw - empty labels are allowed
     val snapshot = collection.document("empty-label-pin").get().await()
@@ -154,10 +151,10 @@ class FirestoreMapPinTest : FirestoreTests() {
     val specialLabel = "Café & Board Games™ (Paris) - #1 Shop!"
     val pinId = "café-&-games"
 
-    repository.upsertMapPin(pinId, PinType.SHOP, testLocation2, specialLabel)
+    repository.upsertGeoPin(pinId, PinType.SHOP, testLocation2, specialLabel)
 
     val snapshot = collection.document(pinId).get().await()
-    val pin = snapshot.toObject(MapPinNoUid::class.java)
+    val pin = snapshot.toObject(StorableGeoPinNoUid::class.java)
 
     assertNotNull(pin)
     assertEquals(specialLabel, pin!!.label)
@@ -168,8 +165,8 @@ class FirestoreMapPinTest : FirestoreTests() {
   fun updateThenDeleteCompleteLifecycle() = runTest {
     // Create & update
     val pinId = "lifecycle-pin"
-    repository.upsertMapPin(pinId, PinType.SESSION, testLocation1, "Initial Session")
-    repository.upsertMapPin(pinId, PinType.SESSION, testLocation2, "Updated Session")
+    repository.upsertGeoPin(pinId, PinType.SESSION, testLocation1, "Initial Session")
+    repository.upsertGeoPin(pinId, PinType.SESSION, testLocation2, "Updated Session")
 
     // Verify update
     val afterUpdate = collection.document(pinId).get().await()
@@ -177,7 +174,7 @@ class FirestoreMapPinTest : FirestoreTests() {
     assertEquals("Updated Session", afterUpdate.getString("label"))
 
     // Delete
-    repository.deleteMapPin(pinId)
+    repository.deleteGeoPin(pinId)
     delay(500)
 
     // Verify deletion
@@ -195,7 +192,7 @@ class FirestoreMapPinTest : FirestoreTests() {
             Location(46.5199, 6.5667, "Very Near EPFL"))
 
     locations.forEachIndexed { index, location ->
-      repository.upsertMapPin("shop$index", PinType.SHOP, location, "Shop at ${location.name}")
+      repository.upsertGeoPin("shop$index", PinType.SHOP, location, "Shop at ${location.name}")
     }
 
     val snapshot = collection.get().await()
@@ -211,15 +208,15 @@ class FirestoreMapPinTest : FirestoreTests() {
     val spacePinId = "gaming-space"
     val sessionPinId = "weekly-session"
 
-    repository.upsertMapPin(shopPinId, PinType.SHOP, testLocation1, "Main Shop")
-    repository.upsertMapPin(spacePinId, PinType.SPACE, testLocation2, "Gaming Space")
-    repository.upsertMapPin(sessionPinId, PinType.SESSION, testLocation3, "Weekly Session")
+    repository.upsertGeoPin(shopPinId, PinType.SHOP, testLocation1, "Main Shop")
+    repository.upsertGeoPin(spacePinId, PinType.SPACE, testLocation2, "Gaming Space")
+    repository.upsertGeoPin(sessionPinId, PinType.SESSION, testLocation3, "Weekly Session")
 
     // Update one pin
-    repository.upsertMapPin(shopPinId, PinType.SHOP, testLocation2, "Main Shop - Paris")
+    repository.upsertGeoPin(shopPinId, PinType.SHOP, testLocation2, "Main Shop - Paris")
 
     // Delete one pin
-    repository.deleteMapPin(sessionPinId)
+    repository.deleteGeoPin(sessionPinId)
     delay(500)
 
     // Verify final state
