@@ -163,12 +163,15 @@ private fun humanize(hours: List<TimeSlot>): String =
       hours.size == 1 &&
           hours[0].open == TimeUi.OPEN24_START &&
           hours[0].close == TimeUi.OPEN24_END -> "Open 24 hours"
-      else ->
-          hours.joinToString("\n") { slot ->
-            val s = slot.open?.let { it.tryParseTime()?.format(TimeUi.fmt12) ?: it } ?: "-"
-            val e = slot.close?.let { it.tryParseTime()?.format(TimeUi.fmt12) ?: it } ?: "-"
-            "$s - $e"
-          }
+      else -> {
+        // Sort by opening time
+        val sorted = hours.sortedBy { ts -> ts.open?.tryParseTime() ?: LocalTime.MAX }
+        sorted.joinToString("\n") { slot ->
+          val s = slot.open?.let { it.tryParseTime()?.format(TimeUi.fmt12) ?: it } ?: "-"
+          val e = slot.close?.let { it.tryParseTime()?.format(TimeUi.fmt12) ?: it } ?: "-"
+          "$s - $e"
+        }
+      }
     }
 
 /* ================================================================================================
