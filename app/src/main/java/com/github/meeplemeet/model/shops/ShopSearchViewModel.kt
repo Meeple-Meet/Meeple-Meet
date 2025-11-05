@@ -2,9 +2,12 @@
 
 package com.github.meeplemeet.model.shops
 
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.map.LocationRepository
 import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.sessions.GameRepository
 import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shared.SearchViewModel
 
@@ -15,7 +18,10 @@ import com.github.meeplemeet.model.shared.SearchViewModel
  * permission validation. This ViewModel ensures that only the shop owner can modify
  * game/location-related data.
  */
-open class ShopSearchViewModel() : SearchViewModel() {
+open class ShopSearchViewModel(
+    gameRepository: GameRepository = RepositoryProvider.games,
+    locationRepository: LocationRepository = RepositoryProvider.locations
+) : SearchViewModel(gameRepository, locationRepository) {
 
   /**
    * Sets the selected game for a shop with permission validation.
