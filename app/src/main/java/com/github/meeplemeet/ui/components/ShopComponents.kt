@@ -35,6 +35,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -643,28 +644,35 @@ fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
       verticalAlignment = Alignment.CenterVertically) {
         ShopUiDefaults.DaysMagicNumbers.short.forEachIndexed { idx, short ->
           val isSel = idx in selected
-          val container =
-              if (isSel) MaterialTheme.colorScheme.primary
-              else MaterialTheme.colorScheme.surfaceVariant
-          val content =
-              if (isSel) MaterialTheme.colorScheme.onPrimary
-              else MaterialTheme.colorScheme.onSurfaceVariant
 
-          Surface(
-              color = container,
+          FilterChip(
+              selected = isSel,
+              onClick = { onToggle(idx) },
               shape = CircleShape,
               modifier =
                   Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.dayChip)
-                      .clickable { onToggle(idx) }
-                      .testTag(ShopComponentsTestTags.dayChip(idx))) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                      .testTag(ShopComponentsTestTags.dayChip(idx)),
+              label = {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                   Text(
                       text = short,
-                      color = content,
+                      textAlign = TextAlign.Center,
                       style = MaterialTheme.typography.titleMedium,
                       fontWeight = FontWeight.SemiBold)
                 }
-              }
+              },
+              colors =
+                  FilterChipDefaults.filterChipColors(
+                      containerColor = Color.Transparent,
+                      labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                      selectedContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                      selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
+              border =
+                  FilterChipDefaults.filterChipBorder(
+                      enabled = true,
+                      selected = isSel,
+                      borderColor = MaterialTheme.colorScheme.outlineVariant,
+                      selectedBorderColor = MaterialTheme.colorScheme.inversePrimary))
         }
       }
 }
