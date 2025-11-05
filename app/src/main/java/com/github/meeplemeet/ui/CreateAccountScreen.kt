@@ -267,6 +267,15 @@ fun CreateAccountScreen(
       }
 }
 
+/**
+ * Composable representing a checkbox that gives the user's it's roles
+ *
+ * @param isChecked If the checkbox is checked
+ * @param onCheckedChange lambda when the user interacts with the checkbox
+ * @param label Main text appearing to t he right of the checkbox
+ * @param description Secondary text appearing below the label
+ * @param testTag Tag to append for UI testing
+ */
 @Composable
 fun RoleCheckBox(
     isChecked: Boolean,

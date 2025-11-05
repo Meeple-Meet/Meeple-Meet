@@ -209,7 +209,13 @@ class DiscussionViewModel(
     viewModelScope.launch { repository.setAccountName(account.uid, newName.ifBlank { "~" }) }
   }
 
-  /** Update account roles. */
+  /**
+   * Update account roles.
+   *
+   * @param account Account to update it's roles
+   * @param isShopOwner Boolean for the role Shop Owner
+   * @param isSpaceRenter Boolean for the role Space Renter
+   */
   fun setAccountRole(
       account: Account,
       isShopOwner: Boolean? = null,
