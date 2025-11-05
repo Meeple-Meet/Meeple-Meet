@@ -9,10 +9,16 @@ import kotlinx.serialization.Serializable
  * Represents a user account stored in Firestore.
  *
  * @property uid Globally unique identifier of the account (Firestore document ID).
+ * @property handle unique human-readable identifier for the user
  * @property name Human-readable name of the account.
+ * @property email User's email used to create the account
  * @property previews Map of discussion previews keyed by discussion ID. Each preview stores
  *   lightweight metadata (e.g. last message, unread count) for discussions this account
  *   participates in.
+ * @property photoUrl User's profile picture
+ * @property description A user's description about himself
+ * @property shopOwner Tells if this account is a shop owner
+ * @property spaceRenter Tells if this account is a space renter
  */
 data class Account(
     val uid: String,
@@ -21,7 +27,9 @@ data class Account(
     val email: String,
     val previews: Map<String, DiscussionPreview> = emptyMap(),
     var photoUrl: String? = null,
-    var description: String? = null
+    var description: String? = null,
+    var shopOwner: Boolean = false,
+    var spaceRenter: Boolean = false
 )
 
 /**
@@ -35,7 +43,9 @@ data class AccountNoUid(
     val name: String = "",
     val email: String = "",
     val photoUrl: String? = null,
-    val description: String? = null
+    val description: String? = null,
+    val shopOwner: Boolean = false,
+    val spaceRenter: Boolean = false
 )
 
 /**
@@ -58,4 +68,7 @@ fun fromNoUid(
         email = accountNoUid.email,
         previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
         photoUrl = accountNoUid.photoUrl,
-        description = accountNoUid.description)
+        description = accountNoUid.description,
+        shopOwner = accountNoUid.shopOwner,
+        spaceRenter = accountNoUid.spaceRenter,
+    )

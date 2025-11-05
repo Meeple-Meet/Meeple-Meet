@@ -33,6 +33,8 @@ object CreateAccountTestTags {
   const val USERNAME_FIELD = "CreateAccountUsernameField"
   const val USERNAME_ERROR = "CreateAccountUsernameError"
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
+  const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
+  const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
 }
 
 /**
@@ -42,14 +44,17 @@ object CreateAccountTestTags {
  * [HandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate] to
  * continue the account creation flow.
  *
- * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
  * @param account The [Account] object representing the user creating an account.
- * @param onCreate Lambda to be executed when account creation is successfully validated.
+ * @param discussionVM The viewModel for managing discussions and account details.
+ * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
+ * @param onCreate Callback function to be executed when account creation is successfully validated.
+ * @param onBack Callback function to be executed when the user wants to go back to the previous
+ *   screen.
  */
 @Composable
 fun CreateAccountScreen(
     account: Account,
-    firestoreVM: DiscussionViewModel,
+    discussionVM: DiscussionViewModel,
     handlesVM: HandlesViewModel,
     onCreate: () -> Unit = {},
     onBack: () -> Unit = {}
@@ -60,6 +65,9 @@ fun CreateAccountScreen(
 
   val errorMessage by handlesVM.errorMessage.collectAsState()
   var showErrors by remember { mutableStateOf(false) }
+
+  var isShopChecked by remember { mutableStateOf(false) }
+  var isSpaceRented by remember { mutableStateOf(false) }
 
   /** Checks the handle availability and updates the ViewModel state. */
   fun validateHandle(handle: String) {
@@ -84,7 +92,7 @@ fun CreateAccountScreen(
   Scaffold(
       bottomBar = {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)) {
               OutlinedButton(
                   onClick = onBack,
@@ -114,8 +122,10 @@ fun CreateAccountScreen(
                     /** Create the handle and call onCreate if there are no errors */
                     if ((errorMessage.isBlank()) && usernameValidation == null) {
                       handlesVM.createAccountHandle(account = account, handle = handle)
-                      firestoreVM.setAccountName(account, username)
-                      if (errorMessage.isBlank()) onCreate()
+                      discussionVM.setAccountName(account, username)
+                      discussionVM.setAccountRole(
+                          account, isSpaceRenter = isSpaceRented, isShopOwner = isShopChecked)
+                      onCreate()
                     }
                   },
                   modifier = Modifier.weight(1f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
@@ -127,7 +137,6 @@ fun CreateAccountScreen(
             modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
-              Spacer(modifier = Modifier.height(24.dp))
 
               // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
@@ -139,8 +148,6 @@ fun CreateAccountScreen(
                     contentDescription = "Meeple Meet Logo",
                     modifier = Modifier.fillMaxSize())
               }
-              Spacer(modifier = Modifier.height(32.dp))
-
               /** Title text shown below the image placeholder. */
               Text(
                   "You're almost there!",
@@ -229,6 +236,70 @@ fun CreateAccountScreen(
                             .padding(start = 16.dp, top = 4.dp)
                             .testTag(CreateAccountTestTags.USERNAME_ERROR))
               }
+
+              // Spacing between input fields and text
+              Spacer(modifier = Modifier.height(24.dp))
+
+              Text(
+                  text = "I also want to:",
+                  color = AppColors.textIcons,
+                  style = MaterialTheme.typography.bodyMedium,
+                  modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+
+              RoleCheckBox(
+                  isChecked = isShopChecked,
+                  onCheckedChange = { checked: Boolean -> isShopChecked = checked },
+                  label = "Sell items",
+                  description = "List your shop and the games you sell.",
+                  testTag = CreateAccountTestTags.CHECKBOX_OWNER)
+
+              Spacer(modifier = Modifier.height(16.dp))
+
+              RoleCheckBox(
+                  isChecked = isSpaceRented,
+                  onCheckedChange = { checked: Boolean -> isSpaceRented = checked },
+                  label = "Rent out spaces",
+                  description = "Offer your play spaces for other players to book.",
+                  testTag = CreateAccountTestTags.CHECKBOX_RENTER)
+
+              Spacer(modifier = Modifier.height(16.dp))
             }
       }
+}
+
+/**
+ * Composable representing a checkbox that gives the user's it's roles
+ *
+ * @param isChecked If the checkbox is checked
+ * @param onCheckedChange lambda when the user interacts with the checkbox
+ * @param label Main text appearing to t he right of the checkbox
+ * @param description Secondary text appearing below the label
+ * @param testTag Tag to append for UI testing
+ */
+@Composable
+fun RoleCheckBox(
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+    description: String,
+    testTag: String
+) {
+  Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+    Checkbox(
+        checked = isChecked,
+        modifier = Modifier.testTag(testTag).padding(top = 2.dp),
+        onCheckedChange = onCheckedChange,
+        colors =
+            CheckboxDefaults.colors(
+                checkedColor = AppColors.affirmative,
+                uncheckedColor = AppColors.textIcons,
+                checkmarkColor = AppColors.textIcons))
+    Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.Center) {
+      Text(text = label, color = AppColors.textIcons, style = MaterialTheme.typography.bodyMedium)
+      Text(
+          text = description,
+          color = AppColors.textIconsFade,
+          style = MaterialTheme.typography.bodySmall)
+    }
+  }
 }

@@ -335,14 +335,17 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.Profile.name) {
-      ProfileScreen(
-          navigation = navigationActions,
-          authViewModel = authVM,
-          firestoreVM,
-          onSignOut = {
-            signedOut = true
-            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          })
+      account?.let {
+        ProfileScreen(
+            navigation = navigationActions,
+            authViewModel = authVM,
+            discussionViewModel = firestoreVM,
+            account = account!!,
+            onSignOut = {
+              navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+              signedOut = true
+            })
+      } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
     }
     composable(MeepleMeetScreen.ShopDetails.name) {
       if (shopId.isNotEmpty()) {
