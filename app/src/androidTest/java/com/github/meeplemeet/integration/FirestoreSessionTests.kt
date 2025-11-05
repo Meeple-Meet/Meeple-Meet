@@ -24,7 +24,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -66,7 +66,7 @@ class FirestoreSessionTests : FirestoreTests() {
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
     testTimestamp = Timestamp.now()
 
-    Dispatchers.setMain(StandardTestDispatcher())
+    Dispatchers.setMain(UnconfinedTestDispatcher())
     viewModel = SessionViewModel(baseDiscussion, sessionRepository)
   }
 
@@ -235,14 +235,14 @@ class FirestoreSessionTests : FirestoreTests() {
     val discussionWithSession = baseDiscussion.copy(session = originalSession)
 
     val newParticipants = listOf(account1, account2, account3)
-    val updatedSession = originalSession.copy(participants = newParticipants.map { it -> it.uid })
+    val updatedSession = originalSession.copy(participants = newParticipants.map { it.uid })
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
     viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     coEvery {
       sessionRepository.updateSession(
-          discussionWithSession.uid, null, null, null, null, newParticipants.map { it -> it.uid })
+          discussionWithSession.uid, null, null, null, null, newParticipants.map { it.uid })
     } returns updatedDiscussion
 
     viewModel.updateSession(account1, discussionWithSession, newParticipantList = newParticipants)
@@ -250,7 +250,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
     val result = viewModel.discussion.value
     assertEquals(3, result.session?.participants?.size)
-    assertEquals(newParticipants.map { it -> it.uid }, result.session?.participants)
+    assertEquals(newParticipants.map { it.uid }, result.session?.participants)
   }
 
   @Test
@@ -274,7 +274,7 @@ class FirestoreSessionTests : FirestoreTests() {
             name = newName,
             date = newDate,
             location = newLocation,
-            participants = newParticipants.map { it -> it.uid })
+            participants = newParticipants.map { it.uid })
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
     viewModel = SessionViewModel(discussionWithSession, sessionRepository)
@@ -286,7 +286,7 @@ class FirestoreSessionTests : FirestoreTests() {
           null,
           newDate,
           newLocation,
-          newParticipants.map { it -> it.uid })
+          newParticipants.map { it.uid })
     } returns updatedDiscussion
 
     viewModel.updateSession(
@@ -302,7 +302,7 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals(newName, result.session?.name)
     assertEquals(newDate, result.session?.date)
     assertEquals(newLocation, result.session?.location)
-    assertEquals(newParticipants.map { it -> it.uid }, result.session?.participants)
+    assertEquals(newParticipants.map { it.uid }, result.session?.participants)
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -907,7 +907,7 @@ class FirestoreSessionTests : FirestoreTests() {
     val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
 
     vm.setGameQuery(account1, baseDiscussion, "cat")
-    advanceUntilIdle()
+    testScheduler.advanceUntilIdle()
 
     val state = vm.gameUIState.value
     assertEquals("cat", state.gameQuery)
@@ -922,7 +922,7 @@ class FirestoreSessionTests : FirestoreTests() {
     val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
 
     vm.setGameQuery(account1, baseDiscussion, "cat")
-    advanceUntilIdle()
+    testScheduler.advanceUntilIdle()
 
     val state = vm.gameUIState.value
     assertEquals("cat", state.gameQuery)
