@@ -4,6 +4,7 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.auth.HANDLES_COLLECTION_PATH
 import com.github.meeplemeet.model.discussions.ACCOUNT_COLLECTION_PATH
 import com.github.meeplemeet.model.discussions.DISCUSSIONS_COLLECTION_PATH
+import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.posts.POSTS_COLLECTION_PATH
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -42,6 +43,7 @@ open class FirestoreTests {
       cleaner.deleteCollection(ACCOUNT_COLLECTION_PATH)
       cleaner.deleteCollection(DISCUSSIONS_COLLECTION_PATH)
       cleaner.deleteCollection(POSTS_COLLECTION_PATH)
+      cleaner.deleteCollection(GEO_PIN_COLLECTION_PATH)
     }
   }
 
