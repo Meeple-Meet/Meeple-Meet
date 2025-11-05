@@ -36,19 +36,13 @@ class StorableGeoPinRepository(private val db: FirebaseFirestore = FirebaseProvi
    *   represents).
    * @param type Updated pin type. See [PinType]
    * @param location Updated location.
-   * @param label Updated label.
    * @return The created or updated [StorableGeoPin] instance.
    */
-  suspend fun upsertGeoPin(
-      ref: String,
-      type: PinType,
-      location: Location,
-      label: String,
-  ): StorableGeoPin {
-    val pin = StorableGeoPin(uid = ref, type = type, location = location, label = label)
+  suspend fun upsertGeoPin(ref: String, type: PinType, location: Location): StorableGeoPin {
+    val pin = StorableGeoPin(uid = ref, type = type)
 
     geoPinCollection.document(pin.uid).set(toNoUid(pin)).await()
-    setGeoLocation(pin.uid, pin.location)
+    setGeoLocation(pin.uid, location)
 
     return pin
   }
