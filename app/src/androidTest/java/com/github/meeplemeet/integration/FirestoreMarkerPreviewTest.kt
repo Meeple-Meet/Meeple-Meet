@@ -171,32 +171,17 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
    * Creates opening hours that will be open at the current time. Useful for testing the isOpenNow
    * logic.
    */
-  private fun createAlwaysOpenToday(): List<OpeningHours> {
-    val now = LocalDateTime.now()
-    val currentDay = now.dayOfWeek.value
-    val currentTime = now.toLocalTime()
-
-    // Create hours that definitely include current time
-    val openTime = currentTime.minusHours(1).toString()
-    val closeTime = currentTime.plusHours(1).toString()
-
-    return listOf(OpeningHours(day = currentDay, hours = listOf(TimeSlot(openTime, closeTime))))
+  private fun createAlwaysOpen(): List<OpeningHours> {
+    val fullDaySlot = listOf(TimeSlot("00:00", "23:59"))
+    return (1..7).map { day -> OpeningHours(day = day, hours = fullDaySlot) }
   }
 
   /**
    * Creates opening hours that will be closed at the current time. Useful for testing the isOpenNow
    * logic.
    */
-  private fun createAlwaysClosedToday(): List<OpeningHours> {
-    val now = LocalDateTime.now()
-    val currentDay = now.dayOfWeek.value
-    val currentTime = now.toLocalTime()
-
-    // Create hours that definitely exclude current time
-    val openTime = currentTime.plusHours(2).toString()
-    val closeTime = currentTime.plusHours(3).toString()
-
-    return listOf(OpeningHours(day = currentDay, hours = listOf(TimeSlot(openTime, closeTime))))
+  private fun createAlwaysClosed(): List<OpeningHours> {
+    return (1..7).map { day -> OpeningHours(day = day, hours = emptyList()) }
   }
 
   // ========================================================================
@@ -412,7 +397,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
   @Test
   fun shopMarkerPreview_showsOpen_whenCurrentlyOpen() = runTest {
     // Create shop with hours that are definitely open now
-    val openNowHours = createAlwaysOpenToday()
+    val openNowHours = createAlwaysOpen()
     val openShop =
         shopRepository.createShop(
             owner = testAccount,
@@ -433,7 +418,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
   @Test
   fun shopMarkerPreview_showsClosed_whenCurrentlyClosed() = runTest {
     // Create shop with hours that are definitely closed now
-    val closedNowHours = createAlwaysClosedToday()
+    val closedNowHours = createAlwaysClosed()
     val closedShop =
         shopRepository.createShop(
             owner = testAccount,
@@ -499,7 +484,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
   @Test
   fun spaceMarkerPreview_correctlyReflectsOpenStatus() = runTest {
     // Create space with hours that are definitely open now
-    val openNowHours = createAlwaysOpenToday()
+    val openNowHours = createAlwaysOpen()
     val openSpace =
         spaceRenterRepository.createSpaceRenter(
             owner = testAccount,
