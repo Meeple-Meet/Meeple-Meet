@@ -36,6 +36,7 @@ import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
@@ -43,6 +44,7 @@ import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreateDiscussionScreen
 import com.github.meeplemeet.ui.CreatePostScreen
 import com.github.meeplemeet.ui.CreateSessionScreen
+import com.github.meeplemeet.ui.CreateShopScreen
 import com.github.meeplemeet.ui.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.DiscussionScreen
 import com.github.meeplemeet.ui.DiscussionsOverviewScreen
@@ -133,7 +135,8 @@ fun MeepleMeetApp(
     firestoreVM: DiscussionViewModel = viewModel(),
     handlesVM: HandlesViewModel = viewModel(),
     navController: NavHostController = rememberNavController(),
-    shopVM: ShopViewModel = viewModel()
+    shopVM: ShopViewModel = viewModel(),
+    createShopVM: CreateShopViewModel = viewModel(),
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
@@ -357,6 +360,13 @@ fun MeepleMeetApp(
       } else {
         LoadingScreen()
       }
+    }
+    composable(MeepleMeetScreen.CreateShop.name) {
+      CreateShopScreen(
+          owner = account!!,
+          onBack = { navigationActions.goBack() },
+          onCreated = { /* TODO */},
+          viewModel = createShopVM)
     }
   }
 }
