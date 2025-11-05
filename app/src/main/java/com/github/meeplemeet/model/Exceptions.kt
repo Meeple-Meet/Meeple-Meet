@@ -42,9 +42,4 @@ class GameNotFoundException(message: String = DEFAULT_MESSAGE) : Exception(messa
   }
 }
 
-class LocationSearchException(message: String = DEFAULT_MESSAGE, cause: Throwable? = null) :
-    Exception(message, cause) {
-  companion object {
-    const val DEFAULT_MESSAGE = "Location search failed."
-  }
-}
+class LocationSearchException(message: String) : Exception(message)

@@ -108,7 +108,7 @@ class NominatimLocationRepository(
                 try {
                   if (body != null) parseBody(body) else emptyList()
                 } catch (e: JSONException) {
-                  throw LocationSearchException("Failed to parse location response", e)
+                  throw LocationSearchException("Failed to parse location response: ${e.message}")
                 }
 
             // Update cache
@@ -117,7 +117,7 @@ class NominatimLocationRepository(
             return@withContext results
           }
         } catch (e: IOException) {
-          throw LocationSearchException("Failed to search location: ${e.message}", e)
+          throw LocationSearchException("Failed to search location: ${e.message}")
         }
       }
 
