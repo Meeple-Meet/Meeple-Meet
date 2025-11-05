@@ -6,6 +6,8 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.map.LocationRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.GameRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,9 +70,16 @@ open class SearchViewModel(
     private val locationRepository: LocationRepository = RepositoryProvider.locations
 ) : ViewModel() {
 
+  private companion object {
+    const val DEBOUNCE_TIME_MS = 500L
+  }
+
   // ---------- Game Search ----------
   private val _gameUIState = MutableStateFlow(GameUIState())
   val gameUIState: StateFlow<GameUIState> = _gameUIState.asStateFlow()
+
+  /** Custom job for debouncing game search */
+  private var gameSearchJob: Job? = null
 
   /** Resets the game search state to its default values. */
   fun clearGameSearch() {
@@ -112,18 +121,21 @@ open class SearchViewModel(
   fun setGameQuery(query: String) {
     _gameUIState.value = _gameUIState.value.copy(gameQuery = query)
 
+    gameSearchJob?.cancel()
     if (query.isNotBlank()) {
-      viewModelScope.launch {
-        try {
-          val results = gameRepository.searchGamesByNameContains(query)
-          _gameUIState.value = _gameUIState.value.copy(gameSuggestions = results)
-        } catch (_: Exception) {
-          _gameUIState.value =
-              _gameUIState.value.copy(
-                  gameSuggestions = emptyList(),
-                  gameSearchError = "Game search failed due to a repository error")
-        }
-      }
+      gameSearchJob =
+          viewModelScope.launch {
+            delay(DEBOUNCE_TIME_MS)
+            try {
+              val results = gameRepository.searchGamesByNameContains(query)
+              _gameUIState.value = _gameUIState.value.copy(gameSuggestions = results)
+            } catch (_: Exception) {
+              _gameUIState.value =
+                  _gameUIState.value.copy(
+                      gameSuggestions = emptyList(),
+                      gameSearchError = "Game search failed due to a repository error")
+            }
+          }
     } else {
       _gameUIState.value = _gameUIState.value.copy(gameSuggestions = emptyList())
     }
@@ -160,6 +172,9 @@ open class SearchViewModel(
   private val _locationUIState = MutableStateFlow(LocationUIState())
   val locationUIState: StateFlow<LocationUIState> = _locationUIState.asStateFlow()
 
+  /** Custom job for debouncing location search */
+  private var locationSearchJob: Job? = null
+
   /** Resets the location search state to its default values. */
   fun clearLocationSearch() {
     _locationUIState.value = LocationUIState()
@@ -189,18 +204,21 @@ open class SearchViewModel(
   fun setLocationQuery(query: String) {
     _locationUIState.value = _locationUIState.value.copy(locationQuery = query)
 
+    locationSearchJob?.cancel()
     if (query.isNotBlank()) {
-      viewModelScope.launch {
-        try {
-          val results = locationRepository.search(query)
-          _locationUIState.value = _locationUIState.value.copy(locationSuggestions = results)
-        } catch (_: Exception) {
-          _locationUIState.value =
-              _locationUIState.value.copy(
-                  locationSuggestions = emptyList(),
-                  locationSearchError = "Location search failed due to a repository error")
-        }
-      }
+      locationSearchJob =
+          viewModelScope.launch {
+            delay(DEBOUNCE_TIME_MS)
+            try {
+              val results = locationRepository.search(query)
+              _locationUIState.value = _locationUIState.value.copy(locationSuggestions = results)
+            } catch (_: Exception) {
+              _locationUIState.value =
+                  _locationUIState.value.copy(
+                      locationSuggestions = emptyList(),
+                      locationSearchError = "Location search failed due to a repository error")
+            }
+          }
     } else {
       _locationUIState.value = _locationUIState.value.copy(locationSuggestions = emptyList())
     }
