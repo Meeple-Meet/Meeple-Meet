@@ -26,6 +26,7 @@ import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.AddShopUi.Strings
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.DayRow
 import com.github.meeplemeet.ui.components.GameListSection
@@ -120,6 +121,9 @@ private object AddShopUi {
 
     const val Collapse = "Collapse"
     const val Expand = "Expand"
+
+    const val ClosedMsg = "Closed"
+    const val Open24Msg = "Open 24 hours"
   }
 
   val dayNames: List<String> by lazy {
@@ -159,10 +163,10 @@ private fun String.tryParseTime(): LocalTime? =
 
 private fun humanize(hours: List<TimeSlot>): String =
     when {
-      hours.isEmpty() -> "Closed"
+      hours.isEmpty() -> Strings.ClosedMsg
       hours.size == 1 &&
           hours[0].open == TimeUi.OPEN24_START &&
-          hours[0].close == TimeUi.OPEN24_END -> "Open 24 hours"
+          hours[0].close == TimeUi.OPEN24_END -> Strings.Open24Msg
       else -> {
         // Sort by opening time
         val sorted = hours.sortedBy { ts -> ts.open?.tryParseTime() ?: LocalTime.MAX }
@@ -416,7 +420,7 @@ fun AddShopContent(
               item {
                 CollapsibleSection(
                     title = AddShopUi.Strings.SectionGames,
-                    initiallyExpanded = true,
+                    initiallyExpanded = false,
                     header = {
                       TextButton(
                           onClick = {
