@@ -843,17 +843,34 @@ fun OpeningHoursDialog(
         TextButton(
             onClick = {
               try {
+                val open24Start = ShopUiDefaults.TimeMagicNumbers.open24Start
+                val open24End = ShopUiDefaults.TimeMagicNumbers.open24End
+                val open24Pair = open24Start to open24End
+
+                // If user entered a single interval with same start/end => treat as open 24
+                val normalizedIntervals =
+                    if (!isClosed &&
+                        !is24h &&
+                        intervals.size == 1 &&
+                        intervals[0].first == intervals[0].second) {
+                      listOf(open24Pair)
+                    } else intervals
+
                 val payload =
                     when {
                       isClosed -> emptyList()
-                      is24h ->
-                          listOf(
-                              ShopUiDefaults.TimeMagicNumbers.open24Start to
-                                  ShopUiDefaults.TimeMagicNumbers.open24End)
-                      else -> validateIntervals(intervals)
+                      is24h -> listOf(open24Pair)
+                      else -> validateIntervals(normalizedIntervals)
                     }
+
+                // Compute final open24 flag from the normalized payload
+                val open24Final =
+                    payload.size == 1 &&
+                        payload[0].first == open24Start &&
+                        payload[0].second == open24End
+
                 errorText = null
-                onSave(selectedDays, isClosed, is24h, payload)
+                onSave(selectedDays, isClosed, open24Final, payload)
               } catch (e: IllegalArgumentException) {
                 errorText = e.message ?: ShopUiDefaults.StringsMagicNumbers.INVALID_TIME_RANGES
               }
