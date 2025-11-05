@@ -551,7 +551,7 @@ fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifie
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
-            maxLines = 2)
+        )
         IconButton(
             onClick = onEdit, modifier = Modifier.testTag(ShopComponentsTestTags.DAY_ROW_EDIT)) {
               Icon(
