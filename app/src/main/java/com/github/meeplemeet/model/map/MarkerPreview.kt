@@ -9,18 +9,24 @@ package com.github.meeplemeet.model.map
  * - SessionPreview: summary of a game session, including title, game name, location, and date
  * - SpacePreview: basic info about a space renter, including open status
  */
-sealed class MarkerPreview {
+sealed class MarkerPreview(open val name: String, open val address: String) {
 
-  data class ShopPreview(val name: String, val address: String, val open: Boolean) :
-      MarkerPreview()
+  data class ShopMarkerPreview(
+      override val name: String,
+      override val address: String,
+      val open: Boolean
+  ) : MarkerPreview(name, address)
 
-  data class SessionPreview(
+  data class SessionMarkerPreview(
       val title: String,
+      override val address: String,
       val game: String,
-      val address: String,
       val date: String
-  ) : MarkerPreview()
+  ) : MarkerPreview(title, address)
 
-  data class SpacePreview(val name: String, val address: String, val open: Boolean) :
-      MarkerPreview()
+  data class SpaceMarkerPreview(
+      override val name: String,
+      override val address: String,
+      val open: Boolean
+  ) : MarkerPreview(name, address)
 }

@@ -1,5 +1,6 @@
 package com.github.meeplemeet.model.map
 
+import com.github.meeplemeet.HttpClientProvider
 import com.github.meeplemeet.model.LocationSearchException
 import com.github.meeplemeet.model.shared.Location
 import java.io.IOException
@@ -26,7 +27,7 @@ import org.json.JSONException
  * Note: Cache is local to the app instance and cleared on app restart.
  */
 class NominatimLocationRepository(
-    private val client: OkHttpClient,
+    private val client: OkHttpClient = HttpClientProvider.client,
     private val baseUrl: HttpUrl = DEFAULT_URL
 ) : LocationRepository {
 
@@ -43,14 +44,14 @@ class NominatimLocationRepository(
     private const val APP_VERSION = "1.0"
     private const val CONTACT = "thomas.picart90@gmail.com"
     private const val REFERER = ""
-    private val USER_AGENT = "$APP_NAME/$APP_VERSION ($CONTACT)"
+    private const val USER_AGENT = "$APP_NAME/$APP_VERSION ($CONTACT)"
 
     /** Default base URL for Nominatim API (used in production) */
     val DEFAULT_URL: HttpUrl =
         HttpUrl.Builder().scheme("https").host("nominatim.openstreetmap.org").build()
   }
 
-  // In-memory LRU cache (max 50 entries) to reduce network usage
+  // // LRU cache for up to 50 queries (max 10 suggestions each) to reduce network calls
   private val cache =
       object : LinkedHashMap<String, List<Location>>(16, 0.75f, true) {
         private val MAX_SIZE = 50
@@ -88,6 +89,7 @@ class NominatimLocationRepository(
                 .addPathSegment("search")
                 .addQueryParameter("q", query)
                 .addQueryParameter("format", "json")
+                .addQueryParameter("limit", "5")
                 .build()
 
         val builder = Request.Builder().url(url).header("User-Agent", USER_AGENT)

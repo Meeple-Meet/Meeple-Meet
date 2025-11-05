@@ -1,5 +1,6 @@
 package com.github.meeplemeet.model.map
 
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.MarkerPreview.*
 import com.github.meeplemeet.model.sessions.GameRepository
@@ -22,10 +23,10 @@ import java.time.format.DateTimeFormatter
  * participation before resolution.
  */
 class MarkerPreviewRepository(
-    private val shopRepository: ShopRepository,
-    private val discussionRepository: DiscussionRepository,
-    private val spaceRenterRepository: SpaceRenterRepository,
-    private val gameRepository: GameRepository
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
+    private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val gameRepository: GameRepository = RepositoryProvider.games
 ) {
 
   /**
@@ -39,23 +40,25 @@ class MarkerPreviewRepository(
       PinType.SHOP -> {
         val shop = shopRepository.getShop(pin.uid)
         shop.let {
-          ShopPreview(name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
+          ShopMarkerPreview(
+              name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
         }
       }
       PinType.SESSION -> {
         val session = discussionRepository.getDiscussion(pin.uid).session
         session?.let {
-          SessionPreview(
+          SessionMarkerPreview(
               title = it.name,
-              game = gameRepository.getGameById(it.gameId).name,
               address = it.location.name,
+              game = gameRepository.getGameById(it.gameId).name,
               date = formatTimeStamp(it.date))
         }
       }
       PinType.SPACE -> {
         val space = spaceRenterRepository.getSpaceRenter(pin.uid)
         space.let {
-          SpacePreview(name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
+          SpaceMarkerPreview(
+              name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
         }
       }
     }

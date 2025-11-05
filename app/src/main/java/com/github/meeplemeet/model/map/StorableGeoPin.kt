@@ -2,6 +2,13 @@ package com.github.meeplemeet.model.map
 
 import kotlinx.serialization.Serializable
 
+/** Enum representing the type of entity linked to a map pin. */
+enum class PinType {
+  SHOP,
+  SPACE,
+  SESSION
+}
+
 /**
  * Represents a map marker for storage and linked to a Firestore entity.
  *
@@ -34,10 +41,3 @@ fun toNoUid(pin: StorableGeoPin): StorableGeoPinNoUid = StorableGeoPinNoUid(pin.
  */
 fun fromNoUid(id: String, noUid: StorableGeoPinNoUid): StorableGeoPin =
     StorableGeoPin(id, noUid.type)
-
-/** Enum representing the type of entity linked to a map pin. */
-enum class PinType {
-  SHOP,
-  SPACE,
-  SESSION
-}
