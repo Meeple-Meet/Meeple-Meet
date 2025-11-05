@@ -97,7 +97,7 @@ private object AddShopUi {
 
   object Strings {
     const val ScreenTitle = "Add Shop"
-    const val SectionRequired = "Required Info"
+    const val RequirementsSection = "Required Info"
     const val SectionAvailability = "Availability"
     const val SectionGames = "Games in stock"
 
@@ -406,7 +406,7 @@ fun AddShopContent(
                     vertical = AddShopUi.Dimensions.contentVPadding)) {
               item {
                 CollapsibleSection(
-                    title = AddShopUi.Strings.SectionRequired,
+                    title = AddShopUi.Strings.RequirementsSection,
                     initiallyExpanded = false,
                     content = {
                       RequiredInfoSection(
