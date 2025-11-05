@@ -10,19 +10,13 @@ import kotlinx.serialization.Serializable
  * @property type Type of the pin (e.g. SHOP, SESSION, SPACE).
  * @property location Geographical coordinates of the pin.
  * @property label Human-readable label displayed on the map.
- * @property ref Firestore path to the linked entity (e.g. "/shops/{id}").
  */
 data class MapPin(
     val uid: String,
     val type: PinType,
     val location: Location,
     val label: String,
-    val ref: String
 )
-
-/** Extension method to only fetch the document ID, without the collections paths */
-val MapPin.refId: String
-  get() = ref.substringAfterLast("/")
 
 /**
  * Minimal serializable form of [MapPin] without the UID, used for Firestore storage.
@@ -33,8 +27,7 @@ val MapPin.refId: String
 data class MapPinNoUid(
     val type: PinType = PinType.SHOP,
     val location: Location = Location(),
-    val label: String = "",
-    val ref: String = "",
+    val label: String = ""
 )
 
 /**
@@ -43,7 +36,7 @@ data class MapPinNoUid(
  * @param pin The map pin instance to convert.
  * @return The stripped-down form without UID for storage.
  */
-fun toNoUid(pin: MapPin): MapPinNoUid = MapPinNoUid(pin.type, pin.location, pin.label, pin.ref)
+fun toNoUid(pin: MapPin): MapPinNoUid = MapPinNoUid(pin.type, pin.location, pin.label)
 
 /**
  * Reconstructs a full [MapPin] object from its Firestore representation.
@@ -53,7 +46,7 @@ fun toNoUid(pin: MapPin): MapPinNoUid = MapPinNoUid(pin.type, pin.location, pin.
  * @return A fully constructed [MapPin] instance.
  */
 fun fromNoUid(id: String, noUid: MapPinNoUid): MapPin =
-    MapPin(id, noUid.type, noUid.location, noUid.label, noUid.ref)
+    MapPin(id, noUid.type, noUid.location, noUid.label)
 
 /** Enum representing the type of entity linked to a map pin. */
 enum class PinType {

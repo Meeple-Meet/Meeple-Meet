@@ -25,58 +25,43 @@ class MapPinRepository(private val db: FirebaseFirestore = FirebaseProvider.db) 
   /** Reference to the Firestore collection where map pins are stored. */
   private val mapPinCollection = db.collection(MAP_PIN_COLLECTION_PATH)
 
-  /** Generates a new unique document ID for a map pin. */
-  private fun newUUID() = mapPinCollection.document().id
-
   /**
-   * Creates a new map pin document in Firestore and links it to a domain object (e.g. shop,
-   * session). The pin is stored with metadata and geolocation, allowing it to be displayed on the
-   * map and referenced later.
+   * Creates or replaces a map pin document in Firestore using the given ID.
    *
-   * @param type Type of the pin (e.g. shop, session). See [PinType]
-   * @param location Geographical location of the pin.
-   * @param label Display label for the pin.
+   * This method is idempotent: if a pin with the same ID already exists, it will be overwritten.
+   * The pin is stored with metadata and geolocation, allowing it to be displayed on the map and
+   * referenced later by its UID (which matches the linked entity's ID).
+   *
    * @param ref ID of the external object this pin is linked to (e.g. the shop or session it
-   *   represents).
-   */
-  suspend fun createMapPin(type: PinType, location: Location, label: String, ref: String): MapPin {
-    val pin = MapPin(uid = newUUID(), type = type, location = location, label = label, ref = ref)
-
-    mapPinCollection.document(pin.uid).set(toNoUid(pin)).await()
-    setGeoLocation(pin.uid, pin.location)
-    return pin
-  }
-
-  /**
-   * Updates an existing map pin document and its geolocation data.
-   *
-   * @param uid Unique ID of the pin to update.
-   * @param type Updated pin type.
+   * represents).
+   * @param type Updated pin type. See [PinType]
    * @param location Updated location.
    * @param label Updated label.
-   * @param ref Updated reference ID.
+   * @return The created or updated [MapPin] instance.
    */
-  suspend fun updateMapPin(
-      uid: String,
+  suspend fun upsertMapPin(
+      ref: String,
       type: PinType,
       location: Location,
       label: String,
-      ref: String
-  ) {
-    val pin = MapPin(uid = uid, type = type, location = location, label = label, ref = ref)
+  ): MapPin {
+    val pin = MapPin(uid = ref, type = type, location = location, label = label)
 
     mapPinCollection.document(pin.uid).set(toNoUid(pin)).await()
     setGeoLocation(pin.uid, pin.location)
+
+    return pin
   }
 
   /**
    * Deletes a map pin document and removes its geolocation data.
    *
-   * @param uid Unique ID of the pin to delete.
+   * @param ref ID of the external object this pin is linked to (e.g. the shop or session it
+   * represents).
    */
-  suspend fun deleteMapPin(uid: String) {
-    removeGeoLocation(uid)
-    mapPinCollection.document(uid).delete().await()
+  suspend fun deleteMapPin(ref: String) {
+    removeGeoLocation(ref)
+    mapPinCollection.document(ref).delete().await()
   }
 
   /**

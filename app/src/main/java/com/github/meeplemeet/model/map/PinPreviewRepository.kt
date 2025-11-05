@@ -37,13 +37,13 @@ class PinPreviewRepository(
   suspend fun getPinPreview(pin: MapPin): PinPreview? {
     return when (pin.type) {
       PinType.SHOP -> {
-        val shop = shopRepository.getShop(pin.refId)
+        val shop = shopRepository.getShop(pin.uid)
         shop.let {
           ShopPreview(name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
         }
       }
       PinType.SESSION -> {
-        val session = discussionRepository.getDiscussion(pin.refId).session
+        val session = discussionRepository.getDiscussion(pin.uid).session
         session?.let {
           SessionPreview(
               title = it.name,
@@ -53,7 +53,7 @@ class PinPreviewRepository(
         }
       }
       PinType.SPACE -> {
-        val space = spaceRenterRepository.getSpaceRenter(pin.refId)
+        val space = spaceRenterRepository.getSpaceRenter(pin.uid)
         space.let {
           SpacePreview(name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
         }
