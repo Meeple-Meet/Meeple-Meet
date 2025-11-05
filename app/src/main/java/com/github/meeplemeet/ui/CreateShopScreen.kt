@@ -3,6 +3,7 @@
 // Docstrings were generated using copilot from Android studio
 package com.github.meeplemeet.ui
 
+import android.util.Patterns
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
@@ -141,8 +142,22 @@ private object TimeUi {
   val fmt12: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
 }
 
+/**
+ * Formats a LocalTime object into "HH:mm" string format.
+ *
+ * @return A string representation of the time in "HH:mm" format.
+ * @receiver The LocalTime object to format.
+ */
 private fun LocalTime.hhmm(): String = "%02d:%02d".format(hour, minute)
 
+/**
+ * Tries to parse a time string into a LocalTime object.
+ *
+ * Supports both 12-hour (with AM/PM) and 24-hour formats.
+ *
+ * @return A LocalTime object if parsing is successful, null otherwise.
+ * @receiver The time string to parse.
+ */
 private fun String.tryParseTime(): LocalTime? =
     runCatching {
           val lower = lowercase(Locale.getDefault())
@@ -161,6 +176,12 @@ private fun String.tryParseTime(): LocalTime? =
         }
         .getOrNull()
 
+/**
+ * Converts a list of TimeSlot objects into a human-readable string format.
+ *
+ * @param hours List of TimeSlot objects representing opening hours.
+ * @return A string representation of the opening hours.
+ */
 private fun humanize(hours: List<TimeSlot>): String =
     when {
       hours.isEmpty() -> Strings.ClosedMsg
@@ -181,9 +202,18 @@ private fun humanize(hours: List<TimeSlot>): String =
 /* ================================================================================================
  * Helpers
  * ================================================================================================ */
+
+/** Returns an empty list of opening hours for each day of the week. */
 private fun emptyWeek(): List<OpeningHours> =
     List(7) { day -> OpeningHours(day = day, hours = emptyList()) }
 
+/**
+ * Mocks location suggestions based on a query string.
+ *
+ * @param query The query string to base the suggestions on.
+ * @param max The maximum number of suggestions to generate.
+ * @return A list of mocked Location objects.
+ */
 private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
   if (query.isBlank()) return emptyList()
   val rng = Random(query.hashCode())
@@ -193,6 +223,14 @@ private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Locat
     Location(latitude = lat, longitude = lon, name = "$query #${i + 1}")
   }
 }
+
+/**
+ * Validates if the provided email string is in a valid email format.
+ *
+ * @param email The email string to validate.
+ * @return True if the email is valid, false otherwise.
+ */
+private fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
 /* ================================================================================================
  * Screen
@@ -303,7 +341,10 @@ fun AddShopContent(
   val isValid by
       remember(shopName, email, addressText, hasOpeningHours) {
         derivedStateOf {
-          shopName.isNotBlank() && email.isNotBlank() && addressText.isNotBlank() && hasOpeningHours
+          shopName.isNotBlank() &&
+              isValidEmail(email) &&
+              addressText.isNotBlank() &&
+              hasOpeningHours
         }
       }
 
@@ -526,6 +567,13 @@ private fun RequiredInfoSection(
         onValueChange = onEmail,
         keyboardType = KeyboardType.Email)
   }
+  val showEmailError = email.isNotEmpty() && !isValidEmail(email)
+  if (showEmailError) {
+    Text(
+        "Enter a valid email address.",
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall)
+  }
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_PHONE)) {
     LabeledField(
         label = AddShopUi.Strings.LabelPhone,
@@ -534,6 +582,7 @@ private fun RequiredInfoSection(
         onValueChange = onPhone,
         keyboardType = KeyboardType.Phone)
   }
+
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_LINK)) {
     LabeledField(
         label = AddShopUi.Strings.LabelLink,
@@ -542,6 +591,7 @@ private fun RequiredInfoSection(
         onValueChange = onLink,
         keyboardType = KeyboardType.Uri)
   }
+
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_ADDRESS)) {
     val locationResults = remember(addressText) { mockLocationSuggestionsFrom(addressText) }
     LocationSearchField(
