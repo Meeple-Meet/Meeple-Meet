@@ -6,11 +6,13 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.map.LocationRepository
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.GameRepository
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 /**
@@ -65,6 +67,7 @@ data class LocationUIState(
  * - [gameUIState] for managing game-related search and selection
  * - [locationUIState] for managing location-related search and selection
  */
+@OptIn(FlowPreview::class)
 open class SearchViewModel(
     private val gameRepository: GameRepository = RepositoryProvider.games,
     private val locationRepository: LocationRepository = RepositoryProvider.locations
@@ -74,12 +77,43 @@ open class SearchViewModel(
     const val DEBOUNCE_TIME_MS = 500L
   }
 
+  /** Debounce flows */
+  private val gameQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+  private val locationQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+
+  init {
+    viewModelScope.launch {
+      gameQueryFlow.debounce(DEBOUNCE_TIME_MS).collectLatest { query ->
+        try {
+          val results = gameRepository.searchGamesByNameContains(query)
+          _gameUIState.value = _gameUIState.value.copy(gameSuggestions = results)
+        } catch (_: Exception) {
+          _gameUIState.value =
+              _gameUIState.value.copy(
+                  gameSuggestions = emptyList(),
+                  gameSearchError = "Game search failed due to a repository error")
+        }
+      }
+    }
+
+    viewModelScope.launch {
+      locationQueryFlow.debounce(DEBOUNCE_TIME_MS).collectLatest { query ->
+        try {
+          val results = locationRepository.search(query)
+          _locationUIState.value = _locationUIState.value.copy(locationSuggestions = results)
+        } catch (_: Exception) {
+          _locationUIState.value =
+              _locationUIState.value.copy(
+                  locationSuggestions = emptyList(),
+                  locationSearchError = "Location search failed due to a repository error")
+        }
+      }
+    }
+  }
+
   // ---------- Game Search ----------
   private val _gameUIState = MutableStateFlow(GameUIState())
   val gameUIState: StateFlow<GameUIState> = _gameUIState.asStateFlow()
-
-  /** Custom job for debouncing game search */
-  private var gameSearchJob: Job? = null
 
   /** Resets the game search state to its default values. */
   fun clearGameSearch() {
@@ -121,21 +155,8 @@ open class SearchViewModel(
   fun setGameQuery(query: String) {
     _gameUIState.value = _gameUIState.value.copy(gameQuery = query)
 
-    gameSearchJob?.cancel()
     if (query.isNotBlank()) {
-      gameSearchJob =
-          viewModelScope.launch {
-            delay(DEBOUNCE_TIME_MS)
-            try {
-              val results = gameRepository.searchGamesByNameContains(query)
-              _gameUIState.value = _gameUIState.value.copy(gameSuggestions = results)
-            } catch (_: Exception) {
-              _gameUIState.value =
-                  _gameUIState.value.copy(
-                      gameSuggestions = emptyList(),
-                      gameSearchError = "Game search failed due to a repository error")
-            }
-          }
+      gameQueryFlow.tryEmit(query)
     } else {
       _gameUIState.value = _gameUIState.value.copy(gameSuggestions = emptyList())
     }
@@ -172,9 +193,6 @@ open class SearchViewModel(
   private val _locationUIState = MutableStateFlow(LocationUIState())
   val locationUIState: StateFlow<LocationUIState> = _locationUIState.asStateFlow()
 
-  /** Custom job for debouncing location search */
-  private var locationSearchJob: Job? = null
-
   /** Resets the location search state to its default values. */
   fun clearLocationSearch() {
     _locationUIState.value = LocationUIState()
@@ -204,21 +222,8 @@ open class SearchViewModel(
   fun setLocationQuery(query: String) {
     _locationUIState.value = _locationUIState.value.copy(locationQuery = query)
 
-    locationSearchJob?.cancel()
     if (query.isNotBlank()) {
-      locationSearchJob =
-          viewModelScope.launch {
-            delay(DEBOUNCE_TIME_MS)
-            try {
-              val results = locationRepository.search(query)
-              _locationUIState.value = _locationUIState.value.copy(locationSuggestions = results)
-            } catch (_: Exception) {
-              _locationUIState.value =
-                  _locationUIState.value.copy(
-                      locationSuggestions = emptyList(),
-                      locationSearchError = "Location search failed due to a repository error")
-            }
-          }
+      locationQueryFlow.tryEmit(query)
     } else {
       _locationUIState.value = _locationUIState.value.copy(locationSuggestions = emptyList())
     }
