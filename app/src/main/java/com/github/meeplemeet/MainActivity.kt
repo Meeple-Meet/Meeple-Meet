@@ -37,6 +37,7 @@ import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.CreateAccountScreen
 import com.github.meeplemeet.ui.CreateDiscussionScreen
@@ -50,6 +51,8 @@ import com.github.meeplemeet.ui.PostsOverviewScreen
 import com.github.meeplemeet.ui.ProfileScreen
 import com.github.meeplemeet.ui.SessionDetailsScreen
 import com.github.meeplemeet.ui.SessionsOverviewScreen
+import com.github.meeplemeet.ui.ShopDetails
+import com.github.meeplemeet.ui.ShopDetailsScreen
 import com.github.meeplemeet.ui.SignInScreen
 import com.github.meeplemeet.ui.SignUpScreen
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -129,7 +132,8 @@ fun MeepleMeetApp(
     authVM: AuthViewModel = viewModel(),
     firestoreVM: DiscussionViewModel = viewModel(),
     handlesVM: HandlesViewModel = viewModel(),
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    shopVM: ShopViewModel = viewModel()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
@@ -151,6 +155,8 @@ fun MeepleMeetApp(
   val sessionVM = remember(discussion) { discussion?.let { SessionViewModel(discussion!!) } }
 
   var postId by remember { mutableStateOf("") }
+
+  var shopId by remember { mutableStateOf("") }
 
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
@@ -337,6 +343,20 @@ fun MeepleMeetApp(
             signedOut = true
             navigationActions.navigateTo(MeepleMeetScreen.SignIn)
           })
+    }
+    composable(MeepleMeetScreen.ShopDetails.name) {
+      if (shopId.isNotEmpty()) {
+        ShopDetailsScreen(
+            account = account!!,
+            shopId = shopId,
+            onBack = { navigationActions.goBack() },
+            onEdit = {
+              // Navigate to shop edit screen (not implemented here)
+            },
+            viewModel = shopVM)
+      } else {
+        LoadingScreen()
+      }
     }
   }
 }
