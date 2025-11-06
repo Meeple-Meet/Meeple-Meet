@@ -362,7 +362,7 @@ class CreateSessionScreenTest {
     @JvmStatic
     @BeforeClass
     fun cacheReflection() {
-      val cls = Class.forName("com.github.meeplemeet.ui.CreateSessionScreenKt")
+      val cls = Class.forName("com.github.meeplemeet.ui.sessions.CreateSessionScreenKt")
       toTs =
           cls.getDeclaredMethod(
                   "toTimestamp", LocalDate::class.java, LocalTime::class.java, ZoneId::class.java)
