@@ -5,7 +5,6 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.model.shops.MapViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.CreateSpaceRenterViewModel
@@ -32,8 +31,6 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   private lateinit var createSpaceRenterViewModel: CreateSpaceRenterViewModel
   private lateinit var spaceRenterViewModel: SpaceRenterViewModel
   private lateinit var editSpaceRenterViewModel: EditSpaceRenterViewModel
-  private lateinit var mapViewModel: MapViewModel
-
   private lateinit var testAccount1: Account
   private lateinit var testAccount2: Account
   private lateinit var testLocation1: Location
@@ -49,7 +46,6 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     createSpaceRenterViewModel = CreateSpaceRenterViewModel(spaceRenterRepository)
     spaceRenterViewModel = SpaceRenterViewModel(spaceRenterRepository)
     editSpaceRenterViewModel = EditSpaceRenterViewModel(spaceRenterRepository)
-    mapViewModel = MapViewModel(spaceRenterRepository = spaceRenterRepository)
 
     runBlocking {
       // Create test accounts
@@ -1211,7 +1207,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     try {
       spaceRenterRepository.getSpaceRenter(spaceRenter.id)
       throw AssertionError("SpaceRenter should have been deleted")
-    } catch (e: IllegalArgumentException) {
+    } catch (_: IllegalArgumentException) {
       // Expected - space renter doesn't exist anymore
     }
   }
@@ -1243,176 +1239,5 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     assertEquals(testLocation1, updated.address)
     assertEquals(testOpeningHours.size, updated.openingHours.size)
     assertEquals(1, updated.spaces.size)
-  }
-
-  // ========================================================================
-  // MapViewModel Tests (Space Renters)
-  // ========================================================================
-
-  @Test
-  fun mapViewModelInitialSpaceRentersStateIsNull() {
-    assertNull(mapViewModel.spaceRenters.value)
-  }
-
-  @Test
-  fun mapViewModelRetrievesSpaceRentersSuccessfully() = runBlocking {
-    // Create multiple space renters
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount1,
-        name = "Map Space Renter 1",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount2,
-        name = "Map Space Renter 2",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount1,
-        name = "Map Space Renter 3",
-        address = testLocation1,
-        openingHours = testOpeningHours,
-        spaces = listOf(testSpace1))
-
-    // Retrieve space renters through MapViewModel
-    mapViewModel.getSpaceRenters(10u)
-    kotlinx.coroutines.delay(1000)
-
-    // Verify StateFlow was updated
-    val spaceRenters = mapViewModel.spaceRenters.value
-    assertNotNull(spaceRenters)
-    assertTrue(spaceRenters!!.size >= 3)
-    assertTrue(spaceRenters.any { it.name == "Map Space Renter 1" })
-    assertTrue(spaceRenters.any { it.name == "Map Space Renter 2" })
-    assertTrue(spaceRenters.any { it.name == "Map Space Renter 3" })
-  }
-
-  @Test
-  fun mapViewModelRespectsCountParameterForSpaceRenters() = runBlocking {
-    // Create 5 space renters
-    for (i in 1..5) {
-      spaceRenterRepository.createSpaceRenter(
-          owner = testAccount1,
-          name = "Count Test Space Renter $i",
-          address = testLocation1,
-          openingHours = testOpeningHours)
-    }
-
-    // Request only 2 space renters
-    mapViewModel.getSpaceRenters(2u)
-    kotlinx.coroutines.delay(1000)
-
-    val spaceRenters = mapViewModel.spaceRenters.value
-    assertNotNull(spaceRenters)
-    assertEquals(2, spaceRenters!!.size)
-  }
-
-  @Test
-  fun mapViewModelReturnsEmptyListWhenNoSpaceRentersExist() = runBlocking {
-    // No space renters created, StateFlow should be empty list
-    mapViewModel.getSpaceRenters(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val spaceRenters = mapViewModel.spaceRenters.value
-    assertNotNull(spaceRenters)
-    assertTrue(spaceRenters!!.isEmpty())
-  }
-
-  @Test
-  fun mapViewModelLoadsSpaceRentersWithCompleteData() = runBlocking {
-    // Create a space renter with all fields populated
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount1,
-        name = "Complete Data Space Renter",
-        phone = "+41 21 555 1234",
-        email = "map@spacerenter.com",
-        website = "https://mapspacerenter.com",
-        address = testLocation1,
-        openingHours = testOpeningHours,
-        spaces = listOf(testSpace1, testSpace2))
-
-    // Retrieve through MapViewModel
-    mapViewModel.getSpaceRenters(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val spaceRenters = mapViewModel.spaceRenters.value
-    assertNotNull(spaceRenters)
-
-    val spaceRenter = spaceRenters!!.find { it.name == "Complete Data Space Renter" }
-    assertNotNull(spaceRenter)
-    assertEquals("Complete Data Space Renter", spaceRenter!!.name)
-    assertEquals("+41 21 555 1234", spaceRenter.phone)
-    assertEquals("map@spacerenter.com", spaceRenter.email)
-    assertEquals("https://mapspacerenter.com", spaceRenter.website)
-    assertEquals(testLocation1, spaceRenter.address)
-    assertEquals(testAccount1.uid, spaceRenter.owner.uid)
-    assertEquals(testOpeningHours.size, spaceRenter.openingHours.size)
-    assertEquals(2, spaceRenter.spaces.size)
-  }
-
-  @Test
-  fun mapViewModelLoadsSpaceRentersWithDifferentOwners() = runBlocking {
-    // Create space renters with different owners
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount1,
-        name = "Alice's Map Space Renter",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount2,
-        name = "Bob's Map Space Renter",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    // Retrieve through MapViewModel
-    mapViewModel.getSpaceRenters(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val spaceRenters = mapViewModel.spaceRenters.value
-    assertNotNull(spaceRenters)
-
-    val aliceSpaceRenter = spaceRenters!!.find { it.name == "Alice's Map Space Renter" }
-    val bobSpaceRenter = spaceRenters.find { it.name == "Bob's Map Space Renter" }
-
-    assertNotNull(aliceSpaceRenter)
-    assertNotNull(bobSpaceRenter)
-    assertEquals(testAccount1.uid, aliceSpaceRenter!!.owner.uid)
-    assertEquals("Alice", aliceSpaceRenter.owner.name)
-    assertEquals(testAccount2.uid, bobSpaceRenter!!.owner.uid)
-    assertEquals("Bob", bobSpaceRenter.owner.name)
-  }
-
-  @Test
-  fun mapViewModelLoadsSpaceRentersWithDifferentLocations() = runBlocking {
-    // Create space renters at different locations
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount1,
-        name = "EPFL Space Renter",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    spaceRenterRepository.createSpaceRenter(
-        owner = testAccount2,
-        name = "Geneva Space Renter",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    // Retrieve through MapViewModel
-    mapViewModel.getSpaceRenters(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val spaceRenters = mapViewModel.spaceRenters.value
-    assertNotNull(spaceRenters)
-
-    val epflSpaceRenter = spaceRenters!!.find { it.name == "EPFL Space Renter" }
-    val genevaSpaceRenter = spaceRenters.find { it.name == "Geneva Space Renter" }
-
-    assertNotNull(epflSpaceRenter)
-    assertNotNull(genevaSpaceRenter)
-    assertEquals(testLocation1, epflSpaceRenter!!.address)
-    assertEquals(testLocation2, genevaSpaceRenter!!.address)
   }
 }

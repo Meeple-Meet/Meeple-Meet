@@ -32,6 +32,7 @@ import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -111,6 +112,7 @@ object RepositoryProvider {
     NominatimLocationRepository(HttpClientProvider.client)
   }
   val geoPins: StorableGeoPinRepository by lazy { StorableGeoPinRepository() }
+  val markerPreviews: MarkerPreviewRepository by lazy { MarkerPreviewRepository() }
 
   /** Lazily initialized repository for post operations. */
   val posts: PostRepository by lazy { PostRepository() }
