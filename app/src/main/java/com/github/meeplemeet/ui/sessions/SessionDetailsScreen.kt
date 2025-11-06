@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.sessions
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
@@ -59,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -551,7 +552,7 @@ private fun ProposedGameSection(
         Spacer(Modifier.width(12.dp))
         Text(
             text = displayedName,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
             modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textIcons)

@@ -1,7 +1,7 @@
 // This file was initially done by hand and
 // then improved and refactored using ChatGPT-5 Extend Thinking
 // Docstrings were generated using copilot from Android studio
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.shops
 
 import android.util.Patterns
 import androidx.compose.animation.AnimatedVisibility
@@ -27,7 +27,6 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.AddShopUi.Strings
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.DayRow
 import com.github.meeplemeet.ui.components.GameListSection
@@ -35,6 +34,7 @@ import com.github.meeplemeet.ui.components.GameStockDialog
 import com.github.meeplemeet.ui.components.LabeledField
 import com.github.meeplemeet.ui.components.LocationSearchField
 import com.github.meeplemeet.ui.components.OpeningHoursDialog
+import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -269,9 +269,9 @@ fun CreateShopScreen(
               gameCollection = stock)
           null
         } catch (e: IllegalArgumentException) {
-          e.message ?: AddShopUi.Strings.ErrorValidation
+          e.message ?: Strings.ErrorValidation
         } catch (_: Exception) {
-          AddShopUi.Strings.ErrorCreate
+          Strings.ErrorCreate
         }
       },
       gameQuery = ui.gameQuery,
@@ -370,9 +370,7 @@ fun AddShopContent(
       topBar = {
         CenterAlignedTopAppBar(
             title = {
-              Text(
-                  AddShopUi.Strings.ScreenTitle,
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
+              Text(Strings.ScreenTitle, modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
             },
             navigationIcon = {
               IconButton(
@@ -406,7 +404,7 @@ fun AddShopContent(
                     vertical = AddShopUi.Dimensions.contentVPadding)) {
               item {
                 CollapsibleSection(
-                    title = AddShopUi.Strings.RequirementsSection,
+                    title = Strings.RequirementsSection,
                     initiallyExpanded = false,
                     content = {
                       RequiredInfoSection(
@@ -439,7 +437,7 @@ fun AddShopContent(
 
               item {
                 CollapsibleSection(
-                    title = AddShopUi.Strings.SectionAvailability,
+                    title = Strings.SectionAvailability,
                     initiallyExpanded = false,
                     content = {
                       AvailabilitySection(
@@ -460,7 +458,7 @@ fun AddShopContent(
 
               item {
                 CollapsibleSection(
-                    title = AddShopUi.Strings.SectionGames,
+                    title = Strings.SectionGames,
                     initiallyExpanded = false,
                     header = {
                       TextButton(
@@ -473,7 +471,7 @@ fun AddShopContent(
                             Icon(Icons.Filled.Add, contentDescription = null)
                             Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
                             Text(
-                                AddShopUi.Strings.BtnAddGame,
+                                Strings.BtnAddGame,
                                 modifier =
                                     Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_LABEL))
                           }
@@ -554,15 +552,15 @@ private fun RequiredInfoSection(
 ) {
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_SHOP)) {
     LabeledField(
-        label = AddShopUi.Strings.LabelShop,
-        placeholder = AddShopUi.Strings.PlaceholderShop,
+        label = Strings.LabelShop,
+        placeholder = Strings.PlaceholderShop,
         value = shopName,
         onValueChange = onShopName)
   }
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_EMAIL)) {
     LabeledField(
-        label = AddShopUi.Strings.LabelEmail,
-        placeholder = AddShopUi.Strings.PlaceholderEmail,
+        label = Strings.LabelEmail,
+        placeholder = Strings.PlaceholderEmail,
         value = email,
         onValueChange = onEmail,
         keyboardType = KeyboardType.Email)
@@ -576,8 +574,8 @@ private fun RequiredInfoSection(
   }
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_PHONE)) {
     LabeledField(
-        label = AddShopUi.Strings.LabelPhone,
-        placeholder = AddShopUi.Strings.PlaceholderPhone,
+        label = Strings.LabelPhone,
+        placeholder = Strings.PlaceholderPhone,
         value = phone,
         onValueChange = onPhone,
         keyboardType = KeyboardType.Phone)
@@ -585,8 +583,8 @@ private fun RequiredInfoSection(
 
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_LINK)) {
     LabeledField(
-        label = AddShopUi.Strings.LabelLink,
-        placeholder = AddShopUi.Strings.PlaceholderLink,
+        label = Strings.LabelLink,
+        placeholder = Strings.PlaceholderLink,
         value = link,
         onValueChange = onLink,
         keyboardType = KeyboardType.Uri)
@@ -600,7 +598,7 @@ private fun RequiredInfoSection(
         results = locationResults,
         onPick = onPickLocation,
         isLoading = false,
-        placeholder = AddShopUi.Strings.PlaceholderLocation,
+        placeholder = Strings.PlaceholderLocation,
         modifier = Modifier.fillMaxWidth())
   }
 }
@@ -643,7 +641,7 @@ private fun GamesSection(stock: List<Pair<Game, Int>>, onDelete: (Game) -> Unit)
     )
   } else {
     Text(
-        AddShopUi.Strings.EmptyGames,
+        Strings.EmptyGames,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT))
   }
@@ -811,8 +809,7 @@ private fun CollapsibleSection(
                   }) {
                 Icon(
                     Icons.Filled.ExpandMore,
-                    contentDescription =
-                        if (expanded) AddShopUi.Strings.Collapse else AddShopUi.Strings.Expand,
+                    contentDescription = if (expanded) Strings.Collapse else Strings.Expand,
                     modifier = Modifier.rotate(arrowRotation))
               }
         }

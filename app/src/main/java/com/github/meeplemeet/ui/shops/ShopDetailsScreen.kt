@@ -1,5 +1,5 @@
 // AI was used to help comment this screen
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.shops
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -191,7 +192,7 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
         IconButton(
             onClick = {
               // Copy the contact text to the clipboard and show a toast confirmation
-              clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(text))
+              clipboardManager.setText(AnnotatedString(text))
               Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             },
             content = { Icon(icon, contentDescription = null, tint = AppColors.neutral) },

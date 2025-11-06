@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.posts
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

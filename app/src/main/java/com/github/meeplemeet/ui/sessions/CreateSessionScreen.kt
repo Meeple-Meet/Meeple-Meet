@@ -3,7 +3,7 @@
 // Copilot was also used to generated docstrings
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.sessions
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

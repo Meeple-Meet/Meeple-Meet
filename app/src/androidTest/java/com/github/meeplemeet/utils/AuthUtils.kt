@@ -9,8 +9,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.github.meeplemeet.ui.SignInScreenTestTags
-import com.github.meeplemeet.ui.SignUpScreenTestTags
+import com.github.meeplemeet.ui.auth.SignInScreenTestTags
+import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 
 object AuthUtils {
