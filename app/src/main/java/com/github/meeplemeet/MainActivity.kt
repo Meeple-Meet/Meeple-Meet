@@ -354,7 +354,7 @@ fun MeepleMeetApp(
             shopId = shopId,
             onBack = { navigationActions.goBack() },
             onEdit = {
-              // Navigate to shop edit screen (not implemented here)
+              navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
             },
             viewModel = shopVM)
       } else {
@@ -365,8 +365,20 @@ fun MeepleMeetApp(
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { /* TODO */},
+          onCreated = { /* TODO */ },
           viewModel = createShopVM)
+    }
+    composable(MeepleMeetScreen.EditShop.name) {
+      if (shopId.isNotEmpty()) {
+        com.github.meeplemeet.ui.EditShopScreen(
+            shopId = shopId,
+            owner = account!!,
+            onBack = { navigationActions.goBack() },
+            onSaved = { navigationActions.goBack() },
+            viewModel = com.github.meeplemeet.model.shops.EditShopViewModel())
+      } else {
+        LoadingScreen()
+      }
     }
   }
 }
