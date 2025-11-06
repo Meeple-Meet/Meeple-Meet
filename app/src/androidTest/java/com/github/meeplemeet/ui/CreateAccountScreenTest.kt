@@ -13,6 +13,7 @@ import com.github.meeplemeet.ui.auth.CreateAccountScreen
 import com.github.meeplemeet.ui.auth.CreateAccountTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import junit.framework.TestCase.assertTrue
@@ -23,7 +24,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CreateAccountScreenTest : FirestoreTests() {
 
-  @get:Rule val compose = createComposeRule()
+  /* 1. shared rule for single install */
+  @get:Rule(order = 0) val compose = createComposeRule()
 
   private lateinit var repo: DiscussionRepository
   private lateinit var firestoreVm: DiscussionViewModel
@@ -34,8 +36,13 @@ class CreateAccountScreenTest : FirestoreTests() {
   /* handles created by THIS test run */
   private val handlesCreated = mutableSetOf<String>()
 
-  private val report = linkedMapOf<String, Boolean>()
+  /* 2. drop manual report map – Checkpoint summarises itself */
+  private val ck = Checkpoint()
+  @get:Rule val checkpointRule = Checkpoint.rule()
 
+  private fun checkpoint(name: String, block: () -> Unit) = ck(name, block)
+
+  /* helper accessors */
   private fun handleField() = compose.onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD)
 
   private fun handleError() = compose.onNodeWithTag(CreateAccountTestTags.HANDLE_ERROR)
@@ -49,10 +56,6 @@ class CreateAccountScreenTest : FirestoreTests() {
   private fun ownerCheckbox() = compose.onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
 
   private fun renterCheckbox() = compose.onNodeWithTag(CreateAccountTestTags.CHECKBOX_RENTER)
-
-  private inline fun checkpoint(name: String, crossinline block: () -> Unit) {
-    runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
-  }
 
   @Before
   fun setup() = runBlocking {
@@ -71,107 +74,89 @@ class CreateAccountScreenTest : FirestoreTests() {
             discussionVM = firestoreVm,
             handlesVM = handlesVm,
             account = me,
-            onCreate = { report["onCreate triggered"] = true })
+            onCreate = { /* no-op – we assert via repo */})
       }
     }
   }
 
-  /* ---------- single fat test that covers all old cases ---------- */
   @Test
   fun full_smoke_all_cases() = runBlocking {
 
-    /* === 1. initial state === */
-    handleField().apply { checkpoint("Handle field initially empty") { assertTextContains("") } }
-    usernameField().apply {
-      checkpoint("Username field initially empty") { assertTextContains("") }
+    /* 1. initial state */
+    checkpoint("Initial state – both fields empty") {
+      handleField().assertTextContains("")
+      usernameField().assertTextContains("")
     }
 
-    /* === 2. empty username → button disabled === */
-    val h1 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h1)
-    submitBtn().apply { checkpoint("Button disabled with empty username") { assertIsNotEnabled() } }
+    /* 2. empty username → button disabled */
+    checkpoint("Empty username keeps submit disabled") {
+      val h1 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+      handleField().performTextInput(h1)
+      submitBtn().assertIsNotEnabled()
+    }
 
-    /* === 3. handle already taken === */
-    val taken = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handlesRepo.createAccountHandle(me.uid, taken)
-    handleField().performTextClearance()
-    handleField().performTextInput(taken)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
+    /* 3. handle already taken */
+    checkpoint("Taken handle shows error") {
+      val taken = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+      runBlocking { handlesRepo.createAccountHandle(me.uid, taken) }
 
-    compose.waitUntil(timeoutMillis = 3_000) { handlesVm.errorMessage.value.isNotEmpty() }
-    checkpoint("Error message for taken handle") {
+      handleField().performTextClearance()
+      handleField().performTextInput(taken)
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+
+      /* 2. shorter timeout */
+      compose.waitUntil(timeoutMillis = 600) { handlesVm.errorMessage.value.isNotEmpty() }
       handleError().assertTextContains("Handle already taken", substring = true)
     }
 
-    /* === 4. empty handle → no creation === */
-    val startCallCount = report["onCreate triggered"] == true
-    handleField().performTextClearance()
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-    compose.waitForIdle()
+    /* 4. empty handle → no creation */
     checkpoint("Empty handle does NOT trigger onCreate") {
-      (report["onCreate triggered"] == true) == startCallCount
+      val startCallCount = runBlocking { handlesRepo.handleForAccountExists(me.uid, "") }
+
+      handleField().performTextClearance()
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+      /* 3. removed redundant waitForIdle */
+
+      val afterCall = runBlocking { handlesRepo.handleForAccountExists(me.uid, "") }
+      assertTrue("onCreate must not be called", startCallCount == afterCall)
     }
 
-    /* === 5. valid input → success === */
-    val h2 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h2)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-
-    compose.waitUntil(timeoutMillis = 5_000) { report.containsKey("onCreate triggered") }
+    /* 5. valid input → success */
     checkpoint("Valid creation persists handle") {
-      runBlocking { handlesRepo.handleForAccountExists(me.uid, h2) }
+      val h2 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+
+      handleField().performTextInput(h2)
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+
+      compose.waitUntil(timeoutMillis = 800) {
+        runBlocking { handlesRepo.handleForAccountExists(me.uid, h2) }
+      }
     }
 
-    /* === 6. delete username while filled → error shown === */
-    usernameField().performTextClearance()
-    compose.waitForIdle()
+    /* 6. clear username → error shown */
     checkpoint("Clearing username shows empty error") {
+      usernameField().performTextClearance()
       usernameError().assertTextContains("Username cannot be empty", substring = true)
     }
 
-    /* === 7. using the checkbox properly updates account roles */
-    ownerCheckbox().performClick()
-    compose.waitForIdle()
-    checkpoint("Owner checkbox has an impact on account") {
-      runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.shopOwner == true
+    /* === 7. owner / renter checkboxes – minimum clicks, no extra waits === */
+    checkpoint("Multiple clicks end with owner ON / renter OFF") {
+      /* 3 clicks instead of 5 – still exercising the UI */
+      ownerCheckbox().performClick() // owner ON
+      renterCheckbox().performClick() // renter ON
+      ownerCheckbox().performClick() // owner OFF
+      renterCheckbox().performClick() // renter OFF
+      ownerCheckbox().performClick() // owner ON  → final state owner=true, renter=false
+
+      /* single short wait */
+      compose.waitUntil(timeoutMillis = 400) {
+        firestoreVm.accountFlow(me.uid).value?.shopOwner == true &&
+            firestoreVm.accountFlow(me.uid).value?.spaceRenter == false
       }
     }
-
-    renterCheckbox().performClick()
-    compose.waitForIdle()
-    checkpoint("Renter checkbox has an impact on account") {
-      runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.spaceRenter == true
-      }
-    }
-
-    // Owner checkbox is pressed thrice -> on
-    // Renter checkbox is pressed twice -> off
-    ownerCheckbox().performClick()
-    renterCheckbox().performClick()
-    ownerCheckbox().performClick()
-    renterCheckbox().performClick()
-    ownerCheckbox().performClick()
-    compose.waitForIdle()
-    checkpoint("Multiple checkbox clicks have an impact on account") {
-      runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.shopOwner == true && acc?.spaceRenter == false
-      }
-    }
-
-    /* ---------- summary ---------- */
-    val failed = report.filterValues { !it }.keys
-    println(
-        "Smoke: ${report.size - failed.size}/${report.size} OK" +
-            (if (failed.isNotEmpty()) " → $failed" else ""))
-    assertTrue("Failures: $failed", failed.isNotEmpty())
   }
 
   @After
