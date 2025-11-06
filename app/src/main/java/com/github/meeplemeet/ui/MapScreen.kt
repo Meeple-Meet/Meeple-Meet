@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.MapUIState
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.MarkerPreview
@@ -48,6 +51,7 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -58,6 +62,7 @@ import kotlinx.coroutines.launch
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
+  const val ADD_FAB = "addFab"
 
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 }
@@ -73,7 +78,12 @@ private const val START_RADIUS_KM = 1.0
  * - shows snackbar on errors
  */
 @Composable
-fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: NavigationActions) {
+fun MapScreen(
+    viewModel: MapViewModel = viewModel(),
+    navigationActions: NavigationActions,
+    account: Account,
+    onFABCLick: () -> Unit
+) {
   val lifecycleOwner = LocalLifecycleOwner.current
   val uiStateFlow =
       remember(viewModel.uiState, lifecycleOwner) {
@@ -139,31 +149,45 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
               }
         }
 
-        GoogleMap(
-            modifier =
-                Modifier.fillMaxSize()
-                    .padding(innerPadding)
-                    .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
-            cameraPositionState = cameraPositionState) {
-              uiState.geoPins.forEach { gp ->
-                val pos = LatLng(gp.location.latitude, gp.location.longitude)
-                // TODO add customization
-                Marker(
-                    state = MarkerState(pos),
-                    title = gp.geoPin.uid,
-                    snippet = gp.geoPin.type.name,
-                    onClick = {
-                      viewModel.selectPin(gp)
-                      coroutineScope.launch {
-                        if (viewModel.uiState.value.selectedMarkerPreview != null) {
-                          sheetState.show()
+        Box(modifier = Modifier.fillMaxSize()) {
+          GoogleMap(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .padding(innerPadding)
+                      .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
+              cameraPositionState = cameraPositionState) {
+                uiState.geoPins.forEach { gp ->
+                  val pos = LatLng(gp.location.latitude, gp.location.longitude)
+                  // TODO add customization
+                  Marker(
+                      state = MarkerState(pos),
+                      title = gp.geoPin.uid,
+                      snippet = gp.geoPin.type.name,
+                      onClick = {
+                        viewModel.selectPin(gp)
+                        coroutineScope.launch {
+                          if (viewModel.uiState.value.selectedMarkerPreview != null) {
+                            sheetState.show()
+                          }
                         }
-                      }
-                      true
-                    },
-                    tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
+                        true
+                      },
+                      tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
+                }
               }
-            }
+          if (account.shopOwner || account.spaceRenter) {
+            FloatingActionButton(
+                onClick = onFABCLick,
+                contentColor = AppColors.textIcons,
+                containerColor = AppColors.neutral,
+                modifier =
+                    Modifier.testTag(MapScreenTestTags.ADD_FAB)
+                        .align(Alignment.TopEnd)
+                        .padding(top = 80.dp, end = 16.dp)) {
+                  Icon(Icons.Default.Add, contentDescription = "Create")
+                }
+          }
+        }
       }
 
   // Close sheet when preview cleared

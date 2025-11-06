@@ -352,7 +352,12 @@ fun MeepleMeetApp(
           onBack = { navigationActions.goBack() })
     }
 
-    composable(MeepleMeetScreen.Map.name) { MapScreen(navigationActions = navigationActions) }
+    composable(MeepleMeetScreen.Map.name) {
+      MapScreen(
+          navigationActions = navigationActions,
+          account = account!!,
+          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) })
+    }
 
     composable(MeepleMeetScreen.Profile.name) {
       account?.let {
