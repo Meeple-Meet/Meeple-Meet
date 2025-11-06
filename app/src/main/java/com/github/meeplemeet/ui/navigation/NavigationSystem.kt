@@ -138,7 +138,7 @@ enum class MeepleMeetScreen(
   CreatePost("Create post"),
   Post("Post"),
   ShopDetails("Shop Details"),
-  CreateShop("Add Shop"),
+  CreateShop("Create Shop"),
 }
 
 /**
