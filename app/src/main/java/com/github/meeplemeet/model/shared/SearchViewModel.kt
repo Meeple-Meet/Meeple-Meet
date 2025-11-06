@@ -3,9 +3,10 @@ package com.github.meeplemeet.model.shared
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.map.LocationRepository
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.sessions.GameRepository
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shared.location.LocationRepository
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,13 +20,13 @@ import kotlinx.coroutines.launch
  * UI state for the session game picker.
  *
  * @property gameQuery Current text in the game search text field (what the user typed).
- * @property gameSuggestions List of candidate [Game] objects returned by the repository for the
- *   current query.
+ * @property gameSuggestions List of candidate [com.github.meeplemeet.model.shared.game.Game]
+ *   objects returned by the repository for the current query.
  * @property selectedGameUid If a game has been selected, holds its UID (Firestore document id).
  *   Empty string when nothing is selected.
  * @property gameSearchError If a search error occurred, holds the error message. Null otherwise.
- * @property fetchedGame The last fetched [Game] by ID, or null if none fetched or an error
- *   occurred.
+ * @property fetchedGame The last fetched [com.github.meeplemeet.model.shared.game.Game] by ID, or
+ *   null if none fetched or an error occurred.
  * @property gameFetchError If an error occurred during fetching a game by ID, holds the error
  *   message.
  */
@@ -43,8 +44,9 @@ data class GameUIState(
  * UI state for location search and selection.
  *
  * @property locationQuery Current text in the location search text field (what the user typed).
- * @property locationSuggestions List of candidate [Location] objects return by the repository for
- *   the current query.
+ * @property locationSuggestions List of candidate
+ *   [com.github.meeplemeet.model.shared.location.Location] objects return by the repository for the
+ *   current query.
  * @property selectedLocation If a location has been selected, holds its value. Null otherwise.
  * @property locationSearchError If a search error occurred, holds the error message. Null
  *   otherwise.
@@ -60,8 +62,9 @@ data class LocationUIState(
  * ViewModel that provides shared search logic for both games and locations.
  *
  * This ViewModel centralizes the logic for:
- * - Game search and selection via [GameRepository]
- * - Location search and selection via [LocationRepository]
+ * - Game search and selection via [com.github.meeplemeet.model.shared.game.GameRepository]
+ * - Location search and selection via
+ *   [com.github.meeplemeet.model.shared.location.LocationRepository]
  *
  * It exposes two independent UI states:
  * - [gameUIState] for managing game-related search and selection

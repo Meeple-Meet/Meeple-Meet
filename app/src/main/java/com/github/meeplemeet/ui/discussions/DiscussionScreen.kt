@@ -1,5 +1,5 @@
 /** Documentation was written with the help of ChatGPT */
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.discussions
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke

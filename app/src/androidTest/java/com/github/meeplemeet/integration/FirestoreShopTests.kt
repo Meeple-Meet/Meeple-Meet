@@ -4,11 +4,11 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
-import com.github.meeplemeet.model.sessions.GAMES_COLLECTION_PATH
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.sessions.GameNoUid
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameNoUid
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.MapViewModel

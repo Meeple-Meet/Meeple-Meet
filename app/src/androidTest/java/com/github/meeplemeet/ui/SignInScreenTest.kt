@@ -15,6 +15,8 @@ import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.AuthRepository
 import com.github.meeplemeet.model.auth.AuthUIState
 import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.ui.auth.SignInScreen
+import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule

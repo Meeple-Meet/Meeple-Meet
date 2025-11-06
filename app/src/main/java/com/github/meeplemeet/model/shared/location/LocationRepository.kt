@@ -1,6 +1,4 @@
-package com.github.meeplemeet.model.map
-
-import com.github.meeplemeet.model.shared.Location
+package com.github.meeplemeet.model.shared.location
 
 /**
  * Interface for location-based search functionality.

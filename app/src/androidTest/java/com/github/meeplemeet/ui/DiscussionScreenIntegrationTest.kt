@@ -10,6 +10,8 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.ui.discussions.DiscussionScreen
+import com.github.meeplemeet.ui.discussions.DiscussionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode

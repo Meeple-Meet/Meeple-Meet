@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

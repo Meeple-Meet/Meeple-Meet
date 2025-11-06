@@ -9,6 +9,8 @@ import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
+import com.github.meeplemeet.ui.discussions.CreateDiscussionScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.FirestoreTests

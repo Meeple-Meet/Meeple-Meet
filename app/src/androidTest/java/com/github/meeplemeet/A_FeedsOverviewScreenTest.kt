@@ -18,11 +18,11 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.model.posts.PostRepository
-import com.github.meeplemeet.ui.FeedsOverviewTestTags
-import com.github.meeplemeet.ui.PostsOverviewScreen
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.posts.FeedsOverviewTestTags
+import com.github.meeplemeet.ui.posts.PostsOverviewScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests

@@ -26,6 +26,11 @@ import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.ui.posts.COMMENT_TEXT_ZONE_PLACEHOLDER
+import com.github.meeplemeet.ui.posts.PostScreen
+import com.github.meeplemeet.ui.posts.PostTags
+import com.github.meeplemeet.ui.posts.REPLY_TEXT_ZONE_PLACEHOLDER
+import com.github.meeplemeet.ui.posts.UNKNOWN_USER_PLACEHOLDER
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Timestamp
 import io.mockk.clearMocks

@@ -7,8 +7,8 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.github.meeplemeet.ui.DiscussionTestTags
-import com.github.meeplemeet.ui.UITestTags
+import com.github.meeplemeet.ui.discussions.DiscussionTestTags
+import com.github.meeplemeet.ui.discussions.UITestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 

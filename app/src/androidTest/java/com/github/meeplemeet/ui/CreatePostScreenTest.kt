@@ -10,6 +10,8 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.posts.CreatePostScreen
+import com.github.meeplemeet.ui.posts.CreatePostTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.delay
@@ -21,7 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Comprehensive UI tests for [CreatePostScreen].
+ * Comprehensive UI tests for [com.github.meeplemeet.ui.posts.CreatePostScreen].
  *
  * Optimized test suite with maximum coverage and minimum test count. Tests cover: initial state,
  * text input, tag management, validation, post creation, error handling, navigation, and edge

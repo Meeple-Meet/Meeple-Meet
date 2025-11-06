@@ -26,9 +26,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.shared.Location
-import com.github.meeplemeet.ui.SessionTestTags
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import java.time.LocalDate
 import java.time.LocalTime

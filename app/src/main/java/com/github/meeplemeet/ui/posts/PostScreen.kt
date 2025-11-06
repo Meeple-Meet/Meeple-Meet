@@ -1,7 +1,7 @@
 // This file was firstly done by hand and improved bit by bit using ChatGPT-5 Thinking Extend
 // Modifications by hand were then done and LLM was used to add test tags
 // Copilot was used to generate docstrings
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.posts
 
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -708,8 +709,8 @@ private fun ThreadGutter(
                 val x = size.width - stepPx / 2f
                 drawLine(
                     color = color,
-                    start = androidx.compose.ui.geometry.Offset(x, 0f),
-                    end = androidx.compose.ui.geometry.Offset(x, size.height),
+                    start = Offset(x, 0f),
+                    end = Offset(x, size.height),
                     strokeWidth = strokePx)
               })
 }

@@ -6,7 +6,7 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.PinType
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async

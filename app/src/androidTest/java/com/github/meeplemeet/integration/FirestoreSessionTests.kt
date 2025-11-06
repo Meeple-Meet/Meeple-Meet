@@ -8,11 +8,11 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
-import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.utils.FakeGameRepo
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp

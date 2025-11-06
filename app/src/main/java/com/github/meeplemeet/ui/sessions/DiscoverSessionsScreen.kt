@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.sessions
 
 // @OptIn(ExperimentalMaterial3Api::class)
 // @Composable
