@@ -29,8 +29,8 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shared.LocationUIState
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Elevation

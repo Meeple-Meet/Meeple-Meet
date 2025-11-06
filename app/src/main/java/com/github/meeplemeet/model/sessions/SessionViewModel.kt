@@ -5,8 +5,10 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.shared.Location
 import com.github.meeplemeet.model.shared.SearchViewModel
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -216,7 +218,7 @@ class SessionViewModel(
    * This method:
    * - updates the visible `locationQuery` in [com.github.meeplemeet.model.shared.LocationUIState],
    * - triggers a background search on the injected
-   *   [com.github.meeplemeet.model.map.LocationRepository],
+   *   [com.github.meeplemeet.model.shared.location.LocationRepository],
    * - updates `locationSuggestions` with the results (or empties the list on error or blank query),
    * - shows any search-related error message in `locationSearchError`.
    *

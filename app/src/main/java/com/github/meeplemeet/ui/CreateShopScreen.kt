@@ -22,8 +22,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot

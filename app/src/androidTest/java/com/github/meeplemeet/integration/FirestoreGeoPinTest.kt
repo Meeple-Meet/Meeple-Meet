@@ -7,7 +7,7 @@ import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinNoUid
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore

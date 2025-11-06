@@ -63,10 +63,10 @@ import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider

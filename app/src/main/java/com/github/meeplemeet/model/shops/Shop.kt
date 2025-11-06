@@ -3,8 +3,8 @@ package com.github.meeplemeet.model.shops
 // Claude Code generated the documentation
 
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.serialization.Serializable
 
 @Serializable data class TimeSlot(val open: String? = null, val close: String? = null)

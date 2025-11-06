@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel

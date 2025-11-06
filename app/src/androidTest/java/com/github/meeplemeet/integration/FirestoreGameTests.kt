@@ -1,10 +1,10 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.GameNotFoundException
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
-import com.github.meeplemeet.model.sessions.GAMES_COLLECTION_PATH
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.sessions.GameNoUid
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await

@@ -1,8 +1,7 @@
-package com.github.meeplemeet.model.map
+package com.github.meeplemeet.model.shared.location
 
 import com.github.meeplemeet.HttpClientProvider
 import com.github.meeplemeet.model.LocationSearchException
-import com.github.meeplemeet.model.shared.Location
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex

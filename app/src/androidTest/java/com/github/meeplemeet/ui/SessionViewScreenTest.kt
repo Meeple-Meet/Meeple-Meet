@@ -11,12 +11,12 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
-import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.Game
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk

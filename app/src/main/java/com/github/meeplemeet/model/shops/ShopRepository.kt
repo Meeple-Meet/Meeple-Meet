@@ -6,8 +6,8 @@ import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.PinType
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

@@ -32,13 +32,13 @@ import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.map.LocationRepository
-import com.github.meeplemeet.model.map.NominatimLocationRepository
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.location.LocationRepository
+import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
@@ -56,7 +56,6 @@ import com.github.meeplemeet.ui.PostsOverviewScreen
 import com.github.meeplemeet.ui.ProfileScreen
 import com.github.meeplemeet.ui.SessionDetailsScreen
 import com.github.meeplemeet.ui.SessionsOverviewScreen
-import com.github.meeplemeet.ui.ShopDetails
 import com.github.meeplemeet.ui.ShopDetailsScreen
 import com.github.meeplemeet.ui.SignInScreen
 import com.github.meeplemeet.ui.SignUpScreen

@@ -17,9 +17,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.AnnotatedString
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository

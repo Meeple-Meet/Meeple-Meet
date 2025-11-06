@@ -1,7 +1,7 @@
 package com.github.meeplemeet.model.map
 
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import kotlin.coroutines.resume

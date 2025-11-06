@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.shared
+package com.github.meeplemeet.model.shared.location
 
 import kotlinx.serialization.Serializable
 

@@ -10,7 +10,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.sessions.Game
+import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import org.junit.Assert.assertEquals

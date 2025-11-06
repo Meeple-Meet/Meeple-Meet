@@ -1,7 +1,7 @@
 package com.github.meeplemeet.api
 
 import com.github.meeplemeet.model.LocationSearchException
-import com.github.meeplemeet.model.map.NominatimLocationRepository
+import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue

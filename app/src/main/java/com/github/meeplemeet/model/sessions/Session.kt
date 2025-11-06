@@ -1,6 +1,6 @@
 package com.github.meeplemeet.model.sessions
 
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.serialization.Serializable
 

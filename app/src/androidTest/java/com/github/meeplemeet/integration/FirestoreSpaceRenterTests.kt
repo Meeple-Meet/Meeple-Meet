@@ -4,7 +4,7 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.MapViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot

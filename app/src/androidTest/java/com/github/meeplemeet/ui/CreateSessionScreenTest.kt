@@ -11,12 +11,12 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.sessions.GameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
