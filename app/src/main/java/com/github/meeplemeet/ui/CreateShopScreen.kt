@@ -182,7 +182,7 @@ private fun String.tryParseTime(): LocalTime? =
  * @param hours List of TimeSlot objects representing opening hours.
  * @return A string representation of the opening hours.
  */
-private fun humanize(hours: List<TimeSlot>): String =
+fun humanize(hours: List<TimeSlot>): String =
     when {
       hours.isEmpty() -> Strings.ClosedMsg
       hours.size == 1 &&
@@ -204,15 +204,12 @@ private fun humanize(hours: List<TimeSlot>): String =
  * ================================================================================================ */
 
 /** Returns an empty list of opening hours for each day of the week. */
-private fun emptyWeek(): List<OpeningHours> =
+fun emptyWeek(): List<OpeningHours> =
     List(7) { day -> OpeningHours(day = day, hours = emptyList()) }
 
 /**
- * Mocks location suggestions based on a query string.
- *
- * @param query The query string to base the suggestions on.
- * @param max The maximum number of suggestions to generate.
- * @return A list of mocked Location objects.
+ * Mocks location suggestions based on a query string. Kept local and private for simplicity until a
+ * real provider replaces it.
  */
 private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
   if (query.isBlank()) return emptyList()
@@ -539,7 +536,7 @@ fun AddShopContent(
  * @param onPickLocation Callback function to handle location selection.
  */
 @Composable
-private fun RequiredInfoSection(
+fun RequiredInfoSection(
     shopName: String,
     onShopName: (String) -> Unit,
     email: String,
@@ -612,7 +609,7 @@ private fun RequiredInfoSection(
  * @param onEdit Callback function to handle editing of opening hours for a specific day.
  */
 @Composable
-private fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
+fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
   Column(Modifier.testTag(CreateShopScreenTestTags.AVAILABILITY_LIST)) {
     week.forEach { oh ->
       val day = oh.day
@@ -663,7 +660,7 @@ private fun GamesSection(stock: List<Pair<Game, Int>>, onDelete: (Game) -> Unit)
  * @param onDismiss Callback function to dismiss the dialog.
  */
 @Composable
-private fun OpeningHoursEditor(
+fun OpeningHoursEditor(
     show: Boolean,
     day: Int?,
     week: List<OpeningHours>,
@@ -709,7 +706,7 @@ private fun OpeningHoursEditor(
  * @param onDismiss Callback function to dismiss the dialog.
  */
 @Composable
-private fun GameStockPicker(
+fun GameStockPicker(
     show: Boolean,
     stock: List<Pair<Game, Int>>,
     onStockChange: (List<Pair<Game, Int>>) -> Unit,
@@ -772,7 +769,7 @@ private fun GameStockPicker(
  * @param testTag Optional test tag for the section.
  */
 @Composable
-private fun CollapsibleSection(
+fun CollapsibleSection(
     title: String,
     initiallyExpanded: Boolean = true,
     header: (@Composable RowScope.() -> Unit)? = null,
