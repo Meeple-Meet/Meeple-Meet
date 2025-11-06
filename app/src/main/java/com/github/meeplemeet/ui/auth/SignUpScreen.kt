@@ -1,6 +1,7 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.auth
 // Github Copilot was used for this file
 import android.content.Context
+import android.util.Patterns
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -101,7 +102,7 @@ fun SignUpScreen(
   val isFormValid =
       remember(email, password, confirmPassword) {
         email.isNotBlank() &&
-            android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
+            Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
             password.isNotBlank() &&
             password.length >= 6 &&
             confirmPassword.isNotBlank() &&
@@ -134,7 +135,7 @@ fun SignUpScreen(
   fun validateEmail(email: String): String? {
     return when {
       email.isBlank() -> "Email cannot be empty"
-      !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email format"
+      !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email format"
       else -> null
     }
   }

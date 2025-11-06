@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.sessions
+package com.github.meeplemeet.model.shared.game
 
 import kotlinx.serialization.Serializable
 

@@ -9,6 +9,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.MeepleMeetApp
+import com.github.meeplemeet.ui.auth.SignInScreenTestTags
+import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags

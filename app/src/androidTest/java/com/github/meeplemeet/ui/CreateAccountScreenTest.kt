@@ -9,6 +9,8 @@ import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.ui.auth.CreateAccountScreen
+import com.github.meeplemeet.ui.auth.CreateAccountTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests

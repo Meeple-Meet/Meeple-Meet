@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.sessions
+package com.github.meeplemeet.model.shared.game
 
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.GameNotFoundException

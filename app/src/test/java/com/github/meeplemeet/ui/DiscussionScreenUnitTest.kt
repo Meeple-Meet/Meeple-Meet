@@ -1,5 +1,8 @@
 package com.github.meeplemeet.ui
 
+import com.github.meeplemeet.ui.discussions.formatDateBubble
+import com.github.meeplemeet.ui.discussions.isSameDay
+import com.github.meeplemeet.ui.discussions.shouldShowDateHeader
 import java.text.SimpleDateFormat
 import java.util.*
 import org.junit.Assert.*

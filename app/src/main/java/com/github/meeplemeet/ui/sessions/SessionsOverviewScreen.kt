@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.sessions
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar

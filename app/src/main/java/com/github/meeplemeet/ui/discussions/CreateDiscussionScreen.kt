@@ -1,5 +1,5 @@
 /** Documentation was written with the help of ChatGPT */
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.discussions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

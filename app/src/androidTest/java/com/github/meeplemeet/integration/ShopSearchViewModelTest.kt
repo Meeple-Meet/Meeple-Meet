@@ -3,10 +3,10 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.LocationRepository
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.sessions.GameRepository
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository

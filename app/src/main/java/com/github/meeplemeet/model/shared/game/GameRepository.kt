@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.sessions
+package com.github.meeplemeet.model.shared.game
 
 /**
  * Repository interface for accessing and querying [Game] data.

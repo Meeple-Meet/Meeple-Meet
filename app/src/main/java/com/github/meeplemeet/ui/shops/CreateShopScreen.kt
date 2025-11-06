@@ -1,7 +1,7 @@
 // This file was initially done by hand and
 // then improved and refactored using ChatGPT-5 Extend Thinking
 // Docstrings were generated using copilot from Android studio
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.shops
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,13 +14,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.sessions.Game
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.ui.AddShopUi.Strings
+import com.github.meeplemeet.ui.AvailabilitySection
+import com.github.meeplemeet.ui.CollapsibleSection
+import com.github.meeplemeet.ui.GameStockPicker
+import com.github.meeplemeet.ui.OpeningHoursEditor
+import com.github.meeplemeet.ui.RequiredInfoSection
+import com.github.meeplemeet.ui.ShopFormTestTags
+import com.github.meeplemeet.ui.ShopFormUi
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.GameListSection
+import com.github.meeplemeet.ui.emptyWeek
+import com.github.meeplemeet.ui.isValidEmail
+import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -86,6 +95,20 @@ private object AddShopUi {
     const val RequirementsSection = "Required Info"
     const val SectionAvailability = "Availability"
     const val SectionGames = "Games in stock"
+
+    const val LabelShop = "Shop"
+    const val PlaceholderShop = "Shop name"
+
+    const val LabelEmail = "Email"
+    const val PlaceholderEmail = "Email"
+
+    const val LabelPhone = "Contact info"
+    const val PlaceholderPhone = "Phone number"
+
+    const val LabelLink = "Link"
+    const val PlaceholderLink = "Website/Instagram link"
+
+    const val PlaceholderLocation = "Search locations…"
 
     const val BtnAddGame = "Add game"
     const val EmptyGames = "No games selected yet."

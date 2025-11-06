@@ -3,7 +3,7 @@ package com.github.meeplemeet.model.map
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.MarkerPreview.*
-import com.github.meeplemeet.model.sessions.GameRepository
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository

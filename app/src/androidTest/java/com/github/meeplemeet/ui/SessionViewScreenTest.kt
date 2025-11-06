@@ -11,16 +11,23 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.sessions.FirestoreGameRepository
-import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.ui.sessions.OrganizationSection
+import com.github.meeplemeet.ui.sessions.ParticipantsSection
+import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
+import com.github.meeplemeet.ui.sessions.SessionForm
+import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.sessions.TimeField
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Before
@@ -96,7 +103,7 @@ class SessionDetailsScreenTest {
                   Account(
                       uid = "3", handle = "alice", name = "Alice", email = "alice@example.com")),
           date = LocalDate.of(2025, 10, 15),
-          time = java.time.LocalTime.of(19, 0),
+          time = LocalTime.of(19, 0),
           locationText = "Student Lounge")
 
   // helper to DRY account stubbing

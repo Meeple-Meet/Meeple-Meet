@@ -3,7 +3,7 @@ package com.github.meeplemeet.model.space_renter
 // Claude Code generated the documentation
 
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.serialization.Serializable
 
