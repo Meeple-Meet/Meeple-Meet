@@ -285,7 +285,7 @@ class ShopComponentsTest {
     setContentThemed {
       val isEnabled = remember { mutableStateOf(true) }
       enabledState = isEnabled
-      ActionBar(onDiscard = { discard++ }, onCreate = { create++ }, enabled = isEnabled.value)
+      ActionBar(onDiscard = { discard++ }, onPrimary = { create++ }, enabled = isEnabled.value)
     }
 
     // enabled

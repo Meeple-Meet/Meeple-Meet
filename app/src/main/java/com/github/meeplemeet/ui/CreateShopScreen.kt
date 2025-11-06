@@ -390,7 +390,7 @@ fun AddShopContent(
       bottomBar = {
         ActionBar(
             onDiscard = { onDiscard() },
-            onCreate = {
+            onPrimary = {
               val addr = selectedLocation ?: Location(name = addressText)
               val err = onCreate(shopName, email, addr, week, stock)
               if (err == null) onCreated() else scope.launch { snackbarHost.showSnackbar(err) }

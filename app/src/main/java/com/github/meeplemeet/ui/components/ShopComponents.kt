@@ -120,6 +120,7 @@ object ShopComponentsTestTags {
   const val ACTION_BAR = "shop_action_bar"
   const val ACTION_DISCARD = "shop_action_discard"
   const val ACTION_CREATE = "shop_action_create"
+  const val ACTION_SAVE = "shop_action_save"
 
   // Search field internals
   const val GAME_SEARCH_FIELD = "shop_game_search_field"
@@ -886,14 +887,18 @@ fun OpeningHoursDialog(
  * ============================================================================= */
 
 /**
- * A composable function that displays an action bar with discard and create buttons.
+ * A composable function that displays an action bar with discard and a primary button.
  *
- * @param onDiscard A callback function that is invoked when the discard button is clicked.
- * @param onCreate A callback function that is invoked when the create button is clicked.
- * @param enabled A boolean indicating whether the create button is enabled or not.
+ * - Keeps existing test tags (ACTION_BAR, ACTION_DISCARD, ACTION_CREATE)
+ * - primaryButtonText defaults to "Create"; pass BTN_SAVE for edit flows
  */
 @Composable
-fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
+fun ActionBar(
+    onDiscard: () -> Unit,
+    onPrimary: () -> Unit,
+    enabled: Boolean,
+    primaryButtonText: String = ShopUiDefaults.StringsMagicNumbers.BTN_CREATE,
+) {
   Surface(
       color = MaterialTheme.colorScheme.background,
       contentColor = MaterialTheme.colorScheme.onSurface,
@@ -917,7 +922,7 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
                     }
               }
 
-              val createColors =
+              val primaryColors =
                   if (enabled)
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.secondary,
@@ -927,16 +932,20 @@ fun ActionBar(onDiscard: () -> Unit, onCreate: () -> Unit, enabled: Boolean) {
                           containerColor = MaterialTheme.colorScheme.outline,
                           contentColor = MaterialTheme.colorScheme.onSecondary)
 
+              val primaryTag =
+                  if (primaryButtonText.equals(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE, ignoreCase = true))
+                      ShopComponentsTestTags.ACTION_SAVE else ShopComponentsTestTags.ACTION_CREATE
+
               Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Button(
-                    onClick = onCreate,
+                    onClick = onPrimary,
                     enabled = enabled,
                     shape = RoundedCornerShape(20.dp),
-                    colors = createColors,
-                    modifier = Modifier.testTag(ShopComponentsTestTags.ACTION_CREATE)) {
+                    colors = primaryColors,
+                    modifier = Modifier.testTag(primaryTag)) {
                       Icon(Icons.Filled.Check, contentDescription = null)
                       Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                      Text(ShopUiDefaults.StringsMagicNumbers.BTN_CREATE)
+                      Text(primaryButtonText)
                     }
               }
             }
@@ -1348,4 +1357,40 @@ fun GameItem(
           }
         }
       }
+}
+
+/* =============================================================================
+ * Games: editable item helper
+ * ============================================================================= */
+
+/** Editable game row used in edit screen (inline quantity +/- and delete). */
+@Composable
+fun EditableGameItem(
+    game: Game,
+    count: Int,
+    onQuantityChange: (Game, Int) -> Unit,
+    onDelete: (Game) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  Card(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+      Text(game.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) }) {
+          Text("-")
+        }
+        Text(count.toString(), modifier = Modifier.padding(horizontal = 12.dp))
+        OutlinedButton(onClick = { onQuantityChange(game, count + 1) }) { Text("+") }
+      }
+      IconButton(
+          onClick = { onDelete(game) },
+          colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
+      ) { Icon(Icons.Filled.Close, contentDescription = null) }
+    }
+  }
 }
