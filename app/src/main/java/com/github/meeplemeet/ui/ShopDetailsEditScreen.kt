@@ -22,7 +22,6 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.ShopUiDefaults
-import java.text.DateFormatSymbols
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -36,32 +35,29 @@ object EditShopScreenTestTags {
   const val SNACKBAR_HOST = "edit_shop_snackbar_host"
   const val LIST = "edit_shop_list"
 
-  const val SECTION_HEADER_SUFFIX = "_header"
-  const val SECTION_TITLE_SUFFIX = "_title"
-  const val SECTION_TOGGLE_SUFFIX = "_toggle"
-  const val SECTION_DIVIDER_SUFFIX = "_divider"
-  const val SECTION_CONTENT_SUFFIX = "_content"
+  // Reuse shared section suffixes
+  const val SECTION_HEADER_SUFFIX = ShopFormTestTags.SECTION_HEADER_SUFFIX
+  const val SECTION_TOGGLE_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_SUFFIX
+  const val SECTION_CONTENT_SUFFIX = ShopFormTestTags.SECTION_CONTENT_SUFFIX
 
   const val SECTION_REQUIRED = "section_required"
-  const val FIELD_SHOP = "field_shop_name"
-  const val FIELD_EMAIL = "field_email"
-  const val FIELD_ADDRESS = "field_address"
-  const val FIELD_PHONE = "field_phone"
-  const val FIELD_LINK = "field_link"
+
+  // Reuse shared field tags
+  const val FIELD_SHOP = ShopFormTestTags.FIELD_SHOP
+  const val FIELD_EMAIL = ShopFormTestTags.FIELD_EMAIL
+  const val FIELD_PHONE = ShopFormTestTags.FIELD_PHONE
+  const val FIELD_LINK = ShopFormTestTags.FIELD_LINK
+
   const val SPACER_AFTER_REQUIRED = "spacer_after_required"
 
   const val SECTION_AVAILABILITY = "section_availability"
-  const val AVAILABILITY_LIST = "availability_list"
-  const val AVAILABILITY_DIVIDER_PREFIX = "availability_divider_"
   const val SPACER_AFTER_AVAILABILITY = "spacer_after_availability"
 
   const val SECTION_GAMES = "section_games"
   const val GAMES_ADD_LABEL = "games_add_label"
   const val GAMES_EMPTY_TEXT = "games_empty_text"
   const val GAMES_ADD_BUTTON = "games_add_button"
-
-  const val OPENING_HOURS_DIALOG_WRAPPER = "opening_hours_dialog_wrapper"
-  const val GAME_STOCK_DIALOG_WRAPPER = "game_stock_dialog_wrapper"
+  const val GAME_STOCK_DIALOG_WRAPPER = ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER
 
   const val BOTTOM_SPACER = "bottom_spacer"
 }
@@ -70,12 +66,13 @@ object EditShopScreenTestTags {
  * UI Defaults
  * ================================================================================================ */
 private object EditShopUi {
+  // Reuse shared dimensions
   object Dimensions {
-    val contentHPadding = 16.dp
-    val contentVPadding = 8.dp
-    val sectionSpace = 12.dp
-    val bottomSpacer = 100.dp
-    val betweenControls = 6.dp
+    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
+    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
+    val sectionSpace = ShopFormUi.Dimensions.sectionSpace
+    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
+    val betweenControls = ShopFormUi.Dimensions.betweenControls
   }
 
   object Strings {
@@ -84,32 +81,10 @@ private object EditShopUi {
     const val SectionAvailability = "Availability"
     const val SectionGames = "Games in stock"
 
-    const val LabelShop = "Shop"
-    const val PlaceholderShop = "Shop name"
-
-    const val LabelEmail = "Email"
-    const val PlaceholderEmail = "Email"
-
-    const val LabelPhone = "Contact info"
-    const val PlaceholderPhone = "Phone number"
-
-    const val LabelLink = "Link"
-    const val PlaceholderLink = "Website/Instagram link"
-
-    const val PlaceholderLocation = "Search locations…"
-
     const val BtnAddGame = "Add game"
     const val EmptyGames = "No games selected yet."
     const val ErrorValidation = "Validation error"
     const val ErrorSave = "Failed to save shop"
-
-    const val Collapse = "Collapse"
-    const val Expand = "Expand"
-  }
-
-  val dayNames: List<String> by lazy {
-    val weekdays = DateFormatSymbols().weekdays
-    (0..6).map { idx -> weekdays.getOrNull(idx + 1) ?: "Day ${idx + 1}" }
   }
 }
 
