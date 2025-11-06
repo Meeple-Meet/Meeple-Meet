@@ -58,97 +58,97 @@ import java.util.Locale
  * ============================================================================= */
 
 object ShopComponentsTestTags {
-    // Section header
-    const val SECTION_HEADER = "shop_section_header"
-    const val SECTION_HEADER_LABEL = "shop_section_header_label"
-    const val SECTION_HEADER_DIVIDER = "shop_section_header_divider"
+  // Section header
+  const val SECTION_HEADER = "shop_section_header"
+  const val SECTION_HEADER_LABEL = "shop_section_header_label"
+  const val SECTION_HEADER_DIVIDER = "shop_section_header_divider"
 
-    fun sectionHeader(title: String) = "$SECTION_HEADER:$title"
+  fun sectionHeader(title: String) = "$SECTION_HEADER:$title"
 
-    // LabeledField
-    const val LABELED_FIELD_CONTAINER = "shop_labeled_field"
-    const val LABELED_FIELD_INPUT = "shop_labeled_field_input"
-    const val LABELED_FIELD_LABEL = "shop_labeled_field_label"
+  // LabeledField
+  const val LABELED_FIELD_CONTAINER = "shop_labeled_field"
+  const val LABELED_FIELD_INPUT = "shop_labeled_field_input"
+  const val LABELED_FIELD_LABEL = "shop_labeled_field_label"
 
-    fun labeledField(label: String) = "$LABELED_FIELD_CONTAINER:$label"
+  fun labeledField(label: String) = "$LABELED_FIELD_CONTAINER:$label"
 
-    // TimeField
-    const val TIME_FIELD_CONTAINER = "shop_time_field"
-    const val TIME_FIELD_CARD = "shop_time_field_card"
-    const val TIME_FIELD_LABEL = "shop_time_field_label"
-    const val TIME_FIELD_VALUE = "shop_time_field_value"
+  // TimeField
+  const val TIME_FIELD_CONTAINER = "shop_time_field"
+  const val TIME_FIELD_CARD = "shop_time_field_card"
+  const val TIME_FIELD_LABEL = "shop_time_field_label"
+  const val TIME_FIELD_VALUE = "shop_time_field_value"
 
-    fun timeField(label: String) = "$TIME_FIELD_CONTAINER:$label"
+  fun timeField(label: String) = "$TIME_FIELD_CONTAINER:$label"
 
-    // Day row
-    const val DAY_ROW = "shop_day_row"
-    const val DAY_ROW_NAME = "shop_day_row_name"
-    const val DAY_ROW_VALUE = "shop_day_row_value"
-    const val DAY_ROW_EDIT = "shop_day_row_edit"
+  // Day row
+  const val DAY_ROW = "shop_day_row"
+  const val DAY_ROW_NAME = "shop_day_row_name"
+  const val DAY_ROW_VALUE = "shop_day_row_value"
+  const val DAY_ROW_EDIT = "shop_day_row_edit"
 
-    fun dayRow(name: String) = "$DAY_ROW:$name"
+  fun dayRow(name: String) = "$DAY_ROW:$name"
 
-    // Hour row
-    const val HOUR_ROW = "shop_hour_row"
-    const val HOUR_ROW_REMOVE = "shop_hour_row_remove"
-    const val HOUR_ROW_OPEN_FIELD = "shop_hour_row_open_field"
-    const val HOUR_ROW_CLOSE_FIELD = "shop_hour_row_close_field"
+  // Hour row
+  const val HOUR_ROW = "shop_hour_row"
+  const val HOUR_ROW_REMOVE = "shop_hour_row_remove"
+  const val HOUR_ROW_OPEN_FIELD = "shop_hour_row_open_field"
+  const val HOUR_ROW_CLOSE_FIELD = "shop_hour_row_close_field"
 
-    fun hourRow(index: Int) = "$HOUR_ROW:$index"
+  fun hourRow(index: Int) = "$HOUR_ROW:$index"
 
-    // Days selector
-    const val DAYS_SELECTOR = "shop_days_selector"
-    const val DAY_CHIP = "shop_day_chip"
+  // Days selector
+  const val DAYS_SELECTOR = "shop_days_selector"
+  const val DAY_CHIP = "shop_day_chip"
 
-    fun dayChip(index: Int) = "$DAY_CHIP:$index"
+  fun dayChip(index: Int) = "$DAY_CHIP:$index"
 
-    // Opening hours dialog
-    const val DIALOG = "shop_opening_hours_dialog"
-    const val DIALOG_TITLE = "shop_opening_hours_title"
-    const val DIALOG_DAYS = "shop_opening_hours_days"
-    const val DIALOG_OPEN24_CHECKBOX = "shop_open_24_checkbox"
-    const val DIALOG_CLOSED_CHECKBOX = "shop_closed_checkbox"
-    const val DIALOG_OPEN24_ROW = "shop_open_24_row"
-    const val DIALOG_CLOSED_ROW = "shop_closed_row"
-    const val DIALOG_INTERVALS = "shop_intervals"
-    const val DIALOG_ADD_HOURS = "shop_add_hours_button"
-    const val DIALOG_ERROR = "shop_dialog_error"
-    const val DIALOG_SAVE = "shop_dialog_save"
-    const val DIALOG_CANCEL = "shop_dialog_cancel"
+  // Opening hours dialog
+  const val DIALOG = "shop_opening_hours_dialog"
+  const val DIALOG_TITLE = "shop_opening_hours_title"
+  const val DIALOG_DAYS = "shop_opening_hours_days"
+  const val DIALOG_OPEN24_CHECKBOX = "shop_open_24_checkbox"
+  const val DIALOG_CLOSED_CHECKBOX = "shop_closed_checkbox"
+  const val DIALOG_OPEN24_ROW = "shop_open_24_row"
+  const val DIALOG_CLOSED_ROW = "shop_closed_row"
+  const val DIALOG_INTERVALS = "shop_intervals"
+  const val DIALOG_ADD_HOURS = "shop_add_hours_button"
+  const val DIALOG_ERROR = "shop_dialog_error"
+  const val DIALOG_SAVE = "shop_dialog_save"
+  const val DIALOG_CANCEL = "shop_dialog_cancel"
 
-    // Action bar
-    const val ACTION_BAR = "shop_action_bar"
-    const val ACTION_DISCARD = "shop_action_discard"
-    const val ACTION_CREATE = "shop_action_create"
-    const val ACTION_SAVE = "shop_action_save"
+  // Action bar
+  const val ACTION_BAR = "shop_action_bar"
+  const val ACTION_DISCARD = "shop_action_discard"
+  const val ACTION_CREATE = "shop_action_create"
+  const val ACTION_SAVE = "shop_action_save"
 
-    // Search field internals
-    const val GAME_SEARCH_FIELD = "shop_game_search_field"
-    const val GAME_SEARCH_LEADING = "shop_game_search_leading"
-    const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
-    const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
-    const val GAME_SEARCH_MENU = "shop_game_search_menu"
-    const val GAME_SEARCH_ITEM = "shop_game_search_item"
+  // Search field internals
+  const val GAME_SEARCH_FIELD = "shop_game_search_field"
+  const val GAME_SEARCH_LEADING = "shop_game_search_leading"
+  const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
+  const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
+  const val GAME_SEARCH_MENU = "shop_game_search_menu"
+  const val GAME_SEARCH_ITEM = "shop_game_search_item"
 
-    // Quantity slider
-    const val QTY_CONTAINER = "shop_qty_container"
-    const val QTY_LABEL_ROW = "shop_qty_label_row"
-    const val QTY_LABEL = "shop_qty_label"
-    const val QTY_VALUE = "shop_qty_value"
-    const val QTY_SLIDER = "shop_qty_slider"
+  // Quantity slider
+  const val QTY_CONTAINER = "shop_qty_container"
+  const val QTY_LABEL_ROW = "shop_qty_label_row"
+  const val QTY_LABEL = "shop_qty_label"
+  const val QTY_VALUE = "shop_qty_value"
+  const val QTY_SLIDER = "shop_qty_slider"
 
-    // Game stock dialog
-    const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
-    const val GAME_DIALOG_BODY = "shop_game_dialog_body"
-    const val GAME_DIALOG_SEARCH = "shop_game_dialog_search"
-    const val GAME_DIALOG_SLIDER = "shop_game_dialog_slider"
-    const val GAME_DIALOG_SAVE = "shop_game_dialog_save"
-    const val GAME_DIALOG_CANCEL = "shop_game_dialog_cancel"
-    const val GAME_DIALOG_HELPER = "shop_game_dialog_helper"
+  // Game stock dialog
+  const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
+  const val GAME_DIALOG_BODY = "shop_game_dialog_body"
+  const val GAME_DIALOG_SEARCH = "shop_game_dialog_search"
+  const val GAME_DIALOG_SLIDER = "shop_game_dialog_slider"
+  const val GAME_DIALOG_SAVE = "shop_game_dialog_save"
+  const val GAME_DIALOG_CANCEL = "shop_game_dialog_cancel"
+  const val GAME_DIALOG_HELPER = "shop_game_dialog_helper"
 
-    // Game list
-    const val SHOP_GAME_PREFIX = "SHOP_GAME_"
-    const val SHOP_GAME_DELETE = "shop_game_delete"
+  // Game list
+  const val SHOP_GAME_PREFIX = "SHOP_GAME_"
+  const val SHOP_GAME_DELETE = "shop_game_delete"
 }
 
 /* =============================================================================
@@ -157,95 +157,95 @@ object ShopComponentsTestTags {
 
 object ShopUiDefaults {
 
-    object DaysMagicNumbers {
-        val short = listOf("S", "M", "T", "W", "T", "F", "S")
-    }
+  object DaysMagicNumbers {
+    val short = listOf("S", "M", "T", "W", "T", "F", "S")
+  }
 
-    object TimeMagicNumbers {
-        const val OPEN24_START = "00:00"
-        const val OPEN24_END = "23:59"
+  object TimeMagicNumbers {
+    const val OPEN24_START = "00:00"
+    const val OPEN24_END = "23:59"
 
-        const val DEFAULT_START_HOUR = 7
-        const val DEFAULT_START_MIN = 30
-        const val DEFAULT_END_HOUR = 20
-        const val DEFAULT_END_MIN = 0
+    const val DEFAULT_START_HOUR = 7
+    const val DEFAULT_START_MIN = 30
+    const val DEFAULT_END_HOUR = 20
+    const val DEFAULT_END_MIN = 0
 
-        const val DISPLAY_PATTERN_12 = "h:mm a"
+    const val DISPLAY_PATTERN_12 = "h:mm a"
 
-        fun formatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
-            DateTimeFormatter.ofPattern(DISPLAY_PATTERN_12, locale)
+    fun formatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(DISPLAY_PATTERN_12, locale)
 
-        val defaultStart: LocalTime = LocalTime.of(DEFAULT_START_HOUR, DEFAULT_START_MIN)
-        val defaultEnd: LocalTime = LocalTime.of(DEFAULT_END_HOUR, DEFAULT_END_MIN)
+    val defaultStart: LocalTime = LocalTime.of(DEFAULT_START_HOUR, DEFAULT_START_MIN)
+    val defaultEnd: LocalTime = LocalTime.of(DEFAULT_END_HOUR, DEFAULT_END_MIN)
 
-        val open24Start: LocalTime = LocalTime.of(0, 0)
-        val open24End: LocalTime = LocalTime.of(23, 59)
-    }
+    val open24Start: LocalTime = LocalTime.of(0, 0)
+    val open24End: LocalTime = LocalTime.of(23, 59)
+  }
 
-    object DimensionsMagicNumbers {
-        // Spacing
-        val space2 = 2.dp
-        val space4 = 4.dp
-        val space6 = 6.dp
-        val space8 = 8.dp
-        val space12 = 12.dp
-        val space16 = 16.dp
+  object DimensionsMagicNumbers {
+    // Spacing
+    val space2 = 2.dp
+    val space4 = 4.dp
+    val space6 = 6.dp
+    val space8 = 8.dp
+    val space12 = 12.dp
+    val space16 = 16.dp
 
-        // Component sizes
-        val timeFieldHeight = 56.dp
-        val removeIconTouch = 40.dp
-        val dayChip = 35.dp
-        val actionBarPadding = 16.dp
-        val actionBarElevation = 3.dp
-        val sectionHeaderDivider = 1.dp
-        val fieldTop = 10.dp
-        val fieldBottom = 12.dp
-        val labelInsetStart = 18.dp
-    }
+    // Component sizes
+    val timeFieldHeight = 56.dp
+    val removeIconTouch = 40.dp
+    val dayChip = 35.dp
+    val actionBarPadding = 16.dp
+    val actionBarElevation = 3.dp
+    val sectionHeaderDivider = 1.dp
+    val fieldTop = 10.dp
+    val fieldBottom = 12.dp
+    val labelInsetStart = 18.dp
+  }
 
-    object StringsMagicNumbers {
-        // Section header
-        const val REQUIRED_INFO = "Required Info"
+  object StringsMagicNumbers {
+    // Section header
+    const val REQUIRED_INFO = "Required Info"
 
-        // Generic
-        const val BTN_SAVE = "Save"
-        const val BTN_CANCEL = "Cancel"
-        const val BTN_DISCARD = "Discard"
-        const val BTN_CREATE = "Create"
+    // Generic
+    const val BTN_SAVE = "Save"
+    const val BTN_CANCEL = "Cancel"
+    const val BTN_DISCARD = "Discard"
+    const val BTN_CREATE = "Create"
 
-        // LabeledField
-        const val LABEL_SHOP = "Shop"
-        const val PLACEHOLDER_SHOP = "Shop name"
+    // LabeledField
+    const val LABEL_SHOP = "Shop"
+    const val PLACEHOLDER_SHOP = "Shop name"
 
-        // Time field
-        const val OPEN_TIME = "Open time"
-        const val CLOSE_TIME = "Close time"
+    // Time field
+    const val OPEN_TIME = "Open time"
+    const val CLOSE_TIME = "Close time"
 
-        // Day row
-        const val EDIT_HOURS = "Edit hours"
+    // Day row
+    const val EDIT_HOURS = "Edit hours"
 
-        // Days selector / dialog
-        const val DIALOG_TITLE = "Select days & time"
-        const val OPEN_24 = "Open 24 hours"
-        const val CLOSED = "Closed"
-        const val ADD_HOURS = "Add hours"
-        const val INVALID_TIME_RANGES = "Invalid time ranges."
+    // Days selector / dialog
+    const val DIALOG_TITLE = "Select days & time"
+    const val OPEN_24 = "Open 24 hours"
+    const val CLOSED = "Closed"
+    const val ADD_HOURS = "Add hours"
+    const val INVALID_TIME_RANGES = "Invalid time ranges."
 
-        // Quantity
-        const val QUANTITY = "Quantity"
+    // Quantity
+    const val QUANTITY = "Quantity"
 
-        // Game search
-        const val ADDED = "Added"
-        const val SEARCH_GAMES_PLACEHOLDER = "Search games…"
+    // Game search
+    const val ADDED = "Added"
+    const val SEARCH_GAMES_PLACEHOLDER = "Search games…"
 
-        // Game stock dialog
-        const val GAME_DIALOG_TITLE = "Add game in stock"
-        const val DUPLICATE_GAME = "This game is already in stock."
-    }
+    // Game stock dialog
+    const val GAME_DIALOG_TITLE = "Add game in stock"
+    const val DUPLICATE_GAME = "This game is already in stock."
+  }
 
-    object RangesMagicNumbers {
-        val qtyGameDialog: IntRange = 1..40
-    }
+  object RangesMagicNumbers {
+    val qtyGameDialog: IntRange = 1..40
+  }
 }
 
 /* =============================================================================
@@ -267,28 +267,28 @@ private fun LocalTime.display(): String = format(ShopUiDefaults.TimeMagicNumbers
  * @return The corresponding LocalTime object.
  */
 private fun parseToLocalTime(raw: String): LocalTime {
-    val s = raw.trim()
-    val lower = s.lowercase(Locale.getDefault())
+  val s = raw.trim()
+  val lower = s.lowercase(Locale.getDefault())
 
-    if (lower.contains("am") || lower.contains("pm")) {
-        val normalized =
-            lower
-                .replace("am", " am")
-                .replace("pm", " pm")
-                .replace(Regex("\\s+"), " ")
-                .trim()
-                .uppercase(Locale.getDefault())
-        return LocalTime.parse(normalized, ShopUiDefaults.TimeMagicNumbers.formatter())
-    }
+  if (lower.contains("am") || lower.contains("pm")) {
+    val normalized =
+        lower
+            .replace("am", " am")
+            .replace("pm", " pm")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .uppercase(Locale.getDefault())
+    return LocalTime.parse(normalized, ShopUiDefaults.TimeMagicNumbers.formatter())
+  }
 
-    return runCatching {
+  return runCatching {
         val (h, mRest) = s.split(":")
         LocalTime.of(h.toInt(), mRest.take(2).toInt())
-    }
-        .getOrElse {
-            LocalTime.parse(
-                s.uppercase(Locale.getDefault()), ShopUiDefaults.TimeMagicNumbers.formatter())
-        }
+      }
+      .getOrElse {
+        LocalTime.parse(
+            s.uppercase(Locale.getDefault()), ShopUiDefaults.TimeMagicNumbers.formatter())
+      }
 }
 
 /**
@@ -299,8 +299,8 @@ private fun parseToLocalTime(raw: String): LocalTime {
  */
 private fun isOpen24(hours: List<TimeSlot>): Boolean =
     hours.size == 1 &&
-            hours.first().open == ShopUiDefaults.TimeMagicNumbers.OPEN24_START &&
-            hours.first().close == ShopUiDefaults.TimeMagicNumbers.OPEN24_END
+        hours.first().open == ShopUiDefaults.TimeMagicNumbers.OPEN24_START &&
+        hours.first().close == ShopUiDefaults.TimeMagicNumbers.OPEN24_END
 
 /**
  * Validates that the provided time intervals do not overlap and that each end time is after its
@@ -313,13 +313,13 @@ private fun isOpen24(hours: List<TimeSlot>): Boolean =
 private fun validateIntervals(
     intervals: List<Pair<LocalTime, LocalTime>>
 ): List<Pair<LocalTime, LocalTime>> {
-    val cleaned = intervals.filter { (s, e) -> e.isAfter(s) }
-    require(cleaned.size == intervals.size) { "End time must be after start time." }
-    val sorted = cleaned.sortedBy { it.first }
-    for (i in 1 until sorted.size) {
-        require(sorted[i].first.isAfter(sorted[i - 1].second)) { "Time ranges must not overlap." }
-    }
-    return sorted
+  val cleaned = intervals.filter { (s, e) -> e.isAfter(s) }
+  require(cleaned.size == intervals.size) { "End time must be after start time." }
+  val sorted = cleaned.sortedBy { it.first }
+  for (i in 1 until sorted.size) {
+    require(sorted[i].first.isAfter(sorted[i - 1].second)) { "Time ranges must not overlap." }
+  }
+  return sorted
 }
 
 /**
@@ -334,14 +334,14 @@ private fun showTimePicker(
     initial: LocalTime,
     onTimePicked: (LocalTime) -> Unit
 ) {
-    val is24h = DateFormat.is24HourFormat(context)
-    TimePickerDialog(
-        context,
-        { _, h, m -> onTimePicked(LocalTime.of(h, m)) },
-        initial.hour,
-        initial.minute,
-        is24h)
-        .show()
+  val is24h = DateFormat.is24HourFormat(context)
+  TimePickerDialog(
+          context,
+          { _, h, m -> onTimePicked(LocalTime.of(h, m)) },
+          initial.hour,
+          initial.minute,
+          is24h)
+      .show()
 }
 
 /**
@@ -365,31 +365,31 @@ private fun initialIntervals(
     is24h: Boolean
 ): List<Pair<LocalTime, LocalTime>> =
     when {
-        is24h ->
-            listOf(
-                ShopUiDefaults.TimeMagicNumbers.open24Start to
-                        ShopUiDefaults.TimeMagicNumbers.open24End)
-        current.hours.isEmpty() ->
-            listOf(
-                ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                        ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-        else ->
-            current.hours
-                .mapNotNull { slot ->
-                    runCatching {
-                        val st =
-                            slot.open?.let(::parseToLocalTime)
-                                ?: ShopUiDefaults.TimeMagicNumbers.defaultStart
-                        val en = slot.close?.let(::parseToLocalTime) ?: st.plusHours(1)
-                        st to en
+      is24h ->
+          listOf(
+              ShopUiDefaults.TimeMagicNumbers.open24Start to
+                  ShopUiDefaults.TimeMagicNumbers.open24End)
+      current.hours.isEmpty() ->
+          listOf(
+              ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                  ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+      else ->
+          current.hours
+              .mapNotNull { slot ->
+                runCatching {
+                      val st =
+                          slot.open?.let(::parseToLocalTime)
+                              ?: ShopUiDefaults.TimeMagicNumbers.defaultStart
+                      val en = slot.close?.let(::parseToLocalTime) ?: st.plusHours(1)
+                      st to en
                     }
-                        .getOrNull()
-                }
-                .ifEmpty {
-                    listOf(
-                        ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                                ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-                }
+                    .getOrNull()
+              }
+              .ifEmpty {
+                listOf(
+                    ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                        ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+              }
     }
 
 /* =============================================================================
@@ -404,22 +404,22 @@ private fun initialIntervals(
  */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
-    val density = LocalDensity.current
-    var textWidth by remember { mutableStateOf(0.dp) }
+  val density = LocalDensity.current
+  var textWidth by remember { mutableStateOf(0.dp) }
 
-    Column(modifier = modifier.testTag(ShopComponentsTestTags.sectionHeader(title))) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            onTextLayout = { layout -> textWidth = with(density) { layout.size.width.toDp() } },
-            modifier = Modifier.testTag(ShopComponentsTestTags.SECTION_HEADER_LABEL))
-        Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
-        HorizontalDivider(
-            modifier = Modifier.width(textWidth).testTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER),
-            thickness = ShopUiDefaults.DimensionsMagicNumbers.sectionHeaderDivider,
-            color = MaterialTheme.colorScheme.outlineVariant)
-        Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
-    }
+  Column(modifier = modifier.testTag(ShopComponentsTestTags.sectionHeader(title))) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        onTextLayout = { layout -> textWidth = with(density) { layout.size.width.toDp() } },
+        modifier = Modifier.testTag(ShopComponentsTestTags.SECTION_HEADER_LABEL))
+    Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
+    HorizontalDivider(
+        modifier = Modifier.width(textWidth).testTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER),
+        thickness = ShopUiDefaults.DimensionsMagicNumbers.sectionHeaderDivider,
+        color = MaterialTheme.colorScheme.outlineVariant)
+    Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+  }
 }
 
 /**
@@ -446,39 +446,39 @@ fun LabeledField(
     singleLine: Boolean = true,
     minLines: Int = 1,
 ) {
-    Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = singleLine,
-            minLines = minLines,
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
-            placeholder = { Text(placeholder) },
-            shape = MaterialTheme.shapes.medium,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(
-                        top = ShopUiDefaults.DimensionsMagicNumbers.fieldTop,
-                        bottom = ShopUiDefaults.DimensionsMagicNumbers.fieldBottom)
-                    .testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
+  Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = singleLine,
+        minLines = minLines,
+        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
+        placeholder = { Text(placeholder) },
+        shape = MaterialTheme.shapes.medium,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(
+                    top = ShopUiDefaults.DimensionsMagicNumbers.fieldTop,
+                    bottom = ShopUiDefaults.DimensionsMagicNumbers.fieldBottom)
+                .testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
 
-        Box(
-            modifier =
-                Modifier.padding(start = ShopUiDefaults.DimensionsMagicNumbers.labelInsetStart)
-                    .offset(y = (-ShopUiDefaults.DimensionsMagicNumbers.space2))
-                    .align(Alignment.TopStart)
-                    .background(MaterialTheme.colorScheme.background)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier.padding(
-                        horizontal = ShopUiDefaults.DimensionsMagicNumbers.space4,
-                        vertical = ShopUiDefaults.DimensionsMagicNumbers.space2)
-                        .testTag(ShopComponentsTestTags.LABELED_FIELD_LABEL))
+    Box(
+        modifier =
+            Modifier.padding(start = ShopUiDefaults.DimensionsMagicNumbers.labelInsetStart)
+                .offset(y = (-ShopUiDefaults.DimensionsMagicNumbers.space2))
+                .align(Alignment.TopStart)
+                .background(MaterialTheme.colorScheme.background)) {
+          Text(
+              text = label,
+              style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier =
+                  Modifier.padding(
+                          horizontal = ShopUiDefaults.DimensionsMagicNumbers.space4,
+                          vertical = ShopUiDefaults.DimensionsMagicNumbers.space2)
+                      .testTag(ShopComponentsTestTags.LABELED_FIELD_LABEL))
         }
-    }
+  }
 }
 
 /**
@@ -491,29 +491,29 @@ fun LabeledField(
  */
 @Composable
 fun TimeField(label: String, value: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.testTag(ShopComponentsTestTags.timeField(label))) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_LABEL))
-        OutlinedCard(
-            onClick = onClick,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = ShopUiDefaults.DimensionsMagicNumbers.space4)
-                    .height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
-                    .testTag(ShopComponentsTestTags.TIME_FIELD_CARD),
-            shape = MaterialTheme.shapes.medium) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    value,
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_VALUE))
-            }
+  Column(modifier = modifier.testTag(ShopComponentsTestTags.timeField(label))) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_LABEL))
+    OutlinedCard(
+        onClick = onClick,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = ShopUiDefaults.DimensionsMagicNumbers.space4)
+                .height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
+                .testTag(ShopComponentsTestTags.TIME_FIELD_CARD),
+        shape = MaterialTheme.shapes.medium) {
+          Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_VALUE))
+          }
         }
-    }
+  }
 }
 
 /* =============================================================================
@@ -531,14 +531,14 @@ fun TimeField(label: String, value: String, onClick: () -> Unit, modifier: Modif
  */
 @Composable
 fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space12)
-                .clickable(onClick = onEdit)
-                .testTag(ShopComponentsTestTags.dayRow(dayName)),
-        verticalAlignment = Alignment.CenterVertically) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space12)
+              .clickable(onClick = onEdit)
+              .testTag(ShopComponentsTestTags.dayRow(dayName)),
+      verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = dayName,
             modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DAY_ROW_NAME),
@@ -555,11 +555,11 @@ fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifie
         )
         IconButton(
             onClick = onEdit, modifier = Modifier.testTag(ShopComponentsTestTags.DAY_ROW_EDIT)) {
-            Icon(
-                imageVector = Icons.Outlined.Edit,
-                contentDescription = ShopUiDefaults.StringsMagicNumbers.EDIT_HOURS)
-        }
-    }
+              Icon(
+                  imageVector = Icons.Outlined.Edit,
+                  contentDescription = ShopUiDefaults.StringsMagicNumbers.EDIT_HOURS)
+            }
+      }
 }
 
 /**
@@ -582,19 +582,19 @@ fun HourRow(
     onRemove: () -> Unit,
     rowIndex: Int? = null
 ) {
-    val labelTopSpace =
-        with(LocalDensity.current) {
-            MaterialTheme.typography.labelSmall.lineHeight.toDp() +
-                    ShopUiDefaults.DimensionsMagicNumbers.space4
-        }
+  val labelTopSpace =
+      with(LocalDensity.current) {
+        MaterialTheme.typography.labelSmall.lineHeight.toDp() +
+            ShopUiDefaults.DimensionsMagicNumbers.space4
+      }
 
-    Row(
-        verticalAlignment = Alignment.Top,
-        modifier =
-            Modifier.fillMaxWidth()
-                .then(
-                    if (rowIndex != null) Modifier.testTag(ShopComponentsTestTags.hourRow(rowIndex))
-                    else Modifier.testTag(ShopComponentsTestTags.HOUR_ROW))) {
+  Row(
+      verticalAlignment = Alignment.Top,
+      modifier =
+          Modifier.fillMaxWidth()
+              .then(
+                  if (rowIndex != null) Modifier.testTag(ShopComponentsTestTags.hourRow(rowIndex))
+                  else Modifier.testTag(ShopComponentsTestTags.HOUR_ROW))) {
         TimeField(
             label = ShopUiDefaults.StringsMagicNumbers.OPEN_TIME,
             value = start.display(),
@@ -610,22 +610,22 @@ fun HourRow(
 
         Column(
             modifier = Modifier.width(48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(labelTopSpace))
-            Box(
-                modifier =
-                    Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
-                        .fillMaxWidth(),
-                contentAlignment = Alignment.Center) {
-                IconButton(
-                    onClick = onRemove,
-                    modifier =
-                        Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.removeIconTouch)
-                            .testTag(ShopComponentsTestTags.HOUR_ROW_REMOVE)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Remove interval")
-                }
+              Spacer(Modifier.height(labelTopSpace))
+              Box(
+                  modifier =
+                      Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
+                          .fillMaxWidth(),
+                  contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick = onRemove,
+                        modifier =
+                            Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.removeIconTouch)
+                                .testTag(ShopComponentsTestTags.HOUR_ROW_REMOVE)) {
+                          Icon(Icons.Filled.Close, contentDescription = "Remove interval")
+                        }
+                  }
             }
-        }
-    }
+      }
 }
 
 /**
@@ -636,46 +636,46 @@ fun HourRow(
  */
 @Composable
 fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space4)
-                .testTag(ShopComponentsTestTags.DAYS_SELECTOR),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space4)
+              .testTag(ShopComponentsTestTags.DAYS_SELECTOR),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
         ShopUiDefaults.DaysMagicNumbers.short.forEachIndexed { idx, short ->
-            val isSel = idx in selected
+          val isSel = idx in selected
 
-            FilterChip(
-                selected = isSel,
-                onClick = { onToggle(idx) },
-                shape = CircleShape,
-                modifier =
-                    Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.dayChip)
-                        .testTag(ShopComponentsTestTags.dayChip(idx)),
-                label = {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = short,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold)
-                    }
-                },
-                colors =
-                    FilterChipDefaults.filterChipColors(
-                        containerColor = Color.Transparent,
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedContainerColor = MaterialTheme.colorScheme.inversePrimary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
-                border =
-                    FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSel,
-                        borderColor = MaterialTheme.colorScheme.outlineVariant,
-                        selectedBorderColor = MaterialTheme.colorScheme.inversePrimary))
+          FilterChip(
+              selected = isSel,
+              onClick = { onToggle(idx) },
+              shape = CircleShape,
+              modifier =
+                  Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.dayChip)
+                      .testTag(ShopComponentsTestTags.dayChip(idx)),
+              label = {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                  Text(
+                      text = short,
+                      textAlign = TextAlign.Center,
+                      style = MaterialTheme.typography.titleMedium,
+                      fontWeight = FontWeight.SemiBold)
+                }
+              },
+              colors =
+                  FilterChipDefaults.filterChipColors(
+                      containerColor = Color.Transparent,
+                      labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                      selectedContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                      selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
+              border =
+                  FilterChipDefaults.filterChipBorder(
+                      enabled = true,
+                      selected = isSel,
+                      borderColor = MaterialTheme.colorScheme.outlineVariant,
+                      selectedBorderColor = MaterialTheme.colorScheme.inversePrimary))
         }
-    }
+      }
 }
 
 /* =============================================================================
@@ -698,188 +698,188 @@ fun OpeningHoursDialog(
     onDismiss: () -> Unit,
     onSave:
         (
-        selectedDays: Set<Int>,
-        closed: Boolean,
-        open24: Boolean,
-        intervals: List<Pair<LocalTime, LocalTime>>) -> Unit
+            selectedDays: Set<Int>,
+            closed: Boolean,
+            open24: Boolean,
+            intervals: List<Pair<LocalTime, LocalTime>>) -> Unit
 ) {
-    val context = LocalContext.current
+  val context = LocalContext.current
 
-    var selectedDays by remember(initialSelectedDays) { mutableStateOf(initialSelectedDays) }
-    var isClosed by remember(current) { mutableStateOf(current.hours.isEmpty()) }
-    var is24h by remember(current) { mutableStateOf(isOpen24(current.hours)) }
-    var intervals by remember(current, is24h) { mutableStateOf(initialIntervals(current, is24h)) }
+  var selectedDays by remember(initialSelectedDays) { mutableStateOf(initialSelectedDays) }
+  var isClosed by remember(current) { mutableStateOf(current.hours.isEmpty()) }
+  var is24h by remember(current) { mutableStateOf(isOpen24(current.hours)) }
+  var intervals by remember(current, is24h) { mutableStateOf(initialIntervals(current, is24h)) }
 
-    var errorText by remember { mutableStateOf<String?>(null) }
+  var errorText by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = {
-            Box(
-                Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG_TITLE),
-                contentAlignment = Alignment.Center) {
-                Text(
-                    ShopUiDefaults.StringsMagicNumbers.DIALOG_TITLE,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center)
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      shape = MaterialTheme.shapes.extraLarge,
+      title = {
+        Box(
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG_TITLE),
+            contentAlignment = Alignment.Center) {
+              Text(
+                  ShopUiDefaults.StringsMagicNumbers.DIALOG_TITLE,
+                  style = MaterialTheme.typography.headlineSmall,
+                  textAlign = TextAlign.Center)
             }
-        },
-        text = {
-            Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG)) {
-                Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_DAYS)) {
-                    DaysSelector(
-                        selected = selectedDays, onToggle = { d -> selectedDays = selectedDays.toggled(d) })
+      },
+      text = {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG)) {
+          Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_DAYS)) {
+            DaysSelector(
+                selected = selectedDays, onToggle = { d -> selectedDays = selectedDays.toggled(d) })
+          }
+
+          Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space12))
+
+          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                  Checkbox(
+                      checked = is24h,
+                      onCheckedChange = {
+                        is24h = it
+                        if (it) {
+                          isClosed = false
+                          intervals =
+                              listOf(
+                                  ShopUiDefaults.TimeMagicNumbers.open24Start to
+                                      ShopUiDefaults.TimeMagicNumbers.open24End)
+                        }
+                      },
+                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
+                  Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                  Text(ShopUiDefaults.StringsMagicNumbers.OPEN_24, maxLines = 1)
                 }
-
-                Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space12))
-
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Row(
-                        modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center) {
-                        Checkbox(
-                            checked = is24h,
-                            onCheckedChange = {
-                                is24h = it
-                                if (it) {
-                                    isClosed = false
-                                    intervals =
-                                        listOf(
-                                            ShopUiDefaults.TimeMagicNumbers.open24Start to
-                                                    ShopUiDefaults.TimeMagicNumbers.open24End)
-                                }
-                            },
-                            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
-                        Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                        Text(ShopUiDefaults.StringsMagicNumbers.OPEN_24, maxLines = 1)
-                    }
-                    Row(
-                        modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center) {
-                        Checkbox(
-                            checked = isClosed,
-                            onCheckedChange = {
-                                isClosed = it
-                                if (it) {
-                                    is24h = false
-                                    intervals =
-                                        listOf(
-                                            ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                                                    ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-                                }
-                            },
-                            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
-                        Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                        Text(ShopUiDefaults.StringsMagicNumbers.CLOSED, maxLines = 1)
-                    }
+            Row(
+                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                  Checkbox(
+                      checked = isClosed,
+                      onCheckedChange = {
+                        isClosed = it
+                        if (it) {
+                          is24h = false
+                          intervals =
+                              listOf(
+                                  ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                                      ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+                        }
+                      },
+                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
+                  Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                  Text(ShopUiDefaults.StringsMagicNumbers.CLOSED, maxLines = 1)
                 }
+          }
 
+          Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+
+          AnimatedVisibility(visible = !isClosed && !is24h) {
+            Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_INTERVALS)) {
+              intervals.forEachIndexed { idx, (start, end) ->
+                HourRow(
+                    start = start,
+                    end = end,
+                    onPickStart = {
+                      showTimePicker(context, start) { t ->
+                        intervals = intervals.toMutableList().apply { this[idx] = t to end }
+                      }
+                    },
+                    onPickEnd = {
+                      showTimePicker(context, end) { t ->
+                        intervals = intervals.toMutableList().apply { this[idx] = start to t }
+                      }
+                    },
+                    onRemove = {
+                      intervals = intervals.toMutableList().apply { removeAt(idx) }
+                      if (intervals.isEmpty()) {
+                        intervals =
+                            listOf(
+                                ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                                    ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+                      }
+                    },
+                    rowIndex = idx)
                 Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+              }
 
-                AnimatedVisibility(visible = !isClosed && !is24h) {
-                    Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_INTERVALS)) {
-                        intervals.forEachIndexed { idx, (start, end) ->
-                            HourRow(
-                                start = start,
-                                end = end,
-                                onPickStart = {
-                                    showTimePicker(context, start) { t ->
-                                        intervals = intervals.toMutableList().apply { this[idx] = t to end }
-                                    }
-                                },
-                                onPickEnd = {
-                                    showTimePicker(context, end) { t ->
-                                        intervals = intervals.toMutableList().apply { this[idx] = start to t }
-                                    }
-                                },
-                                onRemove = {
-                                    intervals = intervals.toMutableList().apply { removeAt(idx) }
-                                    if (intervals.isEmpty()) {
-                                        intervals =
-                                            listOf(
-                                                ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                                                        ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-                                    }
-                                },
-                                rowIndex = idx)
-                            Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                        }
+              TextButton(
+                  onClick = {
+                    val defaultStart = ShopUiDefaults.TimeMagicNumbers.defaultStart
+                    val defaultEnd = ShopUiDefaults.TimeMagicNumbers.defaultEnd
+                    intervals = intervals + (defaultStart to defaultEnd)
+                  },
+                  contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                  modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ADD_HOURS)) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                    Text(ShopUiDefaults.StringsMagicNumbers.ADD_HOURS)
+                  }
+            }
+          }
 
-                        TextButton(
-                            onClick = {
-                                val defaultStart = ShopUiDefaults.TimeMagicNumbers.defaultStart
-                                val defaultEnd = ShopUiDefaults.TimeMagicNumbers.defaultEnd
-                                intervals = intervals + (defaultStart to defaultEnd)
-                            },
-                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-                            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ADD_HOURS)) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                            Text(ShopUiDefaults.StringsMagicNumbers.ADD_HOURS)
-                        }
+          errorText?.let {
+            Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ERROR))
+          }
+        }
+      },
+      dismissButton = {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CANCEL)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
+            }
+      },
+      confirmButton = {
+        TextButton(
+            onClick = {
+              try {
+                val open24Start = ShopUiDefaults.TimeMagicNumbers.open24Start
+                val open24End = ShopUiDefaults.TimeMagicNumbers.open24End
+                val open24Pair = open24Start to open24End
+
+                // If user entered a single interval with same start/end => treat as open 24
+                val normalizedIntervals =
+                    if (!isClosed &&
+                        !is24h &&
+                        intervals.size == 1 &&
+                        intervals[0].first == intervals[0].second) {
+                      listOf(open24Pair)
+                    } else intervals
+
+                val payload =
+                    when {
+                      isClosed -> emptyList()
+                      is24h -> listOf(open24Pair)
+                      else -> validateIntervals(normalizedIntervals)
                     }
-                }
 
-                errorText?.let {
-                    Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ERROR))
-                }
+                // Compute final open24 flag from the normalized payload
+                val open24Final =
+                    payload.size == 1 &&
+                        payload[0].first == open24Start &&
+                        payload[0].second == open24End
+
+                errorText = null
+                onSave(selectedDays, isClosed, open24Final, payload)
+              } catch (e: IllegalArgumentException) {
+                errorText = e.message ?: ShopUiDefaults.StringsMagicNumbers.INVALID_TIME_RANGES
+              }
+            },
+            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_SAVE)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CANCEL)) {
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    try {
-                        val open24Start = ShopUiDefaults.TimeMagicNumbers.open24Start
-                        val open24End = ShopUiDefaults.TimeMagicNumbers.open24End
-                        val open24Pair = open24Start to open24End
-
-                        // If user entered a single interval with same start/end => treat as open 24
-                        val normalizedIntervals =
-                            if (!isClosed &&
-                                !is24h &&
-                                intervals.size == 1 &&
-                                intervals[0].first == intervals[0].second) {
-                                listOf(open24Pair)
-                            } else intervals
-
-                        val payload =
-                            when {
-                                isClosed -> emptyList()
-                                is24h -> listOf(open24Pair)
-                                else -> validateIntervals(normalizedIntervals)
-                            }
-
-                        // Compute final open24 flag from the normalized payload
-                        val open24Final =
-                            payload.size == 1 &&
-                                    payload[0].first == open24Start &&
-                                    payload[0].second == open24End
-
-                        errorText = null
-                        onSave(selectedDays, isClosed, open24Final, payload)
-                    } catch (e: IllegalArgumentException) {
-                        errorText = e.message ?: ShopUiDefaults.StringsMagicNumbers.INVALID_TIME_RANGES
-                    }
-                },
-                modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_SAVE)) {
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-            }
-        })
+      })
 }
 
 /* =============================================================================
@@ -898,16 +898,16 @@ fun ActionBar(
     enabled: Boolean,
     primaryButtonText: String = ShopUiDefaults.StringsMagicNumbers.BTN_CREATE,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = ShopUiDefaults.DimensionsMagicNumbers.actionBarElevation) {
+  Surface(
+      color = MaterialTheme.colorScheme.background,
+      contentColor = MaterialTheme.colorScheme.onSurface,
+      tonalElevation = ShopUiDefaults.DimensionsMagicNumbers.actionBarElevation) {
         Row(
             Modifier.fillMaxWidth()
                 .padding(ShopUiDefaults.DimensionsMagicNumbers.actionBarPadding)
                 .testTag(ShopComponentsTestTags.ACTION_BAR),
             verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 OutlinedButton(
                     onClick = onDiscard,
                     colors =
@@ -915,42 +915,42 @@ fun ActionBar(
                             containerColor = MaterialTheme.colorScheme.outline,
                             contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
-                    Icon(Icons.Filled.Delete, contentDescription = null)
-                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                    Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
-                }
-            }
+                      Icon(Icons.Filled.Delete, contentDescription = null)
+                      Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                      Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
+                    }
+              }
 
-            val primaryColors =
-                if (enabled)
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary)
-                else
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.outline,
-                        contentColor = MaterialTheme.colorScheme.onSecondary)
+              val primaryColors =
+                  if (enabled)
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.secondary,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)
+                  else
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.outline,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)
 
-            val primaryTag =
-                if (primaryButtonText.equals(
-                        ShopUiDefaults.StringsMagicNumbers.BTN_SAVE, ignoreCase = true))
-                    ShopComponentsTestTags.ACTION_SAVE
-                else ShopComponentsTestTags.ACTION_CREATE
+              val primaryTag =
+                  if (primaryButtonText.equals(
+                      ShopUiDefaults.StringsMagicNumbers.BTN_SAVE, ignoreCase = true))
+                      ShopComponentsTestTags.ACTION_SAVE
+                  else ShopComponentsTestTags.ACTION_CREATE
 
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Button(
                     onClick = onPrimary,
                     enabled = enabled,
                     shape = RoundedCornerShape(20.dp),
                     colors = primaryColors,
                     modifier = Modifier.testTag(primaryTag)) {
-                    Icon(Icons.Filled.Check, contentDescription = null)
-                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                    Text(primaryButtonText)
-                }
+                      Icon(Icons.Filled.Check, contentDescription = null)
+                      Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                      Text(primaryButtonText)
+                    }
+              }
             }
-        }
-    }
+      }
 }
 
 /* =============================================================================
@@ -982,40 +982,40 @@ private fun GameSearchOneLine(
     modifier: Modifier = Modifier,
     isItemEnabled: (Game) -> Boolean = { true }
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
+  var expanded by remember { mutableStateOf(false) }
+  val focusManager = LocalFocusManager.current
 
-    ExposedDropdownMenuBox(
-        expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+  ExposedDropdownMenuBox(
+      expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
         OutlinedTextField(
             value = query,
             onValueChange = {
-                onQueryChange(it)
-                expanded = it.isNotBlank() || isLoading
+              onQueryChange(it)
+              expanded = it.isNotBlank() || isLoading
             },
             singleLine = true,
             leadingIcon = {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = null,
-                    modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_LEADING))
+              Icon(
+                  Icons.Filled.Search,
+                  contentDescription = null,
+                  modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_LEADING))
             },
             trailingIcon = {
-                when {
-                    isLoading ->
-                        CircularProgressIndicator(
-                            Modifier.size(18.dp).testTag(ShopComponentsTestTags.GAME_SEARCH_PROGRESS),
-                            strokeWidth = 2.dp)
-                    query.isNotEmpty() ->
-                        IconButton(
-                            onClick = {
-                                onQueryChange("")
-                                expanded = false
-                            },
-                            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_CLEAR)) {
-                            Icon(Icons.Filled.Close, contentDescription = "Clear")
+              when {
+                isLoading ->
+                    CircularProgressIndicator(
+                        Modifier.size(18.dp).testTag(ShopComponentsTestTags.GAME_SEARCH_PROGRESS),
+                        strokeWidth = 2.dp)
+                query.isNotEmpty() ->
+                    IconButton(
+                        onClick = {
+                          onQueryChange("")
+                          expanded = false
+                        },
+                        modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_CLEAR)) {
+                          Icon(Icons.Filled.Close, contentDescription = "Clear")
                         }
-                }
+              }
             },
             placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             modifier =
@@ -1028,34 +1028,34 @@ private fun GameSearchOneLine(
             expanded = expanded && (isLoading || results.isNotEmpty()),
             onDismissRequest = { expanded = false },
             modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_MENU)) {
-            results.forEachIndexed { idx, g ->
+              results.forEachIndexed { idx, g ->
                 val enabled = isItemEnabled(g)
                 DropdownMenuItem(
                     text = {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween) {
+                      Row(
+                          Modifier.fillMaxWidth(),
+                          horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(g.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (!enabled) {
-                                Text(
-                                    ShopUiDefaults.StringsMagicNumbers.ADDED,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                              Text(
+                                  ShopUiDefaults.StringsMagicNumbers.ADDED,
+                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                        }
+                          }
                     },
                     enabled = enabled,
                     onClick = {
-                        if (enabled) {
-                            onPick(g)
-                            onQueryChange(g.name)
-                            expanded = false
-                            focusManager.clearFocus()
-                        }
+                      if (enabled) {
+                        onPick(g)
+                        onQueryChange(g.name)
+                        expanded = false
+                        focusManager.clearFocus()
+                      }
                     },
                     modifier = Modifier.testTag("${ShopComponentsTestTags.GAME_SEARCH_ITEM}:$idx"))
+              }
             }
-        }
-    }
+      }
 }
 
 /**
@@ -1073,28 +1073,28 @@ fun QuantitySlider(
     range: IntRange,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(ShopUiDefaults.DimensionsMagicNumbers.space8),
-            modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL_ROW)) {
-            Text(
-                ShopUiDefaults.StringsMagicNumbers.QUANTITY,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
-            Text(
-                value.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(ShopComponentsTestTags.QTY_VALUE))
+  Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ShopUiDefaults.DimensionsMagicNumbers.space8),
+        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL_ROW)) {
+          Text(
+              ShopUiDefaults.StringsMagicNumbers.QUANTITY,
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
+          Text(
+              value.toString(),
+              style = MaterialTheme.typography.bodyMedium,
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_VALUE))
         }
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt().coerceIn(range)) },
-            valueRange = range.first.toFloat()..range.last.toFloat(),
-            steps = (range.last - range.first - 1).coerceAtLeast(0),
-            modifier = Modifier.testTag(ShopComponentsTestTags.QTY_SLIDER))
-    }
+    Slider(
+        value = value.toFloat(),
+        onValueChange = { onValueChange(it.toInt().coerceIn(range)) },
+        valueRange = range.first.toFloat()..range.last.toFloat(),
+        steps = (range.last - range.first - 1).coerceAtLeast(0),
+        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_SLIDER))
+  }
 }
 
 /* =============================================================================
@@ -1132,74 +1132,74 @@ fun GameStockDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
-    val filtered =
-        remember(results, existingIds) {
-            results.filterNot { it.uid in existingIds }.distinctBy { it.uid }
+  val filtered =
+      remember(results, existingIds) {
+        results.filterNot { it.uid in existingIds }.distinctBy { it.uid }
+      }
+  val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      shape = MaterialTheme.shapes.extraLarge,
+      title = {
+        Box(
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE),
+            contentAlignment = Alignment.Center) {
+              Text(
+                  ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
+                  style = MaterialTheme.typography.headlineSmall)
+            }
+      },
+      text = {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
+          GameSearchOneLine(
+              query = query,
+              onQueryChange = onQueryChange,
+              results = filtered,
+              isLoading = isLoading,
+              onPick = { g ->
+                onPickGame(g)
+                onQueryChange(g.name)
+              },
+              placeholder = ShopUiDefaults.StringsMagicNumbers.SEARCH_GAMES_PLACEHOLDER,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .height(56.dp)
+                      .testTag(ShopComponentsTestTags.GAME_DIALOG_SEARCH))
+
+          if (isDuplicate) {
+            Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
+            Text(
+                ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
+          }
+
+          Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space16))
+
+          QuantitySlider(
+              value = quantity,
+              onValueChange = onQuantityChange,
+              range = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog,
+              modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER))
         }
-    val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = {
-            Box(
-                Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE),
-                contentAlignment = Alignment.Center) {
-                Text(
-                    ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
-                    style = MaterialTheme.typography.headlineSmall)
+      },
+      dismissButton = {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
             }
-        },
-        text = {
-            Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
-                GameSearchOneLine(
-                    query = query,
-                    onQueryChange = onQueryChange,
-                    results = filtered,
-                    isLoading = isLoading,
-                    onPick = { g ->
-                        onPickGame(g)
-                        onQueryChange(g.name)
-                    },
-                    placeholder = ShopUiDefaults.StringsMagicNumbers.SEARCH_GAMES_PLACEHOLDER,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(56.dp)
-                            .testTag(ShopComponentsTestTags.GAME_DIALOG_SEARCH))
-
-                if (isDuplicate) {
-                    Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
-                    Text(
-                        ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
-                }
-
-                Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space16))
-
-                QuantitySlider(
-                    value = quantity,
-                    onValueChange = onQuantityChange,
-                    range = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog,
-                    modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER))
+      },
+      confirmButton = {
+        TextButton(
+            onClick = onSave,
+            enabled = selectedGame != null && !isDuplicate && quantity > 0,
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL)) {
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onSave,
-                enabled = selectedGame != null && !isDuplicate && quantity > 0,
-                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-            }
-        })
+      })
 }
 
 /* =============================================================================
@@ -1228,49 +1228,49 @@ fun GameListSection(
     onClick: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {},
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier) {
-        if (title != null) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                textDecoration = TextDecoration.Underline)
-        }
-
-        if (hasDeleteButton) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                modifier = Modifier.heightIn(max = 600.dp)) {
-                items(items = games, key = { it.first.uid }) { (game, count) ->
-                    GameItem(
-                        game = game,
-                        count = count,
-                        clickable = clickableGames,
-                        onClick = onClick,
-                        hasDeleteButton = true,
-                        onDelete = onDelete)
-                }
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                modifier = Modifier.heightIn(max = 600.dp)) {
-                items(items = games, key = { it.first.uid }) { (game, count) ->
-                    GameItem(
-                        game = game,
-                        count = count,
-                        clickable = clickableGames,
-                        onClick = onClick,
-                        hasDeleteButton = false,
-                        onDelete = { /* no-op */})
-                }
-            }
-        }
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier) {
+    if (title != null) {
+      Text(
+          title,
+          style = MaterialTheme.typography.titleLarge,
+          fontWeight = FontWeight.SemiBold,
+          textDecoration = TextDecoration.Underline)
     }
+
+    if (hasDeleteButton) {
+      LazyColumn(
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(bottom = 16.dp),
+          modifier = Modifier.heightIn(max = 600.dp)) {
+            items(items = games, key = { it.first.uid }) { (game, count) ->
+              GameItem(
+                  game = game,
+                  count = count,
+                  clickable = clickableGames,
+                  onClick = onClick,
+                  hasDeleteButton = true,
+                  onDelete = onDelete)
+            }
+          }
+    } else {
+      LazyVerticalGrid(
+          columns = GridCells.Fixed(2),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(bottom = 16.dp),
+          modifier = Modifier.heightIn(max = 600.dp)) {
+            items(items = games, key = { it.first.uid }) { (game, count) ->
+              GameItem(
+                  game = game,
+                  count = count,
+                  clickable = clickableGames,
+                  onClick = onClick,
+                  hasDeleteButton = false,
+                  onDelete = { /* no-op */})
+            }
+          }
+    }
+  }
 }
 
 /**
@@ -1295,69 +1295,69 @@ fun GameItem(
     hasDeleteButton: Boolean = false,
     onDelete: (Game) -> Unit = {},
 ) {
-    Card(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-                .clickable(enabled = clickable, onClick = { onClick(game) }),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+  Card(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+              .clickable(enabled = clickable, onClick = { onClick(game) }),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
 
-            // Icon + badge
-            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                BadgedBox(
-                    badge = {
-                        // Only show badge if count > 0
-                        if (count > 0) {
-                            val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                            val label = if (count > max) "$max+" else count.toString()
-                            Badge(
-                                modifier =
-                                    Modifier.offset(x = 8.dp, y = (-6).dp)
-                                        .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp),
-                                containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                                Text(
-                                    label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    modifier = Modifier.padding(horizontal = 4.dp))
-                            }
+          // Icon + badge
+          Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            BadgedBox(
+                badge = {
+                  // Only show badge if count > 0
+                  if (count > 0) {
+                    val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+                    val label = if (count > max) "$max+" else count.toString()
+                    Badge(
+                        modifier =
+                            Modifier.offset(x = 8.dp, y = (-6).dp)
+                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp),
+                        containerColor = MaterialTheme.colorScheme.inversePrimary) {
+                          Text(
+                              label,
+                              style = MaterialTheme.typography.labelSmall,
+                              maxLines = 1,
+                              softWrap = false,
+                              modifier = Modifier.padding(horizontal = 4.dp))
                         }
-                    }) {
-                    Icon(Icons.Filled.VideogameAsset, contentDescription = null)
+                  }
+                }) {
+                  Icon(Icons.Filled.VideogameAsset, contentDescription = null)
                 }
-            }
+          }
 
-            Spacer(Modifier.width(8.dp))
+          Spacer(Modifier.width(8.dp))
 
-            // Name centered
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center) {
+          // Name centered
+          Column(
+              modifier = Modifier.weight(1f),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.Center) {
                 Text(
                     game.name,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
-            }
+              }
 
-            // Optional delete
-            if (hasDeleteButton) {
-                IconButton(
-                    onClick = { onDelete(game) },
-                    modifier =
-                        Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error)) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
+          // Optional delete
+          if (hasDeleteButton) {
+            IconButton(
+                onClick = { onDelete(game) },
+                modifier =
+                    Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
+                colors =
+                    IconButtonDefaults.iconButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error)) {
+                  Icon(Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
                 }
-            }
+          }
         }
-    }
+      }
 }
 
 /* =============================================================================
@@ -1373,27 +1373,27 @@ fun EditableGameItem(
     onDelete: (Game) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier =
-            modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+  Card(
+      modifier =
+          modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                game.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) }) {
-                    Text("-")
-                }
-                Text(count.toString(), modifier = Modifier.padding(horizontal = 12.dp))
-                OutlinedButton(onClick = { onQuantityChange(game, count + 1) }) { Text("+") }
+          Text(
+              game.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) }) {
+              Text("-")
             }
-            IconButton(
-                onClick = { onDelete(game) },
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error)) {
+            Text(count.toString(), modifier = Modifier.padding(horizontal = 12.dp))
+            OutlinedButton(onClick = { onQuantityChange(game, count + 1) }) { Text("+") }
+          }
+          IconButton(
+              onClick = { onDelete(game) },
+              colors =
+                  IconButtonDefaults.iconButtonColors(
+                      contentColor = MaterialTheme.colorScheme.error)) {
                 Icon(Icons.Filled.Close, contentDescription = null)
-            }
+              }
         }
-    }
+      }
 }
