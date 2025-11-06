@@ -29,13 +29,13 @@ import kotlinx.coroutines.launch
 
 /** Centralizes test tags used in navigation-related UI elements. */
 object NavigationTestTags {
-  const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
-  const val SCREEN_TITLE = "ScreenTitle"
-  const val GO_BACK_BUTTON = "GoBackButton"
-  const val SESSIONS_TAB = "SessionsTab"
-  const val DISCUSSIONS_TAB = "DiscussionsTab"
-  const val DISCOVER_TAB = "DiscoverTab"
-  const val PROFILE_TAB = "ProfileTab"
+    const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
+    const val SCREEN_TITLE = "ScreenTitle"
+    const val GO_BACK_BUTTON = "GoBackButton"
+    const val SESSIONS_TAB = "SessionsTab"
+    const val DISCUSSIONS_TAB = "DiscussionsTab"
+    const val DISCOVER_TAB = "DiscoverTab"
+    const val PROFILE_TAB = "ProfileTab"
 }
 
 /**
@@ -102,43 +102,44 @@ enum class MeepleMeetScreen(
     val iconSelected: ImageVector? = null,
     val testTag: String? = null
 ) {
-  SignIn("Sign In"),
-  SignUp("Sign Up"),
-  CreateAccount("Create your Account"),
-  DiscussionsOverview(
-      "Discussions",
-      true,
-      Icons.Outlined.ChatBubbleOutline,
-      Icons.Default.ChatBubbleOutline,
-      NavigationTestTags.DISCUSSIONS_TAB),
-  SessionsOverview(
-      "Sessions",
-      true,
-      Icons.Outlined.Groups,
-      Icons.Default.Groups,
-      NavigationTestTags.SESSIONS_TAB),
-  PostsOverview(
-      "Posts",
-      true,
-      Icons.Outlined.Language,
-      Icons.Default.Language,
-      NavigationTestTags.DISCOVER_TAB),
-  Profile(
-      "Profile",
-      true,
-      Icons.Outlined.AccountCircle,
-      Icons.Default.AccountCircle,
-      NavigationTestTags.PROFILE_TAB),
-  CreateDiscussion("Create Discussion"),
-  Discussion("Discussion"),
-  DiscussionDetails("Discussion Details"),
-  CreateSession("Create Session"),
-  Session("Session"),
-  SessionDetails("Session Details"),
-  CreatePost("Create post"),
-  Post("Post"),
-  ShopDetails("Shop Details"),
-  CreateShop("Create Shop"),
+    SignIn("Sign In"),
+    SignUp("Sign Up"),
+    CreateAccount("Create your Account"),
+    DiscussionsOverview(
+        "Discussions",
+        true,
+        Icons.Outlined.ChatBubbleOutline,
+        Icons.Default.ChatBubbleOutline,
+        NavigationTestTags.DISCUSSIONS_TAB),
+    SessionsOverview(
+        "Sessions",
+        true,
+        Icons.Outlined.Groups,
+        Icons.Default.Groups,
+        NavigationTestTags.SESSIONS_TAB),
+    PostsOverview(
+        "Posts",
+        true,
+        Icons.Outlined.Language,
+        Icons.Default.Language,
+        NavigationTestTags.DISCOVER_TAB),
+    Profile(
+        "Profile",
+        true,
+        Icons.Outlined.AccountCircle,
+        Icons.Default.AccountCircle,
+        NavigationTestTags.PROFILE_TAB),
+    CreateDiscussion("Create Discussion"),
+    Discussion("Discussion"),
+    DiscussionDetails("Discussion Details"),
+    CreateSession("Create Session"),
+    Session("Session"),
+    SessionDetails("Session Details"),
+    CreatePost("Create post"),
+    Post("Post"),
+    ShopDetails("Shop Details"),
+    CreateShop("Create Shop"),
+    EditShop("Edit Shop")
 }
 
 /**
@@ -154,38 +155,38 @@ fun BottomNavigationMenu(
     onTabSelected: (MeepleMeetScreen) -> Unit,
     modifier: Modifier = Modifier
 ) {
-  NavigationBar(
-      containerColor = AppColors.secondary,
-      contentColor = AppColors.textIcons,
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .height(64.dp)
-              .testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
+    NavigationBar(
+        containerColor = AppColors.secondary,
+        contentColor = AppColors.textIcons,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
         MeepleMeetScreen.entries
             .filter { it -> it.inBottomBar }
             .forEach { screen ->
-              NavigationBarItem(
-                  colors =
-                      NavigationBarItemColors(
-                          selectedIconColor = AppColors.textIcons,
-                          selectedTextColor = AppColors.textIcons,
-                          selectedIndicatorColor = Color.Transparent,
-                          disabledTextColor = Color.Transparent,
-                          disabledIconColor = Color.Transparent,
-                          unselectedIconColor = AppColors.textIcons.copy(alpha = 0.5f),
-                          unselectedTextColor = AppColors.textIcons.copy(alpha = 0.5f)),
-                  icon = {
-                    val iconToUse =
-                        if (screen == currentScreen) screen.iconSelected ?: screen.icon
-                        else screen.icon
-                    iconToUse?.let { Icon(it, contentDescription = screen.title) }
-                  },
-                  selected = screen == currentScreen,
-                  onClick = { onTabSelected(screen) },
-                  modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)
+                NavigationBarItem(
+                    colors =
+                        NavigationBarItemColors(
+                            selectedIconColor = AppColors.textIcons,
+                            selectedTextColor = AppColors.textIcons,
+                            selectedIndicatorColor = Color.Transparent,
+                            disabledTextColor = Color.Transparent,
+                            disabledIconColor = Color.Transparent,
+                            unselectedIconColor = AppColors.textIcons.copy(alpha = 0.5f),
+                            unselectedTextColor = AppColors.textIcons.copy(alpha = 0.5f)),
+                    icon = {
+                        val iconToUse =
+                            if (screen == currentScreen) screen.iconSelected ?: screen.icon
+                            else screen.icon
+                        iconToUse?.let { Icon(it, contentDescription = screen.title) }
+                    },
+                    selected = screen == currentScreen,
+                    onClick = { onTabSelected(screen) },
+                    modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)
             }
-      }
+    }
 }
 
 /**
@@ -203,65 +204,65 @@ fun BottomNavigationMenu(
  * @param navController The [NavHostController] used for Compose navigation.
  */
 open class NavigationActions(private val navController: NavHostController) {
-  private val scope = MainScope()
+    private val scope = MainScope()
 
-  /**
-   * Navigates to the specified [screen].
-   *
-   * If the destination is already the current top-level destination (isInBottomBar), this call has
-   * no effect to avoid redundant navigation.
-   *
-   * @param screen The target screen to navigate to.
-   */
-  open fun navigateTo(screen: MeepleMeetScreen, popUpTo: Boolean = screen.inBottomBar) {
-    scope.launch(Dispatchers.Main) {
-      if (currentRoute() == screen.name) {
-        // If the user is already on this screen, do nothing to avoid consecutive duplicates
-        return@launch
-      }
-      navController.navigate(screen.name) {
-        // Screens available through the bottom navigation bar are top-level destinations.
-        // When navigating to one of these, we want to clear the back stack to avoid building
-        // up a large stack of destinations as the user switches between them.
-        if (popUpTo) {
-          launchSingleTop = true
-          popUpTo(screen.name) { inclusive = true }
+    /**
+     * Navigates to the specified [screen].
+     *
+     * If the destination is already the current top-level destination (isInBottomBar), this call has
+     * no effect to avoid redundant navigation.
+     *
+     * @param screen The target screen to navigate to.
+     */
+    open fun navigateTo(screen: MeepleMeetScreen, popUpTo: Boolean = screen.inBottomBar) {
+        scope.launch(Dispatchers.Main) {
+            if (currentRoute() == screen.name) {
+                // If the user is already on this screen, do nothing to avoid consecutive duplicates
+                return@launch
+            }
+            navController.navigate(screen.name) {
+                // Screens available through the bottom navigation bar are top-level destinations.
+                // When navigating to one of these, we want to clear the back stack to avoid building
+                // up a large stack of destinations as the user switches between them.
+                if (popUpTo) {
+                    launchSingleTop = true
+                    popUpTo(screen.name) { inclusive = true }
+                }
+
+                restoreState = true
+            }
         }
-
-        restoreState = true
-      }
     }
-  }
 
-  /**
-   * Navigates out of the authentication graph and enters the discussions overview screen.
-   *
-   * This function clears the entire back stack to ensure the user cannot navigate back into the
-   * authentication flow (SignIn/SignUp). It should be called once authentication is successfully
-   * completed.
-   *
-   * Typical usage: called after a successful login or account creation.
-   */
-  open fun navigateOutOfAuthGraph() {
-    scope.launch(Dispatchers.Main) {
-      navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
-        popUpTo(0) { inclusive = true } // Empty stack
-        launchSingleTop = true
-      }
+    /**
+     * Navigates out of the authentication graph and enters the discussions overview screen.
+     *
+     * This function clears the entire back stack to ensure the user cannot navigate back into the
+     * authentication flow (SignIn/SignUp). It should be called once authentication is successfully
+     * completed.
+     *
+     * Typical usage: called after a successful login or account creation.
+     */
+    open fun navigateOutOfAuthGraph() {
+        scope.launch(Dispatchers.Main) {
+            navController.navigate(MeepleMeetScreen.DiscussionsOverview.name) {
+                popUpTo(0) { inclusive = true } // Empty stack
+                launchSingleTop = true
+            }
+        }
     }
-  }
 
-  /** Navigate back to the previous screen, skipping consecutive duplicates. */
-  open fun goBack() {
-    scope.launch(Dispatchers.Main) { navController.popBackStack() }
-  }
+    /** Navigate back to the previous screen, skipping consecutive duplicates. */
+    open fun goBack() {
+        scope.launch(Dispatchers.Main) { navController.popBackStack() }
+    }
 
-  /**
-   * Returns the current route displayed by the [NavHostController].
-   *
-   * @return The route of the currently active screen, or an empty string if unknown.
-   */
-  open fun currentRoute(): String {
-    return navController.currentDestination?.route ?: ""
-  }
+    /**
+     * Returns the current route displayed by the [NavHostController].
+     *
+     * @return The route of the currently active screen, or an empty string if unknown.
+     */
+    open fun currentRoute(): String {
+        return navController.currentDestination?.route ?: ""
+    }
 }
