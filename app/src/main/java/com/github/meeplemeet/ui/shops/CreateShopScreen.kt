@@ -126,14 +126,15 @@ private object AddShopUi {
  *
  * @param owner The account of the shop owner.
  * @param onBack Callback function to be invoked when the back navigation is triggered.
- * @param onCreated Callback function to be invoked when the shop is successfully created.
+ * @param onCreated Callback function to be invoked when the shop is successfully created, receives
+ *   the shop ID.
  * @param viewModel The ViewModel managing the state and logic for creating a shop.
  */
 @Composable
 fun CreateShopScreen(
     owner: Account,
     onBack: () -> Unit,
-    onCreated: () -> Unit,
+    onCreated: (String) -> Unit,
     viewModel: CreateShopViewModel
 ) {
   val ui by viewModel.gameUIState.collectAsState()
@@ -143,20 +144,21 @@ fun CreateShopScreen(
       onCreated = onCreated,
       onCreate = { name, email, address, week, stock ->
         try {
-          viewModel.createShop(
-              owner = owner,
-              name = name,
-              phone = "",
-              email = email,
-              website = "",
-              address = address,
-              openingHours = week,
-              gameCollection = stock)
-          null
+          val shop =
+              viewModel.createShop(
+                  owner = owner,
+                  name = name,
+                  phone = "",
+                  email = email,
+                  website = "",
+                  address = address,
+                  openingHours = week,
+                  gameCollection = stock)
+          shop.id
         } catch (e: IllegalArgumentException) {
-          e.message ?: Strings.ErrorValidation
-        } catch (_: Exception) {
-          Strings.ErrorCreate
+          throw e
+        } catch (e: Exception) {
+          throw e
         }
       },
       gameQuery = ui.gameQuery,
@@ -174,8 +176,10 @@ fun CreateShopScreen(
  * Composable function representing the content of the Add Shop screen.
  *
  * @param onBack Callback function to be invoked when the back navigation is triggered.
- * @param onCreated Callback function to be invoked when the shop is successfully created.
- * @param onCreate Callback function to handle the creation of a shop with provided details.
+ * @param onCreated Callback function to be invoked when the shop is successfully created, receives
+ *   the shop ID.
+ * @param onCreate Suspend function to handle the creation of a shop with provided details, returns
+ *   shop ID.
  * @param gameQuery The current query string for searching games.
  * @param gameSuggestions List of game suggestions based on the current query.
  * @param isSearching Boolean indicating if a search operation is in progress.
@@ -187,14 +191,14 @@ fun CreateShopScreen(
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
-    onCreated: () -> Unit,
+    onCreated: (String) -> Unit,
     onCreate:
-        (
+        suspend (
             name: String,
             email: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> String?,
+            stock: List<Pair<Game, Int>>) -> String,
     gameQuery: String,
     gameSuggestions: List<Game>,
     isSearching: Boolean,
@@ -275,8 +279,16 @@ fun AddShopContent(
             onDiscard = { onDiscard() },
             onPrimary = {
               val addr = selectedLocation ?: Location(name = addressText)
-              val err = onCreate(shopName, email, addr, week, stock)
-              if (err == null) onCreated() else scope.launch { snackbarHost.showSnackbar(err) }
+              scope.launch {
+                try {
+                  val shopId = onCreate(shopName, email, addr, week, stock)
+                  onCreated(shopId)
+                } catch (e: IllegalArgumentException) {
+                  snackbarHost.showSnackbar(e.message ?: Strings.ErrorValidation)
+                } catch (e: Exception) {
+                  snackbarHost.showSnackbar(Strings.ErrorCreate)
+                }
+              }
             },
             enabled = isValid)
       },

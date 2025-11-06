@@ -184,17 +184,10 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
   fun editShopScreen_displaysDataMatchingDatabase() {
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(
-            shopId = testShop.id,
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            viewModel = editShopViewModel)
+        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
-    // Wait for the shop to load
-    Thread.sleep(3000)
     composeTestRule.waitForIdle()
 
     // === REQUIRED INFO ===
@@ -288,17 +281,10 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // Launch screen for existing shop
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(
-            shopId = testShop.id,
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            viewModel = editShopViewModel)
+        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
-    // Give time to load current values
-    Thread.sleep(1500)
     composeTestRule.waitForIdle()
 
     // Edit required info
@@ -419,15 +405,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
   fun editShopScreen_collapsibleSections_toggleVisibility() {
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(
-            shopId = testShop.id,
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            viewModel = editShopViewModel)
+        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
-    Thread.sleep(1500)
 
     val gamesHeader =
         EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
@@ -450,15 +430,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
   fun openingHoursDialog_showsValidationErrorOnOverlap() {
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(
-            shopId = testShop.id,
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            viewModel = editShopViewModel)
+        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
-    Thread.sleep(1500)
 
     expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
     scrollListToTag(
@@ -493,15 +467,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
   fun saveButton_disabledWhenNoOpeningHours() {
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(
-            shopId = testShop.id,
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            viewModel = editShopViewModel)
+        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
-    Thread.sleep(1500)
 
     expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
 
@@ -554,15 +522,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(
-            shopId = testShop.id,
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            viewModel = editShopViewModel)
+        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
-    Thread.sleep(1500)
 
     // Open Games section and click "Add game"
     val gamesHeader =

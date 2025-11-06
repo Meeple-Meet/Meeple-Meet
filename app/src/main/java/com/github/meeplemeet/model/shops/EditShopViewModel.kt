@@ -27,9 +27,13 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
   private val _shop = MutableStateFlow<Shop?>(null)
   val shop: StateFlow<Shop?> = _shop
 
-  fun loadShop(id: String) {
-    require(id.isNotBlank()) { "Shop ID cannot be blank" }
-    viewModelScope.launch { _shop.value = repository.getShop(id) }
+  /**
+   * Sets the shop to be edited.
+   *
+   * @param shop The shop to edit.
+   */
+  fun setShop(shop: Shop?) {
+    _shop.value = shop
   }
 
   /**

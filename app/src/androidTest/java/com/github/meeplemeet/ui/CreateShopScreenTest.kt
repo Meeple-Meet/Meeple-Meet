@@ -228,7 +228,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -241,7 +241,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -257,7 +257,7 @@ class CreateShopScreenTest {
                   onCreate = { name, email, address, _, _ ->
                     calledCreate = true
                     lastPayload = Triple(name, email, address.name)
-                    null
+                    ""
                   },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
@@ -271,7 +271,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = { error("onCreated should not be called on error") },
-                  onCreate = { _, _, _, _, _ -> "Something went wrong" },
+                  onCreate = { _, _, _, _, _ -> throw Exception("Something went wrong") },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -284,7 +284,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -297,7 +297,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = { backCalled = true },
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -342,7 +342,7 @@ class CreateShopScreenTest {
     setAnyOpeningHoursViaDialog()
     compose.onTag(ShopComponentsTestTags.ACTION_CREATE).performClick()
     compose
-        .onAllNodes(hasText("Something went wrong", substring = true), useUnmergedTree = true)
+        .onAllNodes(hasText("Failed to create shop", substring = true), useUnmergedTree = true)
         .assertCountEquals(1)
 
     // 4) Optional fields don't gate
@@ -426,7 +426,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = suggestions,
                   isSearching = false,
@@ -439,7 +439,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -452,7 +452,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -467,7 +467,7 @@ class CreateShopScreenTest {
                   onCreated = {},
                   onCreate = { _, _, _, _, stock ->
                     capturedStock = stock
-                    null
+                    ""
                   },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
@@ -481,7 +481,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = suggestions,
                   isSearching = false,
@@ -494,7 +494,7 @@ class CreateShopScreenTest {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> null },
+                  onCreate = { _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = suggestions,
                   isSearching = false,

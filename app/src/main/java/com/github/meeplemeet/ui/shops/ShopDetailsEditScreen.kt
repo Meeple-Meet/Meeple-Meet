@@ -76,15 +76,15 @@ private object EditShopUi {
   }
 
   object Strings {
-    const val ScreenTitle = "Edit Shop"
-    const val SectionRequired = "Required Info"
-    const val SectionAvailability = "Availability"
-    const val SectionGames = "Games in stock"
+    const val SCREEN_TITLE = "Edit Shop"
+    const val SECTION_REQUIRED = "Required Info"
+    const val SECTION_AVAILABILITY = "Availability"
+    const val SECTION_GAMES = "Games in stock"
 
-    const val BtnAddGame = "Add game"
-    const val EmptyGames = "No games selected yet."
-    const val ErrorValidation = "Validation error"
-    const val ErrorSave = "Failed to save shop"
+    const val BTN_ADD_GAME = "Add game"
+    const val EMPTY_GAMES = "No games selected yet."
+    const val ERROR_VALIDATION = "Validation error"
+    const val ERROR_SAVE = "Failed to save shop"
   }
 }
 
@@ -103,7 +103,6 @@ private object EditShopUi {
  */
 @Composable
 fun EditShopScreen(
-    shopId: String,
     owner: Account,
     onBack: () -> Unit,
     onSaved: () -> Unit,
@@ -111,9 +110,6 @@ fun EditShopScreen(
 ) {
   val ui by viewModel.gameUIState.collectAsState()
   val shop by viewModel.shop.collectAsState()
-
-  // Load shop data when screen is first displayed
-  LaunchedEffect(shopId) { viewModel.loadShop(shopId) }
 
   EditShopContent(
       shop = shop,
@@ -134,9 +130,9 @@ fun EditShopScreen(
               gameCollection = stock)
           null
         } catch (e: IllegalArgumentException) {
-          e.message ?: EditShopUi.Strings.ErrorValidation
+          e.message ?: EditShopUi.Strings.ERROR_VALIDATION
         } catch (_: Exception) {
-          EditShopUi.Strings.ErrorSave
+          EditShopUi.Strings.ERROR_SAVE
         }
       },
       gameQuery = ui.gameQuery,
@@ -226,7 +222,7 @@ fun EditShopContent(
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  EditShopUi.Strings.ScreenTitle,
+                  EditShopUi.Strings.SCREEN_TITLE,
                   modifier = Modifier.testTag(EditShopScreenTestTags.TITLE))
             },
             navigationIcon = {
@@ -263,7 +259,7 @@ fun EditShopContent(
                     vertical = EditShopUi.Dimensions.contentVPadding)) {
               item {
                 CollapsibleSection(
-                    title = EditShopUi.Strings.SectionRequired,
+                    title = EditShopUi.Strings.SECTION_REQUIRED,
                     initiallyExpanded = true,
                     content = {
                       RequiredInfoSection(
@@ -296,7 +292,7 @@ fun EditShopContent(
 
               item {
                 CollapsibleSection(
-                    title = EditShopUi.Strings.SectionAvailability,
+                    title = EditShopUi.Strings.SECTION_AVAILABILITY,
                     initiallyExpanded = true,
                     content = {
                       AvailabilitySection(
@@ -317,7 +313,7 @@ fun EditShopContent(
 
               item {
                 CollapsibleSection(
-                    title = EditShopUi.Strings.SectionGames,
+                    title = EditShopUi.Strings.SECTION_GAMES,
                     initiallyExpanded = true,
                     header = {
                       TextButton(
@@ -330,7 +326,7 @@ fun EditShopContent(
                             Icon(Icons.Filled.Add, contentDescription = null)
                             Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
                             Text(
-                                EditShopUi.Strings.BtnAddGame,
+                                EditShopUi.Strings.BTN_ADD_GAME,
                                 modifier = Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_LABEL))
                           }
                     },
@@ -414,7 +410,7 @@ private fun GamesSection(
         }
   } else {
     Text(
-        EditShopUi.Strings.EmptyGames,
+        EditShopUi.Strings.EMPTY_GAMES,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.testTag(EditShopScreenTestTags.GAMES_EMPTY_TEXT))
   }
