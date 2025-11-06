@@ -66,7 +66,6 @@ import kotlinx.coroutines.launch
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
   const val ADD_FAB = "addFab"
-
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 }
 
@@ -74,11 +73,18 @@ private val START_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val START_RADIUS_KM = 10.0
 
 /**
- * Simple MapScreen:
- * - shows markers for each GeoPinWithLocation (coming from viewModel.uiState.geoPins)
- * - on marker click: requests preview via viewModel.selectPin(pin) and displays bottom sheet with
- *   preview
- * - shows snackbar on errors
+ * MapScreen displays a GoogleMap with dynamic markers and contextual previews.
+ *
+ * Behavior:
+ * - Initializes a geo query centered on EPFL with a fixed radius
+ * - Updates query center when the camera moves (debounced)
+ * - Shows color-coded markers based on pin type (SHOP, SPACE, SESSION)
+ * - Opens a bottom sheet with preview when a marker is selected
+ * - Displays snackbar on error
+ *
+ * Customizations:
+ * - Marker colors: red (shop), blue (space), green (session)
+ * - Preview sheet icons: location, clock, calendar, game controller
  */
 @OptIn(FlowPreview::class)
 @Composable
@@ -94,7 +100,7 @@ fun MapScreen(
   val snackbarHostState = remember { SnackbarHostState() }
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  // Launch initial query
+  // // Initial geo query
   LaunchedEffect(Unit) {
     viewModel.startGeoQuery(center = START_CENTER, radiusKm = START_RADIUS_KM)
   }
@@ -204,6 +210,20 @@ fun MapScreen(
   }
 }
 
+/**
+ * MarkerPreviewSheet displays contextual details about a selected map pin.
+ *
+ * Content varies by pin type:
+ * - Shop / Space:
+ *   - Address with location icon
+ *   - Opening status with clock icon (colored green/red)
+ * - Session:
+ *   - Game name with controller icon
+ *   - Address with location icon
+ *   - Date with calendar icon
+ *
+ * The sheet includes a close icon in the top-right corner.
+ */
 @Composable
 private fun MarkerPreviewSheet(preview: MarkerPreview, onClose: () -> Unit) {
   Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
