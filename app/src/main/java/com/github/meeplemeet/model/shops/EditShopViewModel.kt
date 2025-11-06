@@ -8,6 +8,8 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -20,6 +22,15 @@ import kotlinx.coroutines.launch
  */
 class EditShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
     ShopGameViewModel() {
+
+  // Expose the currently loaded shop for editing
+  private val _shop = MutableStateFlow<Shop?>(null)
+  val shop: StateFlow<Shop?> = _shop
+
+  fun loadShop(id: String) {
+    require(id.isNotBlank()) { "Shop ID cannot be blank" }
+    viewModelScope.launch { _shop.value = repository.getShop(id) }
+  }
 
   /**
    * Updates one or more fields of an existing shop.
