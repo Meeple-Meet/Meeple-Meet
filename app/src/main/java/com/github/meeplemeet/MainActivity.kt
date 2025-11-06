@@ -32,6 +32,9 @@ import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.map.LocationRepository
+import com.github.meeplemeet.model.map.NominatimLocationRepository
+import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.FirestoreGameRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -66,6 +69,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
+import okhttp3.OkHttpClient
 
 /**
  * Provider object for Firebase services.
@@ -104,6 +108,11 @@ object RepositoryProvider {
   /** Lazily initialized repository for board game data operations. */
   val games: FirestoreGameRepository by lazy { FirestoreGameRepository() }
 
+  val locations: LocationRepository by lazy {
+    NominatimLocationRepository(HttpClientProvider.client)
+  }
+  val geoPins: StorableGeoPinRepository by lazy { StorableGeoPinRepository() }
+
   /** Lazily initialized repository for post operations. */
   val posts: PostRepository by lazy { PostRepository() }
 
@@ -112,6 +121,10 @@ object RepositoryProvider {
 
   /** Lazily initialized repository for space renter operations. */
   val spaceRenters: SpaceRenterRepository by lazy { SpaceRenterRepository() }
+}
+
+object HttpClientProvider {
+  var client: OkHttpClient = OkHttpClient()
 }
 
 const val LOADING_SCREEN_TAG = "Loading Screen"
@@ -254,7 +267,7 @@ fun MeepleMeetApp(
                 },
                 onCreateSessionClick = {
                   discussionId = it.uid
-                  if (it.session == null && sessionVM != null) sessionVM.clear()
+                  if (it.session == null && sessionVM != null) sessionVM.clearGameSearch()
                   navigationActions.navigateTo(
                       if (it.session != null) MeepleMeetScreen.Session
                       else MeepleMeetScreen.CreateSession)
@@ -338,14 +351,17 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.Profile.name) {
-      ProfileScreen(
-          navigation = navigationActions,
-          authViewModel = authVM,
-          firestoreVM,
-          onSignOut = {
-            signedOut = true
-            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          })
+      account?.let {
+        ProfileScreen(
+            navigation = navigationActions,
+            authViewModel = authVM,
+            discussionViewModel = firestoreVM,
+            account = account!!,
+            onSignOut = {
+              navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+              signedOut = true
+            })
+      } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
     }
     composable(MeepleMeetScreen.ShopDetails.name) {
       if (shopId.isNotEmpty()) {
@@ -353,9 +369,7 @@ fun MeepleMeetApp(
             account = account!!,
             shopId = shopId,
             onBack = { navigationActions.goBack() },
-            onEdit = {
-              navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
-            },
+            onEdit = { navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false) },
             viewModel = shopVM)
       } else {
         LoadingScreen()
@@ -365,7 +379,7 @@ fun MeepleMeetApp(
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { /* TODO */ },
+          onCreated = { /* TODO */},
           viewModel = createShopVM)
     }
     composable(MeepleMeetScreen.EditShop.name) {

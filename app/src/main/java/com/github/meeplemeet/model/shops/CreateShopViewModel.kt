@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
  * @property shopRepo The repository used for shop operations.
  */
 class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvider.shops) :
-    ShopGameViewModel() {
+    ShopSearchViewModel() {
   /**
    * Creates a new shop in Firestore.
    *

@@ -147,11 +147,15 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
           val discussionFlow = viewModel.discussionFlow(testDiscussion.uid)
           val latestDiscussion by discussionFlow.collectAsState(initial = testDiscussion)
           AppTheme(themeMode = ThemeMode.LIGHT) {
-            DiscussionScreen(
-                viewModel = viewModel,
-                discussion = latestDiscussion!!,
-                account = currentUser,
-                onBack = { backPressed = true })
+            latestDiscussion?.let {
+              if (latestDiscussion != null) {
+                DiscussionScreen(
+                    viewModel = viewModel,
+                    discussion = latestDiscussion!!,
+                    account = currentUser,
+                    onBack = { backPressed = true })
+              }
+            }
           }
         }
 

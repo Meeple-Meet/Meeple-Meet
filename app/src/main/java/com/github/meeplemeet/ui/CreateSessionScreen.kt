@@ -27,9 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.sessions.GameUIState
 import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.Location
+import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Elevation
@@ -61,6 +62,7 @@ object SessionCreationTestTags {
   // Sections
   const val GAME_SEARCH_SECTION = "add_session_game_search_section"
   const val GAME_SEARCH_ERROR = "add_session_game_search_error"
+  const val LOCATION_SEARCH_ERROR = "add_session_location_search_error"
   const val PARTICIPANTS_SECTION = "add_session_participants_section"
   const val ORG_SECTION = "add_session_organisation_section"
 
@@ -159,6 +161,7 @@ fun CreateSessionScreen(
   // Holds the selected location (may be null)
   var selectedLocation by remember { mutableStateOf<Location?>(null) }
   val gameUi by sessionViewModel.gameUIState.collectAsState()
+  val locationUi by sessionViewModel.locationUIState.collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
@@ -253,6 +256,7 @@ fun CreateSessionScreen(
               // Organisation section (title, game, date, time, location)
               OrganisationSection(
                   gameUi = gameUi,
+                  locationUi = locationUi,
                   sessionViewModel = sessionViewModel,
                   account = account,
                   discussion = discussion,
@@ -352,6 +356,49 @@ fun GameSearchBar(
       }
 }
 
+@Composable
+fun LocationSearchBar(
+    sessionViewModel: SessionViewModel,
+    locationUi: LocationUIState,
+    currentUser: Account,
+    discussion: Discussion?,
+    onError: (String) -> Unit = {},
+    onPick: ((Location) -> Unit)? = null
+) {
+  LocationSearchField(
+      query = locationUi.locationQuery,
+      onQueryChange = { q ->
+        discussion?.let { disc ->
+          runCatching { sessionViewModel.setLocationQuery(currentUser, disc, q) }
+              .onFailure { e -> onError(e.message ?: "Location search failed") }
+        }
+      },
+      results = locationUi.locationSuggestions,
+      onPick = { loc ->
+        discussion?.let { disc ->
+          runCatching {
+                sessionViewModel.setLocation(currentUser, disc, loc)
+                onPick?.invoke(loc)
+              }
+              .onFailure { e -> onError(e.message ?: "Failed to select location") }
+        }
+      },
+      isLoading = false,
+      placeholder = "Search locations…",
+      modifier = Modifier.fillMaxWidth())
+
+  locationUi.locationSearchError
+      ?.takeIf { it.isNotBlank() }
+      ?.let { msg ->
+        Spacer(Modifier.height(6.dp))
+        Text(
+            msg,
+            modifier = Modifier.testTag(SessionCreationTestTags.LOCATION_SEARCH_ERROR),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error)
+      }
+}
+
 /**
  * Composable function representing the Create Session button.
  *
@@ -436,6 +483,7 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 @Composable
 fun OrganisationSection(
     gameUi: GameUIState,
+    locationUi: LocationUIState,
     sessionViewModel: SessionViewModel,
     account: Account,
     discussion: Discussion,
@@ -497,18 +545,13 @@ fun OrganisationSection(
         Spacer(Modifier.height(10.dp))
 
         // Location search field with suggestions
-        val locationResults = remember(locationText) { mockLocationSuggestionsFrom(locationText) }
-        LocationSearchField(
-            query = locationText,
-            onQueryChange = onLocationChange,
-            results = locationResults,
-            onPick = { loc ->
-              onLocationChange(loc.name)
-              onLocationPicked?.invoke(loc)
-            },
-            isLoading = false,
-            placeholder = "Search locations…",
-            modifier = Modifier.fillMaxWidth())
+        LocationSearchBar(
+            sessionViewModel = sessionViewModel,
+            locationUi = locationUi,
+            currentUser = account,
+            discussion = discussion,
+            onError = showError,
+            onPick = onLocationPicked)
       }
 }
 

@@ -44,6 +44,10 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   private fun submitBtn() = compose.onNodeWithTag(CreateAccountTestTags.SUBMIT_BUTTON)
 
+  private fun ownerCheckbox() = compose.onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
+
+  private fun renterCheckbox() = compose.onNodeWithTag(CreateAccountTestTags.CHECKBOX_RENTER)
+
   private inline fun checkpoint(name: String, crossinline block: () -> Unit) {
     runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
   }
@@ -62,7 +66,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme(ThemeMode.DARK) {
         CreateAccountScreen(
-            firestoreVM = firestoreVm,
+            discussionVM = firestoreVm,
             handlesVM = handlesVm,
             account = me,
             onCreate = { report["onCreate triggered"] = true })
@@ -124,6 +128,40 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.waitForIdle()
     checkpoint("Clearing username shows empty error") {
       usernameError().assertTextContains("Username cannot be empty", substring = true)
+    }
+
+    /* === 7. using the checkbox properly updates account roles */
+    ownerCheckbox().performClick()
+    compose.waitForIdle()
+    checkpoint("Owner checkbox has an impact on account") {
+      runBlocking {
+        val acc = firestoreVm.accountFlow(me.uid).value
+        acc?.shopOwner == true
+      }
+    }
+
+    renterCheckbox().performClick()
+    compose.waitForIdle()
+    checkpoint("Renter checkbox has an impact on account") {
+      runBlocking {
+        val acc = firestoreVm.accountFlow(me.uid).value
+        acc?.spaceRenter == true
+      }
+    }
+
+    // Owner checkbox is pressed thrice -> on
+    // Renter checkbox is pressed twice -> off
+    ownerCheckbox().performClick()
+    renterCheckbox().performClick()
+    ownerCheckbox().performClick()
+    renterCheckbox().performClick()
+    ownerCheckbox().performClick()
+    compose.waitForIdle()
+    checkpoint("Multiple checkbox clicks have an impact on account") {
+      runBlocking {
+        val acc = firestoreVm.accountFlow(me.uid).value
+        acc?.shopOwner == true && acc?.spaceRenter == false
+      }
     }
 
     /* ---------- summary ---------- */

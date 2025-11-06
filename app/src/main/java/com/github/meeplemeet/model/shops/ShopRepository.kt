@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.shops
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.shared.Location
 import com.google.firebase.firestore.FirebaseFirestore
@@ -28,6 +29,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   private val shops = db.collection(SHOP_COLLECTION_PATH)
   private val accountRepo = RepositoryProvider.discussions
   private val gameRepo = RepositoryProvider.games
+  private val geoPinsRepo = RepositoryProvider.geoPins
 
   private fun newUUID() = shops.document().id
 
@@ -58,6 +60,9 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     val shop =
         Shop(newUUID(), owner, name, phone, email, website, address, openingHours, gameCollection)
     shops.document(shop.id).set(toNoUid(shop)).await()
+
+    geoPinsRepo.upsertGeoPin(ref = shop.id, type = PinType.SHOP, location = address)
+
     return shop
   }
 
@@ -181,6 +186,8 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
         throw IllegalArgumentException("At least one field must be provided for update")
 
     shops.document(id).update(updates).await()
+
+    if (address != null) geoPinsRepo.upsertGeoPin(id, PinType.SHOP, address)
   }
 
   /**
@@ -189,6 +196,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @param id The unique identifier of the shop to delete.
    */
   suspend fun deleteShop(id: String) {
+    geoPinsRepo.deleteGeoPin(id)
     shops.document(id).delete().await()
   }
 }

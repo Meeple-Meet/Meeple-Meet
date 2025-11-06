@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.sessions.Game
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -24,7 +25,8 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -66,7 +68,7 @@ class FirestoreSessionTests : FirestoreTests() {
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
     testTimestamp = Timestamp.now()
 
-    Dispatchers.setMain(StandardTestDispatcher())
+    Dispatchers.setMain(UnconfinedTestDispatcher())
     viewModel = SessionViewModel(baseDiscussion, sessionRepository)
   }
 
@@ -235,14 +237,14 @@ class FirestoreSessionTests : FirestoreTests() {
     val discussionWithSession = baseDiscussion.copy(session = originalSession)
 
     val newParticipants = listOf(account1, account2, account3)
-    val updatedSession = originalSession.copy(participants = newParticipants.map { it -> it.uid })
+    val updatedSession = originalSession.copy(participants = newParticipants.map { it.uid })
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
     viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     coEvery {
       sessionRepository.updateSession(
-          discussionWithSession.uid, null, null, null, null, newParticipants.map { it -> it.uid })
+          discussionWithSession.uid, null, null, null, null, newParticipants.map { it.uid })
     } returns updatedDiscussion
 
     viewModel.updateSession(account1, discussionWithSession, newParticipantList = newParticipants)
@@ -250,7 +252,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
     val result = viewModel.discussion.value
     assertEquals(3, result.session?.participants?.size)
-    assertEquals(newParticipants.map { it -> it.uid }, result.session?.participants)
+    assertEquals(newParticipants.map { it.uid }, result.session?.participants)
   }
 
   @Test
@@ -274,7 +276,7 @@ class FirestoreSessionTests : FirestoreTests() {
             name = newName,
             date = newDate,
             location = newLocation,
-            participants = newParticipants.map { it -> it.uid })
+            participants = newParticipants.map { it.uid })
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
     viewModel = SessionViewModel(discussionWithSession, sessionRepository)
@@ -286,7 +288,7 @@ class FirestoreSessionTests : FirestoreTests() {
           null,
           newDate,
           newLocation,
-          newParticipants.map { it -> it.uid })
+          newParticipants.map { it.uid })
     } returns updatedDiscussion
 
     viewModel.updateSession(
@@ -302,7 +304,7 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals(newName, result.session?.name)
     assertEquals(newDate, result.session?.date)
     assertEquals(newLocation, result.session?.location)
-    assertEquals(newParticipants.map { it -> it.uid }, result.session?.participants)
+    assertEquals(newParticipants.map { it.uid }, result.session?.participants)
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -841,6 +843,69 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals(listOf(account2.uid), secondSession.session?.participants)
   }
 
+  @Test
+  fun createSessionAlsoCreatesGeoPin() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val updatedDiscussion =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "GeoPin Session",
+            "game456",
+            testTimestamp,
+            testLocation,
+            account1.uid)
+
+    val geoPinSnapshot =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+
+    assert(geoPinSnapshot.exists())
+    assertEquals("SESSION", geoPinSnapshot.getString("type"))
+  }
+
+  @Test
+  fun deleteSessionAlsoDeletesGeoPin() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    realSessionRepo.createSession(
+        baseDiscussion.uid, "To Delete", "game123", testTimestamp, testLocation, account1.uid)
+
+    val beforeDelete =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    assert(beforeDelete.exists())
+
+    realSessionRepo.deleteSession(baseDiscussion.uid)
+
+    val afterDelete =
+        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    assert(!afterDelete.exists())
+  }
+
+  @Test
+  fun updateSessionOnlyUpdatesGeoPinIfLocationProvided() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    realSessionRepo.createSession(
+        baseDiscussion.uid, "Session", "game123", testTimestamp, testLocation, account1.uid)
+
+    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid)
+
+    // Location unchanged
+    realSessionRepo.updateSession(baseDiscussion.uid, name = "Updated Name")
+
+    val pinAfterNameUpdate = geoPinRef.get().await()
+    assert(pinAfterNameUpdate.exists())
+    assertEquals("SESSION", pinAfterNameUpdate.getString("type"))
+
+    // Location changed
+    val newLocation = Location(latitude = 48.8566, longitude = 2.3522, name = "Paris")
+    realSessionRepo.updateSession(baseDiscussion.uid, location = newLocation)
+
+    val pinAfterLocationUpdate = geoPinRef.get().await()
+    assert(pinAfterLocationUpdate.exists())
+    assertEquals("SESSION", pinAfterLocationUpdate.getString("type"))
+  }
+
   // ------------------------
   // Tests for setGame / setGameQuery (FirestoreSessionViewModel)
   // ------------------------
@@ -907,7 +972,7 @@ class FirestoreSessionTests : FirestoreTests() {
     val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
 
     vm.setGameQuery(account1, baseDiscussion, "cat")
-    advanceUntilIdle()
+    testScheduler.advanceUntilIdle()
 
     val state = vm.gameUIState.value
     assertEquals("cat", state.gameQuery)
@@ -922,7 +987,7 @@ class FirestoreSessionTests : FirestoreTests() {
     val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
 
     vm.setGameQuery(account1, baseDiscussion, "cat")
-    advanceUntilIdle()
+    testScheduler.advanceUntilIdle()
 
     val state = vm.gameUIState.value
     assertEquals("cat", state.gameQuery)

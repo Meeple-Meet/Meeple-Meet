@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
  * @property repository The repository used for shop operations.
  */
 class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ShopGameViewModel() {
+    ShopSearchViewModel() {
   private val _shop = MutableStateFlow<Shop?>(null)
 
   /**

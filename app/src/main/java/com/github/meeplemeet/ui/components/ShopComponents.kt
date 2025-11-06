@@ -226,7 +226,7 @@ object ShopUiDefaults {
 
     // Days selector / dialog
     const val DIALOG_TITLE = "Select days & time"
-    const val OPEN_24 = "Open 24"
+    const val OPEN_24 = "Open 24 hours"
     const val CLOSED = "Closed"
     const val ADD_HOURS = "Add hours"
     const val INVALID_TIME_RANGES = "Invalid time ranges."

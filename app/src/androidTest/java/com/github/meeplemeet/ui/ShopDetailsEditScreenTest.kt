@@ -1,5 +1,5 @@
 package com.github.meeplemeet.ui
-//Github copilot was used for this file
+// Github copilot was used for this file
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
@@ -75,11 +75,12 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     val toggleTag = sectionTag + EditShopScreenTestTags.SECTION_TOGGLE_SUFFIX
     val headerTag = sectionTag + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
 
-    val isCollapsed = try {
-      !composeTestRule.onNodeWithTag(contentTag, useUnmergedTree = true).isDisplayed()
-    } catch (_: AssertionError) {
-      true
-    }
+    val isCollapsed =
+        try {
+          !composeTestRule.onNodeWithTag(contentTag, useUnmergedTree = true).isDisplayed()
+        } catch (_: AssertionError) {
+          true
+        }
 
     if (isCollapsed) {
       // Ensure the header (and thus the toggle) is scrolled into view before clicking
@@ -161,8 +162,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
             OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "20:00"))),
             OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "20:00"))),
-            OpeningHours(day = 6, hours = listOf(TimeSlot("10:00", "16:00")))
-        )
+            OpeningHours(day = 6, hours = listOf(TimeSlot("10:00", "16:00"))))
 
     // Create a test shop in the repository
     runBlocking {
@@ -202,7 +202,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     inputIn(EditShopScreenTestTags.FIELD_EMAIL).assertTextContains("contact@boardgameparadise.ch")
     inputIn(EditShopScreenTestTags.FIELD_PHONE).assertTextContains("+41 21 123 45 67")
     inputIn(EditShopScreenTestTags.FIELD_LINK).assertTextContains("https://boardgameparadise.ch")
-    composeTestRule.onNodeWithTag(SessionTestTags.LOCATION_FIELD)
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
         .assertTextContains("EPFL Campus, Lausanne")
 
     // === AVAILABILITY ===
@@ -212,7 +213,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     fun dayValueAt(index: Int) =
         composeTestRule
             .onAllNodes(hasTestTag(ShopComponentsTestTags.DAY_ROW_VALUE), useUnmergedTree = true)[
-            index]
+                index]
 
     dayValueAt(0).assertTextContains("Closed")
 
@@ -232,7 +233,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // === GAMES STOCK ===
     // Bring games header into view to ensure section is visible
-    scrollListToTag(EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    scrollListToTag(
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
     Thread.sleep(500)
 
     val catanCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame1.uid}"
@@ -241,34 +243,42 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // Wait until the game cards appear (composed) before asserting
     composeTestRule.waitUntil(8_000) {
       val catanExists =
-          composeTestRule.onAllNodesWithTag(catanCardTag, useUnmergedTree = true)
-              .fetchSemanticsNodes().isNotEmpty()
+          composeTestRule
+              .onAllNodesWithTag(catanCardTag, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
       val ttrExists =
-          composeTestRule.onAllNodesWithTag(ttrCardTag, useUnmergedTree = true)
-              .fetchSemanticsNodes().isNotEmpty()
+          composeTestRule
+              .onAllNodesWithTag(ttrCardTag, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
       catanExists && ttrExists
     }
 
     // Catan card with name and qty 5
     composeTestRule.onNodeWithTag(catanCardTag).assertExists()
-    composeTestRule.onNode(
-        hasText(testGame1.name, substring = true) and hasAnyAncestor(hasTestTag(catanCardTag)),
-        useUnmergedTree = true)
+    composeTestRule
+        .onNode(
+            hasText(testGame1.name, substring = true) and hasAnyAncestor(hasTestTag(catanCardTag)),
+            useUnmergedTree = true)
         .assertExists()
-    composeTestRule.onNode(
-        hasText("5", substring = true) and hasAnyAncestor(hasTestTag(catanCardTag)),
-        useUnmergedTree = true)
+    composeTestRule
+        .onNode(
+            hasText("5", substring = true) and hasAnyAncestor(hasTestTag(catanCardTag)),
+            useUnmergedTree = true)
         .assertExists()
 
     // Ticket to Ride card with name and qty 3
     composeTestRule.onNodeWithTag(ttrCardTag).assertExists()
-    composeTestRule.onNode(
-        hasText(testGame2.name, substring = true) and hasAnyAncestor(hasTestTag(ttrCardTag)),
-        useUnmergedTree = true)
+    composeTestRule
+        .onNode(
+            hasText(testGame2.name, substring = true) and hasAnyAncestor(hasTestTag(ttrCardTag)),
+            useUnmergedTree = true)
         .assertExists()
-    composeTestRule.onNode(
-        hasText("3", substring = true) and hasAnyAncestor(hasTestTag(ttrCardTag)),
-        useUnmergedTree = true)
+    composeTestRule
+        .onNode(
+            hasText("3", substring = true) and hasAnyAncestor(hasTestTag(ttrCardTag)),
+            useUnmergedTree = true)
         .assertExists()
   }
 
@@ -321,22 +331,27 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Change Monday to Open 24 hours via dialog
     expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-    scrollListToTag(EditShopScreenTestTags.SECTION_AVAILABILITY + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    scrollListToTag(
+        EditShopScreenTestTags.SECTION_AVAILABILITY + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
 
     // Click the Monday edit button (index 1)
-    composeTestRule.onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
+    composeTestRule
+        .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
         .apply { this[1].performClick() }
 
     // Toggle Open 24 and save
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX, useUnmergedTree = true)
         .assertExists()
         .performClick()
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
         .assertExists()
         .performClick()
 
     // === GAMES STOCK === Adjust quantities: +1 for first game, -1 for second
-    scrollListToTag(EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    scrollListToTag(
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
     Thread.sleep(300)
 
     val catanCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame1.uid}"
@@ -344,27 +359,34 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Ensure game cards are composed
     composeTestRule.waitUntil(8_000) {
-      val catanExists = composeTestRule.onAllNodesWithTag(catanCardTag, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
-      val ttrExists = composeTestRule.onAllNodesWithTag(ttrCardTag, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      val catanExists =
+          composeTestRule
+              .onAllNodesWithTag(catanCardTag, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      val ttrExists =
+          composeTestRule
+              .onAllNodesWithTag(ttrCardTag, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
       catanExists && ttrExists
     }
 
     // Click + on the first game's row
-    composeTestRule.onNode(
-        hasText("+") and hasAnyAncestor(hasTestTag(catanCardTag)), useUnmergedTree = true)
+    composeTestRule
+        .onNode(hasText("+") and hasAnyAncestor(hasTestTag(catanCardTag)), useUnmergedTree = true)
         .assertExists()
         .performClick()
 
     // Click - on the second game's row
-    composeTestRule.onNode(
-        hasText("-") and hasAnyAncestor(hasTestTag(ttrCardTag)), useUnmergedTree = true)
+    composeTestRule
+        .onNode(hasText("-") and hasAnyAncestor(hasTestTag(ttrCardTag)), useUnmergedTree = true)
         .assertExists()
         .performClick()
 
     // Save changes
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.ACTION_SAVE, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.ACTION_SAVE, useUnmergedTree = true)
         .assertExists()
         .performClick()
 
@@ -406,9 +428,12 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     }
     Thread.sleep(1500)
 
-    val gamesHeader = EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
-    val gamesToggle = EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_TOGGLE_SUFFIX
-    val gamesContent = EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_CONTENT_SUFFIX
+    val gamesHeader =
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
+    val gamesToggle =
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_TOGGLE_SUFFIX
+    val gamesContent =
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_CONTENT_SUFFIX
 
     scrollListToTag(gamesHeader)
     composeTestRule.onNodeWithTag(gamesContent, useUnmergedTree = true).assertExists()
@@ -435,25 +460,31 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     Thread.sleep(1500)
 
     expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-    scrollListToTag(EditShopScreenTestTags.SECTION_AVAILABILITY + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    scrollListToTag(
+        EditShopScreenTestTags.SECTION_AVAILABILITY + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
 
     // Edit Monday
-    composeTestRule.onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
+    composeTestRule
+        .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
         .apply { this[1].performClick() }
 
     // Add another interval leading to overlap and try to save
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_ADD_HOURS, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_ADD_HOURS, useUnmergedTree = true)
         .assertExists()
         .performClick()
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
         .performClick()
 
     // Expect an error label (either specific overlap message or generic)
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_ERROR, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_ERROR, useUnmergedTree = true)
         .assertExists()
 
     // Cancel dialog
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_CANCEL, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_CANCEL, useUnmergedTree = true)
         .performClick()
   }
 
@@ -474,25 +505,30 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
 
     // Open Sunday editor and propagate "Closed" to all days by selecting all chips
-    composeTestRule.onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
+    composeTestRule
+        .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
         .apply { this[0].performClick() }
 
     // Ensure Closed is checked
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX, useUnmergedTree = true)
         .performClick()
 
     // Select all days (0..6)
     repeat(7) { idx ->
-      composeTestRule.onNodeWithTag(ShopComponentsTestTags.dayChip(idx), useUnmergedTree = true)
+      composeTestRule
+          .onNodeWithTag(ShopComponentsTestTags.dayChip(idx), useUnmergedTree = true)
           .performClick()
     }
 
     // Save to apply closed across the week
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
         .performClick()
 
     // Primary action should be disabled when no opening hours anywhere
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.ACTION_SAVE, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.ACTION_SAVE, useUnmergedTree = true)
         .assertExists()
   }
 
@@ -528,20 +564,26 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     Thread.sleep(1500)
 
     // Open Games section and click "Add game"
-    val gamesHeader = EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
+    val gamesHeader =
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
     scrollListToTag(gamesHeader)
-    composeTestRule.onNodeWithTag(EditShopScreenTestTags.GAMES_ADD_BUTTON, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(EditShopScreenTestTags.GAMES_ADD_BUTTON, useUnmergedTree = true)
         .assertExists()
         .performClick()
 
     // Wait for dialog wrapper to ensure dialog is fully composed
     composeTestRule.waitUntil(5_000) {
-      composeTestRule.onAllNodesWithTag(EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(
+              EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Focus the actual text field inside the dialog and type
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_FIELD, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_FIELD, useUnmergedTree = true)
         .assertExists()
         .assertIsDisplayed()
         .performClick()
@@ -549,14 +591,18 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Wait for at least one menu item then click it
     composeTestRule.waitUntil(6_000) {
-      composeTestRule.onAllNodesWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
         .performClick()
 
     // Save in dialog
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
         .assertExists()
         .performClick()
 
@@ -565,9 +611,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.onNodeWithTag(pandemicCard, useUnmergedTree = true).assertExists()
 
     // Open dialog again and cancel directly to cover cancel path
-    composeTestRule.onNodeWithTag(EditShopScreenTestTags.GAMES_ADD_BUTTON, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(EditShopScreenTestTags.GAMES_ADD_BUTTON, useUnmergedTree = true)
         .performClick()
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL, useUnmergedTree = true)
+    composeTestRule
+        .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL, useUnmergedTree = true)
         .performClick()
   }
 }
