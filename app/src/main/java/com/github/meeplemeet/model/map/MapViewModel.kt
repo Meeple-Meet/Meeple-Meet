@@ -150,6 +150,10 @@ class MapViewModel(
     _uiState.update { it.copy(selectedMarkerPreview = null, selectedId = null) }
   }
 
+  fun clearErrorMsg() {
+    _uiState.update { it.copy(errorMsg = null) }
+  }
+
   override fun onCleared() {
     stopGeoQuery()
     super.onCleared()

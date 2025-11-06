@@ -44,6 +44,7 @@ import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
+import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
 import com.github.meeplemeet.ui.auth.ProfileScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
@@ -350,6 +351,8 @@ fun MeepleMeetApp(
           onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
           onBack = { navigationActions.goBack() })
     }
+
+    composable(MeepleMeetScreen.Map.name) { MapScreen(navigationActions = navigationActions) }
 
     composable(MeepleMeetScreen.Profile.name) {
       account?.let {
