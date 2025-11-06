@@ -354,7 +354,7 @@ fun MeepleMeetApp(
 
     composable(MeepleMeetScreen.Map.name) {
       MapScreen(
-          navigationActions = navigationActions,
+          navigation = navigationActions,
           account = account!!,
           onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) })
     }
