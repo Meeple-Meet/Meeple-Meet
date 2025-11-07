@@ -3,6 +3,7 @@ package com.github.meeplemeet.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -245,16 +246,14 @@ fun CreateAccountScreen(
                   text = "I also want to:",
                   color = AppColors.textIcons,
                   style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+                  modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
 
               RoleCheckBox(
                   isChecked = isShopChecked,
                   onCheckedChange = { checked: Boolean -> isShopChecked = checked },
                   label = "Sell items",
-                  description = "List your shop and the games you sell.",
+                  description = "List your shop and the games it offers.",
                   testTag = CreateAccountTestTags.CHECKBOX_OWNER)
-
-              Spacer(modifier = Modifier.height(16.dp))
 
               RoleCheckBox(
                   isChecked = isSpaceRented,
@@ -262,8 +261,6 @@ fun CreateAccountScreen(
                   label = "Rent out spaces",
                   description = "Offer your play spaces for other players to book.",
                   testTag = CreateAccountTestTags.CHECKBOX_RENTER)
-
-              Spacer(modifier = Modifier.height(16.dp))
             }
       }
 }
@@ -285,22 +282,29 @@ fun RoleCheckBox(
     description: String,
     testTag: String
 ) {
-  Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
-    Checkbox(
-        checked = isChecked,
-        modifier = Modifier.testTag(testTag).padding(top = 2.dp),
-        onCheckedChange = onCheckedChange,
-        colors =
-            CheckboxDefaults.colors(
-                checkedColor = AppColors.affirmative,
-                uncheckedColor = AppColors.textIcons,
-                checkmarkColor = AppColors.textIcons))
-    Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.Center) {
-      Text(text = label, color = AppColors.textIcons, style = MaterialTheme.typography.bodyMedium)
-      Text(
-          text = description,
-          color = AppColors.textIconsFade,
-          style = MaterialTheme.typography.bodySmall)
-    }
-  }
+  Row(
+      verticalAlignment = Alignment.Top,
+      modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }) {
+        Checkbox(
+            checked = isChecked,
+            modifier = Modifier.testTag(testTag).padding(top = 2.dp),
+            onCheckedChange = {},
+            colors =
+                CheckboxDefaults.colors(
+                    checkedColor = AppColors.affirmative,
+                    uncheckedColor = AppColors.textIcons,
+                    checkmarkColor = AppColors.textIcons))
+        Column(
+            modifier = Modifier.padding(top = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.Center) {
+              Text(
+                  text = label,
+                  color = AppColors.textIcons,
+                  style = MaterialTheme.typography.bodyMedium)
+              Text(
+                  text = description,
+                  color = AppColors.textIconsFade,
+                  style = MaterialTheme.typography.bodySmall)
+            }
+      }
 }
