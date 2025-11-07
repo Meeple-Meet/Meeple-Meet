@@ -22,7 +22,7 @@ data class MapUIState(
     val geoPins: List<GeoPinWithLocation> = emptyList(),
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
-    val selectedId: String? = null
+    val selectedGeoPin: StorableGeoPin? = null
 )
 
 data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
@@ -133,13 +133,13 @@ class MapViewModel(
       try {
         val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
         _uiState.update {
-          it.copy(selectedMarkerPreview = preview, selectedId = pin.geoPin.uid, errorMsg = null)
+          it.copy(selectedMarkerPreview = preview, selectedGeoPin = pin.geoPin, errorMsg = null)
         }
       } catch (t: Throwable) {
         _uiState.update {
           it.copy(
               selectedMarkerPreview = null,
-              selectedId = null,
+              selectedGeoPin = null,
               errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}")
         }
       }
@@ -147,7 +147,7 @@ class MapViewModel(
   }
 
   fun clearSelectedPin() {
-    _uiState.update { it.copy(selectedMarkerPreview = null, selectedId = null) }
+    _uiState.update { it.copy(selectedMarkerPreview = null, selectedGeoPin = null) }
   }
 
   fun clearErrorMsg() {

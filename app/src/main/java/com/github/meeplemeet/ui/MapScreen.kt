@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -46,6 +47,7 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.StorableGeoPin
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -93,7 +95,8 @@ fun MapScreen(
     viewModel: MapViewModel = viewModel(),
     navigation: NavigationActions,
     account: Account,
-    onFABCLick: () -> Unit
+    onFABCLick: () -> Unit,
+    onRedirect: (StorableGeoPin) -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -131,12 +134,14 @@ fun MapScreen(
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       },
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
-        if (uiState.selectedMarkerPreview != null) {
+        if (uiState.selectedMarkerPreview != null && uiState.selectedGeoPin != null) {
           ModalBottomSheet(
               sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
                 MarkerPreviewSheet(
                     preview = uiState.selectedMarkerPreview!!,
-                    onClose = { viewModel.clearSelectedPin() })
+                    onClose = { viewModel.clearSelectedPin() },
+                    geoPin = uiState.selectedGeoPin!!,
+                    onRedirect = onRedirect)
               }
         }
 
@@ -226,7 +231,12 @@ fun MapScreen(
  * The sheet includes a close icon in the top-right corner.
  */
 @Composable
-private fun MarkerPreviewSheet(preview: MarkerPreview, onClose: () -> Unit) {
+private fun MarkerPreviewSheet(
+    preview: MarkerPreview,
+    onClose: () -> Unit,
+    geoPin: StorableGeoPin,
+    onRedirect: (StorableGeoPin) -> Unit
+) {
   Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
     Box(modifier = Modifier.fillMaxWidth()) {
       Text(
@@ -291,6 +301,12 @@ private fun MarkerPreviewSheet(preview: MarkerPreview, onClose: () -> Unit) {
           Text(text = preview.date)
         }
       }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    Button(onClick = { onRedirect(geoPin) }, modifier = Modifier.align(Alignment.End)) {
+      Text(text = "View details")
     }
   }
 }

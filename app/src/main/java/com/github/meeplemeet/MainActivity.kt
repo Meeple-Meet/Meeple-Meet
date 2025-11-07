@@ -33,6 +33,7 @@ import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
+import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -356,7 +357,23 @@ fun MeepleMeetApp(
       MapScreen(
           navigation = navigationActions,
           account = account!!,
-          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) })
+          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) },
+          onRedirect = { geoPin ->
+            when (geoPin.type) {
+              PinType.SHOP -> {
+                shopId = geoPin.uid
+                navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
+              }
+              PinType.SPACE -> {
+                // spaceId = geoPin.uid
+                // navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
+              }
+              PinType.SESSION -> {
+                discussionId = geoPin.uid
+                navigationActions.navigateTo(MeepleMeetScreen.Session)
+              }
+            }
+          })
     }
 
     composable(MeepleMeetScreen.Profile.name) {
@@ -390,7 +407,7 @@ fun MeepleMeetApp(
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { navigationActions.goBack() },
+          onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) },
           viewModel = createShopVM)
     }
   }
