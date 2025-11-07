@@ -41,4 +41,16 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
 
     viewModelScope.launch { _shop.value = repository.getShop(id) }
   }
+
+  /**
+   * Retrieves a shop by the owner's ID from Firestore.
+   *
+   * This operation is performed asynchronously and returns the shop or null if not found.
+   *
+   * @param ownerId The unique identifier of the shop owner.
+   * @return The Shop owned by the account, or null if no shop is found.
+   */
+  suspend fun getShopByOwnerId(ownerId: String): Shop? {
+    return repository.getShopByOwnerId(ownerId)
+  }
 }
