@@ -67,10 +67,10 @@ class MapViewModel(
                 _uiState.update { it.copy(geoPins = it.geoPins + pin) }
               } catch (t: Throwable) {
                 _uiState.update {
-                  it.copy(errorMsg = t.message ?: "Failed to read geo pin $documentID")
+                  it.copy(
+                      errorMsg =
+                          "Failed to read geo pin $documentID: ${t.message ?: "unknown error"}")
                 }
-                // TODO what's better
-                // _uiState.update { it.copy(errorMsg = "Failed to read geo pin $documentID") }
               }
             }
           }
@@ -96,9 +96,9 @@ class MapViewModel(
           override fun onGeoQueryReady() {}
 
           override fun onGeoQueryError(exception: Exception) {
-            _uiState.update { it.copy(errorMsg = exception.message ?: "GeoQuery error") }
-            // TODO what's better ?
-            // _uiState.update { it.copy(errorMsg = "GeoQuery error") }
+            _uiState.update {
+              it.copy(errorMsg = "GeoQuery error: ${exception.message ?: "unknown error"}")
+            }
           }
         }
 
@@ -140,7 +140,7 @@ class MapViewModel(
           it.copy(
               selectedMarkerPreview = null,
               selectedId = null,
-              errorMsg = t.message ?: "Failed to fetch preview for ${pin.geoPin.uid}")
+              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}")
         }
       }
     }

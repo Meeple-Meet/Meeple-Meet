@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
   const val ADD_FAB = "addFab"
+
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 }
 
@@ -215,12 +216,12 @@ fun MapScreen(
  *
  * Content varies by pin type:
  * - Shop / Space:
- *   - Address with location icon
- *   - Opening status with clock icon (colored green/red)
+ *     - Address with location icon
+ *     - Opening status with clock icon (colored green/red)
  * - Session:
- *   - Game name with controller icon
- *   - Address with location icon
- *   - Date with calendar icon
+ *     - Game name with controller icon
+ *     - Address with location icon
+ *     - Date with calendar icon
  *
  * The sheet includes a close icon in the top-right corner.
  */
