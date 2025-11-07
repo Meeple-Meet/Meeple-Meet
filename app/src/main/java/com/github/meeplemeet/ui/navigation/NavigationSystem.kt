@@ -126,6 +126,7 @@ enum class MeepleMeetScreen(
       Icons.Outlined.Language,
       Icons.Default.Language,
       NavigationTestTags.DISCOVER_TAB),
+  Map("Map", true, Icons.Outlined.Map, Icons.Default.Map, NavigationTestTags.MAP_TAB),
   Profile(
       "Profile",
       true,
@@ -142,7 +143,6 @@ enum class MeepleMeetScreen(
   Post("Post"),
   ShopDetails("Shop Details"),
   CreateShop("Create Shop"),
-  Map("Map", true, Icons.Outlined.Map, Icons.Default.Map, NavigationTestTags.MAP_TAB)
 }
 
 /**
