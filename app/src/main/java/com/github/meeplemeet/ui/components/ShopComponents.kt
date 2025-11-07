@@ -447,6 +447,7 @@ fun LabeledField(
 ) {
   Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
     OutlinedTextField(
+        label = { Text(label) },
         value = value,
         onValueChange = onValueChange,
         singleLine = singleLine,
@@ -460,23 +461,6 @@ fun LabeledField(
                     top = ShopUiDefaults.DimensionsMagicNumbers.fieldTop,
                     bottom = ShopUiDefaults.DimensionsMagicNumbers.fieldBottom)
                 .testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
-
-    Box(
-        modifier =
-            Modifier.padding(start = ShopUiDefaults.DimensionsMagicNumbers.labelInsetStart)
-                .offset(y = (-ShopUiDefaults.DimensionsMagicNumbers.space2))
-                .align(Alignment.TopStart)
-                .background(MaterialTheme.colorScheme.background)) {
-          Text(
-              text = label,
-              style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier =
-                  Modifier.padding(
-                          horizontal = ShopUiDefaults.DimensionsMagicNumbers.space4,
-                          vertical = ShopUiDefaults.DimensionsMagicNumbers.space2)
-                      .testTag(ShopComponentsTestTags.LABELED_FIELD_LABEL))
-        }
   }
 }
 
