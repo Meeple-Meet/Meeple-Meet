@@ -39,7 +39,7 @@ class NavigationTest : FirestoreTests() {
     try {
       FirebaseProvider.auth.signOut()
       Thread.sleep(500) // Give time for auth state to propagate
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       // Ignore if no one is signed in
     }
 
@@ -170,8 +170,8 @@ class NavigationTest : FirestoreTests() {
     // Test that the bottom bar screens are properly configured
     val bottomBarScreens = MeepleMeetScreen.entries.filter { it.inBottomBar }
 
-    assert(bottomBarScreens.size == 4) {
-      "Expected 4 bottom bar screens, but found: ${bottomBarScreens.size}"
+    assert(bottomBarScreens.size == 5) {
+      "Expected 5 bottom bar screens, but found: ${bottomBarScreens.size}"
     }
 
     // Verify expected screens are in the bottom bar
@@ -179,6 +179,7 @@ class NavigationTest : FirestoreTests() {
     assert(bottomBarScreens.contains(MeepleMeetScreen.SessionsOverview))
     assert(bottomBarScreens.contains(MeepleMeetScreen.PostsOverview))
     assert(bottomBarScreens.contains(MeepleMeetScreen.Profile))
+    assert(bottomBarScreens.contains(MeepleMeetScreen.Map))
 
     // Verify each has required properties for bottom bar
     bottomBarScreens.forEach { screen ->
@@ -232,7 +233,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
       FirebaseProvider.auth.signOut()
       composeTestRule.waitForIdle()
       Thread.sleep(500) // Give time for auth state to propagate
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       // Ignore if no one is signed in
     }
 
@@ -731,7 +732,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
             .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
             .fetchSemanticsNodes()
             .isNotEmpty()
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         false
       }
     }
@@ -747,7 +748,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
             .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
             .assertExists()
         true
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         false
       }
     }
@@ -792,7 +793,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
                 .onAllNodesWithText(discussionTitle2, substring = true, useUnmergedTree = true)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         false
       }
     }
@@ -820,7 +821,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
             .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
             .fetchSemanticsNodes()
             .isNotEmpty()
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         false
       }
     }
@@ -835,7 +836,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
             .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
             .assertExists()
         true
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         false
       }
     }
@@ -972,7 +973,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
             .onAllNodesWithText(postTitle, substring = true, useUnmergedTree = true)
             .fetchSemanticsNodes()
             .isNotEmpty()
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         false
       }
     }
@@ -983,7 +984,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
           .onNodeWithText(postTitle, substring = true, useUnmergedTree = true)
           .performClick()
       composeTestRule.waitForIdle()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       // Post might not be clickable in current implementation
     }
   }
