@@ -390,7 +390,7 @@ fun MeepleMeetApp(
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { /* TODO */},
+          onCreated = { navigationActions.goBack() },
           viewModel = createShopVM)
     }
   }

@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
@@ -32,14 +33,13 @@ import com.github.meeplemeet.ui.components.DayRow
 import com.github.meeplemeet.ui.components.GameListSection
 import com.github.meeplemeet.ui.components.GameStockDialog
 import com.github.meeplemeet.ui.components.LabeledField
-import com.github.meeplemeet.ui.components.LocationSearchField
 import com.github.meeplemeet.ui.components.OpeningHoursDialog
+import com.github.meeplemeet.ui.sessions.LocationSearchBar
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.random.Random
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -112,8 +112,6 @@ private object AddShopUi {
 
     const val LabelLink = "Link"
     const val PlaceholderLink = "Website/Instagram link"
-
-    const val PlaceholderLocation = "Search locations…"
 
     const val BtnAddGame = "Add game"
     const val EmptyGames = "No games selected yet."
@@ -208,23 +206,6 @@ private fun emptyWeek(): List<OpeningHours> =
     List(7) { day -> OpeningHours(day = day, hours = emptyList()) }
 
 /**
- * Mocks location suggestions based on a query string.
- *
- * @param query The query string to base the suggestions on.
- * @param max The maximum number of suggestions to generate.
- * @return A list of mocked Location objects.
- */
-private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
-  if (query.isBlank()) return emptyList()
-  val rng = Random(query.hashCode())
-  return List(max) { i ->
-    val lat = rng.nextDouble(-90.0, 90.0)
-    val lon = rng.nextDouble(-180.0, 180.0)
-    Location(latitude = lat, longitude = lon, name = "$query #${i + 1}")
-  }
-}
-
-/**
  * Validates if the provided email string is in a valid email format.
  *
  * @param email The email string to validate.
@@ -252,6 +233,7 @@ fun CreateShopScreen(
     viewModel: CreateShopViewModel
 ) {
   val ui by viewModel.gameUIState.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
   AddShopContent(
       onBack = onBack,
@@ -274,11 +256,14 @@ fun CreateShopScreen(
           Strings.ErrorCreate
         }
       },
+      locationUi = locationUi,
       gameQuery = ui.gameQuery,
       gameSuggestions = ui.gameSuggestions,
       isSearching = ui.isSearching,
       onSetGameQuery = viewModel::setGameQuery,
-      onSetGame = viewModel::setGame)
+      onSetGame = viewModel::setGame,
+      viewModel = viewModel,
+      owner = owner)
 }
 
 /* ================================================================================================
@@ -310,15 +295,19 @@ fun AddShopContent(
             address: Location,
             week: List<OpeningHours>,
             stock: List<Pair<Game, Int>>) -> String?,
+    locationUi: LocationUIState,
     gameQuery: String,
     gameSuggestions: List<Game>,
     isSearching: Boolean,
     onSetGameQuery: (String) -> Unit,
     onSetGame: (Game) -> Unit,
-    initialStock: List<Pair<Game, Int>> = emptyList()
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    viewModel: CreateShopViewModel,
+    owner: Account
 ) {
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  val showError: (String) -> Unit = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
 
   var shopName by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
@@ -333,7 +322,7 @@ fun AddShopContent(
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var showGameDialog by remember { mutableStateOf(false) }
-  var qty by rememberSaveable { mutableStateOf(1) }
+  var qty by rememberSaveable { mutableIntStateOf(1) }
   var picked by remember { mutableStateOf<Game?>(null) }
   var stock by remember { mutableStateOf(initialStock) }
 
@@ -424,7 +413,11 @@ fun AddShopContent(
                           onPickLocation = { loc ->
                             addressText = loc.name
                             selectedLocation = loc
-                          })
+                          },
+                          locationUi = locationUi,
+                          showError = showError,
+                          viewModel = viewModel,
+                          owner = owner)
                     },
                     testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
               }
@@ -548,7 +541,11 @@ private fun RequiredInfoSection(
     onLink: (String) -> Unit,
     addressText: String,
     onAddressText: (String) -> Unit,
-    onPickLocation: (Location) -> Unit
+    onPickLocation: (Location) -> Unit,
+    locationUi: LocationUIState,
+    showError: (String) -> Unit = {},
+    viewModel: CreateShopViewModel,
+    owner: Account
 ) {
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_SHOP)) {
     LabeledField(
@@ -591,15 +588,13 @@ private fun RequiredInfoSection(
   }
 
   Box(Modifier.testTag(CreateShopScreenTestTags.FIELD_ADDRESS)) {
-    val locationResults = remember(addressText) { mockLocationSuggestionsFrom(addressText) }
-    LocationSearchField(
-        query = addressText,
-        onQueryChange = onAddressText,
-        results = locationResults,
-        onPick = onPickLocation,
-        isLoading = false,
-        placeholder = Strings.PlaceholderLocation,
-        modifier = Modifier.fillMaxWidth())
+    LocationSearchBar(
+        viewModel = viewModel,
+        locationUi = locationUi,
+        currentUser = owner,
+        shop = null,
+        onError = showError,
+        onPick = onPickLocation)
   }
 }
 
