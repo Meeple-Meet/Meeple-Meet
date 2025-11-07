@@ -182,6 +182,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun editShopScreen_displaysDataMatchingDatabase() {
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
+
     composeTestRule.setContent {
       AppTheme {
         EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
@@ -278,6 +281,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun editShopScreen_saveChanges_persistsToFirestore() {
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
+
     // Launch screen for existing shop
     composeTestRule.setContent {
       AppTheme {
@@ -403,6 +409,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun editShopScreen_collapsibleSections_toggleVisibility() {
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
+
     composeTestRule.setContent {
       AppTheme {
         EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
@@ -428,6 +437,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun openingHoursDialog_showsValidationErrorOnOverlap() {
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
+
     composeTestRule.setContent {
       AppTheme {
         EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
@@ -465,6 +477,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun saveButton_disabledWhenNoOpeningHours() {
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
+
     composeTestRule.setContent {
       AppTheme {
         EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
@@ -519,6 +534,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
                   genres = listOf(3)))
           .await()
     }
+
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
 
     composeTestRule.setContent {
       AppTheme {
