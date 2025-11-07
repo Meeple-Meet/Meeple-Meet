@@ -42,6 +42,7 @@ import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.CreateShopViewModel
+import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
@@ -63,6 +64,7 @@ import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreen
+import com.github.meeplemeet.ui.shops.EditShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Firebase
@@ -153,6 +155,7 @@ fun MeepleMeetApp(
     navController: NavHostController = rememberNavController(),
     shopVM: ShopViewModel = viewModel(),
     createShopVM: CreateShopViewModel = viewModel(),
+    editShopVM: EditShopViewModel = viewModel(),
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
@@ -395,9 +398,7 @@ fun MeepleMeetApp(
             account = account!!,
             shopId = shopId,
             onBack = { navigationActions.goBack() },
-            onEdit = {
-              // Navigate to shop edit screen (not implemented here)
-            },
+            onEdit = { navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false) },
             viewModel = shopVM)
       } else {
         LoadingScreen()
@@ -409,6 +410,22 @@ fun MeepleMeetApp(
           onBack = { navigationActions.goBack() },
           onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) },
           viewModel = createShopVM)
+    }
+    composable(MeepleMeetScreen.EditShop.name) {
+      val shopFromDetails by shopVM.shop.collectAsStateWithLifecycle()
+      val shop by editShopVM.shop.collectAsStateWithLifecycle()
+
+      LaunchedEffect(shopFromDetails) { editShopVM.setShop(shopFromDetails) }
+
+      if (shop != null) {
+        EditShopScreen(
+            owner = account!!,
+            onBack = { navigationActions.goBack() },
+            onSaved = { navigationActions.goBack() },
+            viewModel = editShopVM)
+      } else {
+        LoadingScreen()
+      }
     }
   }
 }

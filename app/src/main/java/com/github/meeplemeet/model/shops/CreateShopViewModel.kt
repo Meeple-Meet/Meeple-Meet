@@ -2,12 +2,10 @@
 
 package com.github.meeplemeet.model.shops
 
-import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
-import kotlinx.coroutines.launch
 
 /**
  * ViewModel for creating new shops.
@@ -36,10 +34,11 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
    * @param openingHours The shop's opening hours, must include exactly 7 entries (one per day).
    * @param gameCollection The collection of games available at the shop with their quantities
    *   (optional, defaults to empty).
+   * @return The created Shop object with its generated ID.
    * @throws IllegalArgumentException if the shop name is blank, if not exactly 7 opening hours
    *   entries are provided, or if the address is not valid.
    */
-  fun createShop(
+  suspend fun createShop(
       owner: Account,
       name: String,
       phone: String = "",
@@ -48,7 +47,7 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
       address: Location,
       openingHours: List<OpeningHours>,
       gameCollection: List<Pair<Game, Int>> = emptyList()
-  ) {
+  ): Shop {
     if (name.isBlank()) throw IllegalArgumentException("Shop name cannot be blank")
 
     val uniqueByDay = openingHours.distinctBy { it.day }
@@ -57,8 +56,7 @@ class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvi
     if (address == Location())
         throw IllegalArgumentException("An address is required to create a shop")
 
-    viewModelScope.launch {
-      shopRepo.createShop(owner, name, phone, email, website, address, openingHours, gameCollection)
-    }
+    return shopRepo.createShop(
+        owner, name, phone, email, website, address, openingHours, gameCollection)
   }
 }

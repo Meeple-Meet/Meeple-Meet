@@ -199,4 +199,36 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     geoPinsRepo.deleteGeoPin(id)
     shops.document(id).delete().await()
   }
+
+  /**
+   * Retrieves the first shop owned by the specified account from Firestore.
+   *
+   * @param ownerId The unique identifier of the shop owner.
+   * @return The Shop owned by the account, or null if no shop is found.
+   */
+  suspend fun getShopByOwnerId(ownerId: String): Shop? {
+    val snapshot = shops.whereEqualTo(ShopNoUid::ownerId.name, ownerId).limit(1).get().await()
+
+    if (snapshot.isEmpty) return null
+
+    val doc = snapshot.documents.first()
+    val shopNoUid = doc.toObject(ShopNoUid::class.java) ?: return null
+
+    // Fetch the owner account
+    val owner = accountRepo.getAccount(shopNoUid.ownerId)
+
+    // Fetch all games in the game collection
+    val gameCollection = coroutineScope {
+      shopNoUid.gameCollection
+          .map { gameItem ->
+            async {
+              val game = gameRepo.getGameById(gameItem.gameId)
+              game to gameItem.quantity
+            }
+          }
+          .awaitAll()
+    }
+
+    return fromNoUid(doc.id, shopNoUid, owner, gameCollection)
+  }
 }

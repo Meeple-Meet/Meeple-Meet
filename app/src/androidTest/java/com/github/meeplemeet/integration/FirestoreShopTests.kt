@@ -631,100 +631,114 @@ class FirestoreShopTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenNameIsBlank() {
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "",
-        email = "test@test.com",
-        address = testLocation1,
-        openingHours = testOpeningHours)
+    runBlocking {
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "",
+          email = "test@test.com",
+          address = testLocation1,
+          openingHours = testOpeningHours)
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenNameIsOnlyWhitespace() {
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "   ",
-        address = testLocation1,
-        openingHours = testOpeningHours,
-        email = "test@test.com")
+    runBlocking {
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "   ",
+          address = testLocation1,
+          openingHours = testOpeningHours,
+          email = "test@test.com")
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenLessThan7OpeningHours() {
-    val incompleteHours =
-        listOf(
-            OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))))
+    runBlocking {
+      val incompleteHours =
+          listOf(
+              OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))))
 
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "Test Shop",
-        address = testLocation1,
-        openingHours = incompleteHours,
-        email = "test@test.com")
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "Test Shop",
+          address = testLocation1,
+          openingHours = incompleteHours,
+          email = "test@test.com")
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenMoreThan7UniqueOpeningHourDays() {
-    // Use 8 unique days (0-7) to trigger validation error
-    val tooManyHours =
-        listOf(
-            OpeningHours(day = 0, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "18:00"))))
+    runBlocking {
+      // Use 8 unique days (0-7) to trigger validation error
+      val tooManyHours =
+          listOf(
+              OpeningHours(day = 0, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "18:00"))))
 
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "Test Shop",
-        address = testLocation1,
-        openingHours = tooManyHours,
-        email = "test@test.com")
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "Test Shop",
+          address = testLocation1,
+          openingHours = tooManyHours,
+          email = "test@test.com")
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenDuplicateDaysInOpeningHours() {
-    val duplicateDays =
-        listOf(
-            OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))))
+    runBlocking {
+      val duplicateDays =
+          listOf(
+              OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "18:00"))),
+              OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))))
 
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "Test Shop",
-        address = testLocation1,
-        openingHours = duplicateDays,
-        email = "test@test.com")
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "Test Shop",
+          address = testLocation1,
+          openingHours = duplicateDays,
+          email = "test@test.com")
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenAddressIsDefault() {
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "Test Shop",
-        address = Location(), // Default empty location
-        openingHours = testOpeningHours,
-        email = "test@test.com")
+    runBlocking {
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "Test Shop",
+          address = Location(), // Default empty location
+          openingHours = testOpeningHours,
+          email = "test@test.com")
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createShopViewModelThrowsWhenEmptyOpeningHours() {
-    createShopViewModel.createShop(
-        owner = testAccount1,
-        name = "Test Shop",
-        address = testLocation1,
-        openingHours = emptyList(),
-        email = "test@test.com")
+    runBlocking {
+      createShopViewModel.createShop(
+          owner = testAccount1,
+          name = "Test Shop",
+          address = testLocation1,
+          openingHours = emptyList(),
+          email = "test@test.com")
+    }
   }
 
   @Test
