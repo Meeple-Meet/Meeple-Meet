@@ -337,6 +337,13 @@ fun AddShopContent(
         }
       }
 
+  // Sync addressText with locationUi.locationQuery when typing
+  LaunchedEffect(locationUi.locationQuery) {
+    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
+      addressText = locationUi.locationQuery
+    }
+  }
+
   fun onDiscard() {
     shopName = ""
     email = ""
