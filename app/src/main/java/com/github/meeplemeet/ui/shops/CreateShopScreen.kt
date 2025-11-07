@@ -92,13 +92,12 @@ private object AddShopUi {
   }
 
   object Strings {
-    const val ScreenTitle = "Add Shop"
-    const val RequirementsSection = "Required Info"
-    const val SectionAvailability = "Availability"
-    const val SectionGames = "Games in stock"
+    const val REQUIREMENTS_SECTION = "Required Info"
+    const val SECTION_AVAILABILITY = "Availability"
+    const val SECTION_GAMES = "Games in stock"
 
-    const val LabelShop = "Shop"
-    const val PlaceholderShop = "Shop name"
+    const val LABEL_SHOP = "Shop"
+    const val PLACEHOLDER_SHOP = "Shop name"
 
     const val LabelEmail = "Email"
     const val PlaceholderEmail = "Email"
@@ -275,7 +274,9 @@ fun AddShopContent(
       topBar = {
         CenterAlignedTopAppBar(
             title = {
-              Text(Strings.ScreenTitle, modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
+              Text(
+                  MeepleMeetScreen.CreateShop.title,
+                  modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
             },
             navigationIcon = {
               IconButton(
@@ -317,7 +318,7 @@ fun AddShopContent(
                     vertical = AddShopUi.Dimensions.contentVPadding)) {
               item {
                 CollapsibleSection(
-                    title = Strings.RequirementsSection,
+                    title = Strings.REQUIREMENTS_SECTION,
                     initiallyExpanded = false,
                     content = {
                       RequiredInfoSection(
@@ -354,7 +355,7 @@ fun AddShopContent(
 
               item {
                 CollapsibleSection(
-                    title = Strings.SectionAvailability,
+                    title = Strings.SECTION_AVAILABILITY,
                     initiallyExpanded = false,
                     content = {
                       AvailabilitySection(
@@ -375,7 +376,7 @@ fun AddShopContent(
 
               item {
                 CollapsibleSection(
-                    title = Strings.SectionGames,
+                    title = Strings.SECTION_GAMES,
                     initiallyExpanded = false,
                     header = {
                       TextButton(
