@@ -2,7 +2,6 @@
 package com.github.meeplemeet.ui.discussions
 
 import android.text.format.DateFormat
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -50,7 +48,8 @@ import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.appShapes
+import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.MessagingColors
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
@@ -130,8 +129,10 @@ fun DiscussionScreen(
     }
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(AppColors.primary)) {
+  Column(modifier = Modifier.fillMaxSize().background(MessagingColors.messagingBackground)) {
     TopAppBar(
+        colors =
+            TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
         title = {
           Row(
               verticalAlignment = Alignment.CenterVertically,
@@ -142,11 +143,15 @@ fun DiscussionScreen(
                 Box(
                     modifier =
                         Modifier.size(40.dp)
-                            .background(color = AppColors.focus, shape = CircleShape))
-                Spacer(Modifier.width(8.dp))
+                            .clip(CircleShape)
+                            .background(AppColors.neutral, CircleShape))
+                Spacer(Modifier.width(Dimensions.Spacing.large))
                 Text(
                     text = discussionName,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.textIcons),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = Dimensions.TextSize.heading,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               }
         },
@@ -155,7 +160,7 @@ fun DiscussionScreen(
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = AppColors.textIconsFade,
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
           }
         },
@@ -170,7 +175,10 @@ fun DiscussionScreen(
 
           if (icon != null) {
             IconButton(onClick = { onCreateSessionClick(discussion) }) {
-              Icon(icon, contentDescription = "Session action")
+              Icon(
+                  icon,
+                  contentDescription = "Session action",
+                  tint = MaterialTheme.colorScheme.onSurface)
             }
           }
         })
@@ -180,8 +188,10 @@ fun DiscussionScreen(
     LazyColumn(
         state = listState,
         modifier = Modifier.weight(1f).fillMaxWidth(),
-        contentPadding = PaddingValues(8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        contentPadding =
+            PaddingValues(
+                horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.large),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
           itemsIndexed(
               items = messages,
               key = { _, msg ->
@@ -223,99 +233,129 @@ fun DiscussionScreen(
     var showAttachmentMenu by remember { mutableStateOf(false) }
     var showPollDialog by remember { mutableStateOf(false) }
 
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(8.dp)
-                .background(AppColors.secondary, shape = CircleShape)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-          Box {
-            IconButton(
-                modifier = Modifier.testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
-                onClick = { showAttachmentMenu = true }) {
-                  Icon(
-                      Icons.Default.AttachFile,
-                      contentDescription = "Attach",
-                      tint = AppColors.textIconsFade)
-                }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = Dimensions.Elevation.medium) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          horizontal = Dimensions.Spacing.medium,
+                          vertical = Dimensions.Spacing.medium),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                Row(
+                    modifier =
+                        Modifier.weight(1f)
+                            .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
+                            .background(MessagingColors.inputBackground)
+                            .padding(
+                                horizontal = Dimensions.Spacing.large,
+                                vertical = Dimensions.Spacing.medium),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Box {
+                        IconButton(
+                            modifier =
+                                Modifier.size(36.dp).testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
+                            onClick = { showAttachmentMenu = true }) {
+                              Icon(
+                                  Icons.Default.AttachFile,
+                                  contentDescription = "Attach",
+                                  tint = MessagingColors.metadataText,
+                                  modifier = Modifier.size(Dimensions.IconSize.standard))
+                            }
 
-            if (showAttachmentMenu) {
-              val popupOffset = IntOffset(x = -30, y = -170) // ↓ shift down
-              Popup(
-                  onDismissRequest = { showAttachmentMenu = false },
-                  offset = popupOffset,
-                  properties = PopupProperties(focusable = true)) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = AppColors.secondary,
-                        border = BorderStroke(1.dp, AppColors.textIconsFade),
-                        modifier = Modifier.widthIn(min = 40.dp, max = 100.dp) // ← kill the 8 dp
-                        ) {
-                          Column {
-                            DropdownMenuItem(
-                                text = { Text("Create poll") },
-                                onClick = {
-                                  showAttachmentMenu = false
-                                  showPollDialog = true
-                                },
-                                modifier =
-                                    Modifier.testTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION))
+                        if (showAttachmentMenu) {
+                          val popupOffset = IntOffset(x = -30, y = -170)
+                          Popup(
+                              onDismissRequest = { showAttachmentMenu = false },
+                              offset = popupOffset,
+                              properties = PopupProperties(focusable = true)) {
+                                Surface(
+                                    shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+                                    color = MessagingColors.messageBubbleOther,
+                                    shadowElevation = Dimensions.Elevation.high,
+                                    modifier = Modifier.widthIn(min = 40.dp, max = 150.dp)) {
+                                      Column {
+                                        DropdownMenuItem(
+                                            text = {
+                                              Text(
+                                                  "Create poll",
+                                                  fontSize = Dimensions.TextSize.body,
+                                                  color = MessagingColors.primaryText)
+                                            },
+                                            onClick = {
+                                              showAttachmentMenu = false
+                                              showPollDialog = true
+                                            },
+                                            modifier =
+                                                Modifier.testTag(
+                                                    DiscussionTestTags.ATTACHMENT_POLL_OPTION))
+                                      }
+                                    }
+                              }
+                        }
+                      }
+
+                      if (showPollDialog) {
+                        CreatePollDialog(
+                            onDismiss = { showPollDialog = false },
+                            onCreate = { question, options, allowMultiple ->
+                              viewModel.createPoll(
+                                  discussion = discussion,
+                                  creatorId = account.uid,
+                                  question = question,
+                                  options = options,
+                                  allowMultipleVotes = allowMultiple)
+                              showPollDialog = false
+                            })
+                      }
+
+                      BasicTextField(
+                          value = messageText,
+                          onValueChange = { messageText = it },
+                          modifier = Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
+                          textStyle =
+                              MaterialTheme.typography.bodyMedium.copy(
+                                  fontSize = Dimensions.TextSize.body,
+                                  color = MessagingColors.primaryText),
+                          decorationBox = { inner ->
+                            if (messageText.isEmpty())
+                                Text(
+                                    "Message",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontSize = Dimensions.TextSize.body,
+                                    color = MessagingColors.metadataText)
+                            inner()
+                          })
+                    }
+
+                FloatingActionButton(
+                    onClick = {
+                      if (messageText.isNotBlank() && !isSending) {
+                        scope.launch {
+                          isSending = true
+                          try {
+                            viewModel.sendMessageToDiscussion(discussion, account, messageText)
+                            messageText = ""
+                          } finally {
+                            isSending = false
                           }
                         }
-                  }
-            }
-          }
-
-          if (showPollDialog) {
-            CreatePollDialog(
-                onDismiss = { showPollDialog = false },
-                onCreate = { question, options, allowMultiple ->
-                  viewModel.createPoll(
-                      discussion = discussion,
-                      creatorId = account.uid,
-                      question = question,
-                      options = options,
-                      allowMultipleVotes = allowMultiple)
-                  showPollDialog = false
-                })
-          }
-
-          Spacer(Modifier.width(8.dp))
-
-          BasicTextField(
-              value = messageText,
-              onValueChange = { messageText = it },
-              modifier = Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
-              singleLine = true,
-              decorationBox = { inner ->
-                if (messageText.isEmpty())
-                    Text("Type something...", color = AppColors.textIconsFade)
-                inner()
-              })
-
-          Spacer(Modifier.width(8.dp))
-
-          IconButton(
-              modifier = Modifier.testTag(DiscussionTestTags.SEND_BUTTON),
-              onClick = {
-                if (messageText.isNotBlank() && !isSending) {
-                  scope.launch {
-                    isSending = true
-                    try {
-                      viewModel.sendMessageToDiscussion(discussion, account, messageText)
-                      messageText = ""
-                    } finally {
-                      isSending = false
+                      }
+                    },
+                    modifier =
+                        Modifier.size(Dimensions.ButtonSize.standard)
+                            .testTag(DiscussionTestTags.SEND_BUTTON),
+                    containerColor = MessagingColors.whatsappGreen,
+                    contentColor = MessagingColors.messageBubbleOther,
+                    shape = CircleShape) {
+                      Icon(
+                          Icons.AutoMirrored.Filled.Send,
+                          contentDescription = "Send",
+                          modifier = Modifier.size(Dimensions.IconSize.standard))
                     }
-                  }
-                }
-              },
-              enabled = !isSending) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = AppColors.textIconsFade)
               }
         }
   }
@@ -346,55 +386,84 @@ fun PollBubble(
   val total = poll.getTotalVotes()
 
   Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-      horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(
+                  horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.extraSmall),
+      horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
+      verticalAlignment = Alignment.Bottom) {
+        // Profile picture for received messages (on the left)
+        if (!isMine) {
+          Box(
+              modifier =
+                  Modifier.size(Dimensions.AvatarSize.small)
+                      .clip(CircleShape)
+                      .background(AppColors.neutral, CircleShape))
+          Spacer(Modifier.width(Dimensions.Spacing.medium))
+        }
+
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
 
           /*  card container  */
-          Card(
-              shape = appShapes.large,
-              colors = CardDefaults.cardColors(containerColor = AppColors.secondary),
-              elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-              modifier = Modifier.widthIn(min = 120.dp, max = 250.dp)) {
-                Column(modifier = Modifier.padding(12.dp)) {
+          Surface(
+              shape =
+                  RoundedCornerShape(
+                      topStart =
+                          if (isMine) Dimensions.CornerRadius.large
+                          else Dimensions.Spacing.extraSmall,
+                      topEnd =
+                          if (isMine) Dimensions.Spacing.extraSmall
+                          else Dimensions.CornerRadius.large,
+                      bottomStart = Dimensions.CornerRadius.large,
+                      bottomEnd = Dimensions.CornerRadius.large),
+              color =
+                  if (isMine) MessagingColors.messageBubbleOwn
+                  else MessagingColors.messageBubbleOther,
+              shadowElevation = Dimensions.Elevation.minimal,
+              modifier = Modifier.widthIn(min = 200.dp, max = 280.dp)) {
+                Column(modifier = Modifier.padding(Dimensions.Spacing.large)) {
 
                   /*  header  */
-                  Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(32.dp).background(AppColors.focus, CircleShape))
-                    Spacer(Modifier.width(6.dp))
+                  if (!isMine) {
                     Text(
-                        text = if (isMine) "$authorName asked:" else "$authorName asks:",
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.textIcons,
-                        fontSize = 14.sp)
+                        text = authorName,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MessagingColors.whatsappGreen,
+                        fontSize = Dimensions.TextSize.medium)
+                    Spacer(Modifier.height(Dimensions.Spacing.small))
                   }
-                  Spacer(Modifier.height(4.dp))
-                  Text(poll.question, color = AppColors.textIcons, fontSize = 14.sp)
-                  Spacer(Modifier.height(8.dp))
+                  Text(
+                      poll.question,
+                      color = MessagingColors.primaryText,
+                      fontSize = Dimensions.TextSize.body,
+                      fontWeight = FontWeight.Medium)
+                  Spacer(Modifier.height(Dimensions.Spacing.medium))
                   Text(
                       text = if (poll.allowMultipleVotes) "Select multiple" else "Select one",
-                      color = AppColors.textIconsFade,
-                      fontSize = 12.sp)
-                  Spacer(Modifier.height(8.dp))
+                      color = MessagingColors.metadataText,
+                      fontSize = Dimensions.TextSize.small)
+                  Spacer(Modifier.height(Dimensions.Spacing.medium))
 
                   /*  vote rows  */
                   poll.options.forEachIndexed { index, label ->
                     val votesForOption = counts[index] ?: 0
                     val percent = if (total > 0) (votesForOption * 100f / total).toInt() else 0
                     val selected = index in userVotes
-                    val background = if (selected) AppColors.divider else AppColors.primary
+                    val background =
+                        if (selected) MessagingColors.selectionBackground
+                        else MessagingColors.neutralBackground
 
                     /*  SINGLE CLICKABLE CONTAINER  */
                     Box(
                         modifier =
                             Modifier.testTag(DiscussionTestTags.pollVoteButton(msgIndex, index))
                                 .fillMaxWidth()
-                                .defaultMinSize(minHeight = 48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .defaultMinSize(minHeight = 44.dp)
+                                .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
                                 .background(background)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(color = AppColors.affirmative),
+                                    indication = ripple(color = MessagingColors.whatsappGreen),
                                     onClick = {
                                       // single-choice: un-vote previous selection
                                       if (!poll.allowMultipleVotes &&
@@ -407,60 +476,71 @@ fun PollBubble(
                           Row(
                               modifier =
                                   Modifier.fillMaxWidth()
-                                      .padding(horizontal = 12.dp, vertical = 10.dp),
+                                      .padding(
+                                          horizontal = Dimensions.Spacing.large, vertical = 10.dp),
                               horizontalArrangement = Arrangement.SpaceBetween,
                               verticalAlignment = Alignment.CenterVertically) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                  val affirmative = AppColors.affirmative
-                                  val primary = AppColors.primary
-                                  val isCheckBox = poll.allowMultipleVotes
-                                  val shapeSize = 18.dp
-                                  val stroke = 1.dp
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)) {
+                                      val isCheckBox = poll.allowMultipleVotes
+                                      val shapeSize = 18.dp
+                                      val borderColor =
+                                          if (selected) MessagingColors.whatsappGreen
+                                          else MessagingColors.secondaryText
+                                      val fillColor = MessagingColors.whatsappGreen
 
-                                  Canvas(
-                                      modifier =
-                                          Modifier.size(shapeSize)
-                                              .border(
-                                                  stroke,
-                                                  AppColors.textIcons,
-                                                  if (isCheckBox) RoundedCornerShape(4.dp)
-                                                  else CircleShape)
-                                              .padding(3.dp)) {
-                                        if (selected) {
-                                          if (isCheckBox) {
-                                            // draw check-box fill + check mark
-                                            drawRoundRect(
-                                                color = affirmative,
-                                                size = size,
-                                                cornerRadius =
-                                                    CornerRadius(4.dp.toPx(), 4.dp.toPx()))
-                                            // simple check mark (two lines)
-                                            val check =
-                                                Path().apply {
-                                                  moveTo(size.width * .25f, size.height * .5f)
-                                                  lineTo(size.width * .45f, size.height * .7f)
-                                                  lineTo(size.width * .75f, size.height * .3f)
-                                                }
-                                            drawPath(
-                                                check,
-                                                color = primary,
-                                                style =
-                                                    Stroke(
-                                                        width = 2.dp.toPx(), cap = StrokeCap.Round))
-                                          } else {
-                                            // original radio dot
-                                            drawCircle(
-                                                color = affirmative, radius = size.minDimension / 2)
+                                      Canvas(
+                                          modifier =
+                                              Modifier.size(shapeSize)
+                                                  .border(
+                                                      1.5.dp,
+                                                      borderColor,
+                                                      if (isCheckBox) RoundedCornerShape(4.dp)
+                                                      else CircleShape)
+                                                  .padding(3.dp)) {
+                                            if (selected) {
+                                              if (isCheckBox) {
+                                                // draw check-box fill + check mark
+                                                drawRoundRect(
+                                                    color = fillColor,
+                                                    size = size,
+                                                    cornerRadius =
+                                                        CornerRadius(4.dp.toPx(), 4.dp.toPx()))
+                                                // simple check mark (two lines)
+                                                val check =
+                                                    Path().apply {
+                                                      moveTo(size.width * .25f, size.height * .5f)
+                                                      lineTo(size.width * .45f, size.height * .7f)
+                                                      lineTo(size.width * .75f, size.height * .3f)
+                                                    }
+                                                drawPath(
+                                                    check,
+                                                    color = Color.White,
+                                                    style =
+                                                        Stroke(
+                                                            width = 2.dp.toPx(),
+                                                            cap = StrokeCap.Round))
+                                              } else {
+                                                // original radio dot
+                                                drawCircle(
+                                                    color = fillColor,
+                                                    radius = size.minDimension / 2)
+                                              }
+                                            }
                                           }
-                                        }
-                                      }
-                                  Spacer(Modifier.width(6.dp))
-                                  Text(label, color = AppColors.textIcons, fontSize = 14.sp)
-                                }
+                                      Spacer(Modifier.width(Dimensions.Spacing.medium))
+                                      Text(
+                                          label,
+                                          color = MessagingColors.primaryText,
+                                          fontSize = 14.sp,
+                                          modifier = Modifier.weight(1f))
+                                    }
                                 Text(
                                     "$percent%",
-                                    color = AppColors.textIcons,
-                                    fontSize = 14.sp,
+                                    color = MessagingColors.metadataText,
+                                    fontSize = Dimensions.TextSize.medium,
+                                    fontWeight = FontWeight.Medium,
                                     modifier =
                                         Modifier.testTag(
                                             DiscussionTestTags.pollPercent(msgIndex, index)))
@@ -468,13 +548,27 @@ fun PollBubble(
                         }
                     Spacer(Modifier.height(6.dp))
                   }
+
+                  // Timestamp inside poll bubble
+                  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(
+                        text = DateFormat.format("HH:mm", createdAt).toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = Dimensions.TextSize.tiny,
+                        color = MessagingColors.metadataText)
+                  }
                 }
               }
+        }
 
-          Text(
-              text = DateFormat.format("HH:mm", createdAt).toString(),
-              style = MaterialTheme.typography.labelSmall.copy(color = AppColors.textIconsFade),
-              modifier = Modifier.padding(top = 2.dp))
+        // Profile picture for sent messages (on the right)
+        if (isMine) {
+          Spacer(Modifier.width(Dimensions.Spacing.medium))
+          Box(
+              modifier =
+                  Modifier.size(Dimensions.AvatarSize.small)
+                      .clip(CircleShape)
+                      .background(AppColors.focus, CircleShape))
         }
       }
 }
@@ -489,48 +583,80 @@ fun PollBubble(
 @Composable
 private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
   Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(
+                  horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.extraSmall),
+      horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
+      verticalAlignment = Alignment.Bottom) {
+        // Profile picture for received messages (on the left)
         if (!isMine) {
-          Box(modifier = Modifier.size(32.dp).background(AppColors.focus, shape = CircleShape))
-          Spacer(Modifier.width(6.dp))
-        }
-
-        Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
           Box(
               modifier =
-                  Modifier.shadow(elevation = 4.dp, shape = appShapes.large, clip = false)
-                      .background(color = AppColors.secondary, shape = appShapes.large)
-                      .padding(10.dp)
-                      .widthIn(min = 100.dp, max = 250.dp)) {
-                Column {
-                  if (senderName != null) {
-                    Text(
-                        senderName,
-                        style =
-                            MaterialTheme.typography.labelSmall.copy(
-                                color = AppColors.textIconsFade))
-                    Spacer(Modifier.height(2.dp))
-                  }
+                  Modifier.size(Dimensions.AvatarSize.small)
+                      .clip(CircleShape)
+                      .background(AppColors.neutral, CircleShape))
+          Spacer(Modifier.width(Dimensions.Spacing.medium))
+        }
+
+        // Message bubble
+        Box(
+            modifier =
+                Modifier.widthIn(max = 280.dp)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart =
+                                if (isMine) Dimensions.CornerRadius.large
+                                else Dimensions.Spacing.extraSmall,
+                            topEnd =
+                                if (isMine) Dimensions.Spacing.extraSmall
+                                else Dimensions.CornerRadius.large,
+                            bottomStart = Dimensions.CornerRadius.large,
+                            bottomEnd = Dimensions.CornerRadius.large))
+                    .background(
+                        color =
+                            if (isMine) MessagingColors.messageBubbleOwn
+                            else MessagingColors.messageBubbleOther,
+                    )
+                    .padding(
+                        horizontal = Dimensions.Spacing.large,
+                        vertical = Dimensions.Spacing.medium)) {
+              Column {
+                if (senderName != null && !isMine) {
                   Text(
-                      message.content,
-                      style =
-                          MaterialTheme.typography.bodySmall.copy(color = AppColors.textIconsFade))
+                      senderName,
+                      style = MaterialTheme.typography.labelSmall,
+                      fontSize = Dimensions.TextSize.small,
+                      fontWeight = FontWeight.SemiBold,
+                      color = MessagingColors.whatsappGreen)
+                  Spacer(Modifier.height(Dimensions.Spacing.small))
                 }
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                      Text(
+                          message.content,
+                          style = MaterialTheme.typography.bodyMedium,
+                          fontSize = Dimensions.TextSize.body,
+                          color = MessagingColors.primaryText,
+                          modifier = Modifier.weight(1f, fill = false))
+                      Text(
+                          text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
+                          style = MaterialTheme.typography.labelSmall,
+                          fontSize = Dimensions.TextSize.tiny,
+                          color = MessagingColors.metadataText)
+                    }
               }
-          Text(
-              text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
-              style = MaterialTheme.typography.labelSmall.copy(color = AppColors.textIconsFade),
-              modifier =
-                  Modifier.padding(top = 2.dp)
-                      .align(if (isMine) Alignment.End else Alignment.Start))
-        }
+            }
 
+        // Profile picture for sent messages (on the right)
         if (isMine) {
-          Spacer(Modifier.width(6.dp))
+          Spacer(Modifier.width(Dimensions.Spacing.medium))
           Box(
               modifier =
-                  Modifier.size(32.dp).background(color = AppColors.focus, shape = CircleShape))
+                  Modifier.size(Dimensions.AvatarSize.small)
+                      .clip(CircleShape)
+                      .background(AppColors.focus, CircleShape))
         }
       }
 }
@@ -542,15 +668,23 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
  */
 @Composable
 private fun DateSeparator(date: Date) {
-  Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-    Text(
-        text = formatDateBubble(date),
-        color = AppColors.textIconsFade,
-        modifier =
-            Modifier.background(AppColors.divider, shape = CircleShape)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.labelSmall)
-  }
+  Box(
+      modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Spacing.medium),
+      contentAlignment = Alignment.Center) {
+        Surface(
+            shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+            color = MessagingColors.whatsappLightGreen,
+            shadowElevation = Dimensions.Elevation.low) {
+              Text(
+                  text = formatDateBubble(date),
+                  color = MessagingColors.metadataText,
+                  fontSize = Dimensions.TextSize.small,
+                  fontWeight = FontWeight.Medium,
+                  modifier =
+                      Modifier.padding(horizontal = Dimensions.Spacing.large, vertical = 6.dp),
+                  style = MaterialTheme.typography.labelSmall)
+            }
+      }
 }
 
 /**
