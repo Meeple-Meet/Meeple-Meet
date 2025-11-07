@@ -4,27 +4,25 @@
 package com.github.meeplemeet.ui.discussions
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.TabRowDefaults.Divider
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -39,10 +37,10 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,6 +52,8 @@ import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.MessagingColors
 import com.google.firebase.Timestamp
 import java.time.Duration
 import java.time.LocalDateTime
@@ -103,10 +103,14 @@ fun DiscussionsOverviewScreen(
       floatingActionButton = {
         FloatingActionButton(
             onClick = onClickAddDiscussion,
-            contentColor = AppColors.textIcons,
-            containerColor = AppColors.neutral,
-            modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON)) {
-              Icon(Icons.Default.Add, contentDescription = "Create")
+            contentColor = MessagingColors.messagingSurface,
+            containerColor = MessagingColors.whatsappGreen,
+            modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON),
+            shape = CircleShape) {
+              Icon(
+                  Icons.Default.Add,
+                  contentDescription = "Create",
+                  modifier = Modifier.size(Dimensions.IconSize.large))
             }
       },
       topBar = {
@@ -114,7 +118,9 @@ fun DiscussionsOverviewScreen(
             title = {
               Text(
                   text = MeepleMeetScreen.DiscussionsOverview.title,
-                  style = MaterialTheme.typography.bodyMedium,
+                  style = MaterialTheme.typography.titleLarge,
+                  fontSize = Dimensions.TextSize.heading,
+                  fontWeight = FontWeight.SemiBold,
                   color = MaterialTheme.colorScheme.onPrimary,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
             })
@@ -133,9 +139,7 @@ fun DiscussionsOverviewScreen(
               modifier =
                   Modifier.fillMaxSize()
                       .background(MaterialTheme.colorScheme.background)
-                      .padding(innerPadding),
-              verticalArrangement = Arrangement.spacedBy(10.dp),
-              contentPadding = PaddingValues(vertical = 12.dp)) {
+                      .padding(innerPadding)) {
                 items(discussionPreviewsSorted, key = { it.uid }) { preview ->
                   val discussion by viewModel.discussionFlow(preview.uid).collectAsState()
                   val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
@@ -184,13 +188,24 @@ fun DiscussionsOverviewScreen(
 private fun EmptyDiscussionsListText() {
   Box(
       modifier =
-          Modifier.fillMaxSize().padding(24.dp).background(MaterialTheme.colorScheme.background),
+          Modifier.fillMaxSize().padding(32.dp).background(MaterialTheme.colorScheme.background),
       contentAlignment = Alignment.Center) {
-        Text(
-            text = NO_DISCUSSIONS_DEFAULT_TEXT,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimary,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+              Icon(
+                  imageVector = Icons.Default.ChatBubbleOutline,
+                  contentDescription = null,
+                  modifier = Modifier.size(64.dp),
+                  tint = MessagingColors.secondaryText.copy(alpha = 0.7f))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+              Text(
+                  text = NO_DISCUSSIONS_DEFAULT_TEXT,
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontSize = Dimensions.TextSize.title,
+                  color = MessagingColors.secondaryText,
+                  fontWeight = FontWeight.Normal)
+            }
       }
 }
 
@@ -213,94 +228,76 @@ private fun DiscussionCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-  val rightPaneWidth = 90.dp
+  Column(modifier = modifier) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clickable(onClick = onClick)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.large),
+        verticalAlignment = Alignment.CenterVertically) {
+          // Profile picture
+          Box(
+              modifier =
+                  Modifier.size(Dimensions.AvatarSize.extraLarge)
+                      .clip(CircleShape)
+                      .background(AppColors.neutral, CircleShape))
 
-  val pfpSize = 48.dp
-  val horizontalPadding = 16.dp
-  val spacingBetween = 12.dp
-  val dividerStart = horizontalPadding + pfpSize + spacingBetween
+          Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 
-  Column {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        shape = RectangleShape) {
-          Box(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            // LEFT + MIDDLE:
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(horizontal = horizontalPadding, vertical = spacingBetween)
-                        .padding(end = rightPaneWidth),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacingBetween)) {
-                  Box(modifier = Modifier.size(pfpSize)) {
-                    // Profile picture
-                    Box(Modifier.matchParentSize().background(AppColors.neutral, CircleShape))
+          // Text content
+          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = discussionName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontSize = Dimensions.TextSize.title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (unreadMsgCount > 0) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
 
-                    // Unread badge
-                    if (unreadMsgCount > 0) {
-                      Box(
-                          modifier =
-                              Modifier.align(Alignment.TopEnd) // ✅ Correct position
-                                  .offset(x = (2).dp, y = (-2).dp) // optional fine-tuning
-                                  .size(18.dp)
-                                  .background(AppColors.focus, CircleShape),
-                          contentAlignment = Alignment.Center) {
-                            Text(
-                                unreadMsgCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary)
-                          }
-                    }
-                  }
-
-                  DiscussionCardTextSection(discussionName, lastMsg, Modifier.weight(1f))
-                }
-
-            // Discussion time
-            RelativeTimestampText(
-                lastMsgDate,
-                modifier =
-                    Modifier.align(Alignment.TopEnd).padding(horizontal = 8.dp, vertical = 4.dp))
+            Text(
+                text = lastMsg,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = Dimensions.TextSize.body,
+                color = MessagingColors.secondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
           }
-        }
-    Spacer(modifier = Modifier.height(2.dp))
-    Divider(
-        modifier = Modifier.padding(start = dividerStart).fillMaxWidth().alpha(0.6f),
-        thickness = 1.dp,
-        color = AppColors.divider)
-  }
-}
 
-/**
- * Text section of a discussion card
- *
- * Displays the discussion title text and the last message text
- *
- * @param discussionName Discussion name
- * @param lastMsg Last message text
- * @param modifier Optional [Modifier] for this composable
- */
-@Composable
-private fun DiscussionCardTextSection(
-    discussionName: String,
-    lastMsg: String,
-    modifier: Modifier = Modifier
-) {
-  Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
-    Text(
-        text = discussionName,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1)
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(
-        text = lastMsg,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1)
+          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+          // Time and unread badge column
+          Column(
+              horizontalAlignment = Alignment.End,
+              verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                RelativeTimestampText(lastMsgDate, modifier = Modifier)
+
+                if (unreadMsgCount > 0) {
+                  Box(
+                      modifier =
+                          Modifier.size(Dimensions.CornerRadius.extraLarge)
+                              .clip(CircleShape)
+                              .background(MessagingColors.whatsappGreen),
+                      contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (unreadMsgCount > 9) "9+" else unreadMsgCount.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = Dimensions.TextSize.tiny,
+                            color = MessagingColors.messagingSurface,
+                            fontWeight = FontWeight.Bold)
+                      }
+                }
+              }
+        }
+
+    // Divider
+    Divider(
+        modifier = Modifier.padding(start = 84.dp),
+        color = MessagingColors.divider,
+        thickness = 1.0.dp)
   }
 }
 
@@ -333,7 +330,8 @@ fun RelativeTimestampText(timestamp: Timestamp, modifier: Modifier) {
 
   Text(
       text = relativeText,
-      color = AppColors.textIconsFade,
-      style = MaterialTheme.typography.bodySmall,
+      color = MessagingColors.secondaryText,
+      style = MaterialTheme.typography.labelSmall,
+      fontSize = Dimensions.TextSize.medium,
       modifier = modifier)
 }

@@ -6,14 +6,18 @@
 package com.github.meeplemeet.ui.posts
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,8 +35,8 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.Elevation
+import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.MessagingColors
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -77,17 +81,27 @@ fun PostsOverviewScreen(
         FloatingActionButton(
             onClick = onClickAddPost,
             modifier = Modifier.testTag(FeedsOverviewTestTags.ADD_POST_BUTTON),
-            containerColor = AppColors.neutral) {
-              Icon(Icons.Default.Add, contentDescription = "Create")
+            containerColor = MessagingColors.redditOrange,
+            contentColor = MessagingColors.messagingSurface,
+            shape = CircleShape) {
+              Icon(
+                  Icons.Default.Add,
+                  contentDescription = "Create",
+                  modifier = Modifier.size(Dimensions.IconSize.large))
             }
       },
       topBar = {
         CenterAlignedTopAppBar(
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface),
             title = {
               Text(
                   text = MeepleMeetScreen.PostsOverview.title,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onPrimary,
+                  style = MaterialTheme.typography.titleLarge,
+                  fontSize = Dimensions.TextSize.largeHeading,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
             })
       },
@@ -103,10 +117,9 @@ fun PostsOverviewScreen(
           LazyColumn(
               modifier =
                   Modifier.fillMaxSize()
-                      .background(MaterialTheme.colorScheme.background)
+                      .background(MessagingColors.messagingBackground)
                       .padding(innerPadding),
-              verticalArrangement = Arrangement.spacedBy(10.dp),
-              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+              verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 items(postsSorted, key = { it.id }) { post ->
                   val dateFormatted =
                       SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -141,33 +154,37 @@ fun PostsOverviewScreen(
 private fun EmptyFeedListText() {
   Box(
       modifier =
-          Modifier.fillMaxSize().padding(24.dp).background(MaterialTheme.colorScheme.background),
+          Modifier.fillMaxSize().padding(32.dp).background(MessagingColors.messagingBackground),
       contentAlignment = Alignment.Center) {
-        Text(
-            text = NO_POSTS_DEFAULT_TEXT,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimary)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+              Icon(
+                  imageVector = Icons.Default.Article,
+                  contentDescription = null,
+                  modifier = Modifier.size(Dimensions.IconSize.giant),
+                  tint = MessagingColors.secondaryText)
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+              Text(
+                  text = NO_POSTS_DEFAULT_TEXT,
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontSize = Dimensions.TextSize.title,
+                  color = MessagingColors.secondaryText)
+            }
       }
 }
 
 /* ==========  FEED CARD  ====================================================== */
 /**
- * Visual representation of a single post in the feed.
+ * Visual representation of a single post in the feed (Reddit-style).
  *
- * Layout (top → bottom):
- * 1. Row(author avatar + author name)
- * 2. Post title (bold, single line)
- * 3. Last message (single line, ellipsis)
- * 4. Row(comment counter + date)
- *
- * A coloured pill in the top-right corner shows the first tag (max 4 chars, ellipsis if longer).
- * The whole card is clickable.
+ * Layout: Horizontal card with icon on left, content in middle, compact metadata
  *
  * @param authorName Display name of the post creator.
  * @param postTitle Title of the post.
  * @param commentCount Total number of comments on the post.
  * @param date Post creation date formatted as dd/MM/yyyy.
- * @param firstTag First tag of the post (nullable). Shown in a pill.
+ * @param firstTag First tag of the post (nullable). Shown as a flair badge.
  * @param modifier Optional [Modifier].
  * @param onClick Callback invoked when the card is tapped.
  */
@@ -181,89 +198,123 @@ private fun FeedCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-  val shape = MaterialTheme.shapes.large
+  Column(modifier = modifier) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clickable(onClick = onClick)
+                .background(MessagingColors.messagingSurface)
+                .padding(
+                    horizontal = Dimensions.Spacing.large, vertical = Dimensions.Spacing.large),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
+          // Left icon/thumbnail
+          Box(
+              modifier =
+                  Modifier.size(Dimensions.AvatarSize.large)
+                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                      .background(MessagingColors.messagingBackground),
+              contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Article,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimensions.IconSize.large),
+                    tint = MessagingColors.secondaryText)
+              }
 
-  Card(
-      onClick = onClick,
-      modifier = modifier,
-      colors = CardDefaults.cardColors(containerColor = AppColors.secondary),
-      shape = shape,
-      elevation = CardDefaults.cardElevation(defaultElevation = Elevation.raised)) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-          Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 18.dp)) {
-            /* author row */
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                  Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(AppColors.focus))
-                  Text(
-                      text = authorName,
-                      style = MaterialTheme.typography.labelMedium,
-                      color = AppColors.textIconsFade)
-                }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            /* title */
-            Text(
-                text = postTitle,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = AppColors.textIcons,
-                maxLines = 1)
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            /* bottom row */
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically) {
+          // Content column
+          Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                // Tag/Flair badge
+                if (!firstTag.isNullOrBlank()) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = commentCount.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textIcons)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.ChatBubbleOutline,
-                        contentDescription = "comment icon",
-                        modifier = Modifier.size(16.dp),
-                        tint = AppColors.textIconsFade)
+                    Surface(
+                        shape = RoundedCornerShape(Dimensions.CornerRadius.small),
+                        color = MessagingColors.redditBlueBg,
+                        modifier = Modifier.height(Dimensions.IconSize.standard)) {
+                          Text(
+                              text = firstTag,
+                              style = MaterialTheme.typography.labelSmall,
+                              fontSize = Dimensions.TextSize.tiny,
+                              fontWeight = FontWeight.Bold,
+                              color = MessagingColors.redditBlue,
+                              modifier =
+                                  Modifier.padding(
+                                      horizontal = Dimensions.Spacing.small, vertical = 2.dp),
+                              maxLines = 1,
+                              overflow = TextOverflow.Ellipsis)
+                        }
                   }
-
-                  Spacer(modifier = Modifier.weight(1f))
-
-                  Text(
-                      text = date,
-                      style = MaterialTheme.typography.bodySmall,
-                      color = AppColors.textIconsFade)
                 }
-          }
 
-          /* tag pill */
-          if (!firstTag.isNullOrBlank()) {
-            Box(
-                modifier =
-                    Modifier.align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .widthIn(min = 48.dp, max = 110.dp)
-                        .height(24.dp)
-                        .clip(MaterialTheme.shapes.large)
-                        .background(AppColors.neutral)
-                        .border(
-                            width = 1.dp,
-                            color = AppColors.divider,
-                            shape = MaterialTheme.shapes.small)
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                contentAlignment = Alignment.Center) {
-                  Text(
-                      text = firstTag,
-                      style = MaterialTheme.typography.labelSmall,
-                      color = AppColors.textIcons,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = TextOverflow.Ellipsis)
-                }
-          }
+                // Title
+                Text(
+                    text = postTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = Dimensions.TextSize.subtitle,
+                    fontWeight = FontWeight.Medium,
+                    color = MessagingColors.primaryText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
+
+                // Metadata row (author, date, comments)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                      // Author
+                      Text(
+                          text = authorName,
+                          style = MaterialTheme.typography.bodySmall,
+                          fontSize = Dimensions.TextSize.small,
+                          color = MessagingColors.secondaryText,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis,
+                          modifier = Modifier.weight(1f, fill = false))
+
+                      Text(
+                          text = "•",
+                          fontSize = Dimensions.TextSize.small,
+                          color = MessagingColors.secondaryText)
+
+                      // Date
+                      Text(
+                          text = date,
+                          style = MaterialTheme.typography.bodySmall,
+                          fontSize = Dimensions.TextSize.small,
+                          color = MessagingColors.secondaryText)
+                    }
+
+                // Comments row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                      Icon(
+                          imageVector = Icons.Outlined.ChatBubbleOutline,
+                          contentDescription = "comments",
+                          modifier = Modifier.size(Dimensions.IconSize.small),
+                          tint = MessagingColors.secondaryText)
+                      Text(
+                          text = "$commentCount comments",
+                          style = MaterialTheme.typography.bodySmall,
+                          fontSize = Dimensions.TextSize.small,
+                          fontWeight = FontWeight.Medium,
+                          color = MessagingColors.secondaryText)
+                    }
+              }
+
+          // More options icon
+          IconButton(
+              onClick = { /* TODO: Show options */},
+              modifier = Modifier.size(Dimensions.IconSize.large)) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = "More options",
+                    tint = MessagingColors.secondaryText,
+                    modifier = Modifier.size(Dimensions.IconSize.standard))
+              }
         }
-      }
+
+    // Divider
+    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
+  }
 }
