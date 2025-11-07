@@ -76,7 +76,7 @@ class MapViewModelTest {
     assertTrue(initialState.geoPins.isEmpty())
     assertNull(initialState.errorMsg)
     assertNull(initialState.selectedMarkerPreview)
-    assertNull(initialState.selectedId)
+    assertNull(initialState.selectedGeoPin)
 
     // Start query (creates listeners but won't trigger without real Firestore)
     viewModel.startGeoQuery(testCenter, testRadiusKm)
@@ -130,7 +130,7 @@ class MapViewModelTest {
 
     val state = viewModel.uiState.value
     assertEquals(shopPreview, state.selectedMarkerPreview)
-    assertEquals("shop_1", state.selectedId)
+    assertEquals("shop_1", state.selectedGeoPin?.uid)
     assertNull(state.errorMsg)
 
     coVerify(exactly = 1) { mockMarkerPreviewRepo.getMarkerPreview(shopPin) }
@@ -151,7 +151,7 @@ class MapViewModelTest {
 
     var state = viewModel.uiState.value
     assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedId)
+    assertNull(state.selectedGeoPin)
     assertNotNull(state.errorMsg)
     assertTrue(state.errorMsg!!.contains("Failed to fetch preview"))
 
@@ -177,14 +177,14 @@ class MapViewModelTest {
 
     var state = viewModel.uiState.value
     assertNotNull(state.selectedMarkerPreview)
-    assertEquals("shop_1", state.selectedId)
+    assertEquals("shop_1", state.selectedGeoPin?.uid)
 
     // Then clear it
     viewModel.clearSelectedPin()
 
     state = viewModel.uiState.value
     assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedId)
+    assertNull(state.selectedGeoPin)
   }
 
   // ========================================================================
@@ -255,21 +255,21 @@ class MapViewModelTest {
     viewModel.selectPin(GeoPinWithLocation(shopPin, testGeoPoint))
     var state = viewModel.uiState.value
     assertTrue(state.selectedMarkerPreview is MarkerPreview.ShopMarkerPreview)
-    assertEquals("shop_1", state.selectedId)
+    assertEquals("shop_1", state.selectedGeoPin?.uid)
 
     // Clear and select space
     viewModel.clearSelectedPin()
     viewModel.selectPin(GeoPinWithLocation(spacePin, testGeoPoint))
     state = viewModel.uiState.value
     assertTrue(state.selectedMarkerPreview is MarkerPreview.SpaceMarkerPreview)
-    assertEquals("space_1", state.selectedId)
+    assertEquals("space_1", state.selectedGeoPin?.uid)
 
     // Clear and select session
     viewModel.clearSelectedPin()
     viewModel.selectPin(GeoPinWithLocation(sessionPin, testGeoPoint))
     state = viewModel.uiState.value
     assertTrue(state.selectedMarkerPreview is MarkerPreview.SessionMarkerPreview)
-    assertEquals("session_1", state.selectedId)
+    assertEquals("session_1", state.selectedGeoPin?.uid)
   }
 
   // ========================================================================

@@ -104,7 +104,8 @@ class MapScreenTest : FirestoreTests() {
             viewModel = mapViewModel,
             navigation = mockNavigation,
             account = account,
-            onFABCLick = { fabClickCount++ })
+            onFABCLick = { fabClickCount++ },
+            onRedirect = {})
       }
     }
   }
@@ -284,7 +285,7 @@ class MapScreenTest : FirestoreTests() {
 
       updatedState = mapViewModel.uiState.value
       assert(updatedState.selectedMarkerPreview == null) { "Preview should be cleared" }
-      assert(updatedState.selectedId == null) { "Selected ID should be cleared" }
+      assert(updatedState.selectedGeoPin?.uid == null) { "Selected ID should be cleared" }
     }
 
     // Clean up
