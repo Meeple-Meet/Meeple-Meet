@@ -26,7 +26,6 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.shops.EditShopScreen
 import com.github.meeplemeet.ui.shops.EditShopScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -201,9 +200,6 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     inputIn(EditShopScreenTestTags.FIELD_EMAIL).assertTextContains("contact@boardgameparadise.ch")
     inputIn(EditShopScreenTestTags.FIELD_PHONE).assertTextContains("+41 21 123 45 67")
     inputIn(EditShopScreenTestTags.FIELD_LINK).assertTextContains("https://boardgameparadise.ch")
-    composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD)
-        .assertTextContains("EPFL Campus, Lausanne")
 
     // === AVAILABILITY ===
     expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)

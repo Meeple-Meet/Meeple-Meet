@@ -229,7 +229,7 @@ class CreateShopScreenTest {
         val s = remember { mutableIntStateOf(0) }
         stage = s
         var query by remember { mutableStateOf("") }
-        val viewModel = remember { CreateShopViewModel() }
+        val viewModel = CreateShopViewModel()
         val locationUi by viewModel.locationUIState.collectAsState()
 
         when (s.intValue) {
@@ -447,7 +447,7 @@ class CreateShopScreenTest {
         val s = remember { mutableIntStateOf(0) }
         stage = s
         var query by remember { mutableStateOf("") }
-        val viewModel = remember { CreateShopViewModel() }
+        val viewModel = CreateShopViewModel()
         val locationUi by viewModel.locationUIState.collectAsState()
 
         when (s.intValue) {
