@@ -9,13 +9,9 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Edit
@@ -136,6 +133,9 @@ object ShopComponentsTestTags {
   const val QTY_LABEL = "shop_qty_label"
   const val QTY_VALUE = "shop_qty_value"
   const val QTY_SLIDER = "shop_qty_slider"
+  const val QTY_MINUS_BUTTON = "shop_qty_minus_button"
+  const val QTY_INPUT_FIELD = "shop_qty_input_field"
+  const val QTY_PLUS_BUTTON = "shop_qty_plus_button"
 
   // Game stock dialog
   const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
@@ -149,6 +149,9 @@ object ShopComponentsTestTags {
   // Game list
   const val SHOP_GAME_PREFIX = "SHOP_GAME_"
   const val SHOP_GAME_DELETE = "shop_game_delete"
+  const val SHOP_GAME_MINUS_BUTTON = "shop_game_minus_button"
+  const val SHOP_GAME_QTY_INPUT = "shop_game_qty_input"
+  const val SHOP_GAME_PLUS_BUTTON = "shop_game_plus_button"
 }
 
 /* =============================================================================
@@ -1033,41 +1036,60 @@ private fun GameSearchOneLine(
 }
 
 /**
- * A composable function that displays a quantity slider with a label and value.
+ * A composable function that displays a quantity input with +/- buttons and a label.
  *
  * @param value The current quantity value.
  * @param onValueChange A callback function that is invoked when the quantity value changes.
  * @param range The range of valid quantity values.
- * @param modifier The modifier to be applied to the quantity slider.
+ * @param modifier The modifier to be applied to the quantity input.
  */
 @Composable
-fun QuantitySlider(
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    range: IntRange,
-    modifier: Modifier = Modifier
-) {
+fun QuantitySlider(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier) {
   Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
+    Text(
+        ShopUiDefaults.StringsMagicNumbers.QUANTITY,
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
+
+    Spacer(Modifier.height(12.dp))
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(ShopUiDefaults.DimensionsMagicNumbers.space8),
-        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL_ROW)) {
-          Text(
-              ShopUiDefaults.StringsMagicNumbers.QUANTITY,
-              style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
-          Text(
-              value.toString(),
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_VALUE))
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()) {
+          IconButton(
+              onClick = {
+                val newValue = (value - 1)
+                onValueChange(newValue)
+              },
+              enabled = value > 0,
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_MINUS_BUTTON)) {
+                Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
+              }
+
+          OutlinedTextField(
+              value = value.toString(),
+              onValueChange = { newText ->
+                val newValue = newText.toIntOrNull() ?: 0
+                if (newValue > 0) {
+                  onValueChange(newValue)
+                }
+              },
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+              singleLine = true,
+              textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
+              modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.QTY_INPUT_FIELD))
+
+          IconButton(
+              onClick = {
+                val newValue = (value + 1)
+                onValueChange(newValue)
+              },
+              enabled = value > 0,
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_PLUS_BUTTON)) {
+                Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
+              }
         }
-    Slider(
-        value = value.toFloat(),
-        onValueChange = { onValueChange(it.toInt().coerceIn(range)) },
-        valueRange = range.first.toFloat()..range.last.toFloat(),
-        steps = (range.last - range.first - 1).coerceAtLeast(0),
-        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_SLIDER))
   }
 }
 
@@ -1155,7 +1177,6 @@ fun GameStockDialog(
           QuantitySlider(
               value = quantity,
               onValueChange = onQuantityChange,
-              range = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog,
               modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER))
         }
       },
@@ -1211,39 +1232,20 @@ fun GameListSection(
           textDecoration = TextDecoration.Underline)
     }
 
-    if (hasDeleteButton) {
-      LazyColumn(
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-          contentPadding = PaddingValues(bottom = 16.dp),
-          modifier = Modifier.heightIn(max = 600.dp)) {
-            items(items = games, key = { it.first.uid }) { (game, count) ->
-              GameItem(
-                  game = game,
-                  count = count,
-                  clickable = clickableGames,
-                  onClick = onClick,
-                  hasDeleteButton = true,
-                  onDelete = onDelete)
-            }
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
+        modifier = Modifier.heightIn(max = 600.dp)) {
+          items(items = games, key = { it.first.uid }) { (game, count) ->
+            GameItem(
+                game = game,
+                count = count,
+                clickable = clickableGames,
+                onClick = onClick,
+                hasDeleteButton = hasDeleteButton,
+                onDelete = onDelete)
           }
-    } else {
-      LazyVerticalGrid(
-          columns = GridCells.Fixed(2),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-          contentPadding = PaddingValues(bottom = 16.dp),
-          modifier = Modifier.heightIn(max = 600.dp)) {
-            items(items = games, key = { it.first.uid }) { (game, count) ->
-              GameItem(
-                  game = game,
-                  count = count,
-                  clickable = clickableGames,
-                  onClick = onClick,
-                  hasDeleteButton = false,
-                  onDelete = { /* no-op */})
-            }
-          }
-    }
+        }
   }
 }
 
@@ -1354,19 +1356,43 @@ fun EditableGameItem(
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
           Text(
               game.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) }) {
-              Text("-")
-            }
-            Text(count.toString(), modifier = Modifier.padding(horizontal = 12.dp))
-            OutlinedButton(onClick = { onQuantityChange(game, count + 1) }) { Text("+") }
-          }
+          Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(
+                    onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
+                    enabled = count > 0,
+                    modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
+                      Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
+                    }
+                OutlinedTextField(
+                    value = count.toString(),
+                    onValueChange = { newText ->
+                      val newValue = newText.toIntOrNull() ?: 0
+                      if (newValue >= 0) {
+                        onQuantityChange(game, newValue)
+                      }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    textStyle =
+                        MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
+                    modifier =
+                        Modifier.width(80.dp).testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
+                IconButton(
+                    onClick = { onQuantityChange(game, count + 1) },
+                    modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
+                      Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
+                    }
+              }
           IconButton(
               onClick = { onDelete(game) },
               colors =
                   IconButtonDefaults.iconButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error)) {
-                Icon(Icons.Filled.Close, contentDescription = null)
+                      contentColor = MaterialTheme.colorScheme.error),
+              modifier =
+                  Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete game")
               }
         }
       }

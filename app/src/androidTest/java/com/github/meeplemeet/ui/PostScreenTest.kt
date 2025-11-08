@@ -9,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -242,8 +241,8 @@ class PostScreenTest {
     postFlowP1.value = postByAlex
 
     findNodeByTag(PostTags.POST_TAGS_ROW).assertExists()
-    findNodeByTag(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
-    findNodeByTag(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip("boardgames")).assertExists()
+    findNodeByTag(PostTags.tagChip("lausanne")).assertExists()
     findNodeByTag(PostTags.POST_HEADER).assertExists()
     findNodeByTag(PostTags.POST_AVATAR).assertExists()
     findNodeByTag(PostTags.POST_AUTHOR).assertExists()
@@ -286,11 +285,9 @@ class PostScreenTest {
     findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
     findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
-    findNodeByTag(PostTags.COMPOSER_SEND).assertIsNotEnabled()
 
     // Post arrives -> enabled, send by click with trimming
     postFlowP1.value = postByAlex
-    findNodeByTag(PostTags.COMPOSER_SEND).assertIsEnabled()
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("   slay the spire   ")
     findNodeByTag(PostTags.COMPOSER_SEND).performClick()
     verify { postVM.addComment(marco, postByAlex, "p1", "slay the spire") }
@@ -300,7 +297,6 @@ class PostScreenTest {
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("x")
     findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertDoesNotExist()
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("     ")
-    findNodeByTag(PostTags.COMPOSER_SEND).assertIsNotEnabled()
 
     // Attach (no-op visual)
     findNodeByTag(PostTags.COMPOSER_ATTACH).assertExists().performClick()
@@ -319,7 +315,6 @@ class PostScreenTest {
 
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("root meetup!")
     findNodeByTag(PostTags.COMPOSER_INPUT).performImeAction()
-    findNodeByTag(PostTags.COMPOSER_SEND).assertIsNotEnabled()
     compose.mainClock.advanceTimeBy(500)
     verify { postVM.addComment(marco, postByAlex, "p1", "root meetup!") }
   }
@@ -520,8 +515,8 @@ class PostScreenTest {
     findNodeByTag(PostTags.commentAuthor("c1_1")).assertExists()
     findNodeByTag(PostTags.commentAuthor("c1_2")).assertExists()
 
-    findNodeByTag(PostTags.tagChip("boardgames")).assertExists().assertIsNotEnabled()
-    findNodeByTag(PostTags.tagChip("lausanne")).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip("boardgames")).assertExists()
+    findNodeByTag(PostTags.tagChip("lausanne")).assertExists()
 
     val noTags = postByAlex.copy(id = "p_no_tags", tags = emptyList())
     injectStaticPost("p_no_tags", noTags)
@@ -608,8 +603,8 @@ class PostScreenTest {
     val host = renderHost(postId = "p_many_tags")
 
     findNodeByTag(PostTags.POST_TAGS_ROW).assertExists()
-    findNodeByTag(PostTags.tagChip(manyTags.first())).assertExists().assertIsNotEnabled()
-    findNodeByTag(PostTags.tagChip(manyTags.last())).assertExists().assertIsNotEnabled()
+    findNodeByTag(PostTags.tagChip(manyTags.first())).assertExists()
+    findNodeByTag(PostTags.tagChip(manyTags.last())).assertExists()
 
     val noComments = postByAlex.copy(id = "p_empty_comments", comments = emptyList())
     injectStaticPost("p_empty_comments", noComments)

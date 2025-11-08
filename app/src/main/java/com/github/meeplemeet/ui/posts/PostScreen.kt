@@ -3,11 +3,13 @@
 // Copilot was used to generate docstrings
 package com.github.meeplemeet.ui.posts
 
+import android.R.attr.enabled
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -406,7 +408,7 @@ private fun ComposerBar(
                   }
 
               FloatingActionButton(
-                  onClick = onSend,
+                  onClick = { if (sendEnabled) onSend() },
                   modifier =
                       Modifier.size(Dimensions.ButtonSize.standard).testTag(PostTags.COMPOSER_SEND),
                   containerColor = MessagingColors.redditOrange,
@@ -559,7 +561,8 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
                               modifier = Modifier.size(Dimensions.IconSize.medium),
                               tint = MessagingColors.secondaryText)
                           Text(
-                              text = "${post.commentCount} comments",
+                              text =
+                                  "${post.commentCount} ${if (post.commentCount == 1) "comment" else "comments"}",
                               style = MaterialTheme.typography.bodySmall,
                               fontSize = Dimensions.TextSize.medium,
                               fontWeight = FontWeight.Medium,
@@ -863,7 +866,8 @@ private fun CommentItem(
   var replyText by rememberSaveable(comment.id) { mutableStateOf("") }
   val focusManager = LocalFocusManager.current
 
-  Column(modifier = Modifier.fillMaxWidth().testTag(PostTags.commentCard(comment.id))) {
+  val clickMod = if (onCardClick != null) Modifier.clickable(onClick = onCardClick) else Modifier
+  Column(modifier = clickMod.fillMaxWidth().testTag(PostTags.commentCard(comment.id))) {
     // Comment header
     Row(
         modifier = Modifier.fillMaxWidth(),

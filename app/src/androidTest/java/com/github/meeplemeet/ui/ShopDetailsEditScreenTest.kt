@@ -365,13 +365,19 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Click + on the first game's row
     composeTestRule
-        .onNode(hasText("+") and hasAnyAncestor(hasTestTag(catanCardTag)), useUnmergedTree = true)
+        .onNode(
+            hasTestTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON) and
+                hasAnyAncestor(hasTestTag(catanCardTag)),
+            useUnmergedTree = true)
         .assertExists()
         .performClick()
 
     // Click - on the second game's row
     composeTestRule
-        .onNode(hasText("-") and hasAnyAncestor(hasTestTag(ttrCardTag)), useUnmergedTree = true)
+        .onNode(
+            hasTestTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON) and
+                hasAnyAncestor(hasTestTag(ttrCardTag)),
+            useUnmergedTree = true)
         .assertExists()
         .performClick()
 

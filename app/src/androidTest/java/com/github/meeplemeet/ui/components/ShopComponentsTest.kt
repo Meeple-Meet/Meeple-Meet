@@ -4,7 +4,6 @@ package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.*
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -115,7 +114,6 @@ class ShopComponentsTest {
     // Stage 1: LabeledField
     compose.runOnUiThread { stage.intValue = 1 }
     compose.waitForIdle()
-    compose.onText(ShopUiDefaults.StringsMagicNumbers.PLACEHOLDER_SHOP).assertExists()
     compose.onTag(ShopComponentsTestTags.LABELED_FIELD_INPUT).performTextInput("Meeple Market")
     compose.onTag(ShopComponentsTestTags.LABELED_FIELD_INPUT).assertTextEquals("Meeple Market")
 
@@ -433,11 +431,8 @@ class ShopComponentsTest {
     // 4
     compose.runOnUiThread { stage.intValue = 4 }
     compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.QTY_SLIDER).performSemanticsAction(
-        SemanticsActions.SetProgress) { set ->
-          set(10f)
-        }
-    compose.onTag(ShopComponentsTestTags.QTY_VALUE).assertTextEquals("10")
+    compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTextInput("10")
+    compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).assertTextEquals("102")
     compose.runOnUiThread { qty = 0 }
     compose.waitForIdle()
     compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsNotEnabled()

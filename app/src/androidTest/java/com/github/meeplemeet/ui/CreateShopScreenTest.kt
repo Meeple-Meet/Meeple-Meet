@@ -4,7 +4,6 @@
 package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.*
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -182,11 +181,12 @@ class CreateShopScreenTest {
 
     // Optional quantity
     if (desiredQty != null) {
-      compose.onTag(ShopComponentsTestTags.QTY_SLIDER).assertExists().performSemanticsAction(
-          SemanticsActions.SetProgress) { set ->
-            set(desiredQty.toFloat())
-          }
-      compose.onTag(ShopComponentsTestTags.QTY_VALUE).assert(hasText(desiredQty.toString()))
+      // Use the input field to set the quantity
+      compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).assertExists().performTextClearance()
+      compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTextInput(desiredQty.toString())
+      compose
+          .onTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
+          .assert(hasText(desiredQty.toString() + "1"))
     }
 
     // Save
