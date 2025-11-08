@@ -115,10 +115,7 @@ fun PostsOverviewScreen(
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) { EmptyFeedListText() }
         } else {
           LazyColumn(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .background(MessagingColors.messagingBackground)
-                      .padding(innerPadding),
+              modifier = Modifier.fillMaxSize().padding(innerPadding),
               verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 items(postsSorted, key = { it.id }) { post ->
                   val dateFormatted =
@@ -152,26 +149,23 @@ fun PostsOverviewScreen(
 /** Displays a centred label when the feed contains no posts. */
 @Composable
 private fun EmptyFeedListText() {
-  Box(
-      modifier =
-          Modifier.fillMaxSize().padding(32.dp).background(MessagingColors.messagingBackground),
-      contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-              Icon(
-                  imageVector = Icons.Default.Article,
-                  contentDescription = null,
-                  modifier = Modifier.size(Dimensions.IconSize.giant),
-                  tint = MessagingColors.secondaryText)
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-              Text(
-                  text = NO_POSTS_DEFAULT_TEXT,
-                  style = MaterialTheme.typography.bodyLarge,
-                  fontSize = Dimensions.TextSize.title,
-                  color = MessagingColors.secondaryText)
-            }
-      }
+  Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+          Icon(
+              imageVector = Icons.Default.Article,
+              contentDescription = null,
+              modifier = Modifier.size(Dimensions.IconSize.giant),
+              tint = MessagingColors.secondaryText)
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+          Text(
+              text = NO_POSTS_DEFAULT_TEXT,
+              style = MaterialTheme.typography.bodyLarge,
+              fontSize = Dimensions.TextSize.title,
+              color = MessagingColors.secondaryText)
+        }
+  }
 }
 
 /* ==========  FEED CARD  ====================================================== */
