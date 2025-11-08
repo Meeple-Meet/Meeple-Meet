@@ -41,6 +41,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
@@ -52,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +69,7 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
+import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.components.CountBubble
@@ -73,7 +77,6 @@ import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
 import com.github.meeplemeet.ui.components.GameSearchField
 import com.github.meeplemeet.ui.components.IconTextField
-import com.github.meeplemeet.ui.components.LocationSearchField
 import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.UnderlinedLabel
@@ -86,6 +89,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Calendar
+import kotlinx.coroutines.launch
 
 /* =======================================================================
  * Test tags for UI tests
@@ -160,6 +164,11 @@ fun SessionDetailsScreen(
 ) {
   var form by remember { mutableStateOf(initial) }
   val gameUIState by sessionViewModel.gameUIState.collectAsState()
+  val locationUi by sessionViewModel.locationUIState.collectAsState()
+
+  val snackbar = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+  val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   // Fetch game as soon as we know the proposed game.
   // This LaunchedEffect triggers whenever the session's gameId changes,
@@ -223,6 +232,9 @@ fun SessionDetailsScreen(
             },
         )
       },
+      snackbarHost = {
+        SnackbarHost(snackbar, modifier = Modifier.testTag(SessionCreationTestTags.SNACKBAR_HOST))
+      },
       bottomBar = {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
@@ -276,7 +288,9 @@ fun SessionDetailsScreen(
                   discussion = discussion,
                   account = account,
                   gameUIState = gameUIState,
+                  locationUi = locationUi,
                   onValueChangeTitle = { form = form.copy(title = it) },
+                  showError = showError,
                   isCurrUserAdmin = isCurrUserAdmin,
                   sessionViewModel = sessionViewModel)
 
@@ -576,17 +590,13 @@ fun OrganizationSection(
     onValueChangeTitle: (String) -> Unit,
     isCurrUserAdmin: Boolean,
     gameUIState: GameUIState,
+    locationUi: LocationUIState,
     discussion: Discussion,
     form: SessionForm,
     onFormChange: (SessionForm) -> Unit,
+    showError: (String) -> Unit,
     editable: Boolean = false
 ) {
-  val mockResults =
-      listOf(
-          Location(46.5197, 6.6323, "Student Lounge"),
-          Location(46.5191, 6.5668, "Rolex Learning Center"),
-          Location(46.5221, 6.5674, "Satellite Café"))
-
   SectionCard(
       modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary).fillMaxWidth()) {
         Title(
@@ -626,14 +636,13 @@ fun OrganizationSection(
 
         if (editable) {
           // Admins and creators: interactive search field
-          LocationSearchField(
-              query = form.locationText,
-              onQueryChange = { newQuery -> onFormChange(form.copy(locationText = newQuery)) },
-              results = mockResults,
-              onPick = { picked -> onFormChange(form.copy(locationText = picked.name)) },
-              isLoading = false,
-              modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD),
-              placeholder = "Search locations…")
+          LocationSearchBar(
+              viewModel = sessionViewModel,
+              locationUi = locationUi,
+              currentUser = account,
+              discussion = discussion,
+              onError = showError,
+              onPick = {})
         } else {
           // Members: plain read-only text field
           IconTextField(

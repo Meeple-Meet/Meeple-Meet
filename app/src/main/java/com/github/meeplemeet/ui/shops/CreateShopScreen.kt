@@ -14,21 +14,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.ui.AvailabilitySection
-import com.github.meeplemeet.ui.CollapsibleSection
-import com.github.meeplemeet.ui.GameStockPicker
-import com.github.meeplemeet.ui.OpeningHoursEditor
-import com.github.meeplemeet.ui.RequiredInfoSection
-import com.github.meeplemeet.ui.ShopFormTestTags
-import com.github.meeplemeet.ui.ShopFormUi
 import com.github.meeplemeet.ui.components.ActionBar
+import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.GameListSection
-import com.github.meeplemeet.ui.emptyWeek
-import com.github.meeplemeet.ui.isValidEmail
+import com.github.meeplemeet.ui.components.GameStockPicker
+import com.github.meeplemeet.ui.components.OpeningHoursEditor
+import com.github.meeplemeet.ui.components.RequiredInfoSection
+import com.github.meeplemeet.ui.components.ShopFormTestTags
+import com.github.meeplemeet.ui.components.ShopFormUi
+import com.github.meeplemeet.ui.components.emptyWeek
+import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import kotlinx.coroutines.launch
 
@@ -138,6 +139,7 @@ fun CreateShopScreen(
     viewModel: CreateShopViewModel
 ) {
   val ui by viewModel.gameUIState.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
   AddShopContent(
       onBack = onBack,
@@ -161,11 +163,14 @@ fun CreateShopScreen(
           throw e
         }
       },
+      locationUi = locationUi,
       gameQuery = ui.gameQuery,
       gameSuggestions = ui.gameSuggestions,
       isSearching = ui.isSearching,
       onSetGameQuery = viewModel::setGameQuery,
-      onSetGame = viewModel::setGame)
+      onSetGame = viewModel::setGame,
+      viewModel = viewModel,
+      owner = owner)
 }
 
 /* ================================================================================================
@@ -199,15 +204,19 @@ fun AddShopContent(
             address: Location,
             week: List<OpeningHours>,
             stock: List<Pair<Game, Int>>) -> String,
+    locationUi: LocationUIState,
     gameQuery: String,
     gameSuggestions: List<Game>,
     isSearching: Boolean,
     onSetGameQuery: (String) -> Unit,
     onSetGame: (Game) -> Unit,
-    initialStock: List<Pair<Game, Int>> = emptyList()
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    viewModel: CreateShopViewModel,
+    owner: Account
 ) {
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  val showError: (String) -> Unit = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
 
   var shopName by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
@@ -222,7 +231,7 @@ fun AddShopContent(
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var showGameDialog by remember { mutableStateOf(false) }
-  var qty by rememberSaveable { mutableStateOf(1) }
+  var qty by rememberSaveable { mutableIntStateOf(1) }
   var picked by remember { mutableStateOf<Game?>(null) }
   var stock by remember { mutableStateOf(initialStock) }
 
@@ -236,6 +245,13 @@ fun AddShopContent(
               hasOpeningHours
         }
       }
+
+  // Sync addressText with locationUi.locationQuery when typing
+  LaunchedEffect(locationUi.locationQuery) {
+    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
+      addressText = locationUi.locationQuery
+    }
+  }
 
   fun onDiscard() {
     shopName = ""
@@ -321,7 +337,11 @@ fun AddShopContent(
                           onPickLocation = { loc ->
                             addressText = loc.name
                             selectedLocation = loc
-                          })
+                          },
+                          locationUi = locationUi,
+                          showError = showError,
+                          viewModel = viewModel,
+                          owner = owner)
                     },
                     testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
               }

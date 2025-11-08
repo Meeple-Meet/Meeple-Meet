@@ -83,7 +83,7 @@ fun ShopDetailsScreen(
       topBar = {
         TopBarWithDivider(
             text = shopState?.name ?: "Shop",
-            onReturn = { onBack },
+            onReturn = { onBack() },
             trailingIcons = {
               // Show edit button only if current account is the shop owner
               if (account == (shopState?.owner ?: false)) {

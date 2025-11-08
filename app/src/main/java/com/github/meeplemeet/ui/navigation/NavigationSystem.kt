@@ -7,10 +7,12 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -36,6 +38,7 @@ object NavigationTestTags {
   const val DISCUSSIONS_TAB = "DiscussionsTab"
   const val DISCOVER_TAB = "DiscoverTab"
   const val PROFILE_TAB = "ProfileTab"
+  const val MAP_TAB = "MapTab"
 }
 
 /**
@@ -123,6 +126,7 @@ enum class MeepleMeetScreen(
       Icons.Outlined.Language,
       Icons.Default.Language,
       NavigationTestTags.DISCOVER_TAB),
+  Map("Map", true, Icons.Outlined.Map, Icons.Default.Map, NavigationTestTags.MAP_TAB),
   Profile(
       "Profile",
       true,

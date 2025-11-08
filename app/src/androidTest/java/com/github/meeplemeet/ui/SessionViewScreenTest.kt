@@ -15,6 +15,7 @@ import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
+import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.ui.sessions.OrganizationSection
@@ -138,7 +139,7 @@ class SessionDetailsScreenTest {
     composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertExists()
     composeTestRule.onNodeWithTag(SessionTestTags.DATE_FIELD).assertExists()
     composeTestRule.onNodeWithTag(SessionTestTags.TIME_FIELD).assertExists()
-    composeTestRule.onAllNodesWithTag(SessionTestTags.LOCATION_FIELD).assertCountEquals(2)
+    composeTestRule.onAllNodesWithTag(SessionTestTags.LOCATION_FIELD).assertCountEquals(1)
     composeTestRule.onAllNodesWithTag(SessionTestTags.LOCATION_FIELD)[0].assertIsDisplayed()
     composeTestRule.onNodeWithTag(SessionTestTags.QUIT_BUTTON).assertExists()
     composeTestRule.onNodeWithTag(SessionTestTags.DELETE_SESSION_BUTTON).assertExists()
@@ -233,7 +234,9 @@ class SessionDetailsScreenTest {
           account = admin,
           gameUIState = gameUIState,
           isCurrUserAdmin = true,
-          onValueChangeTitle = {})
+          onValueChangeTitle = {},
+          locationUi = LocationUIState(),
+          showError = {})
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.TIME_PICK_BUTTON).performClick()

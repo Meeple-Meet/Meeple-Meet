@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.shops.AddShopContent
@@ -80,12 +81,19 @@ class CreateShopScreenTest {
       address: String = "123 Meeple St"
   ) {
     ensureSectionExpanded(CreateShopScreenTestTags.SECTION_REQUIRED)
-    inputIn(CreateShopScreenTestTags.FIELD_SHOP).assertExists().performTextInput(name)
-    inputIn(CreateShopScreenTestTags.FIELD_EMAIL).assertExists().performTextInput(email)
+    inputIn(CreateShopScreenTestTags.FIELD_SHOP).assertExists().performTextClearance()
+    inputIn(CreateShopScreenTestTags.FIELD_SHOP).performTextInput(name)
+    inputIn(CreateShopScreenTestTags.FIELD_EMAIL).assertExists().performTextClearance()
+    inputIn(CreateShopScreenTestTags.FIELD_EMAIL).performTextInput(email)
     compose
         .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
         .assertExists()
         .performClick()
+    compose
+        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
+        .performTextClearance()
+    compose
+        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
         .performTextInput(address)
   }
 
@@ -221,6 +229,8 @@ class CreateShopScreenTest {
         val s = remember { mutableIntStateOf(0) }
         stage = s
         var query by remember { mutableStateOf("") }
+        val viewModel = CreateShopViewModel()
+        val locationUi by viewModel.locationUIState.collectAsState()
 
         when (s.intValue) {
           // 0: Structure
@@ -234,7 +244,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 1: Validation gating (disabled -> enabled after fields + hours)
           1 ->
@@ -247,7 +260,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 2: Create success
           2 ->
@@ -264,7 +280,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 3: Create error -> snackbar
           3 ->
@@ -277,7 +296,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 4: Optional fields don't gate
           4 ->
@@ -290,7 +312,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 5: Discard clears and calls onBack
           5 ->
@@ -303,7 +328,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
         }
       }
     }
@@ -419,6 +447,8 @@ class CreateShopScreenTest {
         val s = remember { mutableIntStateOf(0) }
         stage = s
         var query by remember { mutableStateOf("") }
+        val viewModel = CreateShopViewModel()
+        val locationUi by viewModel.locationUIState.collectAsState()
 
         when (s.intValue) {
           // 0: Add one via dialog (starts empty)
@@ -432,7 +462,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 1: Scroll inner grid with many items
           1 ->
@@ -445,7 +478,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = many)
+                  initialStock = many,
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 2: Delete removes and shows empty
           2 ->
@@ -458,7 +494,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = listOf(g1 to 2, g2 to 1))
+                  initialStock = listOf(g1 to 2, g2 to 1),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 3: Delete updates stock payload on create
           3 ->
@@ -474,7 +513,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = listOf(g1 to 2, g2 to 1))
+                  initialStock = listOf(g1 to 2, g2 to 1),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 4: Dialog hides already-added + save disabled until pick
           4 ->
@@ -487,7 +529,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
 
           // 5: Delete then re-add
           5 ->
@@ -500,7 +545,10 @@ class CreateShopScreenTest {
                   isSearching = false,
                   onSetGameQuery = { q -> query = q },
                   onSetGame = {},
-                  initialStock = emptyList())
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
+                  locationUi = locationUi)
         }
       }
     }

@@ -32,6 +32,8 @@ import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.map.MarkerPreviewRepository
+import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -44,7 +46,7 @@ import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
-import com.github.meeplemeet.ui.EditShopScreen
+import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
 import com.github.meeplemeet.ui.auth.ProfileScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
@@ -62,6 +64,7 @@ import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreen
+import com.github.meeplemeet.ui.shops.EditShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Firebase
@@ -113,6 +116,7 @@ object RepositoryProvider {
     NominatimLocationRepository(HttpClientProvider.client)
   }
   val geoPins: StorableGeoPinRepository by lazy { StorableGeoPinRepository() }
+  val markerPreviews: MarkerPreviewRepository by lazy { MarkerPreviewRepository() }
 
   /** Lazily initialized repository for post operations. */
   val posts: PostRepository by lazy { PostRepository() }
@@ -352,6 +356,29 @@ fun MeepleMeetApp(
           onBack = { navigationActions.goBack() })
     }
 
+    composable(MeepleMeetScreen.Map.name) {
+      MapScreen(
+          navigation = navigationActions,
+          account = account!!,
+          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) },
+          onRedirect = { geoPin ->
+            when (geoPin.type) {
+              PinType.SHOP -> {
+                shopId = geoPin.uid
+                navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
+              }
+              PinType.SPACE -> {
+                // spaceId = geoPin.uid
+                // navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
+              }
+              PinType.SESSION -> {
+                discussionId = geoPin.uid
+                navigationActions.navigateTo(MeepleMeetScreen.Session)
+              }
+            }
+          })
+    }
+
     composable(MeepleMeetScreen.Profile.name) {
       account?.let {
         ProfileScreen(
@@ -381,10 +408,7 @@ fun MeepleMeetApp(
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { createdShopId ->
-            shopId = createdShopId
-            navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
-          },
+          onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) },
           viewModel = createShopVM)
     }
     composable(MeepleMeetScreen.EditShop.name) {

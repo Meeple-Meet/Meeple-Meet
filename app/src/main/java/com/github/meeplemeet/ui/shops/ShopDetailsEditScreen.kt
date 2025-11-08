@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui
+package com.github.meeplemeet.ui.shops
 // Github copilot was used for this file
 
 import androidx.compose.foundation.layout.*
@@ -14,14 +14,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.ui.components.ActionBar
+import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.EditableGameItem
+import com.github.meeplemeet.ui.components.GameStockPicker
+import com.github.meeplemeet.ui.components.OpeningHoursEditor
+import com.github.meeplemeet.ui.components.RequiredInfoSection
+import com.github.meeplemeet.ui.components.ShopFormTestTags
+import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
+import com.github.meeplemeet.ui.components.emptyWeek
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -110,6 +119,7 @@ fun EditShopScreen(
 ) {
   val ui by viewModel.gameUIState.collectAsState()
   val shop by viewModel.shop.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
   EditShopContent(
       shop = shop,
@@ -135,11 +145,14 @@ fun EditShopScreen(
           EditShopUi.Strings.ERROR_SAVE
         }
       },
+      locationUi = locationUi,
       gameQuery = ui.gameQuery,
       gameSuggestions = ui.gameSuggestions,
       isSearching = ui.isSearching,
       onSetGameQuery = viewModel::setGameQuery,
-      onSetGame = viewModel::setGame)
+      onSetGame = viewModel::setGame,
+      viewModel = viewModel,
+      owner = owner)
 }
 
 /* ================================================================================================
@@ -177,15 +190,19 @@ fun EditShopContent(
             address: Location,
             week: List<OpeningHours>,
             stock: List<Pair<Game, Int>>) -> String?,
+    locationUi: LocationUIState,
     gameQuery: String,
     gameSuggestions: List<Game>,
     isSearching: Boolean,
     onSetGameQuery: (String) -> Unit,
     onSetGame: (Game) -> Unit,
-    initialStock: List<Pair<Game, Int>> = emptyList()
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    viewModel: EditShopViewModel,
+    owner: Account
 ) {
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  val showError: (String) -> Unit = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
 
   // Initialize state with loaded shop data or default values
   var shopName by rememberSaveable(shop) { mutableStateOf(shop?.name ?: "") }
@@ -212,6 +229,13 @@ fun EditShopContent(
           shopName.isNotBlank() && email.isNotBlank() && addressText.isNotBlank() && hasOpeningHours
         }
       }
+
+  // Sync addressText with locationUi.locationQuery when typing
+  LaunchedEffect(locationUi.locationQuery) {
+    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
+      addressText = locationUi.locationQuery
+    }
+  }
 
   fun onDiscard() {
     onBack()
@@ -279,7 +303,11 @@ fun EditShopContent(
                           onPickLocation = { loc ->
                             addressText = loc.name
                             selectedLocation = loc
-                          })
+                          },
+                          locationUi = locationUi,
+                          showError = showError,
+                          viewModel = viewModel,
+                          owner = owner)
                     },
                     testTag = EditShopScreenTestTags.SECTION_REQUIRED)
               }

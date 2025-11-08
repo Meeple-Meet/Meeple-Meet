@@ -11,7 +11,6 @@ import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.EditShopViewModel
-import com.github.meeplemeet.model.shops.MapViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.SHOP_COLLECTION_PATH
 import com.github.meeplemeet.model.shops.ShopRepository
@@ -36,7 +35,6 @@ class FirestoreShopTests : FirestoreTests() {
   private lateinit var createShopViewModel: CreateShopViewModel
   private lateinit var shopViewModel: ShopViewModel
   private lateinit var editShopViewModel: EditShopViewModel
-  private lateinit var mapViewModel: MapViewModel
 
   private lateinit var testAccount1: Account
   private lateinit var testAccount2: Account
@@ -54,7 +52,6 @@ class FirestoreShopTests : FirestoreTests() {
     createShopViewModel = CreateShopViewModel(shopRepository)
     shopViewModel = ShopViewModel(shopRepository)
     editShopViewModel = EditShopViewModel(shopRepository)
-    mapViewModel = MapViewModel(shopRepository)
 
     runBlocking {
       // Create test accounts
@@ -1311,218 +1308,5 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals(testLocation1, updated.address)
     assertEquals(testOpeningHours.size, updated.openingHours.size)
     assertEquals(1, updated.gameCollection.size)
-  }
-
-  // ========================================================================
-  // MapViewModel Tests
-  // ========================================================================
-
-  @Test
-  fun mapViewModelInitialStateIsNull() {
-    assertNull(mapViewModel.shops.value)
-  }
-
-  @Test
-  fun mapViewModelRetrievesShopsSuccessfully() = runBlocking {
-    // Create multiple shops
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "Map Shop 1",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    shopRepository.createShop(
-        owner = testAccount2,
-        name = "Map Shop 2",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "Map Shop 3",
-        address = testLocation1,
-        openingHours = testOpeningHours,
-        gameCollection = listOf(testGame1 to 10))
-
-    // Retrieve shops through MapViewModel
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    // Verify StateFlow was updated
-    val shops = mapViewModel.shops.value
-    assertNotNull(shops)
-    assertTrue(shops!!.size >= 3)
-    assertTrue(shops.any { it.name == "Map Shop 1" })
-    assertTrue(shops.any { it.name == "Map Shop 2" })
-    assertTrue(shops.any { it.name == "Map Shop 3" })
-  }
-
-  @Test
-  fun mapViewModelRespectsCountParameter() = runBlocking {
-    // Create 5 shops
-    for (i in 1..5) {
-      shopRepository.createShop(
-          owner = testAccount1,
-          name = "Count Test Shop $i",
-          address = testLocation1,
-          openingHours = testOpeningHours)
-    }
-
-    // Request only 2 shops
-    mapViewModel.getShops(2u)
-    kotlinx.coroutines.delay(1000)
-
-    val shops = mapViewModel.shops.value
-    assertNotNull(shops)
-    assertEquals(2, shops!!.size)
-  }
-
-  @Test
-  fun mapViewModelReturnsEmptyListWhenNoShopsExist() = runBlocking {
-    // No shops created, StateFlow should be empty list
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val shops = mapViewModel.shops.value
-    assertNotNull(shops)
-    assertTrue(shops!!.isEmpty())
-  }
-
-  @Test
-  fun mapViewModelUpdatesStateFlowOnMultipleCalls() = runBlocking {
-    // Create initial shop
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "Initial Shop",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    // First call
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val firstShops = mapViewModel.shops.value
-    assertNotNull(firstShops)
-    assertTrue(firstShops!!.isNotEmpty())
-
-    // Create more shops
-    shopRepository.createShop(
-        owner = testAccount2,
-        name = "Second Shop",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "Third Shop",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    // Second call
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val secondShops = mapViewModel.shops.value
-    assertNotNull(secondShops)
-    assertTrue(secondShops!!.size >= 3)
-    assertTrue(secondShops.any { it.name == "Initial Shop" })
-    assertTrue(secondShops.any { it.name == "Second Shop" })
-    assertTrue(secondShops.any { it.name == "Third Shop" })
-  }
-
-  @Test
-  fun mapViewModelLoadsShopsWithCompleteData() = runBlocking {
-    // Create a shop with all fields populated
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "Complete Data Shop",
-        phone = "+41 21 555 1234",
-        email = "map@shop.com",
-        website = "https://mapshop.com",
-        address = testLocation1,
-        openingHours = testOpeningHours,
-        gameCollection = listOf(testGame1 to 5, testGame2 to 3))
-
-    // Retrieve through MapViewModel
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val shops = mapViewModel.shops.value
-    assertNotNull(shops)
-
-    val shop = shops!!.find { it.name == "Complete Data Shop" }
-    assertNotNull(shop)
-    assertEquals("Complete Data Shop", shop!!.name)
-    assertEquals("+41 21 555 1234", shop.phone)
-    assertEquals("map@shop.com", shop.email)
-    assertEquals("https://mapshop.com", shop.website)
-    assertEquals(testLocation1, shop.address)
-    assertEquals(testAccount1.uid, shop.owner.uid)
-    assertEquals(testOpeningHours.size, shop.openingHours.size)
-    assertEquals(2, shop.gameCollection.size)
-  }
-
-  @Test
-  fun mapViewModelLoadsShopsWithDifferentOwners() = runBlocking {
-    // Create shops with different owners
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "Alice's Map Shop",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    shopRepository.createShop(
-        owner = testAccount2,
-        name = "Bob's Map Shop",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    // Retrieve through MapViewModel
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val shops = mapViewModel.shops.value
-    assertNotNull(shops)
-
-    val aliceShop = shops!!.find { it.name == "Alice's Map Shop" }
-    val bobShop = shops.find { it.name == "Bob's Map Shop" }
-
-    assertNotNull(aliceShop)
-    assertNotNull(bobShop)
-    assertEquals(testAccount1.uid, aliceShop!!.owner.uid)
-    assertEquals("Alice", aliceShop.owner.name)
-    assertEquals(testAccount2.uid, bobShop!!.owner.uid)
-    assertEquals("Bob", bobShop.owner.name)
-  }
-
-  @Test
-  fun mapViewModelLoadsShopsWithDifferentLocations() = runBlocking {
-    // Create shops at different locations
-    shopRepository.createShop(
-        owner = testAccount1,
-        name = "EPFL Shop",
-        address = testLocation1,
-        openingHours = testOpeningHours)
-
-    shopRepository.createShop(
-        owner = testAccount2,
-        name = "Geneva Shop",
-        address = testLocation2,
-        openingHours = testOpeningHours)
-
-    // Retrieve through MapViewModel
-    mapViewModel.getShops(10u)
-    kotlinx.coroutines.delay(1000)
-
-    val shops = mapViewModel.shops.value
-    assertNotNull(shops)
-
-    val epflShop = shops!!.find { it.name == "EPFL Shop" }
-    val genevaShop = shops.find { it.name == "Geneva Shop" }
-
-    assertNotNull(epflShop)
-    assertNotNull(genevaShop)
-    assertEquals(testLocation1, epflShop!!.address)
-    assertEquals(testLocation2, genevaShop!!.address)
   }
 }

@@ -1,0 +1,250 @@
+// Docs generated with Claude Code.
+
+package com.github.meeplemeet.model.map
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.FirebaseProvider.db
+import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.shared.location.Location
+import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import org.imperiumlabs.geofirestore.GeoFirestore
+import org.imperiumlabs.geofirestore.GeoQuery
+import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
+
+data class MapUIState(
+    val geoPins: List<GeoPinWithLocation> = emptyList(),
+    val errorMsg: String? = null,
+    val selectedMarkerPreview: MarkerPreview? = null,
+    val selectedGeoPin: StorableGeoPin? = null
+)
+
+data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
+
+/**
+ * ViewModel responsible for managing and observing geographically indexed map data (geo-pins).
+ *
+ * This class connects the UI layer (e.g., a map composable) to Firestore through [GeoFirestore],
+ * enabling real-time spatial queries based on a geographic center and radius.
+ *
+ * The ViewModel maintains a [MapUIState] representing the current visible markers, selection state,
+ * and potential errors, all exposed as a [StateFlow].
+ *
+ * The lifecycle of the geographic query is controlled by [startGeoQuery] and [stopGeoQuery].
+ *
+ * ### Usage Notes
+ * - [startGeoQuery] should typically be called **once** when the screen or map component is
+ *   launched.
+ * - After initialization, the query is kept up to date automatically by [GeoFirestore].
+ * - To change the query parameters (center or radius), simply call [updateQueryCenter],
+ *   [updateRadius], or [updateCenterAndRadius]; there is **no need** to restart the query.
+ */
+class MapViewModel(
+    private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews
+) : ViewModel() {
+  private val _uiState = MutableStateFlow(MapUIState())
+  /** Public observable state of the map, containing geo-pins, errors, and selection info. */
+  val uiState: StateFlow<MapUIState> = _uiState.asStateFlow()
+
+  private val geoPinCollection = db.collection(GEO_PIN_COLLECTION_PATH)
+  private var geoQuery: GeoQuery? = null
+
+  /**
+   * Starts a new geographic Firestore query centered around the given [center] and within the given
+   * [radiusKm]. This method automatically listens for live updates from Firestore: whenever a
+   * geo-pin is added, moved, or removed within the queried area, the [uiState] is updated
+   * accordingly.
+   *
+   * The previous query (if any) is automatically stopped before starting a new one.
+   *
+   * @param center The geographic center of the query (latitude and longitude).
+   * @param radiusKm The query radius, in kilometers.
+   * @param includeTypes The set of [PinType] to include (e.g., shops, spaces). Any pin with a type
+   *   not in this set is ignored.
+   */
+  fun startGeoQuery(
+      center: Location,
+      radiusKm: Double,
+      includeTypes: Set<PinType> = setOf(PinType.SHOP, PinType.SPACE)
+  ) {
+    // Always reset previous query before creating a new one.
+    stopGeoQuery()
+
+    val geoFirestore = GeoFirestore(geoPinCollection)
+    val query = geoFirestore.queryAtLocation(GeoPoint(center.latitude, center.longitude), radiusKm)
+
+    // --- Core GeoQuery listener handling all Firestore-driven updates in real-time ---
+    val listener =
+        object : GeoQueryEventListener {
+
+          /**
+           * Called when a new document enters the queried radius. Fetches the full Firestore
+           * document, converts it into a [GeoPinWithLocation], and adds it to [uiState].
+           *
+           * @param documentID The Firestore document ID.
+           * @param location The geographic coordinates of the pin.
+           */
+          override fun onKeyEntered(documentID: String, location: GeoPoint) {
+            viewModelScope.launch {
+              try {
+                val doc = geoPinCollection.document(documentID).get().await()
+                val noUid = doc.toObject(StorableGeoPinNoUid::class.java) ?: return@launch
+                if (noUid.type !in includeTypes) return@launch
+
+                val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
+
+                _uiState.update { it.copy(geoPins = it.geoPins + pin) }
+              } catch (t: Throwable) {
+                _uiState.update {
+                  it.copy(
+                      errorMsg =
+                          "Failed to read geo pin $documentID: ${t.message ?: "unknown error"}")
+                }
+              }
+            }
+          }
+
+          /**
+           * Called when a document already within the query radius changes location. Updates the
+           * corresponding [GeoPinWithLocation] in [uiState].
+           *
+           * @param documentID The Firestore document ID.
+           * @param location The new geographic position of the pin.
+           */
+          override fun onKeyMoved(documentID: String, location: GeoPoint) {
+            _uiState.update { state ->
+              val updatedPins =
+                  state.geoPins.map { pinWithLocation ->
+                    if (pinWithLocation.geoPin.uid == documentID)
+                        pinWithLocation.copy(location = location)
+                    else pinWithLocation
+                  }
+              state.copy(geoPins = updatedPins)
+            }
+          }
+
+          /**
+           * Called when a document leaves the query radius (e.g., moved or deleted). Removes the
+           * pin from [uiState].
+           *
+           * @param documentID The Firestore document ID.
+           */
+          override fun onKeyExited(documentID: String) {
+            _uiState.update { it ->
+              it.copy(geoPins = it.geoPins.filterNot { it.geoPin.uid == documentID })
+            }
+          }
+
+          /**
+           * Called once all initial documents in range have been loaded. Can be used to signal that
+           * the query is ready to display results.
+           */
+          override fun onGeoQueryReady() {}
+
+          /**
+           * Called when an error occurs while listening to Firestore geo updates. Updates
+           * [uiState.errorMsg] with the error message.
+           *
+           * @param exception The exception describing the failure.
+           */
+          override fun onGeoQueryError(exception: Exception) {
+            _uiState.update {
+              it.copy(errorMsg = "GeoQuery error: ${exception.message ?: "unknown error"}")
+            }
+          }
+        }
+
+    query.addGeoQueryEventListener(listener)
+    geoQuery = query
+  }
+
+  /**
+   * Stops any active geo query and clears the map state. This function is automatically called when
+   * the ViewModel is cleared.
+   */
+  fun stopGeoQuery() {
+    try {
+      geoQuery?.removeAllListeners()
+    } catch (_: Throwable) {} finally {
+      geoQuery = null
+    }
+
+    _uiState.update { MapUIState() }
+  }
+
+  /**
+   * Updates the geographic center of the currently active query. Has no effect if no query is
+   * running.
+   *
+   * @param newCenter The new query center.
+   */
+  fun updateQueryCenter(newCenter: Location) {
+    geoQuery?.setCenter(GeoPoint(newCenter.latitude, newCenter.longitude))
+  }
+
+  /**
+   * Updates the radius (in kilometers) of the current query dynamically. Has no effect if no query
+   * is running.
+   *
+   * @param newRadiusKm The new radius in kilometers.
+   */
+  fun updateRadius(newRadiusKm: Double) {
+    geoQuery?.setRadius(newRadiusKm)
+  }
+
+  /**
+   * Updates both the center and radius of the geo query in a single operation.
+   *
+   * @param center The new query center.
+   * @param radiusKm The new radius in kilometers.
+   */
+  fun updateCenterAndRadius(center: Location, radiusKm: Double) {
+    geoQuery?.setLocation(GeoPoint(center.latitude, center.longitude), radiusKm)
+  }
+
+  /**
+   * Selects a specific geo-pin and fetches its corresponding [MarkerPreview] for display in the UI.
+   * If fetching fails, updates [uiState.errorMsg].
+   *
+   * @param pin The selected geo-pin.
+   */
+  fun selectPin(pin: GeoPinWithLocation) {
+    viewModelScope.launch {
+      try {
+        val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
+        _uiState.update {
+          it.copy(selectedMarkerPreview = preview, selectedGeoPin = pin.geoPin, errorMsg = null)
+        }
+      } catch (t: Throwable) {
+        _uiState.update {
+          it.copy(
+              selectedMarkerPreview = null,
+              selectedGeoPin = null,
+              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}")
+        }
+      }
+    }
+  }
+
+  /** Clears the current selection (both marker preview and geo-pin). */
+  fun clearSelectedPin() {
+    _uiState.update { it.copy(selectedMarkerPreview = null, selectedGeoPin = null) }
+  }
+
+  /** Clears the current error message from [uiState]. */
+  fun clearErrorMsg() {
+    _uiState.update { it.copy(errorMsg = null) }
+  }
+
+  /** Called automatically when the ViewModel is cleared; stops the geo query listener. */
+  override fun onCleared() {
+    stopGeoQuery()
+    super.onCleared()
+  }
+}

@@ -31,13 +31,14 @@ import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
 import java.time.*
 import java.util.Date
-import kotlin.random.Random
 import kotlinx.coroutines.launch
 
 /* =======================================================================
@@ -91,24 +92,6 @@ const val TITLE_PLACEHOLDER: String = "Title"
 const val PARTICIPANT_SECTION_NAME: String = "Participants"
 const val ORGANISATION_SECTION_NAME: String = "Organisation"
 const val GAME_SEARCH_PLACEHOLDER: String = "Search games…"
-
-/** TODO: change this to a truly location searcher later when coded */
-/**
- * Returns a list of mock location suggestions based on a query string.
- *
- * @param query The input string to base the suggestions on.
- * @param max The maximum number of location suggestions to return.
- * @return A list of [Location] objects with randomized coordinates.
- */
-private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
-  if (query.isBlank()) return emptyList()
-  val rng = Random(query.hashCode())
-  return List(max) { i ->
-    val lat = rng.nextDouble(-90.0, 90.0)
-    val lon = rng.nextDouble(-180.0, 180.0)
-    Location(latitude = lat, longitude = lon, name = "$query #${i + 1}")
-  }
-}
 
 /**
  * Converts a [LocalDate] and [LocalTime] to a Firebase [Timestamp].
@@ -358,30 +341,64 @@ fun GameSearchBar(
 
 @Composable
 fun LocationSearchBar(
-    sessionViewModel: SessionViewModel,
+    viewModel: SessionViewModel,
     locationUi: LocationUIState,
     currentUser: Account,
-    discussion: Discussion?,
+    discussion: Discussion,
+    onError: (String) -> Unit = {},
+    onPick: ((Location) -> Unit)? = null
+) {
+  LocationSearchBar(
+      setLocationQuery = { viewModel.setLocationQuery(currentUser, discussion, it) },
+      setLocation = { viewModel.setLocation(currentUser, discussion, it) },
+      locationUi = locationUi,
+      onError = onError,
+      onPick = onPick)
+}
+
+@Composable
+fun LocationSearchBar(
+    viewModel: ShopSearchViewModel,
+    locationUi: LocationUIState,
+    currentUser: Account,
+    shop: Shop?,
+    onError: (String) -> Unit = {},
+    onPick: ((Location) -> Unit)? = null
+) {
+  LocationSearchBar(
+      setLocationQuery = { q ->
+        shop?.let { viewModel.setLocationQuery(shop, currentUser, q) }
+            ?: viewModel.setLocationQuery(q)
+      },
+      setLocation = { loc ->
+        shop?.let { viewModel.setLocation(shop, currentUser, loc) } ?: viewModel.setLocation(loc)
+      },
+      locationUi = locationUi,
+      onError = onError,
+      onPick = onPick)
+}
+
+@Composable
+private fun LocationSearchBar(
+    setLocationQuery: (String) -> Unit,
+    setLocation: (Location) -> Unit,
+    locationUi: LocationUIState,
     onError: (String) -> Unit = {},
     onPick: ((Location) -> Unit)? = null
 ) {
   LocationSearchField(
       query = locationUi.locationQuery,
       onQueryChange = { q ->
-        discussion?.let { disc ->
-          runCatching { sessionViewModel.setLocationQuery(currentUser, disc, q) }
-              .onFailure { e -> onError(e.message ?: "Location search failed") }
-        }
+        runCatching { setLocationQuery(q) }
+            .onFailure { e -> onError(e.message ?: "Location search failed") }
       },
       results = locationUi.locationSuggestions,
       onPick = { loc ->
-        discussion?.let { disc ->
-          runCatching {
-                sessionViewModel.setLocation(currentUser, disc, loc)
-                onPick?.invoke(loc)
-              }
-              .onFailure { e -> onError(e.message ?: "Failed to select location") }
-        }
+        runCatching {
+              setLocation(loc)
+              onPick?.invoke(loc)
+            }
+            .onFailure { e -> onError(e.message ?: "Failed to select location") }
       },
       isLoading = false,
       placeholder = "Search locations…",
@@ -546,7 +563,7 @@ fun OrganisationSection(
 
         // Location search field with suggestions
         LocationSearchBar(
-            sessionViewModel = sessionViewModel,
+            viewModel = sessionViewModel,
             locationUi = locationUi,
             currentUser = account,
             discussion = discussion,
