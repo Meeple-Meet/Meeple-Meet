@@ -21,7 +21,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Games
 import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -262,12 +264,12 @@ fun DiscussionScreen(
                               Icon(
                                   Icons.Default.AttachFile,
                                   contentDescription = "Attach",
-                                  tint = MessagingColors.metadataText,
+                                  tint = MessagingColors.primaryText,
                                   modifier = Modifier.size(Dimensions.IconSize.standard))
                             }
 
                         if (showAttachmentMenu) {
-                          val popupOffset = IntOffset(x = -30, y = -170)
+                          val popupOffset = IntOffset(x = -30, y = -200)
                           Popup(
                               onDismissRequest = { showAttachmentMenu = false },
                               offset = popupOffset,
@@ -276,14 +278,15 @@ fun DiscussionScreen(
                                     shape = RoundedCornerShape(Dimensions.CornerRadius.large),
                                     color = MessagingColors.messageBubbleOther,
                                     shadowElevation = Dimensions.Elevation.high,
-                                    modifier = Modifier.widthIn(min = 40.dp, max = 150.dp)) {
+                                    modifier = Modifier.widthIn(max = 60.dp)) {
                                       Column {
                                         DropdownMenuItem(
                                             text = {
-                                              Text(
-                                                  "Create poll",
-                                                  fontSize = Dimensions.TextSize.body,
-                                                  color = MessagingColors.primaryText)
+                                              Icon(
+                                                  Icons.Default.Poll,
+                                                  contentDescription = null,
+                                                  tint = MessagingColors.primaryText,
+                                                  modifier = Modifier.size(60.dp))
                                             },
                                             onClick = {
                                               showAttachmentMenu = false
@@ -704,27 +707,49 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
       onDismissRequest = onDismiss,
       confirmButton = {
         TextButton(
-            modifier = Modifier.testTag(DiscussionTestTags.CREATE_POLL_CONFIRM),
+            modifier =
+                Modifier.testTag(DiscussionTestTags.CREATE_POLL_CONFIRM)
+                    .defaultMinSize(minWidth = 130.dp)
+                    .padding(
+                        horizontal = Dimensions.Spacing.medium,
+                        vertical = Dimensions.Spacing.small),
             onClick = { onCreate(question, options.filter { it.isNotBlank() }, allowMultiple) },
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
             enabled = question.isNotBlank() && options.count { it.isNotBlank() } >= 2) {
-              Text("Create")
+              Text(
+                  "Create",
+                  color = AppColors.textIcons,
+                  style = MaterialTheme.typography.labelLarge)
             }
       },
       dismissButton = {
         TextButton(
             onClick = onDismiss,
+            modifier =
+                Modifier.defaultMinSize(minWidth = 130.dp)
+                    .padding(
+                        horizontal = Dimensions.Spacing.medium,
+                        vertical = Dimensions.Spacing.small),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.negative)) {
-              Text("Cancel")
+              Text(
+                  "Cancel",
+                  color = AppColors.textIcons,
+                  style = MaterialTheme.typography.labelLarge)
             }
       },
-      title = { Text("Create Poll", color = AppColors.textIcons) },
+      title = {
+        Text(
+            "Create Poll",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.textIcons)
+      },
       text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
           OutlinedTextField(
               value = question,
               onValueChange = { question = it },
-              label = { Text("Question") },
+              label = { Text("Poll Question") },
               singleLine = true,
               colors =
                   TextFieldDefaults.colors()
@@ -739,59 +764,88 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
                           focusedContainerColor = Color.Transparent),
               modifier = Modifier.fillMaxWidth().testTag(DiscussionTestTags.QUESTION_FIELD))
 
-          Text("Options", fontWeight = FontWeight.Bold)
+          Spacer(Modifier.height(Dimensions.Spacing.small))
+
+          Text(
+              "Options",
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.SemiBold,
+              color = AppColors.textIcons)
+
           options.forEachIndexed { index, option ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              OutlinedTextField(
-                  value = option,
-                  colors =
-                      TextFieldDefaults.colors()
-                          .copy(
-                              focusedTextColor = AppColors.textIcons,
-                              unfocusedTextColor = AppColors.textIcons,
-                              unfocusedIndicatorColor = AppColors.textIcons,
-                              focusedIndicatorColor = AppColors.textIcons,
-                              unfocusedLabelColor = AppColors.textIconsFade,
-                              focusedLabelColor = AppColors.textIconsFade,
-                              unfocusedContainerColor = Color.Transparent,
-                              focusedContainerColor = Color.Transparent),
-                  onValueChange = { new ->
-                    options = options.toMutableList().apply { this[index] = new }
-                  },
-                  label = { Text("Option ${index + 1}") },
-                  singleLine = true,
-                  modifier = Modifier.weight(1f).testTag(DiscussionTestTags.OPTION_TEXT_FIELD))
-              Spacer(Modifier.width(8.dp))
-              if (options.size > 2) {
-                IconButton(
-                    onClick = { options = options.toMutableList().apply { removeAt(index) } },
-                    modifier = Modifier.testTag(DiscussionTestTags.REMOVE_OPTION_BUTTON)) {
-                      Icon(Icons.Default.Remove, contentDescription = "Remove")
-                    }
-              }
-              if (index == options.lastIndex && options.size < 7) {
-                IconButton(
-                    onClick = { options = options + "" },
-                    modifier = Modifier.testTag(DiscussionTestTags.ADD_OPTION_BUTTON)) {
-                      Icon(Icons.Default.Add, contentDescription = "Add")
-                    }
-              }
-            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                  OutlinedTextField(
+                      value = option,
+                      colors =
+                          TextFieldDefaults.colors()
+                              .copy(
+                                  focusedTextColor = AppColors.textIcons,
+                                  unfocusedTextColor = AppColors.textIcons,
+                                  unfocusedIndicatorColor = AppColors.textIcons,
+                                  focusedIndicatorColor = AppColors.textIcons,
+                                  unfocusedLabelColor = AppColors.textIconsFade,
+                                  focusedLabelColor = AppColors.textIconsFade,
+                                  unfocusedContainerColor = Color.Transparent,
+                                  focusedContainerColor = Color.Transparent),
+                      onValueChange = { new ->
+                        options = options.toMutableList().apply { this[index] = new }
+                      },
+                      label = { Text("Option ${index + 1}") },
+                      singleLine = true,
+                      modifier = Modifier.weight(1f).testTag(DiscussionTestTags.OPTION_TEXT_FIELD))
+
+                  if (options.size > 2) {
+                    IconButton(
+                        onClick = { options = options.toMutableList().apply { removeAt(index) } },
+                        modifier = Modifier.testTag(DiscussionTestTags.REMOVE_OPTION_BUTTON)) {
+                          Icon(
+                              Icons.Default.Remove,
+                              contentDescription = "Remove",
+                              tint = AppColors.textIcons)
+                        }
+                  }
+                  if (index == options.lastIndex && options.size < 7) {
+                    IconButton(
+                        onClick = { options = options + "" },
+                        modifier = Modifier.testTag(DiscussionTestTags.ADD_OPTION_BUTTON)) {
+                          Icon(
+                              Icons.Default.Add,
+                              contentDescription = "Add",
+                              tint = AppColors.textIcons)
+                        }
+                  }
+                }
           }
 
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = allowMultiple,
-                onCheckedChange = { allowMultiple = it },
-                colors =
-                    CheckboxDefaults.colors(
-                        checkedColor = AppColors.affirmative, uncheckedColor = Color.Unspecified),
-                modifier = Modifier.testTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX))
-            Text("Allow multiple votes")
-          }
+          Spacer(Modifier.height(Dimensions.Spacing.small))
+
+          // Clickable row for checkbox
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                      .clickable { allowMultiple = !allowMultiple }
+                      .padding(vertical = Dimensions.Spacing.small),
+              verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = allowMultiple,
+                    onCheckedChange = null, // Let the row handle the click
+                    colors =
+                        CheckboxDefaults.colors(
+                            checkedColor = AppColors.affirmative,
+                            uncheckedColor = AppColors.textIconsFade),
+                    modifier = Modifier.testTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX))
+                Spacer(Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    "Allow multiple votes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textIcons)
+              }
         }
       },
-      shape = RoundedCornerShape(16.dp),
+      shape = RoundedCornerShape(Dimensions.CornerRadius.large),
       modifier = Modifier.testTag(DiscussionTestTags.DIALOG_ROOT))
 }
 
