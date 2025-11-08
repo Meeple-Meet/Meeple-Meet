@@ -14,10 +14,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -296,32 +294,41 @@ private fun MarkerPreviewSheet(
                   modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_OPENING_HOURS))
             }
           }
-          is MarkerPreview.SessionMarkerPreview -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                  text = "Playing: ${preview.game}",
-                  modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                  text = preview.address,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(text = preview.date, modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
-            }
+          //          is MarkerPreview.SessionMarkerPreview -> {
+          //            Row(verticalAlignment = Alignment.CenterVertically) {
+          //              Icon(imageVector = Icons.Default.SportsEsports, contentDescription =
+          // "Game")
+          //              Spacer(modifier = Modifier.width(4.dp))
+          //              Text(
+          //                  text = "Playing: ${preview.game}",
+          //                  modifier =
+          // Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
+          //            }
+          //
+          //            Spacer(modifier = Modifier.height(4.dp))
+          //
+          //            Row(verticalAlignment = Alignment.CenterVertically) {
+          //              Icon(imageVector = Icons.Default.LocationOn, contentDescription =
+          // "Location")
+          //              Spacer(modifier = Modifier.width(4.dp))
+          //              Text(
+          //                  text = preview.address,
+          //                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+          //            }
+          //
+          //            Spacer(modifier = Modifier.height(4.dp))
+          //
+          //            Row(verticalAlignment = Alignment.CenterVertically) {
+          //              Icon(imageVector = Icons.Default.CalendarToday, contentDescription =
+          // "Date")
+          //              Spacer(modifier = Modifier.width(4.dp))
+          //              Text(text = preview.date, modifier =
+          // Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
+          //            }
+          //          }
+          else -> {
+            // Placeholder while session preview are unavailable
+            Text(text = "Preview unavailable")
           }
         }
 
