@@ -68,6 +68,14 @@ import kotlinx.coroutines.launch
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
   const val ADD_FAB = "addFab"
+  const val MARKER_PREVIEW_SHEET = "markerPreviewSheet"
+  const val PREVIEW_TITLE = "previewTitle"
+  const val PREVIEW_ADDRESS = "previewAddress"
+  const val PREVIEW_OPENING_HOURS = "previewOpeningHours"
+  const val PREVIEW_GAME = "previewGame"
+  const val PREVIEW_DATE = "previewDate"
+  const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
+  const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
 
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 }
@@ -237,76 +245,94 @@ private fun MarkerPreviewSheet(
     geoPin: StorableGeoPin,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
-  Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-      Text(
-          text = preview.name,
-          style = MaterialTheme.typography.titleLarge,
-          modifier = Modifier.align(Alignment.CenterStart))
-
-      IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd)) {
-        Icon(imageVector = Icons.Default.Close, contentDescription = "Close preview")
-      }
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    when (preview) {
-      is MarkerPreview.ShopMarkerPreview,
-      is MarkerPreview.SpaceMarkerPreview -> {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(text = preview.address)
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
-          Spacer(modifier = Modifier.width(8.dp))
-          val isOpen =
-              when (preview) {
-                is MarkerPreview.ShopMarkerPreview -> preview.open
-                is MarkerPreview.SpaceMarkerPreview -> preview.open
-                else -> false
-              }
+  Column(
+      modifier =
+          Modifier.fillMaxWidth().padding(16.dp).testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
+        Box(modifier = Modifier.fillMaxWidth()) {
           Text(
-              text = if (isOpen) "Open" else "Closed",
-              color =
-                  if (isOpen) MaterialTheme.colorScheme.primary
-                  else MaterialTheme.colorScheme.error)
+              text = preview.name,
+              style = MaterialTheme.typography.titleLarge,
+              modifier =
+                  Modifier.align(Alignment.CenterStart).testTag(MapScreenTestTags.PREVIEW_TITLE))
+
+          IconButton(
+              onClick = onClose,
+              modifier =
+                  Modifier.align(Alignment.TopEnd)
+                      .testTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON)) {
+                Icon(imageVector = Icons.Default.Close, contentDescription = "Close preview")
+              }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when (preview) {
+          is MarkerPreview.ShopMarkerPreview,
+          is MarkerPreview.SpaceMarkerPreview -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                  text = preview.address,
+                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
+              Spacer(modifier = Modifier.width(8.dp))
+              val isOpen =
+                  when (preview) {
+                    is MarkerPreview.ShopMarkerPreview -> preview.open
+                    is MarkerPreview.SpaceMarkerPreview -> preview.open
+                    else -> false
+                  }
+              Text(
+                  text = if (isOpen) "Open" else "Closed",
+                  color =
+                      if (isOpen) MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.error,
+                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_OPENING_HOURS))
+            }
+          }
+          is MarkerPreview.SessionMarkerPreview -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                  text = "Playing: ${preview.game}",
+                  modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                  text = preview.address,
+                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(text = preview.date, modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
+            }
+          }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = { onRedirect(geoPin) },
+            modifier =
+                Modifier.align(Alignment.End)
+                    .testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
+              Text(text = "View details")
+            }
       }
-      is MarkerPreview.SessionMarkerPreview -> {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(text = "Playing: ${preview.game}", modifier = Modifier.alignByBaseline())
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(text = preview.address)
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(text = preview.date)
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    Button(onClick = { onRedirect(geoPin) }, modifier = Modifier.align(Alignment.End)) {
-      Text(text = "View details")
-    }
-  }
 }

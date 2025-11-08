@@ -2,6 +2,7 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -20,11 +21,12 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import io.mockk.mockk
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,9 +35,12 @@ import org.junit.Test
  *
  * Tests cover: map display, bottom sheet previews, FAB visibility, error handling, navigation, and
  * user interactions with real ViewModels and repositories.
+ *
+ * Note: Tests avoid GoogleMap-specific interactions due to CameraUpdateFactory initialization
+ * issues in test environment. Focus is on ViewModel logic, UI state, and component visibility.
  */
-@Ignore("Compose do not work well with Google maps API")
-class MapScreenTest : FirestoreTests() {
+// @Ignore("Compose do not work well with Google maps API")
+class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   @get:Rule val compose = createComposeRule()
 
@@ -58,6 +63,16 @@ class MapScreenTest : FirestoreTests() {
 
   @Before
   fun setup() {
+    // Initialize Google Maps SDK for tests
+    try {
+      MapsInitializer.initialize(
+          androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext,
+          MapsInitializer.Renderer.LATEST,
+          this)
+    } catch (_: Exception) {
+      // Maps initialization may fail in test environment, that's OK
+    }
+
     shopRepository = ShopRepository()
     discussionRepository = DiscussionRepository()
     spaceRenterRepository = SpaceRenterRepository()
@@ -82,19 +97,29 @@ class MapScreenTest : FirestoreTests() {
       regularAccount =
           discussionRepository.createAccount(
               "regular_user", "Regular User", "regular@test.com", photoUrl = null)
+
       shopOwnerAccount =
           discussionRepository.createAccount(
               "shop_owner", "Shop Owner", "shop@test.com", photoUrl = null)
       discussionRepository.setAccountRole(
           shopOwnerAccount.uid, isShopOwner = true, isSpaceRenter = false)
+      shopOwnerAccount = discussionRepository.getAccount(shopOwnerAccount.uid)
+      assert(shopOwnerAccount.shopOwner) { "Shop owner role not set correctly" }
+
       spaceRenterAccount =
           discussionRepository.createAccount(
               "space_renter", "Space Renter", "space@test.com", photoUrl = null)
       discussionRepository.setAccountRole(
           spaceRenterAccount.uid, isShopOwner = false, isSpaceRenter = true)
+      spaceRenterAccount = discussionRepository.getAccount(spaceRenterAccount.uid)
+      assert(spaceRenterAccount.spaceRenter) { "Space renter role not set correctly" }
     }
 
     fabClickCount = 0
+  }
+
+  override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {
+    // Maps SDK initialized callback
   }
 
   private fun setContent(account: Account = regularAccount) {
@@ -188,7 +213,7 @@ class MapScreenTest : FirestoreTests() {
   }
 
   // ========================================================================
-  // Test 5: Bottom Sheet - Shop Preview with Real Data
+  // Test 5: Bottom Sheet - Shop Preview
   // ========================================================================
 
   @Test
@@ -208,19 +233,35 @@ class MapScreenTest : FirestoreTests() {
     mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
     delay(2000) // Wait for Firestore listeners to trigger
 
-    // The shop pin should appear in geoPins
-    // Note: This depends on GeoFirestore working correctly
     val state = mapViewModel.uiState.value
-    // In real tests with emulator, pins would appear
-    // For now, we verify the screen doesn't crash
-    assert(state.geoPins.isNotEmpty() || state.geoPins.isEmpty()) { "State should exist" }
+    assert(state.geoPins.isNotEmpty()) { "Expected at least one pin" }
+
+    val pin = state.geoPins.first()
+    mapViewModel.selectPin(pin)
+    delay(1000)
+
+    val updatedState = mapViewModel.uiState.value
+    assert(updatedState.selectedMarkerPreview != null) { "Preview should be loaded" }
+
+    compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(shop.name)
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS).assertTextContains(shop.address.name)
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
+
+    mapViewModel.clearSelectedPin()
+    delay(500)
+
+    val clearedState = mapViewModel.uiState.value
+    assert(clearedState.selectedMarkerPreview == null) { "Preview should be cleared" }
+    assert(clearedState.selectedGeoPin == null) { "GeoPin selection should be cleared" }
 
     // Clean up
     shopRepository.deleteShop(shop.id)
   }
 
   // ========================================================================
-  // Test 6: Bottom Sheet - Space Preview with Real Data
+  // Test 6: Bottom Sheet - Space Preview
   // ========================================================================
 
   @Test
@@ -241,59 +282,38 @@ class MapScreenTest : FirestoreTests() {
     mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
     delay(2000)
 
+    val state = mapViewModel.uiState.value
+    assert(state.geoPins.isNotEmpty()) { "Expected at least one pin" }
+
+    val pin = state.geoPins.first()
+    mapViewModel.selectPin(pin)
+    delay(1000)
+
+    val updatedState = mapViewModel.uiState.value
+    assert(updatedState.selectedMarkerPreview != null) { "Preview should be loaded" }
+
+    compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(spaceRenter.name)
+    compose
+        .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
+        .assertTextContains(spaceRenter.address.name)
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
+    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
+
+    mapViewModel.clearSelectedPin()
+    delay(500)
+
+    val clearedState = mapViewModel.uiState.value
+    assert(clearedState.selectedMarkerPreview == null) { "Preview should be cleared" }
+    assert(clearedState.selectedGeoPin == null) { "GeoPin selection should be cleared" }
+
     // Clean up
     spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
   }
 
   // ========================================================================
-  // Test 7: Select and Clear Pin Workflow
-  // ========================================================================
-
-  @Test
-  fun selectAndClearPin_updatesUIStateCorrectly() = runBlocking {
-    val shop =
-        shopRepository.createShop(
-            owner = shopOwnerAccount,
-            name = "Pin Test Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    setContent()
-    compose.waitForIdle()
-
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
-    delay(2000)
-
-    val state = mapViewModel.uiState.value
-
-    // If we have pins, test selection
-    if (state.geoPins.isNotEmpty()) {
-      val firstPin = state.geoPins.first()
-
-      // Select pin
-      mapViewModel.selectPin(firstPin)
-      delay(500)
-
-      var updatedState = mapViewModel.uiState.value
-      assert(updatedState.selectedMarkerPreview != null || updatedState.errorMsg != null) {
-        "Selection should update state"
-      }
-
-      // Clear selection
-      mapViewModel.clearSelectedPin()
-      delay(100)
-
-      updatedState = mapViewModel.uiState.value
-      assert(updatedState.selectedMarkerPreview == null) { "Preview should be cleared" }
-      assert(updatedState.selectedGeoPin?.uid == null) { "Selected ID should be cleared" }
-    }
-
-    // Clean up
-    shopRepository.deleteShop(shop.id)
-  }
-
-  // ========================================================================
-  // Test 8: Error Handling - Error Message Display
+  // Test 7: Error Handling - Error Message Display
   // ========================================================================
 
   @Test
@@ -313,7 +333,7 @@ class MapScreenTest : FirestoreTests() {
   }
 
   // ========================================================================
-  // Test 9: Update Query Parameters During Session
+  // Test 8: Update Query Parameters During Session
   // ========================================================================
 
   @Test
@@ -343,7 +363,7 @@ class MapScreenTest : FirestoreTests() {
   }
 
   // ========================================================================
-  // Test 10: Complete User Flow - Start, Navigate, Stop
+  // Test 9: Complete User Flow - Start, Navigate, Stop
   // ========================================================================
 
   @Test
@@ -390,9 +410,9 @@ class MapScreenTest : FirestoreTests() {
       // If bottom sheet opened, verify close works
       if (updatedState.selectedMarkerPreview != null) {
         // Bottom sheet should show
-        compose
-            .onNodeWithText("Close preview", substring = true, useUnmergedTree = true)
-            .assertExists()
+        compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertHasClickAction()
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
 
         mapViewModel.clearSelectedPin()
         delay(500)
