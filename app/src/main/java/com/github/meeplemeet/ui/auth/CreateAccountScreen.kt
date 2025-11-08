@@ -288,7 +288,7 @@ fun RoleCheckBox(
         Checkbox(
             checked = isChecked,
             modifier = Modifier.testTag(testTag).padding(top = 2.dp),
-            onCheckedChange = {},
+            onCheckedChange = onCheckedChange,
             colors =
                 CheckboxDefaults.colors(
                     checkedColor = AppColors.affirmative,

@@ -831,7 +831,9 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
               verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
                     checked = allowMultiple,
-                    onCheckedChange = null, // Let the row handle the click
+                    onCheckedChange = {
+                      allowMultiple = !allowMultiple
+                    }, // Let the row handle the click
                     colors =
                         CheckboxDefaults.colors(
                             checkedColor = AppColors.affirmative,
