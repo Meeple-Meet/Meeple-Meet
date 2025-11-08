@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -150,7 +151,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     checkpoint("Post without comments shows 0") {
       postCard(first.id).assertExists()
       // card contains the text "0" somewhere inside it
-      postCard(first.id).assert(hasText("0"))
+      postCard(first.id).assert(hasAnyDescendant(hasText("0 comments")))
     }
 
     /* 4  CARD CLICK  ------------------------------------------------------- */

@@ -294,7 +294,8 @@ fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
       DayRow(
           dayName = ShopFormUi.dayNames[day], value = humanize(oh.hours), onEdit = { onEdit(day) })
       HorizontalDivider(
-          modifier = Modifier.testTag(ShopFormTestTags.AVAILABILITY_DIVIDER_PREFIX + day))
+          modifier = Modifier.testTag(ShopFormTestTags.AVAILABILITY_DIVIDER_PREFIX + day),
+          thickness = 0.5.dp)
     }
   }
   Spacer(Modifier.height(4.dp))

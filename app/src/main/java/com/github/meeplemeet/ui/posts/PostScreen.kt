@@ -3,6 +3,7 @@
 // Copilot was used to generate docstrings
 package com.github.meeplemeet.ui.posts
 
+import android.R.attr.enabled
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -19,15 +20,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -55,6 +61,8 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.MessagingColors
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 
@@ -79,10 +87,10 @@ const val TIMESTAMP_COMMENT_FORMAT: String = "MMM d, yyyy · HH:mm"
 private typealias ResolveUser = (String) -> Account?
 
 private object ThreadStyle {
-  val Step: Dp = 8.dp
-  val GapAfter: Dp = 5.dp
-  val Stroke: Dp = 2.dp
-  val VerticalInset: Dp = 6.dp
+  val Step: Dp = Dimensions.Spacing.medium
+  val GapAfter: Dp = Dimensions.Spacing.small
+  val Stroke: Dp = Dimensions.Elevation.medium
+  val VerticalInset: Dp = Dimensions.Spacing.small
 }
 
 object PostTags {
@@ -303,15 +311,23 @@ fun PostScreen(
 @Composable
 private fun PostTopBar(onBack: () -> Unit) {
   CenterAlignedTopAppBar(
+      colors =
+          TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
       navigationIcon = {
         IconButton(onClick = onBack, modifier = Modifier.testTag(PostTags.NAV_BACK_BTN)) {
-          Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          Icon(
+              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+              contentDescription = "Back",
+              tint = MaterialTheme.colorScheme.onSurface)
         }
       },
       title = {
         Text(
             text = TOPBAR_TITLE,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.titleLarge,
+            fontSize = Dimensions.TextSize.largeHeading,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.testTag(PostTags.TOP_TITLE))
@@ -335,43 +351,74 @@ private fun ComposerBar(
     sendEnabled: Boolean,
     onSend: () -> Unit
 ) {
-  Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .imePadding()
-              .navigationBarsPadding()
-              .padding(horizontal = 12.dp, vertical = 4.dp)
-              .background(MaterialTheme.colorScheme.surface, shape = CircleShape)
-              .padding(horizontal = 12.dp, vertical = 8.dp)
-              .testTag(PostTags.COMPOSER_BAR),
-      verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onAttach, modifier = Modifier.testTag(PostTags.COMPOSER_ATTACH)) {
-          Icon(Icons.Default.AttachFile, contentDescription = "Attach")
-        }
-        Spacer(Modifier.width(6.dp))
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
+  Surface(
+      modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding(),
+      color = MaterialTheme.colorScheme.surface,
+      shadowElevation = Dimensions.Elevation.medium) {
+        Row(
             modifier =
-                Modifier.weight(1f)
-                    .semantics { contentDescription = "Comment input" }
-                    .testTag(PostTags.COMPOSER_INPUT),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { if (sendEnabled) onSend() }),
-            decorationBox = { inner ->
-              if (value.isEmpty())
-                  Text(
-                      COMMENT_TEXT_ZONE_PLACEHOLDER,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-              inner()
-            })
-        Spacer(Modifier.width(6.dp))
-        IconButton(
-            enabled = sendEnabled,
-            onClick = onSend,
-            modifier = Modifier.testTag(PostTags.COMPOSER_SEND)) {
-              Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = Dimensions.Spacing.medium,
+                        vertical = Dimensions.Spacing.medium)
+                    .testTag(PostTags.COMPOSER_BAR),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+              Row(
+                  modifier =
+                      Modifier.weight(1f)
+                          .clip(RoundedCornerShape(Dimensions.AvatarSize.tiny))
+                          .background(MessagingColors.inputBackground)
+                          .padding(
+                              horizontal = Dimensions.Padding.large,
+                              vertical = Dimensions.Spacing.medium),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onAttach,
+                        modifier = Modifier.size(36.dp).testTag(PostTags.COMPOSER_ATTACH)) {
+                          Icon(
+                              Icons.Default.AttachFile,
+                              contentDescription = "Attach",
+                              tint = MessagingColors.metadataText,
+                              modifier = Modifier.size(Dimensions.IconSize.standard))
+                        }
+                    BasicTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier =
+                            Modifier.weight(1f)
+                                .semantics { contentDescription = "Comment input" }
+                                .testTag(PostTags.COMPOSER_INPUT),
+                        textStyle =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = Dimensions.TextSize.body,
+                                color = MessagingColors.primaryText),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(onSend = { if (sendEnabled) onSend() }),
+                        decorationBox = { inner ->
+                          if (value.isEmpty())
+                              Text(
+                                  COMMENT_TEXT_ZONE_PLACEHOLDER,
+                                  style = MaterialTheme.typography.bodyMedium,
+                                  fontSize = Dimensions.TextSize.body,
+                                  color = MessagingColors.metadataText)
+                          inner()
+                        })
+                  }
+
+              FloatingActionButton(
+                  onClick = { if (sendEnabled) onSend() },
+                  modifier =
+                      Modifier.size(Dimensions.ButtonSize.standard).testTag(PostTags.COMPOSER_SEND),
+                  containerColor = MessagingColors.redditOrange,
+                  contentColor = MessagingColors.messagingSurface,
+                  shape = CircleShape) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send",
+                        modifier = Modifier.size(Dimensions.IconSize.standard))
+                  }
             }
       }
 }
@@ -405,10 +452,10 @@ private fun PostContent(
       modifier =
           modifier
               .fillMaxSize()
-              .background(MaterialTheme.colorScheme.background)
+              .background(MessagingColors.messagingBackground)
               .testTag(PostTags.LIST),
-      contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      contentPadding = PaddingValues(vertical = 0.dp),
+      verticalArrangement = Arrangement.spacedBy(0.dp)) {
         item {
           PostCard(
               post = post,
@@ -440,58 +487,104 @@ private fun PostContent(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelete: () -> Unit) {
-  MeepleCard {
-    Box(Modifier.fillMaxWidth().testTag(PostTags.postCard(post.id))) {
-      Column {
-        PostHeader(post = post, author = author)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = post.title,
-            style =
-                MaterialTheme.typography.titleLarge.copy(
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.testTag(PostTags.POST_TITLE))
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = post.body,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onBackground),
-            modifier = Modifier.testTag(PostTags.POST_BODY))
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MessagingColors.messagingSurface,
+        shadowElevation = Dimensions.Elevation.minimal) {
+          Box(Modifier.fillMaxWidth().testTag(PostTags.postCard(post.id))) {
+            Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
+              // Post metadata (author and date)
+              PostHeader(post = post, author = author)
 
-        if (post.tags.isNotEmpty()) {
-          Spacer(Modifier.height(12.dp))
-          FlowRow(
-              modifier = Modifier.testTag(PostTags.POST_TAGS_ROW),
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                post.tags.forEach { tag ->
-                  AssistChip(
-                      enabled = false,
-                      onClick = {},
-                      label = { Text(tag) },
-                      colors =
-                          AssistChipDefaults.assistChipColors(
-                              containerColor = MaterialTheme.colorScheme.tertiary,
-                              labelColor = MaterialTheme.colorScheme.onBackground,
-                              disabledContainerColor = MaterialTheme.colorScheme.tertiary,
-                              disabledLabelColor = MaterialTheme.colorScheme.onBackground),
-                      modifier = Modifier.testTag(PostTags.tagChip(tag)),
-                  )
-                }
+              Spacer(Modifier.height(Dimensions.Padding.large))
+
+              // Tags row at top
+              if (post.tags.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.testTag(PostTags.POST_TAGS_ROW),
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
+                    verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                      post.tags.forEach { tag ->
+                        Surface(
+                            shape = RoundedCornerShape(Dimensions.CornerRadius.small),
+                            color = MessagingColors.redditBlueBg,
+                            modifier = Modifier.testTag(PostTags.tagChip(tag))) {
+                              Text(
+                                  text = tag,
+                                  style = MaterialTheme.typography.labelSmall,
+                                  fontSize = Dimensions.TextSize.tiny,
+                                  fontWeight = FontWeight.Bold,
+                                  color = MessagingColors.redditBlue,
+                                  modifier =
+                                      Modifier.padding(
+                                          horizontal = Dimensions.Spacing.medium,
+                                          vertical = Dimensions.Spacing.small))
+                            }
+                      }
+                    }
+                Spacer(Modifier.height(Dimensions.Spacing.medium))
               }
-        }
-      }
 
-      if (post.authorId == currentUser.uid) {
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.align(Alignment.TopEnd).testTag(PostTags.POST_DELETE_BTN)) {
-              Icon(Icons.Default.Delete, "Delete post", tint = MaterialTheme.colorScheme.error)
+              // Title
+              Text(
+                  text = post.title,
+                  style = MaterialTheme.typography.titleLarge,
+                  fontSize = Dimensions.TextSize.heading,
+                  fontWeight = FontWeight.Bold,
+                  color = MessagingColors.primaryText,
+                  modifier = Modifier.testTag(PostTags.POST_TITLE))
+
+              Spacer(Modifier.height(Dimensions.Padding.large))
+
+              // Body
+              Text(
+                  text = post.body,
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontSize = Dimensions.TextSize.body,
+                  color = MessagingColors.primaryText,
+                  modifier = Modifier.testTag(PostTags.POST_BODY))
+
+              Spacer(Modifier.height(Dimensions.Padding.large))
+
+              // Bottom action row
+              Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Padding.extraLarge),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                          Icon(
+                              imageVector = Icons.Outlined.ChatBubbleOutline,
+                              contentDescription = "Comments",
+                              modifier = Modifier.size(Dimensions.IconSize.medium),
+                              tint = MessagingColors.secondaryText)
+                          Text(
+                              text =
+                                  "${post.commentCount} ${if (post.commentCount == 1) "comment" else "comments"}",
+                              style = MaterialTheme.typography.bodySmall,
+                              fontSize = Dimensions.TextSize.medium,
+                              fontWeight = FontWeight.Medium,
+                              color = MessagingColors.secondaryText)
+                        }
+                  }
             }
-      }
-    }
+
+            if (post.authorId == currentUser.uid) {
+              IconButton(
+                  onClick = onDelete,
+                  modifier = Modifier.align(Alignment.TopEnd).testTag(PostTags.POST_DELETE_BTN)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        "Delete post",
+                        tint = MessagingColors.redditOrange,
+                        modifier = Modifier.size(Dimensions.IconSize.standard))
+                  }
+            }
+          }
+        }
+    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
   }
 }
 
@@ -504,35 +597,38 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
 @Composable
 private fun PostHeader(post: Post, author: Account?) {
   Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 12.dp)
-              .testTag(PostTags.POST_HEADER),
-      verticalAlignment = Alignment.CenterVertically) {
+      modifier = Modifier.fillMaxWidth().testTag(PostTags.POST_HEADER),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
         Box(
             modifier =
-                Modifier.size(36.dp)
+                Modifier.size(Dimensions.AvatarSize.small)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(MessagingColors.redditOrange)
                     .clearAndSetSemantics { testTag = PostTags.POST_AVATAR })
-        Spacer(Modifier.width(10.dp))
-        Column {
-          Text(
-              text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
-              style =
-                  MaterialTheme.typography.labelLarge.copy(
-                      color = MaterialTheme.colorScheme.onBackground,
-                      fontWeight = FontWeight.SemiBold),
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis,
-              modifier = Modifier.testTag(PostTags.POST_AUTHOR))
-          Text(
-              text = formatDateTime(post.timestamp),
-              style =
-                  MaterialTheme.typography.labelSmall.copy(
-                      color = MaterialTheme.colorScheme.onSurfaceVariant),
-              modifier = Modifier.testTag(PostTags.POST_DATE))
-        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+              Text(
+                  text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
+                  style = MaterialTheme.typography.labelMedium,
+                  fontSize = Dimensions.TextSize.medium,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MessagingColors.primaryText,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.testTag(PostTags.POST_AUTHOR))
+              Text(
+                  text = "•",
+                  fontSize = Dimensions.TextSize.medium,
+                  color = MessagingColors.secondaryText)
+              Text(
+                  text = formatDateTime(post.timestamp),
+                  style = MaterialTheme.typography.labelSmall,
+                  fontSize = Dimensions.TextSize.medium,
+                  color = MessagingColors.secondaryText,
+                  modifier = Modifier.testTag(PostTags.POST_DATE))
+            }
       }
 }
 
@@ -555,36 +651,50 @@ private fun ThreadCard(
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
     expandedStates: MutableMap<String, Boolean>,
-    gutterColor: Color = MaterialTheme.colorScheme.outline
+    gutterColor: Color = MessagingColors.redditOrange
 ) {
   val expanded = expandedStates[root.id] ?: false
 
-  MeepleCard(modifier = Modifier.testTag(PostTags.threadCard(root.id))) {
-    CommentItem(
-        comment = root,
-        author = resolveUser(root.authorId),
-        isMine = (root.authorId == currentUser.uid),
-        onReply = { text ->
-          onReply(root.id, text)
-          expandedStates[root.id] = true
-        },
-        onDelete = { onDelete(root) },
-        onCardClick = { expandedStates[root.id] = !expanded })
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MessagingColors.messagingSurface,
+        shadowElevation = 0.dp) {
+          Column(
+              modifier =
+                  Modifier.testTag(PostTags.threadCard(root.id))
+                      .padding(Dimensions.Padding.large)) {
+                CommentItem(
+                    comment = root,
+                    author = resolveUser(root.authorId),
+                    isMine = (root.authorId == currentUser.uid),
+                    hasReplies = root.children.isNotEmpty(),
+                    isExpanded = expanded,
+                    onReply = { text ->
+                      onReply(root.id, text)
+                      expandedStates[root.id] = true
+                    },
+                    onDelete = { onDelete(root) },
+                    onCardClick = { expandedStates[root.id] = !expanded })
 
-    AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
-      if (root.children.isNotEmpty()) {
-        Spacer(Modifier.height(8.dp))
-        CommentsTree(
-            comments = root.children,
-            currentUser = currentUser,
-            resolveUser = resolveUser,
-            onReply = onReply,
-            onDelete = onDelete,
-            expandedStates = expandedStates,
-            depth = 1,
-            gutterColor = gutterColor)
-      }
-    }
+                AnimatedVisibility(
+                    visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
+                      if (root.children.isNotEmpty()) {
+                        Spacer(Modifier.height(Dimensions.Spacing.medium))
+                        CommentsTree(
+                            comments = root.children,
+                            currentUser = currentUser,
+                            resolveUser = resolveUser,
+                            onReply = onReply,
+                            onDelete = onDelete,
+                            expandedStates = expandedStates,
+                            depth = 1,
+                            gutterColor = gutterColor)
+                      }
+                    }
+              }
+        }
+    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
 }
 
@@ -619,63 +729,77 @@ private fun CommentsTree(
           modifier = Modifier.fillMaxHeight().testTag(PostTags.gutterDepth(depth)))
       Spacer(Modifier.width(ThreadStyle.GapAfter))
 
-      Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        comments.forEach { c ->
-          val expanded = expandedStates[c.id] ?: false
+      Column(
+          modifier = Modifier.weight(1f),
+          verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.large)) {
+            comments.forEach { c ->
+              val expanded = expandedStates[c.id] ?: false
 
-          CommentItem(
-              comment = c,
-              author = resolveUser(c.authorId),
-              isMine = (c.authorId == currentUser.uid),
-              onReply = { text ->
-                onReply(c.id, text)
-                expandedStates[c.id] = true
-              },
-              onDelete = { onDelete(c) },
-              onCardClick =
-                  if (c.children.isNotEmpty()) {
-                    { expandedStates[c.id] = !expanded }
-                  } else null)
+              CommentItem(
+                  comment = c,
+                  author = resolveUser(c.authorId),
+                  isMine = (c.authorId == currentUser.uid),
+                  hasReplies = c.children.isNotEmpty(),
+                  isExpanded = expanded,
+                  onReply = { text ->
+                    onReply(c.id, text)
+                    expandedStates[c.id] = true
+                  },
+                  onDelete = { onDelete(c) },
+                  onCardClick =
+                      if (c.children.isNotEmpty()) {
+                        { expandedStates[c.id] = !expanded }
+                      } else null)
 
-          if (c.children.isNotEmpty()) {
-            AnimatedVisibility(
-                visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
-                  CommentsTree(
-                      comments = c.children,
-                      currentUser = currentUser,
-                      resolveUser = resolveUser,
-                      onReply = onReply,
-                      onDelete = onDelete,
-                      expandedStates = expandedStates,
-                      depth = depth + 1,
-                      gutterColor = gutterColor)
-                }
+              if (c.children.isNotEmpty()) {
+                AnimatedVisibility(
+                    visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
+                      CommentsTree(
+                          comments = c.children,
+                          currentUser = currentUser,
+                          resolveUser = resolveUser,
+                          onReply = onReply,
+                          onDelete = onDelete,
+                          expandedStates = expandedStates,
+                          depth = depth + 1,
+                          gutterColor = gutterColor)
+                    }
+              }
+            }
           }
-        }
-      }
     }
   } else {
     Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.large),
         modifier = Modifier.testTag(PostTags.treeDepth(depth))) {
           comments.forEach { c ->
+            val expanded = expandedStates[c.id] ?: false
+
             CommentItem(
                 comment = c,
                 author = resolveUser(c.authorId),
                 isMine = (c.authorId == currentUser.uid),
+                hasReplies = c.children.isNotEmpty(),
+                isExpanded = expanded,
                 onReply = { text -> onReply(c.id, text) },
                 onDelete = { onDelete(c) },
-                onCardClick = null)
+                onCardClick =
+                    if (c.children.isNotEmpty()) {
+                      { expandedStates[c.id] = !expanded }
+                    } else null)
             if (c.children.isNotEmpty()) {
-              CommentsTree(
-                  comments = c.children,
-                  currentUser = currentUser,
-                  resolveUser = resolveUser,
-                  onReply = onReply,
-                  onDelete = onDelete,
-                  expandedStates = expandedStates,
-                  depth = 1,
-                  gutterColor = gutterColor)
+              AnimatedVisibility(
+                  visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
+                    CommentsTree(
+                        comments = c.children,
+                        currentUser = currentUser,
+                        resolveUser = resolveUser,
+                        onReply = onReply,
+                        onDelete = onDelete,
+                        expandedStates = expandedStates,
+                        depth = 1,
+                        gutterColor = gutterColor)
+                  }
             }
           }
         }
@@ -721,6 +845,8 @@ private fun ThreadGutter(
  * @param comment The comment to display.
  * @param author The author of the comment.
  * @param isMine Whether the comment was authored by the current user.
+ * @param hasReplies Whether this comment has child replies.
+ * @param isExpanded Whether the replies are currently visible.
  * @param onReply Lambda to invoke when replying to the comment.
  * @param onDelete Lambda to invoke when deleting the comment.
  * @param onCardClick Optional lambda to invoke when the comment card is clicked.
@@ -730,6 +856,8 @@ private fun CommentItem(
     comment: Comment,
     author: Account?,
     isMine: Boolean,
+    hasReplies: Boolean = false,
+    isExpanded: Boolean = false,
     onReply: (String) -> Unit,
     onDelete: () -> Unit,
     onCardClick: (() -> Unit)? = null
@@ -738,64 +866,103 @@ private fun CommentItem(
   var replyText by rememberSaveable(comment.id) { mutableStateOf("") }
   val focusManager = LocalFocusManager.current
 
-  val base = Modifier.fillMaxWidth()
-  val clickable = onCardClick?.let { base.clickable(onClick = it) } ?: base
-
-  MeepleCard(
-      modifier = clickable.testTag(PostTags.commentCard(comment.id)),
-      contentPadding = PaddingValues(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+  val clickMod = if (onCardClick != null) Modifier.clickable(onClick = onCardClick) else Modifier
+  Column(modifier = clickMod.fillMaxWidth().testTag(PostTags.commentCard(comment.id))) {
+    // Comment header
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
           Box(
               modifier =
-                  Modifier.size(24.dp)
+                  Modifier.size(Dimensions.AvatarSize.tiny)
                       .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.primary)
+                      .background(MessagingColors.redditOrange)
                       .clearAndSetSemantics {})
-          Spacer(Modifier.width(8.dp))
-          Column(Modifier.weight(1f)) {
-            Text(
-                text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
-                style =
-                    MaterialTheme.typography.labelMedium.copy(
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.testTag(PostTags.commentAuthor(comment.id)))
-            Text(
-                text = formatDateTime(comment.timestamp),
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant),
-                modifier = Modifier.testTag(PostTags.commentDate(comment.id)))
-          }
+          Text(
+              text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
+              style = MaterialTheme.typography.labelMedium,
+              fontSize = Dimensions.TextSize.small,
+              fontWeight = FontWeight.SemiBold,
+              color = MessagingColors.primaryText,
+              modifier = Modifier.testTag(PostTags.commentAuthor(comment.id)))
+          Text(
+              text = "•",
+              fontSize = Dimensions.TextSize.small,
+              color = MessagingColors.secondaryText)
+          Text(
+              text = formatDateTime(comment.timestamp),
+              style = MaterialTheme.typography.labelSmall,
+              fontSize = Dimensions.TextSize.small,
+              color = MessagingColors.secondaryText,
+              modifier = Modifier.testTag(PostTags.commentDate(comment.id)))
+          Spacer(Modifier.weight(1f))
           if (isMine) {
             IconButton(
                 onClick = onDelete,
-                modifier = Modifier.testTag(PostTags.commentDeleteBtn(comment.id))) {
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .testTag(PostTags.commentDeleteBtn(comment.id))) {
                   Icon(
                       Icons.Default.Delete,
                       contentDescription = "Delete comment",
-                      tint = MaterialTheme.colorScheme.error)
+                      tint = MessagingColors.redditOrange,
+                      modifier = Modifier.size(Dimensions.IconSize.medium))
                 }
           }
           IconButton(
               onClick = { replying = !replying },
-              modifier = Modifier.testTag(PostTags.commentReplyToggle(comment.id))) {
-                Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = "Reply")
+              modifier =
+                  Modifier.size(Dimensions.AvatarSize.small)
+                      .testTag(PostTags.commentReplyToggle(comment.id))) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Reply,
+                    contentDescription = "Reply",
+                    tint = MessagingColors.secondaryText,
+                    modifier = Modifier.size(Dimensions.IconSize.medium))
               }
         }
 
-        Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Dimensions.Spacing.medium))
 
-        Text(
-            text = comment.text,
-            style =
-                MaterialTheme.typography.bodySmall.copy(
-                    color = MaterialTheme.colorScheme.onBackground),
-            modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    // Comment text
+    Text(
+        text = comment.text,
+        style = MaterialTheme.typography.bodyMedium,
+        fontSize = Dimensions.TextSize.standard,
+        color = MessagingColors.primaryText,
+        modifier = Modifier.testTag(PostTags.commentText(comment.id)))
 
-        if (replying) {
-          Spacer(Modifier.height(10.dp))
-          Row(verticalAlignment = Alignment.CenterVertically) {
+    // "See replies" button when there are replies
+    if (hasReplies) {
+      Spacer(Modifier.height(Dimensions.Spacing.medium))
+      TextButton(
+          onClick = { onCardClick?.invoke() },
+          contentPadding = PaddingValues(horizontal = 0.dp, vertical = Dimensions.Spacing.small),
+          modifier = Modifier.padding(start = 0.dp)) {
+            Icon(
+                imageVector =
+                    if (isExpanded) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = if (isExpanded) "Hide replies" else "See replies",
+                modifier = Modifier.size(Dimensions.IconSize.small),
+                tint = MessagingColors.redditOrange)
+            Spacer(Modifier.width(Dimensions.Spacing.small))
+            Text(
+                text = if (isExpanded) "Hide replies" else "See replies",
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = Dimensions.TextSize.medium,
+                fontWeight = FontWeight.Bold,
+                color = MessagingColors.redditOrange)
+          }
+    }
+
+    // Reply field
+    if (replying) {
+      Spacer(Modifier.height(Dimensions.Spacing.medium))
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
             OutlinedTextField(
                 value = replyText,
                 onValueChange = { replyText = it },
@@ -803,8 +970,17 @@ private fun CommentItem(
                     Modifier.weight(1f)
                         .semantics { contentDescription = "Reply input" }
                         .testTag(PostTags.commentReplyField(comment.id)),
-                placeholder = { Text(REPLY_TEXT_ZONE_PLACEHOLDER) },
+                placeholder = {
+                  Text(
+                      REPLY_TEXT_ZONE_PLACEHOLDER,
+                      fontSize = Dimensions.TextSize.standard,
+                      color = MessagingColors.secondaryText)
+                },
+                textStyle =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = Dimensions.TextSize.standard),
                 singleLine = true,
+                shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions =
                     KeyboardActions(
@@ -820,11 +996,7 @@ private fun CommentItem(
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                    ))
-            Spacer(Modifier.width(8.dp))
+                        unfocusedContainerColor = Color.Transparent))
             IconButton(
                 enabled = replyText.isNotBlank(),
                 onClick = {
@@ -837,11 +1009,14 @@ private fun CommentItem(
                   }
                 },
                 modifier = Modifier.testTag(PostTags.commentReplySend(comment.id))) {
-                  Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send reply")
+                  Icon(
+                      Icons.AutoMirrored.Filled.Send,
+                      contentDescription = "Send reply",
+                      tint = MessagingColors.redditOrange)
                 }
           }
-        }
-      }
+    }
+  }
 }
 
 /**
@@ -854,7 +1029,8 @@ private fun CommentItem(
 @Composable
 private fun MeepleCard(
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    contentPadding: PaddingValues =
+        PaddingValues(horizontal = Dimensions.Padding.large, vertical = Dimensions.Spacing.medium),
     content: @Composable ColumnScope.() -> Unit
 ) {
   Card(

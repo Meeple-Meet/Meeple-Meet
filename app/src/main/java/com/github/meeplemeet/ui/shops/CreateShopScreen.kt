@@ -5,6 +5,7 @@ package com.github.meeplemeet.ui.shops
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -22,7 +24,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
-import com.github.meeplemeet.ui.components.GameListSection
+import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
 import com.github.meeplemeet.ui.components.RequiredInfoSection
@@ -30,6 +32,7 @@ import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import kotlinx.coroutines.launch
 
@@ -92,24 +95,9 @@ private object AddShopUi {
   }
 
   object Strings {
-    const val ScreenTitle = "Add Shop"
-    const val RequirementsSection = "Required Info"
-    const val SectionAvailability = "Availability"
-    const val SectionGames = "Games in stock"
-
-    const val LabelShop = "Shop"
-    const val PlaceholderShop = "Shop name"
-
-    const val LabelEmail = "Email"
-    const val PlaceholderEmail = "Email"
-
-    const val LabelPhone = "Contact info"
-    const val PlaceholderPhone = "Phone number"
-
-    const val LabelLink = "Link"
-    const val PlaceholderLink = "Website/Instagram link"
-
-    const val PlaceholderLocation = "Search locations…"
+    const val REQUIREMENTS_SECTION = "Required Info"
+    const val SECTION_AVAILABILITY = "Availability"
+    const val SECTION_GAMES = "Games in stock"
 
     const val BtnAddGame = "Add game"
     const val EmptyGames = "No games selected yet."
@@ -275,7 +263,9 @@ fun AddShopContent(
       topBar = {
         CenterAlignedTopAppBar(
             title = {
-              Text(Strings.ScreenTitle, modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
+              Text(
+                  MeepleMeetScreen.CreateShop.title,
+                  modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
             },
             navigationIcon = {
               IconButton(
@@ -317,8 +307,8 @@ fun AddShopContent(
                     vertical = AddShopUi.Dimensions.contentVPadding)) {
               item {
                 CollapsibleSection(
-                    title = Strings.RequirementsSection,
-                    initiallyExpanded = false,
+                    title = Strings.REQUIREMENTS_SECTION,
+                    initiallyExpanded = true,
                     content = {
                       RequiredInfoSection(
                           shopName = shopName,
@@ -347,14 +337,8 @@ fun AddShopContent(
               }
 
               item {
-                Spacer(
-                    Modifier.height(AddShopUi.Dimensions.sectionSpace)
-                        .testTag(CreateShopScreenTestTags.SPACER_AFTER_REQUIRED))
-              }
-
-              item {
                 CollapsibleSection(
-                    title = Strings.SectionAvailability,
+                    title = Strings.SECTION_AVAILABILITY,
                     initiallyExpanded = false,
                     content = {
                       AvailabilitySection(
@@ -368,14 +352,8 @@ fun AddShopContent(
               }
 
               item {
-                Spacer(
-                    Modifier.height(AddShopUi.Dimensions.sectionSpace)
-                        .testTag(CreateShopScreenTestTags.SPACER_AFTER_AVAILABILITY))
-              }
-
-              item {
                 CollapsibleSection(
-                    title = Strings.SectionGames,
+                    title = Strings.SECTION_GAMES,
                     initiallyExpanded = false,
                     header = {
                       TextButton(
@@ -396,6 +374,12 @@ fun AddShopContent(
                     content = {
                       GamesSection(
                           stock = stock,
+                          onQuantityChange = { game, newQuantity ->
+                            stock =
+                                stock.map { (g, qty) ->
+                                  if (g.uid == game.uid) g to newQuantity else g to qty
+                                }
+                          },
                           onDelete = { gameToRemove ->
                             stock = stock.filterNot { it.first.uid == gameToRemove.uid }
                           })
@@ -442,18 +426,29 @@ fun AddShopContent(
  * Composable function representing the games section of the Add Shop screen.
  *
  * @param stock List of pairs containing games and their quantities in stock.
+ * @param onQuantityChange Callback function to handle updating quantity of a game in the stock
+ *   list.
  * @param onDelete Callback function to handle deletion of a game from the stock list.
  */
 @Composable
-private fun GamesSection(stock: List<Pair<Game, Int>>, onDelete: (Game) -> Unit) {
+private fun GamesSection(
+    stock: List<Pair<Game, Int>>,
+    onQuantityChange: (Game, Int) -> Unit,
+    onDelete: (Game) -> Unit
+) {
   if (stock.isNotEmpty()) {
-    GameListSection(
-        hasDeleteButton = true,
-        onDelete = onDelete,
-        games = stock,
-        clickableGames = false,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
+        modifier = Modifier.heightIn(max = 600.dp)) {
+          items(items = stock, key = { it.first.uid }) { (game, count) ->
+            EditableGameItem(
+                game = game,
+                count = count,
+                onQuantityChange = onQuantityChange,
+                onDelete = onDelete)
+          }
+        }
   } else {
     Text(
         Strings.EmptyGames,

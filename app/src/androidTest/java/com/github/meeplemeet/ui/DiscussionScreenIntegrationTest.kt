@@ -124,9 +124,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         sendField.performTextInput("Hello!")
         sendBtn.performClick()
 
-        checkpoint("Input field cleared after send") {
-          sendField.assertTextContains("Type something...")
-        }
+        checkpoint("Input field cleared after send") { sendField.assertTextContains("Message") }
 
         /* 3  back button ----------------------------------------------------------------- */
         composeTestRule
@@ -278,7 +276,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         addOption()
         optionFields()[2].performTextInput("Soda")
 
-        composeTestRule.onNodeWithTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX).performClick()
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX, useUnmergedTree = true)
+            .performClick()
 
         composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).performClick()
         checkpoint("Wait until poll message exists in repo") {

@@ -2,11 +2,7 @@
 package com.github.meeplemeet.ui.shops
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,18 +16,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextIndent
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
+import com.github.meeplemeet.ui.components.GameListSection
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
 import java.text.DateFormatSymbols
@@ -119,7 +113,11 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
     HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
     AvailabilitySection(shop.openingHours)
     HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    GameListSection(shop.gameCollection)
+    GameListSection(
+        games = shop.gameCollection,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp),
+        hasDeleteButton = false,
+        title = "Games:")
   }
 }
 
@@ -269,95 +267,6 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
                   }
             }
           }
-        }
-      }
-}
-
-// -------------------- GAMES SECTION --------------------
-
-/**
- * Composable that displays a list of games available in the shop.
- *
- * @param games List of pairs of Game and available count.
- */
-@Composable
-fun GameListSection(
-    games: List<Pair<Game, Int>>,
-    horizontalPadding: Dp = 30.dp,
-    clickableGames: Boolean = false,
-    withTitle: Boolean = true,
-    title: String = "Games:",
-    onClick: (Game) -> Unit = {}
-) {
-  Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding)) {
-        if (withTitle) {
-          Text(
-              title,
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.SemiBold,
-              textDecoration = TextDecoration.Underline)
-        }
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.heightIn(max = 600.dp)) {
-              // For each game-count pair, display a GameItem
-              items(games) { (game, count) -> GameItem(game, count, clickableGames, onClick) }
-            }
-      }
-}
-
-/**
- * Composable that displays a single game item with its count badge.
- *
- * @param game The game to display.
- * @param count The number of copies available.
- */
-@Composable
-fun GameItem(game: Game, count: Int, clickable: Boolean = false, onClick: (Game) -> Unit = {}) {
-  Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .testTag("${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}")
-              .clickable(enabled = clickable, onClick = { onClick(game) }),
-      colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
-        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-          // Placeholder box for game image or icon
-          Box(
-              modifier = Modifier.size(48.dp),
-              contentAlignment = Alignment.Center,
-          ) {
-            BadgedBox(
-                modifier = Modifier,
-                badge = {
-                  // Show badge only if count is greater than zero
-                  if (count > 0) {
-                    Badge(
-                        modifier = Modifier.offset(x = 8.dp, y = (-6).dp).size(20.dp),
-                        containerColor = AppColors.focus) {
-                          Text(count.toString())
-                        }
-                  }
-                }) {
-                  Icon(Icons.Default.VideogameAsset, contentDescription = null)
-                }
-          }
-
-          Spacer(modifier = Modifier.width(8.dp))
-          Column(
-              modifier = Modifier.weight(1f),
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.Center) {
-                Text(
-                    game.name,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center)
-              }
         }
       }
 }

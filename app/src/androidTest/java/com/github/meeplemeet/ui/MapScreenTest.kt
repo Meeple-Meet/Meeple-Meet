@@ -5,7 +5,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.DiscussionRepository
@@ -146,12 +145,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Verify map is displayed
     compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
-
-    // Verify top bar with title
-    compose.onNodeWithText("Map").assertIsDisplayed()
-
-    // Verify bottom navigation is present
-    compose.onNodeWithText("Map").assertIsDisplayed()
   }
 
   // ========================================================================

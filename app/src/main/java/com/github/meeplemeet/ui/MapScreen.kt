@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,7 +50,6 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
-import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -124,16 +123,6 @@ fun MapScreen(
   }
 
   Scaffold(
-      topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  text = MeepleMeetScreen.Map.title,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onPrimary,
-                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-            })
-      },
       bottomBar = {
         BottomNavigationMenu(
             currentScreen = MeepleMeetScreen.Map,
@@ -200,11 +189,12 @@ fun MapScreen(
                 onClick = onFABCLick,
                 contentColor = AppColors.textIcons,
                 containerColor = AppColors.neutral,
+                shape = CircleShape,
                 modifier =
                     Modifier.testTag(MapScreenTestTags.ADD_FAB)
                         .align(Alignment.TopEnd)
-                        .padding(top = 80.dp, end = 16.dp)) {
-                  Icon(Icons.Default.Add, contentDescription = "Create")
+                        .padding(top = 8.dp, end = 8.dp)) {
+                  Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
                 }
           }
         }
