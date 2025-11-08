@@ -456,12 +456,7 @@ fun LabeledField(
         keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
         placeholder = { Text(placeholder) },
         shape = MaterialTheme.shapes.medium,
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(
-                    top = ShopUiDefaults.DimensionsMagicNumbers.fieldTop,
-                    bottom = ShopUiDefaults.DimensionsMagicNumbers.fieldBottom)
-                .testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
+        modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
   }
 }
 
@@ -519,7 +514,6 @@ fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifie
       modifier =
           modifier
               .fillMaxWidth()
-              .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space12)
               .clickable(onClick = onEdit)
               .testTag(ShopComponentsTestTags.dayRow(dayName)),
       verticalAlignment = Alignment.CenterVertically) {
@@ -890,20 +884,18 @@ fun ActionBar(
             Modifier.fillMaxWidth()
                 .padding(ShopUiDefaults.DimensionsMagicNumbers.actionBarPadding)
                 .testTag(ShopComponentsTestTags.ACTION_BAR),
-            verticalAlignment = Alignment.CenterVertically) {
-              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                OutlinedButton(
-                    onClick = onDiscard,
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            containerColor = MaterialTheme.colorScheme.outline,
-                            contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
-                      Icon(Icons.Filled.Delete, contentDescription = null)
-                      Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                      Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
-                    }
-              }
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              OutlinedButton(
+                  onClick = onDiscard,
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          containerColor = MaterialTheme.colorScheme.outline,
+                          contentColor = MaterialTheme.colorScheme.error),
+                  modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
+                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                    Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
+                  }
 
               val primaryColors =
                   if (enabled)
@@ -921,18 +913,16 @@ fun ActionBar(
                       ShopComponentsTestTags.ACTION_SAVE
                   else ShopComponentsTestTags.ACTION_CREATE
 
-              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Button(
-                    onClick = onPrimary,
-                    enabled = enabled,
-                    shape = RoundedCornerShape(20.dp),
-                    colors = primaryColors,
-                    modifier = Modifier.testTag(primaryTag)) {
-                      Icon(Icons.Filled.Check, contentDescription = null)
-                      Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                      Text(primaryButtonText)
-                    }
-              }
+              Button(
+                  onClick = onPrimary,
+                  enabled = enabled,
+                  shape = RoundedCornerShape(20.dp),
+                  colors = primaryColors,
+                  modifier = Modifier.weight(1f).testTag(primaryTag)) {
+                    Icon(Icons.Filled.Check, contentDescription = null)
+                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                    Text(primaryButtonText)
+                  }
             }
       }
 }

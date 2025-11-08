@@ -320,7 +320,7 @@ fun AddShopContent(
               item {
                 CollapsibleSection(
                     title = Strings.REQUIREMENTS_SECTION,
-                    initiallyExpanded = false,
+                    initiallyExpanded = true,
                     content = {
                       RequiredInfoSection(
                           shopName = shopName,
@@ -349,12 +349,6 @@ fun AddShopContent(
               }
 
               item {
-                Spacer(
-                    Modifier.height(AddShopUi.Dimensions.sectionSpace)
-                        .testTag(CreateShopScreenTestTags.SPACER_AFTER_REQUIRED))
-              }
-
-              item {
                 CollapsibleSection(
                     title = Strings.SECTION_AVAILABILITY,
                     initiallyExpanded = false,
@@ -367,12 +361,6 @@ fun AddShopContent(
                           })
                     },
                     testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
-              }
-
-              item {
-                Spacer(
-                    Modifier.height(AddShopUi.Dimensions.sectionSpace)
-                        .testTag(CreateShopScreenTestTags.SPACER_AFTER_AVAILABILITY))
               }
 
               item {
