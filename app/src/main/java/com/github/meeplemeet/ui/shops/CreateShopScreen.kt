@@ -30,6 +30,7 @@ import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import kotlinx.coroutines.launch
 
