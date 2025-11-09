@@ -57,8 +57,8 @@ open class CreateAccountViewModel(
       account: Account,
       handle: String,
       username: String,
-      shopOwner: Boolean?,
-      spaceRenter: Boolean?
+      shopOwner: Boolean? = null,
+      spaceRenter: Boolean? = null
   ) {
     if (handle.isBlank()) _errorMsg.value = "Handle can not be blank"
     else if (!handlesRepository.validHandle(handle))

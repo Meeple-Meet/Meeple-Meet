@@ -6,14 +6,11 @@ import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.utils.FakeGameRepo
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import io.mockk.coEvery
@@ -44,21 +41,20 @@ class FirestoreSessionTests : FirestoreTests() {
   lateinit var testLocation: Location
   lateinit var testTimestamp: Timestamp
 
-  private val discussionRepository = DiscussionRepository()
   private val sessionRepository = mockk<SessionRepository>()
-  private lateinit var viewModel: SessionViewModel
+  private val viewModel = SessionViewModel()
 
   @Before
   fun setup() {
     runBlocking {
       account1 =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "Antoine", "Antoine", email = "Antoine@example.com", photoUrl = null)
       account2 =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "Marco", "Marco", email = "Marco@example.com", photoUrl = null)
       account3 =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "Thomas", "Thomas", email = "Thomas@example.com", photoUrl = null)
 
       baseDiscussion =
@@ -69,7 +65,6 @@ class FirestoreSessionTests : FirestoreTests() {
     testTimestamp = Timestamp.now()
 
     Dispatchers.setMain(UnconfinedTestDispatcher())
-    viewModel = SessionViewModel(baseDiscussion, sessionRepository)
   }
 
   @After
@@ -124,7 +119,7 @@ class FirestoreSessionTests : FirestoreTests() {
         account2)
     advanceUntilIdle()
 
-    val updatedDiscussion = viewModel.discussion.value
+    val updatedDiscussion = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertNotNull(updatedDiscussion.session)
     assertEquals("Catan Night", updatedDiscussion.session?.name)
     assertEquals("game123", updatedDiscussion.session?.gameId)
@@ -152,8 +147,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val updatedSession = originalSession.copy(name = "Settlers of Catan Night")
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(
           discussionWithSession.uid, "Settlers of Catan Night", null, null, null, null)
@@ -162,7 +155,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account1, discussionWithSession, name = "Settlers of Catan Night")
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals("Settlers of Catan Night", result.session?.name)
     assertEquals("game123", result.session?.gameId)
   }
@@ -182,8 +175,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val updatedSession = originalSession.copy(location = newLocation)
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(
           discussionWithSession.uid, null, null, null, newLocation, null)
@@ -192,7 +183,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account1, discussionWithSession, location = newLocation)
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(newLocation, result.session?.location)
     assertEquals("Catan Night", result.session?.name)
   }
@@ -212,8 +203,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val updatedSession = originalSession.copy(date = newDate)
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(discussionWithSession.uid, null, null, newDate, null, null)
     } returns updatedDiscussion
@@ -221,7 +210,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account1, discussionWithSession, date = newDate)
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(newDate, result.session?.date)
   }
 
@@ -240,8 +229,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val updatedSession = originalSession.copy(participants = newParticipants.map { it.uid })
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(
           discussionWithSession.uid, null, null, null, null, newParticipants.map { it.uid })
@@ -250,7 +237,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account1, discussionWithSession, newParticipantList = newParticipants)
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(3, result.session?.participants?.size)
     assertEquals(newParticipants.map { it.uid }, result.session?.participants)
   }
@@ -279,8 +266,6 @@ class FirestoreSessionTests : FirestoreTests() {
             participants = newParticipants.map { it.uid })
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(
           discussionWithSession.uid,
@@ -300,7 +285,7 @@ class FirestoreSessionTests : FirestoreTests() {
         newParticipantList = newParticipants)
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(newName, result.session?.name)
     assertEquals(newDate, result.session?.date)
     assertEquals(newLocation, result.session?.location)
@@ -318,8 +303,6 @@ class FirestoreSessionTests : FirestoreTests() {
             participants = listOf(account1.uid))
     val discussionWithSession = baseDiscussion.copy(session = sessionData)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     viewModel.updateSession(account2, discussionWithSession, name = "Hacked Session")
     advanceUntilIdle()
   }
@@ -334,8 +317,6 @@ class FirestoreSessionTests : FirestoreTests() {
             location = testLocation,
             participants = listOf(account1.uid))
     val discussionWithSession = baseDiscussion.copy(session = sessionData)
-
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     coEvery { sessionRepository.deleteSession(discussionWithSession.uid) } returns Unit
 
@@ -357,8 +338,6 @@ class FirestoreSessionTests : FirestoreTests() {
             participants = listOf(account1.uid))
     val discussionWithSession = baseDiscussion.copy(session = sessionData)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     viewModel.deleteSession(account2, discussionWithSession)
     advanceUntilIdle()
   }
@@ -378,8 +357,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val updatedSession = originalSession.copy(gameId = newGameId)
     val updatedDiscussion = discussionWithSession.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(discussionWithSession.uid, null, newGameId, null, null, null)
     } returns updatedDiscussion
@@ -387,7 +364,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account1, discussionWithSession, gameId = newGameId)
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(newGameId, result.session?.gameId)
     assertEquals("Catan Night", result.session?.name)
   }
@@ -408,8 +385,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val updatedSession = originalSession.copy(name = "Updated by Account2")
     val updatedDiscussion = discussionWithTwoParticipants.copy(session = updatedSession)
 
-    viewModel = SessionViewModel(discussionWithTwoParticipants, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(
           discussionWithTwoParticipants.uid, "Updated by Account2", null, null, null, null)
@@ -418,7 +393,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account2, discussionWithTwoParticipants, name = "Updated by Account2")
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals("Updated by Account2", result.session?.name)
   }
 
@@ -432,8 +407,6 @@ class FirestoreSessionTests : FirestoreTests() {
             location = testLocation,
             participants = listOf(account1.uid))
     val discussionWithSession = baseDiscussion.copy(session = sessionData)
-
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     coEvery {
       sessionRepository.updateSession(discussionWithSession.uid, null, null, null, null, null)
@@ -465,15 +438,15 @@ class FirestoreSessionTests : FirestoreTests() {
     } returns discussionWithSession
 
     // Verify initial state has no session
-    assertNull(viewModel.discussion.value.session)
+    assertNull(discussionRepository.getDiscussion(baseDiscussion.uid).session)
 
     viewModel.createSession(
         account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
     advanceUntilIdle()
 
     // Verify state was updated
-    assertNotNull(viewModel.discussion.value.session)
-    assertEquals(discussionWithSession, viewModel.discussion.value)
+    assertNotNull(discussionRepository.getDiscussion(baseDiscussion.uid).session)
+    assertEquals(discussionWithSession, discussionRepository.getDiscussion(baseDiscussion.uid))
   }
 
   @Test(expected = IllegalStateException::class)
@@ -504,8 +477,6 @@ class FirestoreSessionTests : FirestoreTests() {
             participants = listOf(account1.uid))
     val discussionWithSession = baseDiscussion.copy(session = originalSession)
 
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
-
     coEvery {
       sessionRepository.updateSession(discussionWithSession.uid, "New Name", null, null, null, null)
     } throws IllegalStateException("Firestore error")
@@ -524,8 +495,6 @@ class FirestoreSessionTests : FirestoreTests() {
             location = testLocation,
             participants = listOf(account1.uid))
     val discussionWithSession = baseDiscussion.copy(session = sessionData)
-
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     coEvery { sessionRepository.deleteSession(discussionWithSession.uid) } throws
         IllegalStateException("Firestore error")
@@ -574,7 +543,7 @@ class FirestoreSessionTests : FirestoreTests() {
         account3)
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(2, result.session?.participants?.size)
     // Session participants include account3 even though account3 is not in discussion participants
     assertEquals(listOf(account1.uid, account3.uid), result.session?.participants)
@@ -847,17 +816,10 @@ class FirestoreSessionTests : FirestoreTests() {
   fun createSessionAlsoCreatesGeoPin() = runBlocking {
     val realSessionRepo = SessionRepository()
 
-    val updatedDiscussion =
-        realSessionRepo.createSession(
-            baseDiscussion.uid,
-            "GeoPin Session",
-            "game456",
-            testTimestamp,
-            testLocation,
-            account1.uid)
+    realSessionRepo.createSession(
+        baseDiscussion.uid, "GeoPin Session", "game456", testTimestamp, testLocation, account1.uid)
 
-    val geoPinSnapshot =
-        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    val geoPinSnapshot = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
 
     assert(geoPinSnapshot.exists())
     assertEquals("SESSION", geoPinSnapshot.getString("type"))
@@ -870,14 +832,12 @@ class FirestoreSessionTests : FirestoreTests() {
     realSessionRepo.createSession(
         baseDiscussion.uid, "To Delete", "game123", testTimestamp, testLocation, account1.uid)
 
-    val beforeDelete =
-        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    val beforeDelete = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
     assert(beforeDelete.exists())
 
     realSessionRepo.deleteSession(baseDiscussion.uid)
 
-    val afterDelete =
-        db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid).get().await()
+    val afterDelete = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
     assert(!afterDelete.exists())
   }
 
@@ -888,7 +848,7 @@ class FirestoreSessionTests : FirestoreTests() {
     realSessionRepo.createSession(
         baseDiscussion.uid, "Session", "game123", testTimestamp, testLocation, account1.uid)
 
-    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(baseDiscussion.uid)
+    val geoPinRef = geoPinRepository.collection.document(baseDiscussion.uid)
 
     // Location unchanged
     realSessionRepo.updateSession(baseDiscussion.uid, name = "Updated Name")
@@ -924,8 +884,7 @@ class FirestoreSessionTests : FirestoreTests() {
             averagePlayTime = null,
             genres = emptyList())
 
-    val fakeRepo = FakeGameRepo()
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.setGame(account1, baseDiscussion, game)
 
@@ -948,8 +907,7 @@ class FirestoreSessionTests : FirestoreTests() {
             averagePlayTime = null,
             genres = emptyList())
 
-    val fakeRepo = FakeGameRepo()
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.setGame(account3, baseDiscussion, game)
   }
@@ -968,8 +926,7 @@ class FirestoreSessionTests : FirestoreTests() {
             averagePlayTime = null,
             genres = emptyList())
 
-    val fakeRepo = FakeGameRepo().apply { returnedGames = listOf(game) }
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.setGameQuery(account1, baseDiscussion, "cat")
     testScheduler.advanceUntilIdle()
@@ -983,8 +940,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun setGameQuery_sets_error_on_repository_failure() = runTest {
-    val fakeRepo = FakeGameRepo().apply { shouldThrow = true }
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.setGameQuery(account1, baseDiscussion, "cat")
     testScheduler.advanceUntilIdle()
@@ -997,29 +953,14 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test(expected = PermissionDeniedException::class)
   fun setGameQuery_throws_when_not_admin() = runTest {
-    val fakeRepo = FakeGameRepo()
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.setGameQuery(account3, baseDiscussion, "cat")
   }
 
   @Test
   fun getGameFromId_updates_state_when_successful() = runTest {
-    val fakeRepo =
-        FakeGameRepo().apply {
-          returnedGame =
-              Game(
-                  uid = "g_123",
-                  name = "Terraforming Mars",
-                  description = "",
-                  imageURL = "",
-                  minPlayers = 1,
-                  maxPlayers = 5,
-                  recommendedPlayers = null,
-                  averagePlayTime = null,
-                  genres = emptyList())
-        }
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.getGameFromId("g_123")
     advanceUntilIdle()
@@ -1032,8 +973,7 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun getGameFromId_sets_error_state_on_failure() = runTest {
-    val fakeRepo = FakeGameRepo().apply { shouldThrow = true }
-    val vm = SessionViewModel(baseDiscussion, sessionRepository, fakeRepo)
+    val vm = SessionViewModel()
 
     vm.getGameFromId("g_404")
     advanceUntilIdle()
@@ -1054,7 +994,6 @@ class FirestoreSessionTests : FirestoreTests() {
             participants = listOf(account1.uid, account2.uid))
 
     val discussionWithSession = baseDiscussion.copy(session = originalSession)
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     // account2 removes themselves from the session (they're not an admin)
     val updatedSession = originalSession.copy(participants = listOf(account1.uid))
@@ -1069,7 +1008,7 @@ class FirestoreSessionTests : FirestoreTests() {
     viewModel.updateSession(account2, discussionWithSession, newParticipantList = listOf(account1))
     advanceUntilIdle()
 
-    val result = viewModel.discussion.value
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(1, result.session?.participants?.size)
     assertEquals(listOf(account1.uid), result.session?.participants)
   }
@@ -1088,8 +1027,6 @@ class FirestoreSessionTests : FirestoreTests() {
         baseDiscussion.copy(
             participants = listOf(account1.uid, account2.uid, account3.uid),
             session = originalSession)
-
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     // account2 tries to remove account3 (not themselves) - should fail
     viewModel.updateSession(
@@ -1110,8 +1047,6 @@ class FirestoreSessionTests : FirestoreTests() {
     val discussionWithSession =
         baseDiscussion.copy(
             participants = listOf(account1.uid, account2.uid), session = originalSession)
-
-    viewModel = SessionViewModel(discussionWithSession, sessionRepository)
 
     // account2 tries to change the name while also leaving - should fail
     viewModel.updateSession(
