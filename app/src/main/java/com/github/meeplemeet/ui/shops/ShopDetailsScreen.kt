@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -104,7 +105,7 @@ private object EditShopUi {
 /**
  * Composable function representing the Edit Shop screen.
  *
- * @param shopId The ID of the shop to edit.
+ * @param shop The shop to edit.
  * @param owner The account of the shop owner.
  * @param onBack Callback function to be invoked when the back navigation is triggered.
  * @param onSaved Callback function to be invoked when the shop is successfully saved.
@@ -113,12 +114,12 @@ private object EditShopUi {
 @Composable
 fun ShopDetailsScreen(
     owner: Account,
+    shop: Shop,
     onBack: () -> Unit,
     onSaved: () -> Unit,
-    viewModel: EditShopViewModel
+    viewModel: EditShopViewModel = viewModel()
 ) {
-  val ui by viewModel.gameUIState.collectAsState()
-  val shop by viewModel.shop.collectAsState()
+  val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
 
   EditShopContent(
@@ -146,9 +147,9 @@ fun ShopDetailsScreen(
         }
       },
       locationUi = locationUi,
-      gameQuery = ui.gameQuery,
-      gameSuggestions = ui.gameSuggestions,
-      isSearching = ui.isSearching,
+      gameQuery = gameUi.gameQuery,
+      gameSuggestions = gameUi.gameSuggestions,
+      isSearching = gameUi.isSearching,
       onSetGameQuery = viewModel::setGameQuery,
       onSetGame = viewModel::setGame,
       viewModel = viewModel,
@@ -218,7 +219,7 @@ fun EditShopContent(
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var showGameDialog by remember { mutableStateOf(false) }
-  var qty by rememberSaveable { mutableStateOf(1) }
+  var qty by rememberSaveable { mutableIntStateOf(1) }
   var picked by remember { mutableStateOf<Game?>(null) }
   var stock by remember(shop) { mutableStateOf(shop?.gameCollection ?: initialStock) }
 

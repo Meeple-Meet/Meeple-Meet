@@ -41,10 +41,8 @@ import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
-import com.github.meeplemeet.model.shops.CreateShopViewModel
-import com.github.meeplemeet.model.shops.EditShopViewModel
+import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
-import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
@@ -112,10 +110,13 @@ object RepositoryProvider {
   /** Lazily initialized repository for board game data operations. */
   val games: FirestoreGameRepository by lazy { FirestoreGameRepository() }
 
-  val locations: LocationRepository by lazy {
-    NominatimLocationRepository(HttpClientProvider.client)
-  }
+  /** Lazily initialized repository for location operations. */
+  val locations: LocationRepository by lazy { NominatimLocationRepository() }
+
+  /** Lazily initialized repository for geo pin operations. */
   val geoPins: StorableGeoPinRepository by lazy { StorableGeoPinRepository() }
+
+  /** Lazily initialized repository for marker preview operations. */
   val markerPreviews: MarkerPreviewRepository by lazy { MarkerPreviewRepository() }
 
   /** Lazily initialized repository for post operations. */
@@ -153,9 +154,6 @@ fun MeepleMeetApp(
     firestoreVM: DiscussionViewModel = viewModel(),
     handlesVM: HandlesViewModel = viewModel(),
     navController: NavHostController = rememberNavController(),
-    shopVM: ShopViewModel = viewModel(),
-    createShopVM: CreateShopViewModel = viewModel(),
-    editShopVM: EditShopViewModel = viewModel(),
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
@@ -179,6 +177,8 @@ fun MeepleMeetApp(
   var postId by remember { mutableStateOf("") }
 
   var shopId by remember { mutableStateOf("") }
+
+  var shop by remember { mutableStateOf<Shop?>(null) }
 
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
@@ -398,8 +398,7 @@ fun MeepleMeetApp(
             account = account!!,
             shopId = shopId,
             onBack = { navigationActions.goBack() },
-            onEdit = { navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false) },
-            viewModel = shopVM)
+            onEdit = { navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false) })
       } else {
         LoadingScreen()
       }
@@ -408,21 +407,15 @@ fun MeepleMeetApp(
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) },
-          viewModel = createShopVM)
+          onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
     }
     composable(MeepleMeetScreen.EditShop.name) {
-      val shopFromDetails by shopVM.shop.collectAsStateWithLifecycle()
-      val shop by editShopVM.shop.collectAsStateWithLifecycle()
-
-      LaunchedEffect(shopFromDetails) { editShopVM.setShop(shopFromDetails) }
-
       if (shop != null) {
         ShopDetailsScreen(
             owner = account!!,
+            shop = shop!!,
             onBack = { navigationActions.goBack() },
-            onSaved = { navigationActions.goBack() },
-            viewModel = editShopVM)
+            onSaved = { navigationActions.goBack() })
       } else {
         LoadingScreen()
       }

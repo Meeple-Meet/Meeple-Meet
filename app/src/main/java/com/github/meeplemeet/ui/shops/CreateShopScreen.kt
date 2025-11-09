@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -49,9 +50,7 @@ object CreateShopScreenTestTags {
 
   // Reuse shared section suffixes
   const val SECTION_HEADER_SUFFIX = ShopFormTestTags.SECTION_HEADER_SUFFIX
-  const val SECTION_TITLE_SUFFIX = ShopFormTestTags.SECTION_TITLE_SUFFIX
   const val SECTION_TOGGLE_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_SUFFIX
-  const val SECTION_DIVIDER_SUFFIX = ShopFormTestTags.SECTION_DIVIDER_SUFFIX
   const val SECTION_CONTENT_SUFFIX = ShopFormTestTags.SECTION_CONTENT_SUFFIX
 
   const val SECTION_REQUIRED = "section_required"
@@ -59,16 +58,10 @@ object CreateShopScreenTestTags {
   // Reuse shared field tags
   const val FIELD_SHOP = ShopFormTestTags.FIELD_SHOP
   const val FIELD_EMAIL = ShopFormTestTags.FIELD_EMAIL
-  const val FIELD_ADDRESS = ShopFormTestTags.FIELD_ADDRESS
   const val FIELD_PHONE = ShopFormTestTags.FIELD_PHONE
   const val FIELD_LINK = ShopFormTestTags.FIELD_LINK
 
-  const val SPACER_AFTER_REQUIRED = "spacer_after_required"
-
   const val SECTION_AVAILABILITY = "section_availability"
-  const val AVAILABILITY_LIST = ShopFormTestTags.AVAILABILITY_LIST
-  const val AVAILABILITY_DIVIDER_PREFIX = ShopFormTestTags.AVAILABILITY_DIVIDER_PREFIX
-  const val SPACER_AFTER_AVAILABILITY = "spacer_after_availability"
 
   const val SECTION_GAMES = "section_games"
   const val GAMES_ADD_LABEL = "games_add_label"
@@ -89,7 +82,6 @@ private object AddShopUi {
   object Dimensions {
     val contentHPadding = ShopFormUi.Dimensions.contentHPadding
     val contentVPadding = ShopFormUi.Dimensions.contentVPadding
-    val sectionSpace = ShopFormUi.Dimensions.sectionSpace
     val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
     val betweenControls = ShopFormUi.Dimensions.betweenControls
   }
@@ -99,10 +91,10 @@ private object AddShopUi {
     const val SECTION_AVAILABILITY = "Availability"
     const val SECTION_GAMES = "Games in stock"
 
-    const val BtnAddGame = "Add game"
-    const val EmptyGames = "No games selected yet."
-    const val ErrorValidation = "Validation error"
-    const val ErrorCreate = "Failed to create shop"
+    const val BTN_ADD_GAME = "Add game"
+    const val EMPTY_GAMES = "No games selected yet."
+    const val ERROR_VALIDATION = "Validation error"
+    const val ERROR_CREATE = "Failed to create shop"
   }
 }
 
@@ -124,7 +116,7 @@ fun CreateShopScreen(
     owner: Account,
     onBack: () -> Unit,
     onCreated: (String) -> Unit,
-    viewModel: CreateShopViewModel
+    viewModel: CreateShopViewModel = viewModel()
 ) {
   val ui by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
@@ -290,9 +282,9 @@ fun AddShopContent(
                   val shopId = onCreate(shopName, email, addr, week, stock)
                   onCreated(shopId)
                 } catch (e: IllegalArgumentException) {
-                  snackbarHost.showSnackbar(e.message ?: Strings.ErrorValidation)
-                } catch (e: Exception) {
-                  snackbarHost.showSnackbar(Strings.ErrorCreate)
+                  snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
+                } catch (_: Exception) {
+                  snackbarHost.showSnackbar(Strings.ERROR_CREATE)
                 }
               }
             },
@@ -366,7 +358,7 @@ fun AddShopContent(
                             Icon(Icons.Filled.Add, contentDescription = null)
                             Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
                             Text(
-                                Strings.BtnAddGame,
+                                Strings.BTN_ADD_GAME,
                                 modifier =
                                     Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_LABEL))
                           }
@@ -451,7 +443,7 @@ private fun GamesSection(
         }
   } else {
     Text(
-        Strings.EmptyGames,
+        Strings.EMPTY_GAMES,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT))
   }

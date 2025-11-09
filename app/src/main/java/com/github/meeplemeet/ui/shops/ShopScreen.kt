@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
@@ -64,9 +65,9 @@ object ShopTestTags {
 fun ShopScreen(
     shopId: String,
     account: Account,
-    viewModel: ShopViewModel,
+    viewModel: ShopViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onEdit: () -> Unit = {}
+    onEdit: (Shop?) -> Unit = {},
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
@@ -82,7 +83,8 @@ fun ShopScreen(
               // Show edit button only if current account is the shop owner
               if (account == (shopState?.owner ?: false)) {
                 IconButton(
-                    onClick = onEdit, modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
+                    onClick = { onEdit(shopState) },
+                    modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
                       Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
               }
