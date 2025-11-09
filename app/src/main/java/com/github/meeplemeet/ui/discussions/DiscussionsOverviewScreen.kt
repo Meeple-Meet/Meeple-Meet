@@ -19,13 +19,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -221,11 +221,11 @@ private fun EmptyDiscussionsListText() {
 @Composable
 @Preview(showBackground = true)
 private fun DiscussionCard(
+    modifier: Modifier = Modifier,
     discussionName: String = "Hello",
     lastMsg: String = "Hello world",
     lastMsgDate: Timestamp = Timestamp.now(),
     unreadMsgCount: Int = 1,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
   Column(modifier = modifier) {
@@ -294,7 +294,7 @@ private fun DiscussionCard(
         }
 
     // Divider
-    Divider(
+    HorizontalDivider(
         modifier = Modifier.padding(start = 84.dp),
         color = MessagingColors.divider,
         thickness = 1.0.dp)

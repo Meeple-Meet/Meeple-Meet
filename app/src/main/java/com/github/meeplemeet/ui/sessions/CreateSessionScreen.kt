@@ -47,9 +47,6 @@ import kotlinx.coroutines.launch
 object SessionCreationTestTags {
   // App bar
   const val SCAFFOLD = "add_session_scaffold"
-  const val TOP_APP_BAR = "add_session_top_app_bar"
-  const val TOP_APP_BAR_TITLE = "add_session_top_app_bar_title"
-  const val NAV_BACK_BTN = "nav_back_btn"
 
   // Snackbar
   const val SNACKBAR_HOST = "add_session_snackbar_host"
@@ -61,7 +58,6 @@ object SessionCreationTestTags {
   const val FORM_TITLE_FIELD = "add_session_title_field"
 
   // Sections
-  const val GAME_SEARCH_SECTION = "add_session_game_search_section"
   const val GAME_SEARCH_ERROR = "add_session_game_search_error"
   const val LOCATION_SEARCH_ERROR = "add_session_location_search_error"
   const val PARTICIPANTS_SECTION = "add_session_participants_section"
@@ -90,7 +86,6 @@ data class SessionForm(
 
 const val TITLE_PLACEHOLDER: String = "Title"
 const val PARTICIPANT_SECTION_NAME: String = "Participants"
-const val ORGANISATION_SECTION_NAME: String = "Organisation"
 const val GAME_SEARCH_PLACEHOLDER: String = "Search games…"
 
 /**
@@ -290,7 +285,6 @@ fun CreateSessionScreen(
  * @param discussion The discussion context for the session.
  * @param queryFallback The fallback query string for the game search.
  * @param onQueryFallbackChange Callback function to be invoked when the query changes.
- * @param modifier Modifier for styling the composable.
  * @param onError Callback function to handle errors.
  */
 @Composable
@@ -493,7 +487,6 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
  * @param onDateChange Callback when the date changes.
  * @param onTimeChange Callback when the time changes.
  * @param onLocationChange Callback when the location text changes.
- * @param title The title of the organisation section.
  * @param modifier Modifier for styling the composable.
  * @param onLocationPicked Optional callback when a location is picked.
  */

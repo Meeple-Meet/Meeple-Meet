@@ -65,7 +65,6 @@ object ShopComponentsTestTags {
   // LabeledField
   const val LABELED_FIELD_CONTAINER = "shop_labeled_field"
   const val LABELED_FIELD_INPUT = "shop_labeled_field_input"
-  const val LABELED_FIELD_LABEL = "shop_labeled_field_label"
 
   fun labeledField(label: String) = "$LABELED_FIELD_CONTAINER:$label"
 
@@ -129,10 +128,7 @@ object ShopComponentsTestTags {
 
   // Quantity slider
   const val QTY_CONTAINER = "shop_qty_container"
-  const val QTY_LABEL_ROW = "shop_qty_label_row"
   const val QTY_LABEL = "shop_qty_label"
-  const val QTY_VALUE = "shop_qty_value"
-  const val QTY_SLIDER = "shop_qty_slider"
   const val QTY_MINUS_BUTTON = "shop_qty_minus_button"
   const val QTY_INPUT_FIELD = "shop_qty_input_field"
   const val QTY_PLUS_BUTTON = "shop_qty_plus_button"
@@ -187,7 +183,6 @@ object ShopUiDefaults {
 
   object DimensionsMagicNumbers {
     // Spacing
-    val space2 = 2.dp
     val space4 = 4.dp
     val space6 = 6.dp
     val space8 = 8.dp
@@ -201,9 +196,6 @@ object ShopUiDefaults {
     val actionBarPadding = 16.dp
     val actionBarElevation = 3.dp
     val sectionHeaderDivider = 1.dp
-    val fieldTop = 10.dp
-    val fieldBottom = 12.dp
-    val labelInsetStart = 18.dp
   }
 
   object StringsMagicNumbers {
@@ -1216,37 +1208,39 @@ fun GameStockDialog(
 @Composable
 fun GameListSection(
     games: List<Pair<Game, Int>>,
-    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+    modifier: Modifier = Modifier,
     clickableGames: Boolean = false,
     title: String? = null,
     hasDeleteButton: Boolean = false,
     onClick: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {},
 ) {
-  Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier) {
-    if (title != null) {
-      Text(
-          title,
-          style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.SemiBold,
-          textDecoration = TextDecoration.Underline)
-    }
-
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 16.dp),
-        modifier = Modifier.heightIn(max = 600.dp)) {
-          items(items = games, key = { it.first.uid }) { (game, count) ->
-            GameItem(
-                game = game,
-                count = count,
-                clickable = clickableGames,
-                onClick = onClick,
-                hasDeleteButton = hasDeleteButton,
-                onDelete = onDelete)
-          }
+  Column(
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = modifier.fillMaxWidth().padding(horizontal = 15.dp)) {
+        if (title != null) {
+          Text(
+              title,
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.SemiBold,
+              textDecoration = TextDecoration.Underline)
         }
-  }
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+            modifier = Modifier.heightIn(max = 600.dp)) {
+              items(items = games, key = { it.first.uid }) { (game, count) ->
+                GameItem(
+                    game = game,
+                    count = count,
+                    clickable = clickableGames,
+                    onClick = onClick,
+                    hasDeleteButton = hasDeleteButton,
+                    onDelete = onDelete)
+              }
+            }
+      }
 }
 
 /**

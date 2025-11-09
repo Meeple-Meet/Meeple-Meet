@@ -12,13 +12,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,7 +58,6 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  *
  * @param postOverviewVM ViewModel that supplies the list of posts.
  * @param discussionViewModel ViewModel used to resolve author names.
- * @param account Currently logged-in account.
  * @param navigation Actions for navigation events.
  * @param onClickAddPost Callback fired when the FAB is tapped.
  * @param onSelectPost Callback fired when a post card is tapped.
@@ -154,7 +153,7 @@ private fun EmptyFeedListText() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
           Icon(
-              imageVector = Icons.Default.Article,
+              imageVector = Icons.AutoMirrored.Filled.Article,
               contentDescription = null,
               modifier = Modifier.size(Dimensions.IconSize.giant),
               tint = MessagingColors.secondaryText)
@@ -209,7 +208,7 @@ private fun FeedCard(
                       .background(MessagingColors.messagingBackground),
               contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.Article,
+                    imageVector = Icons.AutoMirrored.Filled.Article,
                     contentDescription = null,
                     modifier = Modifier.size(Dimensions.IconSize.large),
                     tint = MessagingColors.secondaryText)
@@ -309,6 +308,7 @@ private fun FeedCard(
         }
 
     // Divider
-    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
+    HorizontalDivider(
+        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
 }

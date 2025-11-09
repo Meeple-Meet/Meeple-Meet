@@ -3,7 +3,6 @@
 // Copilot was used to generate docstrings
 package com.github.meeplemeet.ui.posts
 
-import android.R.attr.enabled
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -24,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
@@ -35,6 +33,7 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -584,7 +583,8 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
             }
           }
         }
-    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
+    HorizontalDivider(
+        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
   }
 }
 
@@ -694,7 +694,8 @@ private fun ThreadCard(
                     }
               }
         }
-    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
+    HorizontalDivider(
+        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
 }
 
@@ -1017,32 +1018,6 @@ private fun CommentItem(
           }
     }
   }
-}
-
-/**
- * Composable representing a styled card used throughout the MeepleMeet app.
- *
- * @param modifier Modifier to be applied to the card.
- * @param contentPadding Padding values for the content inside the card.
- * @param content Composable content to be displayed inside the card.
- */
-@Composable
-private fun MeepleCard(
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues =
-        PaddingValues(horizontal = Dimensions.Padding.large, vertical = Dimensions.Spacing.medium),
-    content: @Composable ColumnScope.() -> Unit
-) {
-  Card(
-      modifier = modifier,
-      shape = MaterialTheme.shapes.large,
-      colors =
-          CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.surface,
-              contentColor = MaterialTheme.colorScheme.onBackground),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-        Column(Modifier.fillMaxWidth().padding(contentPadding), content = content)
-      }
 }
 
 /**

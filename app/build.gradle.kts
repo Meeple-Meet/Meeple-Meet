@@ -285,7 +285,7 @@ dependencies {
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(kotlin("test"))
 
-  androidTestImplementation("androidx.navigation:navigation-testing:2.8.3")
+  androidTestImplementation("androidx.navigation:navigation-testing:2.9.6")
 }
 
 

@@ -29,7 +29,6 @@ import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 
 object CreateAccountTestTags {
-  const val IMAGE = "CreateAccountImage"
   const val HANDLE_FIELD = "CreateAccountHandleField"
   const val HANDLE_ERROR = "CreateAccountHandleError"
   const val USERNAME_FIELD = "CreateAccountUsernameField"

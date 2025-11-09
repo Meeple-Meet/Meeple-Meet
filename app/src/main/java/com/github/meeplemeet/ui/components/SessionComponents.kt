@@ -271,7 +271,6 @@ fun CountBubble(
  * @param range The range of values for the slider.
  * @param values The current selected range values.
  * @param steps The number of discrete steps between the min and max values.
- * @param editable Whether the slider is editable or read-only.
  * @param modifier Modifier to be applied to the surrounding Column.
  * @param sliderModifier Modifier to be applied to the RangeSlider.
  * @param sliderColors Colors to be applied to the RangeSlider.
@@ -415,7 +414,6 @@ fun ParticipantChip(
  * A grid layout that arranges items in two columns per row.
  *
  * @param items The list of items to be displayed in the grid.
- * @param key A function to generate a unique key for each item.
  * @param modifier Modifier to be applied to the Column containing the grid.
  * @param rowsModifier Modifier to be applied to each Row in the grid.
  * @param content Composable content to be displayed for each item, with a modifier for layout.

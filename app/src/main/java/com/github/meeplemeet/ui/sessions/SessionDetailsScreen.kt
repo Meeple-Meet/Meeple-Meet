@@ -749,7 +749,6 @@ fun UserChip(
  * @param range Range of values that the slider can attain
  * @param values Values that be attained by the slider
  * @param steps Number of steps to display
- * @param editable whether the current user can edit the slider (Admin/Owner only)
  */
 @Composable
 fun PillSliderNoBackground(
