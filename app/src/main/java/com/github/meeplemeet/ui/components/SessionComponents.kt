@@ -836,37 +836,52 @@ private fun GameSearchBar(
 
   LaunchedEffect(initial) { if (initial?.name?.isNotBlank() == true) setGame(initial) }
 
-  ExposedDropdownMenuBox(
-      expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
-        OutlinedTextField(
-            value = results.gameQuery.ifBlank { initial?.name.orEmpty() },
-            onValueChange = {
-              menuOpen = true
-              setGameQuery(it)
-            },
-            label = { Text("Game") },
-            placeholder = { Text("Search games") },
-            modifier =
-                Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
-                    .fillMaxWidth()
-                    .testTag(inputFieldTestTag),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        )
+  Column {
+    ExposedDropdownMenuBox(
+        expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
+          OutlinedTextField(
+              value = results.gameQuery.ifBlank { initial?.name.orEmpty() },
+              onValueChange = {
+                menuOpen = true
+                setGameQuery(it)
+              },
+              label = { Text("Game") },
+              placeholder = { Text("Search games") },
+              modifier =
+                  Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                      .fillMaxWidth()
+                      .testTag(inputFieldTestTag),
+              leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+              isError = results.gameSearchError != null)
 
-        ExposedDropdownMenu(
-            expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
-              results.gameSuggestions
-                  .filterNot { existing.contains(it.uid) }
-                  .take(5)
-                  .forEach { game ->
-                    DropdownMenuItem(
-                        text = { Text(game.name) },
-                        onClick = {
-                          menuOpen = false
-                          setGame(game)
-                        },
-                        modifier = Modifier.testTag(dropdownItemTestTag))
-                  }
-            }
-      }
+          ExposedDropdownMenu(
+              expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
+                results.gameSuggestions
+                    .filterNot { existing.contains(it.uid) }
+                    .take(5)
+                    .forEach { game ->
+                      DropdownMenuItem(
+                          text = { Text(game.name) },
+                          onClick = {
+                            menuOpen = false
+                            setGame(game)
+                          },
+                          modifier = Modifier.testTag(dropdownItemTestTag))
+                    }
+              }
+        }
+
+    // Display error message if present
+    results.gameSearchError?.let { errorMsg ->
+      Text(
+          text = errorMsg,
+          color = MaterialTheme.colorScheme.error,
+          style = MaterialTheme.typography.bodySmall,
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(start = 16.dp, top = 4.dp)
+                  .testTag(
+                      com.github.meeplemeet.ui.sessions.SessionCreationTestTags.GAME_SEARCH_ERROR))
+    }
+  }
 }

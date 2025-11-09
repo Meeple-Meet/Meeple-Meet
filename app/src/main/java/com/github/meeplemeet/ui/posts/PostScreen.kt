@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
@@ -151,8 +152,8 @@ object PostTags {
  *
  * @param account The current user's account information.
  * @param postId The ID of the post to display.
- * @param viewModel ViewModel for managing post data.
- * @param viewModel ViewModel for managing user data.
+ * @param postViewModel ViewModel for managing post data.
+ * @param accountViewModel ViewModel for managing user data.
  * @param onBack Lambda to invoke when the back button is pressed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,9 +161,11 @@ object PostTags {
 fun PostScreen(
     account: Account,
     postId: String,
-    viewModel: PostViewModel = viewModel(),
+    postViewModel: PostViewModel = viewModel(),
+    accountViewModel: AccountViewModel = postViewModel,
     onBack: () -> Unit = {}
 ) {
+  val viewModel = postViewModel
   val post: Post? by viewModel.postFlow(postId).collectAsState()
 
   val userCache = remember { mutableStateMapOf<String, Account>() }
@@ -212,7 +215,7 @@ fun PostScreen(
   // Prefetch all distinct authors for the current post/comments in one go
   LaunchedEffect(post?.id, authorsKey) {
     val p = post ?: return@LaunchedEffect
-    val toFetch =
+    val toFetch: List<String> =
         buildSet {
               add(p.authorId)
               fun walk(list: List<Comment>) {
@@ -224,7 +227,9 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    toFetch.forEach { uid -> viewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc } }
+    toFetch.forEach { uid: String ->
+      accountViewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc }
+    }
   }
 
   Scaffold(

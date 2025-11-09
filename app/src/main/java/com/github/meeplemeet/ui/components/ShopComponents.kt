@@ -1022,7 +1022,14 @@ fun GameStockDialog(
       },
       text = {
         Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
-          ShopGameSearchBar(owner, shop, viewModel, gameUIState.fetchedGame, existingIds)
+          ShopGameSearchBar(
+              owner,
+              shop,
+              viewModel,
+              gameUIState.fetchedGame,
+              existingIds,
+              inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
+              dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
           if (isDuplicate) {
             Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))

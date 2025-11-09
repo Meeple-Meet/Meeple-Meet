@@ -15,8 +15,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 open class CreateSessionViewModel(
-    private val sessionRepository: SessionRepository = RepositoryProvider.sessions
-) : SearchViewModel(), AccountViewModel {
+    private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
+    gameRepository: GameRepository = RepositoryProvider.games
+) : SearchViewModel(gameRepository), AccountViewModel {
   override val scope: CoroutineScope
     get() = this.viewModelScope
 

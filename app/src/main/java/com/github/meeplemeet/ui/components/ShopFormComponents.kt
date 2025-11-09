@@ -250,7 +250,11 @@ fun RequiredInfoSection(
   }
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
-    ShopLocationSearchBar(owner, shop, viewModel)
+    ShopLocationSearchBar(
+        owner,
+        shop,
+        viewModel,
+        inputFieldTestTag = com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_FIELD)
   }
 }
 

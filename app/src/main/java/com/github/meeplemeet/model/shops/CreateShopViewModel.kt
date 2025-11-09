@@ -15,8 +15,13 @@ import com.github.meeplemeet.model.shared.location.Location
  *
  * @property shopRepo The repository used for shop operations.
  */
-class CreateShopViewModel(private val shopRepo: ShopRepository = RepositoryProvider.shops) :
-    ShopSearchViewModel() {
+class CreateShopViewModel(
+    private val shopRepo: ShopRepository = RepositoryProvider.shops,
+    gameRepository: com.github.meeplemeet.model.shared.game.GameRepository =
+        RepositoryProvider.games,
+    locationRepository: com.github.meeplemeet.model.shared.location.LocationRepository =
+        RepositoryProvider.locations
+) : ShopSearchViewModel(gameRepository, locationRepository) {
   /**
    * Creates a new shop in Firestore.
    *
