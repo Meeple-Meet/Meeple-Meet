@@ -372,7 +372,10 @@ fun MeepleMeetApp(
             account = account!!,
             shopId = shopId,
             onBack = { navigationActions.goBack() },
-            onEdit = { navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false) })
+            onEdit = {
+              shop = it
+              navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
+            })
       } else {
         LoadingScreen()
       }

@@ -128,7 +128,7 @@ fun DiscussionDetailsScreen(
     Scaffold(
         topBar = {
           TopBarWithDivider(
-              text = d.name,
+              text = "Group Info",
               /**
                * Save Name and Description on back — this is the only time the DB is updated here
                */

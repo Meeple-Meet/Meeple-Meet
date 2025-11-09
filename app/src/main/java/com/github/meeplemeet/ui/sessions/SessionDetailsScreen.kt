@@ -64,7 +64,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionViewModel
@@ -223,7 +222,7 @@ fun SessionDetailsScreen(
                     name = form.title,
                     gameId = form.proposedGameString,
                     date = toTimestamp(form.date, form.time),
-                    location = Location(0.0, 0.0, form.locationText),
+                    location = locationUi.selectedLocation ?: Location(),
                     newParticipantList = form.participants.ifEmpty { emptyList() })
               }
               onBack()
