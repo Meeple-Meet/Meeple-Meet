@@ -71,10 +71,10 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
-import com.github.meeplemeet.ui.components.GameSearchField
 import com.github.meeplemeet.ui.components.IconTextField
-import com.github.meeplemeet.ui.components.LocationSessionDropdown
 import com.github.meeplemeet.ui.components.SectionCard
+import com.github.meeplemeet.ui.components.SessionGameSearchBar
+import com.github.meeplemeet.ui.components.SessionLocationSearchBar
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
@@ -528,21 +528,11 @@ private fun ProposedGameSection(
     discussion: Discussion,
     editable: Boolean,
     gameUIState: GameUIState,
-    onChooseGame: (String) -> Unit
 ) {
 
   Column(modifier = Modifier.fillMaxWidth()) {
     if (editable) {
-      GameSearchField(
-          query = gameUIState.gameQuery,
-          onQueryChange = { viewModel.setGameQuery(currentUser, discussion, it) },
-          results = gameUIState.gameSuggestions,
-          onPick = {
-            onChooseGame(it.uid)
-            viewModel.setGame(currentUser, discussion, it)
-          },
-          isLoading = false,
-          modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
+      SessionGameSearchBar(currentUser, discussion, viewModel, gameUIState.fetchedGame)
     } else {
       val displayedName = gameUIState.fetchedGame?.name ?: "Loading..."
       Row {
@@ -600,7 +590,7 @@ fun OrganizationSection(
             currentUser = account,
             discussion = discussion,
             editable = editable,
-            gameUIState = gameUIState) {}
+            gameUIState = gameUIState)
 
         Spacer(Modifier.height(10.dp))
 
@@ -622,7 +612,7 @@ fun OrganizationSection(
 
         if (editable) {
           // Admins and creators: interactive search field
-          LocationSessionDropdown(
+          SessionLocationSearchBar(
               account,
               discussion,
               sessionViewModel,

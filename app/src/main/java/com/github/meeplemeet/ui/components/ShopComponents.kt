@@ -22,12 +22,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,16 +32,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -927,107 +926,6 @@ fun ActionBar(
  * ============================================================================= */
 
 /**
- * A composable function that displays a one-line game search field with a dropdown menu for
- * selecting games.
- *
- * @param query The current search query.
- * @param onQueryChange A callback function that is invoked when the search query changes.
- * @param results A list of games that match the search query.
- * @param isLoading A boolean indicating whether the search results are loading.
- * @param onPick A callback function that is invoked when a game is picked from the dropdown menu.
- * @param placeholder The placeholder text for the search field.
- * @param modifier The modifier to be applied to the search field.
- * @param isItemEnabled A function that determines whether a game item is enabled for selection.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GameSearchOneLine(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    results: List<Game>,
-    isLoading: Boolean,
-    onPick: (Game) -> Unit,
-    placeholder: String,
-    modifier: Modifier = Modifier,
-    isItemEnabled: (Game) -> Boolean = { true }
-) {
-  var expanded by remember { mutableStateOf(false) }
-  val focusManager = LocalFocusManager.current
-
-  ExposedDropdownMenuBox(
-      expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-              onQueryChange(it)
-              expanded = it.isNotBlank() || isLoading
-            },
-            singleLine = true,
-            leadingIcon = {
-              Icon(
-                  Icons.Filled.Search,
-                  contentDescription = null,
-                  modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_LEADING))
-            },
-            trailingIcon = {
-              when {
-                isLoading ->
-                    CircularProgressIndicator(
-                        Modifier.size(18.dp).testTag(ShopComponentsTestTags.GAME_SEARCH_PROGRESS),
-                        strokeWidth = 2.dp)
-                query.isNotEmpty() ->
-                    IconButton(
-                        onClick = {
-                          onQueryChange("")
-                          expanded = false
-                        },
-                        modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_CLEAR)) {
-                          Icon(Icons.Filled.Close, contentDescription = "Clear")
-                        }
-              }
-            },
-            placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            modifier =
-                Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true)
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .testTag(ShopComponentsTestTags.GAME_SEARCH_FIELD))
-
-        ExposedDropdownMenu(
-            expanded = expanded && (isLoading || results.isNotEmpty()),
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_SEARCH_MENU)) {
-              results.forEachIndexed { idx, g ->
-                val enabled = isItemEnabled(g)
-                DropdownMenuItem(
-                    text = {
-                      Row(
-                          Modifier.fillMaxWidth(),
-                          horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(g.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (!enabled) {
-                              Text(
-                                  ShopUiDefaults.StringsMagicNumbers.ADDED,
-                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                          }
-                    },
-                    enabled = enabled,
-                    onClick = {
-                      if (enabled) {
-                        onPick(g)
-                        onQueryChange(g.name)
-                        expanded = false
-                        focusManager.clearFocus()
-                      }
-                    },
-                    modifier = Modifier.testTag("${ShopComponentsTestTags.GAME_SEARCH_ITEM}:$idx"))
-              }
-            }
-      }
-}
-
-/**
  * A composable function that displays a quantity input with +/- buttons and a label.
  *
  * @param value The current quantity value.
@@ -1036,7 +934,7 @@ private fun GameSearchOneLine(
  * @param modifier The modifier to be applied to the quantity input.
  */
 @Composable
-fun QuantitySlider(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier) {
   Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
     Text(
         ShopUiDefaults.StringsMagicNumbers.QUANTITY,
@@ -1077,7 +975,7 @@ fun QuantitySlider(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier 
                 val newValue = (value + 1)
                 onValueChange(newValue)
               },
-              enabled = value > 0,
+              enabled = true,
               modifier = Modifier.testTag(ShopComponentsTestTags.QTY_PLUS_BUTTON)) {
                 Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
               }
@@ -1108,6 +1006,10 @@ fun QuantitySlider(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier 
  */
 @Composable
 fun GameStockDialog(
+    owner: Account,
+    shop: Shop?,
+    viewModel: ShopSearchViewModel,
+    gameUIState: GameUIState,
     query: String,
     onQueryChange: (String) -> Unit,
     results: List<Game>,
@@ -1120,10 +1022,6 @@ fun GameStockDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
-  val filtered =
-      remember(results, existingIds) {
-        results.filterNot { it.uid in existingIds }.distinctBy { it.uid }
-      }
   val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
 
   AlertDialog(
@@ -1140,20 +1038,7 @@ fun GameStockDialog(
       },
       text = {
         Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
-          GameSearchOneLine(
-              query = query,
-              onQueryChange = onQueryChange,
-              results = filtered,
-              isLoading = isLoading,
-              onPick = { g ->
-                onPickGame(g)
-                onQueryChange(g.name)
-              },
-              placeholder = ShopUiDefaults.StringsMagicNumbers.SEARCH_GAMES_PLACEHOLDER,
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .height(56.dp)
-                      .testTag(ShopComponentsTestTags.GAME_DIALOG_SEARCH))
+          ShopGameSearchBar(owner, shop, viewModel, gameUIState.fetchedGame, existingIds)
 
           if (isDuplicate) {
             Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
@@ -1166,7 +1051,7 @@ fun GameStockDialog(
 
           Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space16))
 
-          QuantitySlider(
+          GameAddUI(
               value = quantity,
               onValueChange = onQuantityChange,
               modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER))
@@ -1182,7 +1067,7 @@ fun GameStockDialog(
       confirmButton = {
         TextButton(
             onClick = onSave,
-            enabled = selectedGame != null && !isDuplicate && quantity > 0,
+            enabled = gameUIState.fetchedGame != null && !isDuplicate && quantity > 0,
             modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
               Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }

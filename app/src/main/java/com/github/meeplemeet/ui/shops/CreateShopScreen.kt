@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
@@ -143,6 +144,7 @@ fun CreateShopScreen(
           throw e
         }
       },
+      gameUi = ui,
       locationUi = locationUi,
       gameQuery = ui.gameQuery,
       gameSuggestions = ui.gameSuggestions,
@@ -184,6 +186,7 @@ fun AddShopContent(
             address: Location,
             week: List<OpeningHours>,
             stock: List<Pair<Game, Int>>) -> String,
+    gameUi: GameUIState,
     locationUi: LocationUIState,
     gameQuery: String,
     gameSuggestions: List<Game>,
@@ -388,6 +391,10 @@ fun AddShopContent(
       onDismiss = { showHoursDialog = false })
 
   GameStockPicker(
+      owner = owner,
+      shop = null,
+      viewModel = viewModel,
+      gameUIState = gameUi,
       show = showGameDialog,
       stock = stock,
       onStockChange = { stock = it },

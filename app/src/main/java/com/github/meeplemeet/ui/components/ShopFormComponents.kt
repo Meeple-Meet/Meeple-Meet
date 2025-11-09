@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -249,7 +250,7 @@ fun RequiredInfoSection(
   }
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
-    LocationShopDropdown(owner, shop, viewModel)
+    ShopLocationSearchBar(owner, shop, viewModel)
   }
 }
 
@@ -402,6 +403,10 @@ fun OpeningHoursEditor(
  */
 @Composable
 fun GameStockPicker(
+    owner: Account,
+    shop: Shop?,
+    viewModel: ShopSearchViewModel,
+    gameUIState: GameUIState,
     show: Boolean,
     stock: List<Pair<Game, Int>>,
     onStockChange: (List<Pair<Game, Int>>) -> Unit,
@@ -421,7 +426,11 @@ fun GameStockPicker(
   val existing = remember(stock) { stock.map { it.first.uid }.toSet() }
   Box(Modifier.testTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER)) {
     GameStockDialog(
+        owner,
+        shop,
         query = gameQuery,
+        viewModel = viewModel,
+        gameUIState = gameUIState,
         onQueryChange = onSetGameQuery,
         results = gameSuggestions,
         isLoading = isSearching,

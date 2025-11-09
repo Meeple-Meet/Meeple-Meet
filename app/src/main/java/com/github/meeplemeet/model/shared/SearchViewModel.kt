@@ -134,7 +134,9 @@ open class SearchViewModel(
    * @param game The [Game] object to select
    */
   fun setGame(game: Game) {
-    _gameUIState.value = _gameUIState.value.copy(selectedGameUid = game.uid, gameQuery = game.name)
+    _gameUIState.value =
+        _gameUIState.value.copy(
+            selectedGameUid = game.uid, gameQuery = game.name, fetchedGame = game)
   }
 
   /**

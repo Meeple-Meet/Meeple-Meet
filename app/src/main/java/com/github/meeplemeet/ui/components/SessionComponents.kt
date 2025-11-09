@@ -7,7 +7,6 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +16,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +32,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
@@ -78,7 +73,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -96,7 +90,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** Extra test tags for components (kept separate to avoid breaking other tests). */
 object ComponentsTestTags {
@@ -117,12 +110,9 @@ object ComponentsTestTags {
   const val SEARCH_POPUP_SURFACE = "comp_search_popup_surface"
   const val SEARCH_LOADING = "comp_search_loading"
   const val SEARCH_EMPTY = "comp_search_empty"
-  const val SEARCH_LIST = "comp_search_list"
   const val SEARCH_ITEM_PREFIX = "comp_search_item_"
 
   fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
-
-  fun searchItem(norm: String) = "$SEARCH_ITEM_PREFIX$norm"
 }
 
 /** Action for participant chip: add or remove. */
@@ -687,31 +677,31 @@ fun TimePickerField(
 }
 
 @Composable
-fun LocationSessionDropdown(
+fun SessionLocationSearchBar(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
-    testTag: String = "",
-    testTag2: String = ""
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
 ) {
-  LocationDropdown(
+  LocationSearchBar(
       setLocation = { viewModel.setLocation(account, discussion, it) },
       setLocationQuery = { viewModel.setLocationQuery(account, discussion, it) },
       discussion.session?.location ?: Location(),
       viewModel,
-      testTag,
-      testTag2)
+      inputFieldTestTag,
+      dropdownItemTestTag)
 }
 
 @Composable
-fun LocationShopDropdown(
+fun ShopLocationSearchBar(
     account: Account,
     shop: Shop?,
     viewModel: ShopSearchViewModel,
-    testTag: String = "",
-    testTag2: String = ""
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
 ) {
-  LocationDropdown(
+  LocationSearchBar(
       setLocation = {
         val location = it
         shop?.let { viewModel.setLocation(shop, account, location) }
@@ -724,13 +714,13 @@ fun LocationShopDropdown(
       },
       shop?.address ?: Location(),
       viewModel,
-      testTag,
-      testTag2)
+      inputFieldTestTag,
+      dropdownItemTestTag)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LocationDropdown(
+private fun LocationSearchBar(
     setLocation: (Location) -> Unit,
     setLocationQuery: (String) -> Unit,
     initial: Location,
@@ -778,227 +768,101 @@ private fun LocationDropdown(
   }
 }
 
-/**
- * A search dropdown field that shows suggestions based on the query input.
- *
- * @param label The label text for the search field.
- * @param query The current query string.
- * @param onQueryChange Callback function to be invoked when the query changes.
- * @param suggestions The list of suggestions to be displayed.
- * @param onSuggestionClick Callback function to be invoked when a suggestion is clicked.
- * @param getPrimaryText Function to extract the primary text from a suggestion item.
- * @param modifier Modifier to be applied to the Box containing the search field.
- * @param modifierTxtField Modifier to be applied to the OutlinedTextField.
- * @param placeholder Placeholder text to be displayed in the text field.
- * @param isLoading Whether the search is currently loading results.
- * @param showWhenEmptyQuery Whether to show suggestions when the query is empty.
- * @param itemContent Optional composable content for each suggestion item.
- * @param emptyText Text to display when there are no suggestions.
- */
 @Composable
-fun <T> SearchDropdownField(
-    label: String,
-    query: String,
-    onQueryChange: (String) -> Unit,
-    suggestions: List<T>,
-    onSuggestionClick: (T) -> Unit,
-    getPrimaryText: (T) -> String,
-    modifier: Modifier = Modifier,
-    modifierTxtField: Modifier = Modifier,
-    placeholder: String = "",
-    isLoading: Boolean = false,
-    showWhenEmptyQuery: Boolean = false,
-    itemContent: (@Composable (item: T) -> Unit)? = null,
-    emptyText: String = "No results"
+fun SessionGameSearchBar(
+    account: Account,
+    discussion: Discussion,
+    viewModel: CreateSessionViewModel,
+    initial: Game? = null,
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
 ) {
-  var expanded by remember { mutableStateOf(false) }
-  var internalQuery by remember { mutableStateOf(query) }
+  GameSearchBar(
+      setGame = { viewModel.setGame(account, discussion, it) },
+      setGameQuery = { viewModel.setGameQuery(account, discussion, it) },
+      viewModel,
+      initial,
+      emptySet(),
+      inputFieldTestTag,
+      dropdownItemTestTag)
+}
 
-  // Sync internalQuery with query parameter when it changes externally
-  LaunchedEffect(query) { internalQuery = query }
+@Composable
+fun ShopGameSearchBar(
+    account: Account,
+    shop: Shop?,
+    viewModel: ShopSearchViewModel,
+    initial: Game? = null,
+    existing: Set<String> = emptySet(),
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
+) {
+  GameSearchBar(
+      setGame = {
+        val game = it
+        shop?.let { viewModel.setGame(shop, account, game) } ?: viewModel.setGame(game)
+      },
+      setGameQuery = {
+        val query = it
+        shop?.let { viewModel.setGameQuery(shop, account, query) } ?: viewModel.setGameQuery(query)
+      },
+      viewModel,
+      initial,
+      existing,
+      inputFieldTestTag,
+      dropdownItemTestTag)
+}
 
-  Box(modifier = modifier) {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameSearchBar(
+    setGame: (Game) -> Unit,
+    setGameQuery: (String) -> Unit,
+    viewModel: SearchViewModel,
+    initial: Game? = null,
+    existing: Set<String> = emptySet(),
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
+) {
+  val results by viewModel.gameUIState.collectAsStateWithLifecycle()
+  var expanded = results.gameSuggestions.isNotEmpty()
+  val internalQuery =
+      remember(initial, results.gameQuery) { results.gameQuery.ifBlank { initial?.name ?: "" } }
+
+  LaunchedEffect(Unit) { if (initial != null && initial.name.isNotBlank()) setGame(initial) }
+
+  var forceClose by remember { mutableStateOf(false) }
+
+  ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
     OutlinedTextField(
         value = internalQuery,
         onValueChange = {
-          internalQuery = it
-          onQueryChange(it)
-          expanded = (showWhenEmptyQuery || it.isNotBlank())
+          forceClose = false
+          setGameQuery(it)
         },
-        label = { Text(label) },
+        label = { Text("Game") },
+        placeholder = { Text("Search games") },
+        modifier =
+            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                .fillMaxWidth()
+                .testTag(inputFieldTestTag),
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        trailingIcon = {
-          when {
-            isLoading -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            internalQuery.isNotEmpty() ->
-                IconButton(
+    )
+
+    ExposedDropdownMenu(
+        expanded = !forceClose && expanded, onDismissRequest = { expanded = false }) {
+          results.gameSuggestions
+              .filterNot { existing.contains(it.uid) }
+              .take(5)
+              .forEach { game ->
+                DropdownMenuItem(
+                    text = { Text(game.name) },
                     onClick = {
-                      internalQuery = ""
-                      onQueryChange("")
-                      expanded = false
-                    }) {
-                      Icon(Icons.Default.Close, contentDescription = "Clear")
-                    }
-          }
-        },
-        placeholder = { if (placeholder.isNotEmpty()) Text(placeholder) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().height(64.dp).then(modifierTxtField))
-
-    val shouldShow = expanded && (isLoading || suggestions.isNotEmpty())
-
-    if (shouldShow) {
-      Popup(onDismissRequest = { expanded = false }, alignment = Alignment.TopStart) {
-        Column(Modifier.fillMaxWidth().offset(y = 64.dp)) {
-          Surface(
-              modifier = Modifier.fillMaxWidth().testTag(ComponentsTestTags.SEARCH_POPUP_SURFACE),
-              shape = RoundedCornerShape(12.dp),
-              tonalElevation = 4.dp,
-              shadowElevation = 4.dp) {
-                when {
-                  isLoading -> {
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .padding(16.dp)
-                            .testTag(ComponentsTestTags.SEARCH_LOADING),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                          CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                          Text("Searching…", style = MaterialTheme.typography.bodyMedium)
-                        }
-                  }
-                  suggestions.isEmpty() -> {
-                    Text(
-                        emptyText,
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(16.dp)
-                                .testTag(ComponentsTestTags.SEARCH_EMPTY),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                  }
-                  else -> {
-                    LazyColumn(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .heightIn(max = 200.dp)
-                                .testTag(ComponentsTestTags.SEARCH_LIST),
-                        contentPadding = PaddingValues(vertical = 6.dp)) {
-                          items(suggestions) { item ->
-                            val raw = getPrimaryText(item)
-                            val norm =
-                                raw.lowercase(Locale.getDefault())
-                                    .replace(Regex("[^a-z0-9]+"), "_")
-                                    .trim('_')
-
-                            Row(
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .clickable {
-                                          onSuggestionClick(item)
-                                          expanded = false
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                                        .testTag(ComponentsTestTags.searchItem(norm)),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                  if (itemContent != null) {
-                                    itemContent(item)
-                                  } else {
-                                    Text(
-                                        text = raw,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis)
-                                  }
-                                }
-                          }
-                        }
-                  }
-                }
+                      forceClose = true
+                      setGame(game)
+                    },
+                    modifier = Modifier.testTag(dropdownItemTestTag))
               }
         }
-      }
-    }
   }
-}
-
-/**
- * A search field specifically for searching games.
- *
- * @param query The current query string.
- * @param onQueryChange Callback function to be invoked when the query changes.
- * @param results The list of game results to be displayed.
- * @param onPick Callback function to be invoked when a game is picked.
- * @param modifier Modifier to be applied to the Box containing the search field.
- * @param isLoading Whether the search is currently loading results.
- * @param placeholder Placeholder text to be displayed in the text field.
- */
-@Composable
-fun GameSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    results: List<Game>,
-    onPick: (Game) -> Unit,
-    modifier: Modifier = Modifier,
-    isLoading: Boolean = false,
-    placeholder: String = "Search games…"
-) {
-  SearchDropdownField(
-      label = "Game",
-      query = query,
-      onQueryChange = onQueryChange,
-      suggestions = results,
-      onSuggestionClick = onPick,
-      modifierTxtField = Modifier.testTag(SessionTestTags.PROPOSED_GAME),
-      getPrimaryText = { it.name },
-      isLoading = isLoading,
-      placeholder = placeholder,
-      modifier = modifier)
-}
-
-/**
- * A search field specifically for searching locations.
- *
- * @param query The current query string.
- * @param onQueryChange Callback function to be invoked when the query changes.
- * @param results The list of location results to be displayed.
- * @param onPick Callback function to be invoked when a location is picked.
- * @param modifier Modifier to be applied to the Box containing the search field.
- * @param isLoading Whether the search is currently loading results.
- * @param placeholder Placeholder text to be displayed in the text field.
- */
-@Composable
-fun LocationSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    results: List<Location>,
-    onPick: (Location) -> Unit,
-    modifier: Modifier = Modifier,
-    isLoading: Boolean = false,
-    placeholder: String = "Search locations…"
-) {
-  SearchDropdownField(
-      label = "Location",
-      query = query,
-      onQueryChange = onQueryChange,
-      suggestions = results,
-      onSuggestionClick = onPick,
-      getPrimaryText = { it.name },
-      isLoading = isLoading,
-      modifierTxtField = Modifier.testTag(SessionTestTags.LOCATION_FIELD),
-      placeholder = placeholder,
-      modifier = modifier,
-      itemContent = { loc ->
-        Column(Modifier.fillMaxWidth()) {
-          Text(
-              text = loc.name,
-              style = MaterialTheme.typography.bodyMedium,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis)
-          Text(
-              text = "${"%.5f".format(loc.latitude)}, ${"%.5f".format(loc.longitude)}",
-              style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-      })
 }
