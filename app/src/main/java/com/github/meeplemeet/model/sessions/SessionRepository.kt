@@ -1,15 +1,12 @@
 package com.github.meeplemeet.model.sessions
 
-import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.discussions.DISCUSSIONS_COLLECTION_PATH
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionNoUid
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -17,8 +14,10 @@ import kotlinx.coroutines.tasks.await
  *
  * Handles CRUD operations for sessions that are nested within discussion documents.
  */
-class SessionRepository(db: FirebaseFirestore = FirebaseProvider.db) {
-  private val discussions = db.collection(DISCUSSIONS_COLLECTION_PATH)
+class SessionRepository(
+    discussionRepository: DiscussionRepository = RepositoryProvider.discussions
+) {
+  private val discussions = discussionRepository.collection
   private val discussionRepo = DiscussionRepository()
   private val geoPinsRepo = RepositoryProvider.geoPins
 

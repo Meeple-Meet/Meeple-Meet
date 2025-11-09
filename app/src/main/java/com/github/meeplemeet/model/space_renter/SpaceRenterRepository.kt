@@ -2,20 +2,18 @@ package com.github.meeplemeet.model.space_renter
 
 // Claude Code generated the documentation
 
-import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.AccountRepository
 import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
-
-/** Firestore collection path for storing and retrieving space renter documents. */
-const val SPACE_RENTER_COLLECTION_PATH = "space_renters"
 
 /**
  * Repository for managing space rental businesses in Firestore.
@@ -25,13 +23,10 @@ const val SPACE_RENTER_COLLECTION_PATH = "space_renters"
  *
  * @property db The Firestore database instance to use for operations.
  */
-class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
-  private val spaceRenters = db.collection(SPACE_RENTER_COLLECTION_PATH)
-  private val accountRepo = RepositoryProvider.discussions
-  private val geoPinsRepo = RepositoryProvider.geoPins
-
-  private fun newUUID() = spaceRenters.document().id
-
+class SpaceRenterRepository(
+    val accountRepository: AccountRepository = RepositoryProvider.accounts,
+    val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
+) : FirestoreRepository("space_renters") {
   /**
    * Creates a new space renter and stores it in Firestore.
    *
@@ -59,9 +54,9 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   ): SpaceRenter {
     val spaceRenter =
         SpaceRenter(newUUID(), owner, name, phone, email, website, address, openingHours, spaces)
-    spaceRenters.document(spaceRenter.id).set(toNoUid(spaceRenter)).await()
+    collection.document(spaceRenter.id).set(toNoUid(spaceRenter)).await()
 
-    geoPinsRepo.upsertGeoPin(ref = spaceRenter.id, type = PinType.SPACE, location = address)
+    geoPinRepository.upsertGeoPin(ref = spaceRenter.id, type = PinType.SPACE, location = address)
 
     return spaceRenter
   }
@@ -76,7 +71,7 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @return A list of SpaceRenter objects, up to maxResults in size.
    */
   suspend fun getSpaceRenters(maxResults: UInt): List<SpaceRenter> {
-    val snapshot = spaceRenters.limit(maxResults.toLong()).get().await()
+    val snapshot = collection.limit(maxResults.toLong()).get().await()
 
     return coroutineScope {
       snapshot.documents
@@ -85,7 +80,7 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
               val spaceRenterNoUid = doc.toObject(SpaceRenterNoUid::class.java) ?: return@async null
 
               // Fetch the owner account
-              val owner = accountRepo.getAccount(spaceRenterNoUid.ownerId)
+              val owner = accountRepository.getAccount(spaceRenterNoUid.ownerId)
 
               fromNoUid(doc.id, spaceRenterNoUid, owner)
             }
@@ -106,7 +101,7 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    *   parsed.
    */
   suspend fun getSpaceRenter(id: String): SpaceRenter {
-    val snapshot = spaceRenters.document(id).get().await()
+    val snapshot = collection.document(id).get().await()
     if (!snapshot.exists())
         throw IllegalArgumentException("SpaceRenter with the given ID does not exist")
 
@@ -115,7 +110,7 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
             ?: throw IllegalArgumentException("Failed to parse space renter data")
 
     // Fetch the owner account
-    val owner = accountRepo.getAccount(spaceRenterNoUid.ownerId)
+    val owner = accountRepository.getAccount(spaceRenterNoUid.ownerId)
 
     return fromNoUid(id, spaceRenterNoUid, owner)
   }
@@ -161,9 +156,9 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     if (updates.isEmpty())
         throw IllegalArgumentException("At least one field must be provided for update")
 
-    spaceRenters.document(id).update(updates).await()
+    collection.document(id).update(updates).await()
 
-    if (address != null) geoPinsRepo.upsertGeoPin(id, PinType.SPACE, address)
+    if (address != null) geoPinRepository.upsertGeoPin(id, PinType.SPACE, address)
   }
 
   /**
@@ -172,7 +167,7 @@ class SpaceRenterRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @param id The unique identifier of the space renter to delete.
    */
   suspend fun deleteSpaceRenter(id: String) {
-    geoPinsRepo.deleteGeoPin(id)
-    spaceRenters.document(id).delete().await()
+    geoPinRepository.deleteGeoPin(id)
+    collection.document(id).delete().await()
   }
 }

@@ -26,12 +26,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.MainActivityViewModel
+import com.github.meeplemeet.model.auth.AccountRepository
 import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
@@ -96,10 +97,13 @@ object FirebaseProvider {
  */
 object RepositoryProvider {
   /** Lazily initialized repository for account/authentication operations. */
-  val accounts: AuthRepository by lazy { AuthRepository() }
+  val authentication: AuthenticationRepository by lazy { AuthenticationRepository() }
 
   /** Lazily initialized repository for user handle operations. */
   val handles: HandlesRepository by lazy { HandlesRepository() }
+
+  /** Lazily initialized repository for account operations. */
+  val accounts: AccountRepository by lazy { AccountRepository() }
 
   /** Lazily initialized repository for discussion operations. */
   val discussions: DiscussionRepository by lazy { DiscussionRepository() }
@@ -151,9 +155,9 @@ class MainActivity : ComponentActivity() {
 fun MeepleMeetApp(
     context: Context = LocalContext.current,
     authVM: AuthViewModel = viewModel(),
-    firestoreVM: DiscussionViewModel = viewModel(),
     handlesVM: HandlesViewModel = viewModel(),
     navController: NavHostController = rememberNavController(),
+    viewModel: MainActivityViewModel = viewModel()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
@@ -162,14 +166,14 @@ fun MeepleMeetApp(
   var accountId by remember { mutableStateOf(FirebaseProvider.auth.currentUser?.uid ?: "") }
   val accountFlow =
       remember(accountId, signedOut) {
-        if (!signedOut) firestoreVM.accountFlow(accountId) else MutableStateFlow(null)
+        if (!signedOut) viewModel.accountFlow(accountId) else MutableStateFlow(null)
       }
   val account by accountFlow.collectAsStateWithLifecycle()
 
   var discussionId by remember { mutableStateOf("") }
   val discussionFlow =
       remember(discussionId, signedOut) {
-        if (!signedOut) firestoreVM.discussionFlow(discussionId) else MutableStateFlow(null)
+        if (!signedOut) viewModel.discussionFlow(discussionId) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
   val sessionVM = remember(discussion) { discussion?.let { SessionViewModel(discussion!!) } }
@@ -226,7 +230,7 @@ fun MeepleMeetApp(
             handlesVM,
             onCreate = { navigationActions.navigateOutOfAuthGraph() },
             onBack = {
-              firestoreVM.signOut()
+              viewModel.signOut()
               authVM.signOut()
               FirebaseProvider.auth.signOut()
               navigationActions.goBack()

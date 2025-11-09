@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.GoogleSignInHelper
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.google.android.gms.tasks.Task
@@ -39,7 +39,8 @@ class AuthRepoFirebaseTest {
         .thenReturn(failedTask(Exception("Invalid email")))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.registerWithEmail("invalid-email", "password123")
 
     assertTrue(result.isFailure)
@@ -54,7 +55,8 @@ class AuthRepoFirebaseTest {
         .thenReturn(failedTask(Exception("Empty password")))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.registerWithEmail("test@example.com", "")
 
     assertTrue(result.isFailure)
@@ -83,7 +85,8 @@ class AuthRepoFirebaseTest {
         .thenReturn(expectedAccount)
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.registerWithEmail(email, password)
 
     assertTrue(result.isSuccess)
@@ -103,7 +106,8 @@ class AuthRepoFirebaseTest {
         whenever(mockAuthResult.user).thenReturn(null)
 
         val repo =
-            AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+            AuthenticationRepository(
+                auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
         val result = repo.registerWithEmail("test@example.com", "Password!123")
 
         assertTrue(result.isFailure)
@@ -119,7 +123,8 @@ class AuthRepoFirebaseTest {
         .thenReturn(failedTask(Exception("Invalid credentials")))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.loginWithEmail("test@example.com", "wrongpassword")
 
     assertTrue(result.isFailure)
@@ -145,7 +150,8 @@ class AuthRepoFirebaseTest {
     whenever(mockFirestore.getAccount(uid)).thenReturn(expectedAccount)
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.loginWithEmail(email, password)
 
     assertTrue(result.isSuccess)
@@ -170,7 +176,8 @@ class AuthRepoFirebaseTest {
     whenever(mockFirestore.getAccount(uid)).thenThrow(RuntimeException("Account not found"))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.loginWithEmail(email, password)
 
     assertTrue(result.isFailure)
@@ -188,7 +195,8 @@ class AuthRepoFirebaseTest {
         whenever(mockAuthResult.user).thenReturn(null)
 
         val repo =
-            AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+            AuthenticationRepository(
+                auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
         val result = repo.loginWithEmail("test@example.com", "Password!123")
 
         assertTrue(result.isFailure)
@@ -201,7 +209,8 @@ class AuthRepoFirebaseTest {
     val mockFirestore = mock<DiscussionRepository>()
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.logout()
 
     assertTrue(result.isSuccess)
@@ -215,7 +224,8 @@ class AuthRepoFirebaseTest {
     whenever(mockAuth.signOut()).thenThrow(RuntimeException("signOut failed"))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.logout()
 
     assertTrue(result.isFailure)
@@ -227,7 +237,8 @@ class AuthRepoFirebaseTest {
     val mockFirestore = mock<DiscussionRepository>()
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     repo.logout()
 
     verify(mockAuth).signOut()
@@ -241,7 +252,8 @@ class AuthRepoFirebaseTest {
     val credential = mock<Credential>()
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.loginWithGoogle(credential)
 
     assertTrue(result.isFailure)
@@ -256,7 +268,8 @@ class AuthRepoFirebaseTest {
     whenever(credential.type).thenReturn("WRONG_TYPE")
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mock(), discussionRepository = mockFirestore)
     val result = repo.loginWithGoogle(credential)
 
     assertTrue(result.isFailure)
@@ -291,7 +304,8 @@ class AuthRepoFirebaseTest {
     whenever(mockFirestore.getAccount(uid)).thenReturn(expectedAccount)
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
     val result = repo.loginWithGoogle(credential)
 
     assertTrue(result.isSuccess)
@@ -317,7 +331,8 @@ class AuthRepoFirebaseTest {
         .thenReturn(failedTask(Exception("Sign in failed")))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
     val result = repo.loginWithGoogle(credential)
 
     assertTrue(result.isFailure)
@@ -343,7 +358,8 @@ class AuthRepoFirebaseTest {
     whenever(mockAuthResult.user).thenReturn(null)
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
     val result = repo.loginWithGoogle(credential)
 
     assertTrue(result.isFailure)
@@ -373,7 +389,8 @@ class AuthRepoFirebaseTest {
     whenever(mockFirestore.getAccount(uid)).thenThrow(RuntimeException("Account not found"))
 
     val repo =
-        AuthRepository(auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
+        AuthenticationRepository(
+            auth = mockAuth, helper = mockHelper, discussionRepository = mockFirestore)
     val result = repo.loginWithGoogle(credential)
 
     assertTrue(result.isFailure)

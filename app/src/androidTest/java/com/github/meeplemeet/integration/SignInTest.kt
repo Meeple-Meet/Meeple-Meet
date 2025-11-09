@@ -1,7 +1,7 @@
 package com.github.meeplemeet.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.auth.AuthRepository
+import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
@@ -25,7 +25,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SignInTest : FirestoreTests() {
 
-  private lateinit var authRepo: AuthRepository
+  private lateinit var authRepo: AuthenticationRepository
   private lateinit var firestoreRepo: DiscussionRepository
 
   // Test credentials - using random emails to avoid conflicts
@@ -38,7 +38,7 @@ class SignInTest : FirestoreTests() {
   fun setup() {
     // Initialize repositories
     firestoreRepo = DiscussionRepository(db)
-    authRepo = AuthRepository(auth = auth, discussionRepository = firestoreRepo)
+    authRepo = AuthenticationRepository(auth = auth, discussionRepository = firestoreRepo)
 
     // Ensure clean state for each test
     runBlocking {
