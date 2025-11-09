@@ -11,10 +11,10 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.components.ComponentsTestTags
@@ -47,7 +47,7 @@ class CreateSessionScreenTest {
   @get:Rule val compose = createComposeRule()
 
   // Repos / VMs
-  private lateinit var firestoreRepo: DiscussionRepository
+  private lateinit var discussionRepository: DiscussionRepository
   private lateinit var viewModel: DiscussionViewModel
   private lateinit var sessionRepo: SessionRepository
   private lateinit var fakeGameRepo: FakeGameRepository
@@ -93,14 +93,7 @@ class CreateSessionScreenTest {
 
   private fun setContent(discussion: Discussion = baseDiscussion, onBack: () -> Unit = {}) {
     compose.setContent {
-      AppTheme {
-        CreateSessionScreen(
-            viewModel = viewModel,
-            sessionViewModel = sessionVM,
-            account = me,
-            discussion = discussion,
-            onBack = onBack)
-      }
+      AppTheme { CreateSessionScreen(account = me, discussion = discussion, onBack = onBack) }
     }
   }
 
@@ -129,8 +122,8 @@ class CreateSessionScreenTest {
 
   @Before
   fun setUp() {
-    firestoreRepo = mockk(relaxed = true)
-    viewModel = spyk(DiscussionViewModel(firestoreRepo))
+    discussionRepository = mockk(relaxed = true)
+    viewModel = spyk(DiscussionViewModel(discussionRepository))
 
     baseDiscussion =
         Discussion(
@@ -168,11 +161,7 @@ class CreateSessionScreenTest {
 
     sessionRepo = mockk(relaxed = true)
     fakeGameRepo = FakeGameRepository()
-    sessionVM =
-        SessionViewModel(
-            initDiscussion = baseDiscussion,
-            sessionRepository = sessionRepo,
-            gameRepository = fakeGameRepo)
+    sessionVM = SessionViewModel(sessionRepository = sessionRepo)
   }
 
   // Grouped UI: bars, snackbar, back/discard
@@ -228,12 +217,7 @@ class CreateSessionScreenTest {
       AppTheme {
         var disc by remember { mutableStateOf(baseDiscussion) }
         updateDiscussion = { newDisc -> disc = newDisc }
-        CreateSessionScreen(
-            viewModel = viewModel,
-            sessionViewModel = sessionVM,
-            account = me,
-            discussion = disc,
-            onBack = {})
+        CreateSessionScreen(account = me, discussion = disc, onBack = {})
       }
     }
 
@@ -331,16 +315,13 @@ class CreateSessionScreenTest {
         OrganisationSection(
             date = null,
             time = null,
-            locationText = "",
             onDateChange = {},
             onTimeChange = {},
-            onLocationChange = {},
             account = me,
-            sessionViewModel = sessionVM,
             discussion = baseDiscussion,
             onLocationPicked = {},
             gameUi = GameUIState(),
-            locationUi = LocationUIState())
+            viewModel = CreateSessionViewModel())
       }
     }
     compose.onAllNodesWithText("Location").onFirst().assertExists()

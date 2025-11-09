@@ -231,6 +231,7 @@ class CreateShopScreenTest {
         var query by remember { mutableStateOf("") }
         val viewModel = CreateShopViewModel()
         val locationUi by viewModel.locationUIState.collectAsState()
+        val gameUi by viewModel.gameUIState.collectAsState()
 
         when (s.intValue) {
           // 0: Structure
@@ -247,6 +248,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 1: Validation gating (disabled -> enabled after fields + hours)
@@ -263,6 +265,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 2: Create success
@@ -283,6 +286,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 3: Create error -> snackbar
@@ -299,6 +303,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 4: Optional fields don't gate
@@ -315,6 +320,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 5: Discard clears and calls onBack
@@ -331,6 +337,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
         }
       }
@@ -449,6 +456,7 @@ class CreateShopScreenTest {
         var query by remember { mutableStateOf("") }
         val viewModel = CreateShopViewModel()
         val locationUi by viewModel.locationUIState.collectAsState()
+        val gameUi by viewModel.gameUIState.collectAsState()
 
         when (s.intValue) {
           // 0: Add one via dialog (starts empty)
@@ -465,6 +473,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 1: Scroll inner grid with many items
@@ -481,6 +490,7 @@ class CreateShopScreenTest {
                   initialStock = many,
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 2: Delete removes and shows empty
@@ -497,6 +507,7 @@ class CreateShopScreenTest {
                   initialStock = listOf(g1 to 2, g2 to 1),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 3: Delete updates stock payload on create
@@ -516,6 +527,7 @@ class CreateShopScreenTest {
                   initialStock = listOf(g1 to 2, g2 to 1),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 4: Dialog hides already-added + save disabled until pick
@@ -532,6 +544,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
 
           // 5: Delete then re-add
@@ -548,6 +561,7 @@ class CreateShopScreenTest {
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
+                  gameUi = gameUi,
                   locationUi = locationUi)
         }
       }
@@ -657,7 +671,7 @@ class CreateShopScreenTest {
 
   @Test
   fun createShopScreen_smoke_renders_topbar_and_list() {
-    val vm = com.github.meeplemeet.model.shops.CreateShopViewModel()
+    val vm = CreateShopViewModel()
     compose.setContent {
       AppTheme { CreateShopScreen(owner = owner, onBack = {}, onCreated = {}, viewModel = vm) }
     }

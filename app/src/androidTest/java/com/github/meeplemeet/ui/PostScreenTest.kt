@@ -90,22 +90,15 @@ class PostScreenTest {
 
   private fun setContent(account: Account = marco, postId: String = "p1", onBack: () -> Unit = {}) {
     compose.setContent {
-      AppTheme {
-        PostScreen(
-            account = account,
-            postId = postId,
-            viewModel = postVM,
-            viewModel = usersVM,
-            onBack = onBack)
-      }
+      AppTheme { PostScreen(account = account, postId = postId, onBack = onBack) }
     }
   }
 
   /* Query helpers */
   private fun findNodeByTag(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true)
 
-  private fun findNodeByText(text: String, unmerged: Boolean = true) =
-      compose.onNodeWithText(text, useUnmergedTree = unmerged)
+  private fun findNodeByText() =
+      compose.onNodeWithText(COMMENT_TEXT_ZONE_PLACEHOLDER, useUnmergedTree = true)
 
   private fun settleAnimations() {
     compose.mainClock.advanceTimeBy(700)
@@ -124,8 +117,6 @@ class PostScreenTest {
   private fun renderHost(
       initialAccount: Account = marco,
       postId: String = "p1",
-      initialPostVM: PostViewModel = postVM,
-      initialUsersVM: DiscussionViewModel = usersVM,
       initialOnBack: (() -> Unit)? = {}
   ): HostControls {
     lateinit var controls: HostControls
@@ -134,7 +125,6 @@ class PostScreenTest {
         var account by remember { mutableStateOf(initialAccount) }
         var currentPostId by remember { mutableStateOf(postId) }
         var onBack by remember { mutableStateOf(initialOnBack) }
-        var vm by remember { mutableStateOf(initialPostVM) }
         var screenKey by remember { mutableStateOf(0) }
 
         controls =
@@ -142,23 +132,14 @@ class PostScreenTest {
                 setAccount = { account = it },
                 setPostId = { currentPostId = it },
                 setOnBack = { onBack = it },
-                setPostVM = { vm = it },
+                setPostVM = {},
                 resetScreen = { screenKey++ })
 
         key(screenKey) {
           if (onBack == null) {
-            PostScreen(
-                account = account,
-                postId = currentPostId,
-                viewModel = vm,
-                viewModel = initialUsersVM)
+            PostScreen(account = account, postId = currentPostId)
           } else {
-            PostScreen(
-                account = account,
-                postId = currentPostId,
-                viewModel = vm,
-                viewModel = initialUsersVM,
-                onBack = onBack!!)
+            PostScreen(account = account, postId = currentPostId, onBack = onBack!!)
           }
         }
       }
@@ -262,7 +243,7 @@ class PostScreenTest {
       AppTheme {
         var acc by remember { mutableStateOf(marco) }
         setAcc = { acc = it }
-        PostScreen(account = acc, postId = "p1", viewModel = postVM, viewModel = usersVM)
+        PostScreen(account = acc, postId = "p1")
       }
     }
     postFlowP1.value = postByAlex
@@ -283,7 +264,7 @@ class PostScreenTest {
 
     // Pre-post: disabled & placeholder
     findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
-    findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
+    findNodeByText().assertExists()
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
 
     // Post arrives -> enabled, send by click with trimming
@@ -293,9 +274,9 @@ class PostScreenTest {
     verify { postVM.addComment(marco, postByAlex, "p1", "slay the spire") }
 
     // Placeholder toggles & whitespace disables
-    findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertExists()
+    findNodeByText().assertExists()
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("x")
-    findNodeByText(COMMENT_TEXT_ZONE_PLACEHOLDER, true).assertDoesNotExist()
+    findNodeByText().assertDoesNotExist()
     findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("     ")
 
     // Attach (no-op visual)
@@ -547,7 +528,8 @@ class PostScreenTest {
     settleAnimations()
     compose
         .onNode(
-            hasTestTag(PostTags.POST_AUTHOR).and(hasText(UNKNOWN_USER_PLACEHOLDER, false, false)),
+            hasTestTag(PostTags.POST_AUTHOR)
+                .and(hasText(UNKNOWN_USER_PLACEHOLDER, substring = false, ignoreCase = false)),
             useUnmergedTree = true)
         .assertExists()
 
@@ -567,7 +549,7 @@ class PostScreenTest {
     compose
         .onNode(
             hasTestTag(PostTags.commentAuthor("c_nil"))
-                .and(hasText(UNKNOWN_USER_PLACEHOLDER, false, false)),
+                .and(hasText(UNKNOWN_USER_PLACEHOLDER, substring = false, ignoreCase = false)),
             useUnmergedTree = true)
         .assertExists()
     verify(atLeast = 1) { usersVM.getOtherAccount(eq(nilUid), any()) }
@@ -581,7 +563,7 @@ class PostScreenTest {
     compose
         .onNode(
             hasTestTag(PostTags.commentAuthor("c_blank"))
-                .and(hasText(UNKNOWN_USER_PLACEHOLDER, false, false)),
+                .and(hasText(UNKNOWN_USER_PLACEHOLDER, substring = false, ignoreCase = false)),
             useUnmergedTree = true)
         .assertExists()
     verify(exactly = 0) { usersVM.getOtherAccount("", any()) }

@@ -16,13 +16,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.AnnotatedString
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -45,8 +42,8 @@ class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
     return copiedText?.let { AnnotatedString(it) }
   }
 
-  override fun setText(text: androidx.compose.ui.text.AnnotatedString) {
-    copiedText = text.text
+  override fun setText(annotatedString: AnnotatedString) {
+    copiedText = annotatedString.text
   }
 }
 
@@ -54,14 +51,11 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()
   private lateinit var vm: ShopViewModel
-  private lateinit var discussionRepo: DiscussionRepository
-  private lateinit var repo: ShopRepository
   private lateinit var games: List<Game>
   private lateinit var dummyShop: Shop
   private lateinit var shop: Shop
   private lateinit var currentUser: Account
   private lateinit var owner: Account
-  private lateinit var gameRep: FirestoreGameRepository
 
   val address = Location(latitude = 0.0, longitude = 0.0, name = "123 Meeple St, Boardgame City")
 
@@ -76,17 +70,6 @@ class ShopDetailsScreenTest : FirestoreTests() {
           OpeningHours(day = 5, hours = listOf(TimeSlot("10:00", "16:00"))),
           OpeningHours(day = 6, hours = emptyList()))
 
-  val dummyGame =
-      Game(
-          uid = "g1",
-          name = "Catan",
-          imageURL = "test",
-          description = "this game is cool",
-          minPlayers = 1,
-          maxPlayers = 4,
-          recommendedPlayers = null,
-          averagePlayTime = null,
-          genres = emptyList())
   private var dummyGames =
       listOf(
           Pair(
@@ -146,23 +129,20 @@ class ShopDetailsScreenTest : FirestoreTests() {
     // seed documents
     seedGamesForTest(testDb)
 
-    repo = ShopRepository()
-    gameRep = FirestoreGameRepository(testDb)
-    discussionRepo = DiscussionRepository()
-    vm = ShopViewModel(repo)
+    vm = ShopViewModel()
 
-    games = runBlocking { gameRep.getGames(2) }
+    games = runBlocking { gameRepository.getGames(2) }
     dummyGames = listOf(Pair(games[0], 2), Pair(games[1], 1))
 
     currentUser = runBlocking {
-      discussionRepo.createAccount(
+      accountRepository.createAccount(
           userHandle = "testuser_${System.currentTimeMillis()}",
           name = "Alice",
           email = "alice@test.com",
           photoUrl = null)
     }
     owner = runBlocking {
-      discussionRepo.createAccount(
+      accountRepository.createAccount(
           userHandle = "testuser_${System.currentTimeMillis()}",
           name = "Owner",
           email = "Owner@test.com",
@@ -181,7 +161,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
             gameCollection = dummyGames)
 
     shop = runBlocking {
-      repo.createShop(
+      shopRepository.createShop(
           owner = owner,
           name = dummyShop.name,
           phone = dummyShop.phone,
@@ -191,9 +171,9 @@ class ShopDetailsScreenTest : FirestoreTests() {
           openingHours = dummyShop.openingHours,
           gameCollection = dummyShop.gameCollection)
     }
-    shop = runBlocking { repo.getShop(shop.id) }
-    currentUser = runBlocking { discussionRepo.getAccount(currentUser.uid) }
-    owner = runBlocking { discussionRepo.getAccount(owner.uid) }
+    shop = runBlocking { shopRepository.getShop(shop.id) }
+    currentUser = runBlocking { accountRepository.getAccount(currentUser.uid) }
+    owner = runBlocking { accountRepository.getAccount(owner.uid) }
   }
 
   @OptIn(ExperimentalTestApi::class)

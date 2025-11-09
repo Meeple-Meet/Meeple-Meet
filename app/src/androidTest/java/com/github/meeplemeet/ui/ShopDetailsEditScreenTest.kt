@@ -14,8 +14,6 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
@@ -23,7 +21,6 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.shops.EditShopScreenTestTags
@@ -44,9 +41,6 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  private lateinit var shopRepository: ShopRepository
-  private lateinit var discussionRepository: DiscussionRepository
-  private lateinit var gameRepository: FirestoreGameRepository
   private lateinit var editShopViewModel: EditShopViewModel
 
   private lateinit var testOwner: Account
@@ -110,15 +104,12 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    shopRepository = ShopRepository(db)
-    discussionRepository = DiscussionRepository()
-    gameRepository = FirestoreGameRepository(db)
-    editShopViewModel = EditShopViewModel(shopRepository)
+    editShopViewModel = EditShopViewModel()
 
     runBlocking {
       // Create test account
       testOwner =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "shopowner", "Shop Owner", email = "owner@boardgames.com", photoUrl = null)
 
       // Create test games
@@ -189,7 +180,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel)
       }
     }
 
@@ -287,7 +282,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel)
       }
     }
 
@@ -421,7 +420,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel)
       }
     }
 
@@ -450,7 +453,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel)
       }
     }
 
@@ -491,7 +498,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel)
       }
     }
 
@@ -550,7 +561,11 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel)
       }
     }
 

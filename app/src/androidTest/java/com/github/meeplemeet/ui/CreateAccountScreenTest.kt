@@ -4,11 +4,10 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
 import com.github.meeplemeet.ui.auth.CreateAccountTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -25,8 +24,7 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var repo: DiscussionRepository
-  private lateinit var firestoreVm: DiscussionViewModel
+  private lateinit var mainActivityViewModel: MainActivityViewModel
   private lateinit var handlesRepo: HandlesRepository
   private lateinit var handlesVm: CreateAccountViewModel
   private lateinit var me: Account
@@ -56,22 +54,16 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = DiscussionRepository()
-    firestoreVm = DiscussionViewModel(repo)
+    mainActivityViewModel = MainActivityViewModel()
     handlesRepo = HandlesRepository()
     handlesVm = CreateAccountViewModel(handlesRepo)
 
-    val bootstrapRepo = DiscussionRepository()
     val uid = "uid_" + UUID.randomUUID().toString().take(8)
-    me = bootstrapRepo.createAccount(uid, "Frank", "frank@test.com", null)
+    me = accountRepository.createAccount(uid, "Frank", "frank@test.com", null)
 
     compose.setContent {
       AppTheme(ThemeMode.DARK) {
-        CreateAccountScreen(
-            discussionVM = firestoreVm,
-            handlesVM = handlesVm,
-            account = me,
-            onCreate = { report["onCreate triggered"] = true })
+        CreateAccountScreen(account = me, onCreate = { report["onCreate triggered"] = true })
       }
     }
   }
@@ -137,7 +129,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.waitForIdle()
     checkpoint("Owner checkbox has an impact on account") {
       runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
+        val acc = mainActivityViewModel.accountFlow(me.uid).value
         acc?.shopOwner == true
       }
     }
@@ -146,7 +138,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.waitForIdle()
     checkpoint("Renter checkbox has an impact on account") {
       runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
+        val acc = mainActivityViewModel.accountFlow(me.uid).value
         acc?.spaceRenter == true
       }
     }
@@ -161,7 +153,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.waitForIdle()
     checkpoint("Multiple checkbox clicks have an impact on account") {
       runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
+        val acc = mainActivityViewModel.accountFlow(me.uid).value
         acc?.shopOwner == true && acc?.spaceRenter == false
       }
     }

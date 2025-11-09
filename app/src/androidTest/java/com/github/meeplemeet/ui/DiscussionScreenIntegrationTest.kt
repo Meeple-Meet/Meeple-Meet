@@ -8,7 +8,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionScreen
 import com.github.meeplemeet.ui.discussions.DiscussionTestTags
@@ -32,7 +31,6 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  private lateinit var repository: DiscussionRepository
   private lateinit var viewModel: DiscussionViewModel
   private lateinit var currentUser: Account
   private lateinit var testScope: TestScope
@@ -50,20 +48,19 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
   fun setup() = runBlocking {
     val dispatcher = StandardTestDispatcher()
     testScope = TestScope(dispatcher)
-    repository = DiscussionRepository()
-    viewModel = DiscussionViewModel(repository)
+    viewModel = DiscussionViewModel()
     backPressed = false
 
     // Create test users
     currentUser =
-        repository.createAccount(
+        accountRepository.createAccount(
             userHandle = "testuser_${Random.nextInt(1000000)}",
             name = "Alice",
             email = "alice@test.com",
             photoUrl = null)
 
     otherUser =
-        repository.createAccount(
+        accountRepository.createAccount(
             userHandle = "otheruser_${Random.nextInt(1000000)}",
             name = "Bob",
             email = "bob@test.com",
@@ -71,29 +68,29 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
     // Create a test discussion with messages
     testDiscussion =
-        repository.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Test Discussion",
             description = "A test discussion",
             creatorId = currentUser.uid,
             participants = listOf(otherUser.uid))
 
     // Add some test messages
-    repository.sendMessageToDiscussion(testDiscussion, currentUser, "Hi there!")
-    repository.sendMessageToDiscussion(testDiscussion, otherUser, "Hey Alice!")
+    discussionRepository.sendMessageToDiscussion(testDiscussion, currentUser, "Hi there!")
+    discussionRepository.sendMessageToDiscussion(testDiscussion, otherUser, "Hey Alice!")
 
     // Fetch updated discussion with messages
-    testDiscussion = repository.getDiscussion(testDiscussion.uid)
+    testDiscussion = discussionRepository.getDiscussion(testDiscussion.uid)
 
-    currentUser = repository.getAccount(currentUser.uid)
-    otherUser = repository.getAccount(otherUser.uid)
+    currentUser = accountRepository.getAccount(currentUser.uid)
+    otherUser = accountRepository.getAccount(otherUser.uid)
   }
 
   @After
   fun teardown() = runBlocking {
     // Clean up created data
-    repository.deleteDiscussion(testDiscussion)
-    repository.deleteAccount(currentUser.uid)
-    repository.deleteAccount(otherUser.uid)
+    discussionRepository.deleteDiscussion(testDiscussion)
+    accountRepository.deleteAccount(currentUser.uid)
+    accountRepository.deleteAccount(otherUser.uid)
   }
 
   @Test
@@ -325,7 +322,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
     var disc = discussion
     while (disc.messages.count { it.poll != null } < minCount) {
       kotlinx.coroutines.delay(200)
-      disc = repository.getDiscussion(discussion.uid)
+      disc = discussionRepository.getDiscussion(discussion.uid)
     }
     return disc
   }

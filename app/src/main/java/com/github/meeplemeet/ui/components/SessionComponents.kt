@@ -113,6 +113,11 @@ object ComponentsTestTags {
   const val SEARCH_EMPTY = "comp_search_empty"
   const val SEARCH_ITEM_PREFIX = "comp_search_item_"
 
+  const val SESSION_GAME_SEARCH_INPUT = "comp_session_game_search_input"
+  const val SESSION_GAME_SEARCH_ITEM = "comp_session_game_search_item"
+  const val SESSION_LOCATION_SEARCH_INPUT = "comp_session_location_search_input"
+  const val SESSION_LOCATION_SEARCH_ITEM = "comp_session_location_search_item"
+
   fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
 }
 
@@ -682,8 +687,8 @@ fun SessionLocationSearchBar(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
-    inputFieldTestTag: String = "",
-    dropdownItemTestTag: String = ""
+    inputFieldTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT,
+    dropdownItemTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_ITEM
 ) {
   LocationSearchBar(
       setLocation = { viewModel.setLocation(account, discussion, it) },
@@ -774,8 +779,8 @@ fun SessionGameSearchBar(
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
     initial: Game? = null,
-    inputFieldTestTag: String = "",
-    dropdownItemTestTag: String = ""
+    inputFieldTestTag: String = ComponentsTestTags.SESSION_GAME_SEARCH_INPUT,
+    dropdownItemTestTag: String = ComponentsTestTags.SESSION_GAME_SEARCH_ITEM
 ) {
   GameSearchBar(
       setGame = { viewModel.setGame(account, discussion, it) },

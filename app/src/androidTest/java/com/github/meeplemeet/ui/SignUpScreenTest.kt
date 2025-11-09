@@ -11,7 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.AuthUIState
-import com.github.meeplemeet.model.auth.AuthenticationRepository
+import com.github.meeplemeet.model.auth.SignUpViewModel
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -23,11 +23,11 @@ import org.junit.Test
 class SignUpScreenTest {
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var vm: AuthViewModel
+  private lateinit var vm: SignUpViewModel
 
   @Before
   fun setup() {
-    vm = AuthViewModel(AuthenticationRepository()) // real view model, no mocks
+    vm = SignUpViewModel() // real view model, no mocks
     compose.setContent {
       SignUpScreen(viewModel = vm) // uses defaults for NavController and CredentialManager
     }

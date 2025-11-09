@@ -13,7 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.AuthUIState
-import com.github.meeplemeet.model.auth.AuthenticationRepository
+import com.github.meeplemeet.model.auth.SignInViewModel
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,11 +24,11 @@ import org.junit.Test
 class SignInScreenTest {
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var vm: AuthViewModel
+  private lateinit var vm: SignInViewModel
 
   @Before
   fun setup() {
-    vm = AuthViewModel(AuthenticationRepository()) // real view model
+    vm = SignInViewModel() // real view model
     compose.setContent { SignInScreen(viewModel = vm) }
   }
 

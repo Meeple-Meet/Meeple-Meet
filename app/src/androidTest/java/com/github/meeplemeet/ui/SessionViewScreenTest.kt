@@ -15,7 +15,6 @@ import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.ui.sessions.OrganizationSection
@@ -76,7 +75,7 @@ class SessionDetailsScreenTest {
 
     sessionRepo = mockk(relaxed = true)
     gameRepo = mockk(relaxed = true)
-    sessionVM = spyk(SessionViewModel(baseDiscussion, sessionRepo, gameRepo))
+    sessionVM = spyk(SessionViewModel(sessionRepo))
   }
 
   private fun readIntFromText(tag: String): Int =
@@ -125,12 +124,7 @@ class SessionDetailsScreenTest {
 
     composeTestRule.setContent {
       SessionDetailsScreen(
-          viewModel = viewModel,
-          sessionViewModel = sessionVM,
-          account = currentUser,
-          initial = initialForm,
-          discussion = baseDiscussion,
-          onBack = {})
+          account = currentUser, initial = initialForm, discussion = baseDiscussion, onBack = {})
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.TITLE).assertExists()
@@ -155,12 +149,7 @@ class SessionDetailsScreenTest {
 
     composeTestRule.setContent {
       SessionDetailsScreen(
-          viewModel = viewModel,
-          sessionViewModel = sessionVM,
-          account = memberUser,
-          initial = initialForm,
-          discussion = baseDiscussion,
-          onBack = {})
+          account = memberUser, initial = initialForm, discussion = baseDiscussion, onBack = {})
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.TITLE).assertExists()
@@ -200,7 +189,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = baseDiscussion.copy(participants = listOf("1", "2", "u3")),
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onNodeWithText("+").performClick()
@@ -234,9 +223,7 @@ class SessionDetailsScreenTest {
           account = admin,
           gameUIState = gameUIState,
           isCurrUserAdmin = true,
-          onValueChangeTitle = {},
-          locationUi = LocationUIState(),
-          showError = {})
+          onValueChangeTitle = {})
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.TIME_PICK_BUTTON).performClick()
@@ -248,7 +235,7 @@ class SessionDetailsScreenTest {
 
   @Test
   fun timeField_shows_and_hides_dialog_on_pick() {
-    var picked: java.time.LocalTime? = null
+    var picked: LocalTime? = null
     composeTestRule.setContent {
       TimeField(value = "10:00", onValueChange = { picked = it }, editable = true)
     }
@@ -281,7 +268,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onAllNodesWithText("+").assertCountEquals(0)
@@ -300,7 +287,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     // now that slider is enabled, interact with it
@@ -321,8 +308,6 @@ class SessionDetailsScreenTest {
       SessionDetailsScreen(
           account = admin,
           discussion = baseDiscussion,
-          viewModel = viewModel,
-          sessionViewModel = sessionVM,
           initial = initialForm,
           onBack = { backCalled = true })
     }
@@ -348,12 +333,7 @@ class SessionDetailsScreenTest {
 
     composeTestRule.setContent {
       SessionDetailsScreen(
-          viewModel = viewModel,
-          sessionViewModel = sessionVM,
-          account = memberUser,
-          initial = initialForm,
-          discussion = baseDiscussion,
-          onBack = {})
+          account = memberUser, initial = initialForm, discussion = baseDiscussion, onBack = {})
     }
 
     // core sections still visible
@@ -387,7 +367,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onAllNodesWithTag("remove:John Doe").assertCountEquals(0)
@@ -421,7 +401,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = { removed.add(it) },
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertExists()
@@ -454,7 +434,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = { removed.add(it) },
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertExists()
@@ -487,7 +467,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onNodeWithTag("discrete_pill_slider").assertExists()
@@ -514,8 +494,6 @@ class SessionDetailsScreenTest {
       SessionDetailsScreen(
           account = admin,
           discussion = baseDiscussion,
-          viewModel = viewModel,
-          sessionViewModel = sessionVM,
           initial = initialForm,
           onBack = { backCalled = true })
     }
@@ -551,7 +529,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = disc,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     // '+' is visible and opens menu
@@ -583,7 +561,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = {},
           discussion = baseDiscussion,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onNodeWithTag(SessionTestTags.PARTICIPANT_CHIPS).assertExists()
@@ -616,7 +594,7 @@ class SessionDetailsScreenTest {
           onRemoveParticipant = {},
           onAddParticipant = { added.add(it) },
           discussion = disc,
-          viewModel = viewModel)
+          viewModel = sessionVM)
     }
 
     composeTestRule.onNodeWithTag("add_participant_button").performClick()
