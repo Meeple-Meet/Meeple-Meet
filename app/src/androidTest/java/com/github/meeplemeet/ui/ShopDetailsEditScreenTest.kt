@@ -26,8 +26,8 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
-import com.github.meeplemeet.ui.shops.EditShopScreen
 import com.github.meeplemeet.ui.shops.EditShopScreenTestTags
+import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
 import java.time.LocalTime
@@ -188,7 +188,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+        ShopDetailsScreen(
+            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
@@ -285,7 +286,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // Launch screen for existing shop
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+        ShopDetailsScreen(
+            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
@@ -418,7 +420,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+        ShopDetailsScreen(
+            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
@@ -446,7 +449,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+        ShopDetailsScreen(
+            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
@@ -486,7 +490,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+        ShopDetailsScreen(
+            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 
@@ -544,7 +549,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     composeTestRule.setContent {
       AppTheme {
-        EditShopScreen(owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
+        ShopDetailsScreen(
+            owner = testOwner, onBack = {}, onSaved = {}, viewModel = editShopViewModel)
       }
     }
 

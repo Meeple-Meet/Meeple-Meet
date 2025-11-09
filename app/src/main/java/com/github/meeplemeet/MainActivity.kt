@@ -64,8 +64,8 @@ import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreen
-import com.github.meeplemeet.ui.shops.EditShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
+import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -394,7 +394,7 @@ fun MeepleMeetApp(
     }
     composable(MeepleMeetScreen.ShopDetails.name) {
       if (shopId.isNotEmpty()) {
-        ShopDetailsScreen(
+        ShopScreen(
             account = account!!,
             shopId = shopId,
             onBack = { navigationActions.goBack() },
@@ -418,7 +418,7 @@ fun MeepleMeetApp(
       LaunchedEffect(shopFromDetails) { editShopVM.setShop(shopFromDetails) }
 
       if (shop != null) {
-        EditShopScreen(
+        ShopDetailsScreen(
             owner = account!!,
             onBack = { navigationActions.goBack() },
             onSaved = { navigationActions.goBack() },

@@ -26,7 +26,7 @@ import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import com.github.meeplemeet.ui.shops.ShopDetailsScreen
+import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
@@ -204,7 +204,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
     composeTestRule.setContent {
       CompositionLocalProvider(LocalClipboardManager provides fakeClipboard) {
         AppTheme(themeMode = ThemeMode.DARK) {
-          ShopDetailsScreen(
+          ShopScreen(
               shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
         }
       }
@@ -291,7 +291,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
   fun test_shopScreenEditButtonVisibleForOwner() {
     var edit = false
     composeTestRule.setContent {
-      ShopDetailsScreen(
+      ShopScreen(
           shopId = shop.id,
           account = owner, // Pass the owner account
           onBack = {},
