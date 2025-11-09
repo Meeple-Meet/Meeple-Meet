@@ -41,27 +41,12 @@ data class AuthUIState(
     val signedOut: Boolean = false
 )
 
-/**
- * ViewModel for authentication screens (Sign-In and Sign-Up).
- *
- * This ViewModel manages the authentication state and coordinates between the UI layer and the
- * authentication repository. It handles three types of authentication:
- * 1. Email/password registration
- * 2. Email/password login
- * 3. Google sign-in via Credential Manager
- *
- * The ViewModel uses coroutines to handle asynchronous authentication operations and exposes a
- * StateFlow for the UI to observe authentication state changes.
- *
- * @property repository The authentication repository that handles the actual auth operations.
- *   Defaults to AuthRepoFirebase for production use.
- */
-class AuthViewModel(
-    private val repository: AuthenticationRepository = RepositoryProvider.authentication
+open class AuthenticationViewModel(
+    protected val repository: AuthenticationRepository = RepositoryProvider.authentication,
 ) : ViewModel() {
 
   // Private mutable state flow for internal state management
-  private val _uiState = MutableStateFlow(AuthUIState())
+  protected val _uiState = MutableStateFlow(AuthUIState())
 
   // Public read-only state flow that UI components can observe for state changes
   val uiState: StateFlow<AuthUIState> = _uiState
@@ -229,78 +214,12 @@ class AuthViewModel(
   }
 
   /**
-   * Registers a new user with email and password.
-   *
-   * This method handles the complete registration process including validation, Firebase Auth
-   * account creation, and Firestore profile creation through the repository.
-   *
-   * @param email The user's email address
-   * @param password The user's chosen password
-   */
-  fun registerWithEmail(email: String, password: String, onRegister: () -> Unit = {}) {
-    // Prevent multiple simultaneous operations
-    if (_uiState.value.isLoading) return
-
-    viewModelScope.launch {
-      // Set loading state and clear previous errors
-      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
-
-      // Call repository to handle the actual registration
-      repository.registerWithEmail(email, password).fold({ user ->
-        // Success: Update UI with the new user
-        _uiState.update {
-          it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
-        }
-        onRegister()
-      }) { failure ->
-        // Registration failed: Show error message
-        _uiState.update {
-          it.copy(isLoading = false, errorMsg = failure.localizedMessage, account = null)
-        }
-      }
-    }
-  }
-
-  /**
-   * Logs in an existing user with email and password.
-   *
-   * This method authenticates the user with Firebase Auth and fetches their profile data from
-   * Firestore through the repository.
-   *
-   * @param email The user's email address
-   * @param password The user's password
-   */
-  fun loginWithEmail(email: String, password: String, callback: () -> Unit = {}) {
-    // Prevent multiple simultaneous operations
-    if (_uiState.value.isLoading) return
-
-    viewModelScope.launch {
-      // Set loading state and clear previous errors
-      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
-
-      // Call repository to handle the authentication
-      repository.loginWithEmail(email, password).fold({ user ->
-        // Success: Update UI with authenticated user
-        _uiState.update {
-          it.copy(isLoading = false, account = user, errorMsg = null, signedOut = false)
-        }
-        callback()
-      }) { failure ->
-        // Login failed: Show error message
-        _uiState.update {
-          it.copy(isLoading = false, errorMsg = failure.localizedMessage, account = null)
-        }
-      }
-    }
-  }
-
-  /**
    * Signs out the current user.
    *
    * This method calls the repository to sign out from Firebase Auth and updates the UI state to
    * reflect the signed-out status.
    */
-  fun signOut() {
+  open fun signOut() {
     // Prevent multiple simultaneous operations
     if (_uiState.value.isLoading) return
 

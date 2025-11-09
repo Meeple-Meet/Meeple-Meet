@@ -5,8 +5,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
@@ -28,7 +28,7 @@ class CreateAccountScreenTest : FirestoreTests() {
   private lateinit var repo: DiscussionRepository
   private lateinit var firestoreVm: DiscussionViewModel
   private lateinit var handlesRepo: HandlesRepository
-  private lateinit var handlesVm: HandlesViewModel
+  private lateinit var handlesVm: CreateAccountViewModel
   private lateinit var me: Account
 
   /* handles created by THIS test run */
@@ -59,7 +59,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     repo = DiscussionRepository()
     firestoreVm = DiscussionViewModel(repo)
     handlesRepo = HandlesRepository()
-    handlesVm = HandlesViewModel(handlesRepo)
+    handlesVm = CreateAccountViewModel(handlesRepo)
 
     val bootstrapRepo = DiscussionRepository()
     val uid = "uid_" + UUID.randomUUID().toString().take(8)

@@ -21,10 +21,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.HandlesViewModel
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 
@@ -42,12 +42,11 @@ object CreateAccountTestTags {
  * Composable screen for completing account creation by selecting a handle and username.
  *
  * This screen collects a handle and username from the user, validates them, and interacts with the
- * [HandlesViewModel] to ensure the handle is available. Once valid, it triggers [onCreate] to
+ * [CreateAccountViewModel] to ensure the handle is available. Once valid, it triggers [onCreate] to
  * continue the account creation flow.
  *
  * @param account The [Account] object representing the user creating an account.
- * @param discussionVM The viewModel for managing discussions and account details.
- * @param handlesVM The ViewModel responsible for handling Firestore handle validation.
+ * @param viewModel The ViewModel responsible for handling Firestore handle validation.
  * @param onCreate Callback function to be executed when account creation is successfully validated.
  * @param onBack Callback function to be executed when the user wants to go back to the previous
  *   screen.
@@ -55,8 +54,7 @@ object CreateAccountTestTags {
 @Composable
 fun CreateAccountScreen(
     account: Account,
-    discussionVM: DiscussionViewModel,
-    handlesVM: HandlesViewModel,
+    viewModel: CreateAccountViewModel = viewModel(),
     onCreate: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {
@@ -64,7 +62,7 @@ fun CreateAccountScreen(
   var username by remember { mutableStateOf("") }
   var usernameError by remember { mutableStateOf<String?>(null) }
 
-  val errorMessage by handlesVM.errorMessage.collectAsState()
+  val errorMessage by viewModel.errorMessage.collectAsState()
   var showErrors by remember { mutableStateOf(false) }
 
   var isShopChecked by remember { mutableStateOf(false) }
@@ -73,7 +71,7 @@ fun CreateAccountScreen(
   /** Checks the handle availability and updates the ViewModel state. */
   fun validateHandle(handle: String) {
     showErrors = true
-    handlesVM.checkHandleAvailable(handle)
+    viewModel.checkHandleAvailable(handle)
   }
 
   /**
@@ -122,10 +120,12 @@ fun CreateAccountScreen(
 
                     /** Create the handle and call onCreate if there are no errors */
                     if ((errorMessage.isBlank()) && usernameValidation == null) {
-                      handlesVM.createAccountHandle(account = account, handle = handle)
-                      discussionVM.setAccountName(account, username)
-                      discussionVM.setAccountRole(
-                          account, isSpaceRenter = isSpaceRented, isShopOwner = isShopChecked)
+                      viewModel.createAccountHandle(
+                          account = account,
+                          handle = handle,
+                          username = username,
+                          spaceRenter = isSpaceRented,
+                          shopOwner = isShopChecked)
                       onCreate()
                     }
                   },
@@ -162,7 +162,7 @@ fun CreateAccountScreen(
                     handle = it
                     if (it.isNotBlank()) {
                       showErrors = true
-                      handlesVM.checkHandleAvailable(it)
+                      viewModel.checkHandleAvailable(it)
                     } else {
                       showErrors = false
                     }

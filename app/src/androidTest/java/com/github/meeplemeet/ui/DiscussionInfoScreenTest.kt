@@ -3,8 +3,8 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -29,7 +29,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   private lateinit var thirdUser: Account
   private lateinit var testDiscussion: Discussion
   private lateinit var handlesRepository: HandlesRepository
-  private lateinit var handlesViewModel: HandlesViewModel
+  private lateinit var createAccountViewModel: CreateAccountViewModel
 
   @Before
   fun setup() = runBlocking {
@@ -37,7 +37,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     handlesRepository = HandlesRepository()
     viewModel = DiscussionViewModel(repository)
 
-    handlesViewModel = HandlesViewModel(handlesRepository)
+    createAccountViewModel = CreateAccountViewModel(handlesRepository)
 
     // Create test users
     currentAccount =
@@ -98,7 +98,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = testDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -125,7 +125,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = testDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -143,7 +143,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = testDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -162,7 +162,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = testDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -180,7 +180,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = testDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -212,7 +212,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = updatedDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -258,7 +258,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = updatedDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()
@@ -296,7 +296,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           viewModel = viewModel,
           discussion = updatedDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+          createAccountViewModel = createAccountViewModel)
     }
 
     compose.waitForIdle()

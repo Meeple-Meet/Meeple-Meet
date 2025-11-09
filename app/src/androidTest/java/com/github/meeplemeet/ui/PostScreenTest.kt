@@ -94,8 +94,8 @@ class PostScreenTest {
         PostScreen(
             account = account,
             postId = postId,
-            postViewModel = postVM,
-            usersViewModel = usersVM,
+            viewModel = postVM,
+            viewModel = usersVM,
             onBack = onBack)
       }
     }
@@ -150,14 +150,14 @@ class PostScreenTest {
             PostScreen(
                 account = account,
                 postId = currentPostId,
-                postViewModel = vm,
-                usersViewModel = initialUsersVM)
+                viewModel = vm,
+                viewModel = initialUsersVM)
           } else {
             PostScreen(
                 account = account,
                 postId = currentPostId,
-                postViewModel = vm,
-                usersViewModel = initialUsersVM,
+                viewModel = vm,
+                viewModel = initialUsersVM,
                 onBack = onBack!!)
           }
         }
@@ -262,7 +262,7 @@ class PostScreenTest {
       AppTheme {
         var acc by remember { mutableStateOf(marco) }
         setAcc = { acc = it }
-        PostScreen(account = acc, postId = "p1", postViewModel = postVM, usersViewModel = usersVM)
+        PostScreen(account = acc, postId = "p1", viewModel = postVM, viewModel = usersVM)
       }
     }
     postFlowP1.value = postByAlex

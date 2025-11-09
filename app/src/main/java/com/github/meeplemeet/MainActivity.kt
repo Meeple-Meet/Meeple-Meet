@@ -28,10 +28,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.auth.AccountRepository
-import com.github.meeplemeet.model.auth.AuthViewModel
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
@@ -153,11 +151,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MeepleMeetApp(
+    viewModel: MainActivityViewModel = viewModel(),
     context: Context = LocalContext.current,
-    authVM: AuthViewModel = viewModel(),
-    handlesVM: HandlesViewModel = viewModel(),
     navController: NavHostController = rememberNavController(),
-    viewModel: MainActivityViewModel = viewModel()
 ) {
   val credentialManager = remember { CredentialManager.create(context) }
   val navigationActions = NavigationActions(navController)
@@ -179,9 +175,7 @@ fun MeepleMeetApp(
   val sessionVM = remember(discussion) { discussion?.let { SessionViewModel(discussion!!) } }
 
   var postId by remember { mutableStateOf("") }
-
   var shopId by remember { mutableStateOf("") }
-
   var shop by remember { mutableStateOf<Shop?>(null) }
 
   DisposableEffect(Unit) {
@@ -195,7 +189,7 @@ fun MeepleMeetApp(
       LaunchedEffect(account) {
         if (account != null && FirebaseProvider.auth.currentUser != null) {
           val exists =
-              handlesVM::repository.get().handleForAccountExists(account!!.uid, account!!.handle)
+              RepositoryProvider.handles.handleForAccountExists(account!!.uid, account!!.handle)
 
           if (exists) navigationActions.navigateOutOfAuthGraph()
           else navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
@@ -205,7 +199,6 @@ fun MeepleMeetApp(
       if (FirebaseProvider.auth.currentUser != null) LoadingScreen()
       else
           SignInScreen(
-              authVM,
               credentialManager = credentialManager,
               onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUp) },
               onSignIn = { signedOut = false })
@@ -213,7 +206,6 @@ fun MeepleMeetApp(
 
     composable(MeepleMeetScreen.SignUp.name) {
       SignUpScreen(
-          authVM,
           credentialManager = credentialManager,
           onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) },
           onRegister = {
@@ -226,12 +218,9 @@ fun MeepleMeetApp(
       if (account != null) {
         CreateAccountScreen(
             account!!,
-            firestoreVM,
-            handlesVM,
             onCreate = { navigationActions.navigateOutOfAuthGraph() },
             onBack = {
               viewModel.signOut()
-              authVM.signOut()
               FirebaseProvider.auth.signOut()
               navigationActions.goBack()
             })
@@ -244,7 +233,6 @@ fun MeepleMeetApp(
       DiscussionsOverviewScreen(
           account!!,
           navigationActions,
-          firestoreVM,
           onClickAddDiscussion = {
             navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
           },
@@ -258,10 +246,8 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.CreateDiscussion.name) {
       CreateDiscussionScreen(
           account = account!!,
-          viewModel = firestoreVM,
           onBack = { navigationActions.goBack() },
-          onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-          handleViewModel = handlesVM)
+          onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
     }
 
     composable(MeepleMeetScreen.Discussion.name) {
@@ -270,7 +256,6 @@ fun MeepleMeetApp(
             DiscussionScreen(
                 account!!,
                 discussion!!,
-                firestoreVM,
                 onBack = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
                 onOpenDiscussionInfo = {
                   navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
@@ -292,7 +277,6 @@ fun MeepleMeetApp(
           DiscussionDetailsScreen(
               account = account!!,
               discussion = discussion!!,
-              viewModel = firestoreVM,
               onBack = { navigationActions.goBack() },
               onLeave = {
                 discussionId = ""
@@ -301,19 +285,14 @@ fun MeepleMeetApp(
               onDelete = {
                 discussionId = ""
                 navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-              },
-              handlesViewModel = handlesVM)
+              })
       else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
     }
 
     composable(MeepleMeetScreen.CreateSession.name) {
       sessionVM?.let {
         CreateSessionScreen(
-            account = account!!,
-            discussion = discussion!!,
-            viewModel = firestoreVM,
-            sessionViewModel = sessionVM,
-            onBack = { navigationActions.goBack() })
+            account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
       } ?: LoadingScreen()
     }
 
@@ -324,8 +303,6 @@ fun MeepleMeetApp(
             SessionDetailsScreen(
                 account = account!!,
                 discussion = discussion!!,
-                viewModel = firestoreVM,
-                sessionViewModel = sessionVM,
                 onBack = { navigationActions.goBack() })
         else navigationActions.navigateTo(MeepleMeetScreen.Discussion)
       } ?: LoadingScreen()
@@ -336,7 +313,6 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.PostsOverview.name) {
       PostsOverviewScreen(
           navigation = navigationActions,
-          discussionViewModel = firestoreVM,
           onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
           onSelectPost = {
             postId = it.id
@@ -345,11 +321,7 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.Post.name) {
-      PostScreen(
-          account = account!!,
-          postId = postId,
-          usersViewModel = firestoreVM,
-          onBack = { navigationActions.goBack() })
+      PostScreen(account = account!!, postId = postId, onBack = { navigationActions.goBack() })
     }
 
     composable(MeepleMeetScreen.CreatePost.name) {
@@ -387,8 +359,6 @@ fun MeepleMeetApp(
       account?.let {
         ProfileScreen(
             navigation = navigationActions,
-            authViewModel = authVM,
-            discussionViewModel = firestoreVM,
             account = account!!,
             onSignOut = {
               navigationActions.navigateTo(MeepleMeetScreen.SignIn)

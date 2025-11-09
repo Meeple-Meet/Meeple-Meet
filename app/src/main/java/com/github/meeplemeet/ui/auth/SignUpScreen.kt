@@ -30,8 +30,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.model.auth.SignUpViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 
@@ -70,7 +71,7 @@ object SignUpScreenTestTags {
  */
 @Composable
 fun SignUpScreen(
-    viewModel: AuthViewModel,
+    viewModel: SignUpViewModel = viewModel(),
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     onLogInClick: () -> Unit = {},

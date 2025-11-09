@@ -24,10 +24,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.location.Location
@@ -123,23 +123,21 @@ fun toTimestamp(
  * @param account The current user's account.
  * @param discussion The discussion context for the session.
  * @param viewModel The FirestoreViewModel for data operations.
- * @param sessionViewModel The FirestoreSessionViewModel for session-specific operations.
  * @param onBack Callback function to be invoked when navigating back.
  */
 @Composable
 fun CreateSessionScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: DiscussionViewModel,
-    sessionViewModel: SessionViewModel,
+    viewModel: CreateSessionViewModel = viewModel(),
     onBack: () -> Unit = {}
 ) {
   // Holds the form state for the session
   var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
   // Holds the selected location (may be null)
   var selectedLocation by remember { mutableStateOf<Location?>(null) }
-  val gameUi by sessionViewModel.gameUIState.collectAsState()
-  val locationUi by sessionViewModel.locationUIState.collectAsState()
+  val gameUi by viewModel.gameUIState.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
@@ -154,7 +152,7 @@ fun CreateSessionScreen(
 
     // If a game query was already entered, trigger search
     if (form.proposedGameString.isNotBlank()) {
-      runCatching { sessionViewModel.setGameQuery(account, discussion, form.proposedGameString) }
+      runCatching { viewModel.setGameQuery(account, discussion, form.proposedGameString) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
     }
   }
@@ -195,8 +193,8 @@ fun CreateSessionScreen(
                   enabled = canCreate,
                   onCreate = {
                     runCatching {
-                          val selectedGameId = sessionViewModel.gameUIState.value.selectedGameUid
-                          sessionViewModel.createSession(
+                          val selectedGameId = viewModel.gameUIState.value.selectedGameUid
+                          viewModel.createSession(
                               requester = account,
                               discussion = discussion,
                               name = form.title,
@@ -235,7 +233,7 @@ fun CreateSessionScreen(
               OrganisationSection(
                   gameUi = gameUi,
                   locationUi = locationUi,
-                  sessionViewModel = sessionViewModel,
+                  viewModel = viewModel,
                   account = account,
                   discussion = discussion,
                   showError = showError,
@@ -244,10 +242,8 @@ fun CreateSessionScreen(
                   onQueryFallbackChange = { form = form.copy(proposedGameString = it) },
                   date = form.date,
                   time = form.time,
-                  locationText = form.locationText,
                   onDateChange = { form = form.copy(date = it) },
                   onTimeChange = { form = form.copy(time = it) },
-                  onLocationChange = { form = form.copy(locationText = it) },
                   onLocationPicked = { selectedLocation = it },
                   modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
@@ -280,7 +276,7 @@ fun CreateSessionScreen(
 /**
  * Composable function representing the game search bar section.
  *
- * @param sessionViewModel The FirestoreSessionViewModel for session-specific operations.
+ * @param viewModel The FirestoreSessionViewModel for session-specific operations.
  * @param currentUser The current user's account.
  * @param discussion The discussion context for the session.
  * @param queryFallback The fallback query string for the game search.
@@ -289,7 +285,7 @@ fun CreateSessionScreen(
  */
 @Composable
 fun GameSearchBar(
-    sessionViewModel: SessionViewModel,
+    viewModel: CreateSessionViewModel,
     gameUi: GameUIState,
     currentUser: Account,
     discussion: Discussion?,
@@ -303,7 +299,7 @@ fun GameSearchBar(
       onQueryChange = { q ->
         onQueryFallbackChange(q)
         discussion?.let { disc ->
-          runCatching { sessionViewModel.setGameQuery(currentUser, disc, q) }
+          runCatching { viewModel.setGameQuery(currentUser, disc, q) }
               .onFailure { e -> onError(e.message ?: "Game search failed") }
         }
       },
@@ -311,8 +307,8 @@ fun GameSearchBar(
       onPick = { game ->
         discussion?.let { disc ->
           runCatching {
-                sessionViewModel.setGame(currentUser, disc, game)
-                sessionViewModel.getGameFromId(game.uid)
+                viewModel.setGame(currentUser, disc, game)
+                viewModel.getGameFromId(game.uid)
               }
               .onFailure { e -> onError(e.message ?: "Failed to select game") }
         }
@@ -335,7 +331,7 @@ fun GameSearchBar(
 
 @Composable
 fun LocationSearchBar(
-    viewModel: SessionViewModel,
+    viewModel: CreateSessionViewModel,
     locationUi: LocationUIState,
     currentUser: Account,
     discussion: Discussion,
@@ -475,7 +471,7 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
  * time, and search for a location.
  *
  * @param form The current session form state.
- * @param sessionViewModel The FirestoreSessionViewModel for session-specific operations.
+ * @param viewModel The FirestoreSessionViewModel for session-specific operations.
  * @param account The current user's account.
  * @param onQueryFallbackChange Callback when the game query fallback changes.
  * @param discussion The discussion context for the session.
@@ -483,10 +479,8 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
  * @param onTitleChange Callback when the session title changes.
  * @param date The selected date for the session.
  * @param time The selected time for the session.
- * @param locationText The text input for the location search.
  * @param onDateChange Callback when the date changes.
  * @param onTimeChange Callback when the time changes.
- * @param onLocationChange Callback when the location text changes.
  * @param modifier Modifier for styling the composable.
  * @param onLocationPicked Optional callback when a location is picked.
  */
@@ -494,12 +488,11 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 fun OrganisationSection(
     gameUi: GameUIState,
     locationUi: LocationUIState,
-    sessionViewModel: SessionViewModel,
+    viewModel: CreateSessionViewModel,
     account: Account,
     discussion: Discussion,
     date: LocalDate?,
     time: LocalTime?,
-    locationText: String,
     modifier: Modifier = Modifier,
     form: SessionForm = SessionForm(),
     onQueryFallbackChange: (String) -> Unit = {},
@@ -507,7 +500,6 @@ fun OrganisationSection(
     onTitleChange: (String) -> Unit = {},
     onDateChange: (LocalDate?) -> Unit,
     onTimeChange: (LocalTime?) -> Unit,
-    onLocationChange: (String) -> Unit,
     onLocationPicked: ((Location) -> Unit)? = null,
 ) {
   SectionCard(
@@ -534,7 +526,7 @@ fun OrganisationSection(
         // Game search section
         GameSearchBar(
             gameUi = gameUi,
-            sessionViewModel = sessionViewModel,
+            viewModel = viewModel,
             currentUser = account,
             discussion = discussion,
             queryFallback = form.proposedGameString,
@@ -556,7 +548,7 @@ fun OrganisationSection(
 
         // Location search field with suggestions
         LocationSearchBar(
-            viewModel = sessionViewModel,
+            viewModel = viewModel,
             locationUi = locationUi,
             currentUser = account,
             discussion = discussion,

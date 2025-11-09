@@ -3,9 +3,9 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.HandleAlreadyTakenException
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.auth.HANDLES_COLLECTION_PATH
 import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
@@ -21,14 +21,14 @@ import org.junit.Test
 class FirestoreHandlesTests : FirestoreTests() {
   private lateinit var handlesRepo: HandlesRepository
   private lateinit var accountRepo: DiscussionRepository
-  private lateinit var handlesVM: HandlesViewModel
+  private lateinit var handlesVM: CreateAccountViewModel
   private lateinit var testAccount: Account
   private lateinit var testAccount2: Account
 
   @Before
   fun setup() {
     handlesRepo = HandlesRepository()
-    handlesVM = HandlesViewModel(handlesRepo)
+    handlesVM = CreateAccountViewModel(handlesRepo)
     accountRepo = DiscussionRepository()
     runBlocking {
       testAccount =

@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
@@ -56,8 +55,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  * Observes [PostOverviewViewModel.posts] and re-composes whenever the list changes. Posts are
  * sorted newest-first.
  *
- * @param postOverviewVM ViewModel that supplies the list of posts.
- * @param discussionViewModel ViewModel used to resolve author names.
+ * @param viewModel ViewModel that supplies the list of posts.
  * @param navigation Actions for navigation events.
  * @param onClickAddPost Callback fired when the FAB is tapped.
  * @param onSelectPost Callback fired when a post card is tapped.
@@ -65,14 +63,12 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostsOverviewScreen(
-    postOverviewVM: PostOverviewViewModel = viewModel(),
-    discussionViewModel: DiscussionViewModel = viewModel(),
+    viewModel: PostOverviewViewModel = viewModel(),
     navigation: NavigationActions,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
-
-  val posts by postOverviewVM.posts.collectAsState()
+  val posts by viewModel.posts.collectAsState()
   val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
 
   Scaffold(
@@ -123,9 +119,7 @@ fun PostsOverviewScreen(
 
                   val authorName by
                       produceState<String?>(key1 = post.authorId, initialValue = null) {
-                        discussionViewModel.getOtherAccount(post.authorId) { acc ->
-                          value = acc.name
-                        }
+                        viewModel.getOtherAccount(post.authorId) { acc -> value = acc.name }
                       }
 
                   FeedCard(

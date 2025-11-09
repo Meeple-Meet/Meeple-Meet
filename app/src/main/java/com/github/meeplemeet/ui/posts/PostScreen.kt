@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
@@ -152,8 +151,8 @@ object PostTags {
  *
  * @param account The current user's account information.
  * @param postId The ID of the post to display.
- * @param postViewModel ViewModel for managing post data.
- * @param usersViewModel ViewModel for managing user data.
+ * @param viewModel ViewModel for managing post data.
+ * @param viewModel ViewModel for managing user data.
  * @param onBack Lambda to invoke when the back button is pressed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,11 +160,10 @@ object PostTags {
 fun PostScreen(
     account: Account,
     postId: String,
-    postViewModel: PostViewModel = viewModel(),
-    usersViewModel: DiscussionViewModel = viewModel(),
+    viewModel: PostViewModel = viewModel(),
     onBack: () -> Unit = {}
 ) {
-  val post: Post? by postViewModel.postFlow(postId).collectAsState()
+  val post: Post? by viewModel.postFlow(postId).collectAsState()
 
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
@@ -177,12 +175,13 @@ fun PostScreen(
 
   // Track if post was ever loaded to distinguish between loading and deleted states
   var postEverLoaded by remember { mutableStateOf(false) }
+  var deleted by remember { mutableStateOf(false) }
 
   // Auto-navigate back if post is deleted after being loaded
-  LaunchedEffect(post) {
+  LaunchedEffect(post, deleted) {
     if (post != null) {
       postEverLoaded = true
-    } else if (postEverLoaded) {
+    } else if (postEverLoaded && !deleted) {
       // Post was loaded but is now null (deleted)
       onBack()
     }
@@ -225,7 +224,7 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    toFetch.forEach { uid -> usersViewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc } }
+    toFetch.forEach { uid -> viewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc } }
   }
 
   Scaffold(
@@ -250,7 +249,7 @@ fun PostScreen(
               scope.launch {
                 isSending = true
                 try {
-                  postViewModel.addComment(
+                  viewModel.addComment(
                       author = account, post = p, parentId = p.id, text = topComment.trim())
                   topComment = ""
                   focusManager.clearFocus(force = true)
@@ -275,19 +274,21 @@ fun PostScreen(
               currentUser = account,
               onDeletePost = {
                 scope.launch {
-                  runCatching { postViewModel.deletePost(account, currentPost) }
+                  deleted = true
+                  runCatching { viewModel.deletePost(account, currentPost) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
+                  onBack()
                 }
               },
               onReply = { parentId, text ->
                 scope.launch {
-                  runCatching { postViewModel.addComment(account, currentPost, parentId, text) }
+                  runCatching { viewModel.addComment(account, currentPost, parentId, text) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_SEND_REPLY) }
                 }
               },
               onDeleteComment = { comment ->
                 scope.launch {
-                  runCatching { postViewModel.removeComment(account, currentPost, comment) }
+                  runCatching { viewModel.removeComment(account, currentPost, comment) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_COMMENT) }
                 }
               },

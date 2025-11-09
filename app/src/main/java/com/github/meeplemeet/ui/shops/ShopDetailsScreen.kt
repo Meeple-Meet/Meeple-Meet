@@ -296,11 +296,6 @@ fun EditShopContent(
                           onPhone = { phone = it },
                           link = link,
                           onLink = { link = it },
-                          addressText = addressText,
-                          onAddressText = { q ->
-                            addressText = q
-                            selectedLocation = null
-                          },
                           onPickLocation = { loc ->
                             addressText = loc.name
                             selectedLocation = loc

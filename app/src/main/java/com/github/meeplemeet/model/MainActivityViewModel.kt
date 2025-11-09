@@ -1,10 +1,10 @@
 package com.github.meeplemeet.model
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,11 +15,12 @@ import kotlinx.coroutines.flow.stateIn
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-) : ViewModel() {
+) : AuthenticationViewModel() {
 
-  fun signOut() {
+  override fun signOut() {
     discussionFlows.clear()
     accountFlows.clear()
+    super.signOut()
   }
 
   /** Holds a [StateFlow] of discussion preview maps keyed by account ID. */

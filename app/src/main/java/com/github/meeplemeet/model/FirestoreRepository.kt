@@ -19,14 +19,8 @@ open class FirestoreRepository(
     collectionName: String,
     val db: FirebaseFirestore = FirebaseProvider.db
 ) {
-  companion object {
-    private val used = mutableSetOf<String>()
-  }
-
   init {
-    // Make sure the collection name is not blank and not already in use
     require(collectionName.isNotBlank())
-    require(used.add(collectionName))
   }
 
   /** The Firestore collection reference for this repository */

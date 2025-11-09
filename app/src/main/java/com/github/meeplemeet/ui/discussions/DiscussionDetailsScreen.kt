@@ -28,9 +28,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.HandlesViewModel
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.launch
@@ -59,11 +58,10 @@ object UITestTags {
  */
 @Composable
 fun DiscussionDetailsScreen(
-    viewModel: DiscussionViewModel,
-    handlesViewModel: HandlesViewModel,
     account: Account,
     discussion: Discussion,
     modifier: Modifier = Modifier,
+    viewModel: DiscussionDetailsViewModel = viewModel(),
     onBack: () -> Unit = {},
     onLeave: () -> Unit = {},
     onDelete: () -> Unit = {}
@@ -110,8 +108,8 @@ fun DiscussionDetailsScreen(
     }
 
     isSearching = true
-    handlesViewModel.searchByHandle(searchQuery)
-    handlesViewModel.handleSuggestions.collect { list ->
+    viewModel.searchByHandle(searchQuery)
+    viewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty()
       isSearching = false
@@ -454,7 +452,7 @@ fun MemberList(
     selectedMembers: MutableList<Account>,
     isMember: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: DiscussionViewModel = viewModel(),
+    viewModel: DiscussionDetailsViewModel = viewModel(),
     currentAccount: Account,
     discussion: Discussion,
 ) {

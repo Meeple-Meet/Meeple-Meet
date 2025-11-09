@@ -171,7 +171,7 @@ class CreateSessionScreenTest {
     sessionVM =
         SessionViewModel(
             initDiscussion = baseDiscussion,
-            repository = sessionRepo,
+            sessionRepository = sessionRepo,
             gameRepository = fakeGameRepo)
   }
 

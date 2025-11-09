@@ -96,7 +96,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme(themeMode = theme) {
         PostsOverviewScreen(
-            postOverviewVM = postVm,
+            viewModel = postVm,
             discussionViewModel = firestoreVm,
             navigation = nav,
             onClickAddPost = { fabClicked = true },

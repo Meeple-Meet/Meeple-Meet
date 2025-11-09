@@ -192,8 +192,6 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
  * @param onPhone Callback function to update the phone.
  * @param link The current value of the link field.
  * @param onLink Callback function to update the link.
- * @param addressText The current value of the address text field.
- * @param onAddressText Callback function to update the address text.
  * @param onPickLocation Callback function to handle location selection.
  */
 @Composable
@@ -206,8 +204,6 @@ fun RequiredInfoSection(
     onPhone: (String) -> Unit,
     link: String,
     onLink: (String) -> Unit,
-    addressText: String,
-    onAddressText: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
     locationUi: LocationUIState,
     showError: (String) -> Unit = {},

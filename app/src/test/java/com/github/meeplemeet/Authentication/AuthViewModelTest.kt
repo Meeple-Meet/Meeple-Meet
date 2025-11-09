@@ -11,7 +11,6 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.AuthUIState
-import com.github.meeplemeet.model.auth.AuthViewModel
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability

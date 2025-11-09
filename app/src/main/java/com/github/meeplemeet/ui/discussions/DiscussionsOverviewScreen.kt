@@ -47,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.DiscussionsOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -90,7 +91,7 @@ object DiscussionOverviewTestTags {
 fun DiscussionsOverviewScreen(
     account: Account,
     navigation: NavigationActions,
-    viewModel: DiscussionViewModel = viewModel(),
+    viewModel: DiscussionsOverviewViewModel = viewModel(),
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {

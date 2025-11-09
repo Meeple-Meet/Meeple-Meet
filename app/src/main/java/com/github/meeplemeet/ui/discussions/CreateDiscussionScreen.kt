@@ -28,8 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.HandlesViewModel
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.CreateDiscussionViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -59,8 +58,7 @@ object AddDiscussionTestTags {
 @Composable
 fun CreateDiscussionScreen(
     account: Account,
-    viewModel: DiscussionViewModel = viewModel(),
-    handleViewModel: HandlesViewModel = viewModel(),
+    viewModel: CreateDiscussionViewModel = viewModel(),
     onBack: () -> Unit = {},
     onCreate: () -> Unit = {},
 ) {
@@ -90,11 +88,11 @@ fun CreateDiscussionScreen(
       return@LaunchedEffect
     }
     isSearching = true
-    handleViewModel.searchByHandle(searchQuery)
+    viewModel.searchByHandle(searchQuery)
   }
 
-  LaunchedEffect(handleViewModel.handleSuggestions) {
-    handleViewModel.handleSuggestions.collect { list ->
+  LaunchedEffect(viewModel.handleSuggestions) {
+    viewModel.handleSuggestions.collect { list ->
       searchResults = list.filter { it.uid != account.uid && it !in selectedMembers }
       dropdownExpanded = searchResults.isNotEmpty() && searchQuery.isNotBlank()
       isSearching = false

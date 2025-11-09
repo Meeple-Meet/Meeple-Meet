@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.AuthUIState
-import com.github.meeplemeet.model.auth.AuthViewModel
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
