@@ -62,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -729,43 +730,42 @@ private fun LocationSearchBar(
     dropdownItemTestTag: String = ""
 ) {
   val results by viewModel.locationUIState.collectAsStateWithLifecycle()
-  var expanded = results.locationSuggestions.isNotEmpty()
-  val internalQuery =
-      remember(initial, results.locationQuery) { results.locationQuery.ifBlank { initial.name } }
 
-  LaunchedEffect(Unit) { if (initial.name.isNotBlank()) setLocation(initial) }
+  var menuOpen by rememberSaveable { mutableStateOf(false) }
+  val hasSuggestions = results.locationSuggestions.isNotEmpty()
 
-  var forceClose by remember { mutableStateOf(false) }
+  LaunchedEffect(initial) { if (initial.name.isNotBlank()) setLocation(initial) }
 
-  ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-    OutlinedTextField(
-        value = internalQuery,
-        onValueChange = {
-          forceClose = false
-          setLocationQuery(it)
-        },
-        label = { Text("Location") },
-        placeholder = { Text("Enter an address") },
-        modifier =
-            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
-                .fillMaxWidth()
-                .testTag(inputFieldTestTag),
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-    )
+  ExposedDropdownMenuBox(
+      expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
+        OutlinedTextField(
+            value = results.locationQuery.ifBlank { initial.name },
+            onValueChange = {
+              menuOpen = true
+              setLocationQuery(it)
+            },
+            label = { Text("Location") },
+            placeholder = { Text("Enter an address") },
+            modifier =
+                Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                    .fillMaxWidth()
+                    .testTag(inputFieldTestTag),
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        )
 
-    ExposedDropdownMenu(
-        expanded = !forceClose && expanded, onDismissRequest = { expanded = false }) {
-          results.locationSuggestions.take(5).forEach { loc ->
-            DropdownMenuItem(
-                text = { Text(loc.name) },
-                onClick = {
-                  forceClose = true
-                  setLocation(loc)
-                },
-                modifier = Modifier.testTag(dropdownItemTestTag))
-          }
-        }
-  }
+        ExposedDropdownMenu(
+            expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
+              results.locationSuggestions.take(5).forEach { loc ->
+                DropdownMenuItem(
+                    text = { Text(loc.name) },
+                    onClick = {
+                      menuOpen = false
+                      setLocation(loc)
+                    },
+                    modifier = Modifier.testTag(dropdownItemTestTag))
+              }
+            }
+      }
 }
 
 @Composable
@@ -825,44 +825,43 @@ private fun GameSearchBar(
     dropdownItemTestTag: String = ""
 ) {
   val results by viewModel.gameUIState.collectAsStateWithLifecycle()
-  var expanded = results.gameSuggestions.isNotEmpty()
-  val internalQuery =
-      remember(initial, results.gameQuery) { results.gameQuery.ifBlank { initial?.name ?: "" } }
 
-  LaunchedEffect(Unit) { if (initial != null && initial.name.isNotBlank()) setGame(initial) }
+  var menuOpen by rememberSaveable { mutableStateOf(false) }
+  val hasSuggestions = results.gameSuggestions.isNotEmpty()
 
-  var forceClose by remember { mutableStateOf(false) }
+  LaunchedEffect(initial) { if (initial?.name?.isNotBlank() == true) setGame(initial) }
 
-  ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-    OutlinedTextField(
-        value = internalQuery,
-        onValueChange = {
-          forceClose = false
-          setGameQuery(it)
-        },
-        label = { Text("Game") },
-        placeholder = { Text("Search games") },
-        modifier =
-            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
-                .fillMaxWidth()
-                .testTag(inputFieldTestTag),
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-    )
+  ExposedDropdownMenuBox(
+      expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
+        OutlinedTextField(
+            value = results.gameQuery.ifBlank { initial?.name.orEmpty() },
+            onValueChange = {
+              menuOpen = true
+              setGameQuery(it)
+            },
+            label = { Text("Game") },
+            placeholder = { Text("Search games") },
+            modifier =
+                Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                    .fillMaxWidth()
+                    .testTag(inputFieldTestTag),
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        )
 
-    ExposedDropdownMenu(
-        expanded = !forceClose && expanded, onDismissRequest = { expanded = false }) {
-          results.gameSuggestions
-              .filterNot { existing.contains(it.uid) }
-              .take(5)
-              .forEach { game ->
-                DropdownMenuItem(
-                    text = { Text(game.name) },
-                    onClick = {
-                      forceClose = true
-                      setGame(game)
-                    },
-                    modifier = Modifier.testTag(dropdownItemTestTag))
-              }
-        }
-  }
+        ExposedDropdownMenu(
+            expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
+              results.gameSuggestions
+                  .filterNot { existing.contains(it.uid) }
+                  .take(5)
+                  .forEach { game ->
+                    DropdownMenuItem(
+                        text = { Text(game.name) },
+                        onClick = {
+                          menuOpen = false
+                          setGame(game)
+                        },
+                        modifier = Modifier.testTag(dropdownItemTestTag))
+                  }
+            }
+      }
 }
