@@ -7,8 +7,6 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -17,17 +15,11 @@ import kotlinx.coroutines.launch
  * Provides permission-controlled access to session operations (create, update, delete) and
  * maintains the current discussion state with reactive updates.
  *
- * @property initDiscussion The initial discussion state
  * @property sessionRepository Repository for session data operations
  */
 class SessionViewModel(
-    initDiscussion: Discussion,
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
 ) : CreateSessionViewModel() {
-  /** Observable discussion state that updates when session operations complete. */
-  private val _discussion = MutableStateFlow(initDiscussion)
-  val discussion: StateFlow<Discussion> = _discussion
-
   /**
    * Checks if an account has admin privileges for a discussion.
    *
@@ -84,9 +76,8 @@ class SessionViewModel(
     if (newParticipantList != null) participantsList = newParticipantList.toList().map { it.uid }
 
     viewModelScope.launch {
-      _discussion.value =
-          sessionRepository.updateSession(
-              discussion.uid, name, gameId, date, location, participantsList)
+      sessionRepository.updateSession(
+          discussion.uid, name, gameId, date, location, participantsList)
     }
   }
 

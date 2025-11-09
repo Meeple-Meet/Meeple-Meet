@@ -119,7 +119,6 @@ object ShopComponentsTestTags {
 
   // Search field internals
   const val GAME_SEARCH_FIELD = "shop_game_search_field"
-  const val GAME_SEARCH_LEADING = "shop_game_search_leading"
   const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
   const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
   const val GAME_SEARCH_MENU = "shop_game_search_menu"
@@ -135,7 +134,6 @@ object ShopComponentsTestTags {
   // Game stock dialog
   const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
   const val GAME_DIALOG_BODY = "shop_game_dialog_body"
-  const val GAME_DIALOG_SEARCH = "shop_game_dialog_search"
   const val GAME_DIALOG_SLIDER = "shop_game_dialog_slider"
   const val GAME_DIALOG_SAVE = "shop_game_dialog_save"
   const val GAME_DIALOG_CANCEL = "shop_game_dialog_cancel"
@@ -227,10 +225,6 @@ object ShopUiDefaults {
 
     // Quantity
     const val QUANTITY = "Quantity"
-
-    // Game search
-    const val ADDED = "Added"
-    const val SEARCH_GAMES_PLACEHOLDER = "Search games…"
 
     // Game stock dialog
     const val GAME_DIALOG_TITLE = "Add game in stock"

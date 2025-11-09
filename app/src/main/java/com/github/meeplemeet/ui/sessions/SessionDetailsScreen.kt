@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionViewModel
@@ -153,7 +154,7 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
 fun SessionDetailsScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: SessionViewModel = SessionViewModel(discussion),
+    viewModel: SessionViewModel = viewModel(),
     initial: SessionForm = SessionForm(),
     onBack: () -> Unit = {},
 ) {
@@ -176,10 +177,10 @@ fun SessionDetailsScreen(
   val game = gameUIState.fetchedGame
   val session = discussion.session!!
 
-  // This LaunchedEffect block updates the form state when the session or game changes.
+  // This LaunchedEffect block updates the form state when the session changes.
   // It fetches participant accounts and updates the UI fields accordingly.
   // If the game info is missing, it triggers a fetch for the proposed game.
-  LaunchedEffect(session.gameId, game) {
+  LaunchedEffect(session.gameId) {
     val (date, time) = timestampToLocal(session.date)
 
     viewModel.getAccounts(session.participants) { accounts ->
@@ -213,7 +214,7 @@ fun SessionDetailsScreen(
                     requester = account,
                     discussion = discussion,
                     name = form.title,
-                    gameId = form.proposedGameString,
+                    gameId = gameUIState.fetchedGame?.uid ?: session.gameId,
                     date = toTimestamp(form.date, form.time),
                     location = locationUi.selectedLocation ?: session.location,
                     newParticipantList = form.participants.ifEmpty { emptyList() })

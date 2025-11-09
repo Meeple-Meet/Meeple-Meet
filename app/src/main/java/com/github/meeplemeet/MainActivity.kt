@@ -36,7 +36,6 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
-import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
@@ -172,7 +171,6 @@ fun MeepleMeetApp(
         if (!signedOut) viewModel.discussionFlow(discussionId) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
-  val sessionVM = remember(discussion) { discussion?.let { SessionViewModel(discussion!!) } }
 
   var postId by remember { mutableStateOf("") }
   var shopId by remember { mutableStateOf("") }
@@ -262,7 +260,6 @@ fun MeepleMeetApp(
                 },
                 onCreateSessionClick = {
                   discussionId = it.uid
-                  if (it.session == null && sessionVM != null) sessionVM.clearGameSearch()
                   navigationActions.navigateTo(
                       if (it.session != null) MeepleMeetScreen.Session
                       else MeepleMeetScreen.CreateSession)
@@ -290,22 +287,18 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.CreateSession.name) {
-      sessionVM?.let {
-        CreateSessionScreen(
-            account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
-      } ?: LoadingScreen()
+      CreateSessionScreen(
+          account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
     }
 
     composable(MeepleMeetScreen.Session.name) {
-      sessionVM?.let {
-        if (discussion!!.session != null &&
-            discussion!!.session!!.participants.contains(account!!.uid))
-            SessionDetailsScreen(
-                account = account!!,
-                discussion = discussion!!,
-                onBack = { navigationActions.goBack() })
-        else navigationActions.navigateTo(MeepleMeetScreen.Discussion)
-      } ?: LoadingScreen()
+      if (discussion!!.session != null &&
+          discussion!!.session!!.participants.contains(account!!.uid))
+          SessionDetailsScreen(
+              account = account!!,
+              discussion = discussion!!,
+              onBack = { navigationActions.goBack() })
+      else navigationActions.navigateTo(MeepleMeetScreen.Discussion)
     }
 
     composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
