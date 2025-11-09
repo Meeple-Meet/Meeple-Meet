@@ -196,7 +196,6 @@ fun AddShopContent(
 ) {
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
-  val showError: (String) -> Unit = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
 
   var shopName by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
@@ -303,6 +302,7 @@ fun AddShopContent(
                     initiallyExpanded = true,
                     content = {
                       RequiredInfoSection(
+                          shop = null,
                           shopName = shopName,
                           onShopName = { shopName = it },
                           email = email,
@@ -315,8 +315,6 @@ fun AddShopContent(
                             addressText = loc.name
                             selectedLocation = loc
                           },
-                          locationUi = locationUi,
-                          showError = showError,
                           viewModel = viewModel,
                           owner = owner)
                     },

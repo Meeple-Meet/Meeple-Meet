@@ -20,13 +20,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.sessions.LocationSearchBar
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -196,6 +195,7 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
  */
 @Composable
 fun RequiredInfoSection(
+    shop: Shop?,
     shopName: String,
     onShopName: (String) -> Unit,
     email: String,
@@ -205,8 +205,6 @@ fun RequiredInfoSection(
     link: String,
     onLink: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
-    locationUi: LocationUIState,
-    showError: (String) -> Unit = {},
     viewModel: ShopSearchViewModel,
     owner: Account
 ) {
@@ -251,13 +249,7 @@ fun RequiredInfoSection(
   }
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
-    LocationSearchBar(
-        viewModel = viewModel,
-        locationUi = locationUi,
-        currentUser = owner,
-        shop = null,
-        onError = showError,
-        onPick = onPickLocation)
+    LocationShopDropdown(owner, shop, viewModel)
   }
 }
 

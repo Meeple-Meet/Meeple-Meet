@@ -54,7 +54,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,14 +67,13 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
-import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
 import com.github.meeplemeet.ui.components.GameSearchField
 import com.github.meeplemeet.ui.components.IconTextField
+import com.github.meeplemeet.ui.components.LocationSessionDropdown
 import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.UnderlinedLabel
@@ -88,7 +86,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Calendar
-import kotlinx.coroutines.launch
 
 /* =======================================================================
  * Test tags for UI tests
@@ -165,8 +162,6 @@ fun SessionDetailsScreen(
   val locationUi by viewModel.locationUIState.collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
-  val scope = rememberCoroutineScope()
-  val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   // Fetch game as soon as we know the proposed game.
   // This LaunchedEffect triggers whenever the session's gameId changes,
@@ -200,9 +195,7 @@ fun SessionDetailsScreen(
       if (form.proposedGameString.isNotBlank()) viewModel.getGameFromId(form.proposedGameString)
     }
 
-    if (session.gameId.isNotBlank() && game == null) {
-      viewModel.getGameFromId(session.gameId)
-    }
+    if (session.gameId.isNotBlank() && game == null) viewModel.getGameFromId(session.gameId)
   }
 
   // Determine if the current user is an admin or the creator of the discussion.
@@ -222,7 +215,7 @@ fun SessionDetailsScreen(
                     name = form.title,
                     gameId = form.proposedGameString,
                     date = toTimestamp(form.date, form.time),
-                    location = locationUi.selectedLocation ?: Location(),
+                    location = locationUi.selectedLocation ?: session.location,
                     newParticipantList = form.participants.ifEmpty { emptyList() })
               }
               onBack()
@@ -285,9 +278,7 @@ fun SessionDetailsScreen(
                   discussion = discussion,
                   account = account,
                   gameUIState = gameUIState,
-                  locationUi = locationUi,
                   onValueChangeTitle = { form = form.copy(title = it) },
-                  showError = showError,
                   isCurrUserAdmin = isCurrUserAdmin,
                   sessionViewModel = viewModel)
 
@@ -587,11 +578,9 @@ fun OrganizationSection(
     onValueChangeTitle: (String) -> Unit,
     isCurrUserAdmin: Boolean,
     gameUIState: GameUIState,
-    locationUi: LocationUIState,
     discussion: Discussion,
     form: SessionForm,
     onFormChange: (SessionForm) -> Unit,
-    showError: (String) -> Unit,
     editable: Boolean = false
 ) {
   SectionCard(
@@ -633,13 +622,11 @@ fun OrganizationSection(
 
         if (editable) {
           // Admins and creators: interactive search field
-          LocationSearchBar(
-              viewModel = sessionViewModel,
-              locationUi = locationUi,
-              currentUser = account,
-              discussion = discussion,
-              onError = showError,
-              onPick = {})
+          LocationSessionDropdown(
+              account,
+              discussion,
+              sessionViewModel,
+          )
         } else {
           // Members: plain read-only text field
           IconTextField(

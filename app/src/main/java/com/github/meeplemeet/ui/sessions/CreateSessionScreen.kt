@@ -31,8 +31,6 @@ import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.model.shops.Shop
-import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Elevation
@@ -329,83 +327,6 @@ fun GameSearchBar(
       }
 }
 
-@Composable
-fun LocationSearchBar(
-    viewModel: CreateSessionViewModel,
-    locationUi: LocationUIState,
-    currentUser: Account,
-    discussion: Discussion,
-    onError: (String) -> Unit = {},
-    onPick: ((Location) -> Unit)? = null
-) {
-  LocationSearchBar(
-      setLocationQuery = { viewModel.setLocationQuery(currentUser, discussion, it) },
-      setLocation = { viewModel.setLocation(currentUser, discussion, it) },
-      locationUi = locationUi,
-      onError = onError,
-      onPick = onPick)
-}
-
-@Composable
-fun LocationSearchBar(
-    viewModel: ShopSearchViewModel,
-    locationUi: LocationUIState,
-    currentUser: Account,
-    shop: Shop?,
-    onError: (String) -> Unit = {},
-    onPick: ((Location) -> Unit)? = null
-) {
-  LocationSearchBar(
-      setLocationQuery = { q ->
-        shop?.let { viewModel.setLocationQuery(shop, currentUser, q) }
-            ?: viewModel.setLocationQuery(q)
-      },
-      setLocation = { loc ->
-        shop?.let { viewModel.setLocation(shop, currentUser, loc) } ?: viewModel.setLocation(loc)
-      },
-      locationUi = locationUi,
-      onError = onError,
-      onPick = onPick)
-}
-
-@Composable
-private fun LocationSearchBar(
-    setLocationQuery: (String) -> Unit,
-    setLocation: (Location) -> Unit,
-    locationUi: LocationUIState,
-    onError: (String) -> Unit = {},
-    onPick: ((Location) -> Unit)? = null
-) {
-  LocationSearchField(
-      query = locationUi.locationQuery,
-      onQueryChange = { q ->
-        runCatching { setLocationQuery(q) }
-            .onFailure { e -> onError(e.message ?: "Location search failed") }
-      },
-      results = locationUi.locationSuggestions,
-      onPick = { loc ->
-        runCatching {
-              setLocation(loc)
-              onPick?.invoke(loc)
-            }
-            .onFailure { e -> onError(e.message ?: "Failed to select location") }
-      },
-      isLoading = false,
-      placeholder = "Search locations…",
-      modifier = Modifier.fillMaxWidth())
-
-  locationUi.locationSearchError
-      ?.takeIf { it.isNotBlank() }
-      ?.let { msg ->
-        Spacer(Modifier.height(6.dp))
-        Text(
-            msg,
-            modifier = Modifier.testTag(SessionCreationTestTags.LOCATION_SEARCH_ERROR),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.error)
-      }
-}
-
 /**
  * Composable function representing the Create Session button.
  *
@@ -547,13 +468,7 @@ fun OrganisationSection(
         Spacer(Modifier.height(10.dp))
 
         // Location search field with suggestions
-        LocationSearchBar(
-            viewModel = viewModel,
-            locationUi = locationUi,
-            currentUser = account,
-            discussion = discussion,
-            onError = showError,
-            onPick = onLocationPicked)
+        LocationSessionDropdown(account, discussion, viewModel)
       }
 }
 

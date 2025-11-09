@@ -41,12 +41,15 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DisplayMode
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.SliderColors
@@ -76,9 +79,15 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.sessions.CreateSessionViewModel
+import com.github.meeplemeet.model.shared.SearchViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -674,6 +683,98 @@ fun TimePickerField(
                     ))
               }
         })
+  }
+}
+
+@Composable
+fun LocationSessionDropdown(
+    account: Account,
+    discussion: Discussion,
+    viewModel: CreateSessionViewModel,
+    testTag: String = "",
+    testTag2: String = ""
+) {
+  LocationDropdown(
+      setLocation = { viewModel.setLocation(account, discussion, it) },
+      setLocationQuery = { viewModel.setLocationQuery(account, discussion, it) },
+      discussion.session?.location ?: Location(),
+      viewModel,
+      testTag,
+      testTag2)
+}
+
+@Composable
+fun LocationShopDropdown(
+    account: Account,
+    shop: Shop?,
+    viewModel: ShopSearchViewModel,
+    testTag: String = "",
+    testTag2: String = ""
+) {
+  LocationDropdown(
+      setLocation = {
+        val location = it
+        shop?.let { viewModel.setLocation(shop, account, location) }
+            ?: viewModel.setLocation(location)
+      },
+      setLocationQuery = {
+        val query = it
+        shop?.let { viewModel.setLocationQuery(shop, account, query) }
+            ?: viewModel.setLocationQuery(query)
+      },
+      shop?.address ?: Location(),
+      viewModel,
+      testTag,
+      testTag2)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LocationDropdown(
+    setLocation: (Location) -> Unit,
+    setLocationQuery: (String) -> Unit,
+    initial: Location,
+    viewModel: SearchViewModel,
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
+) {
+  val results by viewModel.locationUIState.collectAsStateWithLifecycle()
+  var expanded = results.locationSuggestions.isNotEmpty()
+  val internalQuery =
+      remember(initial, results.locationQuery) { results.locationQuery.ifBlank { initial.name } }
+
+  LaunchedEffect(Unit) { if (initial.name.isNotBlank()) setLocation(initial) }
+
+  var forceClose by remember { mutableStateOf(false) }
+
+  ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    OutlinedTextField(
+        value = internalQuery,
+        onValueChange = {
+          forceClose = false
+          setLocationQuery(it)
+        },
+        label = { Text("Location") },
+        placeholder = { Text("Enter an address") },
+        modifier =
+            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+                .fillMaxWidth()
+                .testTag(inputFieldTestTag),
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+    )
+
+    ExposedDropdownMenu(
+        expanded = !forceClose && expanded, onDismissRequest = { expanded = false }) {
+          results.locationSuggestions.take(5).forEach { loc ->
+            DropdownMenuItem(
+                text = { Text(loc.name) },
+                onClick = {
+                  forceClose = true
+                  setLocation(loc)
+                },
+                modifier = Modifier.testTag(dropdownItemTestTag))
+          }
+        }
   }
 }
 
