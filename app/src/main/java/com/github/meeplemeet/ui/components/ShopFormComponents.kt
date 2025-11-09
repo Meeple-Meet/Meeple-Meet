@@ -393,8 +393,6 @@ fun OpeningHoursEditor(
  * @param gameQuery The current query string for searching games.
  * @param gameSuggestions List of game suggestions based on the current query.
  * @param isSearching Boolean indicating if a search operation is in progress.
- * @param picked The currently picked game.
- * @param onPickedChange Callback function to update the picked game.
  * @param qty The quantity of the picked game.
  * @param onQtyChange Callback function to update the quantity of the picked game.
  * @param onSetGameQuery Callback function to update the game search query.
@@ -410,11 +408,6 @@ fun GameStockPicker(
     show: Boolean,
     stock: List<Pair<Game, Int>>,
     onStockChange: (List<Pair<Game, Int>>) -> Unit,
-    gameQuery: String,
-    gameSuggestions: List<Game>,
-    isSearching: Boolean,
-    picked: Game?,
-    onPickedChange: (Game?) -> Unit,
     qty: Int,
     onQtyChange: (Int) -> Unit,
     onSetGameQuery: (String) -> Unit,
@@ -428,30 +421,22 @@ fun GameStockPicker(
     GameStockDialog(
         owner,
         shop,
-        query = gameQuery,
         viewModel = viewModel,
         gameUIState = gameUIState,
         onQueryChange = onSetGameQuery,
-        results = gameSuggestions,
-        isLoading = isSearching,
-        onPickGame = { g ->
-          onPickedChange(g)
-          onSetGame(g)
-        },
-        selectedGame = picked,
         quantity = qty,
         onQuantityChange = onQtyChange,
         existingIds = existing,
         onDismiss = {
           onDismiss()
           onQtyChange(1)
-          onPickedChange(null)
           onSetGameQuery("")
         },
         onSave = {
-          picked?.let { g -> onStockChange((stock + (g to qty)).distinctBy { it.first.uid }) }
+          gameUIState.fetchedGame?.let { g ->
+            onStockChange((stock + (g to qty)).distinctBy { it.first.uid })
+          }
           onQtyChange(1)
-          onPickedChange(null)
           onSetGameQuery("")
           onDismiss()
         })

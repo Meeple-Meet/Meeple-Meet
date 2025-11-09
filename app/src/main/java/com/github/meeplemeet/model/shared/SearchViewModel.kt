@@ -163,7 +163,9 @@ open class SearchViewModel(
     if (query.isNotBlank()) {
       gameQueryFlow.tryEmit(query)
     } else {
-      _gameUIState.value = _gameUIState.value.copy(gameSuggestions = emptyList())
+      _gameUIState.value =
+          _gameUIState.value.copy(
+              gameSuggestions = emptyList(), fetchedGame = null, selectedGameUid = "")
     }
   }
 

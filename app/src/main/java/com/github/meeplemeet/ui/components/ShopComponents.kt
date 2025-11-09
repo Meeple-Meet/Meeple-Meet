@@ -991,13 +991,7 @@ fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Mod
  * A composable function that displays a dialog for adding a game to stock with search and quantity
  * selection.
  *
- * @param query The current search query.
  * @param onQueryChange A callback function that is invoked when the search query changes.
- * @param results A list of games that match the search query.
- * @param isLoading A boolean indicating whether the search results are loading.
- * @param onPickGame A callback function that is invoked when a game is picked from the search
- *   results.
- * @param selectedGame The currently selected game.
  * @param quantity The current quantity value.
  * @param onQuantityChange A callback function that is invoked when the quantity value changes.
  * @param existingIds A set of existing game IDs to prevent duplicates.
@@ -1010,18 +1004,14 @@ fun GameStockDialog(
     shop: Shop?,
     viewModel: ShopSearchViewModel,
     gameUIState: GameUIState,
-    query: String,
     onQueryChange: (String) -> Unit,
-    results: List<Game>,
-    isLoading: Boolean,
-    onPickGame: (Game) -> Unit,
-    selectedGame: Game?,
     quantity: Int,
     onQuantityChange: (Int) -> Unit,
     existingIds: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
+  val selectedGame = gameUIState.fetchedGame
   val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
 
   AlertDialog(
