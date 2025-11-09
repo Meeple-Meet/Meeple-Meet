@@ -36,7 +36,6 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapViewModelTest {
-
   private lateinit var mockMarkerPreviewRepo: MarkerPreviewRepository
   private lateinit var viewModel: MapViewModel
 

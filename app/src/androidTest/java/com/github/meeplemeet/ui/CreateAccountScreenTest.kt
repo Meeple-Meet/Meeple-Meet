@@ -154,7 +154,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     checkpoint("Multiple checkbox clicks have an impact on account") {
       runBlocking {
         val acc = mainActivityViewModel.accountFlow(me.uid).value
-        acc?.shopOwner == true && acc?.spaceRenter == false
+        acc?.shopOwner == true && !acc.spaceRenter
       }
     }
 
