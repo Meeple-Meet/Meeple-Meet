@@ -25,9 +25,6 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import kotlin.math.max
 
-// TODO: only allow >= 1 seats and >= 0 prices
-// TODO: allow decimal prices
-
 /* ================================================================================================
  * Test tags
  * ================================================================================================ */
@@ -195,7 +192,11 @@ fun SpaceRow(
     isEditing: Boolean = false
 ) {
   // Outline opacity: 1f when editing, 0.3f otherwise
-  val outline = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isEditing) 1f else 0.3f)
+  val outline =
+      MaterialTheme.colorScheme.onSurface.copy(
+          alpha =
+              if (isEditing) SpaceRenterUi.Styles.editingBorderAlpha
+              else SpaceRenterUi.Styles.readonlyBorderAlpha)
   val tfColors =
       OutlinedTextFieldDefaults.colors(
           focusedBorderColor = outline,
