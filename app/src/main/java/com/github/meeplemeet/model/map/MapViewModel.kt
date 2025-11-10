@@ -17,6 +17,10 @@ import org.imperiumlabs.geofirestore.GeoFirestore
 import org.imperiumlabs.geofirestore.GeoQuery
 import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
 
+/**
+ * Represents the UI state of the map, including currently visible geo-pins, any selected
+ * pin/preview, loading state, and error messages.
+ */
 data class MapUIState(
     val geoPins: List<GeoPinWithLocation> = emptyList(),
     val errorMsg: String? = null,
@@ -25,6 +29,7 @@ data class MapUIState(
     val isLoadingPreview: Boolean = false
 )
 
+/** A geo-pin along with its current geographic location. */
 data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
 
 /**
@@ -47,7 +52,7 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  */
 class MapViewModel(
     private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews,
-    geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
+    geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   /** Public observable state of the map, containing geo-pins, errors, and selection info. */
@@ -149,8 +154,8 @@ class MapViewModel(
           override fun onGeoQueryReady() {}
 
           /**
-           * Called when an error occurs while listening to Firestore geo updates. Updates
-           * [uiState.errorMsg] with the error message.
+           * Called when an error occurs while listening to Firestore geo updates. Updates the
+           * MapUIState errorMsg with the error message.
            *
            * @param exception The exception describing the failure.
            */
@@ -211,7 +216,7 @@ class MapViewModel(
 
   /**
    * Selects a specific geo-pin and fetches its corresponding [MarkerPreview] for display in the UI.
-   * If fetching fails, updates [uiState.errorMsg].
+   * If fetching fails, updates the MapUIState errorMsg.
    *
    * @param pin The selected geo-pin.
    */
