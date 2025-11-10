@@ -1,6 +1,8 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -13,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
@@ -185,6 +188,48 @@ fun SpaceRow(
           Icons.Filled.Delete,
           contentDescription = "Remove space",
           tint = MaterialTheme.colorScheme.error)
+    }
+  }
+}
+
+@Composable
+fun SpacesList(
+    spaces: List<Space>,
+    onChange: (index: Int, updated: Space) -> Unit,
+    onDelete: (index: Int) -> Unit,
+    placesTitle: String,
+    priceTitle: String,
+    emptyText: String,
+    modifier: Modifier = Modifier,
+    rowBorderOpacity: Float = 1f,
+    rowBorderColor: Color = MaterialTheme.colorScheme.onSurface,
+    maxListHeight: Dp = 600.dp,
+    rowSpacing: Dp = 8.dp
+) {
+  Column(modifier = modifier) {
+    SpacesHeaderRow(placesTitle = placesTitle, priceTitle = priceTitle)
+
+    if (spaces.isEmpty()) {
+      Text(
+          emptyText,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodyMedium,
+      )
+    } else {
+      LazyColumn(
+          verticalArrangement = Arrangement.spacedBy(rowSpacing),
+          contentPadding = PaddingValues(bottom = 16.dp),
+          modifier = Modifier.heightIn(max = maxListHeight)) {
+            itemsIndexed(spaces) { idx, space ->
+              SpaceRow(
+                  index = idx,
+                  space = space,
+                  onChange = { updated -> onChange(idx, updated) },
+                  onDelete = { onDelete(idx) },
+                  borderOpacity = rowBorderOpacity,
+                  borderColor = rowBorderColor)
+            }
+          }
     }
   }
 }
