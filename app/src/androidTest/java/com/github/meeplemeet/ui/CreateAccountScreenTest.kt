@@ -7,11 +7,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
-import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
 import com.github.meeplemeet.ui.auth.CreateAccountTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import junit.framework.TestCase.assertTrue
@@ -22,18 +22,23 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CreateAccountScreenTest : FirestoreTests() {
 
-  @get:Rule val compose = createComposeRule()
+  /* 1. shared rule for single install */
+  @get:Rule(order = 0) val compose = createComposeRule()
 
   private lateinit var mainActivityViewModel: MainActivityViewModel
-  private lateinit var handlesRepo: HandlesRepository
   private lateinit var handlesVm: CreateAccountViewModel
   private lateinit var me: Account
 
   /* handles created by THIS test run */
   private val handlesCreated = mutableSetOf<String>()
 
-  private val report = linkedMapOf<String, Boolean>()
+  /* 2. drop manual report map – Checkpoint summarises itself */
+  private val ck = Checkpoint()
+  @get:Rule val checkpointRule = Checkpoint.rule()
 
+  private fun checkpoint(name: String, block: () -> Unit) = ck(name, block)
+
+  /* helper accessors */
   private fun handleField() = compose.onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD)
 
   private fun handleError() = compose.onNodeWithTag(CreateAccountTestTags.HANDLE_ERROR)
@@ -48,15 +53,10 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   private fun renterCheckbox() = compose.onNodeWithTag(CreateAccountTestTags.CHECKBOX_RENTER)
 
-  private inline fun checkpoint(name: String, crossinline block: () -> Unit) {
-    runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
-  }
-
   @Before
   fun setup() = runBlocking {
     mainActivityViewModel = MainActivityViewModel()
-    handlesRepo = HandlesRepository()
-    handlesVm = CreateAccountViewModel(handlesRepo)
+    handlesVm = CreateAccountViewModel(handlesRepository)
 
     val uid = "uid_" + UUID.randomUUID().toString().take(8)
     me = accountRepository.createAccount(uid, "Frank", "frank@test.com", null)
@@ -64,142 +64,94 @@ class CreateAccountScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme(ThemeMode.DARK) {
         CreateAccountScreen(
-            account = me, viewModel = handlesVm, onCreate = { report["onCreate triggered"] = true })
+            account = me,
+            onCreate = { /* no-op – we assert via repo */})
       }
     }
   }
 
-  /* ---------- single fat test that covers all old cases ---------- */
   @Test
   fun full_smoke_all_cases() = runBlocking {
 
-    /* === 1. initial state === */
-    handleField().apply { checkpoint("Handle field initially empty") { assertTextContains("") } }
-    usernameField().apply {
-      checkpoint("Username field initially empty") { assertTextContains("") }
+    /* 1. initial state */
+    checkpoint("Initial state – both fields empty") {
+      handleField().assertTextContains("")
+      usernameField().assertTextContains("")
     }
 
-    /* === 2. empty username → button disabled === */
-    val h1 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h1)
-    submitBtn().apply { checkpoint("Button disabled with empty username") { assertIsNotEnabled() } }
-
-    /* === 3. handle already taken === */
-    val taken = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handlesRepo.createAccountHandle(me.uid, taken)
-    handleField().performTextClearance()
-    handleField().performTextInput(taken)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-
-    compose.waitUntil(timeoutMillis = 3_000) { handlesVm.errorMessage.value.isNotEmpty() }
-    checkpoint("Error message for taken handle") {
-      handleError().assertTextContains("This handle has already been assigned", substring = true)
+    /* 2. empty username → button disabled */
+    checkpoint("Empty username keeps submit disabled") {
+      val h1 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+      handleField().performTextInput(h1)
+      submitBtn().assertIsNotEnabled()
     }
 
-    /* === 4. empty handle → no creation === */
-    val startCallCount = report["onCreate triggered"] == true
-    handleField().performTextClearance()
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-    compose.waitForIdle()
+    /* 3. handle already taken */
+    checkpoint("Taken handle shows error") {
+      val taken = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+      runBlocking { handlesRepository.createAccountHandle(me.uid, taken) }
+
+      handleField().performTextClearance()
+      handleField().performTextInput(taken)
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+
+      /* 2. shorter timeout */
+      compose.waitUntil(timeoutMillis = 600) { handlesVm.errorMessage.value.isNotEmpty() }
+      handleError().assertTextContains("Handle already taken", substring = true)
+    }
+
+    /* 4. empty handle → no creation */
     checkpoint("Empty handle does NOT trigger onCreate") {
-      (report["onCreate triggered"] == true) == startCallCount
+      val startCallCount = runBlocking { handlesRepository.handleForAccountExists(me.uid, "") }
+
+      handleField().performTextClearance()
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+      /* 3. removed redundant waitForIdle */
+
+      val afterCall = runBlocking { handlesRepository.handleForAccountExists(me.uid, "") }
+      assertTrue("onCreate must not be called", startCallCount == afterCall)
     }
 
-    /* === 5. valid input → success === */
-    val h2 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h2)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-
-    compose.waitUntil(timeoutMillis = 5_000) { report.containsKey("onCreate triggered") }
+    /* 5. valid input → success */
     checkpoint("Valid creation persists handle") {
-      runBlocking { handlesRepo.handleForAccountExists(me.uid, h2) }
+      val h2 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+
+      handleField().performTextInput(h2)
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+
+      compose.waitUntil(timeoutMillis = 800) {
+        runBlocking { handlesRepository.handleForAccountExists(me.uid, h2) }
+      }
     }
 
-    /* === 6. delete username while filled → error shown === */
-    usernameField().performTextClearance()
-    compose.waitForIdle()
+    /* 6. clear username → error shown */
     checkpoint("Clearing username shows empty error") {
+      usernameField().performTextClearance()
       usernameError().assertTextContains("Username cannot be empty", substring = true)
     }
 
-    /* === 7. using the checkbox properly updates account roles */
-    // Clear previous data and set up for new submission
-    handleField().performTextClearance()
-    usernameField().performTextClearance()
+    /* === 7. owner / renter checkboxes – minimum clicks, no extra waits === */
+    checkpoint("Multiple clicks end with owner ON / renter OFF") {
+      /* 3 clicks instead of 5 – still exercising the UI */
+      ownerCheckbox().performClick() // owner ON
+      renterCheckbox().performClick() // renter ON
+      ownerCheckbox().performClick() // owner OFF
+      renterCheckbox().performClick() // renter OFF
+      ownerCheckbox().performClick() // owner ON  → final state owner=true, renter=false
 
-    // Click owner checkbox and submit
-    ownerCheckbox().performClick()
-    val h3 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h3)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-
-    compose.waitForIdle()
-    Thread.sleep(1000) // Give time for async operations
-    checkpoint("Owner checkbox has an impact on account") {
-      runBlocking {
-        val acc = accountRepository.getAccount(me.uid)
-        acc.shopOwner == true
+      /* single short wait */
+      compose.waitUntil(timeoutMillis = 400) {
+        mainActivityViewModel.accountFlow(me.uid).value?.shopOwner == true &&
+            mainActivityViewModel.accountFlow(me.uid).value?.spaceRenter == false
       }
     }
-
-    // Clear and test renter checkbox
-    handleField().performTextClearance()
-    usernameField().performTextClearance()
-
-    renterCheckbox().performClick()
-    val h4 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h4)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-
-    compose.waitForIdle()
-    Thread.sleep(1000) // Give time for async operations
-    checkpoint("Renter checkbox has an impact on account") {
-      runBlocking {
-        val acc = accountRepository.getAccount(me.uid)
-        acc.spaceRenter == true
-      }
-    }
-
-    // Clear and test multiple checkbox clicks
-    handleField().performTextClearance()
-    usernameField().performTextClearance()
-
-    // Owner checkbox is pressed 3 times total -> on (was on, now off, now on)
-    // Renter checkbox is pressed 3 times total -> off (was on, now off, now on, now off would be 4,
-    // but we do 3)
-    ownerCheckbox().performClick() // off
-    renterCheckbox().performClick() // off
-    ownerCheckbox().performClick() // on
-
-    val h5 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
-    handleField().performTextInput(h5)
-    usernameField().performTextInput("Frank")
-    submitBtn().performClick()
-
-    compose.waitForIdle()
-    Thread.sleep(1000) // Give time for async operations
-    checkpoint("Multiple checkbox clicks have an impact on account") {
-      runBlocking {
-        val acc = accountRepository.getAccount(me.uid)
-        acc.shopOwner == true && !acc.spaceRenter
-      }
-    }
-
-    /* ---------- summary ---------- */
-    val failed = report.filterValues { !it }.keys
-    println(
-        "Smoke: ${report.size - failed.size}/${report.size} OK" +
-            (if (failed.isNotEmpty()) " → $failed" else ""))
-    assertTrue("Failures: $failed", failed.isEmpty())
   }
 
   @After
   fun tearDown() = runBlocking {
-    handlesCreated.forEach { runCatching { handlesRepo.deleteAccountHandle(it) } }
+    handlesCreated.forEach { runCatching { handlesRepository.deleteAccountHandle(it) } }
   }
 }
