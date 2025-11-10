@@ -1,1 +1,336 @@
 package com.github.meeplemeet.ui.space_renter
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.LocationUIState
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.space_renter.CreateSpaceRenterViewModel
+import com.github.meeplemeet.model.space_renter.Space
+import com.github.meeplemeet.ui.components.*
+import kotlinx.coroutines.launch
+
+/* ================================================================================================
+ * Test tags
+ * ================================================================================================ */
+object CreateSpaceRenterScreenTestTags {
+  const val SCAFFOLD = "create_space_renter_scaffold"
+  const val TOPBAR = "create_space_renter_topbar"
+  const val TITLE = "create_space_renter_title"
+  const val NAV_BACK = "create_space_renter_nav_back"
+  const val SNACKBAR_HOST = "create_space_renter_snackbar_host"
+  const val LIST = "create_space_renter_list"
+
+  const val SECTION_REQUIRED = "section_required"
+  const val SECTION_AVAILABILITY = "section_availability"
+  const val SECTION_SPACES = "section_spaces"
+
+  const val SPACES_ADD_BUTTON = "spaces_add_button"
+  const val SPACES_ADD_LABEL = "spaces_add_label"
+
+  const val BOTTOM_SPACER = "bottom_spacer"
+}
+
+/* ================================================================================================
+ * UI defaults
+ * ================================================================================================ */
+object AddSpaceRenterUi {
+  object Dimensions {
+    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
+    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
+    val between = ShopFormUi.Dimensions.betweenControls
+    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
+  }
+
+  object Strings {
+    const val SCREEN_TITLE = "Create Space Renter"
+
+    const val REQUIREMENTS_SECTION = "Required Info"
+    const val SECTION_AVAILABILITY = "Availability"
+    const val SECTION_SPACES = "Available Spaces"
+
+    const val BTN_ADD_SPACE = "Add Space"
+    const val ERROR_VALIDATION = "Validation error"
+    const val ERROR_CREATE = "Failed to create space renter"
+  }
+}
+
+/* ================================================================================================
+ * Screen
+ * ================================================================================================ */
+
+/**
+ * Screen to create a new space renter.
+ *
+ * @param owner The account creating the space renter.
+ * @param onBack Callback when the user wants to go back.
+ * @param onCreated Callback when the space renter has been created.
+ * @param viewModel The ViewModel to use.
+ */
+@Composable
+fun CreateSpaceRenterScreen(
+    owner: Account,
+    onBack: () -> Unit,
+    onCreated: () -> Unit,
+    viewModel: CreateSpaceRenterViewModel = viewModel()
+) {
+  val locationUi by viewModel.locationUIState.collectAsState()
+
+  AddSpaceRenterContent(
+      owner = owner,
+      onBack = onBack,
+      onCreated = onCreated,
+      onCreate = { name, email, phone, website, address, week, spaces ->
+        viewModel.createSpaceRenter(
+            owner = owner,
+            name = name,
+            phone = phone,
+            email = email,
+            website = website,
+            address = address,
+            openingHours = week,
+            spaces = spaces)
+      },
+      locationUi = locationUi,
+      viewModel = viewModel)
+}
+
+/* ================================================================================================
+ * Content
+ * ================================================================================================ */
+
+/**
+ * Content for the AddSpaceRenterScreen.
+ *
+ * @param owner The account creating the space renter.
+ * @param onBack Callback when the user wants to go back.
+ * @param onCreated Callback when the space renter has been created.
+ * @param onCreate Suspend function to create the space renter.
+ * @param locationUi The current location UI state.
+ * @param viewModel The ViewModel to use.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AddSpaceRenterContent(
+    owner: Account,
+    onBack: () -> Unit,
+    onCreated: () -> Unit,
+    onCreate:
+        suspend (
+            name: String,
+            email: String,
+            phone: String,
+            website: String,
+            address: Location,
+            week: List<OpeningHours>,
+            spaces: List<Space>) -> Unit,
+    locationUi: LocationUIState,
+    viewModel: CreateSpaceRenterViewModel
+) {
+  val snackbarHost = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+
+  var name by rememberSaveable { mutableStateOf("") }
+  var email by rememberSaveable { mutableStateOf("") }
+  var phone by rememberSaveable { mutableStateOf("") }
+  var link by rememberSaveable { mutableStateOf("") }
+
+  var addressText by rememberSaveable { mutableStateOf("") }
+  var selectedLocation by remember { mutableStateOf<Location?>(null) }
+
+  var week by remember { mutableStateOf(emptyWeek()) }
+  var editingDay by remember { mutableStateOf<Int?>(null) }
+  var showHoursDialog by remember { mutableStateOf(false) }
+
+  var spaces by remember { mutableStateOf(listOf<Space>()) }
+
+  val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
+  val hasAtLeastOneSpace by remember(spaces) { derivedStateOf { spaces.isNotEmpty() } }
+  val allSpacesValid by
+      remember(spaces) { derivedStateOf { spaces.all { it.seats >= 1 && it.costPerHour >= 0.0 } } }
+
+  val isValid by
+      remember(name, email, addressText, hasOpeningHours, hasAtLeastOneSpace, allSpacesValid) {
+        derivedStateOf {
+          name.isNotBlank() &&
+              isValidEmail(email) &&
+              addressText.isNotBlank() &&
+              hasOpeningHours &&
+              hasAtLeastOneSpace &&
+              allSpacesValid
+        }
+      }
+
+  // Keep address text in sync with the location search bar
+  LaunchedEffect(locationUi.locationQuery) {
+    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
+      addressText = locationUi.locationQuery
+    }
+  }
+
+  fun discardAndBack() {
+    name = ""
+    email = ""
+    phone = ""
+    link = ""
+    addressText = ""
+    selectedLocation = null
+    week = emptyWeek()
+    editingDay = null
+    showHoursDialog = false
+    spaces = emptyList()
+    onBack()
+  }
+
+  fun addSpace() {
+    spaces = spaces + Space(seats = 1, costPerHour = 0.0)
+  }
+
+  Scaffold(
+      topBar = {
+        CenterAlignedTopAppBar(
+            title = {
+              Text(
+                  AddSpaceRenterUi.Strings.SCREEN_TITLE,
+                  modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.TITLE))
+            },
+            navigationIcon = {
+              IconButton(
+                  onClick = onBack,
+                  modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.NAV_BACK)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  }
+            },
+            modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.TOPBAR))
+      },
+      snackbarHost = {
+        SnackbarHost(
+            snackbarHost,
+            modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.SNACKBAR_HOST))
+      },
+      bottomBar = {
+        ActionBar(
+            onDiscard = { discardAndBack() },
+            onPrimary = {
+              val addr = selectedLocation ?: Location(name = addressText)
+              scope.launch {
+                try {
+                  onCreate(name, email, phone, link, addr, week, spaces)
+                  onCreated()
+                } catch (e: IllegalArgumentException) {
+                  snackbarHost.showSnackbar(e.message ?: AddSpaceRenterUi.Strings.ERROR_VALIDATION)
+                } catch (_: Exception) {
+                  snackbarHost.showSnackbar(AddSpaceRenterUi.Strings.ERROR_CREATE)
+                }
+              }
+            },
+            enabled = isValid)
+      },
+      modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.SCAFFOLD)) { padding ->
+        LazyColumn(
+            modifier = Modifier.padding(padding).testTag(CreateSpaceRenterScreenTestTags.LIST),
+            contentPadding =
+                PaddingValues(
+                    horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
+                    vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
+
+              // Required info
+              item {
+                CollapsibleSection(
+                    title = AddSpaceRenterUi.Strings.REQUIREMENTS_SECTION,
+                    initiallyExpanded = true,
+                    content = {
+                      SpaceRenterRequiredInfoSection(
+                          spaceRenter = null,
+                          spaceName = name,
+                          onSpaceName = { name = it },
+                          email = email,
+                          onEmail = { email = it },
+                          phone = phone,
+                          onPhone = { phone = it },
+                          link = link,
+                          onLink = { link = it },
+                          onPickLocation = { loc ->
+                            addressText = loc.name
+                            selectedLocation = loc
+                          },
+                          viewModel = viewModel,
+                          owner = owner)
+                    },
+                    testTag = CreateSpaceRenterScreenTestTags.SECTION_REQUIRED)
+              }
+
+              // Availability
+              item {
+                CollapsibleSection(
+                    title = AddSpaceRenterUi.Strings.SECTION_AVAILABILITY,
+                    initiallyExpanded = false,
+                    content = {
+                      AvailabilitySection(
+                          week = week,
+                          onEdit = { day ->
+                            editingDay = day
+                            showHoursDialog = true
+                          })
+                    },
+                    testTag = CreateSpaceRenterScreenTestTags.SECTION_AVAILABILITY)
+              }
+
+              // Spaces
+              item {
+                CollapsibleSection(
+                    title = AddSpaceRenterUi.Strings.SECTION_SPACES,
+                    initiallyExpanded = false,
+                    header = {
+                      TextButton(
+                          onClick = { addSpace() },
+                          modifier =
+                              Modifier.testTag(CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
+                            Text(
+                                AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                modifier =
+                                    Modifier.testTag(
+                                        CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
+                          }
+                    },
+                    content = {
+                      SpacesList(
+                          spaces = spaces,
+                          onChange = { idx, updated ->
+                            spaces = spaces.toMutableList().also { it[idx] = updated }
+                          },
+                          onDelete = { idx ->
+                            spaces = spaces.toMutableList().also { it.removeAt(idx) }
+                          },
+                      )
+                    },
+                    testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
+              }
+
+              item {
+                Spacer(
+                    Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)
+                        .testTag(CreateSpaceRenterScreenTestTags.BOTTOM_SPACER))
+              }
+            }
+      }
+
+  OpeningHoursEditor(
+      show = showHoursDialog,
+      day = editingDay,
+      week = week,
+      onWeekChange = { week = it },
+      onDismiss = { showHoursDialog = false })
+}
