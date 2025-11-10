@@ -876,4 +876,55 @@ class FirestoreSessionTests : FirestoreTests() {
         newParticipantList = listOf(account1))
     advanceUntilIdle()
   }
+
+  @Test
+  fun getSessionIdsForUser_returnsOnlyParticipatingDiscussionIds() = runTest {
+    val realSessionRepo = SessionRepository()
+
+    // create several discussions and add sessions only for some of them including account1
+    val discussionsWithSession = mutableListOf<String>()
+    val otherDiscussions = mutableListOf<String>()
+    repeat(5) { i ->
+      val d = discussionRepository.createDiscussion("D$i", "desc", account1.uid)
+      // create session for even indices including account1
+      if (i % 2 == 0) {
+        realSessionRepo.createSession(
+            d.uid, "S$i", "game$i", testTimestamp, testLocation, account1.uid)
+        discussionsWithSession += d.uid
+      } else {
+        // create session without account1
+        realSessionRepo.createSession(
+            d.uid, "S$i", "game$i", testTimestamp, testLocation, account2.uid)
+        otherDiscussions += d.uid
+      }
+    }
+
+    advanceUntilIdle()
+
+    val ids = realSessionRepo.getSessionIdsForUser(account1.uid)
+    assertTrue(discussionsWithSession.all { ids.contains(it) })
+    assertTrue(otherDiscussions.none { ids.contains(it) })
+  }
+
+  @Test
+  fun getSessionIdsForUser_handlesPagination_whenManyResults() = runTest {
+    val realSessionRepo = SessionRepository()
+
+    // create 7 discussions with sessions where account1 participates
+    val createdIds = mutableListOf<String>()
+    repeat(7) { i ->
+      val d = discussionRepository.createDiscussion("P$i", "desc", account1.uid)
+      realSessionRepo.createSession(
+          d.uid, "PS$i", "gameP$i", testTimestamp, testLocation, account1.uid)
+      createdIds += d.uid
+    }
+
+    advanceUntilIdle()
+
+    // Force small batch size to exercise pagination path
+    val fetched = realSessionRepo.getSessionIdsForUser(account1.uid, batchSize = 2)
+    // all created ids must be present
+    assertEquals(createdIds.size, fetched.count { createdIds.contains(it) })
+    assertTrue(createdIds.all { fetched.contains(it) })
+  }
 }
