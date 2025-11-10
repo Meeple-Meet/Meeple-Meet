@@ -63,9 +63,7 @@ class CreateAccountScreenTest : FirestoreTests() {
 
     compose.setContent {
       AppTheme(ThemeMode.DARK) {
-        CreateAccountScreen(
-            account = me,
-            onCreate = { /* no-op – we assert via repo */})
+        CreateAccountScreen(account = me, onCreate = { /* no-op – we assert via repo */})
       }
     }
   }
