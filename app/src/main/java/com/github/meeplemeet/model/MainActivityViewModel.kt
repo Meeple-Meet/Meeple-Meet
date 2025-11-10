@@ -1,3 +1,4 @@
+// Docs generated with Claude Code.
 package com.github.meeplemeet.model
 
 import androidx.lifecycle.viewModelScope
@@ -12,24 +13,46 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
+/**
+ * Main view model for the application that provides real-time data flows for accounts and
+ * discussions.
+ *
+ * This ViewModel extends [AuthenticationViewModel] to provide authentication functionality while
+ * adding support for listening to real-time updates from Firestore. It manages cached StateFlows
+ * for accounts and discussions to avoid duplicate listeners.
+ *
+ * @property accountRepository Repository for account operations
+ * @property discussionRepository Repository for discussion operations
+ */
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
 ) : AuthenticationViewModel() {
 
+  /**
+   * Signs out the current user and clears all cached flows.
+   *
+   * Overrides the parent signOut method to ensure that all Firestore listeners are removed when the
+   * user signs out.
+   */
   override fun signOut() {
     discussionFlows.clear()
     accountFlows.clear()
     super.signOut()
   }
 
-  /** Holds a [StateFlow] of discussion preview maps keyed by account ID. */
+  /** Holds cached [StateFlow]s of accounts keyed by account ID to avoid duplicate listeners. */
   private val accountFlows = mutableMapOf<String, StateFlow<Account?>>()
 
   /**
-   * Real-time flow of all discussion previews for an account.
+   * Returns a real-time flow of account data for the specified account ID.
    *
-   * Emits a new map whenever any preview changes in Firestore.
+   * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
+   * flow emits updated account data whenever changes occur in Firestore, including the account's
+   * discussion previews.
+   *
+   * @param accountId The ID of the account to observe
+   * @return A StateFlow that emits the account or null if the account doesn't exist or ID is blank
    */
   fun accountFlow(accountId: String): StateFlow<Account?> {
     if (accountId.isBlank()) return MutableStateFlow(null)
@@ -43,14 +66,20 @@ class MainActivityViewModel(
     }
   }
 
-  /** Holds a [StateFlow] of discussion documents keyed by discussion ID. */
+  /**
+   * Holds cached [StateFlow]s of discussions keyed by discussion ID to avoid duplicate listeners.
+   */
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
 
   /**
-   * Real-time flow of a discussion document.
+   * Returns a real-time flow of discussion data for the specified discussion ID.
    *
-   * Emits a new [Discussion] on every snapshot change, or `null` if the discussion does not exist
-   * yet.
+   * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
+   * flow emits updated discussion data whenever changes occur in Firestore.
+   *
+   * @param discussionId The ID of the discussion to observe
+   * @return A StateFlow that emits the discussion or null if the discussion doesn't exist or ID is
+   *   blank
    */
   fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
     if (discussionId.isBlank()) return MutableStateFlow(null)

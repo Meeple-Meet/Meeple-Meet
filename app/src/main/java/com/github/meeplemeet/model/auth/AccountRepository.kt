@@ -1,3 +1,4 @@
+// Docs generated with Claude Code.
 package com.github.meeplemeet.model.auth
 
 import com.github.meeplemeet.model.AccountNotFoundException
@@ -12,8 +13,27 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Repository for managing user account data in Firestore.
+ *
+ * This repository handles CRUD operations for account documents and their associated discussion
+ * previews. It extends [FirestoreRepository] to inherit common Firestore functionality.
+ *
+ * Each account document contains:
+ * - Basic profile information (handle, name, email, photo)
+ * - Role flags (shop owner, space renter)
+ * - A subcollection of discussion previews
+ */
 class AccountRepository : FirestoreRepository("accounts") {
-  /** Create a new account document. */
+  /**
+   * Creates a new account document in Firestore.
+   *
+   * @param userHandle The unique handle for the user (also used as the document ID)
+   * @param name The user's display name
+   * @param email The user's email address
+   * @param photoUrl The URL of the user's profile photo, or null if not available
+   * @return The created Account object
+   */
   suspend fun createAccount(
       userHandle: String,
       name: String,
@@ -28,7 +48,13 @@ class AccountRepository : FirestoreRepository("accounts") {
     return account
   }
 
-  /** Retrieve an account and its discussion previews. */
+  /**
+   * Retrieves an account and its associated discussion previews by ID.
+   *
+   * @param id The account ID to retrieve
+   * @return The Account object with populated discussion previews
+   * @throws AccountNotFoundException if the account does not exist
+   */
   suspend fun getAccount(id: String): Account {
     val snapshot = collection.document(id).get().await()
     val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
@@ -42,7 +68,15 @@ class AccountRepository : FirestoreRepository("accounts") {
     return fromNoUid(id, account, previews)
   }
 
-  /** Retrieve an account and its discussion previews. */
+  /**
+   * Retrieves multiple accounts and their discussion previews concurrently.
+   *
+   * This method fetches all accounts in parallel using coroutines for optimal performance.
+   *
+   * @param ids List of account IDs to retrieve
+   * @return List of Account objects corresponding to the provided IDs
+   * @throws AccountNotFoundException if any of the accounts do not exist
+   */
   suspend fun getAccounts(ids: List<String>): List<Account> = coroutineScope {
     ids.map { id ->
           async {
@@ -62,7 +96,12 @@ class AccountRepository : FirestoreRepository("accounts") {
         .awaitAll()
   }
 
-  /** Update account display name. */
+  /**
+   * Updates the display name of an account.
+   *
+   * @param id The account ID to update
+   * @param name The new display name
+   */
   suspend fun setAccountName(id: String, name: String) {
     collection.document(id).update(Account::name.name, name).await()
   }
@@ -81,15 +120,24 @@ class AccountRepository : FirestoreRepository("accounts") {
     collection.document(id).update(updates).await()
   }
 
-  /** Delete an account document. */
+  /**
+   * Deletes an account document from Firestore.
+   *
+   * @param id The account ID to delete
+   */
   suspend fun deleteAccount(id: String) {
     collection.document(id).delete().await()
   }
 
   /**
-   * Listen for changes to all discussion previews for a given account.
+   * Creates a Flow that listens for real-time changes to an account and its discussion previews.
    *
-   * Emits a map keyed by discussion ID whenever any preview changes.
+   * This method sets up Firestore listeners that emit updated account data whenever changes occur.
+   * The flow emits a complete Account object including all discussion previews. The listeners are
+   * automatically cleaned up when the flow is cancelled.
+   *
+   * @param accountId The ID of the account to listen to
+   * @return A Flow that emits Account objects when changes are detected
    */
   fun listenAccount(accountId: String): Flow<Account> = callbackFlow {
     val accountRef = collection.document(accountId)

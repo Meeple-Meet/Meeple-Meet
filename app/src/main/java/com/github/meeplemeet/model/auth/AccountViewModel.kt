@@ -1,29 +1,63 @@
+// Docs generated with Claude Code.
 package com.github.meeplemeet.model.auth
 
 import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * Interface defining common account management operations for ViewModels.
+ *
+ * This interface provides a standard set of methods for ViewModels to interact with the account
+ * repository. It uses coroutines to perform asynchronous operations and requires implementing
+ * classes to provide a CoroutineScope.
+ */
 interface AccountViewModel {
+  /** The CoroutineScope used for launching coroutines. */
   val scope: CoroutineScope
 
-  /** Retrieve an account by ID. */
+  /**
+   * Retrieves an account by its ID.
+   *
+   * @param id The account ID to retrieve
+   * @throws IllegalArgumentException if the ID is blank
+   */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
     scope.launch { RepositoryProvider.accounts.getAccount(id) }
   }
 
-  /** Retrieve an account by ID without changing the current account state. */
+  /**
+   * Retrieves an account by ID and provides it to a callback.
+   *
+   * This method is useful when you need to fetch account data without updating the current
+   * ViewModel's account state.
+   *
+   * @param id The account ID to retrieve
+   * @param onResult Callback that receives the retrieved account
+   * @throws IllegalArgumentException if the ID is blank
+   */
   fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
     scope.launch { onResult(RepositoryProvider.accounts.getAccount(id)) }
   }
 
+  /**
+   * Retrieves multiple accounts by their IDs and provides them to a callback.
+   *
+   * @param uids List of account IDs to retrieve
+   * @param onResult Callback that receives the list of retrieved accounts
+   */
   fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
     scope.launch { onResult(RepositoryProvider.accounts.getAccounts(uids)) }
   }
 
-  /** Update account name. */
+  /**
+   * Updates the display name of an account.
+   *
+   * @param account The account to update
+   * @param newName The new display name (blank names will be replaced with "~")
+   */
   fun setAccountName(account: Account, newName: String) {
     scope.launch {
       RepositoryProvider.accounts.setAccountName(account.uid, newName.ifBlank { "~" })
@@ -48,7 +82,11 @@ interface AccountViewModel {
     }
   }
 
-  /** Delete an account. */
+  /**
+   * Deletes an account from Firestore.
+   *
+   * @param account The account to delete
+   */
   fun deleteAccount(account: Account) {
     scope.launch { RepositoryProvider.accounts.deleteAccount(account.uid) }
   }
