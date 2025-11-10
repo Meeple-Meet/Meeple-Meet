@@ -1,5 +1,6 @@
 package com.github.meeplemeet.utils
 
+import android.util.Log
 import java.io.PrintWriter
 import java.io.StringWriter
 import org.junit.Assert.assertTrue
@@ -29,7 +30,7 @@ class Checkpoint() {
 
     failures.forEach { (desc, result) ->
       val stack = result.exceptionOrNull()?.stackTraceToString() ?: ""
-      println("FAILED : $desc\n$stack")
+      Log.d("ERROR", "FAILED : $desc\n$stack")
     }
 
     assertTrue("${failures.size} checkpoint(s) failed → ${failures.keys}", failures.isEmpty())
