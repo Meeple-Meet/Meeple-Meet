@@ -116,7 +116,8 @@ fun MapScreen(
 
   // // Initial geo query
   LaunchedEffect(Unit) {
-    viewModel.startGeoQuery(center = START_CENTER, radiusKm = START_RADIUS_KM)
+    viewModel.startGeoQuery(
+        center = START_CENTER, currentUserId = account.uid, radiusKm = START_RADIUS_KM)
   }
 
   // Show errors in snackbar

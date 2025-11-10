@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +53,8 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  */
 class MapViewModel(
     private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews,
-    geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
+    geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
+    private val sessionRepo: SessionRepository = RepositoryProvider.sessions
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   /** Public observable state of the map, containing geo-pins, errors, and selection info. */
@@ -77,97 +79,119 @@ class MapViewModel(
   fun startGeoQuery(
       center: Location,
       radiusKm: Double,
+      currentUserId: String,
       includeTypes: Set<PinType> = setOf(PinType.SHOP, PinType.SPACE)
   ) {
     // Always reset previous query before creating a new one.
     stopGeoQuery()
 
-    val geoFirestore = GeoFirestore(geoPinCollection)
-    val query = geoFirestore.queryAtLocation(GeoPoint(center.latitude, center.longitude), radiusKm)
+    // Pre-fetch session IDs where user is participating
+    viewModelScope.launch {
+      val userSessionIds = mutableSetOf<String>()
+      if (includeTypes.contains(PinType.SESSION)) {
+        try {
+          val ids = sessionRepo.getSessionIdsForUser(currentUserId)
+          userSessionIds.addAll(ids)
+        } catch (t: Throwable) {
+          _uiState.update {
+            it.copy(errorMsg = "Failed to load user sessions: ${t.message ?: "unknown"}")
+          }
+          // continue: listener will still be attached but sessions will be filtered out
+        }
+      }
 
-    // --- Core GeoQuery listener handling all Firestore-driven updates in real-time ---
-    val listener =
-        object : GeoQueryEventListener {
+      val geoFirestore = GeoFirestore(geoPinCollection)
+      val query =
+          geoFirestore.queryAtLocation(GeoPoint(center.latitude, center.longitude), radiusKm)
 
-          /**
-           * Called when a new document enters the queried radius. Fetches the full Firestore
-           * document, converts it into a [GeoPinWithLocation], and adds it to [uiState].
-           *
-           * @param documentID The Firestore document ID.
-           * @param location The geographic coordinates of the pin.
-           */
-          override fun onKeyEntered(documentID: String, location: GeoPoint) {
-            viewModelScope.launch {
-              try {
-                val doc = geoPinCollection.document(documentID).get().await()
-                val noUid = doc.toObject(StorableGeoPinNoUid::class.java) ?: return@launch
-                if (noUid.type !in includeTypes) return@launch
+      // --- Core GeoQuery listener handling all Firestore-driven updates in real-time ---
+      val listener =
+          object : GeoQueryEventListener {
 
-                val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
+            /**
+             * Called when a new document enters the queried radius. Fetches the full Firestore
+             * document, converts it into a [GeoPinWithLocation], and adds it to [uiState].
+             *
+             * @param documentID The Firestore document ID.
+             * @param location The geographic coordinates of the pin.
+             */
+            override fun onKeyEntered(documentID: String, location: GeoPoint) {
+              viewModelScope.launch {
+                try {
+                  val doc = geoPinCollection.document(documentID).get().await()
+                  val noUid = doc.toObject(StorableGeoPinNoUid::class.java) ?: return@launch
+                  if (noUid.type !in includeTypes) return@launch
 
-                _uiState.update { it.copy(geoPins = it.geoPins + pin) }
-              } catch (t: Throwable) {
-                _uiState.update {
-                  it.copy(
-                      errorMsg =
-                          "Failed to read geo pin $documentID: ${t.message ?: "unknown error"}")
+                  // Ignore session where user is not participating
+                  if (noUid.type == PinType.SESSION && !userSessionIds.contains(documentID))
+                      return@launch
+
+                  val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
+
+                  _uiState.update { it.copy(geoPins = it.geoPins + pin) }
+                } catch (t: Throwable) {
+                  _uiState.update {
+                    it.copy(
+                        errorMsg =
+                            "Failed to read geo pin $documentID: ${t.message ?: "unknown error"}")
+                  }
                 }
+              }
+            }
+
+            /**
+             * Called when a document already within the query radius changes location. Updates the
+             * corresponding [GeoPinWithLocation] in [uiState].
+             *
+             * @param documentID The Firestore document ID.
+             * @param location The new geographic position of the pin.
+             */
+            override fun onKeyMoved(documentID: String, location: GeoPoint) {
+              _uiState.update { state ->
+                val updatedPins =
+                    state.geoPins.map { pinWithLocation ->
+                      if (pinWithLocation.geoPin.uid == documentID)
+                          pinWithLocation.copy(location = location)
+                      else pinWithLocation
+                    }
+                state.copy(geoPins = updatedPins)
+              }
+            }
+
+            /**
+             * Called when a document leaves the query radius (e.g., moved or deleted). Removes the
+             * pin from [uiState].
+             *
+             * @param documentID The Firestore document ID.
+             */
+            override fun onKeyExited(documentID: String) {
+              _uiState.update { it ->
+                it.copy(geoPins = it.geoPins.filterNot { it.geoPin.uid == documentID })
+              }
+            }
+
+            /**
+             * Called once all initial documents in range have been loaded. Can be used to signal
+             * that the query is ready to display results.
+             */
+            override fun onGeoQueryReady() {}
+
+            /**
+             * Called when an error occurs while listening to Firestore geo updates. Updates the
+             * MapUIState errorMsg with the error message.
+             *
+             * @param exception The exception describing the failure.
+             */
+            override fun onGeoQueryError(exception: Exception) {
+              _uiState.update {
+                it.copy(errorMsg = "GeoQuery error: ${exception.message ?: "unknown error"}")
               }
             }
           }
 
-          /**
-           * Called when a document already within the query radius changes location. Updates the
-           * corresponding [GeoPinWithLocation] in [uiState].
-           *
-           * @param documentID The Firestore document ID.
-           * @param location The new geographic position of the pin.
-           */
-          override fun onKeyMoved(documentID: String, location: GeoPoint) {
-            _uiState.update { state ->
-              val updatedPins =
-                  state.geoPins.map { pinWithLocation ->
-                    if (pinWithLocation.geoPin.uid == documentID)
-                        pinWithLocation.copy(location = location)
-                    else pinWithLocation
-                  }
-              state.copy(geoPins = updatedPins)
-            }
-          }
-
-          /**
-           * Called when a document leaves the query radius (e.g., moved or deleted). Removes the
-           * pin from [uiState].
-           *
-           * @param documentID The Firestore document ID.
-           */
-          override fun onKeyExited(documentID: String) {
-            _uiState.update { it ->
-              it.copy(geoPins = it.geoPins.filterNot { it.geoPin.uid == documentID })
-            }
-          }
-
-          /**
-           * Called once all initial documents in range have been loaded. Can be used to signal that
-           * the query is ready to display results.
-           */
-          override fun onGeoQueryReady() {}
-
-          /**
-           * Called when an error occurs while listening to Firestore geo updates. Updates the
-           * MapUIState errorMsg with the error message.
-           *
-           * @param exception The exception describing the failure.
-           */
-          override fun onGeoQueryError(exception: Exception) {
-            _uiState.update {
-              it.copy(errorMsg = "GeoQuery error: ${exception.message ?: "unknown error"}")
-            }
-          }
-        }
-
-    query.addGeoQueryEventListener(listener)
-    geoQuery = query
+      query.addGeoQueryEventListener(listener)
+      geoQuery = query
+    }
   }
 
   /**
