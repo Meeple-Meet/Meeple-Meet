@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.Session
-import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -20,14 +19,14 @@ import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
 import com.github.meeplemeet.ui.sessions.SessionForm
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.sessions.TimeField
+import com.github.meeplemeet.utils.FirestoreTests
 import java.time.LocalDate
 import java.time.LocalTime
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class SessionViewScreenTest {
-  private lateinit var sessionRepo: SessionRepository
+class SessionViewScreenTest : FirestoreTests() {
   private lateinit var sessionVM: SessionViewModel
 
   private val member = Account(uid = "user2", handle = "", name = "Alex", email = "alex@epfl.ch")
@@ -49,8 +48,7 @@ class SessionViewScreenTest {
             admins = listOf(currentUser.uid),
             session = Session(participants = listOf(currentUser.uid, member.uid)))
 
-    sessionRepo = SessionRepository()
-    sessionVM = SessionViewModel(sessionRepo)
+    sessionVM = SessionViewModel()
   }
 
   private fun readIntFromText(tag: String): Int =
