@@ -9,10 +9,10 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.sessions.OrganizationSection
 import com.github.meeplemeet.ui.sessions.ParticipantsSection
 import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
@@ -20,8 +20,10 @@ import com.github.meeplemeet.ui.sessions.SessionForm
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.sessions.TimeField
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.firebase.Timestamp
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -29,24 +31,35 @@ import org.junit.Test
 class SessionViewScreenTest : FirestoreTests() {
   private lateinit var sessionVM: SessionViewModel
 
-  private val member = Account(uid = "user2", handle = "", name = "Alex", email = "alex@epfl.ch")
-  private val admin = Account(uid = "user1", handle = "Alice", name = "Alice", email = "*")
+  private lateinit var member: Account
+  private lateinit var admin: Account
 
-  private val currentUser = admin
+  private lateinit var currentUser: Account
 
   private lateinit var baseDiscussion: Discussion
 
   @Before
-  fun setUp() {
+  fun setUp() = runBlocking {
+    member =
+        accountRepository.createAccount(
+            userHandle = "user2", name = "Alex", email = "alex@epfl.ch", photoUrl = null)
+
+    admin =
+        accountRepository.createAccount(
+            userHandle = "user1", name = "Alice", email = "*", photoUrl = null)
+    currentUser = admin
+
     baseDiscussion =
-        Discussion(
-            uid = "discussion1",
+        discussionRepository.createDiscussion(
             name = "Friday Night Meetup",
             description = "Let's play some board games!",
             creatorId = currentUser.uid,
-            participants = listOf(currentUser.uid, member.uid),
-            admins = listOf(currentUser.uid),
-            session = Session(participants = listOf(currentUser.uid, member.uid)))
+            participants = listOf(currentUser.uid, member.uid))
+    discussionRepository.addAdminToDiscussion(baseDiscussion, currentUser.uid)
+    sessionRepository.createSession(
+        baseDiscussion.uid, "test", "", Timestamp.now(), Location(), currentUser.uid, member.uid)
+
+    baseDiscussion = discussionRepository.getDiscussion(baseDiscussion.uid)
 
     sessionVM = SessionViewModel()
   }
