@@ -338,7 +338,7 @@ fun SpaceRow(
                       val normalized = priceText.trimEnd('.')
                       val parsed = normalized.toDoubleOrNull() ?: 0.0
                       val clamped = if (parsed < 0.0) 0.0 else parsed
-                      val display = if (normalized.isBlank()) "0" else normalized
+                      val display = normalized.ifBlank { "0" }
                       if (priceText != display) priceText = display
                       if (space.costPerHour != clamped) {
                         onChange(space.copy(costPerHour = clamped))
