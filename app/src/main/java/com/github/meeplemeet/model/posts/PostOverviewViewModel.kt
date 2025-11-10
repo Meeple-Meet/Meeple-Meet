@@ -5,6 +5,8 @@ package com.github.meeplemeet.model.posts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.auth.AccountViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -20,7 +22,9 @@ import kotlinx.coroutines.launch
  * @property repository The repository for accessing post data from Firestore.
  */
 class PostOverviewViewModel(private val repository: PostRepository = RepositoryProvider.posts) :
-    ViewModel() {
+    ViewModel(), AccountViewModel {
+  override val scope: CoroutineScope
+    get() = this.viewModelScope
 
   private val _posts = MutableStateFlow<List<Post>>(emptyList())
 

@@ -1,22 +1,19 @@
 package com.github.meeplemeet.model.auth
 
-import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.AccountNotFoundException
+import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.HandleAlreadyTakenException
 import com.github.meeplemeet.model.InvalidHandleFormatException
-import com.github.meeplemeet.model.discussions.ACCOUNT_COLLECTION_PATH
 import com.google.firebase.firestore.FieldPath
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-const val HANDLES_COLLECTION_PATH = "handles"
-
-class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
-  private val handles = db.collection(HANDLES_COLLECTION_PATH)
-  private val accounts = db.collection(ACCOUNT_COLLECTION_PATH)
+class HandlesRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
+    FirestoreRepository("handles") {
+  private val accounts = accountRepository.collection
 
   fun validHandle(handle: String): Boolean {
     return handle.length > 3 &&
@@ -26,7 +23,7 @@ class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
 
   suspend fun handleForAccountExists(accountId: String, handle: String): Boolean {
     if (handle.isBlank() || !validHandle(handle)) return false
-    val snapshot = handles.document(handle).get().await()
+    val snapshot = collection.document(handle).get().await()
     val data = snapshot.data ?: return false
     val id = data["accountId"] as? String
     return id == accountId
@@ -34,14 +31,14 @@ class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
 
   suspend fun checkHandleAvailable(handle: String): Boolean {
     if (handle.isBlank() || !validHandle(handle)) return false
-    return handles.document(handle).get().await().exists()
+    return collection.document(handle).get().await().exists()
   }
 
   suspend fun createAccountHandle(accountId: String, handle: String): Account {
     if (!validHandle(handle)) throw InvalidHandleFormatException()
 
     val accountRef = accounts.document(accountId)
-    val handleRef = handles.document(handle)
+    val handleRef = collection.document(handle)
 
     val result =
         db.runTransaction { tx ->
@@ -66,8 +63,8 @@ class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
     if (!validHandle(newHandle)) throw InvalidHandleFormatException()
 
     val accountRef = accounts.document(accountId)
-    val oldHandleRef = handles.document(oldHandle)
-    val newHandleRef = handles.document(newHandle)
+    val oldHandleRef = collection.document(oldHandle)
+    val newHandleRef = collection.document(newHandle)
 
     val result =
         db.runTransaction { tx ->
@@ -91,7 +88,7 @@ class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
   }
 
   suspend fun deleteAccountHandle(userHandle: String) {
-    handles.document(userHandle).delete().await()
+    collection.document(userHandle).delete().await()
   }
 
   fun searchByHandle(handle: String): Flow<List<Account>> = callbackFlow {
@@ -102,7 +99,7 @@ class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
     }
 
     val reg =
-        handles
+        collection
             .whereGreaterThanOrEqualTo(FieldPath.documentId(), handle)
             .whereLessThanOrEqualTo(FieldPath.documentId(), nextString(handle))
             .addSnapshotListener { qs, e ->
@@ -119,8 +116,7 @@ class HandlesRepository(val db: FirebaseFirestore = FirebaseProvider.db) {
                   return@addSnapshotListener
                 }
 
-                FirebaseProvider.db
-                    .collection(ACCOUNT_COLLECTION_PATH)
+                accounts
                     .whereIn(
                         FieldPath.documentId(), accountIds.take(10)) // Firestore limit workaround
                     .get()

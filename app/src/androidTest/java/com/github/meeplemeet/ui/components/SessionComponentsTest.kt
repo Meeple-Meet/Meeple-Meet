@@ -26,10 +26,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.FirestoreTests
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -39,16 +41,21 @@ import org.junit.*
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class SessionComponentsTest {
+class SessionComponentsTest : FirestoreTests() {
 
   @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
   private var oldLocale: Locale? = null
 
+  private lateinit var createSessionViewModel: CreateSessionViewModel
+
   @Before
   fun forceStableLocale() {
     oldLocale = Locale.getDefault()
     Locale.setDefault(Locale.US)
+
+    // Initialize real repositories and view model
+    createSessionViewModel = CreateSessionViewModel(sessionRepository, gameRepository)
   }
 
   @After
@@ -538,164 +545,6 @@ class SessionComponentsTest {
     composeRule.waitForIdle()
   }
 
-  /* ====================== SEARCH FIELDS ====================== */
-
-  @Test
-  fun searchDropdown_loading_vs_empty_and_clear_and_clickSuggestion() {
-    var q by mutableStateOf("")
-    var loading by mutableStateOf(false)
-    var picked: String? = null
-    val suggestions = listOf("Catan", "Carcassonne", "Camel Up")
-
-    set {
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = {
-            q = it
-            loading = true
-          },
-          suggestions = if (loading) emptyList() else suggestions,
-          onSuggestionClick = { picked = it },
-          getPrimaryText = { it },
-          isLoading = loading,
-          placeholder = "Type…")
-    }
-
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performClick()
-    tf.performTextInput("ca")
-
-    // Loading branch visible
-    composeRule
-        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
-        .assertExists()
-    composeRule
-        .onNodeWithTag(ComponentsTestTags.SEARCH_LOADING, useUnmergedTree = true)
-        .assertExists()
-
-    // Show suggestions
-    composeRule.runOnUiThread { loading = false }
-    composeRule
-        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
-        .assertExists()
-        .performClick()
-    composeRule.runOnIdle { assert(picked == "Catan") }
-
-    // Make query non-empty again
-    composeRule.runOnUiThread { q = "C" }
-    tf.performTextInput("a")
-    composeRule.runOnUiThread { loading = false }
-
-    composeRule.waitUntil(5_000) {
-      composeRule
-          .onAllNodesWithContentDescription("Clear", useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-    composeRule.onNodeWithContentDescription("Clear", useUnmergedTree = true).performClick()
-
-    // Popup should be closed after clearing
-    composeRule
-        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
-        .assertCountEquals(0)
-  }
-
-  @Test
-  fun searchDropdown_showWhenEmptyQuery_true_and_false_behaviors() {
-    var qTrue by mutableStateOf("x")
-    var qFalse by mutableStateOf("")
-    val data = listOf("Azul", "Brass", "Catan")
-
-    set {
-      Column {
-        SearchDropdownField(
-            label = "S1",
-            query = qTrue,
-            onQueryChange = { qTrue = it },
-            suggestions = data,
-            onSuggestionClick = {},
-            getPrimaryText = { it },
-            isLoading = false,
-            showWhenEmptyQuery = true,
-            placeholder = "P1")
-        SearchDropdownField(
-            label = "S2",
-            query = qFalse,
-            onQueryChange = { qFalse = it },
-            suggestions = data,
-            onSuggestionClick = {},
-            getPrimaryText = { it },
-            isLoading = false,
-            showWhenEmptyQuery = false,
-            placeholder = "P2")
-      }
-    }
-
-    // S1: empty query still shows suggestions
-    val tf1 = composeRule.onAllNodes(hasSetTextAction())[0]
-    tf1.performClick()
-    tf1.performTextReplacement("")
-    composeRule
-        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
-        .assertExists()
-    composeRule
-        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}azul", useUnmergedTree = true)
-        .assertExists()
-    composeRule
-        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}azul", useUnmergedTree = true)
-        .performClick()
-    composeRule
-        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
-        .assertCountEquals(0)
-
-    // S2: type then clear should hide suggestions
-    val tf2 = composeRule.onAllNodes(hasSetTextAction())[1]
-    tf2.performClick()
-    tf2.performTextInput("ca")
-    composeRule
-        .onAllNodesWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
-        .onFirst()
-        .assertExists()
-    tf2.performTextReplacement("")
-    composeRule
-        .onAllNodesWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
-        .assertCountEquals(0)
-  }
-
-  @Test
-  fun searchDropdown_shows_nothing_when_no_suggestions() {
-    var q by mutableStateOf("")
-    val emptyList = emptyList<String>()
-
-    set {
-      SearchDropdownField(
-          label = "Search",
-          query = q,
-          onQueryChange = { q = it },
-          suggestions = emptyList,
-          onSuggestionClick = {},
-          getPrimaryText = { it },
-          isLoading = false,
-          showWhenEmptyQuery = true,
-          emptyText = "No games found")
-    }
-
-    // Type a query that returns no results
-    val tf = composeRule.onNode(hasSetTextAction())
-    tf.performClick()
-    tf.performTextInput("xyz")
-
-    // Empty state should be visible
-    composeRule
-        .onNodeWithTag(ComponentsTestTags.SEARCH_POPUP_SURFACE, useUnmergedTree = true)
-        .assertDoesNotExist()
-    composeRule.onNodeWithText("No games found", useUnmergedTree = true).assertDoesNotExist()
-    composeRule
-        .onNodeWithTag(ComponentsTestTags.SEARCH_EMPTY, useUnmergedTree = true)
-        .assertDoesNotExist()
-  }
-
   /* ====================== DISCRETE PILL SLIDER ====================== */
 
   @Test
@@ -775,73 +624,182 @@ class SessionComponentsTest {
     composeRule.runOnIdle { assert(iconClicked) }
   }
 
-  /* ====================== GAME & LOCATION ====================== */
+  /* ====================== SEARCH BAR WRAPPERS ====================== */
 
   @Test
-  fun game_and_location_fields_wrappers_cover_items_and_coordinates() {
-    var qGame by mutableStateOf("")
-    var qLoc by mutableStateOf("")
-    var pickedGame: Game? = null
-    var pickedLoc: Location? = null
+  fun sessionGameSearchBar_renders_with_default_test_tags() {
+    val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
+    val discussion =
+        com.github.meeplemeet.model.discussions.Discussion(
+            uid = "disc1",
+            name = "Game Night",
+            description = "",
+            messages = emptyList(),
+            participants = listOf("user1"),
+            admins = listOf("user1"),
+            creatorId = "user1")
 
-    val g1 =
-        Game(
-            uid = "g1",
-            name = "Catan",
+    set { SessionGameSearchBar(account, discussion, createSessionViewModel) }
+
+    // Verify the input field exists with default test tag
+    composeRule.onNodeWithTag(ComponentsTestTags.SESSION_GAME_SEARCH_INPUT).assertExists()
+
+    // Verify label exists
+    composeRule.onNodeWithText("Game").assertExists()
+
+    // Type into the search field
+    composeRule
+        .onNodeWithTag(ComponentsTestTags.SESSION_GAME_SEARCH_INPUT)
+        .performTextInput("Catan")
+
+    // Verify that the query was updated in the view model
+    composeRule.waitForIdle()
+    composeRule.runOnIdle {
+      assert(createSessionViewModel.gameUIState.value.gameQuery.contains("Catan"))
+    }
+  }
+
+  @Test
+  fun sessionGameSearchBar_displays_initial_game() {
+    val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
+    val discussion =
+        com.github.meeplemeet.model.discussions.Discussion(
+            uid = "disc1",
+            name = "Game Night",
             description = "",
-            imageURL = "",
-            minPlayers = 3,
-            maxPlayers = 4,
-            recommendedPlayers = 4,
-            averagePlayTime = 60,
-            genres = emptyList())
-    val g2 =
+            messages = emptyList(),
+            participants = listOf("user1"),
+            admins = listOf("user1"),
+            creatorId = "user1")
+
+    val initialGame =
         Game(
-            uid = "g2",
-            name = "Carcassonne",
-            description = "",
+            uid = "game1",
+            name = "Ticket to Ride",
+            description = "Train game",
             imageURL = "",
             minPlayers = 2,
             maxPlayers = 5,
             recommendedPlayers = 4,
-            averagePlayTime = 45,
-            genres = emptyList())
+            averagePlayTime = 45)
 
-    val loc = Location(name = "EPFL Esplanade", latitude = 46.5191, longitude = 6.5668)
+    set { SessionGameSearchBar(account, discussion, createSessionViewModel, initial = initialGame) }
+
+    // Verify initial game name is displayed
+    composeRule.onNodeWithText("Ticket to Ride").assertExists()
+  }
+
+  @Test
+  fun sessionGameSearchBar_allows_custom_test_tags() {
+    val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
+    val discussion =
+        com.github.meeplemeet.model.discussions.Discussion(
+            uid = "disc1",
+            name = "Game Night",
+            description = "",
+            messages = emptyList(),
+            participants = listOf("user1"),
+            admins = listOf("user1"),
+            creatorId = "user1")
 
     set {
-      Column {
-        GameSearchField(
-            query = qGame,
-            onQueryChange = { qGame = it },
-            results = listOf(g1, g2),
-            onPick = { pickedGame = it })
-        LocationSearchField(
-            query = qLoc,
-            onQueryChange = { qLoc = it },
-            results = listOf(loc),
-            onPick = { pickedLoc = it })
-      }
+      SessionGameSearchBar(
+          account,
+          discussion,
+          createSessionViewModel,
+          inputFieldTestTag = "custom_game_input",
+          dropdownItemTestTag = "custom_game_item")
     }
 
-    // Game flow
-    val tfGame = composeRule.onAllNodes(hasSetTextAction())[0]
-    tfGame.performClick()
-    tfGame.performTextInput("ca")
-    composeRule
-        .onNodeWithTag("${ComponentsTestTags.SEARCH_ITEM_PREFIX}catan", useUnmergedTree = true)
-        .performClick()
-    composeRule.runOnIdle { assert(pickedGame?.uid == "g1") }
+    // Verify custom test tag works
+    composeRule.onNodeWithTag("custom_game_input").assertExists()
+  }
 
-    // Location flow + coordinates rendering
-    val tfLoc = composeRule.onAllNodes(hasSetTextAction())[1]
-    tfLoc.performClick()
-    tfLoc.performTextInput("epfl")
-    composeRule.onNodeWithText("46.51910, 6.56680").assertExists()
+  @Test
+  fun sessionLocationSearchBar_renders_with_default_test_tags() {
+    val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
+    val discussion =
+        com.github.meeplemeet.model.discussions.Discussion(
+            uid = "disc1",
+            name = "Game Night",
+            description = "",
+            messages = emptyList(),
+            participants = listOf("user1"),
+            admins = listOf("user1"),
+            creatorId = "user1")
+
+    set { SessionLocationSearchBar(account, discussion, createSessionViewModel) }
+
+    // Verify the input field exists with default test tag
+    composeRule.onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT).assertExists()
+
+    // Verify label exists
+    composeRule.onNodeWithText("Location").assertExists()
+
+    // Type into the search field
     composeRule
-        .onNodeWithTag(
-            "${ComponentsTestTags.SEARCH_ITEM_PREFIX}epfl_esplanade", useUnmergedTree = true)
-        .performClick()
-    composeRule.runOnIdle { assert(pickedLoc?.name == "EPFL Esplanade") }
+        .onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
+        .performTextInput("EPFL")
+
+    // Verify that the query was updated in the view model
+    composeRule.waitForIdle()
+    composeRule.runOnIdle {
+      assert(createSessionViewModel.locationUIState.value.locationQuery.contains("EPFL"))
+    }
+  }
+
+  @Test
+  fun sessionLocationSearchBar_displays_initial_location() {
+    val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
+    val initialLocation =
+        Location(latitude = 46.518888, longitude = 6.566666, name = "Rolex Learning Center")
+
+    val discussion =
+        com.github.meeplemeet.model.discussions.Discussion(
+            uid = "disc1",
+            name = "Game Night",
+            description = "",
+            messages = emptyList(),
+            participants = listOf("user1"),
+            admins = listOf("user1"),
+            creatorId = "user1",
+            session =
+                com.github.meeplemeet.model.sessions.Session(
+                    name = "Test Session",
+                    gameId = "game1",
+                    date = com.google.firebase.Timestamp.now(),
+                    location = initialLocation,
+                    participants = listOf("user1")))
+
+    set { SessionLocationSearchBar(account, discussion, createSessionViewModel) }
+
+    // Verify initial location name is displayed
+    composeRule.onNodeWithText("Rolex Learning Center").assertExists()
+  }
+
+  @Test
+  fun sessionLocationSearchBar_allows_custom_test_tags() {
+    val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
+    val discussion =
+        com.github.meeplemeet.model.discussions.Discussion(
+            uid = "disc1",
+            name = "Game Night",
+            description = "",
+            messages = emptyList(),
+            participants = listOf("user1"),
+            admins = listOf("user1"),
+            creatorId = "user1")
+
+    set {
+      SessionLocationSearchBar(
+          account,
+          discussion,
+          createSessionViewModel,
+          inputFieldTestTag = "custom_location_input",
+          dropdownItemTestTag = "custom_location_item")
+    }
+
+    // Verify custom test tag works
+    composeRule.onNodeWithTag("custom_location_input").assertExists()
   }
 }

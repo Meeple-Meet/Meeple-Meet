@@ -11,10 +11,10 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.components.ComponentsTestTags
@@ -47,11 +47,12 @@ class CreateSessionScreenTest {
   @get:Rule val compose = createComposeRule()
 
   // Repos / VMs
-  private lateinit var firestoreRepo: DiscussionRepository
+  private lateinit var discussionRepository: DiscussionRepository
   private lateinit var viewModel: DiscussionViewModel
   private lateinit var sessionRepo: SessionRepository
   private lateinit var fakeGameRepo: FakeGameRepository
   private lateinit var sessionVM: SessionViewModel
+  private lateinit var createSessionVM: TestCreateSessionViewModel
 
   // Test data
   private val me = Account(uid = "user1", handle = "", name = "Marco", email = "marco@epfl.ch")
@@ -91,15 +92,14 @@ class CreateSessionScreenTest {
 
   private fun clearMatcher() = hasContentDescription("Clear")
 
-  private fun setContent(discussion: Discussion = baseDiscussion, onBack: () -> Unit = {}) {
+  private fun setContent(
+      discussion: Discussion = baseDiscussion,
+      onBack: () -> Unit = {},
+      vm: CreateSessionViewModel = createSessionVM
+  ) {
     compose.setContent {
       AppTheme {
-        CreateSessionScreen(
-            viewModel = viewModel,
-            sessionViewModel = sessionVM,
-            account = me,
-            discussion = discussion,
-            onBack = onBack)
+        CreateSessionScreen(account = me, discussion = discussion, viewModel = vm, onBack = onBack)
       }
     }
   }
@@ -127,10 +127,20 @@ class CreateSessionScreenTest {
     }
   }
 
+  private inner class TestCreateSessionViewModel(
+      sessionRepository: SessionRepository,
+      gameRepository: GameRepository
+  ) : CreateSessionViewModel(sessionRepository, gameRepository) {
+    // Delegate getAccounts to the mocked DiscussionViewModel
+    override fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
+      viewModel.getAccounts(uids, onResult)
+    }
+  }
+
   @Before
   fun setUp() {
-    firestoreRepo = mockk(relaxed = true)
-    viewModel = spyk(DiscussionViewModel(firestoreRepo))
+    discussionRepository = mockk(relaxed = true)
+    viewModel = spyk(DiscussionViewModel(discussionRepository))
 
     baseDiscussion =
         Discussion(
@@ -168,11 +178,8 @@ class CreateSessionScreenTest {
 
     sessionRepo = mockk(relaxed = true)
     fakeGameRepo = FakeGameRepository()
-    sessionVM =
-        SessionViewModel(
-            initDiscussion = baseDiscussion,
-            repository = sessionRepo,
-            gameRepository = fakeGameRepo)
+    sessionVM = SessionViewModel(sessionRepository = sessionRepo)
+    createSessionVM = TestCreateSessionViewModel(sessionRepo, fakeGameRepo)
   }
 
   // Grouped UI: bars, snackbar, back/discard
@@ -229,11 +236,7 @@ class CreateSessionScreenTest {
         var disc by remember { mutableStateOf(baseDiscussion) }
         updateDiscussion = { newDisc -> disc = newDisc }
         CreateSessionScreen(
-            viewModel = viewModel,
-            sessionViewModel = sessionVM,
-            account = me,
-            discussion = disc,
-            onBack = {})
+            account = me, discussion = disc, viewModel = createSessionVM, onBack = {})
       }
     }
 
@@ -285,17 +288,11 @@ class CreateSessionScreenTest {
     setContent()
     compose.waitForIdle()
 
-    // Type and clear
-    gameInput().performTextInput("Cascadia")
-    waitForAtLeastOne(clearMatcher(), useUnmergedTree = true)
-    compose.onNode(clearMatcher(), useUnmergedTree = true).performClick()
-    compose.waitForIdle()
-    compose.onAllNodesWithText("Cascadia").assertCountEquals(0)
-
-    // Trigger repo error and assert error tag appears
+    // Trigger repo error to test error display
     fakeGameRepo.throwOnSearch = true
     gameInput().performTextInput("Catan")
-    waitForAtLeastOne(hasTestTag(SessionCreationTestTags.GAME_SEARCH_ERROR))
+    // Wait for debounce (500ms) + execution + rendering
+    waitForAtLeastOne(hasTestTag(SessionCreationTestTags.GAME_SEARCH_ERROR), timeoutMs = 2_000L)
     compose.onNodeWithTag(SessionCreationTestTags.GAME_SEARCH_ERROR).assertExists()
   }
 
@@ -331,16 +328,13 @@ class CreateSessionScreenTest {
         OrganisationSection(
             date = null,
             time = null,
-            locationText = "",
             onDateChange = {},
             onTimeChange = {},
-            onLocationChange = {},
             account = me,
-            sessionViewModel = sessionVM,
             discussion = baseDiscussion,
             onLocationPicked = {},
             gameUi = GameUIState(),
-            locationUi = LocationUIState())
+            viewModel = createSessionVM)
       }
     }
     compose.onAllNodesWithText("Location").onFirst().assertExists()

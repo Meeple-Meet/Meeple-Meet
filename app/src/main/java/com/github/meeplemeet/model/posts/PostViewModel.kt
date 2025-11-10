@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.AccountViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,10 @@ import kotlinx.coroutines.launch
  * @property repository The repository used for post operations.
  */
 class PostViewModel(private val repository: PostRepository = RepositoryProvider.posts) :
-    ViewModel() {
+    ViewModel(), AccountViewModel {
+  override val scope: CoroutineScope
+    get() = this.viewModelScope
+
   /**
    * Deletes a post from Firestore.
    *

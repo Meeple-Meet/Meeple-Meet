@@ -1,8 +1,6 @@
 package com.github.meeplemeet.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.auth.AuthRepository
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
 import kotlinx.coroutines.runBlocking
@@ -25,10 +23,6 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class SignUpTest : FirestoreTests() {
-
-  private lateinit var authRepo: AuthRepository
-  private lateinit var firestoreRepo: DiscussionRepository
-
   // Test credentials - using random emails to avoid conflicts
   private val testEmail = "signup_test_${UUID.randomUUID()}@example.com"
   private val testPassword = "TestPassword123!"
@@ -38,10 +32,6 @@ class SignUpTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    // Initialize repositories
-    firestoreRepo = DiscussionRepository(db)
-    authRepo = AuthRepository(auth = auth, discussionRepository = firestoreRepo)
-
     // Ensure clean state for each test
     runBlocking {
       auth.signOut()
@@ -77,7 +67,7 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_sign_up_with_invalid_email_shows_error() = runBlocking {
     // Attempt registration with invalid email format
-    val registrationResult = authRepo.registerWithEmail(invalidEmail, testPassword)
+    val registrationResult = authenticationRepository.registerWithEmail(invalidEmail, testPassword)
 
     // Verify registration failed
     assertTrue("Registration with invalid email should fail", registrationResult.isFailure)
@@ -96,7 +86,7 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_sign_up_with_empty_password_shows_validation_error() = runBlocking {
     // Attempt registration with empty password
-    val registrationResult = authRepo.registerWithEmail(testEmail, "")
+    val registrationResult = authenticationRepository.registerWithEmail(testEmail, "")
 
     // Verify registration failed
     assertTrue("Registration with empty password should fail", registrationResult.isFailure)
@@ -112,7 +102,7 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_sign_up_with_weak_password_shows_validation_error() = runBlocking {
     // Attempt registration with weak password
-    val registrationResult = authRepo.registerWithEmail(testEmail, weakPassword)
+    val registrationResult = authenticationRepository.registerWithEmail(testEmail, weakPassword)
 
     // Verify registration failed
     assertTrue("Registration with weak password should fail", registrationResult.isFailure)
@@ -128,7 +118,7 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_successful_registration_creates_account_and_authenticates_user() = runBlocking {
     // Test user registration with valid credentials
-    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    val registrationResult = authenticationRepository.registerWithEmail(testEmail, testPassword)
 
     // Verify registration succeeded
     assertTrue("Registration should succeed", registrationResult.isSuccess)
@@ -143,7 +133,7 @@ class SignUpTest : FirestoreTests() {
     assertEquals("Firebase user email should match", testEmail, auth.currentUser?.email)
 
     // Verify account document exists in Firestore
-    val retrievedAccount = firestoreRepo.getAccount(registeredAccount!!.uid)
+    val retrievedAccount = accountRepository.getAccount(registeredAccount!!.uid)
     assertEquals("Firestore account should match", registeredAccount.uid, retrievedAccount.uid)
     assertEquals("Firestore email should match", testEmail, retrievedAccount.email)
   }
@@ -151,7 +141,7 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_registration_creates_proper_account_properties() = runBlocking {
     // Register a user
-    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    val registrationResult = authenticationRepository.registerWithEmail(testEmail, testPassword)
     assertTrue("Registration should succeed", registrationResult.isSuccess)
 
     val account = registrationResult.getOrNull()
@@ -169,14 +159,14 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_duplicate_email_registration_fails() = runBlocking {
     // Register a user first
-    val firstRegistration = authRepo.registerWithEmail(existingEmail, testPassword)
+    val firstRegistration = authenticationRepository.registerWithEmail(existingEmail, testPassword)
     assertTrue("First registration should succeed", firstRegistration.isSuccess)
 
     // Sign out
     auth.signOut()
 
     // Try to register with the same email again
-    val secondRegistration = authRepo.registerWithEmail(existingEmail, testPassword)
+    val secondRegistration = authenticationRepository.registerWithEmail(existingEmail, testPassword)
 
     // Verify second registration fails
     assertTrue("Duplicate registration should fail", secondRegistration.isFailure)
@@ -196,14 +186,14 @@ class SignUpTest : FirestoreTests() {
   @Test
   fun test_registration_and_immediate_firestore_consistency() = runBlocking {
     // Register a user
-    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    val registrationResult = authenticationRepository.registerWithEmail(testEmail, testPassword)
     assertTrue("Registration should succeed", registrationResult.isSuccess)
 
     val account = registrationResult.getOrNull()
     assertNotNull("Account should be created", account)
 
     // Immediately try to retrieve the account from Firestore
-    val retrievedAccount = firestoreRepo.getAccount(account!!.uid)
+    val retrievedAccount = accountRepository.getAccount(account!!.uid)
 
     // Verify all properties match
     assertEquals("UID should match", account.uid, retrievedAccount.uid)
@@ -220,7 +210,7 @@ class SignUpTest : FirestoreTests() {
     // after Firebase Auth succeeds to test the cleanup logic
     // For now, we'll test successful registration
 
-    val registrationResult = authRepo.registerWithEmail(testEmail, testPassword)
+    val registrationResult = authenticationRepository.registerWithEmail(testEmail, testPassword)
     assertTrue("Registration should succeed", registrationResult.isSuccess)
 
     // Verify both Firebase Auth and Firestore are consistent
@@ -230,7 +220,7 @@ class SignUpTest : FirestoreTests() {
     assertNotNull("Account should exist", account)
 
     // Verify Firestore document exists
-    val firestoreAccount = firestoreRepo.getAccount(account!!.uid)
+    val firestoreAccount = accountRepository.getAccount(account!!.uid)
     assertEquals("Firestore and returned account should match", account.uid, firestoreAccount.uid)
   }
 }

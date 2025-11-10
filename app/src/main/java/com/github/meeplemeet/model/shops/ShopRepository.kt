@@ -2,20 +2,19 @@ package com.github.meeplemeet.model.shops
 
 // Claude Code generated the documentation
 
-import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.AccountRepository
 import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.StorableGeoPinRepository
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
-
-/** Firestore collection path for storing and retrieving shop documents. */
-const val SHOP_COLLECTION_PATH = "shops"
 
 /**
  * Repository for managing board game shops in Firestore.
@@ -25,14 +24,11 @@ const val SHOP_COLLECTION_PATH = "shops"
  *
  * @property db The Firestore database instance to use for operations.
  */
-class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
-  private val shops = db.collection(SHOP_COLLECTION_PATH)
-  private val accountRepo = RepositoryProvider.discussions
-  private val gameRepo = RepositoryProvider.games
-  private val geoPinsRepo = RepositoryProvider.geoPins
-
-  private fun newUUID() = shops.document().id
-
+class ShopRepository(
+    val accountRepository: AccountRepository = RepositoryProvider.accounts,
+    val gameRepository: FirestoreGameRepository = RepositoryProvider.games,
+    val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
+) : FirestoreRepository("shops") {
   /**
    * Creates a new shop and stores it in Firestore.
    *
@@ -59,9 +55,9 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
   ): Shop {
     val shop =
         Shop(newUUID(), owner, name, phone, email, website, address, openingHours, gameCollection)
-    shops.document(shop.id).set(toNoUid(shop)).await()
+    collection.document(shop.id).set(toNoUid(shop)).await()
 
-    geoPinsRepo.upsertGeoPin(ref = shop.id, type = PinType.SHOP, location = address)
+    geoPinRepository.upsertGeoPin(ref = shop.id, type = PinType.SHOP, location = address)
 
     return shop
   }
@@ -76,7 +72,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @return A list of Shop objects, up to maxResults in size.
    */
   suspend fun getShops(maxResults: UInt): List<Shop> {
-    val snapshot = shops.limit(maxResults.toLong()).get().await()
+    val snapshot = collection.limit(maxResults.toLong()).get().await()
 
     return coroutineScope {
       snapshot.documents
@@ -85,14 +81,14 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
               val shopNoUid = doc.toObject(ShopNoUid::class.java) ?: return@async null
 
               // Fetch the owner account
-              val owner = accountRepo.getAccount(shopNoUid.ownerId)
+              val owner = accountRepository.getAccount(shopNoUid.ownerId)
 
               // Fetch all games in the game collection
               val gameCollection =
                   shopNoUid.gameCollection
                       .map { gameItem ->
                         async {
-                          val game = gameRepo.getGameById(gameItem.gameId)
+                          val game = gameRepository.getGameById(gameItem.gameId)
                           game to gameItem.quantity
                         }
                       }
@@ -117,7 +113,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @throws IllegalArgumentException if the shop does not exist or if the data cannot be parsed.
    */
   suspend fun getShop(id: String): Shop {
-    val snapshot = shops.document(id).get().await()
+    val snapshot = collection.document(id).get().await()
     if (!snapshot.exists()) throw IllegalArgumentException("Shop with the given ID does not exist")
 
     val shopNoUid =
@@ -125,14 +121,14 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
             ?: throw IllegalArgumentException("Failed to parse shop data")
 
     // Fetch the owner account
-    val owner = accountRepo.getAccount(shopNoUid.ownerId)
+    val owner = accountRepository.getAccount(shopNoUid.ownerId)
 
     // Fetch all games in the game collection
     val gameCollection = coroutineScope {
       shopNoUid.gameCollection
           .map { gameItem ->
             async {
-              val game = gameRepo.getGameById(gameItem.gameId)
+              val game = gameRepository.getGameById(gameItem.gameId)
               game to gameItem.quantity
             }
           }
@@ -185,9 +181,9 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     if (updates.isEmpty())
         throw IllegalArgumentException("At least one field must be provided for update")
 
-    shops.document(id).update(updates).await()
+    collection.document(id).update(updates).await()
 
-    if (address != null) geoPinsRepo.upsertGeoPin(id, PinType.SHOP, address)
+    if (address != null) geoPinRepository.upsertGeoPin(id, PinType.SHOP, address)
   }
 
   /**
@@ -196,8 +192,8 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @param id The unique identifier of the shop to delete.
    */
   suspend fun deleteShop(id: String) {
-    geoPinsRepo.deleteGeoPin(id)
-    shops.document(id).delete().await()
+    geoPinRepository.deleteGeoPin(id)
+    collection.document(id).delete().await()
   }
 
   /**
@@ -207,7 +203,7 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
    * @return The Shop owned by the account, or null if no shop is found.
    */
   suspend fun getShopByOwnerId(ownerId: String): Shop? {
-    val snapshot = shops.whereEqualTo(ShopNoUid::ownerId.name, ownerId).limit(1).get().await()
+    val snapshot = collection.whereEqualTo(ShopNoUid::ownerId.name, ownerId).limit(1).get().await()
 
     if (snapshot.isEmpty) return null
 
@@ -215,14 +211,14 @@ class ShopRepository(db: FirebaseFirestore = FirebaseProvider.db) {
     val shopNoUid = doc.toObject(ShopNoUid::class.java) ?: return null
 
     // Fetch the owner account
-    val owner = accountRepo.getAccount(shopNoUid.ownerId)
+    val owner = accountRepository.getAccount(shopNoUid.ownerId)
 
     // Fetch all games in the game collection
     val gameCollection = coroutineScope {
       shopNoUid.gameCollection
           .map { gameItem ->
             async {
-              val game = gameRepo.getGameById(gameItem.gameId)
+              val game = gameRepository.getGameById(gameItem.gameId)
               game to gameItem.quantity
             }
           }

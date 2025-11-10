@@ -3,7 +3,6 @@
 // Copilot was used to generate docstrings
 package com.github.meeplemeet.ui.posts
 
-import android.R.attr.enabled
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -24,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
@@ -35,6 +33,7 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -57,7 +56,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.auth.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
@@ -154,7 +153,7 @@ object PostTags {
  * @param account The current user's account information.
  * @param postId The ID of the post to display.
  * @param postViewModel ViewModel for managing post data.
- * @param usersViewModel ViewModel for managing user data.
+ * @param accountViewModel ViewModel for managing user data.
  * @param onBack Lambda to invoke when the back button is pressed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,10 +162,11 @@ fun PostScreen(
     account: Account,
     postId: String,
     postViewModel: PostViewModel = viewModel(),
-    usersViewModel: DiscussionViewModel = viewModel(),
+    accountViewModel: AccountViewModel = postViewModel,
     onBack: () -> Unit = {}
 ) {
-  val post: Post? by postViewModel.postFlow(postId).collectAsState()
+  val viewModel = postViewModel
+  val post: Post? by viewModel.postFlow(postId).collectAsState()
 
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
@@ -178,12 +178,13 @@ fun PostScreen(
 
   // Track if post was ever loaded to distinguish between loading and deleted states
   var postEverLoaded by remember { mutableStateOf(false) }
+  var deleted by remember { mutableStateOf(false) }
 
   // Auto-navigate back if post is deleted after being loaded
-  LaunchedEffect(post) {
+  LaunchedEffect(post, deleted) {
     if (post != null) {
       postEverLoaded = true
-    } else if (postEverLoaded) {
+    } else if (postEverLoaded && !deleted) {
       // Post was loaded but is now null (deleted)
       onBack()
     }
@@ -214,7 +215,7 @@ fun PostScreen(
   // Prefetch all distinct authors for the current post/comments in one go
   LaunchedEffect(post?.id, authorsKey) {
     val p = post ?: return@LaunchedEffect
-    val toFetch =
+    val toFetch: List<String> =
         buildSet {
               add(p.authorId)
               fun walk(list: List<Comment>) {
@@ -226,7 +227,9 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    toFetch.forEach { uid -> usersViewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc } }
+    toFetch.forEach { uid: String ->
+      accountViewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc }
+    }
   }
 
   Scaffold(
@@ -251,7 +254,7 @@ fun PostScreen(
               scope.launch {
                 isSending = true
                 try {
-                  postViewModel.addComment(
+                  viewModel.addComment(
                       author = account, post = p, parentId = p.id, text = topComment.trim())
                   topComment = ""
                   focusManager.clearFocus(force = true)
@@ -276,19 +279,21 @@ fun PostScreen(
               currentUser = account,
               onDeletePost = {
                 scope.launch {
-                  runCatching { postViewModel.deletePost(account, currentPost) }
+                  deleted = true
+                  runCatching { viewModel.deletePost(account, currentPost) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
+                  onBack()
                 }
               },
               onReply = { parentId, text ->
                 scope.launch {
-                  runCatching { postViewModel.addComment(account, currentPost, parentId, text) }
+                  runCatching { viewModel.addComment(account, currentPost, parentId, text) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_SEND_REPLY) }
                 }
               },
               onDeleteComment = { comment ->
                 scope.launch {
-                  runCatching { postViewModel.removeComment(account, currentPost, comment) }
+                  runCatching { viewModel.removeComment(account, currentPost, comment) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_COMMENT) }
                 }
               },
@@ -584,7 +589,8 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
             }
           }
         }
-    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
+    HorizontalDivider(
+        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
   }
 }
 
@@ -694,7 +700,8 @@ private fun ThreadCard(
                     }
               }
         }
-    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
+    HorizontalDivider(
+        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
 }
 
@@ -1017,32 +1024,6 @@ private fun CommentItem(
           }
     }
   }
-}
-
-/**
- * Composable representing a styled card used throughout the MeepleMeet app.
- *
- * @param modifier Modifier to be applied to the card.
- * @param contentPadding Padding values for the content inside the card.
- * @param content Composable content to be displayed inside the card.
- */
-@Composable
-private fun MeepleCard(
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues =
-        PaddingValues(horizontal = Dimensions.Padding.large, vertical = Dimensions.Spacing.medium),
-    content: @Composable ColumnScope.() -> Unit
-) {
-  Card(
-      modifier = modifier,
-      shape = MaterialTheme.shapes.large,
-      colors =
-          CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.surface,
-              contentColor = MaterialTheme.colorScheme.onBackground),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-        Column(Modifier.fillMaxWidth().padding(contentPadding), content = content)
-      }
 }
 
 /**

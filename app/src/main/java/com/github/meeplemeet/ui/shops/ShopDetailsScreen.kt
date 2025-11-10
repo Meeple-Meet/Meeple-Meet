@@ -1,272 +1,439 @@
-// AI was used to help comment this screen
 package com.github.meeplemeet.ui.shops
+// Github copilot was used for this file
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.GameUIState
+import com.github.meeplemeet.model.shared.LocationUIState
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
-import com.github.meeplemeet.model.shops.ShopViewModel
-import com.github.meeplemeet.ui.components.GameListSection
-import com.github.meeplemeet.ui.components.TopBarWithDivider
-import com.github.meeplemeet.ui.theme.AppColors
-import java.text.DateFormatSymbols
-import java.util.Calendar
+import com.github.meeplemeet.ui.components.ActionBar
+import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.CollapsibleSection
+import com.github.meeplemeet.ui.components.EditableGameItem
+import com.github.meeplemeet.ui.components.GameStockPicker
+import com.github.meeplemeet.ui.components.OpeningHoursEditor
+import com.github.meeplemeet.ui.components.RequiredInfoSection
+import com.github.meeplemeet.ui.components.ShopFormTestTags
+import com.github.meeplemeet.ui.components.ShopFormUi
+import com.github.meeplemeet.ui.components.ShopUiDefaults
+import com.github.meeplemeet.ui.components.emptyWeek
+import kotlinx.coroutines.launch
 
-/** Object containing test tags used in the Shop screen UI for UI testing purposes. */
-object ShopTestTags {
-  // Contact section tags
-  const val SHOP_PHONE_TEXT = "SHOP_PHONE_TEXT"
-  const val SHOP_PHONE_BUTTON = "SHOP_PHONE_BUTTON"
-  const val SHOP_EMAIL_TEXT = "SHOP_EMAIL_TEXT"
-  const val SHOP_EMAIL_BUTTON = "SHOP_EMAIL_BUTTON"
-  const val SHOP_ADDRESS_TEXT = "SHOP_ADDRESS_TEXT"
-  const val SHOP_ADDRESS_BUTTON = "SHOP_ADDRESS_BUTTON"
-  const val SHOP_WEBSITE_TEXT = "SHOP_WEBSITE_TEXT"
-  const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
-  const val SHOP_EDIT_BUTTON = "EDIT_SHOP_BUTTON"
+/* ================================================================================================
+ * Test tags
+ * ================================================================================================ */
+object EditShopScreenTestTags {
+  const val SCAFFOLD = "edit_shop_scaffold"
+  const val TOPBAR = "edit_shop_topbar"
+  const val TITLE = "edit_shop_title"
+  const val NAV_BACK = "edit_shop_nav_back"
+  const val SNACKBAR_HOST = "edit_shop_snackbar_host"
+  const val LIST = "edit_shop_list"
 
-  // Availability section tags
-  const val SHOP_DAY_PREFIX = "SHOP_DAY_"
+  // Reuse shared section suffixes
+  const val SECTION_HEADER_SUFFIX = ShopFormTestTags.SECTION_HEADER_SUFFIX
+  const val SECTION_TOGGLE_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_SUFFIX
+  const val SECTION_CONTENT_SUFFIX = ShopFormTestTags.SECTION_CONTENT_SUFFIX
 
-  // Game list tags
-  const val SHOP_GAME_PREFIX = "SHOP_GAME_"
+  const val SECTION_REQUIRED = "section_required"
+
+  // Reuse shared field tags
+  const val FIELD_SHOP = ShopFormTestTags.FIELD_SHOP
+  const val FIELD_EMAIL = ShopFormTestTags.FIELD_EMAIL
+  const val FIELD_PHONE = ShopFormTestTags.FIELD_PHONE
+  const val FIELD_LINK = ShopFormTestTags.FIELD_LINK
+
+  const val SPACER_AFTER_REQUIRED = "spacer_after_required"
+
+  const val SECTION_AVAILABILITY = "section_availability"
+  const val SPACER_AFTER_AVAILABILITY = "spacer_after_availability"
+
+  const val SECTION_GAMES = "section_games"
+  const val GAMES_ADD_LABEL = "games_add_label"
+  const val GAMES_EMPTY_TEXT = "games_empty_text"
+  const val GAMES_ADD_BUTTON = "games_add_button"
+  const val GAME_STOCK_DIALOG_WRAPPER = ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER
+
+  const val BOTTOM_SPACER = "bottom_spacer"
 }
 
-/**
- * Composable that displays the Shop screen, including the top bar and shop details.
- *
- * @param shopId The ID of the shop to display.
- * @param account The current user account.
- * @param viewModel The ViewModel providing shop data.
- * @param onBack Callback invoked when the back button is pressed.
- * @param onEdit Callback invoked when the edit button is pressed.
- */
-@Composable
-fun ShopDetailsScreen(
-    shopId: String,
-    account: Account,
-    viewModel: ShopViewModel,
-    onBack: () -> Unit = {},
-    onEdit: () -> Unit = {}
-) {
-  // Collect the current shop state from the ViewModel
-  val shopState by viewModel.shop.collectAsStateWithLifecycle()
-  // Trigger loading of shop data when shopId changes
-  LaunchedEffect(shopId) { viewModel.getShop(shopId) }
+/* ================================================================================================
+ * UI Defaults
+ * ================================================================================================ */
+private object EditShopUi {
+  // Reuse shared dimensions
+  object Dimensions {
+    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
+    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
+    val sectionSpace = ShopFormUi.Dimensions.sectionSpace
+    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
+    val betweenControls = ShopFormUi.Dimensions.betweenControls
+  }
 
-  Scaffold(
-      topBar = {
-        TopBarWithDivider(
-            text = shopState?.name ?: "Shop",
-            onReturn = { onBack() },
-            trailingIcons = {
-              // Show edit button only if current account is the shop owner
-              if (account == (shopState?.owner ?: false)) {
-                IconButton(
-                    onClick = onEdit, modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
-                      Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
-              }
-            })
-      }) { innerPadding ->
-        // Show shop details if loaded, otherwise show a loading indicator
-        shopState?.let { shop ->
-          ShopDetails(
-              shop = shop, modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxSize())
-        }
-            ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-              CircularProgressIndicator()
-            }
-      }
-}
+  object Strings {
+    const val SCREEN_TITLE = "Edit Shop"
+    const val SECTION_REQUIRED = "Required Info"
+    const val SECTION_AVAILABILITY = "Availability"
+    const val SECTION_GAMES = "Games in stock"
 
-/**
- * Composable that displays detailed information about a shop, including contact info, availability,
- * and game list.
- *
- * @param shop The shop data to display.
- * @param modifier Modifier to be applied to the layout.
- */
-@Composable
-fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
-  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-    ContactSection(shop)
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    AvailabilitySection(shop.openingHours)
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    GameListSection(
-        games = shop.gameCollection,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp),
-        hasDeleteButton = false,
-        title = "Games:")
+    const val BTN_ADD_GAME = "Add game"
+    const val EMPTY_GAMES = "No games selected yet."
+    const val ERROR_VALIDATION = "Validation error"
+    const val ERROR_SAVE = "Failed to save shop"
   }
 }
 
-// -------------------- CONTACT SECTION --------------------
+/* ================================================================================================
+ * Screen
+ * ================================================================================================ */
 
 /**
- * Composable that displays the contact information section of the shop.
+ * Composable function representing the Edit Shop screen.
  *
- * @param shop The shop whose contact information is displayed.
+ * @param shop The shop to edit.
+ * @param owner The account of the shop owner.
+ * @param onBack Callback function to be invoked when the back navigation is triggered.
+ * @param onSaved Callback function to be invoked when the shop is successfully saved.
+ * @param viewModel The ViewModel managing the state and logic for editing a shop.
  */
 @Composable
-fun ContactSection(shop: Shop) {
-  Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
-        Text(
-            "Contact:",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            textDecoration = TextDecoration.Underline)
+fun ShopDetailsScreen(
+    owner: Account,
+    shop: Shop,
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+    viewModel: EditShopViewModel = viewModel()
+) {
+  val gameUi by viewModel.gameUIState.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
-        // Display phone contact row
-        ContactRow(
-            Icons.Default.Phone,
-            "- Phone: ${shop.phone}",
-            ShopTestTags.SHOP_PHONE_TEXT,
-            ShopTestTags.SHOP_PHONE_BUTTON)
-        // Display email contact row
-        ContactRow(
-            Icons.Default.Email,
-            "- Email: ${shop.email}",
-            ShopTestTags.SHOP_EMAIL_TEXT,
-            ShopTestTags.SHOP_EMAIL_BUTTON)
-        // Display address contact row
-        ContactRow(
-            Icons.Default.Place,
-            "- Address: ${shop.address.name}",
-            ShopTestTags.SHOP_ADDRESS_TEXT,
-            ShopTestTags.SHOP_ADDRESS_BUTTON)
-        // Display website contact row
-        ContactRow(
-            Icons.Default.Language,
-            "- Website: ${shop.website}",
-            ShopTestTags.SHOP_WEBSITE_TEXT,
-            ShopTestTags.SHOP_WEBSITE_BUTTON)
-      }
+  EditShopContent(
+      shop = shop,
+      onBack = onBack,
+      onSaved = onSaved,
+      onSave = { loadedShop, requester, name, email, phone, website, address, week, stock ->
+        try {
+          viewModel.updateShop(
+              shop = loadedShop,
+              requester = requester,
+              owner = owner,
+              name = name,
+              phone = phone,
+              email = email,
+              website = website,
+              address = address,
+              openingHours = week,
+              gameCollection = stock)
+          null
+        } catch (e: IllegalArgumentException) {
+          e.message ?: EditShopUi.Strings.ERROR_VALIDATION
+        } catch (_: Exception) {
+          EditShopUi.Strings.ERROR_SAVE
+        }
+      },
+      gameUi = gameUi,
+      locationUi = locationUi,
+      gameQuery = gameUi.gameQuery,
+      gameSuggestions = gameUi.gameSuggestions,
+      isSearching = gameUi.isSearching,
+      onSetGameQuery = viewModel::setGameQuery,
+      onSetGame = viewModel::setGame,
+      viewModel = viewModel,
+      owner = owner)
 }
 
-/**
- * Composable that displays a single row of contact information with an icon, text, and a button to
- * copy the text to the clipboard.
- *
- * @param icon The icon to display for the contact method.
- * @param text The contact text to display and copy.
- * @param textTag The test tag for the text element.
- * @param buttonTag The test tag for the copy button.
- */
-@Composable
-fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
-  val clipboardManager: ClipboardManager = LocalClipboardManager.current
-  val context = LocalContext.current
-  Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-        Text(
-            text,
-            style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
-            modifier = Modifier.weight(1f).testTag(textTag))
-        IconButton(
-            onClick = {
-              // Copy the contact text to the clipboard and show a toast confirmation
-              clipboardManager.setText(AnnotatedString(text))
-              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-            },
-            content = { Icon(icon, contentDescription = null, tint = AppColors.neutral) },
-            modifier = Modifier.size(24.dp).testTag(buttonTag))
-      }
-}
-
-// -------------------- AVAILABILITY SECTION --------------------
+/* ================================================================================================
+ * Content
+ * ================================================================================================ */
 
 /**
- * Composable that displays the shop's opening hours for each day of the week.
+ * Composable function representing the content of the Edit Shop screen.
  *
- * @param openingHours List of OpeningHours representing the shop's weekly schedule.
+ * @param shop The shop to edit, or null if still loading.
+ * @param onBack Callback function to be invoked when the back navigation is triggered.
+ * @param onSaved Callback function to be invoked when the shop is successfully saved.
+ * @param onSave Callback function to handle the saving of a shop with provided details.
+ * @param gameQuery The current query string for searching games.
+ * @param gameSuggestions List of game suggestions based on the current query.
+ * @param isSearching Boolean indicating if a search operation is in progress.
+ * @param onSetGameQuery Callback function to update the game search query.
+ * @param onSetGame Callback function to set the selected game.
+ * @param initialStock Initial list of games and their quantities in stock.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AvailabilitySection(openingHours: List<OpeningHours>) {
-  val daysOfWeek = remember { DateFormatSymbols().weekdays }
-  val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-  Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
-        Text(
-            "Availability:",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            textDecoration = TextDecoration.Underline)
+fun EditShopContent(
+    shop: Shop?,
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+    onSave:
+        (
+            shop: Shop,
+            requester: Account,
+            name: String,
+            email: String,
+            phone: String,
+            website: String,
+            address: Location,
+            week: List<OpeningHours>,
+            stock: List<Pair<Game, Int>>) -> String?,
+    gameUi: GameUIState,
+    locationUi: LocationUIState,
+    gameQuery: String,
+    gameSuggestions: List<Game>,
+    isSearching: Boolean,
+    onSetGameQuery: (String) -> Unit,
+    onSetGame: (Game) -> Unit,
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    viewModel: EditShopViewModel,
+    owner: Account
+) {
+  val snackbarHost = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
 
-        // Loop through each day's opening hours
-        openingHours.forEach { entry ->
-          // Get the day name from the weekdays array (offset by 1 because weekdays start at 1)
-          val dayName = daysOfWeek.getOrNull(entry.day + 1) ?: "Unknown"
-          // Check if this day is the current day to highlight it
-          val isToday = (entry.day + 1) == currentDay
+  // Initialize state with loaded shop data or default values
+  var shopName by rememberSaveable(shop) { mutableStateOf(shop?.name ?: "") }
+  var email by rememberSaveable(shop) { mutableStateOf(shop?.email ?: "") }
+  var addressText by rememberSaveable(shop) { mutableStateOf(shop?.address?.name ?: "") }
+  var selectedLocation by remember(shop) { mutableStateOf(shop?.address) }
+  var phone by rememberSaveable(shop) { mutableStateOf(shop?.phone ?: "") }
+  var link by rememberSaveable(shop) { mutableStateOf(shop?.website ?: "") }
 
-          if (entry.hours.isEmpty()) {
-            // No opening hours means the shop is closed on this day
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth().testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"),
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                  Text(
-                      dayName,
-                      fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier = Modifier.weight(1f))
-                  Text(
-                      "Closed",
-                      fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier =
-                          Modifier.testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS"))
-                }
-          } else {
-            // Display each time interval for the day
-            entry.hours.forEachIndexed { idx, (start, end) ->
-              Row(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS_${idx}"),
-                  horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (idx == 0) {
-                      // Show the day name only on the first interval row
-                      Text(
-                          dayName,
-                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                          modifier =
-                              Modifier.weight(1f)
-                                  .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"))
-                    } else {
-                      // Empty space for subsequent interval rows to align with day name column
-                      Text("", modifier = Modifier.weight(1f))
-                    }
-                    // Format the time interval or show "Closed" if times are null
-                    val timeText = if (start != null && end != null) "$start - $end" else "Closed"
-                    Text(timeText, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
-                  }
-            }
-          }
+  var week by remember(shop) { mutableStateOf(shop?.openingHours ?: emptyWeek()) }
+
+  var editingDay by remember { mutableStateOf<Int?>(null) }
+  var showHoursDialog by remember { mutableStateOf(false) }
+
+  var showGameDialog by remember { mutableStateOf(false) }
+  var qty by rememberSaveable { mutableIntStateOf(1) }
+  var stock by remember(shop) { mutableStateOf(shop?.gameCollection ?: initialStock) }
+
+  val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
+  val isValid by
+      remember(shopName, email, addressText, hasOpeningHours) {
+        derivedStateOf {
+          shopName.isNotBlank() && email.isNotBlank() && addressText.isNotBlank() && hasOpeningHours
         }
       }
+
+  // Sync addressText with locationUi.locationQuery when typing
+  LaunchedEffect(locationUi.locationQuery) {
+    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
+      addressText = locationUi.locationQuery
+    }
+  }
+
+  fun onDiscard() {
+    onBack()
+  }
+
+  Scaffold(
+      topBar = {
+        CenterAlignedTopAppBar(
+            title = {
+              Text(
+                  EditShopUi.Strings.SCREEN_TITLE,
+                  modifier = Modifier.testTag(EditShopScreenTestTags.TITLE))
+            },
+            navigationIcon = {
+              IconButton(
+                  onClick = onBack, modifier = Modifier.testTag(EditShopScreenTestTags.NAV_BACK)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  }
+            },
+            modifier = Modifier.testTag(EditShopScreenTestTags.TOPBAR))
+      },
+      snackbarHost = {
+        SnackbarHost(
+            snackbarHost, modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
+      },
+      bottomBar = {
+        ActionBar(
+            onDiscard = { onDiscard() },
+            onPrimary = {
+              if (shop != null) {
+                val addr = selectedLocation ?: Location(name = addressText)
+                val err = onSave(shop, shop.owner, shopName, email, phone, link, addr, week, stock)
+                if (err == null) onSaved() else scope.launch { snackbarHost.showSnackbar(err) }
+              }
+            },
+            enabled = isValid && shop != null,
+            primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
+      },
+      modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
+        LazyColumn(
+            modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
+            contentPadding =
+                PaddingValues(
+                    horizontal = EditShopUi.Dimensions.contentHPadding,
+                    vertical = EditShopUi.Dimensions.contentVPadding)) {
+              item {
+                CollapsibleSection(
+                    title = EditShopUi.Strings.SECTION_REQUIRED,
+                    initiallyExpanded = true,
+                    content = {
+                      RequiredInfoSection(
+                          shop = shop,
+                          shopName = shopName,
+                          onShopName = { shopName = it },
+                          email = email,
+                          onEmail = { email = it },
+                          phone = phone,
+                          onPhone = { phone = it },
+                          link = link,
+                          onLink = { link = it },
+                          onPickLocation = { loc ->
+                            addressText = loc.name
+                            selectedLocation = loc
+                          },
+                          viewModel = viewModel,
+                          owner = owner)
+                    },
+                    testTag = EditShopScreenTestTags.SECTION_REQUIRED)
+              }
+
+              item {
+                Spacer(
+                    Modifier.height(EditShopUi.Dimensions.sectionSpace)
+                        .testTag(EditShopScreenTestTags.SPACER_AFTER_REQUIRED))
+              }
+
+              item {
+                CollapsibleSection(
+                    title = EditShopUi.Strings.SECTION_AVAILABILITY,
+                    initiallyExpanded = true,
+                    content = {
+                      AvailabilitySection(
+                          week = week,
+                          onEdit = { day ->
+                            editingDay = day
+                            showHoursDialog = true
+                          })
+                    },
+                    testTag = EditShopScreenTestTags.SECTION_AVAILABILITY)
+              }
+
+              item {
+                Spacer(
+                    Modifier.height(EditShopUi.Dimensions.sectionSpace)
+                        .testTag(EditShopScreenTestTags.SPACER_AFTER_AVAILABILITY))
+              }
+
+              item {
+                CollapsibleSection(
+                    title = EditShopUi.Strings.SECTION_GAMES,
+                    initiallyExpanded = true,
+                    header = {
+                      TextButton(
+                          onClick = {
+                            onSetGameQuery("")
+                            showGameDialog = true
+                          },
+                          modifier = Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
+                            Text(
+                                EditShopUi.Strings.BTN_ADD_GAME,
+                                modifier = Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_LABEL))
+                          }
+                    },
+                    content = {
+                      GamesSection(
+                          stock = stock,
+                          onQuantityChange = { game, newQuantity ->
+                            stock =
+                                stock.map { (g, qty) ->
+                                  if (g.uid == game.uid) g to newQuantity else g to qty
+                                }
+                          },
+                          onDelete = { gameToRemove ->
+                            stock = stock.filterNot { it.first.uid == gameToRemove.uid }
+                          })
+                    },
+                    testTag = EditShopScreenTestTags.SECTION_GAMES)
+              }
+
+              item {
+                Spacer(
+                    Modifier.height(EditShopUi.Dimensions.bottomSpacer)
+                        .testTag(EditShopScreenTestTags.BOTTOM_SPACER))
+              }
+            }
+      }
+
+  OpeningHoursEditor(
+      show = showHoursDialog,
+      day = editingDay,
+      week = week,
+      onWeekChange = { week = it },
+      onDismiss = { showHoursDialog = false })
+
+  GameStockPicker(
+      owner = owner,
+      shop = shop,
+      viewModel = viewModel,
+      gameUIState = gameUi,
+      show = showGameDialog,
+      stock = stock,
+      onStockChange = { stock = it },
+      qty = qty,
+      onQtyChange = { qty = it },
+      onSetGameQuery = onSetGameQuery,
+      onSetGame = onSetGame,
+      onDismiss = { showGameDialog = false })
+}
+
+/* ================================================================================================
+ * Sections (Edit-specific)
+ * ================================================================================================ */
+
+/**
+ * Composable function representing the games section of the Edit Shop screen.
+ *
+ * @param stock List of pairs containing games and their quantities in stock.
+ * @param onQuantityChange Callback function to handle updating quantity of a game in the stock
+ *   list.
+ * @param onDelete Callback function to handle deletion of a game from the stock list.
+ */
+@Composable
+private fun GamesSection(
+    stock: List<Pair<Game, Int>>,
+    onQuantityChange: (Game, Int) -> Unit,
+    onDelete: (Game) -> Unit
+) {
+  if (stock.isNotEmpty()) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
+        modifier = Modifier.heightIn(max = 600.dp)) {
+          items(items = stock, key = { it.first.uid }) { (game, count) ->
+            EditableGameItem(
+                game = game,
+                count = count,
+                onQuantityChange = onQuantityChange,
+                onDelete = onDelete)
+          }
+        }
+  } else {
+    Text(
+        EditShopUi.Strings.EMPTY_GAMES,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testTag(EditShopScreenTestTags.GAMES_EMPTY_TEXT))
+  }
 }

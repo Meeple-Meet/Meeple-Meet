@@ -8,7 +8,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
-import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.posts.CreatePostScreen
 import com.github.meeplemeet.ui.posts.CreatePostTestTags
@@ -34,7 +33,6 @@ class CreatePostScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var repository: PostRepository
   private lateinit var viewModel: CreatePostViewModel
   private lateinit var testAccount: Account
 
@@ -64,8 +62,7 @@ class CreatePostScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repository = PostRepository()
-    viewModel = CreatePostViewModel(repository)
+    viewModel = CreatePostViewModel()
     testAccount = Account("testuser", "test_user", "Test User", "test@example.com")
 
     postCalled = false
@@ -237,7 +234,7 @@ class CreatePostScreenTest : FirestoreTests() {
 
     // Verify in Firestore
     delay(1000)
-    val posts = repository.getPosts()
+    val posts = postRepository.getPosts()
     val createdPost = posts.find { it.title == title }
 
     assert(createdPost != null)
@@ -262,7 +259,7 @@ class CreatePostScreenTest : FirestoreTests() {
     compose.waitUntil(timeoutMillis = 5_000) { postCalled }
 
     delay(1000)
-    val posts = repository.getPosts()
+    val posts = postRepository.getPosts()
     val createdPost = posts.find { it.title == title }
 
     assert(createdPost != null)
@@ -317,7 +314,7 @@ class CreatePostScreenTest : FirestoreTests() {
     compose.waitUntil(timeoutMillis = 5_000) { postCalled }
 
     delay(1000)
-    val posts = repository.getPosts()
+    val posts = postRepository.getPosts()
     val createdPost = posts.find { it.title == "Many Tags Post" }
 
     assert(createdPost != null)
@@ -407,7 +404,7 @@ class CreatePostScreenTest : FirestoreTests() {
     compose.waitUntil(timeoutMillis = 5_000) { postCalled }
 
     delay(1000)
-    val posts = repository.getPosts()
+    val posts = postRepository.getPosts()
     val createdPost = posts.find { it.title == title }
 
     assert(createdPost != null)
@@ -421,10 +418,10 @@ class CreatePostScreenTest : FirestoreTests() {
   @After
   fun tearDown() = runBlocking {
     // Clean up any created posts during tests
-    val posts = repository.getPosts()
+    val posts = postRepository.getPosts()
     for (post in posts) {
       if (post.authorId == testAccount.uid) {
-        repository.deletePost(post.id)
+        postRepository.deletePost(post.id)
       }
     }
   }

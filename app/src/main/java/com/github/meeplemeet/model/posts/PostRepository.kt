@@ -2,18 +2,14 @@
 
 package com.github.meeplemeet.model.posts
 
-import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.model.FirestoreRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-
-/** Path to the posts collection in Firestore. */
-const val POSTS_COLLECTION_PATH = "posts"
 
 /** Path to the comments subcollection within each post document. */
 private const val COMMENTS_COLLECTION_PATH = "comments"
@@ -27,14 +23,9 @@ private const val COMMENTS_COLLECTION_PATH = "comments"
  *
  * @property db The Firestore database instance to use for operations.
  */
-class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
-  private val posts = db.collection(POSTS_COLLECTION_PATH)
-
-  /** Generates a new unique ID for a post or comment. */
-  private fun newPostUUID(): String = posts.document().id
-
+class PostRepository : FirestoreRepository("posts") {
   private fun newCommentUUID(postId: String): String =
-      posts.document(postId).collection(COMMENTS_COLLECTION_PATH).document().id
+      collection.document(postId).collection(COMMENTS_COLLECTION_PATH).document().id
 
   /**
    * Creates a new post in Firestore.
@@ -51,13 +42,13 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
       authorId: String,
       tags: List<String> = emptyList()
   ): Post {
-    val postId = newPostUUID()
+    val postId = newUUID()
     val post = Post(postId, title, content, Timestamp.now(), authorId, tags)
     val (feedNoUid, comments) = toNoUid(post)
 
     val batch = db.batch()
-    batch.set(posts.document(postId), feedNoUid)
-    val fieldsCollection = posts.document(postId).collection(COMMENTS_COLLECTION_PATH)
+    batch.set(collection.document(postId), feedNoUid)
+    val fieldsCollection = collection.document(postId).collection(COMMENTS_COLLECTION_PATH)
     comments.forEach { c -> batch.set(fieldsCollection.document(c.id), c) }
 
     batch.commit().await()
@@ -72,7 +63,7 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
    * @param postId The ID of the post to delete.
    */
   suspend fun deletePost(postId: String) {
-    val feedRef = posts.document(postId)
+    val feedRef = collection.document(postId)
     val commentsSnap = feedRef.collection(COMMENTS_COLLECTION_PATH).get().await()
     val batch = db.batch()
 
@@ -103,13 +94,16 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
             timestamp = Timestamp.now(),
             authorId = authorId,
             parentId = parentId)
-    posts
+    collection
         .document(postId)
         .collection(COMMENTS_COLLECTION_PATH)
         .document(commentId)
         .set(comment)
         .await()
-    posts.document(postId).update(PostNoUid::commentCount.name, FieldValue.increment(1)).await()
+    collection
+        .document(postId)
+        .update(PostNoUid::commentCount.name, FieldValue.increment(1))
+        .await()
     return commentId
   }
 
@@ -121,7 +115,7 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
    * @throws IllegalArgumentException if the comment does not exist.
    */
   suspend fun removeComment(postId: String, commentId: String) {
-    val fieldsRef = posts.document(postId).collection(COMMENTS_COLLECTION_PATH)
+    val fieldsRef = collection.document(postId).collection(COMMENTS_COLLECTION_PATH)
     val commentDoc = fieldsRef.document(commentId).get().await()
     if (!commentDoc.exists()) throw IllegalArgumentException("No such comment")
 
@@ -133,7 +127,10 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
             CommentNoUid::authorId.name,
             "")
         .await()
-    posts.document(postId).update(PostNoUid::commentCount.name, FieldValue.increment(-1)).await()
+    collection
+        .document(postId)
+        .update(PostNoUid::commentCount.name, FieldValue.increment(-1))
+        .await()
   }
 
   /**
@@ -147,7 +144,7 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
    * @throws IllegalArgumentException if the post does not exist.
    */
   suspend fun getPost(postId: String): Post {
-    val feedRef = posts.document(postId)
+    val feedRef = collection.document(postId)
     val feedSnap = feedRef.get().await()
 
     if (!feedSnap.exists()) {
@@ -175,7 +172,7 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
    *   occur, or null if the post no longer exists.
    */
   fun listenPost(postId: String): Flow<Post?> = callbackFlow {
-    val feedRef = posts.document(postId)
+    val feedRef = collection.document(postId)
     val commentsRef = feedRef.collection(COMMENTS_COLLECTION_PATH)
 
     // Listen for both feed metadata and comment updates
@@ -220,7 +217,7 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
    * @return A list of [Post] objects without comments, sorted by timestamp (newest first).
    */
   suspend fun getPosts(): List<Post> {
-    val postsSnap = posts.get().await()
+    val postsSnap = collection.get().await()
 
     return postsSnap.documents
         .mapNotNull { postDoc ->
@@ -242,7 +239,7 @@ class PostRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
    */
   fun listenPosts(): Flow<List<Post>> = callbackFlow {
     val listener =
-        posts.addSnapshotListener { snapshot, e ->
+        collection.addSnapshotListener { snapshot, e ->
           if (e != null) {
             close(e)
             return@addSnapshotListener

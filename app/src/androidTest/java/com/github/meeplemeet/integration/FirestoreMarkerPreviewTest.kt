@@ -4,25 +4,18 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.MarkerPreview
-import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPin
-import com.github.meeplemeet.model.sessions.SessionRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
-import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
-import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import java.time.LocalDateTime
@@ -38,13 +31,6 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreMarkerPreviewTest : FirestoreTests() {
-  private lateinit var markerPreviewRepository: MarkerPreviewRepository
-  private lateinit var shopRepository: ShopRepository
-  private lateinit var discussionRepository: DiscussionRepository
-  private lateinit var sessionRepository: SessionRepository
-  private lateinit var spaceRenterRepository: SpaceRenterRepository
-  private lateinit var gameRepository: GameRepository
-
   private lateinit var testAccount: Account
   private lateinit var testShop: Shop
   private lateinit var testGame1: Game
@@ -57,23 +43,13 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    shopRepository = ShopRepository(db)
-    discussionRepository = DiscussionRepository(db)
-    sessionRepository = SessionRepository(db)
-    spaceRenterRepository = SpaceRenterRepository(db)
-    gameRepository = FirestoreGameRepository(db)
-
-    markerPreviewRepository =
-        MarkerPreviewRepository(
-            shopRepository, discussionRepository, spaceRenterRepository, gameRepository)
-
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
     testTimestamp = Timestamp.now()
 
     runBlocking {
       // Create test account
       testAccount =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "testuser", "Test User", "test@example.com", photoUrl = null)
 
       // Create test game

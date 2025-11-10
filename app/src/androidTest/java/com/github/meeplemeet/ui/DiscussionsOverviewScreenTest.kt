@@ -7,7 +7,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -28,7 +27,6 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
 
   private lateinit var vm: DiscussionViewModel
-  private lateinit var repo: DiscussionRepository
   private lateinit var nav: NavigationActions
 
   private lateinit var me: Account
@@ -41,27 +39,26 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = DiscussionRepository()
-    vm = DiscussionViewModel(repo)
+    vm = DiscussionViewModel()
     nav = mockk(relaxed = true)
 
     // Create test users using repository
     me =
-        repo.createAccount(
+        accountRepository.createAccount(
             userHandle = "marco_${System.currentTimeMillis()}",
             name = "Marco",
             email = "test_marco@epfl.ch",
             photoUrl = null)
 
     bob =
-        repo.createAccount(
+        accountRepository.createAccount(
             userHandle = "bob_${System.currentTimeMillis()}",
             name = "Bob",
             email = "test_bob@epfl.ch",
             photoUrl = null)
 
     zoe =
-        repo.createAccount(
+        accountRepository.createAccount(
             userHandle = "zoe_${System.currentTimeMillis()}",
             name = "Zoe",
             email = "test_zoe@epfl.ch",
@@ -69,7 +66,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     // Create discussions using repository
     d1 =
-        repo.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Catan Crew",
             description = "",
             creatorId = me.uid,
@@ -77,7 +74,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     delay(50)
     d2 =
-        repo.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Gloomhaven",
             description = "",
             creatorId = me.uid,
@@ -85,33 +82,33 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     delay(50)
     d3 =
-        repo.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Weekend Plan", description = "", creatorId = me.uid, participants = emptyList())
 
     // Send messages using repository to create previews
-    repo.sendMessageToDiscussion(d1, me, "Bring snacks")
+    discussionRepository.sendMessageToDiscussion(d1, me, "Bring snacks")
     delay(100)
-    repo.sendMessageToDiscussion(d2, bob, "Ready at 7?")
+    discussionRepository.sendMessageToDiscussion(d2, bob, "Ready at 7?")
 
     // Fetch updated accounts and discussions from repository
-    me = repo.getAccount(me.uid)
-    bob = repo.getAccount(bob.uid)
-    zoe = repo.getAccount(zoe.uid)
+    me = accountRepository.getAccount(me.uid)
+    bob = accountRepository.getAccount(bob.uid)
+    zoe = accountRepository.getAccount(zoe.uid)
 
-    d1 = repo.getDiscussion(d1.uid)
-    d2 = repo.getDiscussion(d2.uid)
-    d3 = repo.getDiscussion(d3.uid)
+    d1 = discussionRepository.getDiscussion(d1.uid)
+    d2 = discussionRepository.getDiscussion(d2.uid)
+    d3 = discussionRepository.getDiscussion(d3.uid)
   }
 
   @After
   fun cleanup() = runBlocking {
     try {
-      repo.deleteDiscussion(d1)
-      repo.deleteDiscussion(d2)
-      repo.deleteDiscussion(d3)
-      repo.deleteAccount(me.uid)
-      repo.deleteAccount(bob.uid)
-      repo.deleteAccount(zoe.uid)
+      discussionRepository.deleteDiscussion(d1)
+      discussionRepository.deleteDiscussion(d2)
+      discussionRepository.deleteDiscussion(d3)
+      accountRepository.deleteAccount(me.uid)
+      accountRepository.deleteAccount(bob.uid)
+      accountRepository.deleteAccount(zoe.uid)
     } catch (_: Exception) {
       // Ignore cleanup errors
     }
@@ -123,9 +120,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @Test
   fun should_pass_test_setup() {
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
-    }
+    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
     assert(me.name == "Marco")
     assert(bob.name == "Bob")
     assert(d1.name == "Catan Crew")
@@ -135,9 +130,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @Test
   fun overview_shows_discussion_cards_with_names_and_messages() {
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
-    }
+    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
     compose.waitForIdle()
 
     compose.onNodeWithText("Catan Crew").assertIsDisplayed()
@@ -151,27 +144,25 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun overview_empty_state_shows_no_discussions_text() = runBlocking {
     // Create a new user with no discussions
     val emptyUser =
-        repo.createAccount(
+        accountRepository.createAccount(
             userHandle = "empty_${System.currentTimeMillis()}",
             name = "Empty",
             email = "empty@test.com",
             photoUrl = null)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = emptyUser, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(account = emptyUser, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("No discussions yet").assertIsDisplayed()
 
     // Cleanup
-    repo.deleteAccount(emptyUser.uid)
+    accountRepository.deleteAccount(emptyUser.uid)
   }
 
   @Test
   fun overview_non_empty_state_hides_empty_message() {
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
-    }
+    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
     compose.waitForIdle()
     compose.onNodeWithText("No discussions yet").assertDoesNotExist()
   }
@@ -179,10 +170,10 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @Test
   fun overview_renders_no_messages_placeholder_when_discussion_has_no_messages() = runTest {
     // Fetch the account to get updated preview info
-    val updatedMe = repo.getAccount(me.uid)
+    val updatedMe = accountRepository.getAccount(me.uid)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = updatedMe, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
     }
     compose.waitForIdle()
 
@@ -196,31 +187,29 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun overview_prefixes_non_me_sender_name_when_known() = runBlocking {
     // Create a new discussion with zoe
     val d4 =
-        repo.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "New Chat", description = "", creatorId = me.uid, participants = listOf(zoe.uid))
 
     // Send a message from zoe
-    repo.sendMessageToDiscussion(d4, zoe, "See you!")
+    discussionRepository.sendMessageToDiscussion(d4, zoe, "See you!")
 
     // Fetch updated account
-    val updatedMe = repo.getAccount(me.uid)
+    val updatedMe = accountRepository.getAccount(me.uid)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = updatedMe, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
     }
     compose.waitForIdle()
     compose.onNodeWithText("Zoe: See you!", substring = true).assertIsDisplayed()
     compose.onNodeWithText("New Chat").assertIsDisplayed()
 
     // Cleanup
-    repo.deleteDiscussion(d4)
+    discussionRepository.deleteDiscussion(d4)
   }
 
   @Test
   fun overview_shows_you_prefix_for_own_messages() {
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
-    }
+    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
     compose.waitForIdle()
 
     // d1 has last message from me
@@ -234,10 +223,10 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
     delay(500) // Wait for Firebase update
 
     // Fetch updated account
-    val updatedMe = repo.getAccount(me.uid)
+    val updatedMe = accountRepository.getAccount(me.uid)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = updatedMe, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
     }
     compose.waitForIdle()
 
@@ -248,14 +237,14 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun overview_sorts_cards_by_latest_message_time() = runBlocking {
     // Send a new message to d2 to make it more recent
     delay(200)
-    repo.sendMessageToDiscussion(d2, bob, "Updated message")
+    discussionRepository.sendMessageToDiscussion(d2, bob, "Updated message")
     delay(200)
 
     // Fetch updated account
-    val updatedMe = repo.getAccount(me.uid)
+    val updatedMe = accountRepository.getAccount(me.uid)
 
     compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = updatedMe, navigation = nav) }
+      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
     }
     compose.waitForIdle()
 
@@ -267,9 +256,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @Test
   fun overview_displays_all_discussions_with_previews() {
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(viewModel = vm, account = me, navigation = nav) }
-    }
+    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
     compose.waitForIdle()
 
     // All three discussions should be visible

@@ -3,7 +3,6 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
@@ -18,28 +17,28 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreRepositoryTests : FirestoreTests() {
-  private lateinit var repository: DiscussionRepository
   private lateinit var testAccount1: Account
   private lateinit var testAccount2: Account
   private lateinit var testAccount3: Account
 
   @Before
   fun setup() {
-    repository = DiscussionRepository()
     runBlocking {
       testAccount1 =
-          repository.createAccount("Alice", "Alice", email = "Alice@example.com", photoUrl = null)
+          accountRepository.createAccount(
+              "Alice", "Alice", email = "Alice@example.com", photoUrl = null)
       testAccount2 =
-          repository.createAccount("Bob", "Bob", email = "Bob@example.com", photoUrl = null)
+          accountRepository.createAccount("Bob", "Bob", email = "Bob@example.com", photoUrl = null)
       testAccount3 =
-          repository.createAccount(
+          accountRepository.createAccount(
               "Charlie", "Charlie", email = "Charlie@example.com", photoUrl = null)
     }
   }
 
   @Test
   fun createDiscussionCreatesNewDiscussion() = runBlocking {
-    val discussion = repository.createDiscussion("Test Discussion", "Description", testAccount1.uid)
+    val discussion =
+        discussionRepository.createDiscussion("Test Discussion", "Description", testAccount1.uid)
 
     assertNotNull(discussion.uid)
     assertEquals("Test Discussion", discussion.name)
@@ -49,15 +48,15 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertTrue(discussion.admins.contains(testAccount1.uid))
     assertTrue(discussion.messages.isEmpty())
 
-    val account = repository.getAccount(testAccount1.uid)
+    val account = accountRepository.getAccount(testAccount1.uid)
     assertNotNull(account.previews[discussion.uid])
   }
 
   @Test
   fun getDiscussionRetrievesExistingDiscussion() = runBlocking {
-    val created = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val created = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val fetched = repository.getDiscussion(created.uid)
+    val fetched = discussionRepository.getDiscussion(created.uid)
 
     assertEquals(created.uid, fetched.uid)
     assertEquals(created.name, fetched.name)
@@ -66,117 +65,121 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test(expected = DiscussionNotFoundException::class)
   fun getDiscussionThrowsForNonExistentDiscussion() = runTest {
-    repository.getDiscussion("nonexistent-id")
+    discussionRepository.getDiscussion("nonexistent-id")
   }
 
   @Test
   fun setDiscussionNameUpdatesName() = runBlocking {
-    val discussion = repository.createDiscussion("Old Name", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Old Name", "Desc", testAccount1.uid)
 
-    repository.setDiscussionName(discussion.uid, "New Name")
+    discussionRepository.setDiscussionName(discussion.uid, "New Name")
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertEquals("New Name", updated.name)
     assertEquals(discussion.uid, updated.uid)
   }
 
   @Test
   fun setDiscussionDescriptionUpdatesDescription() = runBlocking {
-    val discussion = repository.createDiscussion("Name", "Old Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Name", "Old Desc", testAccount1.uid)
 
-    repository.setDiscussionDescription(discussion.uid, "New Description")
+    discussionRepository.setDiscussionDescription(discussion.uid, "New Description")
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertEquals("New Description", updated.description)
     assertEquals(discussion.uid, updated.uid)
   }
 
   @Test(expected = DiscussionNotFoundException::class)
   fun deleteDiscussionRemovesDiscussion() = runTest {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.deleteDiscussion(discussion)
-    repository.getDiscussion(discussion.uid)
+    discussionRepository.deleteDiscussion(discussion)
+    discussionRepository.getDiscussion(discussion.uid)
   }
 
   @Test
   fun addUserToDiscussionAddsParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertFalse(updated.admins.contains(testAccount2.uid))
   }
 
   @Test
   fun removeUserFromDiscussionRemovesParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    val withUser = repository.getDiscussion(discussion.uid)
-    repository.removeUserFromDiscussion(withUser, testAccount2.uid)
+    val withUser = discussionRepository.getDiscussion(discussion.uid)
+    discussionRepository.removeUserFromDiscussion(withUser, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertFalse(updated.participants.contains(testAccount2.uid))
   }
 
   @Test
   fun addUsersToDiscussionAddsMultipleParticipants() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    discussionRepository.addUsersToDiscussion(
+        discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.participants.contains(testAccount3.uid))
   }
 
   @Test
   fun removeUsersFromDiscussionRemovesMultipleParticipants() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUsersToDiscussion(
+        discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val withUsers = repository.getDiscussion(discussion.uid)
-    repository.removeUsersFromDiscussion(withUsers, listOf(testAccount2.uid, testAccount3.uid))
+    val withUsers = discussionRepository.getDiscussion(discussion.uid)
+    discussionRepository.removeUsersFromDiscussion(
+        withUsers, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertFalse(updated.participants.contains(testAccount2.uid))
     assertFalse(updated.participants.contains(testAccount3.uid))
   }
 
   @Test
   fun addAdminToDiscussionAddsAdminAndParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addAdminToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addAdminToDiscussion(discussion, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.admins.contains(testAccount2.uid))
   }
 
   @Test
   fun removeAdminFromDiscussionRemovesAdminButKeepsParticipant() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addAdminToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addAdminToDiscussion(discussion, testAccount2.uid)
 
-    val withAdmin = repository.getDiscussion(discussion.uid)
-    repository.removeAdminFromDiscussion(withAdmin, testAccount2.uid)
+    val withAdmin = discussionRepository.getDiscussion(discussion.uid)
+    discussionRepository.removeAdminFromDiscussion(withAdmin, testAccount2.uid)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertFalse(updated.admins.contains(testAccount2.uid))
   }
 
   @Test
   fun addAdminsToDiscussionAddsMultipleAdmins() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.addAdminsToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    discussionRepository.addAdminsToDiscussion(
+        discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.participants.contains(testAccount3.uid))
     assertTrue(updated.admins.contains(testAccount2.uid))
@@ -185,13 +188,15 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun removeAdminsFromDiscussionRemovesMultipleAdmins() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addAdminsToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addAdminsToDiscussion(
+        discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    val withAdmins = repository.getDiscussion(discussion.uid)
-    repository.removeAdminsFromDiscussion(withAdmins, listOf(testAccount2.uid, testAccount3.uid))
+    val withAdmins = discussionRepository.getDiscussion(discussion.uid)
+    discussionRepository.removeAdminsFromDiscussion(
+        withAdmins, listOf(testAccount2.uid, testAccount3.uid))
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
     assertTrue(updated.participants.contains(testAccount3.uid))
     assertFalse(updated.admins.contains(testAccount2.uid))
@@ -200,12 +205,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun sendMessageToDiscussionAppendsMessage() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.sendMessageToDiscussion(discussion, testAccount1, "Hello World")
+    discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Hello World")
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertEquals(1, updated.messages.size)
     assertEquals("Hello World", updated.messages[0].content)
     assertEquals(testAccount1.uid, updated.messages[0].senderId)
@@ -214,7 +219,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun createAccountCreatesNewAccount() = runBlocking {
     val account =
-        repository.createAccount(
+        accountRepository.createAccount(
             "TestUser", "TestUser", email = "TestUser@example.com", photoUrl = null)
 
     assertNotNull(account.uid)
@@ -225,27 +230,29 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun getAccountRetrievesExistingAccount() = runBlocking {
     val created =
-        repository.createAccount(
+        accountRepository.createAccount(
             "TestUser", "TestUser", email = "TestUser@example.com", photoUrl = null)
 
-    val fetched = repository.getAccount(created.uid)
+    val fetched = accountRepository.getAccount(created.uid)
 
     assertEquals(created.uid, fetched.uid)
     assertEquals(created.name, fetched.name)
   }
 
   @Test(expected = AccountNotFoundException::class)
-  fun getAccountThrowsForNonExistentAccount() = runTest { repository.getAccount("nonexistent-id") }
+  fun getAccountThrowsForNonExistentAccount() = runTest {
+    accountRepository.getAccount("nonexistent-id")
+  }
 
   @Test
   fun setAccountNameUpdatesName() = runBlocking {
     val account =
-        repository.createAccount(
+        accountRepository.createAccount(
             "OldName", "OldName", email = "OldName@example.com", photoUrl = null)
 
-    repository.setAccountName(account.uid, "NewName")
+    accountRepository.setAccountName(account.uid, "NewName")
 
-    val updated = repository.getAccount(account.uid)
+    val updated = accountRepository.getAccount(account.uid)
     assertEquals("NewName", updated.name)
     assertEquals(account.uid, updated.uid)
   }
@@ -253,23 +260,23 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test(expected = AccountNotFoundException::class)
   fun deleteAccountRemovesAccount() = runTest {
     val account =
-        repository.createAccount(
+        accountRepository.createAccount(
             "TestUser", "TestUser", email = "TestUser@example.com", photoUrl = null)
 
-    repository.deleteAccount(account.uid)
-    repository.getAccount(account.uid)
+    accountRepository.deleteAccount(account.uid)
+    accountRepository.getAccount(account.uid)
   }
 
   @Test
   fun readDiscussionMessagesResetsUnreadCount() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
-    repository.sendMessageToDiscussion(discussion, testAccount1, "Hello")
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Hello")
 
     val message = Message(testAccount2.uid, "Read")
-    repository.readDiscussionMessages(testAccount2.uid, discussion.uid, message)
+    discussionRepository.readDiscussionMessages(testAccount2.uid, discussion.uid, message)
 
-    val updated = repository.getAccount(testAccount2.uid)
+    val updated = accountRepository.getAccount(testAccount2.uid)
     val preview = updated.previews[discussion.uid]
     assertNotNull(preview)
     assertEquals(0, preview!!.unreadCount)
@@ -277,9 +284,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun listenDiscussionEmitsUpdates() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val flow = repository.listenDiscussion(discussion.uid)
+    val flow = discussionRepository.listenDiscussion(discussion.uid)
     val firstEmission = withTimeout(5000) { flow.first() }
 
     assertEquals(discussion.uid, firstEmission.uid)
@@ -288,9 +295,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun listenAccountEmitsPreviewUpdates() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    val flow = repository.listenAccount(testAccount1.uid)
+    val flow = accountRepository.listenAccount(testAccount1.uid)
     val firstEmission = withTimeout(5000) { flow.first() }
 
     assertTrue(firstEmission.previews.containsKey(discussion.uid))
@@ -301,18 +308,18 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun createPollCreatesMessageWithPoll() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
     val options = listOf("Option 1", "Option 2", "Option 3")
     val question = "What is your favorite?"
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = question,
         options = options,
         allowMultipleVotes = false)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertEquals(1, updated.messages.size)
     val pollMessage = updated.messages[0]
     assertNotNull(pollMessage.poll)
@@ -324,36 +331,36 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun createPollWithMultipleVotesAllowed() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Select all that apply",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.messages[0].poll?.allowMultipleVotes ?: false)
   }
 
   @Test
   fun voteOnPollSingleVoteMode() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Pick one",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = false)
 
-    val updatedDiscussion = repository.getDiscussion(discussion.uid)
+    val updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     val message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     assertEquals(1, poll?.votes?.size)
@@ -362,24 +369,24 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun voteOnPollMultipleVoteMode() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Select all",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     assertEquals(1, poll?.votes?.size)
@@ -390,24 +397,24 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun voteOnPollSingleVoteReplacesPreviousVote() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Pick one",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     assertEquals(listOf(2), poll?.votes?.get(testAccount2.uid))
@@ -415,27 +422,28 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun voteOnPollMultipleUsersCanVote() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUsersToDiscussion(
+        discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Vote",
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 0)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 0)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     assertEquals(3, poll?.votes?.size)
@@ -446,47 +454,47 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun voteOnPollThrowsForInvalidOptionIndex() = runTest {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Pick one",
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    val updatedDiscussion = repository.getDiscussion(discussion.uid)
+    val updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     val message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 5)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 5)
   }
 
   @Test
   fun removeVoteFromPollRemovesSpecificOption() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Select all",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
 
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 1)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     val userVotes = poll?.votes?.get(testAccount2.uid)
@@ -498,25 +506,25 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun removeVoteFromPollRemovesUserIfNoVotesLeft() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Pick one",
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
 
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
 
     assertNotNull(poll)
@@ -526,62 +534,63 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun removeVoteFromPollThrowsIfUserHasNotVoted() = runTest {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Pick one",
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    val updatedDiscussion = repository.getDiscussion(discussion.uid)
+    val updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     val message = updatedDiscussion.messages[0]
-    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun removeVoteFromPollThrowsIfUserDidNotVoteForThatOption() = runTest {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Select all",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 2)
   }
 
   @Test
   fun pollVoteCountsAreCorrect() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUsersToDiscussion(discussion, listOf(testAccount2.uid, testAccount3.uid))
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUsersToDiscussion(
+        discussion, listOf(testAccount2.uid, testAccount3.uid))
 
-    repository.createPoll(
+    discussionRepository.createPoll(
         discussion = discussion,
         creatorId = testAccount1.uid,
         question = "Vote",
         options = listOf("A", "B", "C"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = repository.getDiscussion(discussion.uid)
+    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     var message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = repository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
     message = updatedDiscussion.messages[0]
-    repository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 1)
+    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 1)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     val voteCounts = poll?.getVoteCountsByOption()
@@ -596,51 +605,54 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun voteOnPollThrowsWhenMessageDoesNotContainPoll() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val regularMessage = d1.messages[0]
 
-    repository.voteOnPoll(d1, regularMessage, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(d1, regularMessage, testAccount1.uid, 0)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun voteOnPollThrowsWhenOptionIndexIsNegative() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.createPoll(
+        discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val pollMessage = d1.messages[0]
 
-    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, -1)
+    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, -1)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun voteOnPollThrowsWhenOptionIndexTooLarge() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.createPoll(
+        discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val pollMessage = d1.messages[0]
 
-    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 5)
+    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 5)
   }
 
   @Test
   fun voteOnPollDoesNotAddDuplicateVoteInMultipleVoteMode() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.createPoll(
+        discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val pollMessage = d1.messages[0]
 
     // Vote on same option twice
-    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
-    val d2 = repository.getDiscussion(discussion.uid)
-    repository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 0) // Same option again
+    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+    val d2 = discussionRepository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 0) // Same option again
 
-    val final = repository.getDiscussion(discussion.uid)
+    val final = discussionRepository.getDiscussion(discussion.uid)
     val poll = final.messages[0].poll
     assertNotNull(poll)
     // Should only have one vote for option 0
@@ -649,30 +661,31 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun removeVoteFromPollThrowsWhenMessageDoesNotContainPoll() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val regularMessage = d1.messages[0]
 
-    repository.removeVoteFromPoll(d1, regularMessage, testAccount1.uid, 0)
+    discussionRepository.removeVoteFromPoll(d1, regularMessage, testAccount1.uid, 0)
   }
 
   // Poll Helper Methods Tests
 
   @Test
   fun pollGetUserVotesReturnsCorrectVotes() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
-    repository.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.createPoll(
+        discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val pollMessage = d1.messages[0]
-    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
-    val d2 = repository.getDiscussion(discussion.uid)
-    repository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 2)
+    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+    val d2 = discussionRepository.getDiscussion(discussion.uid)
+    discussionRepository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 2)
 
-    val final = repository.getDiscussion(discussion.uid)
+    val final = discussionRepository.getDiscussion(discussion.uid)
     val poll = final.messages[0].poll
     assertNotNull(poll)
 
@@ -688,15 +701,16 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun pollHasUserVotedWorksCorrectly() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
-    repository.addUserToDiscussion(discussion, testAccount2.uid)
-    repository.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
+    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.createPoll(
+        discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 
-    val d1 = repository.getDiscussion(discussion.uid)
+    val d1 = discussionRepository.getDiscussion(discussion.uid)
     val pollMessage = d1.messages[0]
-    repository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
 
-    val final = repository.getDiscussion(discussion.uid)
+    val final = discussionRepository.getDiscussion(discussion.uid)
     val poll = final.messages[0].poll
     assertNotNull(poll)
 
@@ -708,13 +722,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun createPollWithEmptyContentWorks() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
     val question = "What do you think?"
     val options = listOf("Yes", "No")
 
-    repository.createPoll(discussion, testAccount1.uid, question, options, false)
+    discussionRepository.createPoll(discussion, testAccount1.uid, question, options, false)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     assertEquals(1, updated.messages.size)
     val message = updated.messages[0]
     assertNotNull(message.poll)
@@ -725,12 +739,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test
   fun pollWithManyOptions() = runBlocking {
-    val discussion = repository.createDiscussion("Test", "Desc", testAccount1.uid)
+    val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
     val options = (1..20).map { "Option $it" }
 
-    repository.createPoll(discussion, testAccount1.uid, "Pick one", options, false)
+    discussionRepository.createPoll(discussion, testAccount1.uid, "Pick one", options, false)
 
-    val updated = repository.getDiscussion(discussion.uid)
+    val updated = discussionRepository.getDiscussion(discussion.uid)
     val poll = updated.messages[0].poll
     assertNotNull(poll)
     assertEquals(20, poll!!.options.size)

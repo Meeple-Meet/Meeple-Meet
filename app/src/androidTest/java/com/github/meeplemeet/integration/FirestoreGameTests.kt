@@ -1,7 +1,6 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.GameNotFoundException
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
@@ -15,12 +14,8 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreGameTests : FirestoreTests() {
-  private lateinit var repository: FirestoreGameRepository
-
   @Before
   fun setup() {
-    repository = FirestoreGameRepository(db)
-
     // Clean collection and insert some baseline documents
     runBlocking {
       // Delete existing documents in the collection (defensive)
@@ -59,13 +54,13 @@ class FirestoreGameTests : FirestoreTests() {
       }
     }
 
-    val results = repository.getGames(maxResults = 3)
+    val results = gameRepository.getGames(maxResults = 3)
     assertEquals(3, results.size)
   }
 
   @Test
   fun getGames_returns_all_games_without_exception() = runTest {
-    val results = repository.getGames(maxResults = 10)
+    val results = gameRepository.getGames(maxResults = 10)
 
     assertTrue(results.size >= 3)
     assertTrue(results.any { it.name == "Catan" })
@@ -75,17 +70,17 @@ class FirestoreGameTests : FirestoreTests() {
 
   @Test
   fun getGameById_returns_expected_game() = runTest {
-    val game: Game = repository.getGameById("g_catan")
+    val game: Game = gameRepository.getGameById("g_catan")
     assertEquals("Catan", game.name)
     assertEquals("g_catan", game.uid)
   }
 
   @Test(expected = GameNotFoundException::class)
-  fun getGameById_throws_when_missing() = runTest { repository.getGameById("non-existent-id") }
+  fun getGameById_throws_when_missing() = runTest { gameRepository.getGameById("non-existent-id") }
 
   @Test
   fun getGamesByGenre_returns_only_games_containing_genre() = runTest {
-    val results = repository.getGamesByGenre(2, maxResults = 10)
+    val results = gameRepository.getGamesByGenre(2, maxResults = 10)
     val names = results.map { it.name }
     assertTrue(names.contains("Catan"))
     assertTrue(names.contains("Carcassonne"))
@@ -101,7 +96,7 @@ class FirestoreGameTests : FirestoreTests() {
       }
     }
 
-    val results = repository.getGamesByGenre(99, maxResults = 2)
+    val results = gameRepository.getGamesByGenre(99, maxResults = 2)
     assertEquals(2, results.size)
     // ensure all results contain the genre
     assertTrue(results.all { 99 in it.genres })
@@ -116,7 +111,7 @@ class FirestoreGameTests : FirestoreTests() {
       addGameDoc("g_other", "OtherGame", genres = listOf(2, 3))
     }
 
-    val results = repository.getGamesByGenres(listOf(1, 2), maxResults = 10)
+    val results = gameRepository.getGamesByGenres(listOf(1, 2), maxResults = 10)
     val names = results.map { it.name }
     assertTrue(names.contains("ComplexGame"))
     assertTrue(names.contains("PartialGame"))
@@ -134,7 +129,7 @@ class FirestoreGameTests : FirestoreTests() {
       addGameDoc("g_other", "Only20", genres = listOf(20))
     }
 
-    val results = repository.getGamesByGenres(listOf(10, 20), maxResults = 2)
+    val results = gameRepository.getGamesByGenres(listOf(10, 20), maxResults = 2)
     // limited by maxResults
     assertEquals(2, results.size)
     // all returned games must contain both genres
@@ -145,7 +140,7 @@ class FirestoreGameTests : FirestoreTests() {
   fun searchGamesByNameContains_returns_matching_games_ignoreCase_true() = runTest {
     // baseline already has "Catan" and "Carcassonne"
     val results =
-        repository.searchGamesByNameContains(query = "cat", maxResults = 10, ignoreCase = true)
+        gameRepository.searchGamesByNameContains(query = "cat", maxResults = 10, ignoreCase = true)
     val resultNames = results.map { it.name.lowercase() }
     assertTrue(resultNames.any { it.contains("cat") })
     assertTrue(resultNames.contains("catan"))
@@ -160,7 +155,7 @@ class FirestoreGameTests : FirestoreTests() {
     }
 
     val results =
-        repository.searchGamesByNameContains(query = "cat", maxResults = 2, ignoreCase = true)
+        gameRepository.searchGamesByNameContains(query = "cat", maxResults = 2, ignoreCase = true)
 
     assertTrue(results.size <= 2)
     assertTrue(results.any { it.name == "Catan" } || results.any { it.name == "Catan Junior" })
@@ -169,7 +164,7 @@ class FirestoreGameTests : FirestoreTests() {
   @Test
   fun searchGamesByNameContains_is_empty_for_blank_query() = runTest {
     val results =
-        repository.searchGamesByNameContains(query = "", maxResults = 10, ignoreCase = true)
+        gameRepository.searchGamesByNameContains(query = "", maxResults = 10, ignoreCase = true)
     assertTrue(results.isEmpty())
   }
 
@@ -177,7 +172,7 @@ class FirestoreGameTests : FirestoreTests() {
   fun searchGamesByNameContains_caseSensitive_noMatch_when_caseDiffers() = runTest {
     // baseline: "Catan" exists from setup
     val resultsCaseSensitive =
-        repository.searchGamesByNameContains(query = "cat", maxResults = 10, ignoreCase = false)
+        gameRepository.searchGamesByNameContains(query = "cat", maxResults = 10, ignoreCase = false)
     // "Catan" starts with 'C' — case-sensitive 'cat' should NOT match "Catan"
     assertTrue(resultsCaseSensitive.none { it.name == "Catan" })
   }
@@ -192,7 +187,7 @@ class FirestoreGameTests : FirestoreTests() {
     }
 
     val results =
-        repository.searchGamesByNameContains(query = "cat", maxResults = 2, ignoreCase = true)
+        gameRepository.searchGamesByNameContains(query = "cat", maxResults = 2, ignoreCase = true)
 
     // respect du maxResults
     assertTrue(results.size <= 2)
@@ -210,14 +205,14 @@ class FirestoreGameTests : FirestoreTests() {
     }
 
     val resIgnoreTrue =
-        repository.searchGamesByNameContains(query = "myg", maxResults = 10, ignoreCase = true)
+        gameRepository.searchGamesByNameContains(query = "myg", maxResults = 10, ignoreCase = true)
     assertTrue(
         resIgnoreTrue.any {
           it.name.equals("mygame", ignoreCase = true) || it.name.equals("MyGame", ignoreCase = true)
         })
 
     val resIgnoreFalse =
-        repository.searchGamesByNameContains(query = "myg", maxResults = 10, ignoreCase = false)
+        gameRepository.searchGamesByNameContains(query = "myg", maxResults = 10, ignoreCase = false)
     // case-sensitive: "myg" should match "mygame" but not "MyGame"
     assertTrue(resIgnoreFalse.any { it.name == "mygame" })
     assertTrue(resIgnoreFalse.none { it.name == "MyGame" })

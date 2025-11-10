@@ -10,13 +10,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.github.meeplemeet.model.auth.AuthRepository
-import com.github.meeplemeet.model.auth.AuthUIState
-import com.github.meeplemeet.model.auth.AuthViewModel
+import com.github.meeplemeet.model.auth.SignUpViewModel
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -24,29 +21,14 @@ import org.junit.Test
 class SignUpScreenTest {
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var vm: AuthViewModel
+  private lateinit var vm: SignUpViewModel
 
   @Before
   fun setup() {
-    vm = AuthViewModel(AuthRepository()) // real view model, no mocks
+    vm = SignUpViewModel() // real view model, no mocks
     compose.setContent {
       SignUpScreen(viewModel = vm) // uses defaults for NavController and CredentialManager
     }
-  }
-
-  // ===== helpers =====
-
-  private fun setVmState(state: AuthUIState) {
-    val f =
-        vm::class.java.declaredFields.firstOrNull { field ->
-          field.isAccessible = true
-          val v = field.get(vm)
-          v is MutableStateFlow<*> && v.value is AuthUIState
-        } ?: error("MutableStateFlow<AuthUIState> not found on AuthViewModel")
-
-    @Suppress("UNCHECKED_CAST") val flow = f.get(vm) as MutableStateFlow<AuthUIState>
-    flow.value = state
-    compose.waitForIdle()
   }
 
   // ===== Initial state =====
@@ -278,56 +260,6 @@ class SignUpScreenTest {
     compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
   }
 
-  // ===== Loading state =====
-
-  @Test
-  fun loadingState_disablesAllButtons() {
-    // Even with valid input, buttons should be disabled during loading
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .performTextInput("password123")
-    setVmState(AuthUIState(isLoading = true))
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
-
-  @Test
-  fun loadingState_showsLoadingIndicator() {
-    setVmState(AuthUIState(isLoading = true))
-    compose.onNodeWithTag(SignUpScreenTestTags.LOADING_INDICATOR).assertExists()
-  }
-
-  @Test
-  fun loadingState_notLoading_noLoadingIndicator() {
-    setVmState(AuthUIState(isLoading = false))
-    compose.onNodeWithTag(SignUpScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
-  }
-
-  // ===== Server error messages (Snackbar) =====
-
-  @Test
-  fun errorMessage_emailAlreadyInUse_mappedAndDisplayed() {
-    setVmState(AuthUIState(errorMsg = "auth/email-already-in-use"))
-    compose.waitForIdle()
-    compose.onNodeWithText("Email already in use").assertExists()
-  }
-
-  @Test
-  fun errorMessage_weakPassword_mappedAndDisplayed() {
-    setVmState(AuthUIState(errorMsg = "auth/weak-password"))
-    compose.waitForIdle()
-    compose.onNodeWithText("Password is too weak").assertExists()
-  }
-
-  @Test
-  fun errorMessage_other_unmapped_passthroughDisplayed() {
-    setVmState(AuthUIState(errorMsg = "Some other error"))
-    compose.waitForIdle()
-    compose.onNodeWithText("Some other error").assertExists()
-  }
-
   // ===== Google sign-up button =====
 
   @Test
@@ -335,18 +267,6 @@ class SignUpScreenTest {
     compose
         .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
         .assertTextContains("Connect with Google")
-  }
-
-  @Test
-  fun googleSignUpButton_disabledDuringLoading() {
-    setVmState(AuthUIState(isLoading = true))
-    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
-
-  @Test
-  fun googleSignUpButton_enabledWhenNotLoading() {
-    setVmState(AuthUIState(isLoading = false))
-    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertIsEnabled()
   }
 
   // ===== OR divider =====
