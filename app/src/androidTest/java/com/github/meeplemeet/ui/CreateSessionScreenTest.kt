@@ -2,6 +2,7 @@
 // given as entry. It also corrected errors and improved code efficiency.
 package com.github.meeplemeet.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.*
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
@@ -18,9 +19,13 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import com.github.meeplemeet.ui.sessions.*
+import com.github.meeplemeet.ui.sessions.CreateSessionButton
+import com.github.meeplemeet.ui.sessions.CreateSessionScreen
+import com.github.meeplemeet.ui.sessions.DiscardButton
+import com.github.meeplemeet.ui.sessions.OrganisationSection
+import com.github.meeplemeet.ui.sessions.SessionCreationTestTags
+import com.github.meeplemeet.ui.sessions.SessionForm
 import com.github.meeplemeet.ui.theme.AppTheme
-import com.github.meeplemeet.utils.Checkpoint
 import com.google.firebase.Timestamp
 import io.mockk.*
 import java.lang.reflect.Method
@@ -32,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Rule
