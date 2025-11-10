@@ -2,6 +2,7 @@
 
 package com.github.meeplemeet.ui
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,7 +56,9 @@ import com.github.meeplemeet.ui.theme.AppColors
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -157,12 +161,22 @@ fun MapScreen(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
+          val isDarkTheme = isSystemInDarkTheme()
+          val context = LocalContext.current
+          val mapStyleOptions =
+              if (isDarkTheme) {
+                MapStyleOptions.loadRawResourceStyle(
+                    context, com.github.meeplemeet.R.raw.map_style_dark)
+              } else {
+                null
+              }
           GoogleMap(
               modifier =
                   Modifier.fillMaxSize()
                       .padding(innerPadding)
                       .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
-              cameraPositionState = cameraPositionState) {
+              cameraPositionState = cameraPositionState,
+              properties = MapProperties(mapStyleOptions = mapStyleOptions)) {
                 uiState.geoPins.forEach { gp ->
                   val pos = LatLng(gp.location.latitude, gp.location.longitude)
                   // TODO add better customization icon
