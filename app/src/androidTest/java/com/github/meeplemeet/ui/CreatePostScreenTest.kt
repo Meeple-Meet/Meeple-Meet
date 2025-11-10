@@ -1,5 +1,7 @@
 package com.github.meeplemeet.ui
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,6 +22,10 @@ import org.junit.runner.RunWith
 class CreatePostScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
+  /* ---------- Checkpoint helper ---------- */
+  @get:Rule val ck = Checkpoint.rule()
+
+  fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var repository: PostRepository
   private lateinit var viewModel: CreatePostViewModel
@@ -48,11 +54,6 @@ class CreatePostScreenTest : FirestoreTests() {
 
   private fun tagRemoveButton(tag: String) =
       compose.onNodeWithTag(CreatePostTestTags.tagRemoveIcon(tag))
-
-  /* ---------- Checkpoint helper ---------- */
-  @get:Rule val ck = Checkpoint.rule()
-
-  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   @Before
   fun setup() = runBlocking {
@@ -160,12 +161,14 @@ class CreatePostScreenTest : FirestoreTests() {
       tagAddButton().performClick()
       tagChip("#boardgames").assertExists()
       tagInput().assertTextContains("")
+      removeAllTags()
     }
 
     checkpoint("Add via IME") {
       tagInput().performTextInput("strategy")
       tagInput().performImeAction()
       tagChip("#strategy").assertExists()
+      removeAllTags()
     }
 
     checkpoint("Normalize hash prefix") {
@@ -173,18 +176,14 @@ class CreatePostScreenTest : FirestoreTests() {
       tagAddButton().performClick()
       tagChip("#rpg").assertExists()
       compose.onAllNodesWithTag(CreatePostTestTags.tagChip("##rpg")).assertCountEquals(0)
+      removeAllTags()
     }
 
     checkpoint("Case-insensitive duplicate blocked") {
       tagInput().performTextInput("BoardGames")
       tagAddButton().performClick()
       compose.onAllNodesWithTag(CreatePostTestTags.tagChip("#boardgames")).assertCountEquals(1)
-    }
-
-    checkpoint("Remove tag") {
-      tagChip("#rpg").assertExists()
-      tagRemoveButton("#rpg").performClick()
-      tagChip("#rpg").assertDoesNotExist()
+      removeAllTags()
     }
 
     /* 4. post with tags */
@@ -214,6 +213,7 @@ class CreatePostScreenTest : FirestoreTests() {
         assert(created?.authorId == testAccount.uid)
         assert(created?.tags?.size == 3)
         assert(created?.tags?.containsAll(listOf("#tag1", "#tag2", "#tag3")) == true)
+        removeAllTags()
       }
     }
 
@@ -234,6 +234,7 @@ class CreatePostScreenTest : FirestoreTests() {
         assert(created != null)
         assert(created?.tags?.isEmpty() == true)
       }
+      removeAllTags()
     }
 
     /* 6. navigation */
@@ -275,7 +276,10 @@ class CreatePostScreenTest : FirestoreTests() {
         repeat(10) { i -> assert(created?.tags?.contains("#tag$i") == true) }
       }
     }
+  }
 
+  @Test
+  fun fullIntegration() {
     /* 8. integration workflow */
     checkpoint("Full integration – realistic workflow") {
       titleField().performTextClearance()
@@ -323,5 +327,29 @@ class CreatePostScreenTest : FirestoreTests() {
         .getPosts()
         .filter { it.authorId == testAccount.uid }
         .forEach { repository.deletePost(it.id) }
+  }
+
+  private fun removeAllTags() {
+    with(compose) {
+      while (true) {
+        // 1. collect all tags that start with our prefix
+        val removeTags =
+            onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.TestTag))
+                .fetchSemanticsNodes()
+                .mapNotNull { node ->
+                  node.config.getOrNull(SemanticsProperties.TestTag)?.takeIf {
+                    it.startsWith("create_post_tag_remove:")
+                  }
+                }
+        if (removeTags.isEmpty()) break // nothing left → finished
+
+        // 2. click the first one; if it no longer exists we are done
+        val tag = removeTags.first()
+        val node = onNode(hasTestTag(tag))
+        if (!node.isDisplayed()) break // row disappeared → done
+        node.performClick()
+        waitForIdle() // wait for UI to settle
+      }
+    }
   }
 }
