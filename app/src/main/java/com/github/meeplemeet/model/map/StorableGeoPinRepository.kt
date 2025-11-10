@@ -1,8 +1,7 @@
 package com.github.meeplemeet.model.map
 
-import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.shared.location.Location
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -12,19 +11,13 @@ import org.imperiumlabs.geofirestore.GeoFirestore
 import org.imperiumlabs.geofirestore.extension.removeLocation
 import org.imperiumlabs.geofirestore.extension.setLocation
 
-/** Firestore collection path for storing and retrieving map pins documents. */
-const val GEO_PIN_COLLECTION_PATH = "geo_pins"
-
 /**
  * Repository responsible for managing map pins in Firestore. Each pin includes geolocation data
  * stored via the GeoFirestore library.
  *
  * @property db Firestore instance used to access the pins collection.
  */
-class StorableGeoPinRepository(private val db: FirebaseFirestore = FirebaseProvider.db) {
-  /** Reference to the Firestore collection where pins are stored. */
-  private val geoPinCollection = db.collection(GEO_PIN_COLLECTION_PATH)
-
+class StorableGeoPinRepository : FirestoreRepository("geo_pins") {
   /**
    * Creates or replaces a geo-pin document in Firestore using the given ID.
    *
@@ -41,7 +34,7 @@ class StorableGeoPinRepository(private val db: FirebaseFirestore = FirebaseProvi
   suspend fun upsertGeoPin(ref: String, type: PinType, location: Location): StorableGeoPin {
     val pin = StorableGeoPin(uid = ref, type = type)
 
-    geoPinCollection.document(pin.uid).set(toNoUid(pin)).await()
+    collection.document(pin.uid).set(toNoUid(pin)).await()
     setGeoLocation(pin.uid, location)
 
     return pin
@@ -55,7 +48,7 @@ class StorableGeoPinRepository(private val db: FirebaseFirestore = FirebaseProvi
    */
   suspend fun deleteGeoPin(ref: String) {
     removeGeoLocation(ref)
-    geoPinCollection.document(ref).delete().await()
+    collection.document(ref).delete().await()
   }
 
   /**
@@ -65,7 +58,7 @@ class StorableGeoPinRepository(private val db: FirebaseFirestore = FirebaseProvi
    * @param location Location to associate with the pin.
    */
   private suspend fun setGeoLocation(uid: String, location: Location) {
-    val geoFirestore = GeoFirestore(geoPinCollection)
+    val geoFirestore = GeoFirestore(collection)
     suspendCoroutine { cont ->
       geoFirestore.setLocation(uid, GeoPoint(location.latitude, location.longitude)) { exception ->
         if (exception != null) cont.resumeWithException(exception) else cont.resume(Unit)
@@ -79,7 +72,7 @@ class StorableGeoPinRepository(private val db: FirebaseFirestore = FirebaseProvi
    * @param uid Document ID of the pin.
    */
   private suspend fun removeGeoLocation(uid: String) {
-    val geoFirestore = GeoFirestore(geoPinCollection)
+    val geoFirestore = GeoFirestore(collection)
     suspendCoroutine { cont ->
       geoFirestore.removeLocation(uid) { exception ->
         if (exception != null) cont.resumeWithException(exception) else cont.resume(Unit)

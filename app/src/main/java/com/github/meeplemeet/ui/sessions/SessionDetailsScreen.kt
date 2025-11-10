@@ -54,7 +54,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,20 +63,19 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
-import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
-import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
-import com.github.meeplemeet.ui.components.GameSearchField
 import com.github.meeplemeet.ui.components.IconTextField
 import com.github.meeplemeet.ui.components.SectionCard
+import com.github.meeplemeet.ui.components.SessionGameSearchBar
+import com.github.meeplemeet.ui.components.SessionLocationSearchBar
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
@@ -89,7 +87,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Calendar
-import kotlinx.coroutines.launch
 
 /* =======================================================================
  * Test tags for UI tests
@@ -145,7 +142,7 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
  * regular members.
  *
  * @param viewModel Global FirestoreViewModel for retrieving discussions
- * @param sessionViewModel ViewModel managing session-specific operations
+ * @param viewModel ViewModel managing session-specific operations
  * @param account Currently logged-in user
  * @param initial Initial session form state (optional)
  * @param discussion The discussion linked to the session
@@ -157,18 +154,15 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
 fun SessionDetailsScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: DiscussionViewModel,
-    sessionViewModel: SessionViewModel,
+    viewModel: SessionViewModel = viewModel(),
     initial: SessionForm = SessionForm(),
     onBack: () -> Unit = {},
 ) {
   var form by remember { mutableStateOf(initial) }
-  val gameUIState by sessionViewModel.gameUIState.collectAsState()
-  val locationUi by sessionViewModel.locationUIState.collectAsState()
+  val gameUIState by viewModel.gameUIState.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
-  val scope = rememberCoroutineScope()
-  val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   // Fetch game as soon as we know the proposed game.
   // This LaunchedEffect triggers whenever the session's gameId changes,
@@ -176,17 +170,17 @@ fun SessionDetailsScreen(
   val sessionGameId = discussion.session?.gameId.orEmpty()
   LaunchedEffect(sessionGameId) {
     if (sessionGameId.isNotBlank()) {
-      sessionViewModel.getGameFromId(sessionGameId)
+      viewModel.getGameFromId(sessionGameId)
     }
   }
 
   val game = gameUIState.fetchedGame
   val session = discussion.session!!
 
-  // This LaunchedEffect block updates the form state when the session or game changes.
+  // This LaunchedEffect block updates the form state when the session changes.
   // It fetches participant accounts and updates the UI fields accordingly.
   // If the game info is missing, it triggers a fetch for the proposed game.
-  LaunchedEffect(session.gameId, game) {
+  LaunchedEffect(session.gameId) {
     val (date, time) = timestampToLocal(session.date)
 
     viewModel.getAccounts(session.participants) { accounts ->
@@ -199,13 +193,10 @@ fun SessionDetailsScreen(
               participants = accounts,
               locationText = session.location.name)
 
-      if (form.proposedGameString.isNotBlank())
-          sessionViewModel.getGameFromId(form.proposedGameString)
+      if (form.proposedGameString.isNotBlank()) viewModel.getGameFromId(form.proposedGameString)
     }
 
-    if (session.gameId.isNotBlank() && game == null) {
-      sessionViewModel.getGameFromId(session.gameId)
-    }
+    if (session.gameId.isNotBlank() && game == null) viewModel.getGameFromId(session.gameId)
   }
 
   // Determine if the current user is an admin or the creator of the discussion.
@@ -219,13 +210,13 @@ fun SessionDetailsScreen(
             onReturn = {
               // Only admins/owners can persist changes to the session on back navigation.
               if (isCurrUserAdmin) {
-                sessionViewModel.updateSession(
+                viewModel.updateSession(
                     requester = account,
                     discussion = discussion,
                     name = form.title,
-                    gameId = form.proposedGameString,
+                    gameId = gameUIState.fetchedGame?.uid ?: session.gameId,
                     date = toTimestamp(form.date, form.time),
-                    location = Location(0.0, 0.0, form.locationText),
+                    location = locationUi.selectedLocation ?: session.location,
                     newParticipantList = form.participants.ifEmpty { emptyList() })
               }
               onBack()
@@ -244,11 +235,11 @@ fun SessionDetailsScreen(
                     val updatedParticipants = form.participants.filterNot { it.uid == account.uid }
                     discussion.let { disc ->
                       if (updatedParticipants.isNotEmpty())
-                          sessionViewModel.updateSession(
+                          viewModel.updateSession(
                               requester = account,
                               discussion = disc,
                               newParticipantList = updatedParticipants)
-                      else sessionViewModel.deleteSession(account, disc)
+                      else viewModel.deleteSession(account, disc)
                       onBack()
                     }
                   },
@@ -263,7 +254,7 @@ fun SessionDetailsScreen(
 
               // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
               DeleteSessionBTN(
-                  sessionViewModel = sessionViewModel,
+                  viewModel = viewModel,
                   currentUser = account,
                   discussion = discussion,
                   userIsAdmin = isCurrUserAdmin,
@@ -288,11 +279,9 @@ fun SessionDetailsScreen(
                   discussion = discussion,
                   account = account,
                   gameUIState = gameUIState,
-                  locationUi = locationUi,
                   onValueChangeTitle = { form = form.copy(title = it) },
-                  showError = showError,
                   isCurrUserAdmin = isCurrUserAdmin,
-                  sessionViewModel = sessionViewModel)
+                  sessionViewModel = viewModel)
 
               // Participants section (chips, add/remove)
               ParticipantsSection(
@@ -302,12 +291,12 @@ fun SessionDetailsScreen(
                   game = game,
                   onRemoveParticipant = { p ->
                     form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
-                    sessionViewModel.updateSession(
+                    viewModel.updateSession(
                         account, discussion, newParticipantList = form.participants)
                   },
                   onAddParticipant = { p ->
                     form = form.copy(participants = form.participants + p)
-                    sessionViewModel.updateSession(
+                    viewModel.updateSession(
                         account, discussion, newParticipantList = form.participants)
                   },
                   discussion = discussion,
@@ -330,7 +319,7 @@ fun ParticipantsSection(
     onRemoveParticipant: (Account) -> Unit,
     onAddParticipant: (Account) -> Unit,
     discussion: Discussion,
-    viewModel: DiscussionViewModel
+    viewModel: SessionViewModel
 ) {
   val participants = form.participants
   val currentCount = participants.size
@@ -535,26 +524,16 @@ private fun AvatarBubble(name: String) {
 
 @Composable
 private fun ProposedGameSection(
-    sessionViewModel: SessionViewModel,
+    viewModel: SessionViewModel,
     currentUser: Account,
     discussion: Discussion,
     editable: Boolean,
     gameUIState: GameUIState,
-    onChooseGame: (String) -> Unit
 ) {
 
   Column(modifier = Modifier.fillMaxWidth()) {
     if (editable) {
-      GameSearchField(
-          query = gameUIState.gameQuery,
-          onQueryChange = { sessionViewModel.setGameQuery(currentUser, discussion, it) },
-          results = gameUIState.gameSuggestions,
-          onPick = {
-            onChooseGame(it.uid)
-            sessionViewModel.setGame(currentUser, discussion, it)
-          },
-          isLoading = false,
-          modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.PROPOSED_GAME))
+      SessionGameSearchBar(currentUser, discussion, viewModel, gameUIState.fetchedGame)
     } else {
       val displayedName = gameUIState.fetchedGame?.name ?: "Loading..."
       Row {
@@ -590,11 +569,9 @@ fun OrganizationSection(
     onValueChangeTitle: (String) -> Unit,
     isCurrUserAdmin: Boolean,
     gameUIState: GameUIState,
-    locationUi: LocationUIState,
     discussion: Discussion,
     form: SessionForm,
     onFormChange: (SessionForm) -> Unit,
-    showError: (String) -> Unit,
     editable: Boolean = false
 ) {
   SectionCard(
@@ -610,11 +587,11 @@ fun OrganizationSection(
         Spacer(Modifier.height(10.dp))
 
         ProposedGameSection(
-            sessionViewModel = sessionViewModel,
+            viewModel = sessionViewModel,
             currentUser = account,
             discussion = discussion,
             editable = editable,
-            gameUIState = gameUIState) {}
+            gameUIState = gameUIState)
 
         Spacer(Modifier.height(10.dp))
 
@@ -636,13 +613,11 @@ fun OrganizationSection(
 
         if (editable) {
           // Admins and creators: interactive search field
-          LocationSearchBar(
-              viewModel = sessionViewModel,
-              locationUi = locationUi,
-              currentUser = account,
-              discussion = discussion,
-              onError = showError,
-              onPick = {})
+          SessionLocationSearchBar(
+              account,
+              discussion,
+              sessionViewModel,
+          )
         } else {
           // Members: plain read-only text field
           IconTextField(
@@ -749,7 +724,6 @@ fun UserChip(
  * @param range Range of values that the slider can attain
  * @param values Values that be attained by the slider
  * @param steps Number of steps to display
- * @param editable whether the current user can edit the slider (Admin/Owner only)
  */
 @Composable
 fun PillSliderNoBackground(
@@ -878,7 +852,7 @@ fun TimeField(
 /**
  * Deletes the currently viewed session - Only accessible with Admin/Owner rights
  *
- * @param sessionViewModel ViewModel used to delete the session
+ * @param viewModel ViewModel used to delete the session
  * @param currentUser User performing the action
  * @param discussion Discussion the session is tied to
  * @param userIsAdmin Boolean to check whether the user can see this button
@@ -886,7 +860,7 @@ fun TimeField(
  */
 @Composable
 fun DeleteSessionBTN(
-    sessionViewModel: SessionViewModel,
+    viewModel: SessionViewModel,
     currentUser: Account,
     discussion: Discussion,
     userIsAdmin: Boolean,
@@ -894,7 +868,7 @@ fun DeleteSessionBTN(
 ) {
   if (userIsAdmin) {
     OutlinedButton(
-        onClick = { sessionViewModel.deleteSession(currentUser, discussion) },
+        onClick = { viewModel.deleteSession(currentUser, discussion) },
         shape = CircleShape,
         border = BorderStroke(1.5.dp, AppColors.negative),
         modifier = modifier.testTag(SessionTestTags.DELETE_SESSION_BUTTON),

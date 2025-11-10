@@ -134,7 +134,9 @@ open class SearchViewModel(
    * @param game The [Game] object to select
    */
   fun setGame(game: Game) {
-    _gameUIState.value = _gameUIState.value.copy(selectedGameUid = game.uid, gameQuery = game.name)
+    _gameUIState.value =
+        _gameUIState.value.copy(
+            selectedGameUid = game.uid, gameQuery = game.name, fetchedGame = game)
   }
 
   /**
@@ -161,7 +163,9 @@ open class SearchViewModel(
     if (query.isNotBlank()) {
       gameQueryFlow.tryEmit(query)
     } else {
-      _gameUIState.value = _gameUIState.value.copy(gameSuggestions = emptyList())
+      _gameUIState.value =
+          _gameUIState.value.copy(
+              gameSuggestions = emptyList(), fetchedGame = null, selectedGameUid = "")
     }
   }
 

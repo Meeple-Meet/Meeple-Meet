@@ -5,9 +5,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
-import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.discussions.CreateDiscussionScreen
@@ -28,10 +26,8 @@ class DiscussionAddScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
   private val nav: NavigationActions = mockk(relaxed = true)
 
-  private lateinit var repo: DiscussionRepository
-  private lateinit var handlesRepo: HandlesRepository
   private lateinit var vm: DiscussionViewModel
-  private lateinit var handlesVm: HandlesViewModel
+  private lateinit var handlesVm: CreateAccountViewModel
   private lateinit var me: Account
 
   private val createdAccounts = mutableListOf<Account>()
@@ -58,10 +54,8 @@ class DiscussionAddScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = DiscussionRepository()
-    handlesRepo = HandlesRepository()
-    vm = DiscussionViewModel(repo)
-    handlesVm = HandlesViewModel(handlesRepo)
+    vm = DiscussionViewModel()
+    handlesVm = CreateAccountViewModel(handlesRepository)
 
     val alice = newAccount("Alice", "alice")
     val frank = newAccount("Frank", "frank")
@@ -75,12 +69,7 @@ class DiscussionAddScreenTest : FirestoreTests() {
     me = frank
 
     compose.setContent {
-      CreateDiscussionScreen(
-          onBack = { nav.goBack() },
-          onCreate = { nav.goBack() },
-          viewModel = vm,
-          handleViewModel = handlesVm,
-          account = me)
+      CreateDiscussionScreen(onBack = { nav.goBack() }, onCreate = { nav.goBack() }, account = me)
     }
   }
 
@@ -163,8 +152,8 @@ class DiscussionAddScreenTest : FirestoreTests() {
 
   @After
   fun tearDown() = runBlocking {
-    createdHandles.forEach { runCatching { handlesRepo.deleteAccountHandle(it) } }
-    createdAccounts.forEach { runCatching { repo.deleteAccount(it.uid) } }
+    createdHandles.forEach { runCatching { handlesRepository.deleteAccountHandle(it) } }
+    createdAccounts.forEach { runCatching { accountRepository.deleteAccount(it.uid) } }
   }
 
   /* --------------------- helper functions --------------------- */
@@ -177,13 +166,13 @@ class DiscussionAddScreenTest : FirestoreTests() {
    */
   private suspend fun newAccount(name: String, handleBase: String): Account {
     val uid = randomUid()
-    val acc = repo.createAccount(uid, name, "$handleBase@test.com", null)
+    val acc = accountRepository.createAccount(uid, name, "$handleBase@test.com", null)
     createHandleOnce(uid, handleBase)
     return acc.copy(handle = handleBase)
   }
 
   private suspend fun createHandleOnce(uid: String, handle: String) {
-    runCatching { handlesRepo.deleteAccountHandle(handle) }
-    handlesRepo.createAccountHandle(uid, handle)
+    runCatching { handlesRepository.deleteAccountHandle(handle) }
+    handlesRepository.createAccountHandle(uid, handle)
   }
 }

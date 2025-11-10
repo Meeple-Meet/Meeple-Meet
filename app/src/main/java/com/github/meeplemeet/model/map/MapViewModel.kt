@@ -4,7 +4,6 @@ package com.github.meeplemeet.model.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.meeplemeet.FirebaseProvider.db
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.GeoPoint
@@ -46,13 +45,14 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  *   [updateRadius], or [updateCenterAndRadius]; there is **no need** to restart the query.
  */
 class MapViewModel(
-    private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews
+    private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews,
+    private val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   /** Public observable state of the map, containing geo-pins, errors, and selection info. */
   val uiState: StateFlow<MapUIState> = _uiState.asStateFlow()
 
-  private val geoPinCollection = db.collection(GEO_PIN_COLLECTION_PATH)
+  private val geoPinCollection = geoPinRepository.collection
   private var geoQuery: GeoQuery? = null
 
   /**

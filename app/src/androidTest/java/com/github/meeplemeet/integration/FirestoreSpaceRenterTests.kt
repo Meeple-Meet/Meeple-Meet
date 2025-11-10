@@ -2,16 +2,12 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.CreateSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.EditSpaceRenterViewModel
-import com.github.meeplemeet.model.space_renter.SPACE_RENTER_COLLECTION_PATH
 import com.github.meeplemeet.model.space_renter.Space
-import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
@@ -26,8 +22,6 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreSpaceRenterTests : FirestoreTests() {
-  private lateinit var spaceRenterRepository: SpaceRenterRepository
-  private lateinit var discussionRepository: DiscussionRepository
   private lateinit var createSpaceRenterViewModel: CreateSpaceRenterViewModel
   private lateinit var spaceRenterViewModel: SpaceRenterViewModel
   private lateinit var editSpaceRenterViewModel: EditSpaceRenterViewModel
@@ -41,8 +35,6 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    spaceRenterRepository = SpaceRenterRepository(db)
-    discussionRepository = DiscussionRepository()
     createSpaceRenterViewModel = CreateSpaceRenterViewModel(spaceRenterRepository)
     spaceRenterViewModel = SpaceRenterViewModel(spaceRenterRepository)
     editSpaceRenterViewModel = EditSpaceRenterViewModel(spaceRenterRepository)
@@ -50,10 +42,10 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     runBlocking {
       // Create test accounts
       testAccount1 =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "alice", "Alice", email = "alice@spacerenter.com", photoUrl = null)
       testAccount2 =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "bob", "Bob", email = "bob@spacerenter.com", photoUrl = null)
     }
 
@@ -76,7 +68,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   fun tearDown() {
     runBlocking {
       // Clean up space renters collection
-      val snapshot = db.collection(SPACE_RENTER_COLLECTION_PATH).get().await()
+      val snapshot = spaceRenterRepository.collection.get().await()
       val batch = db.batch()
       snapshot.documents.forEach { batch.delete(it.reference) }
       batch.commit().await()
@@ -528,8 +520,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours,
             spaces = listOf(testSpace1))
 
-    val geoPinSnapshot =
-        db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id).get().await()
+    val geoPinSnapshot = geoPinRepository.collection.document(spaceRenter.id).get().await()
 
     assert(geoPinSnapshot.exists())
     assertEquals("SPACE", geoPinSnapshot.getString("type"))
@@ -544,12 +535,12 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    val beforeDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id).get().await()
+    val beforeDelete = geoPinRepository.collection.document(spaceRenter.id).get().await()
     assert(beforeDelete.exists())
 
     spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
 
-    val afterDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id).get().await()
+    val afterDelete = geoPinRepository.collection.document(spaceRenter.id).get().await()
     assert(!afterDelete.exists())
   }
 
@@ -562,7 +553,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(spaceRenter.id)
+    val geoPinRef = geoPinRepository.collection.document(spaceRenter.id)
 
     // Location unchanged
     spaceRenterRepository.updateSpaceRenter(spaceRenter.id, name = "Updated Name")

@@ -20,18 +20,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shared.LocationUIState
+import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.sessions.LocationSearchBar
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.random.Random
 
 /* ================================================================================================
  * Shared Test Tags
@@ -69,25 +68,23 @@ object ShopFormUi {
   }
 
   object Strings {
-    const val LabelShop = "Shop"
-    const val PlaceholderShop = "Shop name"
+    const val SHOP_LABEL = "Shop"
+    const val SHOP_PLACEHOLDER = "Shop name"
 
-    const val LabelEmail = "Email"
-    const val PlaceholderEmail = "Email"
+    const val EMAIL_LABEL = "Email"
+    const val EMAIL_PLACEHOLDER = "Email"
 
-    const val LabelPhone = "Contact info"
-    const val PlaceholderPhone = "Phone number"
+    const val PHONE_LABEL = "Contact info"
+    const val PHONE_PLACEHOLDER = "Phone number"
 
-    const val LabelLink = "Link"
-    const val PlaceholderLink = "Website/Instagram link"
+    const val LINK_LABEL = "Link"
+    const val LINK_PLACEHOLDER = "Website/Instagram link"
 
-    const val PlaceholderLocation = "Search locations…"
+    const val COLLAPSE = "Collapse"
+    const val EXPAND = "Expand"
 
-    const val Collapse = "Collapse"
-    const val Expand = "Expand"
-
-    const val ClosedMsg = "Closed"
-    const val Open24Msg = "Open 24 hours"
+    const val CLOSED_LABEL = "Closed"
+    const val OPEN24_LABEL = "Open 24 hours"
   }
 
   val dayNames: List<String> by lazy {
@@ -102,7 +99,9 @@ object ShopFormUi {
 object TimeUi {
   const val OPEN24_START = "00:00"
   const val OPEN24_END = "23:59"
-  val fmt12: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+
+  fun fmt12(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+      DateTimeFormatter.ofPattern("h:mm a", locale)
 }
 
 /**
@@ -131,7 +130,7 @@ fun String.tryParseTime(): LocalTime? =
                     .replace(Regex("\\s+"), " ")
                     .trim()
                     .uppercase(Locale.getDefault()),
-                TimeUi.fmt12)
+                TimeUi.fmt12())
           } else {
             val (h, mRest) = split(":")
             LocalTime.of(h.toInt(), mRest.take(2).toInt())
@@ -147,16 +146,16 @@ fun String.tryParseTime(): LocalTime? =
  */
 fun humanize(hours: List<TimeSlot>): String =
     when {
-      hours.isEmpty() -> ShopFormUi.Strings.ClosedMsg
+      hours.isEmpty() -> ShopFormUi.Strings.CLOSED_LABEL
       hours.size == 1 &&
           hours[0].open == TimeUi.OPEN24_START &&
-          hours[0].close == TimeUi.OPEN24_END -> ShopFormUi.Strings.Open24Msg
+          hours[0].close == TimeUi.OPEN24_END -> ShopFormUi.Strings.OPEN24_LABEL
       else -> {
         // Sort by opening time
         val sorted = hours.sortedBy { ts -> ts.open?.tryParseTime() ?: LocalTime.MAX }
         sorted.joinToString("\n") { slot ->
-          val s = slot.open?.let { it.tryParseTime()?.format(TimeUi.fmt12) ?: it } ?: "-"
-          val e = slot.close?.let { it.tryParseTime()?.format(TimeUi.fmt12) ?: it } ?: "-"
+          val s = slot.open?.let { it.tryParseTime()?.format(TimeUi.fmt12()) ?: it } ?: "-"
+          val e = slot.close?.let { it.tryParseTime()?.format(TimeUi.fmt12()) ?: it } ?: "-"
           "$s - $e"
         }
       }
@@ -169,20 +168,6 @@ fun humanize(hours: List<TimeSlot>): String =
 /** Returns an empty list of opening hours for each day of the week. */
 fun emptyWeek(): List<OpeningHours> =
     List(7) { day -> OpeningHours(day = day, hours = emptyList()) }
-
-/**
- * Mocks location suggestions based on a query string. Kept local and private for simplicity until a
- * real provider replaces it.
- */
-private fun mockLocationSuggestionsFrom(query: String, max: Int = 5): List<Location> {
-  if (query.isBlank()) return emptyList()
-  val rng = Random(query.hashCode())
-  return List(max) { i ->
-    val lat = rng.nextDouble(-90.0, 90.0)
-    val lon = rng.nextDouble(-180.0, 180.0)
-    Location(latitude = lat, longitude = lon, name = "$query #${i + 1}")
-  }
-}
 
 /**
  * Validates if the provided email string is in a valid email format.
@@ -207,12 +192,11 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
  * @param onPhone Callback function to update the phone.
  * @param link The current value of the link field.
  * @param onLink Callback function to update the link.
- * @param addressText The current value of the address text field.
- * @param onAddressText Callback function to update the address text.
  * @param onPickLocation Callback function to handle location selection.
  */
 @Composable
 fun RequiredInfoSection(
+    shop: Shop?,
     shopName: String,
     onShopName: (String) -> Unit,
     email: String,
@@ -221,25 +205,21 @@ fun RequiredInfoSection(
     onPhone: (String) -> Unit,
     link: String,
     onLink: (String) -> Unit,
-    addressText: String,
-    onAddressText: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
-    locationUi: LocationUIState,
-    showError: (String) -> Unit = {},
     viewModel: ShopSearchViewModel,
     owner: Account
 ) {
   Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP)) {
     LabeledField(
-        label = ShopFormUi.Strings.LabelShop,
-        placeholder = ShopFormUi.Strings.PlaceholderShop,
+        label = ShopFormUi.Strings.SHOP_LABEL,
+        placeholder = ShopFormUi.Strings.SHOP_PLACEHOLDER,
         value = shopName,
         onValueChange = onShopName)
   }
   Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL)) {
     LabeledField(
-        label = ShopFormUi.Strings.LabelEmail,
-        placeholder = ShopFormUi.Strings.PlaceholderEmail,
+        label = ShopFormUi.Strings.EMAIL_LABEL,
+        placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
         value = email,
         onValueChange = onEmail,
         keyboardType = KeyboardType.Email)
@@ -253,8 +233,8 @@ fun RequiredInfoSection(
   }
   Box(Modifier.testTag(ShopFormTestTags.FIELD_PHONE)) {
     LabeledField(
-        label = ShopFormUi.Strings.LabelPhone,
-        placeholder = ShopFormUi.Strings.PlaceholderPhone,
+        label = ShopFormUi.Strings.PHONE_LABEL,
+        placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
         value = phone,
         onValueChange = onPhone,
         keyboardType = KeyboardType.Phone)
@@ -262,21 +242,19 @@ fun RequiredInfoSection(
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK)) {
     LabeledField(
-        label = ShopFormUi.Strings.LabelLink,
-        placeholder = ShopFormUi.Strings.PlaceholderLink,
+        label = ShopFormUi.Strings.LINK_LABEL,
+        placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
         value = link,
         onValueChange = onLink,
         keyboardType = KeyboardType.Uri)
   }
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
-    LocationSearchBar(
-        viewModel = viewModel,
-        locationUi = locationUi,
-        currentUser = owner,
-        shop = null,
-        onError = showError,
-        onPick = onPickLocation)
+    ShopLocationSearchBar(
+        owner,
+        shop,
+        viewModel,
+        inputFieldTestTag = com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_FIELD)
   }
 }
 
@@ -349,7 +327,7 @@ fun CollapsibleSection(
                 Icon(
                     Icons.Filled.ExpandMore,
                     contentDescription =
-                        if (expanded) ShopFormUi.Strings.Collapse else ShopFormUi.Strings.Expand,
+                        if (expanded) ShopFormUi.Strings.COLLAPSE else ShopFormUi.Strings.EXPAND,
                     modifier = Modifier.rotate(arrowRotation))
               }
         }
@@ -419,8 +397,6 @@ fun OpeningHoursEditor(
  * @param gameQuery The current query string for searching games.
  * @param gameSuggestions List of game suggestions based on the current query.
  * @param isSearching Boolean indicating if a search operation is in progress.
- * @param picked The currently picked game.
- * @param onPickedChange Callback function to update the picked game.
  * @param qty The quantity of the picked game.
  * @param onQtyChange Callback function to update the quantity of the picked game.
  * @param onSetGameQuery Callback function to update the game search query.
@@ -429,14 +405,13 @@ fun OpeningHoursEditor(
  */
 @Composable
 fun GameStockPicker(
+    owner: Account,
+    shop: Shop?,
+    viewModel: ShopSearchViewModel,
+    gameUIState: GameUIState,
     show: Boolean,
     stock: List<Pair<Game, Int>>,
     onStockChange: (List<Pair<Game, Int>>) -> Unit,
-    gameQuery: String,
-    gameSuggestions: List<Game>,
-    isSearching: Boolean,
-    picked: Game?,
-    onPickedChange: (Game?) -> Unit,
     qty: Int,
     onQtyChange: (Int) -> Unit,
     onSetGameQuery: (String) -> Unit,
@@ -448,28 +423,24 @@ fun GameStockPicker(
   val existing = remember(stock) { stock.map { it.first.uid }.toSet() }
   Box(Modifier.testTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER)) {
     GameStockDialog(
-        query = gameQuery,
+        owner,
+        shop,
+        viewModel = viewModel,
+        gameUIState = gameUIState,
         onQueryChange = onSetGameQuery,
-        results = gameSuggestions,
-        isLoading = isSearching,
-        onPickGame = { g ->
-          onPickedChange(g)
-          onSetGame(g)
-        },
-        selectedGame = picked,
         quantity = qty,
         onQuantityChange = onQtyChange,
         existingIds = existing,
         onDismiss = {
           onDismiss()
           onQtyChange(1)
-          onPickedChange(null)
           onSetGameQuery("")
         },
         onSave = {
-          picked?.let { g -> onStockChange((stock + (g to qty)).distinctBy { it.first.uid }) }
+          gameUIState.fetchedGame?.let { g ->
+            onStockChange((stock + (g to qty)).distinctBy { it.first.uid })
+          }
           onQtyChange(1)
-          onPickedChange(null)
           onSetGameQuery("")
           onDismiss()
         })

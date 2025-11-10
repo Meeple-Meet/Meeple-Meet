@@ -4,11 +4,10 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
 import com.github.meeplemeet.ui.auth.CreateAccountTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -25,10 +24,9 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var repo: DiscussionRepository
-  private lateinit var firestoreVm: DiscussionViewModel
+  private lateinit var mainActivityViewModel: MainActivityViewModel
   private lateinit var handlesRepo: HandlesRepository
-  private lateinit var handlesVm: HandlesViewModel
+  private lateinit var handlesVm: CreateAccountViewModel
   private lateinit var me: Account
 
   /* handles created by THIS test run */
@@ -56,22 +54,17 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    repo = DiscussionRepository()
-    firestoreVm = DiscussionViewModel(repo)
+    mainActivityViewModel = MainActivityViewModel()
     handlesRepo = HandlesRepository()
-    handlesVm = HandlesViewModel(handlesRepo)
+    handlesVm = CreateAccountViewModel(handlesRepo)
 
-    val bootstrapRepo = DiscussionRepository()
     val uid = "uid_" + UUID.randomUUID().toString().take(8)
-    me = bootstrapRepo.createAccount(uid, "Frank", "frank@test.com", null)
+    me = accountRepository.createAccount(uid, "Frank", "frank@test.com", null)
 
     compose.setContent {
       AppTheme(ThemeMode.DARK) {
         CreateAccountScreen(
-            discussionVM = firestoreVm,
-            handlesVM = handlesVm,
-            account = me,
-            onCreate = { report["onCreate triggered"] = true })
+            account = me, viewModel = handlesVm, onCreate = { report["onCreate triggered"] = true })
       }
     }
   }
@@ -101,7 +94,7 @@ class CreateAccountScreenTest : FirestoreTests() {
 
     compose.waitUntil(timeoutMillis = 3_000) { handlesVm.errorMessage.value.isNotEmpty() }
     checkpoint("Error message for taken handle") {
-      handleError().assertTextContains("Handle already taken", substring = true)
+      handleError().assertTextContains("This handle has already been assigned", substring = true)
     }
 
     /* === 4. empty handle → no creation === */
@@ -133,36 +126,67 @@ class CreateAccountScreenTest : FirestoreTests() {
     }
 
     /* === 7. using the checkbox properly updates account roles */
+    // Clear previous data and set up for new submission
+    handleField().performTextClearance()
+    usernameField().performTextClearance()
+
+    // Click owner checkbox and submit
     ownerCheckbox().performClick()
+    val h3 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+    handleField().performTextInput(h3)
+    usernameField().performTextInput("Frank")
+    submitBtn().performClick()
+
     compose.waitForIdle()
+    Thread.sleep(1000) // Give time for async operations
     checkpoint("Owner checkbox has an impact on account") {
       runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.shopOwner == true
+        val acc = accountRepository.getAccount(me.uid)
+        acc.shopOwner == true
       }
     }
 
+    // Clear and test renter checkbox
+    handleField().performTextClearance()
+    usernameField().performTextClearance()
+
     renterCheckbox().performClick()
+    val h4 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+    handleField().performTextInput(h4)
+    usernameField().performTextInput("Frank")
+    submitBtn().performClick()
+
     compose.waitForIdle()
+    Thread.sleep(1000) // Give time for async operations
     checkpoint("Renter checkbox has an impact on account") {
       runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.spaceRenter == true
+        val acc = accountRepository.getAccount(me.uid)
+        acc.spaceRenter == true
       }
     }
 
-    // Owner checkbox is pressed thrice -> on
-    // Renter checkbox is pressed twice -> off
-    ownerCheckbox().performClick()
-    renterCheckbox().performClick()
-    ownerCheckbox().performClick()
-    renterCheckbox().performClick()
-    ownerCheckbox().performClick()
+    // Clear and test multiple checkbox clicks
+    handleField().performTextClearance()
+    usernameField().performTextClearance()
+
+    // Owner checkbox is pressed 3 times total -> on (was on, now off, now on)
+    // Renter checkbox is pressed 3 times total -> off (was on, now off, now on, now off would be 4,
+    // but we do 3)
+    ownerCheckbox().performClick() // off
+    renterCheckbox().performClick() // off
+    ownerCheckbox().performClick() // on
+
+    val h5 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+    handleField().performTextInput(h5)
+    usernameField().performTextInput("Frank")
+    submitBtn().performClick()
+
     compose.waitForIdle()
+    Thread.sleep(1000) // Give time for async operations
     checkpoint("Multiple checkbox clicks have an impact on account") {
       runBlocking {
-        val acc = firestoreVm.accountFlow(me.uid).value
-        acc?.shopOwner == true && acc?.spaceRenter == false
+        val acc = accountRepository.getAccount(me.uid)
+        acc.shopOwner == true && !acc.spaceRenter
       }
     }
 
@@ -171,7 +195,7 @@ class CreateAccountScreenTest : FirestoreTests() {
     println(
         "Smoke: ${report.size - failed.size}/${report.size} OK" +
             (if (failed.isNotEmpty()) " → $failed" else ""))
-    assertTrue("Failures: $failed", failed.isNotEmpty())
+    assertTrue("Failures: $failed", failed.isEmpty())
   }
 
   @After

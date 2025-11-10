@@ -1,12 +1,8 @@
 package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.HandleAlreadyTakenException
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.HANDLES_COLLECTION_PATH
-import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
-import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
@@ -19,23 +15,18 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreHandlesTests : FirestoreTests() {
-  private lateinit var handlesRepo: HandlesRepository
-  private lateinit var accountRepo: DiscussionRepository
-  private lateinit var handlesVM: HandlesViewModel
+  private var handlesVM = CreateAccountViewModel()
   private lateinit var testAccount: Account
   private lateinit var testAccount2: Account
 
   @Before
   fun setup() {
-    handlesRepo = HandlesRepository()
-    handlesVM = HandlesViewModel(handlesRepo)
-    accountRepo = DiscussionRepository()
     runBlocking {
       testAccount =
-          accountRepo.createAccount(
+          accountRepository.createAccount(
               "Alice", "Alice", email = "alice_handles_test@example.com", photoUrl = null)
       testAccount2 =
-          accountRepo.createAccount(
+          accountRepository.createAccount(
               "Bobs", "Bobs", email = "bob_handles_test@example.com", photoUrl = null)
     }
   }
@@ -47,7 +38,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "existing_handle_123"
 
     // Create a handle for the account
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     // Update account with the handle
@@ -94,7 +85,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "taken_handle_789"
 
     // Create handle for testAccount
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     // Try to check if the same handle exists for testAccount2 (it doesn't)
@@ -112,7 +103,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "deleted_handle_999"
 
     // Create handle
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     val accountWithHandle = testAccount.copy(handle = handle)
@@ -140,7 +131,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val newHandle = "new_handle_xyz"
 
     // Create initial handle
-    handlesVM.createAccountHandle(testAccount, oldHandle)
+    handlesVM.createAccountHandle(testAccount, oldHandle, "n")
     delay(1000)
 
     // Change the handle
@@ -174,20 +165,20 @@ class FirestoreHandlesTests : FirestoreTests() {
     delay(1000) // Wait for ViewModel coroutine to complete
 
     assertEquals("", handlesVM.errorMessage.value)
-    assertFalse(handlesRepo.checkHandleAvailable(handle))
+    assertFalse(handlesRepository.checkHandleAvailable(handle))
   }
 
   @Test
   fun checkHandleExistsSetsErrorForExistingHandle() = runBlocking {
     val handle = "existing_handle_456"
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000) // Wait for creation to complete
 
     handlesVM.checkHandleAvailable(handle)
     delay(1000) // Wait for check to complete
 
     assertEquals(HandleAlreadyTakenException.DEFAULT_MESSAGE, handlesVM.errorMessage.value)
-    assertTrue(handlesRepo.checkHandleAvailable(handle))
+    assertTrue(handlesRepository.checkHandleAvailable(handle))
   }
 
   @Test
@@ -204,15 +195,14 @@ class FirestoreHandlesTests : FirestoreTests() {
   fun canCreateNewHandle() = runBlocking {
     val handle = "alice_unique_handle"
 
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000) // Wait for ViewModel operation
 
     // Verify no error occurred
     assertEquals("", handlesVM.errorMessage.value)
 
     // Verify the handle document exists in Firestore
-    val handleDoc =
-        FirebaseProvider.db.collection(HANDLES_COLLECTION_PATH).document(handle).get().await()
+    val handleDoc = handlesRepository.collection.document(handle).get().await()
     assertTrue(handleDoc.exists())
 
     // Verify the handle document points to the correct account
@@ -221,7 +211,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     assertEquals(testAccount.uid, accountId)
 
     // Verify the account in Firestore was updated
-    val fetchedAccount = accountRepo.getAccount(testAccount.uid)
+    val fetchedAccount = accountRepository.getAccount(testAccount.uid)
     assertEquals(handle, fetchedAccount.handle)
   }
 
@@ -230,12 +220,12 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "duplicate_handle"
 
     // Create handle for first account
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
     assertEquals("", handlesVM.errorMessage.value)
 
     // Try to create same handle for second account - should set error
-    handlesVM.createAccountHandle(testAccount2, handle)
+    handlesVM.createAccountHandle(testAccount2, handle, "n")
     delay(1000)
 
     assertEquals(HandleAlreadyTakenException.DEFAULT_MESSAGE, handlesVM.errorMessage.value)
@@ -251,7 +241,7 @@ class FirestoreHandlesTests : FirestoreTests() {
             name = "Ghost",
             email = "ghost@example.com")
 
-    handlesVM.createAccountHandle(nonExistentAccount, handle)
+    handlesVM.createAccountHandle(nonExistentAccount, handle, "n")
     delay(1000)
 
     assertEquals(HandleAlreadyTakenException.DEFAULT_MESSAGE, handlesVM.errorMessage.value)
@@ -261,22 +251,22 @@ class FirestoreHandlesTests : FirestoreTests() {
   fun createAccountHandleWithSpecialCharacters() = runBlocking {
     val handle = "test_user_123"
 
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     assertEquals("", handlesVM.errorMessage.value)
-    assertTrue(handlesRepo.checkHandleAvailable(handle))
+    assertTrue(handlesRepository.checkHandleAvailable(handle))
   }
 
   @Test
   fun createAccountHandleUpdatesAccountInFirestore() = runBlocking {
     val handle = "persistent_handle"
 
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     // Verify the account document was updated in Firestore
-    val fetchedAccount = accountRepo.getAccount(testAccount.uid)
+    val fetchedAccount = accountRepository.getAccount(testAccount.uid)
     assertEquals(handle, fetchedAccount.handle)
   }
 
@@ -288,7 +278,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val newHandle = "new_handle_789"
 
     // Create initial handle
-    handlesVM.createAccountHandle(testAccount, oldHandle)
+    handlesVM.createAccountHandle(testAccount, oldHandle, "n")
     delay(1000)
 
     // Update testAccount with the old handle
@@ -302,18 +292,16 @@ class FirestoreHandlesTests : FirestoreTests() {
     assertEquals("", handlesVM.errorMessage.value)
 
     // Verify old handle document was deleted
-    val oldHandleDoc =
-        FirebaseProvider.db.collection(HANDLES_COLLECTION_PATH).document(oldHandle).get().await()
+    val oldHandleDoc = handlesRepository.collection.document(oldHandle).get().await()
     assertFalse(oldHandleDoc.exists())
 
     // Verify new handle document exists
-    val newHandleDoc =
-        FirebaseProvider.db.collection(HANDLES_COLLECTION_PATH).document(newHandle).get().await()
+    val newHandleDoc = handlesRepository.collection.document(newHandle).get().await()
     assertTrue(newHandleDoc.exists())
     assertEquals(testAccount.uid, newHandleDoc.getString("accountId"))
 
     // Verify the account in Firestore was updated
-    val fetchedAccount = accountRepo.getAccount(testAccount.uid)
+    val fetchedAccount = accountRepository.getAccount(testAccount.uid)
     assertEquals(newHandle, fetchedAccount.handle)
   }
 
@@ -323,9 +311,9 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle2 = "handle_account2"
 
     // Create handles for both accounts
-    handlesVM.createAccountHandle(testAccount, handle1)
+    handlesVM.createAccountHandle(testAccount, handle1, "n")
     delay(1000)
-    handlesVM.createAccountHandle(testAccount2, handle2)
+    handlesVM.createAccountHandle(testAccount2, handle2, "n")
     delay(1000)
 
     val accountWithHandle1 = testAccount.copy(handle = handle1)
@@ -359,7 +347,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "same_handle"
 
     // Create initial handle
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     val accountWithHandle = testAccount.copy(handle = handle)
@@ -370,7 +358,7 @@ class FirestoreHandlesTests : FirestoreTests() {
 
     // May or may not set error depending on implementation
     // Just verify handle still exists
-    assertTrue(handlesRepo.checkHandleAvailable(handle))
+    assertTrue(handlesRepository.checkHandleAvailable(handle))
   }
 
   @Test
@@ -378,7 +366,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val oldHandle = "to_be_removed"
     val newHandle = "replacement_handle"
 
-    handlesVM.createAccountHandle(testAccount, oldHandle)
+    handlesVM.createAccountHandle(testAccount, oldHandle, "n")
     delay(1000)
 
     val accountWithOldHandle = testAccount.copy(handle = oldHandle)
@@ -386,9 +374,9 @@ class FirestoreHandlesTests : FirestoreTests() {
     delay(1000)
 
     // Verify old handle is gone
-    assertFalse(handlesRepo.checkHandleAvailable(oldHandle))
+    assertFalse(handlesRepository.checkHandleAvailable(oldHandle))
     // Verify new handle exists
-    assertTrue(handlesRepo.checkHandleAvailable(newHandle))
+    assertTrue(handlesRepository.checkHandleAvailable(newHandle))
   }
 
   // ==================== deleteAccountHandle Tests ====================
@@ -398,9 +386,9 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "handle_to_delete"
 
     // Create handle
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
-    assertTrue(handlesRepo.checkHandleAvailable(handle))
+    assertTrue(handlesRepository.checkHandleAvailable(handle))
 
     val accountWithHandle = testAccount.copy(handle = handle)
 
@@ -409,11 +397,10 @@ class FirestoreHandlesTests : FirestoreTests() {
     delay(1000)
 
     // Verify handle document was deleted
-    assertFalse(handlesRepo.checkHandleAvailable(handle))
+    assertFalse(handlesRepository.checkHandleAvailable(handle))
 
     // Verify the document is actually gone from Firestore
-    val handleDoc =
-        FirebaseProvider.db.collection(HANDLES_COLLECTION_PATH).document(handle).get().await()
+    val handleDoc = handlesRepository.collection.document(handle).get().await()
     assertFalse(handleDoc.exists())
   }
 
@@ -427,14 +414,14 @@ class FirestoreHandlesTests : FirestoreTests() {
     delay(1000)
 
     // Verify it still doesn't exist
-    assertFalse(handlesRepo.checkHandleAvailable(handle))
+    assertFalse(handlesRepository.checkHandleAvailable(handle))
   }
 
   @Test
   fun deleteAccountHandleMultipleTimes() = runBlocking {
     val handle = "delete_multiple_times"
 
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     val accountWithHandle = testAccount.copy(handle = handle)
@@ -445,7 +432,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     handlesVM.deleteAccountHandle(accountWithHandle)
     delay(1000)
 
-    assertFalse(handlesRepo.checkHandleAvailable(handle))
+    assertFalse(handlesRepository.checkHandleAvailable(handle))
   }
 
   // ==================== Integration Scenario Tests ====================
@@ -456,24 +443,24 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle2 = "lifecycle_handle_2"
 
     // Create handle
-    handlesVM.createAccountHandle(testAccount, handle1)
+    handlesVM.createAccountHandle(testAccount, handle1, "n")
     delay(1000)
     assertEquals("", handlesVM.errorMessage.value)
-    assertTrue(handlesRepo.checkHandleAvailable(handle1))
+    assertTrue(handlesRepository.checkHandleAvailable(handle1))
 
     // Update handle
     val accountWithHandle1 = testAccount.copy(handle = handle1)
     handlesVM.setAccountHandle(accountWithHandle1, handle2)
     delay(1000)
     assertEquals("", handlesVM.errorMessage.value)
-    assertFalse(handlesRepo.checkHandleAvailable(handle1))
-    assertTrue(handlesRepo.checkHandleAvailable(handle2))
+    assertFalse(handlesRepository.checkHandleAvailable(handle1))
+    assertTrue(handlesRepository.checkHandleAvailable(handle2))
 
     // Delete handle
     val accountWithHandle2 = testAccount.copy(handle = handle2)
     handlesVM.deleteAccountHandle(accountWithHandle2)
     delay(1000)
-    assertFalse(handlesRepo.checkHandleAvailable(handle2))
+    assertFalse(handlesRepository.checkHandleAvailable(handle2))
   }
 
   @Test
@@ -481,18 +468,18 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle1 = "alice_handle"
     val handle2 = "bob_handle"
 
-    handlesVM.createAccountHandle(testAccount, handle1)
+    handlesVM.createAccountHandle(testAccount, handle1, "n")
     delay(1000)
-    handlesVM.createAccountHandle(testAccount2, handle2)
+    handlesVM.createAccountHandle(testAccount2, handle2, "n")
     delay(1000)
 
     assertEquals("", handlesVM.errorMessage.value)
-    assertTrue(handlesRepo.checkHandleAvailable(handle1))
-    assertTrue(handlesRepo.checkHandleAvailable(handle2))
+    assertTrue(handlesRepository.checkHandleAvailable(handle1))
+    assertTrue(handlesRepository.checkHandleAvailable(handle2))
 
     // Verify accounts in Firestore
-    val account1 = accountRepo.getAccount(testAccount.uid)
-    val account2 = accountRepo.getAccount(testAccount2.uid)
+    val account1 = accountRepository.getAccount(testAccount.uid)
+    val account2 = accountRepository.getAccount(testAccount2.uid)
     assertEquals(handle1, account1.handle)
     assertEquals(handle2, account2.handle)
   }
@@ -502,7 +489,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     val handle = "reusable_handle"
 
     // Create handle for first account
-    handlesVM.createAccountHandle(testAccount, handle)
+    handlesVM.createAccountHandle(testAccount, handle, "n")
     delay(1000)
 
     // Delete the handle
@@ -511,14 +498,13 @@ class FirestoreHandlesTests : FirestoreTests() {
     delay(1000)
 
     // Create same handle for second account - should succeed
-    handlesVM.createAccountHandle(testAccount2, handle)
+    handlesVM.createAccountHandle(testAccount2, handle, "n")
     delay(1000)
     assertEquals("", handlesVM.errorMessage.value)
-    assertTrue(handlesRepo.checkHandleAvailable(handle))
+    assertTrue(handlesRepository.checkHandleAvailable(handle))
 
     // Verify it points to second account
-    val handleDoc =
-        FirebaseProvider.db.collection(HANDLES_COLLECTION_PATH).document(handle).get().await()
+    val handleDoc = handlesRepository.collection.document(handle).get().await()
     assertEquals(testAccount2.uid, handleDoc.getString("accountId"))
   }
 }

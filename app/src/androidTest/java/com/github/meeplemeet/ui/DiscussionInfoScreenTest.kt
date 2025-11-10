@@ -3,10 +3,8 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.HandlesRepository
-import com.github.meeplemeet.model.auth.HandlesViewModel
+import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -23,39 +21,35 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
 
   private lateinit var viewModel: DiscussionViewModel
-  private lateinit var repository: DiscussionRepository
   private lateinit var currentAccount: Account
   private lateinit var otherUser: Account
   private lateinit var thirdUser: Account
   private lateinit var testDiscussion: Discussion
-  private lateinit var handlesRepository: HandlesRepository
-  private lateinit var handlesViewModel: HandlesViewModel
+  private lateinit var createAccountViewModel: CreateAccountViewModel
 
   @Before
   fun setup() = runBlocking {
-    repository = DiscussionRepository()
-    handlesRepository = HandlesRepository()
-    viewModel = DiscussionViewModel(repository)
+    viewModel = DiscussionViewModel()
 
-    handlesViewModel = HandlesViewModel(handlesRepository)
+    createAccountViewModel = CreateAccountViewModel(handlesRepository)
 
     // Create test users
     currentAccount =
-        repository.createAccount(
+        accountRepository.createAccount(
             userHandle = "testuser1_${System.currentTimeMillis()}",
             name = "Alice",
             email = "alice@test.com",
             photoUrl = null)
 
     otherUser =
-        repository.createAccount(
+        accountRepository.createAccount(
             userHandle = "testuser2_${System.currentTimeMillis()}",
             name = "Bob",
             email = "bob@test.com",
             photoUrl = null)
 
     thirdUser =
-        repository.createAccount(
+        accountRepository.createAccount(
             userHandle = "testuser3_${System.currentTimeMillis()}",
             name = "Charlie",
             email = "charlie@test.com",
@@ -63,30 +57,30 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
     // Create a test discussion
     testDiscussion =
-        repository.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Test Discussion",
             description = "A sample group",
             creatorId = currentAccount.uid,
             participants = listOf(otherUser.uid))
 
     // Add a test message
-    repository.sendMessageToDiscussion(testDiscussion, currentAccount, "Hi")
+    discussionRepository.sendMessageToDiscussion(testDiscussion, currentAccount, "Hi")
 
     // Fetch updated discussion and accounts with previews
-    testDiscussion = repository.getDiscussion(testDiscussion.uid)
-    currentAccount = repository.getAccount(currentAccount.uid)
-    otherUser = repository.getAccount(otherUser.uid)
-    thirdUser = repository.getAccount(thirdUser.uid)
+    testDiscussion = discussionRepository.getDiscussion(testDiscussion.uid)
+    currentAccount = accountRepository.getAccount(currentAccount.uid)
+    otherUser = accountRepository.getAccount(otherUser.uid)
+    thirdUser = accountRepository.getAccount(thirdUser.uid)
   }
 
   @After
   fun cleanup() = runBlocking {
     try {
-      repository.deleteDiscussion(testDiscussion)
-      repository.deleteAccount(currentAccount.uid)
-      repository.deleteAccount(otherUser.uid)
-      repository.deleteAccount(thirdUser.uid)
-    } catch (e: Exception) {
+      discussionRepository.deleteDiscussion(testDiscussion)
+      accountRepository.deleteAccount(currentAccount.uid)
+      accountRepository.deleteAccount(otherUser.uid)
+      accountRepository.deleteAccount(thirdUser.uid)
+    } catch (_: Exception) {
       // Ignore cleanup errors
     }
   }
@@ -94,11 +88,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   @Test
   fun screen_displaysDiscussionName_andButtons() {
     compose.setContent {
-      DiscussionDetailsScreen(
-          viewModel = viewModel,
-          discussion = testDiscussion,
-          account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -121,11 +111,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   @Test
   fun clickingDeleteButton_showsDeleteDialog() {
     compose.setContent {
-      DiscussionDetailsScreen(
-          viewModel = viewModel,
-          discussion = testDiscussion,
-          account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -139,11 +125,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   @Test
   fun clickingLeaveButton_showsLeaveDialog() {
     compose.setContent {
-      DiscussionDetailsScreen(
-          viewModel = viewModel,
-          discussion = testDiscussion,
-          account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -158,11 +140,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   @Test
   fun memberList_displaysMembersWithBadges() {
     compose.setContent {
-      DiscussionDetailsScreen(
-          viewModel = viewModel,
-          discussion = testDiscussion,
-          account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -177,10 +155,9 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun backButton_savesChanges() {
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel,
           discussion = testDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      )
     }
 
     compose.waitForIdle()
@@ -198,21 +175,17 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun participantView_cannotEditOrAddMembers() = runBlocking {
     // Create a discussion where current user is participant but not admin or owner
     val participantDiscussion =
-        repository.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Participant Test",
             description = "Test description",
             creatorId = thirdUser.uid, // Third user is the owner
             participants = listOf(currentAccount.uid, otherUser.uid))
 
-    repository.sendMessageToDiscussion(participantDiscussion, thirdUser, "Test message")
-    val updatedDiscussion = repository.getDiscussion(participantDiscussion.uid)
+    discussionRepository.sendMessageToDiscussion(participantDiscussion, thirdUser, "Test message")
+    val updatedDiscussion = discussionRepository.getDiscussion(participantDiscussion.uid)
 
     compose.setContent {
-      DiscussionDetailsScreen(
-          viewModel = viewModel,
-          discussion = updatedDiscussion,
-          account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -234,31 +207,27 @@ class DiscussionSettingScreenTest : FirestoreTests() {
         .assertHasNoClickAction()
 
     // Cleanup
-    repository.deleteDiscussion(updatedDiscussion)
+    discussionRepository.deleteDiscussion(updatedDiscussion)
   }
 
   @Test
   fun adminView_canEditAndAddMembers() = runBlocking {
     // Create a discussion where current user is admin but not owner
     val adminDiscussion =
-        repository.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Admin Test",
             description = "Test description",
             creatorId = thirdUser.uid, // Third user is the owner
             participants = listOf(currentAccount.uid, otherUser.uid))
 
     // Make current user an admin
-    repository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
+    discussionRepository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
 
-    repository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
-    val updatedDiscussion = repository.getDiscussion(adminDiscussion.uid)
+    discussionRepository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
+    val updatedDiscussion = discussionRepository.getDiscussion(adminDiscussion.uid)
 
     compose.setContent {
-      DiscussionDetailsScreen(
-          viewModel = viewModel,
-          discussion = updatedDiscussion,
-          account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
     }
 
     compose.waitForIdle()
@@ -271,7 +240,7 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithText("Add Members").assertIsDisplayed()
 
     // Cleanup
-    repository.deleteDiscussion(updatedDiscussion)
+    discussionRepository.deleteDiscussion(updatedDiscussion)
   }
 
   @Ignore
@@ -279,24 +248,23 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   fun ownerView_canRemoveAdmins() = runBlocking {
     // Create a discussion where current user is the owner
     val ownerDiscussion =
-        repository.createDiscussion(
+        discussionRepository.createDiscussion(
             name = "Owner Test",
             description = "Test description",
             creatorId = currentAccount.uid,
             participants = listOf(otherUser.uid))
 
     // Make other user an admin
-    repository.addAdminToDiscussion(ownerDiscussion, otherUser.uid)
+    discussionRepository.addAdminToDiscussion(ownerDiscussion, otherUser.uid)
 
-    repository.sendMessageToDiscussion(ownerDiscussion, currentAccount, "Test message")
-    val updatedDiscussion = repository.getDiscussion(ownerDiscussion.uid)
+    discussionRepository.sendMessageToDiscussion(ownerDiscussion, currentAccount, "Test message")
+    val updatedDiscussion = discussionRepository.getDiscussion(ownerDiscussion.uid)
 
     compose.setContent {
       DiscussionDetailsScreen(
-          viewModel = viewModel,
           discussion = updatedDiscussion,
           account = currentAccount,
-          handlesViewModel = handlesViewModel)
+      )
     }
 
     compose.waitForIdle()
@@ -309,6 +277,6 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithText("Remove Admin").assertIsDisplayed()
 
     // Cleanup
-    repository.deleteDiscussion(updatedDiscussion)
+    discussionRepository.deleteDiscussion(updatedDiscussion)
   }
 }

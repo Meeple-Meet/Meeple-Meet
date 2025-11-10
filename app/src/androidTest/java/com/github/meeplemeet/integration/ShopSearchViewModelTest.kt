@@ -2,14 +2,12 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.utils.FirestoreTests
@@ -64,9 +62,6 @@ class TestableShopSearchViewModel(gameRepo: GameRepository, locationRepo: Locati
     ShopSearchViewModel(gameRepo, locationRepo)
 
 class ShopSearchViewModelTest : FirestoreTests() {
-
-  private lateinit var shopRepository: ShopRepository
-  private lateinit var discussionRepository: DiscussionRepository
   private lateinit var gameRepo: GameRepository
   private lateinit var locationRepo: LocationRepository
   private lateinit var shopViewModel: ShopSearchViewModel
@@ -83,16 +78,13 @@ class ShopSearchViewModelTest : FirestoreTests() {
   fun setup() {
     Dispatchers.setMain(testDispatcher)
 
-    shopRepository = ShopRepository()
-    discussionRepository = DiscussionRepository()
     gameRepo = CountingGameRepository()
     locationRepo = CountingLocationRepository()
     shopViewModel = TestableShopSearchViewModel(gameRepo, locationRepo)
 
     runBlocking {
-      owner = discussionRepository.createAccount("owner", "Owner", "owner@shop.com", null)
-      intruder =
-          discussionRepository.createAccount("intruder", "Intruder", "intruder@shop.com", null)
+      owner = accountRepository.createAccount("owner", "Owner", "owner@shop.com", null)
+      intruder = accountRepository.createAccount("intruder", "Intruder", "intruder@shop.com", null)
 
       game = Game("g1", "Catan", "Catan game", "url.com", 2, 8, null, null, emptyList())
       location = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")

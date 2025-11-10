@@ -14,11 +14,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
-import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -44,8 +42,6 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   private val nav: NavigationActions = mockk(relaxed = true)
 
   /* repos & VMs */
-  private lateinit var postRepo: PostRepository
-  private lateinit var accountRepo: DiscussionRepository
   private lateinit var postVm: PostOverviewViewModel
   private lateinit var firestoreVm: DiscussionViewModel
 
@@ -73,16 +69,14 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    postRepo = PostRepository()
-    accountRepo = DiscussionRepository()
-    postVm = PostOverviewViewModel(postRepo)
-    firestoreVm = DiscussionViewModel(accountRepo)
+    postVm = PostOverviewViewModel()
+    firestoreVm = DiscussionViewModel()
 
-    me = accountRepo.createAccount("meUID", "Me", "me@test.com", null)
+    me = accountRepository.createAccount("meUID", "Me", "me@test.com", null)
     createdAccounts += me
 
-    alice = accountRepo.createAccount("aliceUID", "Alice", "alice@test.com", null)
-    bob = accountRepo.createAccount("bobUID", "Bob", "bob@test.com", null)
+    alice = accountRepository.createAccount("aliceUID", "Alice", "alice@test.com", null)
+    bob = accountRepository.createAccount("bobUID", "Bob", "bob@test.com", null)
     createdAccounts += alice
     createdAccounts += bob
   }
@@ -96,8 +90,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme(themeMode = theme) {
         PostsOverviewScreen(
-            postOverviewVM = postVm,
-            discussionViewModel = firestoreVm,
+            viewModel = postVm,
             navigation = nav,
             onClickAddPost = { fabClicked = true },
             onSelectPost = { clickedPost = it })
@@ -112,7 +105,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     /* 2  SEED POSTS  ------------------------------------------------------- */
     // post without comments → comment count = 0
     createdPosts +=
-        postRepo.createPost(
+        postRepository.createPost(
             title = "No-comment post",
             content = "Empty post",
             authorId = alice.uid,
@@ -120,7 +113,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
 
     // post with long tag → ellipsis
     createdPosts +=
-        postRepo.createPost(
+        postRepository.createPost(
             title = "Long-tag post",
             content = "Tag will be truncated",
             authorId = bob.uid,
@@ -128,14 +121,14 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
 
     // normal post with comments
     var normal =
-        postRepo.createPost(
+        postRepository.createPost(
             title = "Normal post",
             content = "Has comments",
             authorId = me.uid,
             tags = listOf("board-games", "strategy"))
-    postRepo.addComment(normal.id, "First!", me.uid, parentId = normal.id)
+    postRepository.addComment(normal.id, "First!", me.uid, parentId = normal.id)
     createdPosts += normal
-    normal = postRepo.getPost(normal.id)
+    normal = postRepository.getPost(normal.id)
     val first = createdPosts.first()
     postVm.getPosts()
 
@@ -184,8 +177,8 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
 
   @After
   fun tearDown() = runBlocking {
-    createdPosts.forEach { runCatching { postRepo.deletePost(it.id) } }
-    createdAccounts.forEach { runCatching { accountRepo.deleteAccount(it.uid) } }
+    createdPosts.forEach { runCatching { postRepository.deletePost(it.id) } }
+    createdAccounts.forEach { runCatching { accountRepository.deleteAccount(it.uid) } }
   }
 
   /* ---------------- helper ---------------- */

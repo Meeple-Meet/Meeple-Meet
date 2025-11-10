@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AuthViewModel
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -36,18 +36,17 @@ object ProfileTestTags {
  * account, as well as allowing you to sign out.
  *
  * @param navigation Navigation actions for screen transitions.
- * @param authViewModel ViewModel for authentication-related operations.
+ * @param viewModel ViewModel for authentication-related operations.
  * @param account The current user's account.
- * @param discussionViewModel ViewModel for discussion-related operations.
+ * @param viewModel ViewModel for discussion-related operations.
  * @param onSignOut Callback function to be invoked on sign out.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navigation: NavigationActions,
-    authViewModel: AuthViewModel,
+    viewModel: AuthenticationViewModel = viewModel(),
     account: Account,
-    discussionViewModel: DiscussionViewModel,
     onSignOut: () -> Unit
 ) {
   Scaffold(
@@ -96,8 +95,8 @@ fun ProfileScreen(
               Button(
                   onClick = {
                     onSignOut()
-                    discussionViewModel.signOut()
-                    authViewModel.signOut()
+                    viewModel.signOut()
+                    viewModel.signOut()
                   },
                   modifier = Modifier.testTag(ProfileTestTags.LOG_OUT_BUTTON),
                   colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {

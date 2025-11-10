@@ -12,13 +12,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
@@ -56,9 +55,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  * Observes [PostOverviewViewModel.posts] and re-composes whenever the list changes. Posts are
  * sorted newest-first.
  *
- * @param postOverviewVM ViewModel that supplies the list of posts.
- * @param discussionViewModel ViewModel used to resolve author names.
- * @param account Currently logged-in account.
+ * @param viewModel ViewModel that supplies the list of posts.
  * @param navigation Actions for navigation events.
  * @param onClickAddPost Callback fired when the FAB is tapped.
  * @param onSelectPost Callback fired when a post card is tapped.
@@ -66,14 +63,12 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostsOverviewScreen(
-    postOverviewVM: PostOverviewViewModel = viewModel(),
-    discussionViewModel: DiscussionViewModel = viewModel(),
+    viewModel: PostOverviewViewModel = viewModel(),
     navigation: NavigationActions,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
-
-  val posts by postOverviewVM.posts.collectAsState()
+  val posts by viewModel.posts.collectAsState()
   val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
 
   Scaffold(
@@ -124,9 +119,7 @@ fun PostsOverviewScreen(
 
                   val authorName by
                       produceState<String?>(key1 = post.authorId, initialValue = null) {
-                        discussionViewModel.getOtherAccount(post.authorId) { acc ->
-                          value = acc.name
-                        }
+                        viewModel.getOtherAccount(post.authorId) { acc -> value = acc.name }
                       }
 
                   FeedCard(
@@ -154,7 +147,7 @@ private fun EmptyFeedListText() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
           Icon(
-              imageVector = Icons.Default.Article,
+              imageVector = Icons.AutoMirrored.Filled.Article,
               contentDescription = null,
               modifier = Modifier.size(Dimensions.IconSize.giant),
               tint = MessagingColors.secondaryText)
@@ -209,7 +202,7 @@ private fun FeedCard(
                       .background(MessagingColors.messagingBackground),
               contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.Article,
+                    imageVector = Icons.AutoMirrored.Filled.Article,
                     contentDescription = null,
                     modifier = Modifier.size(Dimensions.IconSize.large),
                     tint = MessagingColors.secondaryText)
@@ -309,6 +302,7 @@ private fun FeedCard(
         }
 
     // Divider
-    Divider(color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
+    HorizontalDivider(
+        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
 }

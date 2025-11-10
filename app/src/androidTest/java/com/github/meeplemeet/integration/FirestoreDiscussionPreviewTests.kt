@@ -1,7 +1,6 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
@@ -9,23 +8,21 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreDiscussionPreviewTests : FirestoreTests() {
-  private lateinit var repository: DiscussionRepository
-
   private lateinit var account1: Account
   private lateinit var account2: Account
   private lateinit var account3: Account
 
   @Before
   fun setup() {
-    repository = DiscussionRepository()
     runBlocking {
       account1 =
-          repository.createAccount(
+          accountRepository.createAccount(
               "Antoine", "Antoine", email = "Antoine@example.com", photoUrl = null)
       account2 =
-          repository.createAccount("Marco", "Marco", email = "Marco@example.com", photoUrl = null)
+          accountRepository.createAccount(
+              "Marco", "Marco", email = "Marco@example.com", photoUrl = null)
       account3 =
-          repository.createAccount(
+          accountRepository.createAccount(
               "Thomas", "Thomas", email = "Thomas@example.com", photoUrl = null)
     }
   }
@@ -35,13 +32,14 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
     val content = "Hi"
 
     val discussion =
-        repository.createDiscussion("Test", "", account1.uid, listOf(account2.uid, account3.uid))
+        discussionRepository.createDiscussion(
+            "Test", "", account1.uid, listOf(account2.uid, account3.uid))
 
-    repository.sendMessageToDiscussion(discussion, account1, content)
+    discussionRepository.sendMessageToDiscussion(discussion, account1, content)
 
-    val acc1 = repository.getAccount(account1.uid)
-    val acc2 = repository.getAccount(account2.uid)
-    val acc3 = repository.getAccount(account3.uid)
+    val acc1 = accountRepository.getAccount(account1.uid)
+    val acc2 = accountRepository.getAccount(account2.uid)
+    val acc3 = accountRepository.getAccount(account3.uid)
 
     assertEquals(content, acc1.previews[discussion.uid]!!.lastMessage)
     assertEquals(account1.uid, acc1.previews[discussion.uid]!!.lastMessageSender)
@@ -61,15 +59,16 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
     val base = "Hi"
 
     val discussion =
-        repository.createDiscussion("Test", "", account1.uid, listOf(account2.uid, account3.uid))
+        discussionRepository.createDiscussion(
+            "Test", "", account1.uid, listOf(account2.uid, account3.uid))
 
     for (i in 0..10) {
-      repository.sendMessageToDiscussion(discussion, account1, "$base$i")
+      discussionRepository.sendMessageToDiscussion(discussion, account1, "$base$i")
     }
 
-    val acc1 = repository.getAccount(account1.uid)
-    val acc2 = repository.getAccount(account2.uid)
-    val acc3 = repository.getAccount(account3.uid)
+    val acc1 = accountRepository.getAccount(account1.uid)
+    val acc2 = accountRepository.getAccount(account2.uid)
+    val acc3 = accountRepository.getAccount(account3.uid)
 
     val last = "${base}10"
     assertEquals(last, acc1.previews[discussion.uid]!!.lastMessage)
@@ -88,16 +87,17 @@ class FirestoreDiscussionPreviewTests : FirestoreTests() {
   @Test
   fun sendingMessagesFromMultiplePeopleWorksAsExpected() = runBlocking {
     val discussion =
-        repository.createDiscussion("Test", "", account1.uid, listOf(account2.uid, account3.uid))
+        discussionRepository.createDiscussion(
+            "Test", "", account1.uid, listOf(account2.uid, account3.uid))
 
     val last = "How are you ?"
-    repository.sendMessageToDiscussion(discussion, account1, "Hi")
-    repository.sendMessageToDiscussion(discussion, account2, "Hello")
-    repository.sendMessageToDiscussion(discussion, account3, last)
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Hi")
+    discussionRepository.sendMessageToDiscussion(discussion, account2, "Hello")
+    discussionRepository.sendMessageToDiscussion(discussion, account3, last)
 
-    val acc1 = repository.getAccount(account1.uid)
-    val acc2 = repository.getAccount(account2.uid)
-    val acc3 = repository.getAccount(account3.uid)
+    val acc1 = accountRepository.getAccount(account1.uid)
+    val acc2 = accountRepository.getAccount(account2.uid)
+    val acc3 = accountRepository.getAccount(account3.uid)
 
     assertEquals(last, acc3.previews[discussion.uid]!!.lastMessage)
     assertEquals(account3.uid, acc3.previews[discussion.uid]!!.lastMessageSender)

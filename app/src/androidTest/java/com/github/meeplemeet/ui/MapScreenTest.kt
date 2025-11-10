@@ -7,16 +7,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.MapViewModel
-import com.github.meeplemeet.model.map.MarkerPreviewRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.Space
-import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.FirestoreTests
@@ -43,11 +38,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   @get:Rule val compose = createComposeRule()
 
-  private lateinit var shopRepository: ShopRepository
-  private lateinit var discussionRepository: DiscussionRepository
-  private lateinit var spaceRenterRepository: SpaceRenterRepository
-  private lateinit var gameRepository: FirestoreGameRepository
-  private lateinit var markerPreviewRepository: MarkerPreviewRepository
   private lateinit var mapViewModel: MapViewModel
   private lateinit var mockNavigation: NavigationActions
 
@@ -72,13 +62,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       // Maps initialization may fail in test environment, that's OK
     }
 
-    shopRepository = ShopRepository()
-    discussionRepository = DiscussionRepository()
-    spaceRenterRepository = SpaceRenterRepository()
-    gameRepository = FirestoreGameRepository()
-    markerPreviewRepository =
-        MarkerPreviewRepository(
-            shopRepository, discussionRepository, spaceRenterRepository, gameRepository)
     mapViewModel = MapViewModel(markerPreviewRepository)
     mockNavigation = mockk(relaxed = true)
 
@@ -94,23 +77,23 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     runBlocking {
       regularAccount =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "regular_user", "Regular User", "regular@test.com", photoUrl = null)
 
       shopOwnerAccount =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "shop_owner", "Shop Owner", "shop@test.com", photoUrl = null)
-      discussionRepository.setAccountRole(
+      accountRepository.setAccountRole(
           shopOwnerAccount.uid, isShopOwner = true, isSpaceRenter = false)
-      shopOwnerAccount = discussionRepository.getAccount(shopOwnerAccount.uid)
+      shopOwnerAccount = accountRepository.getAccount(shopOwnerAccount.uid)
       assert(shopOwnerAccount.shopOwner) { "Shop owner role not set correctly" }
 
       spaceRenterAccount =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "space_renter", "Space Renter", "space@test.com", photoUrl = null)
-      discussionRepository.setAccountRole(
+      accountRepository.setAccountRole(
           spaceRenterAccount.uid, isShopOwner = false, isSpaceRenter = true)
-      spaceRenterAccount = discussionRepository.getAccount(spaceRenterAccount.uid)
+      spaceRenterAccount = accountRepository.getAccount(spaceRenterAccount.uid)
       assert(spaceRenterAccount.spaceRenter) { "Space renter role not set correctly" }
     }
 

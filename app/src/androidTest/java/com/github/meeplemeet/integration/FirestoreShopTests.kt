@@ -2,9 +2,6 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.GEO_PIN_COLLECTION_PATH
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
@@ -12,8 +9,6 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.model.shops.SHOP_COLLECTION_PATH
-import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.utils.FirestoreTests
@@ -29,12 +24,9 @@ import org.junit.Before
 import org.junit.Test
 
 class FirestoreShopTests : FirestoreTests() {
-  private lateinit var shopRepository: ShopRepository
-  private lateinit var discussionRepository: DiscussionRepository
-  private lateinit var gameRepository: FirestoreGameRepository
-  private lateinit var createShopViewModel: CreateShopViewModel
-  private lateinit var shopViewModel: ShopViewModel
-  private lateinit var editShopViewModel: EditShopViewModel
+  private var createShopViewModel = CreateShopViewModel()
+  private var shopViewModel = ShopViewModel()
+  private var editShopViewModel = EditShopViewModel()
 
   private lateinit var testAccount1: Account
   private lateinit var testAccount2: Account
@@ -46,20 +38,13 @@ class FirestoreShopTests : FirestoreTests() {
 
   @Before
   fun setup() {
-    shopRepository = ShopRepository(db)
-    discussionRepository = DiscussionRepository()
-    gameRepository = FirestoreGameRepository(db)
-    createShopViewModel = CreateShopViewModel(shopRepository)
-    shopViewModel = ShopViewModel(shopRepository)
-    editShopViewModel = EditShopViewModel(shopRepository)
-
     runBlocking {
       // Create test accounts
       testAccount1 =
-          discussionRepository.createAccount(
+          accountRepository.createAccount(
               "alice", "Alice", email = "alice@shop.com", photoUrl = null)
       testAccount2 =
-          discussionRepository.createAccount("bob", "Bob", email = "bob@shop.com", photoUrl = null)
+          accountRepository.createAccount("bob", "Bob", email = "bob@shop.com", photoUrl = null)
 
       // Create test games
       db.collection(GAMES_COLLECTION_PATH)
@@ -106,7 +91,7 @@ class FirestoreShopTests : FirestoreTests() {
   fun tearDown() {
     runBlocking {
       // Clean up shops collection
-      val snapshot = db.collection(SHOP_COLLECTION_PATH).get().await()
+      val snapshot = shopRepository.collection.get().await()
       val batch = db.batch()
       snapshot.documents.forEach { batch.delete(it.reference) }
       batch.commit().await()
@@ -575,7 +560,7 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    val geoPinSnapshot = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id).get().await()
+    val geoPinSnapshot = geoPinRepository.collection.document(shop.id).get().await()
 
     assert(geoPinSnapshot.exists())
     assertEquals("SHOP", geoPinSnapshot.getString("type"))
@@ -590,12 +575,12 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    val beforeDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id).get().await()
+    val beforeDelete = geoPinRepository.collection.document(shop.id).get().await()
     assert(beforeDelete.exists())
 
     shopRepository.deleteShop(shop.id)
 
-    val afterDelete = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id).get().await()
+    val afterDelete = geoPinRepository.collection.document(shop.id).get().await()
     assert(!afterDelete.exists())
   }
 
@@ -608,7 +593,7 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    val geoPinRef = db.collection(GEO_PIN_COLLECTION_PATH).document(shop.id)
+    val geoPinRef = geoPinRepository.collection.document(shop.id)
 
     // Location unchanged
     shopRepository.updateShop(shop.id, name = "Updated Name")
