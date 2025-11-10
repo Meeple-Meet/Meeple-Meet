@@ -222,7 +222,6 @@ fun EditShopContent(
 
   var showGameDialog by remember { mutableStateOf(false) }
   var qty by rememberSaveable { mutableIntStateOf(1) }
-  var picked by remember { mutableStateOf<Game?>(null) }
   var stock by remember(shop) { mutableStateOf(shop?.gameCollection ?: initialStock) }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
@@ -343,7 +342,6 @@ fun EditShopContent(
                     header = {
                       TextButton(
                           onClick = {
-                            picked = null
                             onSetGameQuery("")
                             showGameDialog = true
                           },

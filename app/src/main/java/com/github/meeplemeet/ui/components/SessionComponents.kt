@@ -760,14 +760,14 @@ private fun LocationSearchBar(
 
         ExposedDropdownMenu(
             expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
-              results.locationSuggestions.take(5).forEach { loc ->
+              results.locationSuggestions.take(5).forEachIndexed { i, loc ->
                 DropdownMenuItem(
                     text = { Text(loc.name) },
                     onClick = {
                       menuOpen = false
                       setLocation(loc)
                     },
-                    modifier = Modifier.testTag(dropdownItemTestTag))
+                    modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
               }
             }
       }
@@ -859,14 +859,14 @@ private fun GameSearchBar(
                 results.gameSuggestions
                     .filterNot { existing.contains(it.uid) }
                     .take(5)
-                    .forEach { game ->
+                    .forEachIndexed { i, game ->
                       DropdownMenuItem(
                           text = { Text(game.name) },
                           onClick = {
                             menuOpen = false
                             setGame(game)
                           },
-                          modifier = Modifier.testTag(dropdownItemTestTag))
+                          modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
                     }
               }
         }

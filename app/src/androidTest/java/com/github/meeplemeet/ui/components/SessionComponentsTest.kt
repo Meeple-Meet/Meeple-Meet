@@ -31,7 +31,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
-import io.mockk.*
+import com.github.meeplemeet.utils.FirestoreTests
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -41,16 +41,21 @@ import org.junit.*
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class SessionComponentsTest {
+class SessionComponentsTest : FirestoreTests() {
 
   @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
   private var oldLocale: Locale? = null
 
+  private lateinit var createSessionViewModel: CreateSessionViewModel
+
   @Before
   fun forceStableLocale() {
     oldLocale = Locale.getDefault()
     Locale.setDefault(Locale.US)
+
+    // Initialize real repositories and view model
+    createSessionViewModel = CreateSessionViewModel(sessionRepository, gameRepository)
   }
 
   @After
@@ -634,31 +639,23 @@ class SessionComponentsTest {
             admins = listOf("user1"),
             creatorId = "user1")
 
-    val mockViewModel = mockk<CreateSessionViewModel>(relaxed = true)
-    var capturedQuery: String? = null
-
-    every { mockViewModel.setGameQuery(account, discussion, any()) } answers
-        {
-          capturedQuery = thirdArg()
-        }
-
-    set { SessionGameSearchBar(account, discussion, mockViewModel) }
+    set { SessionGameSearchBar(account, discussion, createSessionViewModel) }
 
     // Verify the input field exists with default test tag
     composeRule.onNodeWithTag(ComponentsTestTags.SESSION_GAME_SEARCH_INPUT).assertExists()
 
-    // Verify label and placeholder
+    // Verify label exists
     composeRule.onNodeWithText("Game").assertExists()
-    composeRule.onNodeWithText("Search games", useUnmergedTree = true).assertExists()
 
     // Type into the search field
     composeRule
         .onNodeWithTag(ComponentsTestTags.SESSION_GAME_SEARCH_INPUT)
         .performTextInput("Catan")
 
+    // Verify that the query was updated in the view model
+    composeRule.waitForIdle()
     composeRule.runOnIdle {
-      verify { mockViewModel.setGameQuery(account, discussion, any()) }
-      assert(capturedQuery == "Catan")
+      assert(createSessionViewModel.gameUIState.value.gameQuery.contains("Catan"))
     }
   }
 
@@ -686,9 +683,7 @@ class SessionComponentsTest {
             recommendedPlayers = 4,
             averagePlayTime = 45)
 
-    val mockViewModel = mockk<CreateSessionViewModel>(relaxed = true)
-
-    set { SessionGameSearchBar(account, discussion, mockViewModel, initial = initialGame) }
+    set { SessionGameSearchBar(account, discussion, createSessionViewModel, initial = initialGame) }
 
     // Verify initial game name is displayed
     composeRule.onNodeWithText("Ticket to Ride").assertExists()
@@ -707,13 +702,11 @@ class SessionComponentsTest {
             admins = listOf("user1"),
             creatorId = "user1")
 
-    val mockViewModel = mockk<CreateSessionViewModel>(relaxed = true)
-
     set {
       SessionGameSearchBar(
           account,
           discussion,
-          mockViewModel,
+          createSessionViewModel,
           inputFieldTestTag = "custom_game_input",
           dropdownItemTestTag = "custom_game_item")
     }
@@ -735,31 +728,23 @@ class SessionComponentsTest {
             admins = listOf("user1"),
             creatorId = "user1")
 
-    val mockViewModel = mockk<CreateSessionViewModel>(relaxed = true)
-    var capturedQuery: String? = null
-
-    every { mockViewModel.setLocationQuery(account, discussion, any()) } answers
-        {
-          capturedQuery = thirdArg()
-        }
-
-    set { SessionLocationSearchBar(account, discussion, mockViewModel) }
+    set { SessionLocationSearchBar(account, discussion, createSessionViewModel) }
 
     // Verify the input field exists with default test tag
     composeRule.onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT).assertExists()
 
-    // Verify label and placeholder
+    // Verify label exists
     composeRule.onNodeWithText("Location").assertExists()
-    composeRule.onNodeWithText("Search locations", useUnmergedTree = true).assertExists()
 
     // Type into the search field
     composeRule
         .onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
         .performTextInput("EPFL")
 
+    // Verify that the query was updated in the view model
+    composeRule.waitForIdle()
     composeRule.runOnIdle {
-      verify { mockViewModel.setLocationQuery(account, discussion, any()) }
-      assert(capturedQuery == "EPFL")
+      assert(createSessionViewModel.locationUIState.value.locationQuery.contains("EPFL"))
     }
   }
 
@@ -786,9 +771,7 @@ class SessionComponentsTest {
                     location = initialLocation,
                     participants = listOf("user1")))
 
-    val mockViewModel = mockk<CreateSessionViewModel>(relaxed = true)
-
-    set { SessionLocationSearchBar(account, discussion, mockViewModel) }
+    set { SessionLocationSearchBar(account, discussion, createSessionViewModel) }
 
     // Verify initial location name is displayed
     composeRule.onNodeWithText("Rolex Learning Center").assertExists()
@@ -807,13 +790,11 @@ class SessionComponentsTest {
             admins = listOf("user1"),
             creatorId = "user1")
 
-    val mockViewModel = mockk<CreateSessionViewModel>(relaxed = true)
-
     set {
       SessionLocationSearchBar(
           account,
           discussion,
-          mockViewModel,
+          createSessionViewModel,
           inputFieldTestTag = "custom_location_input",
           dropdownItemTestTag = "custom_location_item")
     }

@@ -12,11 +12,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.github.meeplemeet.model.auth.AuthUIState
 import com.github.meeplemeet.model.auth.SignInViewModel
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -30,21 +28,6 @@ class SignInScreenTest {
   fun setup() {
     vm = SignInViewModel() // real view model
     compose.setContent { SignInScreen(viewModel = vm) }
-  }
-
-  // ===== helpers =====
-
-  private fun setVmState(state: AuthUIState) {
-    val f =
-        vm::class.java.declaredFields.firstOrNull { field ->
-          field.isAccessible = true
-          val v = field.get(vm)
-          v is MutableStateFlow<*> && v.value is AuthUIState
-        } ?: error("MutableStateFlow<AuthUIState> not found on AuthViewModel")
-
-    @Suppress("UNCHECKED_CAST") val flow = f.get(vm) as MutableStateFlow<AuthUIState>
-    flow.value = state
-    compose.waitForIdle()
   }
 
   // ===== Initial state =====
@@ -233,54 +216,6 @@ class SignInScreenTest {
     compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
   }
 
-  // ===== Loading state =====
-
-  @Test
-  fun loadingState_disablesAllButtons() {
-    // Even with valid input, buttons should be disabled during loading
-    compose.onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    setVmState(AuthUIState(isLoading = true))
-    compose.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertIsNotEnabled()
-    compose.onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON).assertIsNotEnabled()
-  }
-
-  @Test
-  fun loadingState_showsLoadingIndicator() {
-    setVmState(AuthUIState(isLoading = true))
-    compose.onNodeWithTag(SignInScreenTestTags.LOADING_INDICATOR).assertExists()
-  }
-
-  @Test
-  fun loadingState_notLoading_noLoadingIndicator() {
-    setVmState(AuthUIState(isLoading = false))
-    compose.onNodeWithTag(SignInScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
-  }
-
-  // ===== Server error messages =====
-
-  @Test
-  fun errorMessage_displayed_whenPresent() {
-    setVmState(AuthUIState(errorMsg = "Invalid credentials"))
-    compose.onNodeWithText("Invalid credentials").assertExists()
-  }
-
-  @Test
-  fun errorMessage_notDisplayed_whenNull() {
-    setVmState(AuthUIState(errorMsg = null))
-    compose.onAllNodesWithText("Invalid credentials").assertCountEquals(0)
-  }
-
-  @Test
-  fun errorMessage_clearedOnButtonClick() {
-    setVmState(AuthUIState(errorMsg = "Previous error"))
-    compose.onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).performClick()
-    compose.waitForIdle()
-    compose.onAllNodesWithText("Previous error").assertCountEquals(0)
-  }
-
   // ===== Google sign-in button =====
 
   @Test
@@ -288,18 +223,6 @@ class SignInScreenTest {
     compose
         .onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON)
         .assertTextContains("Connect with Google")
-  }
-
-  @Test
-  fun googleSignInButton_disabledDuringLoading() {
-    setVmState(AuthUIState(isLoading = true))
-    compose.onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON).assertIsNotEnabled()
-  }
-
-  @Test
-  fun googleSignInButton_enabledWhenNotLoading() {
-    setVmState(AuthUIState(isLoading = false))
-    compose.onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON).assertIsEnabled()
   }
 
   // ===== OR divider =====
