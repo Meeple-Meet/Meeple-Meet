@@ -1,4 +1,4 @@
-package com.github.meeplemeet
+package com.github.meeplemeet.end2end
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -28,7 +29,7 @@ import org.junit.runner.RunWith
  */
 @Ignore("d")
 @RunWith(AndroidJUnit4::class)
-class EndToEndTest : FirestoreTests() {
+class E2E_M1 : FirestoreTests() {
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   private val testEmail = "e2etest${UUID.randomUUID().toString().take(8)}@example.com"
