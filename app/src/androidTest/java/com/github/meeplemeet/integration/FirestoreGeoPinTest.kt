@@ -6,19 +6,26 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinNoUid
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.firebase.firestore.CollectionReference
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Test
 
 class FirestoreGeoPinTest : FirestoreTests() {
-  private var collection = geoPinRepository.collection
+  private lateinit var collection: CollectionReference
 
   private val testLocation1 = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
   private val testLocation2 = Location(latitude = 48.8566, longitude = 2.3522, name = "Paris")
   private val testLocation3 = Location(latitude = 51.5074, longitude = -0.1278, name = "London")
+
+  @Before
+  fun setup() {
+    collection = geoPinRepository.collection
+  }
 
   /* ========== Test 1: Pin Creation ========== */
   @Test
