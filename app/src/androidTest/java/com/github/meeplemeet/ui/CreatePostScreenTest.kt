@@ -31,20 +31,28 @@ class CreatePostScreenTest : FirestoreTests() {
 
   /* ---------- Node helpers ---------- */
   private fun titleField() = compose.onNodeWithTag(CreatePostTestTags.TITLE_FIELD)
+
   private fun bodyField() = compose.onNodeWithTag(CreatePostTestTags.BODY_FIELD)
+
   private fun tagInput() = compose.onNodeWithTag(CreatePostTestTags.TAG_INPUT_FIELD)
+
   private fun tagAddButton() = compose.onNodeWithTag(CreatePostTestTags.TAG_ADD_BUTTON)
+
   private fun postButton() = compose.onNodeWithTag(CreatePostTestTags.POST_BUTTON)
+
   private fun discardButton() = compose.onNodeWithTag(CreatePostTestTags.DISCARD_BUTTON)
+
   private fun backButton() = compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON)
+
   private fun tagChip(tag: String) = compose.onNodeWithTag(CreatePostTestTags.tagChip(tag))
+
   private fun tagRemoveButton(tag: String) =
-    compose.onNodeWithTag(CreatePostTestTags.tagRemoveIcon(tag))
+      compose.onNodeWithTag(CreatePostTestTags.tagRemoveIcon(tag))
 
   /* ---------- Checkpoint helper ---------- */
-  private val ck = Checkpoint()
-  @get:Rule val checkpointRule = Checkpoint.rule()
-  private fun checkpoint(name: String, block: () -> Unit) = ck(name, block)
+  @get:Rule val ck = Checkpoint.rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   @Before
   fun setup() = runBlocking {
@@ -59,12 +67,11 @@ class CreatePostScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme {
         CreatePostScreen(
-          account = testAccount,
-          viewModel = viewModel,
-          onPost = { postCalled = true },
-          onDiscard = { discardCalled = true },
-          onBack = { backCalled = true }
-        )
+            account = testAccount,
+            viewModel = viewModel,
+            onPost = { postCalled = true },
+            onDiscard = { discardCalled = true },
+            onBack = { backCalled = true })
       }
     }
   }
@@ -284,7 +291,7 @@ class CreatePostScreenTest : FirestoreTests() {
       tagInput().performImeAction()
       tagInput().performTextInput("coop")
       tagAddButton().performClick()
-      tagInput().performTextInput("STRATEGY")   // duplicate
+      tagInput().performTextInput("STRATEGY") // duplicate
       tagAddButton().performClick()
       tagRemoveButton("#coop").performClick()
 
@@ -312,8 +319,9 @@ class CreatePostScreenTest : FirestoreTests() {
 
   @After
   fun tearDown() = runBlocking {
-    repository.getPosts()
-      .filter { it.authorId == testAccount.uid }
-      .forEach { repository.deletePost(it.id) }
+    repository
+        .getPosts()
+        .filter { it.authorId == testAccount.uid }
+        .forEach { repository.deletePost(it.id) }
   }
 }

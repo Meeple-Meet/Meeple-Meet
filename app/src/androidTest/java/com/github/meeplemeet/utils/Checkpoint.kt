@@ -40,11 +40,9 @@ class Checkpoint() {
   /* JUnit-rule glue (optional but handy)                                   */
   /* ---------------------------------------------------------------------- */
   class Rule : TestWatcher() {
-    private val ck = Checkpoint() // simple instance
+    val ck = Checkpoint() // simple instance
 
-    override fun starting(description: Description) {
-      /* nothing */
-    }
+    override fun starting(description: Description) {}
 
     override fun finished(description: Description) = ck.assertAll()
   }
