@@ -10,6 +10,7 @@ import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPin
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.GeoPoint
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -35,7 +36,7 @@ import org.junit.Test
  * query parameter updates, and type filtering.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class MapViewModelTest {
+class MapViewModelTest : FirestoreTests() {
   private lateinit var mockMarkerPreviewRepo: MarkerPreviewRepository
   private lateinit var viewModel: MapViewModel
 

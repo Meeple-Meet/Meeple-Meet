@@ -21,7 +21,8 @@ data class MapUIState(
     val geoPins: List<GeoPinWithLocation> = emptyList(),
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
-    val selectedGeoPin: StorableGeoPin? = null
+    val selectedGeoPin: StorableGeoPin? = null,
+    val isLoadingPreview: Boolean = false
 )
 
 data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
@@ -46,7 +47,7 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  */
 class MapViewModel(
     private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews,
-    private val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
+    geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   /** Public observable state of the map, containing geo-pins, errors, and selection info. */
@@ -216,17 +217,23 @@ class MapViewModel(
    */
   fun selectPin(pin: GeoPinWithLocation) {
     viewModelScope.launch {
+      _uiState.update { it.copy(isLoadingPreview = true, selectedGeoPin = pin.geoPin) }
       try {
         val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
         _uiState.update {
-          it.copy(selectedMarkerPreview = preview, selectedGeoPin = pin.geoPin, errorMsg = null)
+          it.copy(
+              selectedMarkerPreview = preview,
+              selectedGeoPin = pin.geoPin,
+              errorMsg = null,
+              isLoadingPreview = false)
         }
       } catch (t: Throwable) {
         _uiState.update {
           it.copy(
               selectedMarkerPreview = null,
               selectedGeoPin = null,
-              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}")
+              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}",
+              isLoadingPreview = false)
         }
       }
     }

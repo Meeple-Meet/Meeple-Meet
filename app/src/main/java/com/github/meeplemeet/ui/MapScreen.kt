@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -133,14 +134,21 @@ fun MapScreen(
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       },
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
-        if (uiState.selectedMarkerPreview != null && uiState.selectedGeoPin != null) {
+        uiState.selectedGeoPin?.let { geoPin ->
           ModalBottomSheet(
               sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
-                MarkerPreviewSheet(
-                    preview = uiState.selectedMarkerPreview!!,
-                    onClose = { viewModel.clearSelectedPin() },
-                    geoPin = uiState.selectedGeoPin!!,
-                    onRedirect = onRedirect)
+                when {
+                  uiState.isLoadingPreview -> {
+                    MarkerPreviewLoadingSheet(geoPin = geoPin)
+                  }
+                  uiState.selectedMarkerPreview != null -> {
+                    MarkerPreviewSheet(
+                        preview = uiState.selectedMarkerPreview!!,
+                        onClose = { viewModel.clearSelectedPin() },
+                        geoPin = uiState.selectedGeoPin!!,
+                        onRedirect = onRedirect)
+                  }
+                }
               }
         }
 
@@ -224,6 +232,27 @@ fun MapScreen(
       }
     }
   }
+}
+
+@Composable
+private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
+  Column(
+      modifier =
+          Modifier.fillMaxWidth().padding(16.dp).testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET),
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text =
+                when (geoPin.type) {
+                  PinType.SHOP -> "Loading shop..."
+                  PinType.SPACE -> "Loading space..."
+                  PinType.SESSION -> "Loading session..."
+                },
+            style = MaterialTheme.typography.titleMedium)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CircularProgressIndicator()
+      }
 }
 
 /**
