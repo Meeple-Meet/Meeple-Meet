@@ -11,6 +11,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -22,6 +23,7 @@ import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.sessions.SessionTestTags
+import kotlin.math.max
 
 // TODO: only allow >= 1 seats and >= 0 prices
 // TODO: allow decimal prices
@@ -193,11 +195,7 @@ fun SpaceRow(
     isEditing: Boolean = false
 ) {
   // Outline opacity: 1f when editing, 0.3f otherwise
-  val outline =
-      MaterialTheme.colorScheme.onSurface.copy(
-          alpha =
-              if (isEditing) SpaceRenterUi.Styles.editingBorderAlpha
-              else SpaceRenterUi.Styles.readonlyBorderAlpha)
+  val outline = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isEditing) 1f else 0.3f)
   val tfColors =
       OutlinedTextFieldDefaults.colors(
           focusedBorderColor = outline,
@@ -206,6 +204,13 @@ fun SpaceRow(
           errorBorderColor = outline)
 
   val rowTagBase = SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + index
+
+  var seatsText by remember(space.seats) { mutableStateOf(max(1, space.seats).toString()) }
+  var priceText by
+      remember(space.costPerHour) {
+        mutableStateOf(
+            if (space.costPerHour == 0.0) "0" else space.costPerHour.toString().removeSuffix(".0"))
+      }
 
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag(rowTagBase)) {
     Text(
@@ -216,17 +221,17 @@ fun SpaceRow(
                 .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_LABEL_SUFFIX))
 
     OutlinedTextField(
-        value = space.seats.toString(),
+        value = seatsText,
         onValueChange = { raw ->
-          val clean = raw.filter { it.isDigit() }
-          val parsed = clean.toIntOrNull()
-          val clamped =
-              when {
-                parsed == null -> 1
-                parsed < 1 -> 1
-                else -> parsed
-              }
-          onChange(space.copy(seats = clamped))
+          val digits = raw.filter(Char::isDigit)
+          if (digits.isEmpty()) {
+            seatsText = ""
+          } else {
+            seatsText = digits
+            val parsed = digits.toIntOrNull() ?: 1
+            val clamped = max(1, parsed)
+            if (clamped != space.seats) onChange(space.copy(seats = clamped))
+          }
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -234,21 +239,49 @@ fun SpaceRow(
         colors = tfColors,
         modifier =
             Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+                .onFocusChanged { st ->
+                  if (st.isFocused) {
+                    if (seatsText == "1" && space.seats == 1) seatsText = ""
+                  } else {
+                    if (seatsText.isBlank()) {
+                      seatsText = "1"
+                      if (space.seats != 1) onChange(space.copy(seats = 1))
+                    } else {
+                      val value = (seatsText.toIntOrNull() ?: 1).coerceAtLeast(1)
+                      val normalized = value.toString()
+                      if (seatsText != normalized) seatsText = normalized
+                      if (space.seats != value) onChange(space.copy(seats = value))
+                    }
+                  }
+                }
                 .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_SEATS_FIELD_SUFFIX))
 
     Spacer(Modifier.width(SpaceRenterUi.Dimensions.columnsGap))
 
     OutlinedTextField(
-        value = space.costPerHour.toString().removeSuffix(".0"),
+        value = priceText,
         onValueChange = { raw ->
           val normalized = raw.replace(',', '.')
-          val cleaned =
-              normalized.filterIndexed { i, c ->
-                c.isDigit() || (c == '.' && normalized.indexOf('.') == i)
+          var dotSeen = false
+          val filtered = buildString {
+            for (c in normalized) {
+              if (c.isDigit()) append(c)
+              else if (c == '.' && !dotSeen) {
+                append(c)
+                dotSeen = true
               }
-          val parsed = cleaned.toDoubleOrNull()
-          val clamped = if (parsed == null || parsed < 0.0) 0.0 else parsed
-          onChange(space.copy(costPerHour = clamped))
+            }
+          }
+
+          priceText = filtered
+
+          val parsed = filtered.toDoubleOrNull()
+          if (parsed != null) {
+            val clamped = if (parsed < 0.0) 0.0 else parsed
+            if (clamped != space.costPerHour) {
+              onChange(space.copy(costPerHour = clamped))
+            }
+          }
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -256,6 +289,29 @@ fun SpaceRow(
         colors = tfColors,
         modifier =
             Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+                .onFocusChanged { st ->
+                  if (st.isFocused) {
+                    if ((priceText == "0" || priceText == "0.0") && space.costPerHour == 0.0) {
+                      priceText = ""
+                    }
+                  } else {
+                    if (priceText.isBlank() || priceText == ".") {
+                      priceText = "0"
+                      if (space.costPerHour != 0.0) {
+                        onChange(space.copy(costPerHour = 0.0))
+                      }
+                    } else {
+                      val normalized = priceText.trimEnd('.')
+                      val parsed = normalized.toDoubleOrNull() ?: 0.0
+                      val clamped = if (parsed < 0.0) 0.0 else parsed
+                      val display = if (normalized.isBlank()) "0" else normalized
+                      if (priceText != display) priceText = display
+                      if (space.costPerHour != clamped) {
+                        onChange(space.copy(costPerHour = clamped))
+                      }
+                    }
+                  }
+                }
                 .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_PRICE_FIELD_SUFFIX))
 
     Spacer(Modifier.weight(1f))
