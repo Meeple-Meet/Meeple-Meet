@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -28,6 +27,9 @@ import com.github.meeplemeet.ui.sessions.SessionTestTags
 private val SpaceLabelWidth = 110.dp
 private val FieldBoxWidth = 88.dp
 private val ColumnsGap = 16.dp
+
+private val MAX_LIST_HEIGHT: Dp = 600.dp
+private val ROW_SPACING: Dp = 8.dp
 
 /* ================================================================
  * Required info section (same as shop, adapted to space renters)
@@ -104,7 +106,7 @@ fun SpaceRenterRequiredInfoSection(
 }
 
 /* ================================================================
- * Spaces section header + row (used by CreateSpaceRenterScreen)
+ * Spaces section header + row + list (used by CreateSpaceRenterScreen)
  * ================================================================ */
 @Composable
 fun SpacesHeaderRow(placesTitle: String, priceTitle: String) {
@@ -135,10 +137,10 @@ fun SpaceRow(
     space: Space,
     onChange: (Space) -> Unit,
     onDelete: () -> Unit,
-    borderOpacity: Float = 1f,
-    borderColor: Color = MaterialTheme.colorScheme.onSurface
+    isEditing: Boolean = false
 ) {
-  val outline = borderColor.copy(alpha = borderOpacity)
+  // Hard-coded outline behavior: 1f when editing, 0.3f otherwise.
+  val outline = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isEditing) 1f else 0.3f)
   val tfColors =
       OutlinedTextFieldDefaults.colors(
           focusedBorderColor = outline,
@@ -183,11 +185,13 @@ fun SpaceRow(
 
     Spacer(Modifier.weight(1f))
 
-    IconButton(onClick = onDelete) {
-      Icon(
-          Icons.Filled.Delete,
-          contentDescription = "Remove space",
-          tint = MaterialTheme.colorScheme.error)
+    if (isEditing) {
+      IconButton(onClick = onDelete) {
+        Icon(
+            Icons.Filled.Delete,
+            contentDescription = "Remove space",
+            tint = MaterialTheme.colorScheme.error)
+      }
     }
   }
 }
@@ -201,14 +205,9 @@ fun SpacesList(
     priceTitle: String,
     emptyText: String,
     modifier: Modifier = Modifier,
-    rowBorderOpacity: Float = 1f,
-    rowBorderColor: Color = MaterialTheme.colorScheme.onSurface,
-    maxListHeight: Dp = 600.dp,
-    rowSpacing: Dp = 8.dp
+    isEditing: Boolean = true, // controls delete visibility & border opacity
 ) {
   Column(modifier = modifier) {
-    SpacesHeaderRow(placesTitle = placesTitle, priceTitle = priceTitle)
-
     if (spaces.isEmpty()) {
       Text(
           emptyText,
@@ -216,36 +215,46 @@ fun SpacesList(
           style = MaterialTheme.typography.bodyMedium,
       )
     } else {
+      SpacesHeaderRow(placesTitle = placesTitle, priceTitle = priceTitle)
       LazyColumn(
-          verticalArrangement = Arrangement.spacedBy(rowSpacing),
+          verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
           contentPadding = PaddingValues(bottom = 16.dp),
-          modifier = Modifier.heightIn(max = maxListHeight)) {
+          modifier = Modifier.heightIn(max = MAX_LIST_HEIGHT)) {
             itemsIndexed(spaces) { idx, space ->
               SpaceRow(
                   index = idx,
                   space = space,
                   onChange = { updated -> onChange(idx, updated) },
                   onDelete = { onDelete(idx) },
-                  borderOpacity = rowBorderOpacity,
-                  borderColor = rowBorderColor)
+                  isEditing = isEditing)
             }
           }
     }
   }
 }
 
-/** Isolated row preview so you can tweak integer/double inputs quickly. */
-@Preview(name = "Space Row – inputs", showBackground = true, widthDp = 390)
+/** Quick preview for the row in both modes (no Firebase/VMs). */
+@Preview(name = "Space Row – read vs edit", showBackground = true, widthDp = 390)
 @Composable
-private fun Preview_SpaceRow() {
+private fun Preview_SpaceRow_ReadEdit() {
   MaterialTheme {
     Surface {
       Column(Modifier.padding(16.dp)) {
+        Text("Read-only", style = MaterialTheme.typography.titleSmall)
         SpaceRow(
-            index = 0, space = Space(seats = 4, costPerHour = 8.5), onChange = {}, onDelete = {})
+            index = 0,
+            space = Space(seats = 6, costPerHour = 12.0),
+            onChange = {},
+            onDelete = {},
+            isEditing = false)
         Spacer(Modifier.height(12.dp))
+        Text("Editing", style = MaterialTheme.typography.titleSmall)
         SpaceRow(
-            index = 1, space = Space(seats = 10, costPerHour = 15.0), onChange = {}, onDelete = {})
+            index = 1,
+            space = Space(seats = 8, costPerHour = 20.0),
+            onChange = {},
+            onDelete = {},
+            isEditing = true)
       }
     }
   }
