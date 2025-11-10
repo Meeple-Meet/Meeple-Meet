@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.space_renter
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -21,7 +20,7 @@ import kotlinx.coroutines.launch
  */
 class EditSpaceRenterViewModel(
     private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
-) : ViewModel() {
+) : SpaceRenterSearchViewModel() {
 
   /**
    * Updates one or more fields of an existing space renter.

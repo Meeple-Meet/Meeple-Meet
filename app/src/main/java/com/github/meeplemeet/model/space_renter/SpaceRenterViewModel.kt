@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.space_renter
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +17,7 @@ import kotlinx.coroutines.launch
  */
 class SpaceRenterViewModel(
     private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
-) : ViewModel() {
+) : SpaceRenterSearchViewModel() {
   private val _spaceRenter = MutableStateFlow<SpaceRenter?>(null)
 
   /**
