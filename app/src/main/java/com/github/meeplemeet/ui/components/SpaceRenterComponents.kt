@@ -7,13 +7,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
@@ -23,17 +23,61 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 
-/* ----- sizes to keep columns aligned across header and rows ----- */
-private val SpaceLabelWidth = 110.dp
-private val FieldBoxWidth = 88.dp
-private val ColumnsGap = 16.dp
+// TODO: only allow >= 1 seats and >= 0 prices
+// TODO: allow decimal prices
 
-private val MAX_LIST_HEIGHT: Dp = 600.dp
-private val ROW_SPACING: Dp = 8.dp
+/* ================================================================================================
+ * Test tags
+ * ================================================================================================ */
+object SpaceRenterComponentsTestTags {
+  // Space list
+  const val SPACES_LIST = "spaces_list"
+  const val SPACES_EMPTY_TEXT = "spaces_empty_text"
 
-/* ================================================================
- * Required info section (same as shop, adapted to space renters)
- * ================================================================ */
+  // Header
+  const val SPACES_HEADER = "spaces_header"
+  const val SPACES_HEADER_PLACES = "spaces_header_places"
+  const val SPACES_HEADER_PRICE = "spaces_header_price"
+
+  // Space rows
+  const val SPACE_ROW_PREFIX = "space_row_"
+  const val SPACE_ROW_LABEL_SUFFIX = "_label"
+  const val SPACE_ROW_SEATS_FIELD_SUFFIX = "_seats"
+  const val SPACE_ROW_PRICE_FIELD_SUFFIX = "_price"
+  const val SPACE_ROW_DELETE_SUFFIX = "_delete"
+}
+
+/* ================================================================================================
+ * UI defaults
+ * ================================================================================================ */
+private object SpaceRenterUi {
+  object Dimensions {
+    val spaceLabelWidth = 110.dp
+    val fieldBoxWidth = 88.dp
+    val columnsGap = 16.dp
+    val maxListHeight: Dp = 600.dp
+    val rowSpacing: Dp = 8.dp
+  }
+
+  object Strings {
+    const val spaceNumberPrefix = "Space N°"
+    const val spaceNameField = "Space name"
+    const val validEmailMsg = "Enter a valid email address."
+
+    const val labelPlaces = "Places"
+    const val labelPrices = "Price"
+    const val emptySpacesText = "No spaces added yet."
+  }
+
+  object Styles {
+    const val editingBorderAlpha = 1f
+    const val readonlyBorderAlpha = 0.3f
+  }
+}
+
+/* ================================================================================================
+ * Required info section
+ * ================================================================================================ */
 @Composable
 fun SpaceRenterRequiredInfoSection(
     spaceRenter: SpaceRenter?,
@@ -52,8 +96,8 @@ fun SpaceRenterRequiredInfoSection(
   // Name
   Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP)) {
     LabeledField(
-        label = "Space name",
-        placeholder = "Space name",
+        label = SpaceRenterUi.Strings.spaceNameField,
+        placeholder = SpaceRenterUi.Strings.spaceNameField,
         value = spaceName,
         onValueChange = onSpaceName)
   }
@@ -70,7 +114,7 @@ fun SpaceRenterRequiredInfoSection(
   val showEmailError = email.isNotEmpty() && !isValidEmail(email)
   if (showEmailError) {
     Text(
-        "Enter a valid email address.",
+        SpaceRenterUi.Strings.validEmailMsg,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall)
   }
@@ -105,26 +149,35 @@ fun SpaceRenterRequiredInfoSection(
   }
 }
 
-/* ================================================================
- * Spaces section header + row + list (used by CreateSpaceRenterScreen)
- * ================================================================ */
+/* ================================================================================================
+ * Spaces section
+ * ================================================================================================ */
 @Composable
 fun SpacesHeaderRow(placesTitle: String, priceTitle: String) {
   Row(
-      modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(bottom = 8.dp)
+              .testTag(SpaceRenterComponentsTestTags.SPACES_HEADER),
       verticalAlignment = Alignment.CenterVertically) {
-        Spacer(Modifier.width(SpaceLabelWidth))
+        Spacer(Modifier.width(SpaceRenterUi.Dimensions.spaceLabelWidth))
 
         Text(
             text = placesTitle,
-            modifier = Modifier.width(FieldBoxWidth).wrapContentWidth(Alignment.CenterHorizontally),
+            modifier =
+                Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .testTag(SpaceRenterComponentsTestTags.SPACES_HEADER_PLACES),
             style = MaterialTheme.typography.titleMedium)
 
-        Spacer(Modifier.width(ColumnsGap))
+        Spacer(Modifier.width(SpaceRenterUi.Dimensions.columnsGap))
 
         Text(
             text = priceTitle,
-            modifier = Modifier.width(FieldBoxWidth).wrapContentWidth(Alignment.CenterHorizontally),
+            modifier =
+                Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .testTag(SpaceRenterComponentsTestTags.SPACES_HEADER_PRICE),
             style = MaterialTheme.typography.titleMedium)
 
         Spacer(Modifier.weight(1f))
@@ -139,8 +192,12 @@ fun SpaceRow(
     onDelete: () -> Unit,
     isEditing: Boolean = false
 ) {
-  // Hard-coded outline behavior: 1f when editing, 0.3f otherwise.
-  val outline = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isEditing) 1f else 0.3f)
+  // Outline opacity: 1f when editing, 0.3f otherwise
+  val outline =
+      MaterialTheme.colorScheme.onSurface.copy(
+          alpha =
+              if (isEditing) SpaceRenterUi.Styles.editingBorderAlpha
+              else SpaceRenterUi.Styles.readonlyBorderAlpha)
   val tfColors =
       OutlinedTextFieldDefaults.colors(
           focusedBorderColor = outline,
@@ -148,50 +205,72 @@ fun SpaceRow(
           disabledBorderColor = outline,
           errorBorderColor = outline)
 
-  Row(verticalAlignment = Alignment.CenterVertically) {
+  val rowTagBase = SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + index
+
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag(rowTagBase)) {
     Text(
-        "Space N°${index + 1}",
+        "${SpaceRenterUi.Strings.spaceNumberPrefix} ${index + 1}",
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.width(SpaceLabelWidth))
+        modifier =
+            Modifier.width(SpaceRenterUi.Dimensions.spaceLabelWidth)
+                .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_LABEL_SUFFIX))
 
     OutlinedTextField(
         value = space.seats.toString(),
         onValueChange = { raw ->
           val clean = raw.filter { it.isDigit() }
-          onChange(space.copy(seats = clean.toIntOrNull() ?: 0))
+          val parsed = clean.toIntOrNull()
+          val clamped =
+              when {
+                parsed == null -> 1
+                parsed < 1 -> 1
+                else -> parsed
+              }
+          onChange(space.copy(seats = clamped))
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
         colors = tfColors,
-        modifier = Modifier.width(FieldBoxWidth))
+        modifier =
+            Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+                .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_SEATS_FIELD_SUFFIX))
 
-    Spacer(Modifier.width(ColumnsGap))
+    Spacer(Modifier.width(SpaceRenterUi.Dimensions.columnsGap))
 
     OutlinedTextField(
         value = space.costPerHour.toString().removeSuffix(".0"),
         onValueChange = { raw ->
+          val normalized = raw.replace(',', '.')
           val cleaned =
-              raw.replace(',', '.').filterIndexed { i, c ->
-                c.isDigit() || (c == '.' && raw.replace(',', '.').indexOf('.') == i)
+              normalized.filterIndexed { i, c ->
+                c.isDigit() || (c == '.' && normalized.indexOf('.') == i)
               }
-          onChange(space.copy(costPerHour = cleaned.toDoubleOrNull() ?: 0.0))
+          val parsed = cleaned.toDoubleOrNull()
+          val clamped = if (parsed == null || parsed < 0.0) 0.0 else parsed
+          onChange(space.copy(costPerHour = clamped))
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
         colors = tfColors,
-        modifier = Modifier.width(FieldBoxWidth))
+        modifier =
+            Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+                .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_PRICE_FIELD_SUFFIX))
 
     Spacer(Modifier.weight(1f))
 
     if (isEditing) {
-      IconButton(onClick = onDelete) {
-        Icon(
-            Icons.Filled.Delete,
-            contentDescription = "Remove space",
-            tint = MaterialTheme.colorScheme.error)
-      }
+      IconButton(
+          onClick = onDelete,
+          modifier =
+              Modifier.testTag(
+                  rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_DELETE_SUFFIX)) {
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = "Remove space",
+                tint = MaterialTheme.colorScheme.error)
+          }
     }
   }
 }
@@ -201,25 +280,24 @@ fun SpacesList(
     spaces: List<Space>,
     onChange: (index: Int, updated: Space) -> Unit,
     onDelete: (index: Int) -> Unit,
-    placesTitle: String,
-    priceTitle: String,
-    emptyText: String,
     modifier: Modifier = Modifier,
-    isEditing: Boolean = true, // controls delete visibility & border opacity
+    isEditing: Boolean = true
 ) {
-  Column(modifier = modifier) {
+  Column(modifier = modifier.testTag(SpaceRenterComponentsTestTags.SPACES_LIST)) {
     if (spaces.isEmpty()) {
       Text(
-          emptyText,
+          SpaceRenterUi.Strings.emptySpacesText,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           style = MaterialTheme.typography.bodyMedium,
-      )
+          modifier = Modifier.testTag(SpaceRenterComponentsTestTags.SPACES_EMPTY_TEXT))
     } else {
-      SpacesHeaderRow(placesTitle = placesTitle, priceTitle = priceTitle)
+      SpacesHeaderRow(
+          placesTitle = SpaceRenterUi.Strings.labelPlaces,
+          priceTitle = SpaceRenterUi.Strings.labelPrices)
       LazyColumn(
-          verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
+          verticalArrangement = Arrangement.spacedBy(SpaceRenterUi.Dimensions.rowSpacing),
           contentPadding = PaddingValues(bottom = 16.dp),
-          modifier = Modifier.heightIn(max = MAX_LIST_HEIGHT)) {
+          modifier = Modifier.heightIn(max = SpaceRenterUi.Dimensions.maxListHeight)) {
             itemsIndexed(spaces) { idx, space ->
               SpaceRow(
                   index = idx,
@@ -229,33 +307,6 @@ fun SpacesList(
                   isEditing = isEditing)
             }
           }
-    }
-  }
-}
-
-/** Quick preview for the row in both modes (no Firebase/VMs). */
-@Preview(name = "Space Row – read vs edit", showBackground = true, widthDp = 390)
-@Composable
-private fun Preview_SpaceRow_ReadEdit() {
-  MaterialTheme {
-    Surface {
-      Column(Modifier.padding(16.dp)) {
-        Text("Read-only", style = MaterialTheme.typography.titleSmall)
-        SpaceRow(
-            index = 0,
-            space = Space(seats = 6, costPerHour = 12.0),
-            onChange = {},
-            onDelete = {},
-            isEditing = false)
-        Spacer(Modifier.height(12.dp))
-        Text("Editing", style = MaterialTheme.typography.titleSmall)
-        SpaceRow(
-            index = 1,
-            space = Space(seats = 8, costPerHour = 20.0),
-            onChange = {},
-            onDelete = {},
-            isEditing = true)
-      }
     }
   }
 }
