@@ -77,6 +77,23 @@ private object SpaceRenterUi {
 /* ================================================================================================
  * Required info section
  * ================================================================================================ */
+
+/**
+ * Section with required info fields for a space renter: name, email, phone, link, address.
+ *
+ * @param spaceRenter The space renter being edited, or null if creating a new one.
+ * @param spaceName The current value of the space name field.
+ * @param onSpaceName Callback when the space name changes.
+ * @param email The current value of the email field.
+ * @param onEmail Callback when the email changes.
+ * @param phone The current value of the phone field.
+ * @param onPhone Callback when the phone changes.
+ * @param link The current value of the link field.
+ * @param onLink Callback when the link changes.
+ * @param onPickLocation Callback when a location is picked.
+ * @param viewModel The SpaceRenterSearchViewModel for location searching.
+ * @param owner The account of the owner of the space renter.
+ */
 @Composable
 fun SpaceRenterRequiredInfoSection(
     spaceRenter: SpaceRenter?,
@@ -151,6 +168,13 @@ fun SpaceRenterRequiredInfoSection(
 /* ================================================================================================
  * Spaces section
  * ================================================================================================ */
+
+/**
+ * Header row for the spaces list, showing titles for places and price columns.
+ *
+ * @param placesTitle The title for the places column.
+ * @param priceTitle The title for the price column.
+ */
 @Composable
 fun SpacesHeaderRow(placesTitle: String, priceTitle: String) {
   Row(
@@ -183,6 +207,15 @@ fun SpacesHeaderRow(placesTitle: String, priceTitle: String) {
       }
 }
 
+/**
+ * A row representing a single space, with fields for number of seats and cost per hour.
+ *
+ * @param index The index of the space in the list.
+ * @param space The space data.
+ * @param onChange Callback when the space is changed.
+ * @param onDelete Callback when the space is deleted.
+ * @param isEditing Whether the row is in editing mode (shows delete button).
+ */
 @Composable
 fun SpaceRow(
     index: Int,
@@ -332,6 +365,15 @@ fun SpaceRow(
   }
 }
 
+/**
+ * A list of spaces with the ability to edit or delete each space.
+ *
+ * @param spaces The list of spaces to display.
+ * @param onChange Callback when a space is changed, providing the index and updated space.
+ * @param onDelete Callback when a space is deleted, providing the index.
+ * @param modifier Modifier for the list container.
+ * @param isEditing Whether the list is in editing mode (shows delete buttons).
+ */
 @Composable
 fun SpacesList(
     spaces: List<Space>,
