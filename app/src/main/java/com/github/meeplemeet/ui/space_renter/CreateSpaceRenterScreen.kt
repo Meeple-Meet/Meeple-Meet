@@ -68,15 +68,6 @@ object AddSpaceRenterUi {
 /* ================================================================================================
  * Screen
  * ================================================================================================ */
-
-/**
- * Screen to create a new space renter.
- *
- * @param owner The account creating the space renter.
- * @param onBack Callback when the user wants to go back.
- * @param onCreated Callback when the space renter has been created.
- * @param viewModel The ViewModel to use.
- */
 @Composable
 fun CreateSpaceRenterScreen(
     owner: Account,
@@ -108,17 +99,6 @@ fun CreateSpaceRenterScreen(
 /* ================================================================================================
  * Content
  * ================================================================================================ */
-
-/**
- * Content for the AddSpaceRenterScreen.
- *
- * @param owner The account creating the space renter.
- * @param onBack Callback when the user wants to go back.
- * @param onCreated Callback when the space renter has been created.
- * @param onCreate Suspend function to create the space renter.
- * @param locationUi The current location UI state.
- * @param viewModel The ViewModel to use.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddSpaceRenterContent(
@@ -145,9 +125,6 @@ internal fun AddSpaceRenterContent(
   var phone by rememberSaveable { mutableStateOf("") }
   var link by rememberSaveable { mutableStateOf("") }
 
-  var addressText by rememberSaveable { mutableStateOf("") }
-  var selectedLocation by remember { mutableStateOf<Location?>(null) }
-
   var week by remember { mutableStateOf(emptyWeek()) }
   var editingDay by remember { mutableStateOf<Int?>(null) }
   var showHoursDialog by remember { mutableStateOf(false) }
@@ -159,32 +136,38 @@ internal fun AddSpaceRenterContent(
   val allSpacesValid by
       remember(spaces) { derivedStateOf { spaces.all { it.seats >= 1 && it.costPerHour >= 0.0 } } }
 
+  val hasLocation by
+      remember(locationUi.selectedLocation) {
+        derivedStateOf { locationUi.selectedLocation != null }
+      }
+
+  LaunchedEffect(locationUi.locationQuery) {
+    val sel = locationUi.selectedLocation
+    if (sel != null && locationUi.locationQuery != sel.name) {
+      val typed = locationUi.locationQuery
+      viewModel.clearLocationSearch()
+      if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
+    }
+  }
+
   val isValid by
-      remember(name, email, addressText, hasOpeningHours, hasAtLeastOneSpace, allSpacesValid) {
+      remember(name, email, hasLocation, hasOpeningHours, hasAtLeastOneSpace, allSpacesValid) {
         derivedStateOf {
           name.isNotBlank() &&
               isValidEmail(email) &&
-              addressText.isNotBlank() &&
+              hasLocation &&
               hasOpeningHours &&
               hasAtLeastOneSpace &&
               allSpacesValid
         }
       }
 
-  // Keep address text in sync with the location search bar
-  LaunchedEffect(locationUi.locationQuery) {
-    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
-      addressText = locationUi.locationQuery
-    }
-  }
-
   fun discardAndBack() {
     name = ""
     email = ""
     phone = ""
     link = ""
-    addressText = ""
-    selectedLocation = null
+    viewModel.clearLocationSearch()
     week = emptyWeek()
     editingDay = null
     showHoursDialog = false
@@ -222,7 +205,7 @@ internal fun AddSpaceRenterContent(
         ActionBar(
             onDiscard = { discardAndBack() },
             onPrimary = {
-              val addr = selectedLocation ?: Location(name = addressText)
+              val addr = locationUi.selectedLocation ?: Location(name = locationUi.locationQuery)
               scope.launch {
                 try {
                   onCreate(name, email, phone, link, addr, week, spaces)
@@ -243,7 +226,6 @@ internal fun AddSpaceRenterContent(
                 PaddingValues(
                     horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
                     vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
-
               // Required info
               item {
                 CollapsibleSection(
@@ -260,10 +242,7 @@ internal fun AddSpaceRenterContent(
                           onPhone = { phone = it },
                           link = link,
                           onLink = { link = it },
-                          onPickLocation = { loc ->
-                            addressText = loc.name
-                            selectedLocation = loc
-                          },
+                          onPickLocation = { loc -> viewModel.setLocation(loc) },
                           viewModel = viewModel,
                           owner = owner)
                     },
