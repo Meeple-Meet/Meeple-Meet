@@ -4,6 +4,7 @@ import android.util.Log
 import java.io.PrintWriter
 import java.io.StringWriter
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
@@ -30,7 +31,7 @@ class Checkpoint() {
 
     failures.forEach { (desc, result) ->
       val stack = result.exceptionOrNull()?.stackTraceToString() ?: ""
-      Log.d("ERROR", "FAILED : $desc\n$stack")
+      Log.e("ERROR", "Checkpoint failed: $desc\n$stack")
     }
 
     assertTrue("${failures.size} checkpoint(s) failed → ${failures.keys}", failures.isEmpty())

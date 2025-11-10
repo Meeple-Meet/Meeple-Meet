@@ -24,6 +24,10 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   /* 1. shared rule for single install */
   @get:Rule(order = 0) val compose = createComposeRule()
+  /* ---------- Checkpoint helper ---------- */
+  @get:Rule val ck = Checkpoint.rule()
+
+  fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var mainActivityViewModel: MainActivityViewModel
   private lateinit var handlesVm: CreateAccountViewModel
@@ -31,12 +35,6 @@ class CreateAccountScreenTest : FirestoreTests() {
 
   /* handles created by THIS test run */
   private val handlesCreated = mutableSetOf<String>()
-
-  /* 2. drop manual report map – Checkpoint summarises itself */
-  private val ck = Checkpoint()
-  @get:Rule val checkpointRule = Checkpoint.rule()
-
-  private fun checkpoint(name: String, block: () -> Unit) = ck(name, block)
 
   /* helper accessors */
   private fun handleField() = compose.onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD)
