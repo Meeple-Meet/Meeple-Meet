@@ -301,11 +301,9 @@ internal fun AddSpaceRenterContent(
                       SpacesList(
                           spaces = spaces,
                           onChange = { idx, updated ->
-                            spaces = spaces.toMutableList().also { it[idx] = updated }
+                            spaces = spaces.mapIndexed { i, sp -> if (i == idx) updated else sp }
                           },
-                          onDelete = { idx ->
-                            spaces = spaces.toMutableList().also { it.removeAt(idx) }
-                          },
+                          onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } },
                       )
                     },
                     testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
