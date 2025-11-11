@@ -189,8 +189,8 @@ fun ContactSection(spaceRenter: SpaceRenter) {
 }
 
 /**
- * Composable that displays a single row of contact information with an icon, text, and a button to
- * copy the text to the clipboard.
+ * Composable displaying a row of contact info. This includes an clickable icon, and information
+ * about the spaceRenter The clickable icons currently only copy the text to the clipboard.
  *
  * @param icon The icon to display for the contact method.
  * @param text The contact text to display and copy.
@@ -201,6 +201,15 @@ fun ContactSection(spaceRenter: SpaceRenter) {
 fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
   val clipboardManager: ClipboardManager = LocalClipboardManager.current
   val context = LocalContext.current
+
+  val copyToClipboard =
+      remember(text) {
+        {
+          clipboardManager.setText(AnnotatedString(text))
+          Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
+      }
+
   Row(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -209,14 +218,10 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
             text,
             style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
             modifier = Modifier.weight(1f).testTag(textTag))
-        IconButton(
-            onClick = {
-              // Copy the contact text to the clipboard and show a toast confirmation
-              clipboardManager.setText(AnnotatedString(text))
-              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-            },
-            content = { Icon(icon, contentDescription = null, tint = AppColors.neutral) },
-            modifier = Modifier.size(24.dp).testTag(buttonTag))
+
+        IconButton(onClick = copyToClipboard, modifier = Modifier.size(24.dp).testTag(buttonTag)) {
+          Icon(imageVector = icon, contentDescription = null, tint = AppColors.neutral)
+        }
       }
 }
 
