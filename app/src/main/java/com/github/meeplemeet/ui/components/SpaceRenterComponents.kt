@@ -75,6 +75,104 @@ private object SpaceRenterUi {
 }
 
 /* ================================================================================================
+ * Helpers
+ * ================================================================================================ */
+
+/**
+ * Sanitizes input for a positive integer field by removing non-digit characters.
+ *
+ * @param raw The raw input string.
+ * @return A string containing only digit characters.
+ */
+private fun sanitizePositiveIntInput(raw: String): String = raw.filter(Char::isDigit)
+
+/**
+ * Sanitizes input for a decimal number field by allowing only digits and a single decimal point.
+ *
+ * @param raw The raw input string.
+ * @return A string formatted as a decimal number.
+ */
+private fun sanitizeDecimalInput(raw: String): String {
+  val normalized = raw.replace(',', '.')
+  var dotSeen = false
+  val out = StringBuilder()
+  for (c in normalized) {
+    if (c.isDigit()) out.append(c)
+    else if (c == '.' && !dotSeen) {
+      out.append('.')
+      dotSeen = true
+    }
+  }
+  return out.toString()
+}
+
+/**
+ * Handles focus change for an integer input field, normalizing the text and committing changes.
+ *
+ * @param isFocused Whether the field is currently focused.
+ * @param text The current text in the field.
+ * @param current The current integer value represented by the field.
+ * @param min The minimum allowed value (default is 1).
+ * @param onText Callback to update the text in the field.
+ * @param onCommit Callback to commit the integer value.
+ */
+private fun handleIntFocusChange(
+    isFocused: Boolean,
+    text: String,
+    current: Int,
+    min: Int = 1,
+    onText: (String) -> Unit,
+    onCommit: (Int) -> Unit,
+) {
+  if (isFocused) {
+    if (text == min.toString() && current == min) onText("")
+    return
+  }
+  if (text.isBlank()) {
+    onText(min.toString())
+    if (current != min) onCommit(min)
+  } else {
+    val value = (text.toIntOrNull() ?: min).coerceAtLeast(min)
+    val normalized = value.toString()
+    if (text != normalized) onText(normalized)
+    if (current != value) onCommit(value)
+  }
+}
+
+/**
+ * Handles focus change for a decimal input field, normalizing the text and committing changes.
+ *
+ * @param isFocused Whether the field is currently focused.
+ * @param text The current text in the field.
+ * @param current The current decimal value represented by the field.
+ * @param onText Callback to update the text in the field.
+ * @param onCommit Callback to commit the decimal value.
+ */
+private fun handleDecimalFocusChange(
+    isFocused: Boolean,
+    text: String,
+    current: Double,
+    onText: (String) -> Unit,
+    onCommit: (Double) -> Unit,
+) {
+  if (isFocused) {
+    if ((text == "0" || text == "0.0") && current == 0.0) onText("")
+    return
+  }
+  if (text.isBlank() || text == ".") {
+    onText("0")
+    if (current != 0.0) onCommit(0.0)
+  } else {
+    val normalized = text.trimEnd('.')
+    val parsed = normalized.toDoubleOrNull() ?: 0.0
+    val clamped = if (parsed < 0.0) 0.0 else parsed
+    val display = normalized.ifBlank { "0" }
+    if (text != display) onText(display)
+    if (current != clamped) onCommit(clamped)
+  }
+}
+
+/* ================================================================================================
  * Required info section
  * ================================================================================================ */
 
@@ -254,14 +352,13 @@ fun SpaceRow(
             Modifier.width(SpaceRenterUi.Dimensions.spaceLabelWidth)
                 .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_LABEL_SUFFIX))
 
+    // Seats
     OutlinedTextField(
         value = seatsText,
         onValueChange = { raw ->
-          val digits = raw.filter(Char::isDigit)
-          if (digits.isEmpty()) {
-            seatsText = ""
-          } else {
-            seatsText = digits
+          val digits = sanitizePositiveIntInput(raw)
+          seatsText = digits
+          if (digits.isNotEmpty()) {
             val parsed = digits.toIntOrNull() ?: 1
             val clamped = max(1, parsed)
             if (clamped != space.seats) onChange(space.copy(seats = clamped))
@@ -274,47 +371,27 @@ fun SpaceRow(
         modifier =
             Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
                 .onFocusChanged { st ->
-                  if (st.isFocused) {
-                    if (seatsText == "1" && space.seats == 1) seatsText = ""
-                  } else {
-                    if (seatsText.isBlank()) {
-                      seatsText = "1"
-                      if (space.seats != 1) onChange(space.copy(seats = 1))
-                    } else {
-                      val value = (seatsText.toIntOrNull() ?: 1).coerceAtLeast(1)
-                      val normalized = value.toString()
-                      if (seatsText != normalized) seatsText = normalized
-                      if (space.seats != value) onChange(space.copy(seats = value))
-                    }
-                  }
+                  handleIntFocusChange(
+                      isFocused = st.isFocused,
+                      text = seatsText,
+                      current = space.seats,
+                      min = 1,
+                      onText = { seatsText = it },
+                      onCommit = { v -> if (space.seats != v) onChange(space.copy(seats = v)) })
                 }
                 .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_SEATS_FIELD_SUFFIX))
 
     Spacer(Modifier.width(SpaceRenterUi.Dimensions.columnsGap))
 
+    // Price
     OutlinedTextField(
         value = priceText,
         onValueChange = { raw ->
-          val normalized = raw.replace(',', '.')
-          var dotSeen = false
-          val filtered = buildString {
-            for (c in normalized) {
-              if (c.isDigit()) append(c)
-              else if (c == '.' && !dotSeen) {
-                append(c)
-                dotSeen = true
-              }
-            }
-          }
-
+          val filtered = sanitizeDecimalInput(raw)
           priceText = filtered
-
-          val parsed = filtered.toDoubleOrNull()
-          if (parsed != null) {
+          filtered.toDoubleOrNull()?.let { parsed ->
             val clamped = if (parsed < 0.0) 0.0 else parsed
-            if (clamped != space.costPerHour) {
-              onChange(space.copy(costPerHour = clamped))
-            }
+            if (clamped != space.costPerHour) onChange(space.copy(costPerHour = clamped))
           }
         },
         singleLine = true,
@@ -324,27 +401,14 @@ fun SpaceRow(
         modifier =
             Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
                 .onFocusChanged { st ->
-                  if (st.isFocused) {
-                    if ((priceText == "0" || priceText == "0.0") && space.costPerHour == 0.0) {
-                      priceText = ""
-                    }
-                  } else {
-                    if (priceText.isBlank() || priceText == ".") {
-                      priceText = "0"
-                      if (space.costPerHour != 0.0) {
-                        onChange(space.copy(costPerHour = 0.0))
-                      }
-                    } else {
-                      val normalized = priceText.trimEnd('.')
-                      val parsed = normalized.toDoubleOrNull() ?: 0.0
-                      val clamped = if (parsed < 0.0) 0.0 else parsed
-                      val display = normalized.ifBlank { "0" }
-                      if (priceText != display) priceText = display
-                      if (space.costPerHour != clamped) {
-                        onChange(space.copy(costPerHour = clamped))
-                      }
-                    }
-                  }
+                  handleDecimalFocusChange(
+                      isFocused = st.isFocused,
+                      text = priceText,
+                      current = space.costPerHour,
+                      onText = { priceText = it },
+                      onCommit = { v ->
+                        if (space.costPerHour != v) onChange(space.copy(costPerHour = v))
+                      })
                 }
                 .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_PRICE_FIELD_SUFFIX))
 
