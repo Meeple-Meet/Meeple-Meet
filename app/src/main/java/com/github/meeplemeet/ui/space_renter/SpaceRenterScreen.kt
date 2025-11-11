@@ -29,7 +29,6 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.SpacesList
-import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.humanize
 import com.github.meeplemeet.ui.theme.AppColors
 import java.text.DateFormatSymbols
@@ -76,7 +75,7 @@ fun SpaceRenterScreen(
 
   Scaffold(
       topBar = {
-        TopBarWithDivider(
+        TopBarAndDivider(
             text = spaceState?.name ?: "Space Renter",
             onReturn = { onBack() },
             trailingIcons = {
@@ -273,4 +272,46 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
                   }
             }
       }
+}
+
+@Composable
+fun TopBarAndDivider(
+    text: String,
+    onReturn: () -> Unit,
+    trailingIcons: @Composable (() -> Unit)? = null
+) {
+  Column {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+
+      // Left icon area (fixed width)
+      Row(
+          modifier = Modifier.align(Alignment.CenterStart).width(48.dp),
+          verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onReturn) {
+              Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+          }
+
+      // Center Title, constrained so it NEVER touches icons
+      Text(
+          text = text,
+          style = MaterialTheme.typography.titleLarge,
+          maxLines = Int.MAX_VALUE, // Allows vertical expansion when text is long
+          modifier =
+              Modifier.align(Alignment.Center)
+                  .padding(horizontal = 48.dp) // <-- Critical fix
+                  .fillMaxWidth(),
+          textAlign = TextAlign.Center)
+
+      // Right icon area (fixed width)
+      Row(
+          modifier = Modifier.align(Alignment.CenterEnd).width(48.dp),
+          horizontalArrangement = Arrangement.End,
+          verticalAlignment = Alignment.CenterVertically) {
+            trailingIcons?.invoke()
+          }
+    }
+
+    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+  }
 }
