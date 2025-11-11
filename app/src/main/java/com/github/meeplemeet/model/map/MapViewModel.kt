@@ -92,9 +92,9 @@ class MapViewModel(
         try {
           val ids = sessionRepo.getSessionIdsForUser(currentUserId)
           userSessionIds.addAll(ids)
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
           _uiState.update {
-            it.copy(errorMsg = "Failed to load user sessions: ${t.message ?: "unknown"}")
+            it.copy(errorMsg = "Failed to load user sessions: ${e.message ?: "unknown"}")
           }
           // continue: listener will still be attached but sessions will be filtered out
         }
@@ -129,11 +129,11 @@ class MapViewModel(
                   val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
 
                   _uiState.update { it.copy(geoPins = it.geoPins + pin) }
-                } catch (t: Throwable) {
+                } catch (e: Exception) {
                   _uiState.update {
                     it.copy(
                         errorMsg =
-                            "Failed to read geo pin $documentID: ${t.message ?: "unknown error"}")
+                            "Failed to read geo pin $documentID: ${e.message ?: "unknown error"}")
                   }
                 }
               }
@@ -201,7 +201,7 @@ class MapViewModel(
   fun stopGeoQuery() {
     try {
       geoQuery?.removeAllListeners()
-    } catch (_: Throwable) {} finally {
+    } catch (_: Exception) {} finally {
       geoQuery = null
     }
 
@@ -256,12 +256,12 @@ class MapViewModel(
               errorMsg = null,
               isLoadingPreview = false)
         }
-      } catch (t: Throwable) {
+      } catch (e: Exception) {
         _uiState.update {
           it.copy(
               selectedMarkerPreview = null,
               selectedGeoPin = null,
-              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}",
+              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${e.message}",
               isLoadingPreview = false)
         }
       }

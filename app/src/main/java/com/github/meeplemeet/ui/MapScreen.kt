@@ -2,6 +2,11 @@
 
 package com.github.meeplemeet.ui
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.location.Location as AndroidLocation
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,14 +41,19 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
@@ -56,6 +66,8 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
@@ -68,6 +80,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
@@ -84,22 +97,31 @@ object MapScreenTestTags {
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 }
 
-private val START_CENTER = Location(46.5183, 6.5662, "EPFL")
+private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val START_RADIUS_KM = 10.0
 
 /**
- * MapScreen displays a GoogleMap with dynamic markers and contextual previews.
+ * MapScreen displays an interactive Google Map centered on the user's location (if granted) or
+ * defaults to EPFL. It dynamically loads pins (shops, spaces, sessions) from Firestore through the
+ * [MapViewModel].
  *
- * Behavior:
- * - Initializes a geo query centered on EPFL with a fixed radius
- * - Updates query center when the camera moves (debounced)
- * - Shows color-coded markers based on pin type (SHOP, SPACE, SESSION)
- * - Opens a bottom sheet with preview when a marker is selected
- * - Displays snackbar on error
+ * Main responsibilities:
+ * - Request location permissions (fine or coarse)
+ * - Center the map on the user's location or fallback
+ * - Start a geo query around that location to load relevant markers
+ * - Reactively update query center when user pans the map
+ * - Display contextual previews in a bottom sheet when a pin is tapped
+ * - Show error messages via snackbar
  *
- * Customizations:
- * - Marker colors: red (shop), blue (space), green (session)
- * - Preview sheet icons: location, clock, calendar, game controller
+ * Lifecycle behavior:
+ * - When resuming the screen (e.g., returning to app), the location is refreshed once
+ * - No continuous location tracking is performed for efficiency
+ *
+ * @param viewModel MapViewModel managing geo query and pin data
+ * @param navigation navigation actions between screens
+ * @param account current user account, used to filter sessions and permissions
+ * @param onFABCLick action triggered when pressing the add button (for shop/space owners)
+ * @param onRedirect action executed when clicking “View details” in a marker preview
  */
 @OptIn(FlowPreview::class)
 @Composable
@@ -110,19 +132,102 @@ fun MapScreen(
     onFABCLick: () -> Unit,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
+  // --- State & helpers ---
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
   val coroutineScope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  val context = LocalContext.current
+  val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-  // // Initial geo query
+  // --- Permission management ---
+  var permissionGranted by remember { mutableStateOf(false) }
+  var permissionChecked by remember { mutableStateOf(false) }
+
+  /**
+   * Handles runtime permission requests for fine location. If fine is denied but coarse is granted,
+   * coarse access is used as fallback.
+   */
+  val permissionLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+          permissionGranted = true
+        } else {
+          val coarseGranted =
+              ContextCompat.checkSelfPermission(
+                  context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                  android.content.pm.PackageManager.PERMISSION_GRANTED
+          permissionGranted = coarseGranted
+        }
+        permissionChecked = true
+      }
+
+  // Observe lifecycle to refresh location when returning to the app
+  val lifecycleState by
+      LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
+
+  // --- Map & query state ---
+  var userLocation by remember { mutableStateOf<Location?>(null) }
+  var isLoadingLocation by remember { mutableStateOf(true) }
+  var queryStarted by remember { mutableStateOf(false) }
+
+  /**
+   * Permission initialization. Checks for existing permission, requests it if missing. Runs only
+   * once at screen start.
+   */
   LaunchedEffect(Unit) {
-    viewModel.startGeoQuery(
-        center = START_CENTER, currentUserId = account.uid, radiusKm = START_RADIUS_KM)
+    val fine =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    val coarse =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    when {
+      fine -> permissionGranted = true
+      coarse -> permissionGranted = true
+      else -> permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+    permissionChecked = true
   }
 
-  // Show errors in snackbar
+  /**
+   * Retrieves user location whenever:
+   * - permission state changes, or
+   * - lifecycle returns to RESUMED (i.e., app resumes).
+   *
+   * If location retrieval fails or permission denied, falls back to EPFL.
+   */
+  LaunchedEffect(permissionGranted, permissionChecked, lifecycleState) {
+    if (!permissionChecked) return@LaunchedEffect
+    if (lifecycleState != Lifecycle.State.RESUMED) return@LaunchedEffect
+
+    isLoadingLocation = true
+    val loc =
+        if (permissionGranted) {
+          try {
+            getUserLocation(fusedClient)
+          } catch (_: Exception) {
+            null
+          }
+        } else null
+
+    userLocation = loc ?: DEFAULT_CENTER
+    isLoadingLocation = false
+  }
+
+  /**
+   * Starts the Firestore geo query once a valid user location is obtained. Runs only once to avoid
+   * restarting the query unnecessarily.
+   */
+  LaunchedEffect(userLocation) {
+    if (userLocation != null && !queryStarted) {
+      viewModel.startGeoQuery(
+          center = userLocation!!, currentUserId = account.uid, radiusKm = START_RADIUS_KM)
+      queryStarted = true
+    }
+  }
+
+  /** Displays any error message emitted by the ViewModel in a snackbar. */
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { msg ->
       snackbarHostState.showSnackbar(msg)
@@ -130,6 +235,7 @@ fun MapScreen(
     }
   }
 
+  // --- UI scaffold ---
   Scaffold(
       bottomBar = {
         BottomNavigationMenu(
@@ -137,6 +243,16 @@ fun MapScreen(
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       },
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+
+        // --- Loading state ---
+        if (isLoadingLocation) {
+          Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+          }
+          return@Scaffold
+        }
+
+        // --- Marker preview bottom sheet ---
         uiState.selectedGeoPin?.let { geoPin ->
           ModalBottomSheet(
               sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
@@ -155,14 +271,21 @@ fun MapScreen(
               }
         }
 
-        // Map
+        // --- Map rendering ---
         val cameraPositionState = rememberCameraPositionState()
-        LaunchedEffect(Unit) {
-          cameraPositionState.move(
-              CameraUpdateFactory.newLatLngZoom(
-                  LatLng(START_CENTER.latitude, START_CENTER.longitude), 14f))
+
+        /** Center the camera on user location when it changes (first load or refresh). */
+        LaunchedEffect(userLocation) {
+          userLocation?.let {
+            cameraPositionState.move(
+                CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 14f))
+          }
         }
 
+        /**
+         * Watches camera movement and updates Firestore query center after a short debounce.
+         * Ensures live results around current map area.
+         */
         LaunchedEffect(cameraPositionState) {
           snapshotFlow { cameraPositionState.position.target }
               .debounce(1000)
@@ -171,6 +294,7 @@ fun MapScreen(
               }
         }
 
+        // --- Google Map content ---
         Box(modifier = Modifier.fillMaxSize()) {
           val isDarkTheme = isSystemInDarkTheme()
           val context = LocalContext.current
@@ -209,6 +333,8 @@ fun MapScreen(
                       tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
                 }
               }
+
+          // --- Add button for shop/space owners ---
           if (account.shopOwner || account.spaceRenter) {
             FloatingActionButton(
                 onClick = onFABCLick,
@@ -225,7 +351,7 @@ fun MapScreen(
         }
       }
 
-  // Close sheet when preview cleared
+  /** Controls bottom sheet visibility based on whether a marker preview is available. */
   LaunchedEffect(uiState.selectedMarkerPreview) {
     if (uiState.selectedMarkerPreview != null) {
       coroutineScope.launch { sheetState.show() }
@@ -237,6 +363,35 @@ fun MapScreen(
   }
 }
 
+/**
+ * Attempts to retrieve the user's last known location using the [FusedLocationProviderClient].
+ *
+ * This function does not request permission by itself, so it should only be called after ensuring
+ * that location permissions are granted.
+ *
+ * @param fusedClient the FusedLocationProviderClient used to fetch the last location
+ * @return a [Location] representing the user's coordinates, or null if unavailable
+ */
+@SuppressLint("MissingPermission")
+private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): Location? {
+  return try {
+    val loc: AndroidLocation? = fusedClient.lastLocation.await()
+    loc?.let { Location(it.latitude, it.longitude, "User Location") }
+  } catch (_: SecurityException) {
+    null
+  } catch (_: Exception) {
+    null
+  }
+}
+
+/**
+ * Displays a simple loading sheet while fetching marker preview data.
+ *
+ * Shows a centered text and a circular progress indicator. The text varies depending on the type of
+ * the pin being loaded.
+ *
+ * @param geoPin the [StorableGeoPin] for which the preview is loading
+ */
 @Composable
 private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
   Column(
