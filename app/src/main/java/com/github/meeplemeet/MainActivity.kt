@@ -335,7 +335,7 @@ fun MeepleMeetApp(
       MapScreen(
           navigation = navigationActions,
           account = account!!,
-          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateSpaceRenter) },
+          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) },
           onRedirect = { geoPin ->
             when (geoPin.type) {
               PinType.SHOP -> {
