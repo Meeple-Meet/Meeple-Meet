@@ -685,6 +685,7 @@ fun OpeningHoursDialog(
 
   AlertDialog(
       onDismissRequest = onDismiss,
+      containerColor = MaterialTheme.colorScheme.background,
       shape = MaterialTheme.shapes.extraLarge,
       title = {
         Box(
