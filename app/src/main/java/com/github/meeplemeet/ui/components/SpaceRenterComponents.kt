@@ -180,14 +180,10 @@ private fun handleDecimalFocusChange(
  * Section with required info fields for a space renter: name, email, phone, link, address.
  *
  * @param spaceRenter The space renter being edited, or null if creating a new one.
- * @param spaceName The current value of the space name field.
  * @param onSpaceName Callback when the space name changes.
- * @param email The current value of the email field.
  * @param onEmail Callback when the email changes.
- * @param phone The current value of the phone field.
  * @param onPhone Callback when the phone changes.
- * @param link The current value of the link field.
- * @param onLink Callback when the link changes.
+ * @param onLink Callback when the website/link changes.
  * @param onPickLocation Callback when a location is picked.
  * @param viewModel The SpaceRenterSearchViewModel for location searching.
  * @param owner The account of the owner of the space renter.
@@ -195,24 +191,26 @@ private fun handleDecimalFocusChange(
 @Composable
 fun SpaceRenterRequiredInfoSection(
     spaceRenter: SpaceRenter?,
-    spaceName: String,
     onSpaceName: (String) -> Unit,
-    email: String,
     onEmail: (String) -> Unit,
-    phone: String,
     onPhone: (String) -> Unit,
-    link: String,
     onLink: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
     viewModel: SpaceRenterSearchViewModel,
     owner: Account
 ) {
+  // Read current values from the model
+  val nameValue = spaceRenter?.name.orEmpty()
+  val emailValue = spaceRenter?.email.orEmpty()
+  val phoneValue = spaceRenter?.phone.orEmpty()
+  val linkValue = spaceRenter?.website.orEmpty()
+
   // Name
   Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP)) {
     LabeledField(
         label = SpaceRenterUi.Strings.spaceNameField,
         placeholder = SpaceRenterUi.Strings.spaceNameField,
-        value = spaceName,
+        value = nameValue,
         onValueChange = onSpaceName)
   }
 
@@ -221,11 +219,11 @@ fun SpaceRenterRequiredInfoSection(
     LabeledField(
         label = ShopFormUi.Strings.EMAIL_LABEL,
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
-        value = email,
+        value = emailValue,
         onValueChange = onEmail,
         keyboardType = KeyboardType.Email)
   }
-  val showEmailError = email.isNotEmpty() && !isValidEmail(email)
+  val showEmailError = emailValue.isNotEmpty() && !isValidEmail(emailValue)
   if (showEmailError) {
     Text(
         SpaceRenterUi.Strings.validEmailMsg,
@@ -238,17 +236,17 @@ fun SpaceRenterRequiredInfoSection(
     LabeledField(
         label = ShopFormUi.Strings.PHONE_LABEL,
         placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
-        value = phone,
+        value = phoneValue,
         onValueChange = onPhone,
         keyboardType = KeyboardType.Phone)
   }
 
-  // Link
+  // Link / Website
   Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK)) {
     LabeledField(
         label = ShopFormUi.Strings.LINK_LABEL,
         placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
-        value = link,
+        value = linkValue,
         onValueChange = onLink,
         keyboardType = KeyboardType.Uri)
   }

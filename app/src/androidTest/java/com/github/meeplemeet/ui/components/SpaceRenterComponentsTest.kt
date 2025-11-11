@@ -22,6 +22,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.Space
+import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags as Tags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
@@ -177,24 +178,30 @@ class SpaceRenterComponentsTest : FirestoreTests() {
     val owner = previewOwner()
     val vm = SpaceRenterSearchViewModel()
 
-    var name by mutableStateOf("")
-    var email by mutableStateOf("")
-    var phone by mutableStateOf("")
-    var link by mutableStateOf("")
-    var picked by mutableStateOf<Location?>(null)
-
     setContentThemed {
+      // Keep a draft renter as state; composable reads values from it.
+      var renter by remember {
+        mutableStateOf(
+            SpaceRenter(
+                id = "",
+                owner = owner,
+                name = "",
+                phone = "",
+                email = "",
+                website = "",
+                address = Location(name = ""),
+                openingHours = emptyList(),
+                spaces = emptyList()))
+      }
+
       SpaceRenterRequiredInfoSection(
-          spaceRenter = null,
-          spaceName = name,
-          onSpaceName = { name = it },
-          email = email,
-          onEmail = { email = it },
-          phone = phone,
-          onPhone = { phone = it.filter { ch -> ch.isDigit() } },
-          link = link,
-          onLink = { link = it },
-          onPickLocation = { picked = it },
+          spaceRenter = renter,
+          onSpaceName = { renter = renter.copy(name = it) },
+          onEmail = { renter = renter.copy(email = it) },
+          // test wants digits-only behavior -> filter in the callback
+          onPhone = { renter = renter.copy(phone = it.filter(Char::isDigit)) },
+          onLink = { renter = renter.copy(website = it) },
+          onPickLocation = { loc -> renter = renter.copy(address = loc) },
           viewModel = vm,
           owner = owner)
     }
