@@ -326,6 +326,7 @@ fun SpaceRow(
           alpha =
               if (isEditing) SpaceRenterUi.Styles.editingBorderAlpha
               else SpaceRenterUi.Styles.readonlyBorderAlpha)
+
   val tfColors =
       OutlinedTextFieldDefaults.colors(
           focusedBorderColor = outline,
@@ -335,95 +336,155 @@ fun SpaceRow(
 
   val rowTagBase = SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + index
 
-  var seatsText by remember(space.seats) { mutableStateOf(max(1, space.seats).toString()) }
-  var priceText by
-      remember(space.costPerHour) {
-        mutableStateOf(
-            if (space.costPerHour == 0.0) "0" else space.costPerHour.toString().removeSuffix(".0"))
-      }
-
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag(rowTagBase)) {
-    Text(
-        "${SpaceRenterUi.Strings.spaceNumberPrefix} ${index + 1}",
-        style = MaterialTheme.typography.titleMedium,
-        modifier =
-            Modifier.width(SpaceRenterUi.Dimensions.spaceLabelWidth)
-                .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_LABEL_SUFFIX))
+    SpaceNumberLabel(index = index, rowTagBase = rowTagBase)
 
-    // Seats
-    OutlinedTextField(
-        value = seatsText,
-        onValueChange = { raw ->
-          val digits = sanitizePositiveIntInput(raw)
-          seatsText = digits
-          if (digits.isNotEmpty()) {
-            val parsed = digits.toIntOrNull() ?: 1
-            val clamped = max(1, parsed)
-            if (clamped != space.seats) onChange(space.copy(seats = clamped))
-          }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
-        colors = tfColors,
-        modifier =
-            Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
-                .onFocusChanged { st ->
-                  handleIntFocusChange(
-                      isFocused = st.isFocused,
-                      text = seatsText,
-                      current = space.seats,
-                      min = 1,
-                      onText = { seatsText = it },
-                      onCommit = { v -> if (space.seats != v) onChange(space.copy(seats = v)) })
-                }
-                .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_SEATS_FIELD_SUFFIX))
+    SeatsField(
+        seats = space.seats,
+        tfColors = tfColors,
+        fieldTag = rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_SEATS_FIELD_SUFFIX,
+        onCommit = { v -> if (v != space.seats) onChange(space.copy(seats = v)) })
 
     Spacer(Modifier.width(SpaceRenterUi.Dimensions.columnsGap))
 
-    // Price
-    OutlinedTextField(
-        value = priceText,
-        onValueChange = { raw ->
-          val filtered = sanitizeDecimalInput(raw)
-          priceText = filtered
-          filtered.toDoubleOrNull()?.let { parsed ->
-            val clamped = if (parsed < 0.0) 0.0 else parsed
-            if (clamped != space.costPerHour) onChange(space.copy(costPerHour = clamped))
-          }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
-        colors = tfColors,
-        modifier =
-            Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
-                .onFocusChanged { st ->
-                  handleDecimalFocusChange(
-                      isFocused = st.isFocused,
-                      text = priceText,
-                      current = space.costPerHour,
-                      onText = { priceText = it },
-                      onCommit = { v ->
-                        if (space.costPerHour != v) onChange(space.copy(costPerHour = v))
-                      })
-                }
-                .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_PRICE_FIELD_SUFFIX))
+    PriceField(
+        price = space.costPerHour,
+        tfColors = tfColors,
+        fieldTag = rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_PRICE_FIELD_SUFFIX,
+        onCommit = { v -> if (v != space.costPerHour) onChange(space.copy(costPerHour = v)) })
 
     Spacer(Modifier.weight(1f))
 
     if (isEditing) {
-      IconButton(
-          onClick = onDelete,
-          modifier =
-              Modifier.testTag(
-                  rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_DELETE_SUFFIX)) {
-            Icon(
-                Icons.Filled.Delete,
-                contentDescription = "Remove space",
-                tint = MaterialTheme.colorScheme.error)
-          }
+      DeleteSpaceButton(
+          onDelete = onDelete,
+          testTag = rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_DELETE_SUFFIX)
     }
+  }
+}
+
+/**
+ * Label displaying the space number.
+ *
+ * @param index The index of the space.
+ * @param rowTagBase The base test tag for the row.
+ */
+@Composable
+private fun SpaceNumberLabel(index: Int, rowTagBase: String) {
+  Text(
+      "${SpaceRenterUi.Strings.spaceNumberPrefix} ${index + 1}",
+      style = MaterialTheme.typography.titleMedium,
+      modifier =
+          Modifier.width(SpaceRenterUi.Dimensions.spaceLabelWidth)
+              .testTag(rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_LABEL_SUFFIX))
+}
+
+/**
+ * Input field for the number of seats in a space.
+ *
+ * @param seats The current number of seats.
+ * @param tfColors The colors to use for the text field.
+ * @param fieldTag The test tag for the text field.
+ * @param onCommit Callback when the number of seats is committed.
+ */
+@Composable
+private fun SeatsField(
+    seats: Int,
+    tfColors: TextFieldColors,
+    fieldTag: String,
+    onCommit: (Int) -> Unit
+) {
+  var seatsText by remember(seats) { mutableStateOf(max(1, seats).toString()) }
+
+  OutlinedTextField(
+      value = seatsText,
+      onValueChange = { raw ->
+        val digits = sanitizePositiveIntInput(raw)
+        seatsText = digits
+        if (digits.isNotEmpty()) {
+          val parsed = digits.toIntOrNull() ?: 1
+          val clamped = max(1, parsed)
+          if (clamped != seats) onCommit(clamped)
+        }
+      },
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+      textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
+      colors = tfColors,
+      modifier =
+          Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+              .onFocusChanged { st ->
+                handleIntFocusChange(
+                    isFocused = st.isFocused,
+                    text = seatsText,
+                    current = seats,
+                    min = 1,
+                    onText = { seatsText = it },
+                    onCommit = onCommit)
+              }
+              .testTag(fieldTag))
+}
+
+/**
+ * Input field for the price per hour of a space.
+ *
+ * @param price The current price value.
+ * @param tfColors The colors to use for the text field.
+ * @param fieldTag The test tag for the text field.
+ * @param onCommit Callback when the price is committed.
+ */
+@Composable
+private fun PriceField(
+    price: Double,
+    tfColors: TextFieldColors,
+    fieldTag: String,
+    onCommit: (Double) -> Unit
+) {
+  var priceText by
+      remember(price) {
+        mutableStateOf(if (price == 0.0) "0" else price.toString().removeSuffix(".0"))
+      }
+
+  OutlinedTextField(
+      value = priceText,
+      onValueChange = { raw ->
+        val filtered = sanitizeDecimalInput(raw)
+        priceText = filtered
+        filtered.toDoubleOrNull()?.let { parsed ->
+          val clamped = if (parsed < 0.0) 0.0 else parsed
+          if (clamped != price) onCommit(clamped)
+        }
+      },
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+      textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
+      colors = tfColors,
+      modifier =
+          Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
+              .onFocusChanged { st ->
+                handleDecimalFocusChange(
+                    isFocused = st.isFocused,
+                    text = priceText,
+                    current = price,
+                    onText = { priceText = it },
+                    onCommit = onCommit)
+              }
+              .testTag(fieldTag))
+}
+
+/**
+ * Delete button for a space row.
+ *
+ * @param onDelete Callback when the delete button is clicked.
+ * @param testTag The test tag for the delete button.
+ */
+@Composable
+private fun DeleteSpaceButton(onDelete: () -> Unit, testTag: String) {
+  IconButton(onClick = onDelete, modifier = Modifier.testTag(testTag)) {
+    Icon(
+        Icons.Filled.Delete,
+        contentDescription = "Remove space",
+        tint = MaterialTheme.colorScheme.error)
   }
 }
 
