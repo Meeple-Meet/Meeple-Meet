@@ -14,9 +14,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.CreateSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.Space
+import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.components.*
 import kotlinx.coroutines.launch
 
@@ -81,16 +81,16 @@ fun CreateSpaceRenterScreen(
       owner = owner,
       onBack = onBack,
       onCreated = onCreated,
-      onCreate = { name, email, phone, website, address, week, spaces ->
+      onCreate = { renter ->
         viewModel.createSpaceRenter(
             owner = owner,
-            name = name,
-            phone = phone,
-            email = email,
-            website = website,
-            address = address,
-            openingHours = week,
-            spaces = spaces)
+            name = renter.name,
+            phone = renter.phone,
+            email = renter.email,
+            website = renter.website,
+            address = renter.address,
+            openingHours = renter.openingHours,
+            spaces = renter.spaces)
       },
       locationUi = locationUi,
       viewModel = viewModel)
@@ -105,15 +105,7 @@ internal fun AddSpaceRenterContent(
     owner: Account,
     onBack: () -> Unit,
     onCreated: () -> Unit,
-    onCreate:
-        suspend (
-            name: String,
-            email: String,
-            phone: String,
-            website: String,
-            address: Location,
-            week: List<OpeningHours>,
-            spaces: List<Space>) -> Unit,
+    onCreate: suspend (SpaceRenter) -> Unit,
     locationUi: LocationUIState,
     viewModel: CreateSpaceRenterViewModel
 ) {
@@ -179,6 +171,18 @@ internal fun AddSpaceRenterContent(
     spaces = spaces + Space(seats = 1, costPerHour = 0.0)
   }
 
+  val draftRenter =
+      SpaceRenter(
+          id = "",
+          owner = owner,
+          name = name,
+          phone = phone,
+          email = email,
+          website = link,
+          address = locationUi.selectedLocation ?: Location(name = locationUi.locationQuery),
+          openingHours = week,
+          spaces = spaces)
+
   Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
@@ -205,10 +209,9 @@ internal fun AddSpaceRenterContent(
         ActionBar(
             onDiscard = { discardAndBack() },
             onPrimary = {
-              val addr = locationUi.selectedLocation ?: Location(name = locationUi.locationQuery)
               scope.launch {
                 try {
-                  onCreate(name, email, phone, link, addr, week, spaces)
+                  onCreate(draftRenter)
                   onCreated()
                 } catch (e: IllegalArgumentException) {
                   snackbarHost.showSnackbar(e.message ?: AddSpaceRenterUi.Strings.ERROR_VALIDATION)
@@ -233,14 +236,10 @@ internal fun AddSpaceRenterContent(
                     initiallyExpanded = true,
                     content = {
                       SpaceRenterRequiredInfoSection(
-                          spaceRenter = null,
-                          spaceName = name,
+                          spaceRenter = draftRenter,
                           onSpaceName = { name = it },
-                          email = email,
                           onEmail = { email = it },
-                          phone = phone,
                           onPhone = { phone = it },
-                          link = link,
                           onLink = { link = it },
                           onPickLocation = { loc -> viewModel.setLocation(loc) },
                           viewModel = viewModel,
