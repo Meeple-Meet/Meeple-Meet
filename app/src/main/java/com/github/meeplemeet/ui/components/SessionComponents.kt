@@ -784,17 +784,20 @@ private fun LocationSearchBar(
         )
 
         ExposedDropdownMenu(
-            expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
-              results.locationSuggestions.take(5).forEachIndexed { i, loc ->
-                DropdownMenuItem(
-                    text = { Text(loc.name) },
-                    onClick = {
-                      menuOpen = false
-                      setLocation(loc)
-                    },
-                    modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
-              }
-            }
+            expanded = menuOpen && hasSuggestions,
+            onDismissRequest = { menuOpen = false },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+          results.locationSuggestions.take(5).forEachIndexed { i, loc ->
+            DropdownMenuItem(
+                text = { Text(loc.name) },
+                onClick = {
+                  menuOpen = false
+                  setLocation(loc)
+                },
+                modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
+          }
+        }
       }
 }
 
