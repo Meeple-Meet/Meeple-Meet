@@ -1,3 +1,6 @@
+// This file was initially done by hand and
+// then improved and refactored using ChatGPT-5 Extend Thinking
+// Docstrings were generated using copilot from Android studio
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.layout.*
