@@ -21,14 +21,20 @@ import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
 /**
  * Represents the UI state of the map, including currently visible geo-pins, any selected
  * pin/preview, loading state, and error messages.
+ *
+ * @property geoPins The filtered list of geo-pins, based on [activeFilters].
  */
 data class MapUIState(
-    val geoPins: List<GeoPinWithLocation> = emptyList(),
+    val allGeoPins: List<GeoPinWithLocation> = emptyList(),
+    val activeFilters: Set<PinType> = PinType.entries.toSet(),
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
     val selectedGeoPin: StorableGeoPin? = null,
     val isLoadingPreview: Boolean = false
-)
+) {
+  val geoPins: List<GeoPinWithLocation>
+    get() = allGeoPins.filter { it.geoPin.type in activeFilters }
+}
 
 /** A geo-pin along with its current geographic location. */
 data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
@@ -73,31 +79,24 @@ class MapViewModel(
    *
    * @param center The geographic center of the query (latitude and longitude).
    * @param radiusKm The query radius, in kilometers.
-   * @param includeTypes The set of [PinType] to include (e.g., shops, spaces). Any pin with a type
-   *   not in this set is ignored.
+   * @param currentUserId The ID of the current user. Used to fetch only sessions in which the user
+   *   is a participant.
    */
-  fun startGeoQuery(
-      center: Location,
-      radiusKm: Double,
-      currentUserId: String,
-      includeTypes: Set<PinType> = setOf(PinType.SHOP, PinType.SPACE)
-  ) {
+  fun startGeoQuery(center: Location, radiusKm: Double, currentUserId: String) {
     // Always reset previous query before creating a new one.
     stopGeoQuery()
 
     // Pre-fetch session IDs where user is participating
     viewModelScope.launch {
       val userSessionIds = mutableSetOf<String>()
-      if (includeTypes.contains(PinType.SESSION)) {
-        try {
-          val ids = sessionRepo.getSessionIdsForUser(currentUserId)
-          userSessionIds.addAll(ids)
-        } catch (e: Exception) {
-          _uiState.update {
-            it.copy(errorMsg = "Failed to load user sessions: ${e.message ?: "unknown"}")
-          }
-          // continue: listener will still be attached but sessions will be filtered out
+      try {
+        val ids = sessionRepo.getSessionIdsForUser(currentUserId)
+        userSessionIds.addAll(ids)
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(errorMsg = "Failed to load user sessions: ${e.message ?: "unknown"}")
         }
+        // continue: listener will still be attached but sessions will be filtered out
       }
 
       val geoFirestore = GeoFirestore(geoPinCollection)
@@ -120,7 +119,6 @@ class MapViewModel(
                 try {
                   val doc = geoPinCollection.document(documentID).get().await()
                   val noUid = doc.toObject(StorableGeoPinNoUid::class.java) ?: return@launch
-                  if (noUid.type !in includeTypes) return@launch
 
                   // Ignore session where user is not participating
                   if (noUid.type == PinType.SESSION && !userSessionIds.contains(documentID))
@@ -128,7 +126,7 @@ class MapViewModel(
 
                   val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
 
-                  _uiState.update { it.copy(geoPins = it.geoPins + pin) }
+                  _uiState.update { it.copy(allGeoPins = it.allGeoPins + pin) }
                 } catch (e: Exception) {
                   _uiState.update {
                     it.copy(
@@ -149,12 +147,12 @@ class MapViewModel(
             override fun onKeyMoved(documentID: String, location: GeoPoint) {
               _uiState.update { state ->
                 val updatedPins =
-                    state.geoPins.map { pinWithLocation ->
+                    state.allGeoPins.map { pinWithLocation ->
                       if (pinWithLocation.geoPin.uid == documentID)
                           pinWithLocation.copy(location = location)
                       else pinWithLocation
                     }
-                state.copy(geoPins = updatedPins)
+                state.copy(allGeoPins = updatedPins)
               }
             }
 
@@ -166,7 +164,7 @@ class MapViewModel(
              */
             override fun onKeyExited(documentID: String) {
               _uiState.update { it ->
-                it.copy(geoPins = it.geoPins.filterNot { it.geoPin.uid == documentID })
+                it.copy(allGeoPins = it.allGeoPins.filterNot { it.geoPin.uid == documentID })
               }
             }
 
@@ -206,6 +204,16 @@ class MapViewModel(
     }
 
     _uiState.update { MapUIState() }
+  }
+
+  /**
+   * Updates the set of active pin type filters applied to the map. This affects the
+   * [MapUIState.geoPins] property, which is the filtered view used by the UI.
+   *
+   * @param newFilters The new set of [PinType] to display.
+   */
+  fun updateFilters(newFilters: Set<PinType>) {
+    _uiState.update { it.copy(activeFilters = newFilters) }
   }
 
   /**

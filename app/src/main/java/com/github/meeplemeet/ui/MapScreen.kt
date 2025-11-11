@@ -7,7 +7,11 @@ import android.annotation.SuppressLint
 import android.location.Location as AndroidLocation
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,18 +20,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +48,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -48,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -85,6 +99,10 @@ import kotlinx.coroutines.tasks.await
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
   const val ADD_FAB = "addFab"
+  const val FILTER_BUTTON = "filterButton"
+  const val FILTER_SHOP_CHIP = "filterShop"
+  const val FILTER_SPACE_CHIP = "filterSpace"
+  const val FILTER_SESSIONS_CHIP = "filterSession"
   const val MARKER_PREVIEW_SHEET = "markerPreviewSheet"
   const val PREVIEW_TITLE = "previewTitle"
   const val PREVIEW_ADDRESS = "previewAddress"
@@ -98,7 +116,7 @@ object MapScreenTestTags {
 }
 
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
-private const val START_RADIUS_KM = 10.0
+private const val DEFAULT_RADIUS_KM = 10.0
 
 /**
  * MapScreen displays an interactive Google Map centered on the user's location (if granted) or
@@ -169,7 +187,8 @@ fun MapScreen(
   // --- Map & query state ---
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
-  var queryStarted by remember { mutableStateOf(false) }
+  var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
+  var showFilterButtons by remember { mutableStateOf(false) }
 
   /**
    * Permission initialization. Checks for existing permission, requests it if missing. Runs only
@@ -220,11 +239,15 @@ fun MapScreen(
    * restarting the query unnecessarily.
    */
   LaunchedEffect(userLocation) {
-    if (userLocation != null && !queryStarted) {
-      viewModel.startGeoQuery(
-          center = userLocation!!, currentUserId = account.uid, radiusKm = START_RADIUS_KM)
-      queryStarted = true
-    }
+    if (userLocation == null) return@LaunchedEffect
+
+    viewModel.startGeoQuery(
+        center = userLocation!!, currentUserId = account.uid, radiusKm = DEFAULT_RADIUS_KM)
+  }
+
+  /** Updates the ViewModel filters whenever the set of included pin types changes. */
+  LaunchedEffect(includeTypes) {
+    snapshotFlow { includeTypes }.debounce(500).collect { types -> viewModel.updateFilters(types) }
   }
 
   /** Displays any error message emitted by the ViewModel in a snackbar. */
@@ -334,6 +357,73 @@ fun MapScreen(
                 }
               }
 
+          // --- FILTER BUTTON + vertical list of filter chips (top-start) ---
+          Box(
+              modifier =
+                  Modifier.align(Alignment.TopStart)
+                      .padding(start = 8.dp, top = 8.dp)
+                      .wrapContentSize()) {
+                // Main filter FAB
+                FloatingActionButton(
+                    onClick = { showFilterButtons = !showFilterButtons },
+                    containerColor = AppColors.neutral,
+                    contentColor = AppColors.textIcons,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.testTag(MapScreenTestTags.FILTER_BUTTON).size(48.dp)) {
+                      Icon(Icons.Default.FilterList, contentDescription = "Filter pins")
+                    }
+
+                // Panel with FilterChips
+                AnimatedVisibility(
+                    visible = showFilterButtons,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.TopStart)) {
+                      Surface(
+                          modifier =
+                              Modifier.padding(top = 56.dp)
+                                  .widthIn(max = 120.dp)
+                                  .wrapContentHeight()
+                                  .shadow(6.dp, RoundedCornerShape(12.dp)),
+                          tonalElevation = 4.dp,
+                          shape = RoundedCornerShape(12.dp),
+                          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                  PinType.entries.forEach { type ->
+                                    val selected = includeTypes.contains(type)
+                                    FilterChip(
+                                        selected = selected,
+                                        onClick = {
+                                          includeTypes =
+                                              if (selected) includeTypes - type
+                                              else includeTypes + type
+                                        },
+                                        label = {
+                                          Text(
+                                              text =
+                                                  type.name.lowercase().replaceFirstChar {
+                                                    it.uppercaseChar()
+                                                  },
+                                              style = MaterialTheme.typography.labelLarge)
+                                        },
+                                        leadingIcon = {
+                                          Checkbox(
+                                              checked = selected,
+                                              onCheckedChange = null,
+                                              modifier = Modifier.size(18.dp))
+                                        },
+                                        modifier =
+                                            Modifier.testTag(pinTypeTestTag(type))
+                                                .height(36.dp)
+                                                .fillMaxWidth())
+                                  }
+                                }
+                          }
+                    }
+              }
+
           // --- Add button for shop/space owners ---
           if (account.shopOwner || account.spaceRenter) {
             FloatingActionButton(
@@ -362,6 +452,17 @@ fun MapScreen(
     }
   }
 }
+
+/**
+ * Maps each PinType to its corresponding test tag used in UI tests. Used to assign stable and
+ * readable tags to dynamically generated FilterChips.
+ */
+private fun pinTypeTestTag(type: PinType): String =
+    when (type) {
+      PinType.SHOP -> MapScreenTestTags.FILTER_SHOP_CHIP
+      PinType.SPACE -> MapScreenTestTags.FILTER_SPACE_CHIP
+      PinType.SESSION -> MapScreenTestTags.FILTER_SESSIONS_CHIP
+    }
 
 /**
  * Attempts to retrieve the user's last known location using the [FusedLocationProviderClient].
