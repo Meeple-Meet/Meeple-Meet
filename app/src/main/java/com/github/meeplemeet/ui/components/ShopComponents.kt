@@ -234,6 +234,11 @@ object ShopUiDefaults {
   object RangesMagicNumbers {
     val qtyGameDialog: IntRange = 1..40
   }
+
+  object Numbers {
+    const val MIN_LINES_DEFAULT = 1
+    const val MAX_LINES_DEFAULT = 1
+  }
 }
 
 /* =============================================================================
@@ -432,7 +437,7 @@ fun LabeledField(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
-    minLines: Int = 1,
+    minLines: Int = ShopUiDefaults.Numbers.MIN_LINES_DEFAULT,
 ) {
   Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
     OutlinedTextField(
@@ -719,7 +724,9 @@ fun OpeningHoursDialog(
                       },
                       modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
                   Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                  Text(ShopUiDefaults.StringsMagicNumbers.OPEN_24, maxLines = 1)
+                  Text(
+                      ShopUiDefaults.StringsMagicNumbers.OPEN_24,
+                      maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT)
                 }
             Row(
                 modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW),
@@ -739,7 +746,9 @@ fun OpeningHoursDialog(
                       },
                       modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
                   Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
-                  Text(ShopUiDefaults.StringsMagicNumbers.CLOSED, maxLines = 1)
+                  Text(
+                      ShopUiDefaults.StringsMagicNumbers.CLOSED,
+                      maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT)
                 }
           }
 
@@ -1166,7 +1175,7 @@ fun GameItem(
                           Text(
                               label,
                               style = MaterialTheme.typography.labelSmall,
-                              maxLines = 1,
+                              maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT,
                               softWrap = false,
                               modifier = Modifier.padding(horizontal = 4.dp))
                         }
