@@ -127,6 +127,7 @@ internal fun AddSpaceRenterContent(
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var spaces by remember { mutableStateOf(listOf<Space>()) }
+  var spacesExpanded by rememberSaveable { mutableStateOf(false) }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val hasAtLeastOneSpace by remember(spaces) { derivedStateOf { spaces.isNotEmpty() } }
@@ -169,6 +170,7 @@ internal fun AddSpaceRenterContent(
     editingDay = null
     showHoursDialog = false
     spaces = emptyList()
+    spacesExpanded = false
     onBack()
   }
 
@@ -178,6 +180,7 @@ internal fun AddSpaceRenterContent(
             Space(
                 seats = AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE,
                 costPerHour = AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR)
+    spacesExpanded = true
   }
 
   val draftRenter =
@@ -188,7 +191,7 @@ internal fun AddSpaceRenterContent(
           phone = phone,
           email = email,
           website = link,
-          address = locationUi.selectedLocation ?: Location(name = locationUi.locationQuery),
+          address = locationUi.selectedLocation ?: Location(),
           openingHours = week,
           spaces = spaces)
 
@@ -278,6 +281,8 @@ internal fun AddSpaceRenterContent(
                 CollapsibleSection(
                     title = AddSpaceRenterUi.Strings.SECTION_SPACES,
                     initiallyExpanded = false,
+                    expanded = spacesExpanded,
+                    onExpandedChange = { spacesExpanded = it },
                     header = {
                       TextButton(
                           onClick = { addSpace() },
