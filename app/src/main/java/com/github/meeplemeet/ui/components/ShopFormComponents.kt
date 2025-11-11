@@ -67,6 +67,11 @@ object ShopFormUi {
     val betweenControls = 6.dp
   }
 
+  object Numbers {
+    const val EXPANDED_ANGLE = 180f
+    const val COLLAPSED_ANGLE = 0f
+  }
+
   object Strings {
     const val SHOP_LABEL = "Shop"
     const val SHOP_PLACEHOLDER = "Shop name"
@@ -308,7 +313,11 @@ fun CollapsibleSection(
       }
 
   val arrowRotation by
-      animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "arrow")
+      animateFloatAsState(
+          targetValue =
+              if (isExpanded) ShopFormUi.Numbers.EXPANDED_ANGLE
+              else ShopFormUi.Numbers.COLLAPSED_ANGLE,
+          label = "arrow")
 
   Column(Modifier.fillMaxWidth()) {
     Row(
