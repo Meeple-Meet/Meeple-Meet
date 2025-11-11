@@ -135,7 +135,14 @@ internal fun AddSpaceRenterContent(
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val hasAtLeastOneSpace by remember(spaces) { derivedStateOf { spaces.isNotEmpty() } }
   val allSpacesValid by
-      remember(spaces) { derivedStateOf { spaces.all { it.seats >= 1 && it.costPerHour >= 0.0 } } }
+      remember(spaces) {
+        derivedStateOf {
+          spaces.all {
+            it.seats >= AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE &&
+                it.costPerHour >= AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR
+          }
+        }
+      }
 
   val hasLocation by
       remember(locationUi.selectedLocation) {
