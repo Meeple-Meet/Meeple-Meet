@@ -67,6 +67,11 @@ object ShopFormUi {
     val betweenControls = 6.dp
   }
 
+  object Numbers {
+    const val EXPANDED_ANGLE = 180f
+    const val COLLAPSED_ANGLE = 0f
+  }
+
   object Strings {
     const val SHOP_LABEL = "Shop"
     const val SHOP_PLACEHOLDER = "Shop name"
@@ -295,10 +300,24 @@ fun CollapsibleSection(
     initiallyExpanded: Boolean = true,
     header: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
-    testTag: String? = null
+    testTag: String? = null,
+    expanded: Boolean? = null,
+    onExpandedChange: ((Boolean) -> Unit)? = null,
 ) {
-  var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
-  val arrowRotation by animateFloatAsState(if (expanded) 180f else 0f, label = "arrow")
+  val (isExpanded, setExpanded) =
+      if (expanded != null && onExpandedChange != null) {
+        expanded to onExpandedChange
+      } else {
+        var localExpanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+        localExpanded to { v: Boolean -> localExpanded = v }
+      }
+
+  val arrowRotation by
+      animateFloatAsState(
+          targetValue =
+              if (isExpanded) ShopFormUi.Numbers.EXPANDED_ANGLE
+              else ShopFormUi.Numbers.COLLAPSED_ANGLE,
+          label = "arrow")
 
   Column(Modifier.fillMaxWidth()) {
     Row(
@@ -316,9 +335,11 @@ fun CollapsibleSection(
                     if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TITLE_SUFFIX)
                     else m
                   })
+
           header?.invoke(this)
+
           IconButton(
-              onClick = { expanded = !expanded },
+              onClick = { setExpanded(!isExpanded) },
               modifier =
                   Modifier.let { m ->
                     if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX)
@@ -327,10 +348,11 @@ fun CollapsibleSection(
                 Icon(
                     Icons.Filled.ExpandMore,
                     contentDescription =
-                        if (expanded) ShopFormUi.Strings.COLLAPSE else ShopFormUi.Strings.EXPAND,
+                        if (isExpanded) ShopFormUi.Strings.COLLAPSE else ShopFormUi.Strings.EXPAND,
                     modifier = Modifier.rotate(arrowRotation))
               }
         }
+
     HorizontalDivider(
         thickness = 1.dp,
         color = MaterialTheme.colorScheme.outlineVariant,
@@ -340,7 +362,7 @@ fun CollapsibleSection(
               else m
             })
 
-    AnimatedVisibility(visible = expanded) {
+    AnimatedVisibility(visible = isExpanded) {
       Column(
           Modifier.padding(top = 0.dp).let { m ->
             if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
