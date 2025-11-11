@@ -3,6 +3,8 @@ package com.github.meeplemeet.ui.space_renter
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +30,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.SpacesList
 import com.github.meeplemeet.ui.components.TopBarWithDivider
+import com.github.meeplemeet.ui.components.humanize
 import com.github.meeplemeet.ui.theme.AppColors
 import java.text.DateFormatSymbols
 import java.util.Calendar
@@ -34,7 +38,7 @@ import java.util.Calendar
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
 object SpaceRenterTestTags {
   // Contact section tags
-  const val SPACE_RENTER_PHONE_TEXT = "SPACE_RENTER_TEXT"
+  const val SPACE_RENTER_PHONE_TEXT = "SPACE_RENTER_PHONE_TEXT"
   const val SPACE_RENTER_PHONE_BUTTON = "SPACE_RENTER_PHONE_BUTTON"
   const val SPACE_RENTER_EMAIL_TEXT = "SPACE_RENTER_EMAIL_TEXT"
   const val SPACE_RENTER_EMAIL_BUTTON = "SPACE_RENTER_EMAIL_BUTTON"
@@ -77,7 +81,7 @@ fun SpaceRenterScreen(
             onReturn = { onBack() },
             trailingIcons = {
               // Show edit button only if current account is the space renter owner
-              if (account == (spaceState?.owner ?: false)) {
+              if (account.uid == (spaceState?.owner?.uid)) {
                 IconButton(
                     onClick = { onEdit(spaceState) },
                     modifier = Modifier.testTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)) {
@@ -107,28 +111,30 @@ fun SpaceRenterScreen(
  */
 @Composable
 fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) {
-  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-    ContactSection(spaceRenter)
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    AvailabilitySection(spaceRenter.openingHours)
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
-          Text(
-              "Available spaces",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.SemiBold)
+  Column(
+      modifier = modifier.verticalScroll(rememberScrollState()).padding(bottom = 32.dp),
+      verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        ContactSection(spaceRenter)
+        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        AvailabilitySection(spaceRenter.openingHours)
+        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
+              Text(
+                  "Provided spaces",
+                  style = MaterialTheme.typography.titleLarge,
+                  fontWeight = FontWeight.SemiBold)
 
-          SpacesList(
-              spaces = spaceRenter.spaces,
-              modifier = Modifier.fillMaxWidth(),
-              onChange = { _, _ -> },
-              onDelete = {},
-              isEditing = false,
-          )
-        }
-  }
+              SpacesList(
+                  spaces = spaceRenter.spaces,
+                  modifier = Modifier.fillMaxWidth(),
+                  onChange = { _, _ -> },
+                  onDelete = {},
+                  isEditing = false,
+              )
+            }
+      }
 }
 
 // -------------------- CONTACT SECTION --------------------
@@ -149,11 +155,13 @@ fun ContactSection(spaceRenter: SpaceRenter) {
             fontWeight = FontWeight.SemiBold)
 
         // Display phone contact row
-        ContactRow(
-            Icons.Default.Phone,
-            "- Phone: ${spaceRenter.phone}",
-            SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
-            SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
+        if (spaceRenter.phone.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Phone,
+              "- Phone: ${spaceRenter.phone}",
+              SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
+              SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
+        }
 
         // Display email contact row
         ContactRow(
@@ -170,11 +178,13 @@ fun ContactSection(spaceRenter: SpaceRenter) {
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
 
         // Display website contact row
-        ContactRow(
-            Icons.Default.Language,
-            "- Website: ${spaceRenter.website}",
-            SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
-            SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
+        if (spaceRenter.website.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Language,
+              "- Website: ${spaceRenter.website}",
+              SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
+              SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
+        }
       }
 }
 
@@ -221,6 +231,7 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
 fun AvailabilitySection(openingHours: List<OpeningHours>) {
   val daysOfWeek = remember { DateFormatSymbols().weekdays }
   val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+
   Column(
       verticalArrangement = Arrangement.spacedBy(8.dp),
       modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
@@ -230,58 +241,31 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
             fontWeight = FontWeight.SemiBold)
 
         // Loop through each day's opening hours
-        openingHours.forEach { entry ->
-          // Get the day name from the weekdays array (offset by 1 because weekdays start at 1)
-          val dayName = daysOfWeek.getOrNull(entry.day + 1) ?: "Unknown"
-          // Check if this day is the current day to highlight it
-          val isToday = (entry.day + 1) == currentDay
+        openingHours
+            .sortedBy { it.day }
+            .forEach { entry ->
+              val dayName = daysOfWeek.getOrNull(entry.day + 1) ?: "Unknown"
+              val isTodayFont =
+                  if ((entry.day + 1) == currentDay) FontWeight.Bold else FontWeight.Normal
 
-          if (entry.hours.isEmpty()) {
-            // No opening hours means the space renter is closed on this day
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .testTag("${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}"),
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                  Text(
-                      dayName,
-                      fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier = Modifier.weight(1f))
-                  Text(
-                      "Closed",
-                      fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier =
-                          Modifier.testTag(
-                              "${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}_HOURS"))
-                }
-          } else {
-            // Display each time interval for the day
-            entry.hours.forEachIndexed { idx, (start, end) ->
+              val hoursText = humanize(entry.hours)
+
               Row(
                   modifier =
                       Modifier.fillMaxWidth()
-                          .testTag(
-                              "${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}_HOURS_${idx}"),
+                          .testTag("${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}"),
                   horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (idx == 0) {
-                      // Show the day name only on the first interval row
-                      Text(
-                          dayName,
-                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                          modifier =
-                              Modifier.weight(1f)
-                                  .testTag(
-                                      "${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}"))
-                    } else {
-                      // Empty space for subsequent interval rows to align with day name column
-                      Text("", modifier = Modifier.weight(1f))
-                    }
-                    // Format the time interval or show "Closed" if times are null
-                    val timeText = if (start != null && end != null) "$start - $end" else "Closed"
-                    Text(timeText, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
+                    Text(text = dayName, fontWeight = isTodayFont, modifier = Modifier.weight(1f))
+
+                    Text(
+                        text = hoursText,
+                        fontWeight = isTodayFont,
+                        textAlign = TextAlign.End,
+                        modifier =
+                            Modifier.weight(1f)
+                                .testTag(
+                                    "${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}_HOURS"))
                   }
             }
-          }
-        }
       }
 }
