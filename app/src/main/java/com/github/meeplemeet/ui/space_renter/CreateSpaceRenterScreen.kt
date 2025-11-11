@@ -63,6 +63,11 @@ object AddSpaceRenterUi {
     const val ERROR_VALIDATION = "Validation error"
     const val ERROR_CREATE = "Failed to create space renter"
   }
+
+  object Numbers {
+    const val MIN_SEATS_PER_SPACE = 1
+    const val MIN_COST_PER_HOUR = 0.0
+  }
 }
 
 /* ================================================================================================
@@ -168,7 +173,11 @@ internal fun AddSpaceRenterContent(
   }
 
   fun addSpace() {
-    spaces = spaces + Space(seats = 1, costPerHour = 0.0)
+    spaces =
+        spaces +
+            Space(
+                seats = AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE,
+                costPerHour = AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR)
   }
 
   val draftRenter =
