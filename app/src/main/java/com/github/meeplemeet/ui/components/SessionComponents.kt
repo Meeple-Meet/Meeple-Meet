@@ -83,6 +83,8 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
+import com.github.meeplemeet.model.space_renter.SpaceRenter
+import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -724,6 +726,29 @@ fun ShopLocationSearchBar(
       dropdownItemTestTag)
 }
 
+@Composable
+fun SpaceRenterLocationSearchBar(
+    account: Account,
+    spaceRenter: SpaceRenter?,
+    viewModel: SpaceRenterSearchViewModel,
+    inputFieldTestTag: String = "",
+    dropdownItemTestTag: String = ""
+) {
+  LocationSearchBar(
+      setLocation = { loc ->
+        spaceRenter?.let { viewModel.setLocation(spaceRenter, account, loc) }
+            ?: viewModel.setLocation(loc)
+      },
+      setLocationQuery = { q ->
+        spaceRenter?.let { viewModel.setLocationQuery(spaceRenter, account, q) }
+            ?: viewModel.setLocationQuery(q)
+      },
+      initial = spaceRenter?.address ?: Location(),
+      viewModel = viewModel,
+      inputFieldTestTag = inputFieldTestTag,
+      dropdownItemTestTag = dropdownItemTestTag)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LocationSearchBar(
@@ -759,17 +784,20 @@ private fun LocationSearchBar(
         )
 
         ExposedDropdownMenu(
-            expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
-              results.locationSuggestions.take(5).forEachIndexed { i, loc ->
-                DropdownMenuItem(
-                    text = { Text(loc.name) },
-                    onClick = {
-                      menuOpen = false
-                      setLocation(loc)
-                    },
-                    modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
-              }
-            }
+            expanded = menuOpen && hasSuggestions,
+            onDismissRequest = { menuOpen = false },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+          results.locationSuggestions.take(5).forEachIndexed { i, loc ->
+            DropdownMenuItem(
+                text = { Text(loc.name) },
+                onClick = {
+                  menuOpen = false
+                  setLocation(loc)
+                },
+                modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
+          }
+        }
       }
 }
 

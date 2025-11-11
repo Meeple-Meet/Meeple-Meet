@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.space_renter
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
@@ -20,7 +19,7 @@ import kotlinx.coroutines.launch
  */
 class CreateSpaceRenterViewModel(
     private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
-) : ViewModel() {
+) : SpaceRenterSearchViewModel() {
   /**
    * Creates a new space renter in Firestore.
    *
