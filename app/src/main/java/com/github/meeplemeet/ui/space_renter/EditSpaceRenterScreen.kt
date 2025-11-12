@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.EditSpaceRenterViewModel
+import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.components.*
 import kotlinx.coroutines.launch
@@ -162,6 +164,15 @@ internal fun EditSpaceRenterContent(
           openingHours = week,
           spaces = spaces)
 
+  fun addSpace() {
+    spaces =
+        spaces +
+            Space(
+                seats = AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE,
+                costPerHour = AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR)
+    spacesExpanded = true
+  }
+
   Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
@@ -246,19 +257,34 @@ internal fun EditSpaceRenterContent(
               // Spaces
               item {
                 CollapsibleSection(
-                    title = EditSpaceRenterUi.Strings.SECTION_SPACES,
+                    title = AddSpaceRenterUi.Strings.SECTION_SPACES,
                     initiallyExpanded = false,
                     expanded = spacesExpanded,
                     onExpandedChange = { spacesExpanded = it },
+                    header = {
+                      TextButton(
+                          onClick = { addSpace() },
+                          modifier =
+                              Modifier.testTag(CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
+                            Text(
+                                AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                modifier =
+                                    Modifier.testTag(
+                                        CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
+                          }
+                    },
                     content = {
                       SpacesList(
                           spaces = spaces,
                           onChange = { idx, updated ->
                             spaces = spaces.mapIndexed { i, sp -> if (i == idx) updated else sp }
                           },
-                          onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } })
+                          onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } },
+                      )
                     },
-                    testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
+                    testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
               }
 
               item {
