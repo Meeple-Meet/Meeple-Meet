@@ -110,7 +110,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
   @Test
   fun screen_prefills_data_and_allows_editing() {
     var backCalled = false
-    val vm = EditSpaceRenterViewModel()
 
     compose.setContent {
       AppTheme {
@@ -166,7 +165,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
   @Test
   fun screen_saves_on_update() {
     var updatedCalled = false
-    val vm = EditSpaceRenterViewModel()
 
     // Make the renter valid by putting one non-empty OpeningHours entry (one TimeSlot).
     val validRenter =
@@ -188,8 +186,7 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
             spaceRenter = validRenter,
             owner = owner,
             onBack = {},
-            onUpdated = { updatedCalled = true },
-            viewModel = vm)
+            onUpdated = { updatedCalled = true },)
       }
     }
 
