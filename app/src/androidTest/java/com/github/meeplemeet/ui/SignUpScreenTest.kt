@@ -9,17 +9,21 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.SignUpViewModel
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.Checkpoint
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 class SignUpScreenTest {
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: SignUpViewModel
 
@@ -31,309 +35,311 @@ class SignUpScreenTest {
     }
   }
 
-  // ===== Initial state =====
-
   @Test
-  fun initialState_allFieldsEmpty() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().assertTextContains("")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().assertTextContains("")
-    compose
+  fun smoke_all_cases() {
+
+    checkpoint("Initial State") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().assertTextContains("")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists()
+        .assertTextContains("")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertExists()
         .assertTextContains("")
-  }
+    }
 
-  @Test
-  fun initialState_signUpButtonDisabled() {
-    // Button should be disabled when fields are empty
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists().assertIsNotEnabled()
-  }
+    checkpoint("Initial State signUp button disabled") {
+      // Button should be disabled when fields are empty
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists().assertIsNotEnabled()
+    }
 
-  @Test
-  fun initialState_googleSignUpButtonEnabled() {
-    compose
+    checkpoint("Initial State Google sign-up button enabled") {
+      compose
         .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
         .assertExists()
         .assertIsEnabled()
-  }
+    }
 
-  @Test
-  fun initialState_welcomeTextDisplayed() {
-    compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
-  }
+    checkpoint("Initial State screen title displayed") {
+      compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
+    }
 
-  @Test
-  fun initialState_logInLinkDisplayed() {
-    compose.onNodeWithText("Already have an account? ").assertExists()
-    compose.onNodeWithText("Log in.").assertExists()
-  }
+    checkpoint("Initial State OR divider displayed") {
+      compose.onNodeWithText("Already have an account? ").assertExists()
+      compose.onNodeWithText("Log in.").assertExists()
+    }
 
-  @Test
-  fun initialState_noValidationErrorsDisplayed() {
-    compose.onAllNodesWithText("Email cannot be empty").assertCountEquals(0)
-    compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
-    compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
-    compose.onAllNodesWithText("Password is too weak").assertCountEquals(0)
-    compose.onAllNodesWithText("Please confirm your password").assertCountEquals(0)
-    compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
-  }
+    checkpoint("No validation errors shown initially") {
+      compose.onAllNodesWithText("Email cannot be empty").assertCountEquals(0)
+      compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
+      compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
+      compose.onAllNodesWithText("Password is too weak").assertCountEquals(0)
+      compose.onAllNodesWithText("Please confirm your password").assertCountEquals(0)
+      compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
+    }
 
-  // ===== Email field =====
+    // ===== Email field =====
 
-  @Test
-  fun emailField_acceptsInput() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertTextContains("test@example.com")
-  }
+    checkpoint("Email field accepts input") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertTextContains("test@example.com")
+      clearFields()
+    }
 
-  @Test
-  fun emailField_showsErrorInRealTime_invalidFormat() {
-    // Error should appear immediately as user types invalid email
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
-    compose.waitForIdle()
-    compose.onNodeWithText("Invalid email format").assertExists()
-  }
+    checkpoint("Email field shows error in real-time invalid format") {
+      // Error should appear immediately as user types invalid email
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
+      compose.waitForIdle()
+      compose.onNodeWithText("Invalid email format").assertExists()
+      clearFields()
+    }
 
-  @Test
-  fun emailField_errorClearsWhenCorrected() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("invalid")
-    compose.waitForIdle()
-    compose.onNodeWithText("Invalid email format").assertExists()
-    // Clear and enter valid email
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("@example.com")
-    compose.waitForIdle()
-    compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
-  }
+    checkpoint("Email field clears error on valid input") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("invalid")
+      compose.waitForIdle()
+      compose.onNodeWithText("Invalid email format").assertExists()
+      // Clear and enter valid email
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("@example.com")
+      compose.waitForIdle()
+      compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
+      clearFields()
+    }
 
-  // ===== Password field =====
+    // ===== Password field =====
 
-  @Test
-  fun passwordField_acceptsInput_andMasks() {
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    // Initially password is hidden
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("•••••••••••")
-    // Toggle to show
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("password123")
-    // Toggle to hide
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("•••••••••••")
-  }
+    checkpoint("Password field accepts input and masks") {
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      // Initially password is hidden
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("•••••••••••")
+      // Toggle to show
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("password123")
+      // Toggle to hide
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).performClick()
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertTextContains("•••••••••••")
+      clearFields()
+    }
 
-  @Test
-  fun passwordField_showsErrorInRealTime_tooWeak() {
-    // Error should appear immediately when password is too short
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345")
-    compose.waitForIdle()
-    compose.onNodeWithText("Password is too weak").assertExists()
-  }
+    checkpoint("Password field shows error in real-time too short") {
+      // Error should appear immediately when password is too short
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345")
+      compose.waitForIdle()
+      compose.onNodeWithText("Password is too weak").assertExists()
+      clearFields()
+    }
 
-  // ===== Confirm Password field =====
+    // ===== Confirm Password field =====
 
-  @Test
-  fun confirmPasswordField_acceptsInput_andMasks() {
-    compose
+    checkpoint("Confirm Password field accepts input and masks") {
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    // Initially password is hidden
-    compose
+      // Initially password is hidden
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertTextContains("•••••••••••")
-    // Toggle to show
-    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
-    compose
+      // Toggle to show
+      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertTextContains("password123")
-    // Toggle to hide
-    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
-    compose
+      // Toggle to hide
+      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertTextContains("•••••••••••")
-  }
+      clearFields()
+    }
 
-  @Test
-  fun confirmPasswordField_showsErrorInRealTime_mismatch() {
-    // Set password first
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    // Enter mismatched confirm password
-    compose
+    checkpoint("Confirm Password field shows error on mismatch") {
+      // Set password first
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      // Enter mismatched confirm password
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password124")
-    compose.waitForIdle()
-    compose.onNodeWithText("Passwords do not match").assertExists()
-  }
+      compose.waitForIdle()
+      compose.onNodeWithText("Passwords do not match").assertExists()
+      clearFields()
+    }
 
-  // ===== Button enablement based on validation =====
+    // ===== Button enablement based on validation =====
 
-  @Test
-  fun signUpButton_disabledWhenEmailEmpty() {
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Sign Up button enablement based on field validity") {
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun signUpButton_disabledWhenPasswordEmpty() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose
+    checkpoint("Sign Up button disabled when password empty") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun signUpButton_disabledWhenConfirmPasswordEmpty() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
+    checkpoint("Sign Up button disabled when confirm password empty") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun signUpButton_disabledWhenEmailInvalid() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Sign Up button disabled when email invalid") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun signUpButton_disabledWhenPasswordTooWeak() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345") // < 6
-    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("12345")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
+    checkpoint("Sign Up button disabled when password too short") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345") // < 6
+      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("12345")
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun signUpButton_disabledWhenPasswordsMismatch() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Sign Up button disabled when passwords do not match") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password124")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
-  }
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun signUpButton_enabledWhenAllFieldsValid() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Sign Up button enabled when all fields valid") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
-  }
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
+      clearFields()
+    }
 
-  // ===== Real-time validation errors =====
+    // ===== Real-time validation errors =====
 
-  @Test
-  fun validation_emailWithSpaces_showsErrorImmediately() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test @example.com")
-    compose.waitForIdle()
-    compose.onNodeWithText("Invalid email format").assertExists()
-  }
+    checkpoint("Real-time validation error for empty email") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test @example.com")
+      compose.waitForIdle()
+      compose.onNodeWithText("Invalid email format").assertExists()
+      clearFields()
+    }
 
-  @Test
-  fun validation_allFieldsValid_noClientErrors() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Real-time validation error for empty password") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
-    compose.onAllNodesWithText("Email cannot be empty").assertCountEquals(0)
-    compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
-    compose.onAllNodesWithText("Password is too weak").assertCountEquals(0)
-    compose.onAllNodesWithText("Please confirm your password").assertCountEquals(0)
-    compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
-  }
+      compose.waitForIdle()
+      compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
+      compose.onAllNodesWithText("Email cannot be empty").assertCountEquals(0)
+      compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
+      compose.onAllNodesWithText("Password is too weak").assertCountEquals(0)
+      compose.onAllNodesWithText("Please confirm your password").assertCountEquals(0)
+      compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
+      clearFields()
+    }
 
-  // ===== Google sign-up button =====
+    // ===== Google sign-up button =====
 
-  @Test
-  fun googleSignUpButton_hasCorrectText() {
-    compose
+    checkpoint("Google sign-up button displays correct text") {
+      compose
         .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
         .assertTextContains("Connect with Google")
-  }
+      clearFields()
+    }
 
-  // ===== OR divider =====
+    // ===== OR divider =====
 
-  @Test
-  fun orDivider_displayed() {
-    compose.onNodeWithText("OR").assertExists()
-  }
+    checkpoint("OR divider is displayed") {
+      compose.onNodeWithText("OR").assertExists()
+      clearFields()
+    }
 
-  // ===== All required elements present =====
+    // ===== All required elements present =====
 
-  @Test
-  fun allRequiredElements_present() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists()
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists()
-    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertExists()
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).assertExists()
-    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).assertExists()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists()
-    compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertExists()
-    compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
-    compose.onNodeWithText("OR").assertExists()
-    compose.onNodeWithText("Already have an account? ").assertExists()
-    compose.onNodeWithText("Log in.").assertExists()
-  }
+    checkpoint("All required elements are present") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists()
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists()
+      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertExists()
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE).assertExists()
+      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).assertExists()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists()
+      compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertExists()
+      compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
+      compose.onNodeWithText("OR").assertExists()
+      compose.onNodeWithText("Already have an account? ").assertExists()
+      compose.onNodeWithText("Log in.").assertExists()
+      clearFields()
+    }
 
-  // ===== Edge cases =====
+    // ===== Edge cases =====
 
-  @Test
-  fun validation_buttonEnabledAfterCorrectingEmail() {
-    // Start with invalid email
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("invalid")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Edge case: correcting invalid email enables sign-up") {
+      // Start with invalid email
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("invalid")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
 
-    // Correct the email
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("@example.com")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
-  }
+      // Correct the email
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("@example.com")
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun validation_exactlySixCharacterPassword_accepted() {
-    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("123456")
-    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("123456")
-    compose.waitForIdle()
-    compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
-  }
+    checkpoint("Edge case: correcting short password enables sign-up") {
+      compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("123456")
+      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("123456")
+      compose.waitForIdle()
+      compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
+      clearFields()
+    }
 
-  @Test
-  fun validation_passwordChangeRevalidatesConfirmPassword() {
-    // Set matching passwords first
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-    compose
+    checkpoint("Edge case: changing password creates mismatch error") {
+      // Set matching passwords first
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
+      compose
         .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .performTextInput("password123")
-    compose.waitForIdle()
-    compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
+      compose.waitForIdle()
+      compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
 
-    // Change password to create mismatch
-    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("4")
-    compose.waitForIdle()
-    compose.onNodeWithText("Passwords do not match").assertExists()
+      // Change password to create mismatch
+      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("4")
+      compose.waitForIdle()
+      compose.onNodeWithText("Passwords do not match").assertExists()
+      clearFields()
+    }
+  }
+  private fun clearFields() {
+    compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextClearance()
+    compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextClearance()
+    compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextClearance()
   }
 }
