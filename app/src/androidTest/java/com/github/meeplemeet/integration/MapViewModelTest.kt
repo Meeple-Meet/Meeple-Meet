@@ -1,337 +1,796 @@
-// Test suite initially generated with Claude 4.5, following Meeple Meet's global test architecture.
-// Then, the test suite was manually reviewed, cleaned up, and debugged.
 package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.model.map.GeoPinWithLocation
+import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.MapUIState
 import com.github.meeplemeet.model.map.MapViewModel
-import com.github.meeplemeet.model.map.MarkerPreview
-import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
-import com.github.meeplemeet.model.map.StorableGeoPin
+import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
+import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.utils.FirestoreTests
-import com.google.firebase.firestore.GeoPoint
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import com.google.firebase.Timestamp
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import org.junit.Before
 import org.junit.Test
 
 /**
- * Comprehensive test suite for MapViewModel with maximum coverage.
+ * Comprehensive integration test suite for MapViewModel using real Firestore repositories.
  *
- * Tests cover: initial state, geo query lifecycle, pin updates, error handling, preview selection,
- * query parameter updates, and type filtering.
+ * Tests cover:
+ * - Geo query lifecycle with real pins
+ * - UI-side type filtering
+ * - Session participant filtering
+ * - Pin selection and preview loading
+ * - Query parameter updates
+ * - Error handling
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class MapViewModelTest : FirestoreTests() {
-  private lateinit var mockMarkerPreviewRepo: MarkerPreviewRepository
   private lateinit var viewModel: MapViewModel
-
-  private val testCenter = Location(46.5197, 6.5665, "EPFL")
-  private val testGeoPoint = GeoPoint(46.5197, 6.5665)
-  private val testRadiusKm = 10.0
-
-  private val shopPin = StorableGeoPin("shop_1", PinType.SHOP)
-  private val spacePin = StorableGeoPin("space_1", PinType.SPACE)
-  private val sessionPin = StorableGeoPin("session_1", PinType.SESSION)
-
-  private val shopPreview =
-      MarkerPreview.ShopMarkerPreview(name = "Test Shop", address = "EPFL", open = true)
+  private lateinit var testAccount1: Account
+  private lateinit var testAccount2: Account
+  private lateinit var testLocation: Location
+  private lateinit var testLocationNearby: Location
+  private lateinit var testLocationFar: Location
+  private lateinit var testOpeningHours: List<OpeningHours>
 
   @Before
   fun setup() {
-    Dispatchers.setMain(UnconfinedTestDispatcher())
+    viewModel = MapViewModel()
 
-    mockMarkerPreviewRepo = mockk(relaxed = true)
-    viewModel = MapViewModel(mockMarkerPreviewRepo)
+    runBlocking {
+      testAccount1 =
+          accountRepository.createAccount("user1", "User One", "user1@test.com", photoUrl = null)
+      testAccount2 =
+          accountRepository.createAccount("user2", "User Two", "user2@test.com", photoUrl = null)
+    }
+
+    testLocation = Location(46.5197, 6.5665, "EPFL")
+    testLocationNearby = Location(46.5200, 6.5670, "Near EPFL")
+    testLocationFar = Location(46.2044, 6.1432, "Geneva")
+
+    testOpeningHours =
+        listOf(
+            OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
+            OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
+            OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
+            OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
+            OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "20:00"))),
+            OpeningHours(day = 6, hours = listOf(TimeSlot("10:00", "17:00"))),
+            OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
   }
-
-  @After
-  fun tearDown() {
-    Dispatchers.resetMain()
-  }
-
-  // ========================================================================
-  // Test 1: Initial State + Basic Query Start/Stop
-  // ========================================================================
 
   @Test
-  fun initialState_isEmpty_andStartStopQuery_resetsState() = runTest {
-    // Initial state verification
+  fun initialState_isEmpty() {
+    val state = viewModel.uiState.value
+
+    assertEquals(MapUIState(), state)
+    assertTrue(state.allGeoPins.isEmpty())
+    assertTrue(state.geoPins.isEmpty())
+    assertEquals(PinType.entries.toSet(), state.activeFilters)
+    assertNull(state.errorMsg)
+    assertNull(state.selectedMarkerPreview)
+    assertNull(state.selectedGeoPin)
+  }
+
+  @Test
+  fun startGeoQuery_loadsShopPins() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Test Board Game Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+    assertTrue(state.geoPins.isNotEmpty())
+
+    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(shopPin)
+    assertEquals(PinType.SHOP, shopPin!!.geoPin.type)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun startGeoQuery_loadsSpacePins() = runBlocking {
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Test Game Space",
+            address = testLocation,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    val spacePin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
+    assertNotNull(spacePin)
+    assertEquals(PinType.SPACE, spacePin!!.geoPin.type)
+
+    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+  }
+
+  @Test
+  fun startGeoQuery_loadsSessionPinsOnlyForParticipant() = runBlocking {
+    // create a game entry
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_game_chess_mv")
+        .set(
+            GameNoUid(
+                name = "Chess",
+                description = "Strategy board game",
+                imageURL = "https://example.com/chess.jpg",
+                minPlayers = 2,
+                maxPlayers = 2,
+                recommendedPlayers = null,
+                averagePlayTime = null,
+                genres = emptyList()))
+        .await()
+
+    val testGame = gameRepository.getGameById("test_game_chess_mv")
+
+    // create discussion then create session linked to it
+    val discussion =
+        discussionRepository.createDiscussion(
+            "Chess Night Discussion", "Test discussion for chess session", testAccount1.uid)
+
+    // create session via discussion (sessionRepository.createSession(discussionId,...))
+    sessionRepository.createSession(
+        discussion.uid,
+        "Chess Night",
+        testGame.uid,
+        Timestamp.now(),
+        testLocation,
+        testAccount1.uid)
+
+    // User1 is creator / participant -> should see the session pin (search by discussion.uid)
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    val sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid } // note: discussion.uid
+    assertNotNull(sessionPin)
+    assertEquals(PinType.SESSION, sessionPin!!.geoPin.type)
+
+    viewModel.stopGeoQuery()
+
+    // User2 (not participant) should not see the session pin
+    val viewModel2 = MapViewModel()
+    viewModel2.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount2.uid)
+    delay(3000)
+
+    state = viewModel2.uiState.value
+    val sessionPin2 = state.geoPins.find { it.geoPin.uid == discussion.uid }
+    assertNull(sessionPin2)
+
+    // cleanup
+    discussionRepository.deleteDiscussion(discussion)
+  }
+
+  @Test
+  fun startGeoQuery_loadsMultiplePinTypes() = runBlocking {
+    // create game + discussion+session
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_game_catan_mv")
+        .set(
+            GameNoUid(
+                name = "Catan",
+                description = "Trading and building board game",
+                imageURL = "https://example.com/catan.jpg",
+                minPlayers = 3,
+                maxPlayers = 4,
+                recommendedPlayers = null,
+                averagePlayTime = null,
+                genres = emptyList()))
+        .await()
+
+    val testGame = gameRepository.getGameById("test_game_catan_mv")
+
+    val discussion =
+        discussionRepository.createDiscussion(
+            "Catan Night Discussion", "Discussion for Catan session test", testAccount1.uid)
+
+    sessionRepository.createSession(
+        discussion.uid, "Game Night", testGame.uid, Timestamp.now(), testLocation, testAccount1.uid)
+
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Space",
+            address = testLocation,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.size >= 3)
+
+    val shopPin = state.geoPins.find { it.geoPin.type == PinType.SHOP }
+    val spacePin = state.geoPins.find { it.geoPin.type == PinType.SPACE }
+    val sessionPin = state.geoPins.find { it.geoPin.type == PinType.SESSION }
+
+    assertNotNull(shopPin)
+    assertNotNull(spacePin)
+    assertNotNull(sessionPin)
+
+    shopRepository.deleteShop(shop.id)
+    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+    // cleanup discussion which contains the session link
+    discussionRepository.deleteDiscussion(discussion)
+  }
+
+  @Test
+  fun startGeoQuery_doesNotLoadPinsOutsideRadius() = runBlocking {
+    val farShop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Far Shop",
+            address = testLocationFar,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    val farPin = state.geoPins.find { it.geoPin.uid == farShop.id }
+    assertNull(farPin)
+
+    shopRepository.deleteShop(farShop.id)
+  }
+
+  @Test
+  fun stopGeoQuery_clearsAllPins() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    viewModel.stopGeoQuery()
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isEmpty())
+    assertTrue(state.geoPins.isEmpty())
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun updateFilters_filtersGeoPinsProperty() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Space",
+            address = testLocation,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.size >= 2)
+    assertTrue(state.geoPins.size >= 2)
+
+    viewModel.updateFilters(setOf(PinType.SHOP))
+    delay(100)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.size >= 2)
+    assertTrue(state.geoPins.all { it.geoPin.type == PinType.SHOP })
+    assertTrue(state.geoPins.none { it.geoPin.type == PinType.SPACE })
+
+    viewModel.updateFilters(setOf(PinType.SPACE))
+    delay(100)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.size >= 2)
+    assertTrue(state.geoPins.all { it.geoPin.type == PinType.SPACE })
+    assertTrue(state.geoPins.none { it.geoPin.type == PinType.SHOP })
+
+    viewModel.updateFilters(setOf(PinType.SHOP, PinType.SPACE))
+    delay(100)
+
+    state = viewModel.uiState.value
+    assertTrue(state.geoPins.size >= 2)
+
+    shopRepository.deleteShop(shop.id)
+    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+  }
+
+  @Test
+  fun updateFilters_withEmptySet_hidesAllPins() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+    assertTrue(state.geoPins.isNotEmpty())
+
+    viewModel.updateFilters(emptySet())
+    delay(100)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+    assertTrue(state.geoPins.isEmpty())
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun selectPin_loadsShopPreview() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Chess Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(shopPin)
+
+    viewModel.selectPin(shopPin!!)
+    delay(1000)
+
+    val updatedState = viewModel.uiState.value
+    assertNotNull(updatedState.selectedMarkerPreview)
+    assertNotNull(updatedState.selectedGeoPin)
+    assertEquals(shop.id, updatedState.selectedGeoPin!!.uid)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun selectPin_loadsSpacePreview() = runBlocking {
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Game Hall",
+            address = testLocation,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    val spacePin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
+    assertNotNull(spacePin)
+
+    viewModel.selectPin(spacePin!!)
+    delay(1000)
+
+    val updatedState = viewModel.uiState.value
+    assertNotNull(updatedState.selectedMarkerPreview)
+    assertEquals(spaceRenter.id, updatedState.selectedGeoPin!!.uid)
+
+    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+  }
+
+  @Test
+  fun selectPin_loadsSessionPreview() = runBlocking {
+    // create game entry
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_game_chess_select")
+        .set(
+            GameNoUid(
+                name = "Chess",
+                description = "Strategy board game",
+                imageURL = "https://example.com/chess.jpg",
+                minPlayers = 2,
+                maxPlayers = 2,
+                recommendedPlayers = null,
+                averagePlayTime = null,
+                genres = emptyList()))
+        .await()
+
+    val testGame = gameRepository.getGameById("test_game_chess_select")
+
+    // create discussion then session via discussion
+    val discussion =
+        discussionRepository.createDiscussion(
+            "Chess Tournament Discussion", "Test discussion for tournament", testAccount1.uid)
+
+    sessionRepository.createSession(
+        discussion.uid,
+        "Chess Tournament",
+        testGame.uid,
+        Timestamp.now(),
+        testLocation,
+        testAccount1.uid)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    val sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
+
+    assertNotNull(sessionPin)
+
+    viewModel.selectPin(sessionPin!!)
+    delay(1000)
+
+    val updatedState = viewModel.uiState.value
+    assertNotNull(updatedState.selectedMarkerPreview)
+    assertEquals(discussion.uid, updatedState.selectedGeoPin!!.uid)
+
+    // cleanup
+    discussionRepository.deleteDiscussion(discussion)
+  }
+
+  @Test
+  fun clearSelectedPin_removesSelection() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    val state = viewModel.uiState.value
+    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(shopPin)
+
+    viewModel.selectPin(shopPin!!)
+    delay(1000)
+
+    var updatedState = viewModel.uiState.value
+    assertNotNull(updatedState.selectedMarkerPreview)
+
+    viewModel.clearSelectedPin()
+
+    updatedState = viewModel.uiState.value
+    assertNull(updatedState.selectedMarkerPreview)
+    assertNull(updatedState.selectedGeoPin)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun updateQueryCenter_keepsQueryAlive() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    val initialCount = state.allGeoPins.size
+    assertTrue(initialCount > 0)
+
+    viewModel.updateQueryCenter(testLocationNearby)
+    delay(1000)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun updateRadius_keepsQueryAlive() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    viewModel.updateRadius(15.0)
+    delay(1000)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun updateCenterAndRadius_keepsQueryAlive() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    viewModel.updateCenterAndRadius(testLocationNearby, 15.0)
+    delay(1000)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun geoQuery_onKeyMoved_updatesLocation() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Moving Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    val initialPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(initialPin)
+    assertEquals(testLocation.latitude, initialPin!!.location.latitude, 0.0001)
+    assertEquals(testLocation.longitude, initialPin.location.longitude, 0.0001)
+
+    shopRepository.updateShop(shop.id, address = testLocationNearby)
+    delay(3000)
+
+    state = viewModel.uiState.value
+    val updatedPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(updatedPin)
+    assertEquals(testLocationNearby.latitude, updatedPin!!.location.latitude, 0.0001)
+    assertEquals(testLocationNearby.longitude, updatedPin.location.longitude, 0.0001)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun geoQuery_onKeyExited_removesPinWhenMovedOutOfRadius() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Exiting Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    val initialPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(initialPin)
+
+    shopRepository.updateShop(shop.id, address = testLocationFar)
+    delay(3000)
+
+    state = viewModel.uiState.value
+    val exitedPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNull(exitedPin)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun geoQuery_onKeyExited_removesPinWhenDeleted() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Temporary Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    val initialPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(initialPin)
+
+    shopRepository.deleteShop(shop.id)
+    delay(3000)
+
+    state = viewModel.uiState.value
+    val deletedPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNull(deletedPin)
+  }
+
+  @Test
+  fun clearErrorMsg_removesError() {
+    viewModel.clearErrorMsg()
+
+    val state = viewModel.uiState.value
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun multipleQueryCycles_workCorrectly() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    viewModel.stopGeoQuery()
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isEmpty())
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun stopGeoQuery_canBeCalledMultipleTimes() {
+    viewModel.stopGeoQuery()
+    viewModel.stopGeoQuery()
+    viewModel.stopGeoQuery()
+
+    val state = viewModel.uiState.value
+    assertNotNull(state)
+    assertTrue(state.allGeoPins.isEmpty())
+  }
+
+  @Test
+  fun startGeoQuery_restartingQueryClearsPreviousState() = runBlocking {
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.isNotEmpty())
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationFar,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocationFar, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    state = viewModel.uiState.value
+    val pin1 = state.allGeoPins.find { it.geoPin.uid == shop1.id }
+    val pin2 = state.allGeoPins.find { it.geoPin.uid == shop2.id }
+    assertNull(pin1)
+    assertNotNull(pin2)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  @Test
+  fun geoQuery_dynamicallyLoadsNewPins() = runBlocking {
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    var state = viewModel.uiState.value
+    val initialCount = state.allGeoPins.size
+
+    val newShop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "New Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    delay(3000)
+
+    state = viewModel.uiState.value
+    assertTrue(state.allGeoPins.size > initialCount)
+    val newPin = state.allGeoPins.find { it.geoPin.uid == newShop.id }
+    assertNotNull(newPin)
+
+    shopRepository.deleteShop(newShop.id)
+  }
+
+  @Test
+  fun updateFilters_doesNotAffectAllGeoPins() = runBlocking {
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Space",
+            address = testLocation,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
     val initialState = viewModel.uiState.value
-    assertEquals(MapUIState(), initialState)
-    assertTrue(initialState.geoPins.isEmpty())
-    assertNull(initialState.errorMsg)
-    assertNull(initialState.selectedMarkerPreview)
-    assertNull(initialState.selectedGeoPin)
+    val initialAllCount = initialState.allGeoPins.size
 
-    // Start query (creates listeners but won't trigger without real Firestore)
-    viewModel.startGeoQuery(testCenter, testRadiusKm)
+    viewModel.updateFilters(setOf(PinType.SHOP))
+    delay(100)
 
-    // Stop query should reset state
-    viewModel.stopGeoQuery()
+    val filteredState = viewModel.uiState.value
+    assertEquals(initialAllCount, filteredState.allGeoPins.size)
+    assertTrue(filteredState.geoPins.size < initialAllCount)
 
-    val stateAfterStop = viewModel.uiState.value
-    assertEquals(MapUIState(), stateAfterStop)
-    assertTrue(stateAfterStop.geoPins.isEmpty())
-  }
-
-  // ========================================================================
-  // Test 2: Update Query Parameters (Center, Radius, Both)
-  // ========================================================================
-
-  @Test
-  fun updateQueryParameters_centerRadiusAndBoth_doesNotCrash() = runTest {
-    viewModel.startGeoQuery(testCenter, testRadiusKm)
-
-    // Update center only
-    val newCenter = Location(46.5200, 6.5700, "New Location")
-    viewModel.updateQueryCenter(newCenter)
-
-    // Update radius only
-    val newRadius = 15.0
-    viewModel.updateRadius(newRadius)
-
-    // Update both
-    val anotherCenter = Location(46.5300, 6.5800, "Another Location")
-    val anotherRadius = 20.0
-    viewModel.updateCenterAndRadius(anotherCenter, anotherRadius)
-
-    // Verify state is still valid
-    assertNotNull(viewModel.uiState.value)
-
-    viewModel.stopGeoQuery()
-  }
-
-  // ========================================================================
-  // Test 3: Select Pin - Success Path with Preview Fetch
-  // ========================================================================
-
-  @Test
-  fun selectPin_successful_updatesStateWithPreview() = runTest {
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(shopPin) } returns shopPreview
-
-    val geoPinWithLocation = GeoPinWithLocation(shopPin, testGeoPoint)
-
-    viewModel.selectPin(geoPinWithLocation)
-
-    val state = viewModel.uiState.value
-    assertEquals(shopPreview, state.selectedMarkerPreview)
-    assertEquals("shop_1", state.selectedGeoPin?.uid)
-    assertNull(state.errorMsg)
-
-    coVerify(exactly = 1) { mockMarkerPreviewRepo.getMarkerPreview(shopPin) }
-  }
-
-  // ========================================================================
-  // Test 4: Select Pin - Error Handling + Clear Error
-  // ========================================================================
-
-  @Test
-  fun selectPin_failure_setsError_andClearErrorMsg_removesIt() = runTest {
-    val exception = RuntimeException("Failed to load preview")
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(shopPin) } throws exception
-
-    val geoPinWithLocation = GeoPinWithLocation(shopPin, testGeoPoint)
-
-    viewModel.selectPin(geoPinWithLocation)
-
-    var state = viewModel.uiState.value
-    assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedGeoPin)
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("Failed to fetch preview"))
-
-    // Clear error
-    viewModel.clearErrorMsg()
-
-    state = viewModel.uiState.value
-    assertNull(state.errorMsg)
-  }
-
-  // ========================================================================
-  // Test 5: Clear Selected Pin
-  // ========================================================================
-
-  @Test
-  fun clearSelectedPin_removesSelectionFromState() = runTest {
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(shopPin) } returns shopPreview
-
-    val geoPinWithLocation = GeoPinWithLocation(shopPin, testGeoPoint)
-
-    // First select a pin
-    viewModel.selectPin(geoPinWithLocation)
-
-    var state = viewModel.uiState.value
-    assertNotNull(state.selectedMarkerPreview)
-    assertEquals("shop_1", state.selectedGeoPin?.uid)
-
-    // Then clear it
-    viewModel.clearSelectedPin()
-
-    state = viewModel.uiState.value
-    assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedGeoPin)
-  }
-
-  // ========================================================================
-  // Test 6: Type Filtering (includeTypes parameter)
-  // ========================================================================
-
-  @Test
-  fun startGeoQuery_withTypeFiltering_onlyIncludesSpecifiedTypes() = runTest {
-    // Start query with only SHOP and SPACE (no SESSION)
-    viewModel.startGeoQuery(
-        center = testCenter,
-        radiusKm = testRadiusKm,
-        includeTypes = setOf(PinType.SHOP, PinType.SPACE))
-
-    // This test verifies the parameter is passed correctly
-    // Actual filtering happens in the onKeyEntered listener
-    // In a real scenario with Firestore, SESSION pins would be filtered out
-
-    assertNotNull(viewModel.uiState.value)
-  }
-
-  // ========================================================================
-  // Test 7: Multiple Query Lifecycle - Start, Stop, Restart
-  // ========================================================================
-
-  @Test
-  fun multipleQueryLifecycle_startStopRestart_maintainsConsistentState() = runTest {
-    // First query
-    viewModel.startGeoQuery(testCenter, testRadiusKm)
-    viewModel.stopGeoQuery()
-
-    var state = viewModel.uiState.value
-    assertTrue(state.geoPins.isEmpty())
-
-    // Second query with different params
-    val newCenter = Location(48.8566, 2.3522, "Paris")
-    viewModel.startGeoQuery(newCenter, 5.0)
-    viewModel.stopGeoQuery()
-
-    state = viewModel.uiState.value
-    assertTrue(state.geoPins.isEmpty())
-
-    // Third query
-    viewModel.startGeoQuery(testCenter, testRadiusKm)
-
-    // State should still be clean
-    assertNotNull(viewModel.uiState.value)
-
-    viewModel.stopGeoQuery()
-  }
-
-  // ========================================================================
-  // Test 8: Select Different Pin Types (Shop, Space, Session)
-  // ========================================================================
-
-  @Test
-  fun selectPin_differentTypes_allHandledCorrectly() = runTest {
-    val shopPreview = MarkerPreview.ShopMarkerPreview("Shop", "Address", true)
-    val spacePreview = MarkerPreview.SpaceMarkerPreview("Space", "Address", false)
-    val sessionPreview =
-        MarkerPreview.SessionMarkerPreview("Session", "Address", "Game", "01/01/2025 at 20:00")
-
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(shopPin) } returns shopPreview
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(spacePin) } returns spacePreview
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(sessionPin) } returns sessionPreview
-
-    // Select shop
-    viewModel.selectPin(GeoPinWithLocation(shopPin, testGeoPoint))
-    var state = viewModel.uiState.value
-    assertTrue(state.selectedMarkerPreview is MarkerPreview.ShopMarkerPreview)
-    assertEquals("shop_1", state.selectedGeoPin?.uid)
-
-    // Clear and select space
-    viewModel.clearSelectedPin()
-    viewModel.selectPin(GeoPinWithLocation(spacePin, testGeoPoint))
-    state = viewModel.uiState.value
-    assertTrue(state.selectedMarkerPreview is MarkerPreview.SpaceMarkerPreview)
-    assertEquals("space_1", state.selectedGeoPin?.uid)
-
-    // Clear and select session
-    viewModel.clearSelectedPin()
-    viewModel.selectPin(GeoPinWithLocation(sessionPin, testGeoPoint))
-    state = viewModel.uiState.value
-    assertTrue(state.selectedMarkerPreview is MarkerPreview.SessionMarkerPreview)
-    assertEquals("session_1", state.selectedGeoPin?.uid)
-  }
-
-  // ========================================================================
-  // Test 9: Error Messages - Set and Clear Multiple Times
-  // ========================================================================
-
-  @Test
-  fun errorMessages_setAndClearMultipleTimes_maintainsConsistency() = runTest {
-    val exception1 = RuntimeException("Error 1")
-    val exception2 = RuntimeException("Error 2")
-
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(shopPin) } throws exception1
-
-    // First error
-    viewModel.selectPin(GeoPinWithLocation(shopPin, testGeoPoint))
-    var state = viewModel.uiState.value
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("Error 1"))
-
-    // Clear
-    viewModel.clearErrorMsg()
-    state = viewModel.uiState.value
-    assertNull(state.errorMsg)
-
-    // Second error
-    coEvery { mockMarkerPreviewRepo.getMarkerPreview(spacePin) } throws exception2
-    viewModel.selectPin(GeoPinWithLocation(spacePin, testGeoPoint))
-    state = viewModel.uiState.value
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("Error 2"))
-
-    // Clear again
-    viewModel.clearErrorMsg()
-    state = viewModel.uiState.value
-    assertNull(state.errorMsg)
-  }
-
-  // ========================================================================
-  // Test 10: onCleared Lifecycle + Stop Query Without Active Query
-  // ========================================================================
-
-  @Test
-  fun onCleared_stopsQuery_andStopQueryWithoutStart_doesNotCrash() = runTest {
-    // Start a query
-    viewModel.startGeoQuery(testCenter, testRadiusKm)
-
-    // Simulate ViewModel being cleared (this calls onCleared internally)
-    // We can't directly call onCleared as it's protected, but stopGeoQuery does the same
-    viewModel.stopGeoQuery()
-
-    val state = viewModel.uiState.value
-    assertTrue(state.geoPins.isEmpty())
-
-    // Try to stop again without starting (should not crash)
-    viewModel.stopGeoQuery()
-
-    // Try multiple stops
-    viewModel.stopGeoQuery()
-    viewModel.stopGeoQuery()
-
-    // State should still be valid
-    assertNotNull(viewModel.uiState.value)
-    assertTrue(viewModel.uiState.value.geoPins.isEmpty())
+    shopRepository.deleteShop(shop.id)
+    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
   }
 }

@@ -259,9 +259,7 @@ fun MapScreen(
   }
 
   /** Updates the ViewModel filters whenever the set of included pin types changes. */
-  LaunchedEffect(includeTypes) {
-    snapshotFlow { includeTypes }.debounce(500).collect { types -> viewModel.updateFilters(types) }
-  }
+  LaunchedEffect(includeTypes) { viewModel.updateFilters(includeTypes) }
 
   /** Displays any error message emitted by the ViewModel in a snackbar. */
   LaunchedEffect(uiState.errorMsg) {
