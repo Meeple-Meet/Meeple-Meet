@@ -146,6 +146,7 @@ enum class MeepleMeetScreen(
   EditShop("Edit Shop"),
   CreateSpaceRenter("Create Space Renter"),
   SpaceDetails("Space Renter Details"),
+  EditSpaceRenter("Edit Space Renter"),
 }
 
 /**

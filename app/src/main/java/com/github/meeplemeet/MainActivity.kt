@@ -64,6 +64,7 @@ import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
+import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.android.gms.maps.MapsInitializer
@@ -418,7 +419,7 @@ fun MeepleMeetApp(
       CreateSpaceRenterScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { navigationActions.goBack() /* TODO */ })
+          onCreated = { navigationActions.goBack()})
     }
 
     composable(MeepleMeetScreen.SpaceDetails.name) {
@@ -429,9 +430,21 @@ fun MeepleMeetApp(
             onBack = { navigationActions.goBack() },
             onEdit = {
               spaceRenter = it
-              //              navigationActions.navigateTo(MeepleMeetScreen.EditSpaceRenter, popUpTo
-              // = false) /* TODO: uncomment once EditSpaceRenter is implemented */
+              navigationActions.navigateTo(
+                  MeepleMeetScreen.EditSpaceRenter,
+                  popUpTo = false)
             })
+      } else {
+        LoadingScreen()
+      }
+    }
+    composable(MeepleMeetScreen.EditSpaceRenter.name) {
+      if (spaceRenter != null) {
+        EditSpaceRenterScreen(
+            owner = account!!,
+            spaceRenter = spaceRenter!!,
+            onBack = { navigationActions.goBack() },
+            onUpdated = { navigationActions.goBack() })
       } else {
         LoadingScreen()
       }
