@@ -362,7 +362,17 @@ fun MapScreen(
                       .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
               properties = MapProperties(mapStyleOptions = mapStyleOptions)) {
-                uiState.geoPins.forEach { gp ->
+                val pinPriority = listOf(PinType.SESSION, PinType.SHOP, PinType.SPACE)
+
+                val uniquePins =
+                    uiState.geoPins
+                        .groupBy { it.location }
+                        .mapValues { (_, pins) ->
+                          pins.minByOrNull { pinPriority.indexOf(it.geoPin.type) }!!
+                        }
+                        .values
+
+                uniquePins.forEach { gp ->
                   val pos = LatLng(gp.location.latitude, gp.location.longitude)
                   val icon =
                       when (gp.geoPin.type) {
@@ -772,6 +782,21 @@ private fun MarkerPreviewSheet(
       }
 }
 
+/**
+ * Creates a custom Google Maps marker icon from a drawable resource.
+ *
+ * The icon is drawn on a colored circle background with configurable scale, tint, and alpha. This
+ * allows easy distinction between different pin types while maintaining legibility on the map.
+ *
+ * @param resId drawable resource ID of the marker icon
+ * @param scale scaling factor applied to the drawable (default 1.5x)
+ * @param tint color applied to the drawable icon (default [AppColors.neutral])
+ * @param backgroundTint color of the circle background behind the icon (default
+ *   [AppColors.primary])
+ * @param backgroundAlpha alpha transparency of the background circle (0f = fully transparent, 1f =
+ *   opaque)
+ * @return a [BitmapDescriptor] usable as a Google Maps marker icon
+ */
 @Composable
 private fun rememberMarkerIcon(
     @DrawableRes resId: Int,
