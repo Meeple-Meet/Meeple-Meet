@@ -19,8 +19,8 @@ import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
-import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -29,13 +29,13 @@ import org.junit.Test
 class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
+    @get:Rule val ck = Checkpoint.Rule()
+    private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: SpaceRenterViewModel
   private lateinit var renter: SpaceRenter
   private lateinit var currentUser: Account
   private lateinit var owner: Account
-
-  private val report = linkedMapOf<String, Boolean>()
 
   private var theme by mutableStateOf(ThemeMode.LIGHT)
 
@@ -131,7 +131,7 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
             addressBtn() to "- Address: ${renter.address.name}",
             websiteBtn() to "- Website: ${renter.website}")
         .forEach { (btn, expected) ->
-          checkpoint("Copy via ${btn}") {
+          checkpoint("Copy via $btn") {
             btn.performClick()
             assert(clipboard.copiedText == expected)
           }
@@ -146,12 +146,6 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
       val row = spaceRow(i)
       checkpoint("Space row exists: $row") { compose.onNodeWithTag(row).assertExists() }
     }
-
-    val failed = report.filterValues { !it }.keys
-    println(
-        "Smoke: ${report.size - failed.size}/${report.size} OK" +
-            (if (failed.isNotEmpty()) " → $failed" else ""))
-    assertTrue("Failures: $failed", failed.isEmpty())
   }
 
   @Test
@@ -173,9 +167,5 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
   }
 
   /* ------ helper ------ */
-  private inline fun checkpoint(name: String, block: () -> Unit) {
-    runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
-  }
-
   private fun now() = System.currentTimeMillis().toString()
 }
