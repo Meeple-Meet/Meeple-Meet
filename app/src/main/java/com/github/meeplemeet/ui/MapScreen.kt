@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
@@ -456,7 +459,6 @@ fun MapScreen(
                 }
           }
 
-          // TODO clean up dialog style
           if (showCreateDialog) {
             Dialog(
                 onDismissRequest = {
@@ -465,11 +467,13 @@ fun MapScreen(
                 }) {
                   Surface(
                       shape = RoundedCornerShape(16.dp),
+                      color = MaterialTheme.colorScheme.surface,
                       tonalElevation = 12.dp,
                       modifier =
                           Modifier.testTag(MapScreenTestTags.ADD_CHOOSE_DIALOG)
                               .widthIn(min = 300.dp, max = 420.dp)
-                              .wrapContentHeight()) {
+                              .wrapContentHeight()
+                              .border(1.dp, AppColors.textIcons, RoundedCornerShape(16.dp))) {
                         Column(
                             modifier =
                                 Modifier.fillMaxWidth()
@@ -513,21 +517,28 @@ fun MapScreen(
                                     colors =
                                         SegmentedButtonDefaults.colors(
                                             activeContainerColor = AppColors.focus),
-                                    label = { Text(label) },
-                                    icon =
-                                        if (selectedCreateType == type) {
-                                          {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(16.dp))
+                                    border = BorderStroke(1.dp, AppColors.textIcons),
+                                    label = {
+                                      Row(
+                                          modifier = Modifier.fillMaxWidth(),
+                                          verticalAlignment = Alignment.CenterVertically,
+                                          horizontalArrangement = Arrangement.Center) {
+                                            if (selectedCreateType == type) {
+                                              Icon(
+                                                  Icons.Default.Check,
+                                                  contentDescription = null,
+                                                  modifier = Modifier.size(16.dp))
+                                            }
+                                            Text(
+                                                text = label,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis)
                                           }
-                                        } else {
-                                          {}
-                                        })
+                                    },
+                                    icon = {})
                               }
 
-                              SingleChoiceSegmentedButtonRow {
+                              SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                                 Option("Shop", PinType.SHOP, 0)
                                 Option("Rental Space", PinType.SPACE, index = 1)
                               }
