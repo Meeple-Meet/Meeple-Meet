@@ -123,8 +123,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
       }
     }
 
-    Thread.sleep(10000) // Wait for Compose to settle
-
     // Top & list exist
     compose.onTag(EditSpaceRenterScreenTestTags.SCAFFOLD).assertExists()
     compose.onTag(EditSpaceRenterScreenTestTags.TOPBAR).assertExists()

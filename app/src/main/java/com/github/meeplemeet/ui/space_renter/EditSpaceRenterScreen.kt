@@ -36,6 +36,10 @@ object EditSpaceRenterScreenTestTags {
   const val SECTION_AVAILABILITY = "edit_section_availability"
   const val SECTION_SPACES = "edit_section_spaces"
 
+  // Added for the Spaces header button and label used by tests
+  const val SPACES_ADD_BUTTON = "edit_space_renter_spaces_add_button"
+  const val SPACES_ADD_LABEL = "edit_space_renter_spaces_add_label"
+
   const val BOTTOM_SPACER = "edit_bottom_spacer"
 }
 
@@ -257,7 +261,7 @@ internal fun EditSpaceRenterContent(
               // Spaces
               item {
                 CollapsibleSection(
-                    title = AddSpaceRenterUi.Strings.SECTION_SPACES,
+                    title = EditSpaceRenterUi.Strings.SECTION_SPACES,
                     initiallyExpanded = false,
                     expanded = spacesExpanded,
                     onExpandedChange = { spacesExpanded = it },
@@ -265,14 +269,14 @@ internal fun EditSpaceRenterContent(
                       TextButton(
                           onClick = { addSpace() },
                           modifier =
-                              Modifier.testTag(CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
+                              Modifier.testTag(EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
                             Icon(Icons.Filled.Add, contentDescription = null)
                             Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
                             Text(
                                 AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
                                 modifier =
                                     Modifier.testTag(
-                                        CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
+                                        EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
                           }
                     },
                     content = {
@@ -284,7 +288,9 @@ internal fun EditSpaceRenterContent(
                           onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } },
                       )
                     },
-                    testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
+                    // Use the Edit\_... test tag so tests searching for "edit\_section\_spaces\_*"
+                    // succeed
+                    testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
               }
 
               item {
