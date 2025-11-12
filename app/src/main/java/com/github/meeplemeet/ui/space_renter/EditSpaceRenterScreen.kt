@@ -24,6 +24,10 @@ import kotlinx.coroutines.launch
 /* ================================================================================================
  * Test tags
  * ================================================================================================ */
+/**
+ * Contains test tag constants used for identifying UI components in tests
+ * for the Edit Space Renter screen.
+ */
 object EditSpaceRenterScreenTestTags {
   const val SCAFFOLD = "edit_space_renter_scaffold"
   const val TOPBAR = "edit_space_renter_topbar"
@@ -46,6 +50,9 @@ object EditSpaceRenterScreenTestTags {
 /* ================================================================================================
  * UI defaults
  * ================================================================================================ */
+/**
+ * Holds UI-related constants such as string resources used in the Edit Space Renter screen.
+ */
 object EditSpaceRenterUi {
   object Strings {
     const val SCREEN_TITLE = "Edit Space Renter"
@@ -62,6 +69,18 @@ object EditSpaceRenterUi {
 /* ================================================================================================
  * Screen
  * ================================================================================================ */
+/**
+ * Main entry point for the Edit Space Renter screen.
+ *
+ * Displays a screen allowing a space renter to edit their information,
+ * including required info, availability, and available spaces.
+ *
+ * @param spaceRenter The initial [SpaceRenter] data being edited.
+ * @param owner The [Account] of the current owner editing the space renter.
+ * @param onBack Callback invoked when the user navigates back.
+ * @param onUpdated Callback invoked when the renter update completes successfully.
+ * @param viewModel The [EditSpaceRenterViewModel] handling logic and state for this screen.
+ */
 @Composable
 fun EditSpaceRenterScreen(
     spaceRenter: SpaceRenter,
@@ -72,6 +91,8 @@ fun EditSpaceRenterScreen(
 ) {
   val locationUi by viewModel.locationUIState.collectAsState()
 
+  // Automatically initialize the selected location if not already set
+  // when the renter has an existing address.
   LaunchedEffect(spaceRenter.address) {
     if (locationUi.selectedLocation == null && spaceRenter.address != Location()) {
       viewModel.setLocation(spaceRenter.address)
@@ -103,6 +124,20 @@ fun EditSpaceRenterScreen(
 /* ================================================================================================
  * Content
  * ================================================================================================ */
+/**
+ * Core UI content for the Edit Space Renter screen.
+ *
+ * Manages UI state (form fields, dialogs, lists) and validation logic,
+ * and coordinates saving updates to the renter profile.
+ *
+ * @param owner The current [Account] editing the renter.
+ * @param initialRenter The initial state of the [SpaceRenter].
+ * @param onBack Callback for navigation back.
+ * @param onUpdated Callback after successful update.
+ * @param onUpdateSpaceRenter Suspend function performing the update operation.
+ * @param locationUi The [LocationUIState] representing current location selection.
+ * @param viewModel The [EditSpaceRenterViewModel] managing state and events.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EditSpaceRenterContent(
@@ -146,6 +181,7 @@ internal fun EditSpaceRenterContent(
         derivedStateOf { locationUi.selectedLocation != null }
       }
 
+  // Determines whether all required fields are filled and valid.
   val isValid by
       remember(name, email, hasLocation, hasOpeningHours, hasAtLeastOneSpace, allSpacesValid) {
         derivedStateOf {
@@ -168,6 +204,7 @@ internal fun EditSpaceRenterContent(
           openingHours = week,
           spaces = spaces)
 
+  // Adds a new default space to the list and expands the section.
   fun addSpace() {
     spaces =
         spaces +
@@ -177,6 +214,7 @@ internal fun EditSpaceRenterContent(
     spacesExpanded = true
   }
 
+  // Scaffold structure for the screen including top bar, snackbar, and main content.
   Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
@@ -202,6 +240,7 @@ internal fun EditSpaceRenterContent(
         ActionBar(
             onDiscard = onBack,
             onPrimary = {
+              // Try to update the space renter and handle any validation or network errors.
               scope.launch {
                 try {
                   onUpdateSpaceRenter(draftRenter)
