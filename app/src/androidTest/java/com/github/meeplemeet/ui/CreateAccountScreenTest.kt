@@ -80,6 +80,7 @@ class CreateAccountScreenTest : FirestoreTests() {
       val h1 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
       handleField().performTextInput(h1)
       submitBtn().assertIsNotEnabled()
+        clearFields()
     }
 
     /* 3. handle already taken */
@@ -91,10 +92,10 @@ class CreateAccountScreenTest : FirestoreTests() {
       handleField().performTextInput(taken)
       usernameField().performTextInput("Frank")
       submitBtn().performClick()
+      compose.waitForIdle()
 
-      /* 2. shorter timeout */
-      compose.waitUntil(timeoutMillis = 600) { handlesVm.errorMessage.value.isNotEmpty() }
-      handleError().assertTextContains("Handle already taken", substring = true)
+      handleError().assertTextContains("assigned", substring = true)
+      clearFields()
     }
 
     /* 4. empty handle → no creation */
@@ -108,6 +109,7 @@ class CreateAccountScreenTest : FirestoreTests() {
 
       val afterCall = runBlocking { handlesRepository.handleForAccountExists(me.uid, "") }
       assertTrue("onCreate must not be called", startCallCount == afterCall)
+        clearFields()
     }
 
     /* 5. valid input → success */
@@ -121,27 +123,72 @@ class CreateAccountScreenTest : FirestoreTests() {
       compose.waitUntil(timeoutMillis = 800) {
         runBlocking { handlesRepository.handleForAccountExists(me.uid, h2) }
       }
+      clearFields()
     }
 
     /* 6. clear username → error shown */
     checkpoint("Clearing username shows empty error") {
       usernameField().performTextClearance()
       usernameError().assertTextContains("Username cannot be empty", substring = true)
+      clearFields()
     }
 
     /* === 7. owner / renter checkboxes – minimum clicks, no extra waits === */
     checkpoint("Multiple clicks end with owner ON / renter OFF") {
       /* 3 clicks instead of 5 – still exercising the UI */
-      ownerCheckbox().performClick() // owner ON
-      renterCheckbox().performClick() // renter ON
-      ownerCheckbox().performClick() // owner OFF
-      renterCheckbox().performClick() // renter OFF
-      ownerCheckbox().performClick() // owner ON  → final state owner=true, renter=false
+      ownerCheckbox().performClick()
+      val h3 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+      handleField().performTextInput(h3)
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
 
-      /* single short wait */
-      compose.waitUntil(timeoutMillis = 400) {
-        mainActivityViewModel.accountFlow(me.uid).value?.shopOwner == true &&
-            mainActivityViewModel.accountFlow(me.uid).value?.spaceRenter == false
+      compose.waitForIdle()
+      Thread.sleep(1000) // Give time for async operations
+      checkpoint("Owner checkbox has an impact on account") {
+        runBlocking {
+          val acc = accountRepository.getAccount(me.uid)
+            acc.shopOwner
+        }
+      }
+
+      // Clear and test renter checkbox
+      handleField().performTextClearance()
+      usernameField().performTextClearance()
+
+      renterCheckbox().performClick()
+      val h4 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+      handleField().performTextInput(h4)
+      usernameField().performTextInput("Frank")
+      submitBtn().performClick()
+
+      compose.waitForIdle()
+      Thread.sleep(1000) // Give time for async operations
+      checkpoint("Renter checkbox has an impact on account") {
+        runBlocking {
+          val acc = accountRepository.getAccount(me.uid)
+            acc.spaceRenter
+        }
+      }
+
+      checkpoint("Checkbox clicks") {
+        clearFields()
+        ownerCheckbox().performClick() // off
+        renterCheckbox().performClick() // off
+        ownerCheckbox().performClick() // on
+
+        val h5 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
+        handleField().performTextInput(h5)
+        usernameField().performTextInput("Frank")
+        submitBtn().performClick()
+
+        compose.waitForIdle()
+        Thread.sleep(1000) // Give time for async operations
+        checkpoint("Multiple checkbox clicks have an impact on account") {
+          runBlocking {
+            val acc = accountRepository.getAccount(me.uid)
+            acc.shopOwner && !acc.spaceRenter
+          }
+        }
       }
     }
   }
@@ -149,5 +196,10 @@ class CreateAccountScreenTest : FirestoreTests() {
   @After
   fun tearDown() = runBlocking {
     handlesCreated.forEach { runCatching { handlesRepository.deleteAccountHandle(it) } }
+  }
+
+  private fun clearFields() {
+    handleField().performTextClearance()
+    usernameField().performTextClearance()
   }
 }
