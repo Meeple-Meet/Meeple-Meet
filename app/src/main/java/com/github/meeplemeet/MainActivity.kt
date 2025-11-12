@@ -419,7 +419,7 @@ fun MeepleMeetApp(
       CreateSpaceRenterScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
-          onCreated = { navigationActions.goBack()})
+          onCreated = { navigationActions.goBack() })
     }
 
     composable(MeepleMeetScreen.SpaceDetails.name) {
@@ -430,9 +430,7 @@ fun MeepleMeetApp(
             onBack = { navigationActions.goBack() },
             onEdit = {
               spaceRenter = it
-              navigationActions.navigateTo(
-                  MeepleMeetScreen.EditSpaceRenter,
-                  popUpTo = false)
+              navigationActions.navigateTo(MeepleMeetScreen.EditSpaceRenter, popUpTo = false)
             })
       } else {
         LoadingScreen()
