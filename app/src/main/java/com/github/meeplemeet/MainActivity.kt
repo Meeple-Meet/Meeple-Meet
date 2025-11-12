@@ -41,6 +41,7 @@ import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.auth.CreateAccountScreen
@@ -63,6 +64,7 @@ import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
+import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -176,6 +178,9 @@ fun MeepleMeetApp(
   var postId by remember { mutableStateOf("") }
   var shopId by remember { mutableStateOf("") }
   var shop by remember { mutableStateOf<Shop?>(null) }
+
+  var spaceId by remember { mutableStateOf("") }
+  var spaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
 
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
@@ -338,8 +343,8 @@ fun MeepleMeetApp(
                 navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
               }
               PinType.SPACE -> {
-                // spaceId = geoPin.uid
-                // navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
+                spaceId = geoPin.uid
+                navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
               }
               PinType.SESSION -> {
                 discussionId = geoPin.uid
@@ -360,6 +365,7 @@ fun MeepleMeetApp(
             })
       } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
     }
+
     composable(MeepleMeetScreen.ShopDetails.name) {
       if (shopId.isNotEmpty()) {
         ShopScreen(
@@ -374,12 +380,14 @@ fun MeepleMeetApp(
         LoadingScreen()
       }
     }
+
     composable(MeepleMeetScreen.CreateShop.name) {
       CreateShopScreen(
           owner = account!!,
           onBack = { navigationActions.goBack() },
           onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
     }
+
     composable(MeepleMeetScreen.EditShop.name) {
       if (shop != null) {
         ShopDetailsScreen(
@@ -396,6 +404,22 @@ fun MeepleMeetApp(
           owner = account!!,
           onBack = { navigationActions.goBack() },
           onCreated = { navigationActions.goBack() /* TODO */ })
+    }
+
+    composable(MeepleMeetScreen.SpaceDetails.name) {
+      if (spaceId.isNotEmpty()) {
+        SpaceRenterScreen(
+            account = account!!,
+            spaceId = spaceId,
+            onBack = { navigationActions.goBack() },
+            onEdit = {
+              spaceRenter = it
+              //              navigationActions.navigateTo(MeepleMeetScreen.EditSpaceRenter, popUpTo
+              // = false) /* TODO: uncomment once EditSpaceRenter is implemented */
+            })
+      } else {
+        LoadingScreen()
+      }
     }
   }
 }
