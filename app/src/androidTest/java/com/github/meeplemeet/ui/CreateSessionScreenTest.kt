@@ -80,28 +80,12 @@ class CreateSessionScreenTest {
 
   private fun createBtn() = compose.onNodeWithTag(SessionCreationTestTags.CREATE_BUTTON)
 
-  private fun discardBtn() = compose.onNodeWithTag(SessionCreationTestTags.DISCARD_BUTTON)
-
-  private fun backBtn() = compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON)
-
   // Game/Location come from reusable components
   private fun allInputs() = compose.onAllNodes(hasSetTextAction())
 
   private fun gameInput() = allInputs()[1]
 
   private fun locationInput() = allInputs()[2]
-
-  private fun setContent(
-      discussion: Discussion = baseDiscussion,
-      onBack: () -> Unit = {},
-      vm: CreateSessionViewModel = createSessionVM
-  ) {
-    compose.setContent {
-      AppTheme {
-        CreateSessionScreen(account = me, discussion = discussion, viewModel = vm, onBack = onBack)
-      }
-    }
-  }
 
   private class FakeGameRepository : GameRepository {
     var throwOnSearch: Boolean = false
@@ -206,7 +190,7 @@ class CreateSessionScreenTest {
   fun full_smoke() {
     val harness =
         ComposeOnceHarness(account = me, startDisc = baseDiscussion, viewModel = createSessionVM)
-    compose.setContent { harness.Content() } //  <───  ONLY setContent CALL
+    compose.setContent { harness.Content() }
 
     checkpoint("ui_chrome_present_and_nav_discard_callbacks_fire") {
       compose.waitForIdle() // guarantee first frame

@@ -14,6 +14,7 @@ import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.OnMapsSdkInitializedCallback
@@ -37,6 +38,9 @@ import org.junit.Test
 class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var mapViewModel: MapViewModel
   private lateinit var mockNavigation: NavigationActions
@@ -117,295 +121,278 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
   }
 
-  // ========================================================================
-  // Test 1: Initial Map Display + Screen Elements
-  // ========================================================================
-
   @Test
-  fun initialMapDisplay_showsMapAndTopBarWithoutErrors() {
-    setContent()
-    compose.waitForIdle()
-
-    // Verify map is displayed
-    compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
-  }
-
-  // ========================================================================
-  // Tests 2: FAB Visibility - Shop Owner, Space Renter, Regular User
-  // ========================================================================
-
-  @Test
-  fun fab_hiddenForRegularUser() {
+  fun smoke_regular_user_tests() {
     setContent(account = regularAccount)
     compose.waitForIdle()
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertDoesNotExist()
-  }
 
-  @Test
-  fun fab_visibleForShopOwner() {
-    setContent(account = shopOwnerAccount)
-    compose.waitForIdle()
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertHasClickAction()
-  }
+    // ========================================================================
+    // Test 1: Initial Map Display + Screen Elements
+    // ========================================================================
 
-  @Test
-  fun fab_visibleForSpaceRenter() {
-    setContent(account = spaceRenterAccount)
-    compose.waitForIdle()
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertHasClickAction()
-  }
+    checkpoint("Initial map display") {
+      compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
+    }
 
-  // ========================================================================
-  // Test 3: FAB Click Callback
-  // ========================================================================
+    // ========================================================================
+    // Tests 2: FAB Visibility - Regular User
+    // ========================================================================
 
-  @Test
-  fun fab_whenClicked_triggersCallback() {
-    setContent(account = shopOwnerAccount)
-    compose.waitForIdle()
+    checkpoint("FAB not visible for regular user") {
+      compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertDoesNotExist()
+    }
 
-    val initialCount = fabClickCount
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
-    compose.waitForIdle()
+    // ========================================================================
+    // Test 3: Map Initializes GeoQuery on Launch
+    // ========================================================================
 
-    assert(fabClickCount == initialCount + 1) { "FAB click should increment count" }
-  }
+    checkpoint("Map Initializes GeoQuery on Launch") {
+      val uiState = mapViewModel.uiState.value
+      assert(uiState.geoPins.isEmpty()) { "Initially should have no pins" }
+    }
 
-  // ========================================================================
-  // Test 4: Map Initializes GeoQuery on Launch
-  // ========================================================================
+    // ========================================================================
+    // Test 4: Bottom Sheet - Shop Preview
+    // ========================================================================
 
-  @Test
-  fun mapScreen_startsGeoQueryOnLaunch() {
-    setContent()
-    compose.waitForIdle()
+    checkpoint("Bottom Sheet - Shop Preview") {
+      runBlocking {
+        // Create a real shop in Firestore
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Test Board Game Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
 
-    // After a short delay, geoQuery should be initialized
-    // We can verify by checking that the UI state is no longer null
-    val uiState = mapViewModel.uiState.value
-    assert(uiState.geoPins.isEmpty()) { "Initially should have no pins" }
-  }
+        // Start geo query around EPFL
+        mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
+        delay(2000) // Wait for Firestore listeners to trigger
 
-  // ========================================================================
-  // Test 5: Bottom Sheet - Shop Preview
-  // ========================================================================
+        val state = mapViewModel.uiState.value
+        assert(state.geoPins.isNotEmpty()) { "Expected at least one pin" }
 
-  @Test
-  fun bottomSheet_displaysShopPreview_withRealFirestoreData() = runBlocking {
-    // Create a real shop in Firestore
-    val shop =
-        shopRepository.createShop(
-            owner = shopOwnerAccount,
-            name = "Test Board Game Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
+        val pin = state.geoPins.first()
+        mapViewModel.selectPin(pin)
+        delay(1000)
 
-    setContent()
-    compose.waitForIdle()
+        val updatedState = mapViewModel.uiState.value
+        assert(updatedState.selectedMarkerPreview != null) { "Preview should be loaded" }
 
-    // Start geo query around EPFL
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
-    delay(2000) // Wait for Firestore listeners to trigger
-
-    val state = mapViewModel.uiState.value
-    assert(state.geoPins.isNotEmpty()) { "Expected at least one pin" }
-
-    val pin = state.geoPins.first()
-    mapViewModel.selectPin(pin)
-    delay(1000)
-
-    val updatedState = mapViewModel.uiState.value
-    assert(updatedState.selectedMarkerPreview != null) { "Preview should be loaded" }
-
-    compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(shop.name)
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS).assertTextContains(shop.address.name)
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
-
-    mapViewModel.clearSelectedPin()
-    delay(500)
-
-    val clearedState = mapViewModel.uiState.value
-    assert(clearedState.selectedMarkerPreview == null) { "Preview should be cleared" }
-    assert(clearedState.selectedGeoPin == null) { "GeoPin selection should be cleared" }
-
-    // Clean up
-    shopRepository.deleteShop(shop.id)
-  }
-
-  // ========================================================================
-  // Test 6: Bottom Sheet - Space Preview
-  // ========================================================================
-
-  @Test
-  fun bottomSheet_displaysSpacePreview_withRealFirestoreData() = runBlocking {
-    // Create a real space renter in Firestore
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = spaceRenterAccount,
-            name = "Test Game Space",
-            address = testLocation,
-            openingHours = testOpeningHours,
-            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
-
-    setContent()
-    compose.waitForIdle()
-
-    // Start geo query
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
-    delay(2000)
-
-    val state = mapViewModel.uiState.value
-    assert(state.geoPins.isNotEmpty()) { "Expected at least one pin" }
-
-    val pin = state.geoPins.first()
-    mapViewModel.selectPin(pin)
-    delay(1000)
-
-    val updatedState = mapViewModel.uiState.value
-    assert(updatedState.selectedMarkerPreview != null) { "Preview should be loaded" }
-
-    compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(spaceRenter.name)
-    compose
-        .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
-        .assertTextContains(spaceRenter.address.name)
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
-
-    mapViewModel.clearSelectedPin()
-    delay(500)
-
-    val clearedState = mapViewModel.uiState.value
-    assert(clearedState.selectedMarkerPreview == null) { "Preview should be cleared" }
-    assert(clearedState.selectedGeoPin == null) { "GeoPin selection should be cleared" }
-
-    // Clean up
-    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-  }
-
-  // ========================================================================
-  // Test 7: Error Handling - Error Message Display
-  // ========================================================================
-
-  @Test
-  fun errorMessage_canBeSetAndCleared() {
-    setContent()
-    compose.waitForIdle()
-
-    // Initially no error
-    var state = mapViewModel.uiState.value
-    assert(state.errorMsg == null) { "Initially no error" }
-
-    // Errors are typically set by geo query listeners
-    // We can verify clearErrorMsg works
-    mapViewModel.clearErrorMsg()
-    state = mapViewModel.uiState.value
-    assert(state.errorMsg == null) { "Error should remain null" }
-  }
-
-  // ========================================================================
-  // Test 8: Update Query Parameters During Session
-  // ========================================================================
-
-  @Test
-  fun updateQueryParameters_duringActiveSession_doesNotCrash() {
-    setContent()
-    compose.waitForIdle()
-
-    // Start query
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
-    compose.waitForIdle()
-
-    // Update center
-    val newLocation = Location(latitude = 46.5200, longitude = 6.5700, name = "New Location")
-    mapViewModel.updateQueryCenter(newLocation)
-    compose.waitForIdle()
-
-    // Update radius
-    mapViewModel.updateRadius(15.0)
-    compose.waitForIdle()
-
-    // Update both
-    mapViewModel.updateCenterAndRadius(testLocation, 20.0)
-    compose.waitForIdle()
-
-    // Verify UI is still responsive
-    compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertExists()
-  }
-
-  // ========================================================================
-  // Test 9: Complete User Flow - Start, Navigate, Stop
-  // ========================================================================
-
-  @Test
-  fun completeUserFlow_startNavigateStop_worksCorrectly() = runBlocking {
-    // Create test entities
-    val shop =
-        shopRepository.createShop(
-            owner = shopOwnerAccount,
-            name = "Complete Flow Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    setContent(account = shopOwnerAccount)
-    compose.waitForIdle()
-
-    // Verify initial state
-    compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
-
-    // Start geo query
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
-    delay(2000)
-
-    val state = mapViewModel.uiState.value
-    assert(state.geoPins.isNotEmpty() || state.geoPins.isEmpty()) { "State should be valid" }
-
-    // Click FAB
-    val initialFabCount = fabClickCount
-    compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
-    compose.waitForIdle()
-    assert(fabClickCount == initialFabCount + 1) { "FAB callback triggered" }
-
-    // If pins exist, select one
-    if (state.geoPins.isNotEmpty()) {
-      mapViewModel.selectPin(state.geoPins.first())
-      delay(1000)
-
-      val updatedState = mapViewModel.uiState.value
-      // Preview should load or error should appear
-      assert(updatedState.selectedMarkerPreview != null || updatedState.errorMsg != null) {
-        "Selection should update state"
-      }
-
-      // If bottom sheet opened, verify close works
-      if (updatedState.selectedMarkerPreview != null) {
-        // Bottom sheet should show
         compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertHasClickAction()
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(shop.name)
+        compose
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
+            .assertTextContains(shop.address.name)
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
         compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
 
         mapViewModel.clearSelectedPin()
         delay(500)
 
         val clearedState = mapViewModel.uiState.value
-        assert(clearedState.selectedMarkerPreview == null) { "Preview cleared" }
+        assert(clearedState.selectedMarkerPreview == null) { "Preview should be cleared" }
+        assert(clearedState.selectedGeoPin == null) { "GeoPin selection should be cleared" }
+
+        // Clean up
+        shopRepository.deleteShop(shop.id)
       }
     }
 
-    // Stop query
-    mapViewModel.stopGeoQuery()
-    delay(100)
+    // ========================================================================
+    // Test 5: Bottom Sheet - Space Preview
+    // ========================================================================
 
-    val finalState = mapViewModel.uiState.value
-    assert(finalState.geoPins.isEmpty()) { "Pins should be cleared after stop" }
+    checkpoint("Bottom Sheet - Space Preview") {
+      runBlocking {
+        // Create a real space renter in Firestore
+        val spaceRenter =
+            spaceRenterRepository.createSpaceRenter(
+                owner = spaceRenterAccount,
+                name = "Test Game Space",
+                address = testLocation,
+                openingHours = testOpeningHours,
+                spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
 
-    // Clean up
-    shopRepository.deleteShop(shop.id)
+        // Start geo query
+        mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
+        delay(2000)
+
+        val state = mapViewModel.uiState.value
+        assert(state.geoPins.isNotEmpty()) { "Expected at least one pin" }
+
+        val pin = state.geoPins.first()
+        mapViewModel.selectPin(pin)
+        delay(1000)
+
+        val updatedState = mapViewModel.uiState.value
+        assert(updatedState.selectedMarkerPreview != null) { "Preview should be loaded" }
+
+        compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(spaceRenter.name)
+        compose
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
+            .assertTextContains(spaceRenter.address.name)
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
+        compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
+
+        mapViewModel.clearSelectedPin()
+        delay(500)
+
+        val clearedState = mapViewModel.uiState.value
+        assert(clearedState.selectedMarkerPreview == null) { "Preview should be cleared" }
+        assert(clearedState.selectedGeoPin == null) { "GeoPin selection should be cleared" }
+
+        // Clean up
+        spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+      }
+    }
+
+    // ========================================================================
+    // Test 6: Error Handling - Error Message Display
+    // ========================================================================
+
+    checkpoint("Error Handling - Error Message Display") {
+      // Initially no error
+      var state = mapViewModel.uiState.value
+      assert(state.errorMsg == null) { "Initially no error" }
+
+      // Errors are typically set by geo query listeners
+      // We can verify clearErrorMsg works
+      mapViewModel.clearErrorMsg()
+      state = mapViewModel.uiState.value
+      assert(state.errorMsg == null) { "Error should remain null" }
+    }
+
+    // ========================================================================
+    // Test 7: Update Query Parameters During Session
+    // ========================================================================
+
+    checkpoint("Update Query Parameters During Session") {
+
+      // Start query
+      mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
+      compose.waitForIdle()
+
+      // Update center
+      val newLocation = Location(latitude = 46.5200, longitude = 6.5700, name = "New Location")
+      mapViewModel.updateQueryCenter(newLocation)
+      // Update radius
+      mapViewModel.updateRadius(15.0)
+      // Update both
+      mapViewModel.updateCenterAndRadius(testLocation, 20.0)
+      compose.waitForIdle()
+
+      // Verify UI is still responsive
+      compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertExists()
+    }
+  }
+
+  @Test
+  fun smoke_shop_owner_user_tests() {
+    setContent(account = shopOwnerAccount)
+    compose.waitForIdle()
+
+    // ========================================================================
+    // Test 8: FAB Visibility - Shop Owner
+    // ========================================================================
+    checkpoint("FAB visible for shop owner") {
+      compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
+      compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertHasClickAction()
+    }
+
+    // ========================================================================
+    // Test 9: FAB Click Callback
+    // ========================================================================
+
+    checkpoint("FAB Click Callback") {
+      val initialCount = fabClickCount
+      compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
+      compose.waitForIdle()
+
+      assert(fabClickCount == initialCount + 1) { "FAB click should increment count" }
+    }
+    // ========================================================================
+    // Test 10: Complete User Flow - Start, Navigate, Stop
+    // ========================================================================
+
+    checkpoint("Complete User Flow - Start, Navigate, Stop") {
+      runBlocking {
+        // Create test entities
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Complete Flow Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+        // Verify initial state
+        compose.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
+        compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
+
+        // Start geo query
+        mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0)
+        delay(2000)
+
+        val state = mapViewModel.uiState.value
+        assert(state.geoPins.isNotEmpty() || state.geoPins.isEmpty()) { "State should be valid" }
+
+        // Click FAB
+        val initialFabCount = fabClickCount
+        compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
+        compose.waitForIdle()
+        assert(fabClickCount == initialFabCount + 1) { "FAB callback triggered" }
+
+        // If pins exist, select one
+        if (state.geoPins.isNotEmpty()) {
+          mapViewModel.selectPin(state.geoPins.first())
+          delay(1000)
+
+          val updatedState = mapViewModel.uiState.value
+          // Preview should load or error should appear
+          assert(updatedState.selectedMarkerPreview != null || updatedState.errorMsg != null) {
+            "Selection should update state"
+          }
+
+          // If bottom sheet opened, verify close works
+          if (updatedState.selectedMarkerPreview != null) {
+            // Bottom sheet should show
+            compose.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+            compose
+                .onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)
+                .assertHasClickAction()
+            compose.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
+
+            mapViewModel.clearSelectedPin()
+            delay(500)
+
+            val clearedState = mapViewModel.uiState.value
+            assert(clearedState.selectedMarkerPreview == null) { "Preview cleared" }
+          }
+        }
+
+        // Stop query
+        mapViewModel.stopGeoQuery()
+        delay(100)
+
+        val finalState = mapViewModel.uiState.value
+        assert(finalState.geoPins.isEmpty()) { "Pins should be cleared after stop" }
+
+        // Clean up
+        shopRepository.deleteShop(shop.id)
+      }
+    }
+  }
+  // ========================================================================
+  // Test 11: FAB Visibility - Space Renter
+  // ========================================================================
+  @Test
+  fun fab_visibleForSpaceRenter() {
+    checkpoint("FAB visible for space renter") {
+      setContent(account = spaceRenterAccount)
+      compose.waitForIdle()
+      compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
+      compose.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertHasClickAction()
+    }
   }
 }
