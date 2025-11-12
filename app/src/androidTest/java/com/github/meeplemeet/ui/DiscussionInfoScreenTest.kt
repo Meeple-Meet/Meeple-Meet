@@ -8,6 +8,7 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionDetailsScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -19,6 +20,9 @@ import org.junit.Test
 class DiscussionSettingScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var viewModel: DiscussionViewModel
   private lateinit var currentAccount: Account
@@ -86,54 +90,98 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun screen_displaysDiscussionName_andButtons() {
+  fun smokeTestNotAdmin() = runBlocking {
     compose.setContent {
       DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
     }
 
-    compose.waitForIdle()
+    checkpoint("screen_displaysDiscussionName_andButtons") {
+      compose
+          .onNodeWithTag("discussion_name")
+          .assertIsDisplayed()
+          .assertTextContains("Test Discussion")
 
-    compose
-        .onNodeWithTag("discussion_name")
-        .assertIsDisplayed()
-        .assertTextContains("Test Discussion")
+      compose
+          .onNodeWithTag("discussion_description")
+          .assertIsDisplayed()
+          .assertTextContains("A sample group")
 
-    compose
-        .onNodeWithTag("discussion_description")
-        .assertIsDisplayed()
-        .assertTextContains("A sample group")
+      compose.onNodeWithTag("delete_button").assertIsDisplayed().assertIsEnabled()
 
-    compose.onNodeWithTag("delete_button").assertIsDisplayed().assertIsEnabled()
+      compose.onNodeWithTag("leave_button").assertIsDisplayed().assertIsEnabled()
+      clearFields()
+    }
+    checkpoint("Delete Button shows dialog") {
+      compose.waitForIdle()
+      compose.onNodeWithTag("delete_button").performClick()
 
-    compose.onNodeWithTag("leave_button").assertIsDisplayed().assertIsEnabled()
+      compose.waitForIdle()
+      compose.onNodeWithTag("delete_discussion_display").assertIsDisplayed()
+      compose.onNodeWithText("Cancel").assertIsDisplayed()
+      compose.onNodeWithText("Cancel").performClick()
+    }
+
+    checkpoint("Leave Button shows Dialog") {
+      compose.waitForIdle()
+      compose.onNodeWithTag("leave_button").performClick()
+
+      compose.waitForIdle()
+      compose.onNodeWithTag("leave_discussion_display").assertIsDisplayed()
+      compose.onNodeWithText("Cancel").assertIsDisplayed()
+      compose.onNodeWithText("Cancel").performClick()
+    }
+
+    checkpoint("Back Button saves Changes") {
+      compose.waitForIdle()
+
+      compose.onNodeWithTag("discussion_name").performTextInput(" Updated")
+      compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).performClick()
+
+      compose.waitForIdle()
+      // Here we just assert the UI still exists (no crash)
+      compose.onNodeWithTag("discussion_name").assertExists()
+      clearFields()
+    }
   }
 
   @Test
-  fun clickingDeleteButton_showsDeleteDialog() {
-    compose.setContent {
-      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
+  fun adminView_canEditAndAddMembers() = runBlocking {
+    checkpoint("Admin can edit discussion details and add members") {
+      runBlocking {
+        // Create a discussion where current user is admin but not owner
+        val adminDiscussion =
+            discussionRepository.createDiscussion(
+                name = "Admin Test",
+                description = "Test description",
+                creatorId = thirdUser.uid, // Third user is the owner
+                participants = listOf(currentAccount.uid, otherUser.uid))
+
+        // Make current user an admin
+        discussionRepository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
+
+        discussionRepository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
+        val updatedDiscussion = discussionRepository.getDiscussion(adminDiscussion.uid)
+
+        compose.setContent {
+          DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
+        }
+
+        compose.waitForIdle()
+
+        // Can edit name and description
+        compose.onNodeWithTag("discussion_name").assertIsDisplayed().performTextInput(" updated")
+        compose
+            .onNodeWithTag("discussion_description")
+            .assertIsDisplayed()
+            .performTextInput(" changed")
+
+        // Can see search bar
+        compose.onNodeWithText("Add Members").assertIsDisplayed()
+
+        // Cleanup
+        discussionRepository.deleteDiscussion(updatedDiscussion)
+      }
     }
-
-    compose.waitForIdle()
-    compose.onNodeWithTag("delete_button").performClick()
-
-    compose.waitForIdle()
-    compose.onNodeWithTag("delete_discussion_display").assertIsDisplayed()
-    compose.onNodeWithText("Cancel").assertIsDisplayed()
-  }
-
-  @Test
-  fun clickingLeaveButton_showsLeaveDialog() {
-    compose.setContent {
-      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
-    }
-
-    compose.waitForIdle()
-    compose.onNodeWithTag("leave_button").performClick()
-
-    compose.waitForIdle()
-    compose.onNodeWithTag("leave_discussion_display").assertIsDisplayed()
-    compose.onNodeWithText("Cancel").assertIsDisplayed()
   }
 
   @Ignore
@@ -149,25 +197,6 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithTag("member_row_${otherUser.uid}").assertIsDisplayed()
     compose.onNodeWithText("Owner").assertIsDisplayed()
     compose.onNodeWithText("Member").assertIsDisplayed()
-  }
-
-  @Test
-  fun backButton_savesChanges() {
-    compose.setContent {
-      DiscussionDetailsScreen(
-          discussion = testDiscussion,
-          account = currentAccount,
-      )
-    }
-
-    compose.waitForIdle()
-
-    compose.onNodeWithTag("discussion_name").performTextInput(" Updated")
-    compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).performClick()
-
-    compose.waitForIdle()
-    // Here we just assert the UI still exists (no crash)
-    compose.onNodeWithTag("discussion_name").assertExists()
   }
 
   @Ignore
@@ -210,39 +239,6 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     discussionRepository.deleteDiscussion(updatedDiscussion)
   }
 
-  @Test
-  fun adminView_canEditAndAddMembers() = runBlocking {
-    // Create a discussion where current user is admin but not owner
-    val adminDiscussion =
-        discussionRepository.createDiscussion(
-            name = "Admin Test",
-            description = "Test description",
-            creatorId = thirdUser.uid, // Third user is the owner
-            participants = listOf(currentAccount.uid, otherUser.uid))
-
-    // Make current user an admin
-    discussionRepository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
-
-    discussionRepository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
-    val updatedDiscussion = discussionRepository.getDiscussion(adminDiscussion.uid)
-
-    compose.setContent {
-      DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
-    }
-
-    compose.waitForIdle()
-
-    // Can edit name and description
-    compose.onNodeWithTag("discussion_name").assertIsDisplayed().performTextInput(" updated")
-    compose.onNodeWithTag("discussion_description").assertIsDisplayed().performTextInput(" changed")
-
-    // Can see search bar
-    compose.onNodeWithText("Add Members").assertIsDisplayed()
-
-    // Cleanup
-    discussionRepository.deleteDiscussion(updatedDiscussion)
-  }
-
   @Ignore
   @Test
   fun ownerView_canRemoveAdmins() = runBlocking {
@@ -278,5 +274,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
     // Cleanup
     discussionRepository.deleteDiscussion(updatedDiscussion)
+  }
+
+  private fun clearFields() {
+    compose.onNodeWithTag("discussion_name").performTextClearance()
+    compose.onNodeWithTag("discussion_description").performTextClearance()
   }
 }
