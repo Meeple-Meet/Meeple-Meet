@@ -24,6 +24,7 @@ import org.junit.Test
 class SignInScreenTest {
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
+
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: SignInViewModel
@@ -39,8 +40,10 @@ class SignInScreenTest {
 
     checkpoint("Initial State") {
       compose.onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).assertExists().assertTextContains("")
-      compose.onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).assertExists()
-        .assertTextContains("")
+      compose
+          .onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD)
+          .assertExists()
+          .assertTextContains("")
     }
 
     checkpoint("signInButton initially disabled") {
@@ -49,14 +52,12 @@ class SignInScreenTest {
 
     checkpoint("googleSignInButton exists and enabled") {
       compose
-        .onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
+          .onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
     }
 
-    checkpoint("Welcome text displayed") {
-      compose.onNodeWithText("Welcome!").assertExists()
-    }
+    checkpoint("Welcome text displayed") { compose.onNodeWithText("Welcome!").assertExists() }
 
     checkpoint("Sign up prompt displayed") {
       compose.onNodeWithText("I'm a new user. ").assertExists()
@@ -217,8 +218,8 @@ class SignInScreenTest {
 
     checkpoint("Google sign-in button text displayed") {
       compose
-        .onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON)
-        .assertTextContains("Connect with Google")
+          .onNodeWithTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON)
+          .assertTextContains("Connect with Google")
       clearFields()
     }
 
@@ -276,6 +277,7 @@ class SignInScreenTest {
       clearFields()
     }
   }
+
   private fun clearFields() {
     compose.onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).performTextClearance()
     compose.onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).performTextClearance()

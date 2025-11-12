@@ -29,8 +29,9 @@ import org.junit.Test
 class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
-    @get:Rule val ck = Checkpoint.Rule()
-    private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: SpaceRenterViewModel
   private lateinit var renter: SpaceRenter

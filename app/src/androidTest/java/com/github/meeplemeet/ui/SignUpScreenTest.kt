@@ -23,6 +23,7 @@ import org.junit.Test
 class SignUpScreenTest {
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
+
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: SignUpViewModel
@@ -38,8 +39,14 @@ class SignUpScreenTest {
 
     checkpoint("Initial State – all fields empty") {
       compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().assertTextContains("")
-      compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().assertTextContains("")
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertExists().assertTextContains("")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
+          .assertExists()
+          .assertTextContains("")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertExists()
+          .assertTextContains("")
     }
 
     checkpoint("Initial State – sign-up button disabled") {
@@ -47,7 +54,10 @@ class SignUpScreenTest {
     }
 
     checkpoint("Initial State – Google sign-up button enabled") {
-      compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertExists().assertIsEnabled()
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
     }
 
     checkpoint("Initial State – screen title & OR divider") {
@@ -116,20 +126,30 @@ class SignUpScreenTest {
     // ===== Confirm Password field =====
 
     checkpoint("Confirm-password field – input accepted & visibility toggle") {
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("password123")
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertTextContains("•••••••••••")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .performTextInput("password123")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertTextContains("•••••••••••")
 
       compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertTextContains("password123")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertTextContains("password123")
 
       compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE).performClick()
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).assertTextContains("•••••••••••")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertTextContains("•••••••••••")
       clearFields()
     }
 
     checkpoint("Confirm-password field – mismatch error") {
       compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("password124")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .performTextInput("password124")
       compose.waitForIdle()
       compose.onNodeWithText("Passwords do not match").assertExists()
       clearFields()
@@ -140,7 +160,9 @@ class SignUpScreenTest {
     checkpoint("Sign-up button – enabled only when all fields valid") {
       compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("test@example.com")
       compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("password123")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .performTextInput("password123")
       compose.waitForIdle()
       compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsEnabled()
       clearFields()
@@ -149,8 +171,9 @@ class SignUpScreenTest {
     // ===== Google & static elements =====
 
     checkpoint("Google button text") {
-      compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
-        .assertTextContains("Connect with Google")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON)
+          .assertTextContains("Connect with Google")
       clearFields()
     }
 
@@ -174,7 +197,9 @@ class SignUpScreenTest {
     checkpoint("Edge case – correcting invalid email enables sign-up") {
       compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("invalid")
       compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("password123")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .performTextInput("password123")
       compose.waitForIdle()
       compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertIsNotEnabled()
 
@@ -195,7 +220,9 @@ class SignUpScreenTest {
 
     checkpoint("Edge case – changing password creates mismatch") {
       compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("password123")
-      compose.onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD).performTextInput("password123")
+      compose
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .performTextInput("password123")
       compose.waitForIdle()
       compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
 
