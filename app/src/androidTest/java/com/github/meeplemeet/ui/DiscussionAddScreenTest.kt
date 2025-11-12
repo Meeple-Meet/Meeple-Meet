@@ -11,6 +11,7 @@ import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.discussions.CreateDiscussionScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -34,9 +35,10 @@ class DiscussionAddScreenTest : FirestoreTests() {
   private val createdHandles = mutableListOf<String>()
   private val report = linkedMapOf<String, Boolean>()
 
-  private inline fun checkpoint(name: String, crossinline block: () -> Unit) {
-    runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
-  }
+  /* --------------- checkpoint helper ---------------- */
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* ---------------- semantic helpers ---------------- */
   private fun titleField() = compose.onNodeWithTag(AddDiscussionTestTags.ADD_TITLE)
@@ -73,7 +75,6 @@ class DiscussionAddScreenTest : FirestoreTests() {
     }
   }
 
-  /* ========================== ONE FAT TEST ========================================== */
   @OptIn(ExperimentalTestApi::class)
   @Test
   fun full_smoke_all_cases() = runBlocking {
