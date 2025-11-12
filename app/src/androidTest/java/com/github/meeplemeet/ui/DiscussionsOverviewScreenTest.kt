@@ -150,7 +150,9 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @Test
   fun smoke_updated_account() = runBlocking {
     vm.sendMessageToDiscussion(d1, me, "Changed plan")
+    delay(200)
     discussionRepository.sendMessageToDiscussion(d2, bob, "Updated message")
+    delay(200)
     val updatedMe: Account = accountRepository.getAccount(me.uid)
     compose.setContent {
       AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
