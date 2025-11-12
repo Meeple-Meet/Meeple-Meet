@@ -4,9 +4,14 @@ package com.github.meeplemeet.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.location.Location as AndroidLocation
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -71,6 +76,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,6 +88,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.MarkerPreview
@@ -94,6 +102,7 @@ import com.github.meeplemeet.ui.theme.AppColors
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
@@ -102,6 +111,7 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlin.math.min
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
@@ -336,11 +346,15 @@ fun MapScreen(
           val isDarkTheme = isSystemInDarkTheme()
           val mapStyleOptions =
               if (isDarkTheme) {
-                MapStyleOptions.loadRawResourceStyle(
-                    context, com.github.meeplemeet.R.raw.map_style_dark)
+                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
               } else {
                 null
               }
+
+          val shopIcon = rememberMarkerIcon(resId = R.drawable.ic_storefront)
+          val spaceIcon = rememberMarkerIcon(resId = R.drawable.ic_table)
+          val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
+
           GoogleMap(
               modifier =
                   Modifier.fillMaxSize()
@@ -350,12 +364,11 @@ fun MapScreen(
               properties = MapProperties(mapStyleOptions = mapStyleOptions)) {
                 uiState.geoPins.forEach { gp ->
                   val pos = LatLng(gp.location.latitude, gp.location.longitude)
-                  // TODO add better customization icon
-                  val hue =
+                  val icon =
                       when (gp.geoPin.type) {
-                        PinType.SHOP -> BitmapDescriptorFactory.HUE_RED
-                        PinType.SPACE -> BitmapDescriptorFactory.HUE_BLUE
-                        PinType.SESSION -> BitmapDescriptorFactory.HUE_GREEN
+                        PinType.SHOP -> shopIcon
+                        PinType.SPACE -> spaceIcon
+                        PinType.SESSION -> sessionIcon
                       }
                   Marker(
                       state = MarkerState(pos),
@@ -365,7 +378,7 @@ fun MapScreen(
                         viewModel.selectPin(gp)
                         true
                       },
-                      icon = BitmapDescriptorFactory.defaultMarker(hue),
+                      icon = icon,
                       tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
                 }
               }
@@ -757,4 +770,43 @@ private fun MarkerPreviewSheet(
               Text(text = "View details")
             }
       }
+}
+
+@Composable
+private fun rememberMarkerIcon(
+    @DrawableRes resId: Int,
+    scale: Float = 1.5f,
+    tint: Color = AppColors.neutral,
+    backgroundTint: Color = AppColors.primary,
+    backgroundAlpha: Float = 1.0f
+): BitmapDescriptor {
+  val context = LocalContext.current
+
+  return remember(resId, scale) {
+    val drawable = AppCompatResources.getDrawable(context, resId) ?: error("Drawable not found")
+
+    val width = (drawable.intrinsicWidth * scale).toInt()
+    val height = (drawable.intrinsicHeight * scale).toInt()
+
+    // Main bitmap
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // Circle background
+    val paint =
+        Paint().apply {
+          color = backgroundTint.toArgb()
+          alpha = (255 * backgroundAlpha).toInt()
+          isAntiAlias = true
+        }
+    val radius = min(width, height) / 2f
+    canvas.drawCircle(width / 2f, height / 2f, radius, paint)
+
+    // Draw icon on background
+    drawable.setTint(tint.toArgb())
+    drawable.setBounds(0, 0, width, height)
+    drawable.draw(canvas)
+
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+  }
 }
