@@ -80,7 +80,7 @@ class CreateAccountScreenTest : FirestoreTests() {
       val h1 = "h_" + UUID.randomUUID().toString().take(8).also { handlesCreated += it }
       handleField().performTextInput(h1)
       submitBtn().assertIsNotEnabled()
-        clearFields()
+      clearFields()
     }
 
     /* 3. handle already taken */
@@ -109,7 +109,7 @@ class CreateAccountScreenTest : FirestoreTests() {
 
       val afterCall = runBlocking { handlesRepository.handleForAccountExists(me.uid, "") }
       assertTrue("onCreate must not be called", startCallCount == afterCall)
-        clearFields()
+      clearFields()
     }
 
     /* 5. valid input → success */
@@ -147,7 +147,7 @@ class CreateAccountScreenTest : FirestoreTests() {
       checkpoint("Owner checkbox has an impact on account") {
         runBlocking {
           val acc = accountRepository.getAccount(me.uid)
-            acc.shopOwner
+          acc.shopOwner
         }
       }
 
@@ -166,7 +166,7 @@ class CreateAccountScreenTest : FirestoreTests() {
       checkpoint("Renter checkbox has an impact on account") {
         runBlocking {
           val acc = accountRepository.getAccount(me.uid)
-            acc.spaceRenter
+          acc.spaceRenter
         }
       }
 
