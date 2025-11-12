@@ -79,7 +79,7 @@ fun SpaceRenterScreen(
             text = spaceState?.name ?: "Space Renter",
             onReturn = { onBack() },
             trailingIcons = {
-              // Show edit button only if current account is the space renter owner
+              // Edit button should only show if current account is the space renter owner
               if (account.uid == (spaceState?.owner?.uid)) {
                 IconButton(
                     onClick = { onEdit(spaceState) },
@@ -274,6 +274,14 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
       }
 }
 
+/**
+ * Composable that replaces material3's TopBarWithDivider The main difference is the text is now
+ * centered horizontally and can expand vertically if needed
+ *
+ * @param text The title's text to display in the top bar.
+ * @param onReturn Callback function for the back button is pressed.
+ * @param trailingIcons Optional composable for an additional trailing icon (to the right)
+ */
 @Composable
 fun TopBarAndDivider(
     text: String,
@@ -282,8 +290,7 @@ fun TopBarAndDivider(
 ) {
   Column {
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-
-      // Left icon area (fixed width)
+      // Button to the left
       Row(
           modifier = Modifier.align(Alignment.CenterStart).width(48.dp),
           verticalAlignment = Alignment.CenterVertically) {
@@ -292,18 +299,15 @@ fun TopBarAndDivider(
             }
           }
 
-      // Center Title, constrained so it NEVER touches icons
       Text(
           text = text,
           style = MaterialTheme.typography.titleLarge,
-          maxLines = Int.MAX_VALUE, // Allows vertical expansion when text is long
-          modifier =
-              Modifier.align(Alignment.Center)
-                  .padding(horizontal = 48.dp) // <-- Critical fix
-                  .fillMaxWidth(),
+          maxLines =
+              Int.MAX_VALUE, // Allows vertical expansion when text is too to fit horizontally
+          modifier = Modifier.align(Alignment.Center).padding(horizontal = 48.dp).fillMaxWidth(),
           textAlign = TextAlign.Center)
 
-      // Right icon area (fixed width)
+      // (Optional) Button to the right
       Row(
           modifier = Modifier.align(Alignment.CenterEnd).width(48.dp),
           horizontalArrangement = Arrangement.End,
