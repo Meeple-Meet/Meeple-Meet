@@ -31,21 +31,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SingleChoiceSegmentedButtonRowScope
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -65,6 +72,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -99,6 +107,7 @@ import kotlinx.coroutines.tasks.await
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
   const val ADD_FAB = "addFab"
+  const val ADD_CHOOSE_DIALOG = "chooseAddDialog"
   const val FILTER_BUTTON = "filterButton"
   const val FILTER_SHOP_CHIP = "filterShop"
   const val FILTER_SPACE_CHIP = "filterSpace"
@@ -147,7 +156,7 @@ fun MapScreen(
     viewModel: MapViewModel = viewModel(),
     navigation: NavigationActions,
     account: Account,
-    onFABCLick: () -> Unit,
+    onFABCLick: (PinType) -> Unit,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
   // --- State & helpers ---
@@ -188,7 +197,11 @@ fun MapScreen(
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
+
+  // --- UI controls (filters & creation) ---
   var showFilterButtons by remember { mutableStateOf(false) }
+  var showCreateDialog by remember { mutableStateOf(false) }
+  var selectedCreateType by remember { mutableStateOf<PinType?>(null) }
 
   /**
    * Permission initialization. Checks for existing permission, requests it if missing. Runs only
@@ -320,7 +333,6 @@ fun MapScreen(
         // --- Google Map content ---
         Box(modifier = Modifier.fillMaxSize()) {
           val isDarkTheme = isSystemInDarkTheme()
-          val context = LocalContext.current
           val mapStyleOptions =
               if (isDarkTheme) {
                 MapStyleOptions.loadRawResourceStyle(
@@ -427,7 +439,14 @@ fun MapScreen(
           // --- Add button for shop/space owners ---
           if (account.shopOwner || account.spaceRenter) {
             FloatingActionButton(
-                onClick = onFABCLick,
+                onClick = {
+                  when (account.shopOwner to account.spaceRenter) {
+                    true to true -> showCreateDialog = true
+                    true to false -> onFABCLick(PinType.SHOP)
+                    false to true -> onFABCLick(PinType.SPACE)
+                    else -> {}
+                  }
+                },
                 contentColor = AppColors.textIcons,
                 containerColor = AppColors.neutral,
                 shape = CircleShape,
@@ -436,6 +455,110 @@ fun MapScreen(
                         .align(Alignment.TopEnd)
                         .padding(top = 8.dp, end = 8.dp)) {
                   Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
+                }
+          }
+
+          // TODO clean up dialog style
+          if (showCreateDialog) {
+            Dialog(
+                onDismissRequest = {
+                  showCreateDialog = false
+                  selectedCreateType = null
+                }) {
+                  Surface(
+                      shape = RoundedCornerShape(16.dp),
+                      tonalElevation = 12.dp,
+                      modifier =
+                          Modifier.testTag(MapScreenTestTags.ADD_CHOOSE_DIALOG)
+                              .widthIn(min = 300.dp, max = 420.dp)
+                              .wrapContentHeight()) {
+                        Column(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                              // --- Title ---
+                              Box(Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = "Select a place type",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.align(Alignment.Center))
+                                IconButton(
+                                    onClick = {
+                                      showCreateDialog = false
+                                      selectedCreateType = null
+                                    },
+                                    modifier = Modifier.size(32.dp).align(Alignment.CenterEnd)) {
+                                      Icon(Icons.Default.Close, contentDescription = "Close")
+                                    }
+                              }
+
+                              Spacer(Modifier.height(8.dp))
+                              HorizontalDivider(
+                                  modifier = Modifier.fillMaxWidth(0.8f),
+                                  thickness = 1.dp,
+                                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                              Spacer(Modifier.height(20.dp))
+
+                              // --- Two-option selector ---
+                              @Composable
+                              fun SingleChoiceSegmentedButtonRowScope.Option(
+                                  label: String,
+                                  type: PinType,
+                                  index: Int
+                              ) {
+                                SegmentedButton(
+                                    selected = selectedCreateType == type,
+                                    onClick = { selectedCreateType = type },
+                                    shape =
+                                        SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                                    colors =
+                                        SegmentedButtonDefaults.colors(
+                                            activeContainerColor = AppColors.focus),
+                                    label = { Text(label) },
+                                    icon =
+                                        if (selectedCreateType == type) {
+                                          {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp))
+                                          }
+                                        } else {
+                                          {}
+                                        })
+                              }
+
+                              SingleChoiceSegmentedButtonRow {
+                                Option("Shop", PinType.SHOP, 0)
+                                Option("Rental Space", PinType.SPACE, index = 1)
+                              }
+
+                              Spacer(Modifier.height(24.dp))
+                              Button(
+                                  onClick = {
+                                    showCreateDialog = false
+                                    onFABCLick(selectedCreateType!!)
+                                  },
+                                  modifier =
+                                      Modifier.align(Alignment.CenterHorizontally)
+                                          .fillMaxWidth(0.6f),
+                                  enabled = selectedCreateType != null,
+                                  shape = RoundedCornerShape(24.dp),
+                                  colors =
+                                      ButtonDefaults.buttonColors(
+                                          containerColor = AppColors.affirmative)) {
+                                    Text(
+                                        text =
+                                            when (selectedCreateType) {
+                                              PinType.SHOP -> "Add Shop"
+                                              PinType.SPACE -> "Add Rental Space"
+                                              else -> "Add"
+                                            })
+                                  }
+                              Spacer(Modifier.height(8.dp))
+                            }
+                      }
                 }
           }
         }
