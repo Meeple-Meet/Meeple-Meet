@@ -25,8 +25,8 @@ import kotlinx.coroutines.launch
  * Test tags
  * ================================================================================================ */
 /**
- * Contains test tag constants used for identifying UI components in tests
- * for the Edit Space Renter screen.
+ * Contains test tag constants used for identifying UI components in tests for the Edit Space Renter
+ * screen.
  */
 object EditSpaceRenterScreenTestTags {
   const val SCAFFOLD = "edit_space_renter_scaffold"
@@ -50,9 +50,7 @@ object EditSpaceRenterScreenTestTags {
 /* ================================================================================================
  * UI defaults
  * ================================================================================================ */
-/**
- * Holds UI-related constants such as string resources used in the Edit Space Renter screen.
- */
+/** Holds UI-related constants such as string resources used in the Edit Space Renter screen. */
 object EditSpaceRenterUi {
   object Strings {
     const val SCREEN_TITLE = "Edit Space Renter"
@@ -72,8 +70,8 @@ object EditSpaceRenterUi {
 /**
  * Main entry point for the Edit Space Renter screen.
  *
- * Displays a screen allowing a space renter to edit their information,
- * including required info, availability, and available spaces.
+ * Displays a screen allowing a space renter to edit their information, including required info,
+ * availability, and available spaces.
  *
  * @param spaceRenter The initial [SpaceRenter] data being edited.
  * @param owner The [Account] of the current owner editing the space renter.
@@ -127,8 +125,8 @@ fun EditSpaceRenterScreen(
 /**
  * Core UI content for the Edit Space Renter screen.
  *
- * Manages UI state (form fields, dialogs, lists) and validation logic,
- * and coordinates saving updates to the renter profile.
+ * Manages UI state (form fields, dialogs, lists) and validation logic, and coordinates saving
+ * updates to the renter profile.
  *
  * @param owner The current [Account] editing the renter.
  * @param initialRenter The initial state of the [SpaceRenter].

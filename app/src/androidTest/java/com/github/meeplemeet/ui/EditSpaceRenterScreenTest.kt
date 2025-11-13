@@ -186,7 +186,8 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
             spaceRenter = validRenter,
             owner = owner,
             onBack = {},
-            onUpdated = { updatedCalled = true },)
+            onUpdated = { updatedCalled = true },
+        )
       }
     }
 
