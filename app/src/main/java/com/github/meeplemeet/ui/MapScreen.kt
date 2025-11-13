@@ -140,6 +140,11 @@ object MapScreenTestTags {
 
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val DEFAULT_RADIUS_KM = 10.0
+private const val DEFAULT_ZOOM_LEVEL = 14f
+private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
+private const val DEFAULT_MARKER_SCALE = 1.5f
+private const val DEFAULT_MARKER_BACKGROUND_ALPHA = 1.0f
+private const val RGB_MAX_ALPHA = 255
 
 /**
  * MapScreen displays an interactive Google Map centered on the user's location (if granted) or
@@ -326,7 +331,8 @@ fun MapScreen(
         LaunchedEffect(userLocation) {
           userLocation?.let {
             cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 14f))
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(it.latitude, it.longitude), DEFAULT_ZOOM_LEVEL))
           }
         }
 
@@ -336,7 +342,7 @@ fun MapScreen(
          */
         LaunchedEffect(cameraPositionState) {
           snapshotFlow { cameraPositionState.position.target }
-              .debounce(1000)
+              .debounce(CAMERA_CENTER_DEBOUNCE_MS)
               .collect { latLng ->
                 viewModel.updateQueryCenter(Location(latLng.latitude, latLng.longitude))
               }
@@ -612,6 +618,9 @@ fun MapScreen(
 /**
  * Maps each PinType to its corresponding test tag used in UI tests. Used to assign stable and
  * readable tags to dynamically generated FilterChips.
+ *
+ * @param type the PinType for which to get the test tag
+ * @return the test tag string associated with the given PinType
  */
 private fun pinTypeTestTag(type: PinType): String =
     when (type) {
@@ -801,10 +810,10 @@ private fun MarkerPreviewSheet(
 @Composable
 private fun rememberMarkerIcon(
     @DrawableRes resId: Int,
-    scale: Float = 1.5f,
+    scale: Float = DEFAULT_MARKER_SCALE,
     tint: Color = AppColors.neutral,
     backgroundTint: Color = AppColors.primary,
-    backgroundAlpha: Float = 1.0f
+    backgroundAlpha: Float = DEFAULT_MARKER_BACKGROUND_ALPHA
 ): BitmapDescriptor {
   val context = LocalContext.current
 
@@ -822,7 +831,7 @@ private fun rememberMarkerIcon(
     val paint =
         Paint().apply {
           color = backgroundTint.toArgb()
-          alpha = (255 * backgroundAlpha).toInt()
+          alpha = (RGB_MAX_ALPHA * backgroundAlpha).toInt()
           isAntiAlias = true
         }
     val radius = min(width, height) / 2f

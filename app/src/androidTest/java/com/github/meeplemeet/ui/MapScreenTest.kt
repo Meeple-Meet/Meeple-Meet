@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.MapViewModel
@@ -58,6 +59,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
+  private val DEFAULT_TEST_KM = 10.0
   private lateinit var mapViewModel: MapViewModel
   private lateinit var mockNavigation: NavigationActions
 
@@ -77,7 +79,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   fun setup() {
     try {
       MapsInitializer.initialize(
-          androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext,
+          InstrumentationRegistry.getInstrumentation().targetContext,
           MapsInitializer.Renderer.LATEST,
           this)
     } catch (_: Exception) {}
@@ -313,7 +315,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -348,7 +351,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -403,7 +407,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -442,7 +447,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -473,7 +479,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -513,7 +520,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     assert(fabClickCount == initialCount + 1)
     assert(lastFabClickType == PinType.SHOP)
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = shopOwnerAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -555,7 +563,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -596,7 +605,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -633,7 +643,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -665,7 +676,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
@@ -708,7 +720,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent(account = regularAccount)
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     var state = mapViewModel.uiState.value
@@ -719,7 +732,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     val ownerViewModel = MapViewModel()
     ownerViewModel.startGeoQuery(
-        testLocation, radiusKm = 10.0, currentUserId = shopOwnerAccount.uid)
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
     delay(2000)
 
     state = ownerViewModel.uiState.value
@@ -742,7 +755,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     setContent()
     composeRule.waitForIdle()
 
-    mapViewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = regularAccount.uid)
+    mapViewModel.startGeoQuery(
+        testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
     delay(2000)
 
     val state = mapViewModel.uiState.value
