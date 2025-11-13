@@ -15,6 +15,7 @@ object Dimensions {
     val medium: Dp = 8.dp
     val large: Dp = 12.dp
     val extraLarge: Dp = 16.dp
+    val xLarge: Dp = 20.dp
     val xxLarge: Dp = 24.dp
     val xxxLarge: Dp = 32.dp
   }
@@ -23,9 +24,15 @@ object Dimensions {
   object Padding {
     val tiny: Dp = 2.dp
     val small: Dp = 4.dp
+    val mediumSmall: Dp = 6.dp
     val medium: Dp = 8.dp
     val large: Dp = 12.dp
     val extraLarge: Dp = 16.dp
+    val xLarge: Dp = 20.dp
+    val xxLarge: Dp = 24.dp
+    val xxxLarge: Dp = 32.dp
+    val huge: Dp = 36.dp
+    val giant: Dp = 56.dp
   }
 
   // Icon sizes
@@ -74,6 +81,7 @@ object Dimensions {
     val medium: Dp = 2.dp
     val high: Dp = 4.dp
     val extraHigh: Dp = 8.dp
+    val xxHigh: Dp = 12.dp
   }
 
   // Text sizes
