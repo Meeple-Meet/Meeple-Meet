@@ -20,6 +20,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,6 +56,8 @@ object SpaceRenterUi
     fun emailContactRow(email: String) = "- Email: $email"
     fun addressContactRow(address: String) = "- Address: $address"
     fun websiteContactRow(website: String) = "- Website: $website"
+    val HORIZONTAL_PADDING: Dp = 100.dp
+    val ROW_WIDTH : Dp = 48.dp
 }
 
 /**
@@ -126,9 +129,9 @@ fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) 
               .padding(bottom = Dimensions.Padding.xxxLarge),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         ContactSection(spaceRenter)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         AvailabilitySection(spaceRenter.openingHours)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
@@ -256,7 +259,7 @@ fun TopBarAndDivider(
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.large)) {
       // Button to the left
       Row(
-          modifier = Modifier.align(Alignment.CenterStart).width(48.dp),
+          modifier = Modifier.align(Alignment.CenterStart).width(SpaceRenterUi.ROW_WIDTH),
           verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onReturn) {
               Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -273,13 +276,13 @@ fun TopBarAndDivider(
 
       // (Optional) Button to the right
       Row(
-          modifier = Modifier.align(Alignment.CenterEnd).width(48.dp),
+          modifier = Modifier.align(Alignment.CenterEnd).width(SpaceRenterUi.ROW_WIDTH),
           horizontalArrangement = Arrangement.End,
           verticalAlignment = Alignment.CenterVertically) {
             trailingIcons?.invoke()
           }
     }
 
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
   }
 }
