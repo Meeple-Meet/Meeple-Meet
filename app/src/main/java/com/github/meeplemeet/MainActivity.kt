@@ -300,13 +300,15 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.Session.name) {
-      if (discussion!!.session != null &&
-          discussion!!.session!!.participants.contains(account!!.uid))
-          SessionDetailsScreen(
-              account = account!!,
-              discussion = discussion!!,
-              onBack = { navigationActions.goBack() })
-      else navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+      if (discussion == null) {
+        LoadingScreen()
+      } else if (discussion!!.session != null &&
+          discussion!!.session!!.participants.contains(account!!.uid)) {
+        SessionDetailsScreen(
+            account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
+      } else {
+        navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+      }
     }
 
     composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
@@ -360,6 +362,7 @@ fun MeepleMeetApp(
               }
               PinType.SESSION -> {
                 discussionId = geoPin.uid
+                println(geoPin.uid)
                 navigationActions.navigateTo(MeepleMeetScreen.Session)
               }
             }
