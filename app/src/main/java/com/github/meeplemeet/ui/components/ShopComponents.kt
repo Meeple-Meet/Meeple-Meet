@@ -1168,61 +1168,64 @@ fun GameItem(
               .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
               .clickable(enabled = clickable, onClick = { onClick(game) }),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(modifier = Modifier.padding(Dimensions.Padding.medium), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(Dimensions.Padding.medium),
+            verticalAlignment = Alignment.CenterVertically) {
 
-          // Icon + badge
-          Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            BadgedBox(
-                badge = {
-                  // Only show badge if count > 0
-                  if (count > 0) {
-                    val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                    val label = if (count > max) "$max+" else count.toString()
-                    Badge(
-                        modifier =
-                            Modifier.offset(x = 8.dp, y = (-6).dp)
-                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp),
-                        containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                          Text(
-                              label,
-                              style = MaterialTheme.typography.labelSmall,
-                              maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT,
-                              softWrap = false,
-                              modifier = Modifier.padding(horizontal = 4.dp))
-                        }
-                  }
-                }) {
-                  Icon(Icons.Filled.VideogameAsset, contentDescription = null)
-                }
-          }
-
-          Spacer(Modifier.width(8.dp))
-
-          // Name centered
-          Column(
-              modifier = Modifier.weight(1f),
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.Center) {
-                Text(
-                    game.name,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center)
+              // Icon + badge
+              Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                BadgedBox(
+                    badge = {
+                      // Only show badge if count > 0
+                      if (count > 0) {
+                        val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+                        val label = if (count > max) "$max+" else count.toString()
+                        Badge(
+                            modifier =
+                                Modifier.offset(x = 8.dp, y = (-6).dp)
+                                    .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp),
+                            containerColor = MaterialTheme.colorScheme.inversePrimary) {
+                              Text(
+                                  label,
+                                  style = MaterialTheme.typography.labelSmall,
+                                  maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT,
+                                  softWrap = false,
+                                  modifier = Modifier.padding(horizontal = 4.dp))
+                            }
+                      }
+                    }) {
+                      Icon(Icons.Filled.VideogameAsset, contentDescription = null)
+                    }
               }
 
-          // Optional delete
-          if (hasDeleteButton) {
-            IconButton(
-                onClick = { onDelete(game) },
-                modifier =
-                    Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error)) {
-                  Icon(Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
-                }
-          }
-        }
+              Spacer(Modifier.width(8.dp))
+
+              // Name centered
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.Center) {
+                    Text(
+                        game.name,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center)
+                  }
+
+              // Optional delete
+              if (hasDeleteButton) {
+                IconButton(
+                    onClick = { onDelete(game) },
+                    modifier =
+                        Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
+                    colors =
+                        IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error)) {
+                      Icon(
+                          Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
+                    }
+              }
+            }
       }
 }
 

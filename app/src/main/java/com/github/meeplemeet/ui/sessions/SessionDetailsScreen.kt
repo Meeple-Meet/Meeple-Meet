@@ -738,7 +738,7 @@ fun UserChip(
           IconButton(
               onClick = onRemove,
               modifier =
-                  Modifier.size(Dimensions.Padding.small)
+                  Modifier.size(Dimensions.IconSize.medium)
                       .testTag(SessionTestTags.removeParticipantTag(user.name))) {
                 Icon(
                     imageVector = Icons.Default.Close,
