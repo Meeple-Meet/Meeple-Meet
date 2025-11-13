@@ -44,6 +44,10 @@ object FeedsOverviewTestTags {
   const val POST_CARD_PREFIX = "Post/"
 }
 
+object PostOverviewScreenUi {
+  val xxxLargePadding = Dimensions.Padding.xxxLarge
+}
+
 /* ==========  CONSTANTS  ====================================================== */
 /** Placeholder text shown when the feed contains zero posts. */
 private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
@@ -142,23 +146,25 @@ fun PostsOverviewScreen(
 /** Displays a centred label when the feed contains no posts. */
 @Composable
 private fun EmptyFeedListText() {
-  Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-          Icon(
-              imageVector = Icons.AutoMirrored.Filled.Article,
-              contentDescription = null,
-              modifier = Modifier.size(Dimensions.IconSize.giant),
-              tint = MessagingColors.secondaryText)
-          Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-          Text(
-              text = NO_POSTS_DEFAULT_TEXT,
-              style = MaterialTheme.typography.bodyLarge,
-              fontSize = Dimensions.TextSize.title,
-              color = MessagingColors.secondaryText)
-        }
-  }
+  Box(
+      modifier = Modifier.fillMaxSize().padding(PostOverviewScreenUi.xxxLargePadding),
+      contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.Article,
+                  contentDescription = null,
+                  modifier = Modifier.size(Dimensions.IconSize.giant),
+                  tint = MessagingColors.secondaryText)
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+              Text(
+                  text = NO_POSTS_DEFAULT_TEXT,
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontSize = Dimensions.TextSize.title,
+                  color = MessagingColors.secondaryText)
+            }
+      }
 }
 
 /* ==========  FEED CARD  ====================================================== */
