@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +60,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SingleChoiceSegmentedButtonRowScope
 import androidx.compose.material3.SnackbarHost
@@ -430,10 +432,11 @@ fun MapScreen(
                               Modifier.padding(top = Dimensions.Padding.giant)
                                   .widthIn(max = 120.dp)
                                   .wrapContentHeight()
+                                  .background(AppColors.primary)
                                   .shadow(6.dp, RoundedCornerShape(Dimensions.CornerRadius.large)),
                           tonalElevation = Dimensions.Elevation.high,
                           shape = RoundedCornerShape(Dimensions.CornerRadius.large),
-                          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) {
+                          color = AppColors.primary.copy(alpha = 0.95f)) {
                             Column(
                                 modifier =
                                     Modifier.padding(
@@ -456,6 +459,7 @@ fun MapScreen(
                                                   type.name.lowercase().replaceFirstChar {
                                                     it.uppercaseChar()
                                                   },
+                                              color = AppColors.textIcons,
                                               style = MaterialTheme.typography.labelLarge)
                                         },
                                         leadingIcon = {
@@ -464,9 +468,25 @@ fun MapScreen(
                                               onCheckedChange = null,
                                               modifier = Modifier.size(Dimensions.IconSize.medium))
                                         },
+                                        colors =
+                                            SelectableChipColors(
+                                                containerColor = AppColors.primary,
+                                                leadingIconColor = Color.Transparent,
+                                                trailingIconColor = Color.Transparent,
+                                                disabledContainerColor = Color.Transparent,
+                                                disabledLabelColor = Color.Transparent,
+                                                disabledLeadingIconColor = Color.Transparent,
+                                                disabledTrailingIconColor = Color.Transparent,
+                                                disabledSelectedContainerColor = Color.Transparent,
+                                                selectedLabelColor = Color.Transparent,
+                                                selectedLeadingIconColor = Color.Transparent,
+                                                selectedTrailingIconColor = Color.Transparent,
+                                                labelColor = AppColors.textIcons,
+                                                selectedContainerColor = Color.Transparent),
                                         modifier =
                                             Modifier.testTag(pinTypeTestTag(type))
                                                 .height(Dimensions.Padding.huge)
+                                                .background(AppColors.primary)
                                                 .fillMaxWidth())
                                   }
                                 }
@@ -505,7 +525,7 @@ fun MapScreen(
                 }) {
                   Surface(
                       shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
-                      color = MaterialTheme.colorScheme.surface,
+                      color = AppColors.primary,
                       tonalElevation = Dimensions.Elevation.xxHigh,
                       modifier =
                           Modifier.testTag(MapScreenTestTags.ADD_CHOOSE_DIALOG)
@@ -561,6 +581,7 @@ fun MapScreen(
                                         SegmentedButtonDefaults.itemShape(index = index, count = 2),
                                     colors =
                                         SegmentedButtonDefaults.colors(
+                                            inactiveContainerColor = AppColors.primary,
                                             activeContainerColor = AppColors.focus),
                                     border = BorderStroke(1.dp, AppColors.textIcons),
                                     label = {
