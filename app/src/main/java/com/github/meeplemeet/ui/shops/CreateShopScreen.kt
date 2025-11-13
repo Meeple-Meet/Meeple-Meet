@@ -36,6 +36,7 @@ import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -425,8 +426,8 @@ private fun GamesSection(
 ) {
   if (stock.isNotEmpty()) {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+        contentPadding = PaddingValues(bottom = Dimensions.Padding.extraLarge),
         modifier = Modifier.heightIn(max = 600.dp)) {
           items(items = stock, key = { it.first.uid }) { (game, count) ->
             EditableGameItem(

@@ -198,8 +198,8 @@ fun DiscussionDetailsScreen(
                             .testTag(UITestTags.DISCUSSION_NAME),
                     colors =
                         TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = AppColors.primary,
+                            unfocusedContainerColor = AppColors.primary,
                             focusedIndicatorColor = AppColors.textIcons,
                             unfocusedIndicatorColor = AppColors.textIconsFade,
                             cursorColor = AppColors.textIcons,
@@ -253,8 +253,8 @@ fun DiscussionDetailsScreen(
                     /** Makes the textField look like a line */
                     colors =
                         TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = AppColors.primary,
+                            unfocusedContainerColor = AppColors.primary,
                             focusedIndicatorColor = AppColors.textIcons,
                             unfocusedIndicatorColor = AppColors.textIconsFade,
                             cursorColor = AppColors.textIcons,
@@ -279,13 +279,14 @@ fun DiscussionDetailsScreen(
                 )
 
                 /** --- Divider --- */
-                HorizontalDivider(
-                    modifier =
-                        Modifier.fillMaxWidth(0.945f) // 70% width to create middle effect
-                            .padding(horizontal = 0.dp)
-                            .align(Alignment.CenterHorizontally),
-                    thickness = 1.75.dp,
-                    color = AppColors.divider)
+                //                HorizontalDivider(
+                //                    modifier =
+                //                        Modifier.fillMaxWidth(0.945f) // 70% width to create
+                // middle effect
+                //                            .padding(horizontal = 0.dp)
+                //                            .align(Alignment.CenterHorizontally),
+                //                    thickness = 1.75.dp,
+                //                    color = AppColors.divider)
 
                 /** Row for search and member selection */
                 if (isAdmin)

@@ -331,21 +331,26 @@ fun MemberSearchField(
           } else Icon(imageVector = Icons.Default.Search, contentDescription = null)
         })
 
-    ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = onDismiss) {
-      when {
-        isSearching -> DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
-        searchResults.isEmpty() -> DropdownMenuItem(text = { Text("No results") }, onClick = {})
-        else ->
-            searchResults.forEach { account ->
-              DropdownMenuItem(
-                  modifier = Modifier.testTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT),
-                  text = { Text(account.handle) },
-                  onClick = {
-                    onSelect(account)
-                    onDismiss()
-                  })
-            }
-      }
-    }
+    ExposedDropdownMenu(
+        expanded = dropdownExpanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.background(AppColors.primary)) {
+          when {
+            isSearching -> DropdownMenuItem(text = { Text("Searching...") }, onClick = {})
+            searchResults.isEmpty() -> DropdownMenuItem(text = { Text("No results") }, onClick = {})
+            else ->
+                searchResults.forEach { account ->
+                  DropdownMenuItem(
+                      modifier =
+                          Modifier.testTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT)
+                              .background(AppColors.primary),
+                      text = { Text(account.handle) },
+                      onClick = {
+                        onSelect(account)
+                        onDismiss()
+                      })
+                }
+          }
+        }
   }
 }
