@@ -1,24 +1,8 @@
 # --------------------------
-# Kotlin metadata & serialization
+# Keep Kotlin metadata for reflection and serialization
 # --------------------------
--keepclassmembers class kotlin.Metadata { *; }
--keepclassmembers class com.github.meeplemeet.model.** {
-    @kotlinx.serialization.Serializable *;
-}
+-keep class kotlin.Metadata { *; }
 -keepattributes Signature, *Annotation*
-
-# --------------------------
-# Google Maps (principaux packages seulement)
-# --------------------------
--keep class com.google.android.gms.maps.** { *; }
--keep class com.google.maps.android.** { *; }
--dontwarn com.google.android.gms.maps.**
--dontwarn com.google.maps.android.**
-
-# --------------------------
-# Firebase Auth
-# --------------------------
--keep class com.google.firebase.auth.** { *; }
 
 # --------------------------
 # Firebase Firestore
@@ -28,18 +12,32 @@
 -dontwarn com.google.firebase.firestore.**
 
 # --------------------------
-# Google Sign-In / credentials
+# Firestore / Serializable models
 # --------------------------
--keep class com.google.android.gms.auth.api.signin.** { *; }
--dontwarn com.google.android.gms.auth.api.signin.**
+# Keep all classes in your model package intact, including fields and constructors
+-keep class com.github.meeplemeet.model.** { *; }
+-keepclassmembers class com.github.meeplemeet.model.** {
+    public <init>(...);
+}
+-keepclassmembernames class com.github.meeplemeet.model.** { <fields>; }
+
+# --------------------------
+# Maps
+# --------------------------
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.maps.android.** { *; }
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.maps.android.**
 
 # --------------------------
 # Compose essentials
 # --------------------------
 -keep class androidx.compose.runtime.** { *; }
+-keep class androidx.activity.** { *; }
+-keep class androidx.savedstate.** { *; }
 
 # --------------------------
-# Kotlin stdlib reflection
+# Kotlin runtime essentials
 # --------------------------
 -keepclassmembers class kotlin.jvm.internal.Intrinsics { *; }
 
@@ -47,13 +45,3 @@
 # R classes
 # --------------------------
 -keepclassmembers class **.R$* { public static <fields>; }
-
-# --------------------------
-# Full keep test (temporary)
-# --------------------------
-# Uncomment the following lines to disable all minification/obfuscation for debugging
--keep class * { *; }
--keep interface * { *; }
--keep enum * { *; }
--keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
--dontwarn **

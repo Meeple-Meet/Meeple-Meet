@@ -85,21 +85,23 @@ android {
     manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
   }
 
+  val localProps = Properties()
+  val localPropsFile = rootProject.file("local.properties")
+  if (localPropsFile.exists()) {
+    FileInputStream(localPropsFile).use { localProps.load(it) }
+  }
+
   signingConfigs {
     create("release") {
-      val keystorePathProp = (project.findProperty("KEYSTORE_PATH") as String?) ?: (System.getenv("KEYSTORE_PATH"))
-      val keystorePassword = (project.findProperty("KEYSTORE_PASSWORD") as String?) ?: (System.getenv("KEYSTORE_PASSWORD"))
-      val keystoreKeyAlias = (project.findProperty("KEY_ALIAS") as String?) ?: (System.getenv("KEY_ALIAS"))
-      val keystoreKeyPassword = (project.findProperty("KEY_PASSWORD") as String?) ?: (System.getenv("KEY_PASSWORD"))
+      val keystorePathProp = localProps.getProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH")
+      val keystorePassword = localProps.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
+      val keystoreKeyAlias = localProps.getProperty("KEY_ALIAS") ?: System.getenv("KEY_ALIAS")
+      val keystoreKeyPassword = localProps.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
 
-      val resolvedKeystorePath = when {
-        !keystorePathProp.isNullOrBlank() && file(keystorePathProp).exists() -> keystorePathProp
-        !keystorePathProp.isNullOrBlank() && file("${rootDir}/${keystorePathProp}").exists() -> "${rootDir}/${keystorePathProp}"
-        else -> null
-      }
+      val keystoreFile = keystorePathProp?.let { rootProject.file(it) }
 
-      if (!resolvedKeystorePath.isNullOrBlank()) {
-        storeFile = file(resolvedKeystorePath)
+      if (keystoreFile != null && keystoreFile.exists()) {
+        storeFile = keystoreFile
         storePassword = keystorePassword
         keyAlias = keystoreKeyAlias
         keyPassword = keystoreKeyPassword
@@ -119,11 +121,8 @@ android {
       if (releaseSigning != null && releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
         signingConfig = releaseSigning
       }
-
-      // Dump for rules
-      buildConfigField("boolean", "DEBUG", "false")
-      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
+
     getByName("debug") {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
