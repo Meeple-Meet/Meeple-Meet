@@ -73,7 +73,7 @@ private object SpaceRenterUi {
 
   object Styles {
     const val editingBorderAlpha = 1f
-    const val readonlyBorderAlpha = 1f
+    const val readonlyBorderAlpha = 0.3f
   }
 }
 
@@ -417,7 +417,7 @@ private fun SeatsField(
       singleLine = true,
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
       textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
-      colors = tfColors,
+      colors = tfColors.copy(disabledTextColor = MaterialTheme.colorScheme.onSurface),
       modifier =
           Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
               .onFocusChanged { st ->
@@ -467,7 +467,7 @@ private fun PriceField(
       singleLine = true,
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
       textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
-      colors = tfColors,
+      colors = tfColors.copy(disabledTextColor = MaterialTheme.colorScheme.onSurface),
       modifier =
           Modifier.width(SpaceRenterUi.Dimensions.fieldBoxWidth)
               .onFocusChanged { st ->
