@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,13 +18,25 @@ import org.imperiumlabs.geofirestore.GeoFirestore
 import org.imperiumlabs.geofirestore.GeoQuery
 import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
 
+/**
+ * Represents the UI state of the map, including currently visible geo-pins, any selected
+ * pin/preview, loading state, and error messages.
+ *
+ * @property geoPins The filtered list of geo-pins, based on [activeFilters].
+ */
 data class MapUIState(
-    val geoPins: List<GeoPinWithLocation> = emptyList(),
+    val allGeoPins: List<GeoPinWithLocation> = emptyList(),
+    val activeFilters: Set<PinType> = PinType.entries.toSet(),
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
-    val selectedGeoPin: StorableGeoPin? = null
-)
+    val selectedGeoPin: StorableGeoPin? = null,
+    val isLoadingPreview: Boolean = false
+) {
+  val geoPins: List<GeoPinWithLocation>
+    get() = allGeoPins.filter { it.geoPin.type in activeFilters }
+}
 
+/** A geo-pin along with its current geographic location. */
 data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
 
 /**
@@ -46,7 +59,8 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  */
 class MapViewModel(
     private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews,
-    private val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
+    geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
+    private val sessionRepo: SessionRepository = RepositoryProvider.sessions
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   /** Public observable state of the map, containing geo-pins, errors, and selection info. */
@@ -65,103 +79,117 @@ class MapViewModel(
    *
    * @param center The geographic center of the query (latitude and longitude).
    * @param radiusKm The query radius, in kilometers.
-   * @param includeTypes The set of [PinType] to include (e.g., shops, spaces). Any pin with a type
-   *   not in this set is ignored.
+   * @param currentUserId The ID of the current user. Used to fetch only sessions in which the user
+   *   is a participant.
    */
-  fun startGeoQuery(
-      center: Location,
-      radiusKm: Double,
-      includeTypes: Set<PinType> = setOf(PinType.SHOP, PinType.SPACE)
-  ) {
+  fun startGeoQuery(center: Location, radiusKm: Double, currentUserId: String) {
     // Always reset previous query before creating a new one.
     stopGeoQuery()
 
-    val geoFirestore = GeoFirestore(geoPinCollection)
-    val query = geoFirestore.queryAtLocation(GeoPoint(center.latitude, center.longitude), radiusKm)
+    // Pre-fetch session IDs where user is participating
+    viewModelScope.launch {
+      val userSessionIds = mutableSetOf<String>()
+      try {
+        val ids = sessionRepo.getSessionIdsForUser(currentUserId)
+        userSessionIds.addAll(ids)
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(errorMsg = "Failed to load user sessions: ${e.message ?: "unknown"}")
+        }
+        // continue: listener will still be attached but sessions will be filtered out
+      }
 
-    // --- Core GeoQuery listener handling all Firestore-driven updates in real-time ---
-    val listener =
-        object : GeoQueryEventListener {
+      val geoFirestore = GeoFirestore(geoPinCollection)
+      val query =
+          geoFirestore.queryAtLocation(GeoPoint(center.latitude, center.longitude), radiusKm)
 
-          /**
-           * Called when a new document enters the queried radius. Fetches the full Firestore
-           * document, converts it into a [GeoPinWithLocation], and adds it to [uiState].
-           *
-           * @param documentID The Firestore document ID.
-           * @param location The geographic coordinates of the pin.
-           */
-          override fun onKeyEntered(documentID: String, location: GeoPoint) {
-            viewModelScope.launch {
-              try {
-                val doc = geoPinCollection.document(documentID).get().await()
-                val noUid = doc.toObject(StorableGeoPinNoUid::class.java) ?: return@launch
-                if (noUid.type !in includeTypes) return@launch
+      // --- Core GeoQuery listener handling all Firestore-driven updates in real-time ---
+      val listener =
+          object : GeoQueryEventListener {
 
-                val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
+            /**
+             * Called when a new document enters the queried radius. Fetches the full Firestore
+             * document, converts it into a [GeoPinWithLocation], and adds it to [uiState].
+             *
+             * @param documentID The Firestore document ID.
+             * @param location The geographic coordinates of the pin.
+             */
+            override fun onKeyEntered(documentID: String, location: GeoPoint) {
+              viewModelScope.launch {
+                try {
+                  val doc = geoPinCollection.document(documentID).get().await()
+                  val noUid = doc.toObject(StorableGeoPinNoUid::class.java) ?: return@launch
 
-                _uiState.update { it.copy(geoPins = it.geoPins + pin) }
-              } catch (t: Throwable) {
-                _uiState.update {
-                  it.copy(
-                      errorMsg =
-                          "Failed to read geo pin $documentID: ${t.message ?: "unknown error"}")
+                  // Ignore session where user is not participating
+                  if (noUid.type == PinType.SESSION && !userSessionIds.contains(documentID))
+                      return@launch
+
+                  val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
+
+                  _uiState.update { it.copy(allGeoPins = it.allGeoPins + pin) }
+                } catch (e: Exception) {
+                  _uiState.update {
+                    it.copy(
+                        errorMsg =
+                            "Failed to read geo pin $documentID: ${e.message ?: "unknown error"}")
+                  }
                 }
+              }
+            }
+
+            /**
+             * Called when a document already within the query radius changes location. Updates the
+             * corresponding [GeoPinWithLocation] in [uiState].
+             *
+             * @param documentID The Firestore document ID.
+             * @param location The new geographic position of the pin.
+             */
+            override fun onKeyMoved(documentID: String, location: GeoPoint) {
+              _uiState.update { state ->
+                val updatedPins =
+                    state.allGeoPins.map { pinWithLocation ->
+                      if (pinWithLocation.geoPin.uid == documentID)
+                          pinWithLocation.copy(location = location)
+                      else pinWithLocation
+                    }
+                state.copy(allGeoPins = updatedPins)
+              }
+            }
+
+            /**
+             * Called when a document leaves the query radius (e.g., moved or deleted). Removes the
+             * pin from [uiState].
+             *
+             * @param documentID The Firestore document ID.
+             */
+            override fun onKeyExited(documentID: String) {
+              _uiState.update { it ->
+                it.copy(allGeoPins = it.allGeoPins.filterNot { it.geoPin.uid == documentID })
+              }
+            }
+
+            /**
+             * Called once all initial documents in range have been loaded. Can be used to signal
+             * that the query is ready to display results.
+             */
+            override fun onGeoQueryReady() {}
+
+            /**
+             * Called when an error occurs while listening to Firestore geo updates. Updates the
+             * MapUIState errorMsg with the error message.
+             *
+             * @param exception The exception describing the failure.
+             */
+            override fun onGeoQueryError(exception: Exception) {
+              _uiState.update {
+                it.copy(errorMsg = "GeoQuery error: ${exception.message ?: "unknown error"}")
               }
             }
           }
 
-          /**
-           * Called when a document already within the query radius changes location. Updates the
-           * corresponding [GeoPinWithLocation] in [uiState].
-           *
-           * @param documentID The Firestore document ID.
-           * @param location The new geographic position of the pin.
-           */
-          override fun onKeyMoved(documentID: String, location: GeoPoint) {
-            _uiState.update { state ->
-              val updatedPins =
-                  state.geoPins.map { pinWithLocation ->
-                    if (pinWithLocation.geoPin.uid == documentID)
-                        pinWithLocation.copy(location = location)
-                    else pinWithLocation
-                  }
-              state.copy(geoPins = updatedPins)
-            }
-          }
-
-          /**
-           * Called when a document leaves the query radius (e.g., moved or deleted). Removes the
-           * pin from [uiState].
-           *
-           * @param documentID The Firestore document ID.
-           */
-          override fun onKeyExited(documentID: String) {
-            _uiState.update { it ->
-              it.copy(geoPins = it.geoPins.filterNot { it.geoPin.uid == documentID })
-            }
-          }
-
-          /**
-           * Called once all initial documents in range have been loaded. Can be used to signal that
-           * the query is ready to display results.
-           */
-          override fun onGeoQueryReady() {}
-
-          /**
-           * Called when an error occurs while listening to Firestore geo updates. Updates
-           * [uiState.errorMsg] with the error message.
-           *
-           * @param exception The exception describing the failure.
-           */
-          override fun onGeoQueryError(exception: Exception) {
-            _uiState.update {
-              it.copy(errorMsg = "GeoQuery error: ${exception.message ?: "unknown error"}")
-            }
-          }
-        }
-
-    query.addGeoQueryEventListener(listener)
-    geoQuery = query
+      query.addGeoQueryEventListener(listener)
+      geoQuery = query
+    }
   }
 
   /**
@@ -171,11 +199,21 @@ class MapViewModel(
   fun stopGeoQuery() {
     try {
       geoQuery?.removeAllListeners()
-    } catch (_: Throwable) {} finally {
+    } catch (_: Exception) {} finally {
       geoQuery = null
     }
 
     _uiState.update { MapUIState() }
+  }
+
+  /**
+   * Updates the set of active pin type filters applied to the map. This affects the
+   * [MapUIState.geoPins] property, which is the filtered view used by the UI.
+   *
+   * @param newFilters The new set of [PinType] to display.
+   */
+  fun updateFilters(newFilters: Set<PinType>) {
+    _uiState.update { it.copy(activeFilters = newFilters) }
   }
 
   /**
@@ -210,23 +248,29 @@ class MapViewModel(
 
   /**
    * Selects a specific geo-pin and fetches its corresponding [MarkerPreview] for display in the UI.
-   * If fetching fails, updates [uiState.errorMsg].
+   * If fetching fails, updates the MapUIState errorMsg.
    *
    * @param pin The selected geo-pin.
    */
   fun selectPin(pin: GeoPinWithLocation) {
     viewModelScope.launch {
+      _uiState.update { it.copy(isLoadingPreview = true, selectedGeoPin = pin.geoPin) }
       try {
         val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
         _uiState.update {
-          it.copy(selectedMarkerPreview = preview, selectedGeoPin = pin.geoPin, errorMsg = null)
+          it.copy(
+              selectedMarkerPreview = preview,
+              selectedGeoPin = pin.geoPin,
+              errorMsg = null,
+              isLoadingPreview = false)
         }
-      } catch (t: Throwable) {
+      } catch (e: Exception) {
         _uiState.update {
           it.copy(
               selectedMarkerPreview = null,
               selectedGeoPin = null,
-              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${t.message}")
+              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${e.message}",
+              isLoadingPreview = false)
         }
       }
     }

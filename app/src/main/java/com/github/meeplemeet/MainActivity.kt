@@ -66,6 +66,7 @@ import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -147,6 +148,7 @@ const val LOADING_SCREEN_TAG = "Loading Screen"
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    MapsInitializer.initialize(applicationContext)
     setContent { AppTheme { Surface(modifier = Modifier.fillMaxSize()) { MeepleMeetApp() } } }
   }
 }
@@ -298,13 +300,15 @@ fun MeepleMeetApp(
     }
 
     composable(MeepleMeetScreen.Session.name) {
-      if (discussion!!.session != null &&
-          discussion!!.session!!.participants.contains(account!!.uid))
-          SessionDetailsScreen(
-              account = account!!,
-              discussion = discussion!!,
-              onBack = { navigationActions.goBack() })
-      else navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+      if (discussion == null) {
+        LoadingScreen()
+      } else if (discussion!!.session != null &&
+          discussion!!.session!!.participants.contains(account!!.uid)) {
+        SessionDetailsScreen(
+            account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
+      } else {
+        navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+      }
     }
 
     composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
@@ -335,7 +339,17 @@ fun MeepleMeetApp(
       MapScreen(
           navigation = navigationActions,
           account = account!!,
-          onFABCLick = { navigationActions.navigateTo(MeepleMeetScreen.CreateShop) },
+          onFABCLick = { geoPin ->
+            when (geoPin) {
+              PinType.SHOP -> {
+                navigationActions.navigateTo(MeepleMeetScreen.CreateShop)
+              }
+              PinType.SPACE -> {
+                navigationActions.navigateTo(MeepleMeetScreen.CreateSpaceRenter)
+              }
+              PinType.SESSION -> {}
+            }
+          },
           onRedirect = { geoPin ->
             when (geoPin.type) {
               PinType.SHOP -> {
@@ -348,6 +362,7 @@ fun MeepleMeetApp(
               }
               PinType.SESSION -> {
                 discussionId = geoPin.uid
+                println(geoPin.uid)
                 navigationActions.navigateTo(MeepleMeetScreen.Session)
               }
             }

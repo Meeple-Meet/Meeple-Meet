@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldPath
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -80,5 +81,40 @@ class SessionRepository(
   suspend fun deleteSession(discussionId: String) {
     geoPinsRepo.deleteGeoPin(discussionId)
     discussions.document(discussionId).update(DiscussionNoUid::session.name, null).await()
+  }
+
+  /**
+   * Returns the list of discussion IDs that currently contain a session and where the session's
+   * participant list contains [userId].
+   *
+   * This method performs a paginated query to avoid reading too many documents at once. It pages
+   * through results using `startAfter(lastSnapshot)` and a `limit(batchSize)`.
+   *
+   * @param userId user UID to look for in session.participants.
+   * @param batchSize maximum documents to fetch per query page (default 50).
+   * @return list of discussion document IDs matching the criteria.
+   */
+  suspend fun getSessionIdsForUser(userId: String, batchSize: Long = 50): List<String> {
+    val allIds = mutableListOf<String>()
+    var lastDocumentId: String? = null
+
+    while (true) {
+      val query =
+          discussions
+              .whereArrayContains("session.participants", userId)
+              .orderBy(FieldPath.documentId())
+              .let { if (lastDocumentId != null) it.startAfter(lastDocumentId) else it }
+              .limit(batchSize)
+
+      val snapshot = query.get().await()
+      if (snapshot.isEmpty) break
+
+      allIds.addAll(snapshot.documents.map { it.id })
+      lastDocumentId = snapshot.documents.last().id
+
+      if (snapshot.size() < batchSize) break
+    }
+
+    return allIds
   }
 }
