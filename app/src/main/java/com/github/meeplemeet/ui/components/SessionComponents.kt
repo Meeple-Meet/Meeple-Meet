@@ -72,7 +72,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -357,10 +356,10 @@ fun TopBarWithDivider(
     /** --- Divider --- */
     HorizontalDivider(
         modifier =
-            Modifier.fillMaxWidth(0.7f) // 70% width to create middle effect
-                .padding(horizontal = 0.dp)
+            Modifier.fillMaxWidth(Dimensions.Fractions.topBarDivider)
+                .padding(horizontal = Dimensions.Spacing.none)
                 .align(Alignment.CenterHorizontally),
-        thickness = 1.dp,
+        thickness = Dimensions.DividerThickness.standard,
         color = AppColors.textIconsFade)
   }
 }
@@ -402,8 +401,10 @@ fun ParticipantChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(18.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
-            Spacer(Modifier.width(6.dp))
+            Box(
+                Modifier.size(Dimensions.IconSize.medium)
+                    .background(MaterialTheme.colorScheme.tertiary, CircleShape))
+            Spacer(Modifier.width(Dimensions.Padding.mediumSmall))
           }
 
           val (icon, tint) =
@@ -414,7 +415,7 @@ fun ParticipantChip(
           IconButton(
               onClick = { onClick(account) },
               modifier =
-                  Modifier.size(20.dp)
+                  Modifier.size(Dimensions.IconSize.standard)
                       .testTag(
                           "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
               colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
@@ -581,7 +582,9 @@ fun TimePickerField(
   var open by remember { mutableStateOf(false) }
   val state =
       rememberTimePickerState(
-          is24Hour = is24Hour, initialHour = value?.hour ?: 19, initialMinute = value?.minute ?: 0)
+          is24Hour = is24Hour,
+          initialHour = value?.hour ?: Dimensions.Numbers.defaultTimeHour,
+          initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: ""
 
   OutlinedTextField(
@@ -807,7 +810,9 @@ private fun LocationSearchBar(
             onDismissRequest = { menuOpen = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
-          results.locationSuggestions.take(5).forEachIndexed { i, loc ->
+          results.locationSuggestions.take(Dimensions.Numbers.searchResultLimit).forEachIndexed {
+              i,
+              loc ->
             DropdownMenuItem(
                 text = { Text(loc.name) },
                 onClick = {
@@ -905,7 +910,7 @@ private fun GameSearchBar(
               expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
                 results.gameSuggestions
                     .filterNot { existing.contains(it.uid) }
-                    .take(5)
+                    .take(Dimensions.Numbers.searchResultLimit)
                     .forEachIndexed { i, game ->
                       DropdownMenuItem(
                           text = { Text(game.name) },

@@ -19,7 +19,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.Space
@@ -54,11 +53,11 @@ object SpaceRenterComponentsTestTags {
  * ================================================================================================ */
 private object SpaceRenterUi {
   object Dimensions {
-    val spaceLabelWidth = 110.dp
-    val fieldBoxWidth = 88.dp
-    val columnsGap = 16.dp
-    val maxListHeight: Dp = 600.dp
-    val rowSpacing: Dp = 8.dp
+    val spaceLabelWidth = com.github.meeplemeet.ui.theme.Dimensions.ComponentWidth.spaceLabelWidth
+    val fieldBoxWidth = com.github.meeplemeet.ui.theme.Dimensions.ComponentWidth.fieldBoxWidth
+    val columnsGap = com.github.meeplemeet.ui.theme.Dimensions.Spacing.extraLarge
+    val maxListHeight: Dp = com.github.meeplemeet.ui.theme.Dimensions.ContainerSize.maxListHeight
+    val rowSpacing: Dp = com.github.meeplemeet.ui.theme.Dimensions.Spacing.medium
   }
 
   object Strings {
@@ -69,11 +68,6 @@ private object SpaceRenterUi {
     const val labelPlaces = "Places"
     const val labelPrices = "Price"
     const val emptySpacesText = "No spaces added yet."
-  }
-
-  object Styles {
-    const val editingBorderAlpha = 1f
-    const val readonlyBorderAlpha = 0.3f
   }
 }
 
@@ -279,7 +273,7 @@ fun SpacesHeaderRow(placesTitle: String, priceTitle: String) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
-              .padding(bottom = 8.dp)
+              .padding(bottom = com.github.meeplemeet.ui.theme.Dimensions.Spacing.medium)
               .testTag(SpaceRenterComponentsTestTags.SPACES_HEADER),
       verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(SpaceRenterUi.Dimensions.spaceLabelWidth))
@@ -327,8 +321,7 @@ fun SpaceRow(
   val outline =
       MaterialTheme.colorScheme.onSurface.copy(
           alpha =
-              if (isEditing) SpaceRenterUi.Styles.editingBorderAlpha
-              else SpaceRenterUi.Styles.readonlyBorderAlpha)
+              if (isEditing) Dimensions.Alpha.editingBorder else Dimensions.Alpha.readonlyBorder)
 
   val tfColors =
       OutlinedTextFieldDefaults.colors(
@@ -527,7 +520,8 @@ fun SpacesList(
           priceTitle = SpaceRenterUi.Strings.labelPrices)
       LazyColumn(
           verticalArrangement = Arrangement.spacedBy(SpaceRenterUi.Dimensions.rowSpacing),
-          contentPadding = PaddingValues(bottom = 16.dp),
+          contentPadding =
+              PaddingValues(bottom = com.github.meeplemeet.ui.theme.Dimensions.Spacing.extraLarge),
           modifier = Modifier.heightIn(max = SpaceRenterUi.Dimensions.maxListHeight)) {
             itemsIndexed(spaces) { idx, space ->
               SpaceRow(

@@ -162,38 +162,19 @@ object ShopUiDefaults {
     const val OPEN24_START = "00:00"
     const val OPEN24_END = "23:59"
 
-    const val DEFAULT_START_HOUR = 7
-    const val DEFAULT_START_MIN = 30
-    const val DEFAULT_END_HOUR = 20
-    const val DEFAULT_END_MIN = 0
-
     const val DISPLAY_PATTERN_12 = "h:mm a"
 
     fun formatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
         DateTimeFormatter.ofPattern(DISPLAY_PATTERN_12, locale)
 
-    val defaultStart: LocalTime = LocalTime.of(DEFAULT_START_HOUR, DEFAULT_START_MIN)
-    val defaultEnd: LocalTime = LocalTime.of(DEFAULT_END_HOUR, DEFAULT_END_MIN)
+    val defaultStart: LocalTime =
+        LocalTime.of(
+            Dimensions.Numbers.defaultShopStartHour, Dimensions.Numbers.defaultShopStartMinute)
+    val defaultEnd: LocalTime =
+        LocalTime.of(Dimensions.Numbers.defaultShopEndHour, Dimensions.Numbers.defaultShopEndMinute)
 
     val open24Start: LocalTime = LocalTime.of(0, 0)
     val open24End: LocalTime = LocalTime.of(23, 59)
-  }
-
-  object DimensionsMagicNumbers {
-    // Spacing
-    val space4 = 4.dp
-    val space6 = 6.dp
-    val space8 = 8.dp
-    val space12 = 12.dp
-    val space16 = 16.dp
-
-    // Component sizes
-    val timeFieldHeight = 56.dp
-    val removeIconTouch = 40.dp
-    val dayChip = 35.dp
-    val actionBarPadding = 16.dp
-    val actionBarElevation = 3.dp
-    val sectionHeaderDivider = 1.dp
   }
 
   object StringsMagicNumbers {
@@ -233,12 +214,7 @@ object ShopUiDefaults {
   }
 
   object RangesMagicNumbers {
-    val qtyGameDialog: IntRange = 1..40
-  }
-
-  object Numbers {
-    const val MIN_LINES_DEFAULT = 1
-    const val MAX_LINES_DEFAULT = 1
+    val qtyGameDialog: IntRange = Dimensions.Numbers.quantityMin..Dimensions.Numbers.quantityMax
   }
 }
 
@@ -407,12 +383,12 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
         onTextLayout = { layout -> textWidth = with(density) { layout.size.width.toDp() } },
         modifier = Modifier.testTag(ShopComponentsTestTags.SECTION_HEADER_LABEL))
-    Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
+    Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
     HorizontalDivider(
         modifier = Modifier.width(textWidth).testTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER),
-        thickness = ShopUiDefaults.DimensionsMagicNumbers.sectionHeaderDivider,
+        thickness = Dimensions.DividerThickness.standard,
         color = MaterialTheme.colorScheme.outlineVariant)
-    Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+    Spacer(Modifier.height(Dimensions.Spacing.medium))
   }
 }
 
@@ -438,7 +414,7 @@ fun LabeledField(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
-    minLines: Int = ShopUiDefaults.Numbers.MIN_LINES_DEFAULT,
+    minLines: Int = Dimensions.Numbers.singleLine,
 ) {
   Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
     OutlinedTextField(
@@ -474,8 +450,8 @@ fun TimeField(label: String, value: String, onClick: () -> Unit, modifier: Modif
         onClick = onClick,
         modifier =
             Modifier.fillMaxWidth()
-                .padding(top = ShopUiDefaults.DimensionsMagicNumbers.space4)
-                .height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
+                .padding(top = Dimensions.Spacing.small)
+                .height(Dimensions.ContainerSize.timeFieldHeight)
                 .testTag(ShopComponentsTestTags.TIME_FIELD_CARD),
         shape = MaterialTheme.shapes.medium) {
           Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -519,7 +495,7 @@ fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifie
             text = value,
             modifier =
                 Modifier.weight(2f)
-                    .padding(end = ShopUiDefaults.DimensionsMagicNumbers.space8)
+                    .padding(end = Dimensions.Spacing.medium)
                     .testTag(ShopComponentsTestTags.DAY_ROW_VALUE),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -556,8 +532,7 @@ fun HourRow(
 ) {
   val labelTopSpace =
       with(LocalDensity.current) {
-        MaterialTheme.typography.labelSmall.lineHeight.toDp() +
-            ShopUiDefaults.DimensionsMagicNumbers.space4
+        MaterialTheme.typography.labelSmall.lineHeight.toDp() + Dimensions.Spacing.small
       }
 
   Row(
@@ -572,26 +547,26 @@ fun HourRow(
             value = start.display(),
             onClick = onPickStart,
             modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_OPEN_FIELD))
-        Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space12))
+        Spacer(Modifier.width(Dimensions.Spacing.large))
         TimeField(
             label = ShopUiDefaults.StringsMagicNumbers.CLOSE_TIME,
             value = end.display(),
             onClick = onPickEnd,
             modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_CLOSE_FIELD))
-        Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space4))
+        Spacer(Modifier.width(Dimensions.Spacing.small))
 
         Column(
-            modifier = Modifier.width(48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            modifier = Modifier.width(Dimensions.ContainerSize.iconButtonSize),
+            horizontalAlignment = Alignment.CenterHorizontally) {
               Spacer(Modifier.height(labelTopSpace))
               Box(
                   modifier =
-                      Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.timeFieldHeight)
-                          .fillMaxWidth(),
+                      Modifier.height(Dimensions.ContainerSize.timeFieldHeight).fillMaxWidth(),
                   contentAlignment = Alignment.Center) {
                     IconButton(
                         onClick = onRemove,
                         modifier =
-                            Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.removeIconTouch)
+                            Modifier.size(Dimensions.ContainerSize.iconButtonTouch)
                                 .testTag(ShopComponentsTestTags.HOUR_ROW_REMOVE)) {
                           Icon(Icons.Filled.Close, contentDescription = "Remove interval")
                         }
@@ -611,7 +586,7 @@ fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
-              .padding(vertical = ShopUiDefaults.DimensionsMagicNumbers.space4)
+              .padding(vertical = Dimensions.Spacing.small)
               .testTag(ShopComponentsTestTags.DAYS_SELECTOR),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically) {
@@ -623,7 +598,7 @@ fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
               onClick = { onToggle(idx) },
               shape = CircleShape,
               modifier =
-                  Modifier.size(ShopUiDefaults.DimensionsMagicNumbers.dayChip)
+                  Modifier.size(Dimensions.ComponentWidth.chipSize)
                       .testTag(ShopComponentsTestTags.dayChip(idx)),
               label = {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -705,7 +680,7 @@ fun OpeningHoursDialog(
                 selected = selectedDays, onToggle = { d -> selectedDays = selectedDays.toggled(d) })
           }
 
-          Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space12))
+          Spacer(Modifier.height(Dimensions.Spacing.large))
 
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             val onIs24h: (Boolean) -> Unit = {
@@ -729,10 +704,10 @@ fun OpeningHoursDialog(
                       checked = is24h,
                       onCheckedChange = onIs24h,
                       modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
-                  Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                  Spacer(Modifier.width(Dimensions.Spacing.medium))
                   Text(
                       ShopUiDefaults.StringsMagicNumbers.OPEN_24,
-                      maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT)
+                      maxLines = Dimensions.Numbers.singleLine)
                 }
 
             val onIsClosed: (Boolean) -> Unit = {
@@ -756,14 +731,14 @@ fun OpeningHoursDialog(
                       checked = isClosed,
                       onCheckedChange = onIsClosed,
                       modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
-                  Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                  Spacer(Modifier.width(Dimensions.Spacing.medium))
                   Text(
                       ShopUiDefaults.StringsMagicNumbers.CLOSED,
-                      maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT)
+                      maxLines = Dimensions.Numbers.singleLine)
                 }
           }
 
-          Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+          Spacer(Modifier.height(Dimensions.Spacing.medium))
 
           AnimatedVisibility(visible = !isClosed && !is24h) {
             Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_INTERVALS)) {
@@ -791,7 +766,7 @@ fun OpeningHoursDialog(
                       }
                     },
                     rowIndex = idx)
-                Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                Spacer(Modifier.height(Dimensions.Spacing.medium))
               }
 
               TextButton(
@@ -800,17 +775,19 @@ fun OpeningHoursDialog(
                     val defaultEnd = ShopUiDefaults.TimeMagicNumbers.defaultEnd
                     intervals = intervals + (defaultStart to defaultEnd)
                   },
-                  contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                  contentPadding =
+                      PaddingValues(
+                          horizontal = Dimensions.Spacing.none, vertical = Dimensions.Spacing.none),
                   modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ADD_HOURS)) {
                     Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
                     Text(ShopUiDefaults.StringsMagicNumbers.ADD_HOURS)
                   }
             }
           }
 
           errorText?.let {
-            Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space8))
+            Spacer(Modifier.height(Dimensions.Spacing.medium))
             Text(
                 it,
                 color = MaterialTheme.colorScheme.error,
@@ -887,12 +864,12 @@ fun ActionBar(
   Surface(
       color = MaterialTheme.colorScheme.background,
       contentColor = MaterialTheme.colorScheme.onSurface,
-      tonalElevation = ShopUiDefaults.DimensionsMagicNumbers.actionBarElevation) {
+      tonalElevation = Elevation.raised) {
         Row(
             Modifier.fillMaxWidth()
-                .padding(ShopUiDefaults.DimensionsMagicNumbers.actionBarPadding)
+                .padding(Dimensions.Padding.extraLarge)
                 .testTag(ShopComponentsTestTags.ACTION_BAR),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
               OutlinedButton(
                   onClick = onDiscard,
                   colors =
@@ -901,7 +878,7 @@ fun ActionBar(
                           contentColor = MaterialTheme.colorScheme.error),
                   modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
                     Icon(Icons.Filled.Delete, contentDescription = null)
-                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
                     Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
                   }
 
@@ -924,11 +901,11 @@ fun ActionBar(
               Button(
                   onClick = onPrimary,
                   enabled = enabled,
-                  shape = RoundedCornerShape(20.dp),
+                  shape = RoundedCornerShape(Dimensions.ButtonRadius.rounded),
                   colors = primaryColors,
                   modifier = Modifier.weight(1f).testTag(primaryTag)) {
                     Icon(Icons.Filled.Check, contentDescription = null)
-                    Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
                     Text(primaryButtonText)
                   }
             }
@@ -955,11 +932,11 @@ fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Mod
         style = MaterialTheme.typography.headlineSmall,
         modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Dimensions.Spacing.large))
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
         modifier = Modifier.fillMaxWidth()) {
           IconButton(
               onClick = {
@@ -1052,7 +1029,7 @@ fun GameStockDialog(
               dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
           if (isDuplicate) {
-            Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space6))
+            Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
             Text(
                 ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
                 color = MaterialTheme.colorScheme.error,
@@ -1060,7 +1037,7 @@ fun GameStockDialog(
                 modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
           }
 
-          Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space16))
+          Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
 
           GameAddUI(
               value = quantity,
@@ -1113,7 +1090,7 @@ fun GameListSection(
 ) {
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = modifier.fillMaxWidth().padding(horizontal = 15.dp)) {
+      modifier = modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge)) {
         if (title != null) {
           Text(
               title,
@@ -1125,7 +1102,7 @@ fun GameListSection(
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             contentPadding = PaddingValues(bottom = Dimensions.Spacing.extraLarge),
-            modifier = Modifier.heightIn(max = 600.dp)) {
+            modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
               items(items = games, key = { it.first.uid }) { (game, count) ->
                 GameItem(
                     game = game,
@@ -1168,61 +1145,71 @@ fun GameItem(
               .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
               .clickable(enabled = clickable, onClick = { onClick(game) }),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(modifier = Modifier.padding(Dimensions.Padding.medium), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(Dimensions.Padding.medium),
+            verticalAlignment = Alignment.CenterVertically) {
 
-          // Icon + badge
-          Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            BadgedBox(
-                badge = {
-                  // Only show badge if count > 0
-                  if (count > 0) {
-                    val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                    val label = if (count > max) "$max+" else count.toString()
-                    Badge(
-                        modifier =
-                            Modifier.offset(x = 8.dp, y = (-6).dp)
-                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp),
-                        containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                          Text(
-                              label,
-                              style = MaterialTheme.typography.labelSmall,
-                              maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT,
-                              softWrap = false,
-                              modifier = Modifier.padding(horizontal = 4.dp))
+              // Icon + badge
+              Box(
+                  modifier = Modifier.size(Dimensions.IconSize.huge),
+                  contentAlignment = Alignment.Center) {
+                    BadgedBox(
+                        badge = {
+                          // Only show badge if count > 0
+                          if (count > 0) {
+                            val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+                            val label = if (count > max) "$max+" else count.toString()
+                            Badge(
+                                modifier =
+                                    Modifier.offset(
+                                            x = Dimensions.BadgeSize.offsetX,
+                                            y = Dimensions.BadgeSize.offsetY)
+                                        .defaultMinSize(
+                                            minWidth = Dimensions.BadgeSize.minSize,
+                                            minHeight = Dimensions.BadgeSize.minSize),
+                                containerColor = MaterialTheme.colorScheme.inversePrimary) {
+                                  Text(
+                                      label,
+                                      style = MaterialTheme.typography.labelSmall,
+                                      maxLines = Dimensions.Numbers.singleLine,
+                                      softWrap = false,
+                                      modifier =
+                                          Modifier.padding(horizontal = Dimensions.Spacing.small))
+                                }
+                          }
+                        }) {
+                          Icon(Icons.Filled.VideogameAsset, contentDescription = null)
                         }
                   }
-                }) {
-                  Icon(Icons.Filled.VideogameAsset, contentDescription = null)
-                }
-          }
 
-          Spacer(Modifier.width(8.dp))
+              Spacer(Modifier.width(Dimensions.Spacing.medium))
 
-          // Name centered
-          Column(
-              modifier = Modifier.weight(1f),
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.Center) {
-                Text(
-                    game.name,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center)
+              // Name centered
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.Center) {
+                    Text(
+                        game.name,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center)
+                  }
+
+              // Optional delete
+              if (hasDeleteButton) {
+                IconButton(
+                    onClick = { onDelete(game) },
+                    modifier =
+                        Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
+                    colors =
+                        IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error)) {
+                      Icon(
+                          Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
+                    }
               }
-
-          // Optional delete
-          if (hasDeleteButton) {
-            IconButton(
-                onClick = { onDelete(game) },
-                modifier =
-                    Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error)) {
-                  Icon(Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
-                }
-          }
-        }
+            }
       }
 }
 
@@ -1243,47 +1230,53 @@ fun EditableGameItem(
       modifier =
           modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-          Text(
-              game.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-          Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(
-                    onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
-                    enabled = count > 0,
-                    modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
-                      Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-                    }
-                OutlinedTextField(
-                    value = count.toString(),
-                    onValueChange = { newText ->
-                      val newValue = newText.toIntOrNull() ?: 0
-                      if (newValue >= 0) {
-                        onQuantityChange(game, newValue)
-                      }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    textStyle =
-                        MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-                    modifier =
-                        Modifier.width(80.dp).testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
-                IconButton(
-                    onClick = { onQuantityChange(game, count + 1) },
-                    modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
-                      Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
-                    }
-              }
-          IconButton(
-              onClick = { onDelete(game) },
-              colors =
-                  IconButtonDefaults.iconButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error),
-              modifier =
-                  Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete game")
-              }
-        }
+        Row(
+            Modifier.padding(Dimensions.Padding.medium),
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  game.name,
+                  style = MaterialTheme.typography.bodyLarge,
+                  modifier = Modifier.weight(1f))
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                    IconButton(
+                        onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
+                        enabled = count > 0,
+                        modifier =
+                            Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
+                          Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
+                        }
+                    OutlinedTextField(
+                        value = count.toString(),
+                        onValueChange = { newText ->
+                          val newValue = newText.toIntOrNull() ?: 0
+                          if (newValue >= 0) {
+                            onQuantityChange(game, newValue)
+                          }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        textStyle =
+                            MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
+                        modifier =
+                            Modifier.width(Dimensions.ComponentWidth.inputFieldWidth)
+                                .testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
+                    IconButton(
+                        onClick = { onQuantityChange(game, count + 1) },
+                        modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
+                          Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
+                        }
+                  }
+              IconButton(
+                  onClick = { onDelete(game) },
+                  colors =
+                      IconButtonDefaults.iconButtonColors(
+                          contentColor = MaterialTheme.colorScheme.error),
+                  modifier =
+                      Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete game")
+                  }
+            }
       }
 }
