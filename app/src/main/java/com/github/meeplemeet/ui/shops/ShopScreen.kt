@@ -88,7 +88,7 @@ fun ShopScreen(
             onReturn = { onBack() },
             trailingIcons = {
               // Show edit button only if current account is the shop owner
-              if (account == (shopState?.owner ?: false)) {
+              if (account.uid == (shopState?.owner?.uid)) {
                 IconButton(
                     onClick = { onEdit(shopState) },
                     modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
