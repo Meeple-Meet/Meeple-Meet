@@ -1,21 +1,47 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# --------------------------
+# Keep Kotlin metadata for reflection and serialization
+# --------------------------
+-keep class kotlin.Metadata { *; }
+-keepattributes Signature, *Annotation*
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --------------------------
+# Firebase Firestore
+# --------------------------
+-keep class com.google.firebase.firestore.** { *; }
+-keep class com.google.firebase.Timestamp { *; }
+-dontwarn com.google.firebase.firestore.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# --------------------------
+# Firestore / Serializable models
+# --------------------------
+# Keep all classes in your model package intact, including fields and constructors
+-keep class com.github.meeplemeet.model.** { *; }
+-keepclassmembers class com.github.meeplemeet.model.** {
+    public <init>(...);
+}
+-keepclassmembernames class com.github.meeplemeet.model.** { <fields>; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --------------------------
+# Maps
+# --------------------------
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.maps.android.** { *; }
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.maps.android.**
+
+# --------------------------
+# Compose essentials
+# --------------------------
+-keep class androidx.compose.runtime.** { *; }
+-keep class androidx.activity.** { *; }
+-keep class androidx.savedstate.** { *; }
+
+# --------------------------
+# Kotlin runtime essentials
+# --------------------------
+-keepclassmembers class kotlin.jvm.internal.Intrinsics { *; }
+
+# --------------------------
+# R classes
+# --------------------------
+-keepclassmembers class **.R$* { public static <fields>; }

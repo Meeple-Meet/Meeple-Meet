@@ -6,7 +6,6 @@ plugins {
   alias(libs.plugins.androidApplication)
   alias(libs.plugins.jetbrainsKotlinAndroid)
   alias(libs.plugins.ktfmt)
-// TODO: Enable Google Services plugin when Firebase services are used
   alias(libs.plugins.gms)
   alias(libs.plugins.sonar)
 }
@@ -86,15 +85,23 @@ android {
     manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
   }
 
+  val localProps = Properties()
+  val localPropsFile = rootProject.file("local.properties")
+  if (localPropsFile.exists()) {
+    FileInputStream(localPropsFile).use { localProps.load(it) }
+  }
+
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH")
-      val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
-      val keystoreKeyAlias = System.getenv("KEY_ALIAS")
-      val keystoreKeyPassword = System.getenv("KEY_PASSWORD")
+      val keystorePathProp = localProps.getProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH")
+      val keystorePassword = localProps.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
+      val keystoreKeyAlias = localProps.getProperty("KEY_ALIAS") ?: System.getenv("KEY_ALIAS")
+      val keystoreKeyPassword = localProps.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
 
-      if (keystorePath != null) {
-        storeFile = file(keystorePath)
+      val keystoreFile = keystorePathProp?.let { rootProject.file(it) }
+
+      if (keystoreFile != null && keystoreFile.exists()) {
+        storeFile = keystoreFile
         storePassword = keystorePassword
         keyAlias = keystoreKeyAlias
         keyPassword = keystoreKeyPassword
@@ -102,36 +109,21 @@ android {
     }
   }
 
-  // Disable Proguard check for demo purpose
-//    buildTypes {
-//        getByName("release") {
-//            isMinifyEnabled = true
-//            proguardFiles(
-//                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-//            )
-//            // Only apply signing config if keystore is configured
-//            if (System.getenv("KEYSTORE_PATH") != null) {
-//                signingConfig = signingConfigs.getByName("release")
-//            }
-//        }
-//        debug {
-//            enableUnitTestCoverage = true
-//            enableAndroidTestCoverage = true
-//        }
-//    }
-
-
   buildTypes {
-    release {
-      isMinifyEnabled = false
-      isShrinkResources = false
+    getByName("release") {
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro"
+          getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
       )
-      signingConfig = signingConfigs.getByName("release")
+      // Apply signing config only if the release signing config has a valid storeFile present
+      val releaseSigning = signingConfigs.findByName("release")
+      if (releaseSigning != null && releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
+        signingConfig = releaseSigning
+      }
     }
-    debug {
+
+    getByName("debug") {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
     }
@@ -146,6 +138,7 @@ android {
   }
   buildFeatures {
     compose = true
+    buildConfig = true
   }
   composeOptions {
     kotlinCompilerExtensionVersion = "1.5.1"
@@ -167,7 +160,6 @@ android {
   testOptions {
     unitTests {
       isIncludeAndroidResources = true
-
       isReturnDefaultValues = true
     }
     packagingOptions {
@@ -175,16 +167,6 @@ android {
         useLegacyPackaging = true
       }
     }
-  }
-
-
-  buildFeatures {
-    compose = true
-    buildConfig = true
-  }
-
-  kotlinOptions {
-    jvmTarget = "11"
   }
 
   // Robolectric needs to be run only in debug. But its tests are placed in the shared source set (test)
@@ -202,7 +184,6 @@ android {
       resources.srcDirs("src/testDebug/resources")
     }
   }
-
 }
 
 
