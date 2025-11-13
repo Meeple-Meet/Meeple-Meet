@@ -7,3 +7,4 @@ app/google-services.json
 firebase-debug.log
 firestore-debug.log
 app/*.jks
+*.dpapi
