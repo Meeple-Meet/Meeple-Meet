@@ -73,8 +73,6 @@ object SessionCreationTestTags {
 
 private val CountBubbleHorizontalPadding = 10.dp
 private val CountBubbleVerticalPadding = 6.dp
-private val SliderSectionSpacerHeight = 12.dp
-private val OutlineBorderThickness = 1.5.dp
 private val SpacerPadding = 10.dp
 
 private const val LABEL_CREATE = "Create"
@@ -330,7 +328,7 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
       onClick = onDiscard,
       modifier = modifier.testTag(SessionCreationTestTags.DISCARD_BUTTON),
       shape = CircleShape,
-      border = BorderStroke(OutlineBorderThickness, MaterialTheme.colorScheme.error),
+      border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
       colors =
           ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
         Icon(
@@ -471,7 +469,7 @@ fun ParticipantsSection(
                           MaterialTheme.colorScheme.outline,
                           CircleShape)
                       .padding(
-                          horizontal = CountBubbleHorizontalPadding,
+                          horizontal = 10.dp,
                           vertical = CountBubbleVerticalPadding))
         }
         Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
@@ -522,7 +520,7 @@ fun ParticipantsSection(
                                 vertical = CountBubbleVerticalPadding))
               }
         }
-        Spacer(Modifier.height(SliderSectionSpacerHeight))
+        Spacer(Modifier.height(12.dp))
 
         // All candidate chips
         UserChipsGrid(
