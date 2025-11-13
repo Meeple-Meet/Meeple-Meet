@@ -4,6 +4,7 @@ package com.github.meeplemeet.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -196,7 +197,7 @@ fun MapScreen(
           val coarseGranted =
               ContextCompat.checkSelfPermission(
                   context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-                  android.content.pm.PackageManager.PERMISSION_GRANTED
+                  PackageManager.PERMISSION_GRANTED
           permissionGranted = coarseGranted
         }
         permissionChecked = true
@@ -223,10 +224,10 @@ fun MapScreen(
   LaunchedEffect(Unit) {
     val fine =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
+            PackageManager.PERMISSION_GRANTED
     val coarse =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
+            PackageManager.PERMISSION_GRANTED
     when {
       fine -> permissionGranted = true
       coarse -> permissionGranted = true
