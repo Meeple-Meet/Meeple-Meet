@@ -141,9 +141,7 @@ class CreateAccountScreenTest : FirestoreTests() {
       handleField().performTextInput(h3)
       usernameField().performTextInput("Frank")
       submitBtn().performClick()
-
       compose.waitForIdle()
-      Thread.sleep(1000) // Give time for async operations
       checkpoint("Owner checkbox has an impact on account") {
         runBlocking {
           val acc = accountRepository.getAccount(me.uid)
