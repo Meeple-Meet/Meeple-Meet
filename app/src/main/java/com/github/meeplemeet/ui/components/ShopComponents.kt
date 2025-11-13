@@ -45,6 +45,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -1111,7 +1112,7 @@ fun GameListSection(
     onDelete: (Game) -> Unit = {},
 ) {
   Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
       modifier = modifier.fillMaxWidth().padding(horizontal = 15.dp)) {
         if (title != null) {
           Text(
@@ -1122,8 +1123,8 @@ fun GameListSection(
         }
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+            contentPadding = PaddingValues(bottom = Dimensions.Spacing.extraLarge),
             modifier = Modifier.heightIn(max = 600.dp)) {
               items(items = games, key = { it.first.uid }) { (game, count) ->
                 GameItem(
@@ -1167,7 +1168,7 @@ fun GameItem(
               .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
               .clickable(enabled = clickable, onClick = { onClick(game) }),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(Dimensions.Padding.medium), verticalAlignment = Alignment.CenterVertically) {
 
           // Icon + badge
           Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
