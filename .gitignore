@@ -6,3 +6,4 @@ local.properties
 app/google-services.json
 firebase-debug.log
 firestore-debug.log
+app/*.jks

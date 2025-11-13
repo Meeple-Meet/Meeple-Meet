@@ -6,7 +6,6 @@ plugins {
   alias(libs.plugins.androidApplication)
   alias(libs.plugins.jetbrainsKotlinAndroid)
   alias(libs.plugins.ktfmt)
-// TODO: Enable Google Services plugin when Firebase services are used
   alias(libs.plugins.gms)
   alias(libs.plugins.sonar)
 }
@@ -88,13 +87,19 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH")
-      val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
-      val keystoreKeyAlias = System.getenv("KEY_ALIAS")
-      val keystoreKeyPassword = System.getenv("KEY_PASSWORD")
+      val keystorePathProp = (project.findProperty("KEYSTORE_PATH") as String?) ?: (System.getenv("KEYSTORE_PATH"))
+      val keystorePassword = (project.findProperty("KEYSTORE_PASSWORD") as String?) ?: (System.getenv("KEYSTORE_PASSWORD"))
+      val keystoreKeyAlias = (project.findProperty("KEY_ALIAS") as String?) ?: (System.getenv("KEY_ALIAS"))
+      val keystoreKeyPassword = (project.findProperty("KEY_PASSWORD") as String?) ?: (System.getenv("KEY_PASSWORD"))
 
-      if (keystorePath != null) {
-        storeFile = file(keystorePath)
+      val resolvedKeystorePath = when {
+        !keystorePathProp.isNullOrBlank() && file(keystorePathProp).exists() -> keystorePathProp
+        !keystorePathProp.isNullOrBlank() && file("${rootDir}/${keystorePathProp}").exists() -> "${rootDir}/${keystorePathProp}"
+        else -> null
+      }
+
+      if (!resolvedKeystorePath.isNullOrBlank()) {
+        storeFile = file(resolvedKeystorePath)
         storePassword = keystorePassword
         keyAlias = keystoreKeyAlias
         keyPassword = keystoreKeyPassword
@@ -102,36 +107,24 @@ android {
     }
   }
 
-  // Disable Proguard check for demo purpose
-//    buildTypes {
-//        getByName("release") {
-//            isMinifyEnabled = true
-//            proguardFiles(
-//                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-//            )
-//            // Only apply signing config if keystore is configured
-//            if (System.getenv("KEYSTORE_PATH") != null) {
-//                signingConfig = signingConfigs.getByName("release")
-//            }
-//        }
-//        debug {
-//            enableUnitTestCoverage = true
-//            enableAndroidTestCoverage = true
-//        }
-//    }
-
-
   buildTypes {
-    release {
-      isMinifyEnabled = false
-      isShrinkResources = false
+    getByName("release") {
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro"
+          getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
       )
-      signingConfig = signingConfigs.getByName("release")
+      // Apply signing config only if the release signing config has a valid storeFile present
+      val releaseSigning = signingConfigs.findByName("release")
+      if (releaseSigning != null && releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
+        signingConfig = releaseSigning
+      }
+
+      // Dump for rules
+      buildConfigField("boolean", "DEBUG", "false")
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
-    debug {
+    getByName("debug") {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
     }
@@ -146,6 +139,7 @@ android {
   }
   buildFeatures {
     compose = true
+    buildConfig = true
   }
   composeOptions {
     kotlinCompilerExtensionVersion = "1.5.1"
@@ -167,7 +161,6 @@ android {
   testOptions {
     unitTests {
       isIncludeAndroidResources = true
-
       isReturnDefaultValues = true
     }
     packagingOptions {
@@ -175,16 +168,6 @@ android {
         useLegacyPackaging = true
       }
     }
-  }
-
-
-  buildFeatures {
-    compose = true
-    buildConfig = true
-  }
-
-  kotlinOptions {
-    jvmTarget = "11"
   }
 
   // Robolectric needs to be run only in debug. But its tests are placed in the shared source set (test)
@@ -202,7 +185,6 @@ android {
       resources.srcDirs("src/testDebug/resources")
     }
   }
-
 }
 
 
