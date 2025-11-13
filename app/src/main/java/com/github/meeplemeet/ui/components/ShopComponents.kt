@@ -707,44 +707,53 @@ fun OpeningHoursDialog(
           Spacer(Modifier.height(ShopUiDefaults.DimensionsMagicNumbers.space12))
 
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val onIs24h: (Boolean) -> Unit = {
+              is24h = it
+              if (it) {
+                isClosed = false
+                intervals =
+                    listOf(
+                        ShopUiDefaults.TimeMagicNumbers.open24Start to
+                            ShopUiDefaults.TimeMagicNumbers.open24End)
+              }
+            }
             Row(
-                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW),
+                modifier =
+                    Modifier.weight(1f)
+                        .testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW)
+                        .clickable { onIs24h(!is24h) },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center) {
                   Checkbox(
                       checked = is24h,
-                      onCheckedChange = {
-                        is24h = it
-                        if (it) {
-                          isClosed = false
-                          intervals =
-                              listOf(
-                                  ShopUiDefaults.TimeMagicNumbers.open24Start to
-                                      ShopUiDefaults.TimeMagicNumbers.open24End)
-                        }
-                      },
+                      onCheckedChange = onIs24h,
                       modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
                   Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                   Text(
                       ShopUiDefaults.StringsMagicNumbers.OPEN_24,
                       maxLines = ShopUiDefaults.Numbers.MAX_LINES_DEFAULT)
                 }
+
+            val onIsClosed: (Boolean) -> Unit = {
+              isClosed = it
+              if (it) {
+                is24h = false
+                intervals =
+                    listOf(
+                        ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                            ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+              }
+            }
             Row(
-                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW),
+                modifier =
+                    Modifier.weight(1f)
+                        .testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW)
+                        .clickable { onIsClosed(!isClosed) },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center) {
                   Checkbox(
                       checked = isClosed,
-                      onCheckedChange = {
-                        isClosed = it
-                        if (it) {
-                          is24h = false
-                          intervals =
-                              listOf(
-                                  ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                                      ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-                        }
-                      },
+                      onCheckedChange = onIsClosed,
                       modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
                   Spacer(Modifier.width(ShopUiDefaults.DimensionsMagicNumbers.space8))
                   Text(
