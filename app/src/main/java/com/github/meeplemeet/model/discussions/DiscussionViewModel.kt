@@ -41,7 +41,8 @@ class DiscussionViewModel(
     if (!discussion.participants.contains(account.uid)) return
 
     if (discussion.messages.isEmpty()) return
-    if (account.previews[discussion.uid]!!.unreadCount == 0) return
+    val preview = account.previews[discussion.uid] ?: return
+    if (preview.unreadCount == 0) return
 
     viewModelScope.launch {
       discussionRepository.readDiscussionMessages(

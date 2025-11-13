@@ -20,6 +20,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +48,19 @@ object SpaceRenterTestTags {
 
   // Availability section tags
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
+}
+
+object SpaceRenterUi {
+  fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
+
+  fun emailContactRow(email: String) = "- Email: $email"
+
+  fun addressContactRow(address: String) = "- Address: $address"
+
+  fun websiteContactRow(website: String) = "- Website: $website"
+
+  val HORIZONTAL_PADDING: Dp = 100.dp
+  val ROW_WIDTH: Dp = 48.dp
 }
 
 /**
@@ -118,9 +132,13 @@ fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) 
               .padding(bottom = Dimensions.Padding.xxxLarge),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         ContactSection(spaceRenter)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         AvailabilitySection(spaceRenter.openingHours)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
@@ -161,7 +179,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.phone.isNotBlank()) {
           ContactRow(
               Icons.Default.Phone,
-              "- Phone: ${spaceRenter.phone}",
+              SpaceRenterUi.phoneContactRow(spaceRenter.phone),
               SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
         }
@@ -169,14 +187,14 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         // Display email contact row
         ContactRow(
             Icons.Default.Email,
-            "- Email: ${spaceRenter.email}",
+            SpaceRenterUi.emailContactRow(spaceRenter.email),
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
 
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            "- Address: ${spaceRenter.address.name}",
+            SpaceRenterUi.addressContactRow(spaceRenter.address.name),
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
 
@@ -184,7 +202,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
-              "- Website: ${spaceRenter.website}",
+              SpaceRenterUi.websiteContactRow(spaceRenter.website),
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }
@@ -248,7 +266,7 @@ fun TopBarAndDivider(
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.large)) {
       // Button to the left
       Row(
-          modifier = Modifier.align(Alignment.CenterStart).width(48.dp),
+          modifier = Modifier.align(Alignment.CenterStart).width(SpaceRenterUi.ROW_WIDTH),
           verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onReturn) {
               Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -265,13 +283,14 @@ fun TopBarAndDivider(
 
       // (Optional) Button to the right
       Row(
-          modifier = Modifier.align(Alignment.CenterEnd).width(48.dp),
+          modifier = Modifier.align(Alignment.CenterEnd).width(SpaceRenterUi.ROW_WIDTH),
           horizontalArrangement = Arrangement.End,
           verticalAlignment = Alignment.CenterVertically) {
             trailingIcons?.invoke()
           }
     }
 
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+    HorizontalDivider(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
   }
 }
