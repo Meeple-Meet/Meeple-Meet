@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/apk-build-workflow
   workflow_dispatch:
 
 jobs:
@@ -27,7 +26,7 @@ jobs:
         run: |
           mkdir -p app
           echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/key-store.keystore
-          echo "KEYSTORE_PATH=$PWD/app/key-store.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PATH=${{ github.workspace }}/app/key-store.keystore" >> $GITHUB_ENV
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/app/key-store.keystore
 
@@ -53,11 +52,11 @@ jobs:
 
       - name: Build Signed Release APK
         env:
-          KEYSTORE_PATH: key-store.keystore
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew clean assembleRelease
+        run: ./gradlew clean assembleRelease --no-daemon
 
       - name: Rename APK
         run: |

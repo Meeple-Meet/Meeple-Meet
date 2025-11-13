@@ -345,6 +345,7 @@ fun SpaceRow(
     SeatsField(
         seats = space.seats,
         tfColors = tfColors,
+        isEditing = isEditing,
         fieldTag = rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_SEATS_FIELD_SUFFIX,
         onCommit = { v -> if (v != space.seats) onChange(space.copy(seats = v)) })
 
@@ -353,6 +354,7 @@ fun SpaceRow(
     PriceField(
         price = space.costPerHour,
         tfColors = tfColors,
+        isEditing = isEditing,
         fieldTag = rowTagBase + SpaceRenterComponentsTestTags.SPACE_ROW_PRICE_FIELD_SUFFIX,
         onCommit = { v -> if (v != space.costPerHour) onChange(space.copy(costPerHour = v)) })
 
@@ -394,6 +396,7 @@ private fun SpaceNumberLabel(index: Int, rowTagBase: String) {
 private fun SeatsField(
     seats: Int,
     tfColors: TextFieldColors,
+    isEditing: Boolean,
     fieldTag: String,
     onCommit: (Int) -> Unit
 ) {
@@ -401,6 +404,7 @@ private fun SeatsField(
 
   OutlinedTextField(
       value = seatsText,
+      enabled = isEditing,
       onValueChange = { raw ->
         val digits = sanitizePositiveIntInput(raw)
         seatsText = digits
@@ -441,6 +445,7 @@ private fun PriceField(
     price: Double,
     tfColors: TextFieldColors,
     fieldTag: String,
+    isEditing: Boolean,
     onCommit: (Double) -> Unit
 ) {
   var priceText by
@@ -450,6 +455,7 @@ private fun PriceField(
 
   OutlinedTextField(
       value = priceText,
+      enabled = isEditing,
       onValueChange = { raw ->
         val filtered = sanitizeDecimalInput(raw)
         priceText = filtered
