@@ -100,6 +100,7 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -404,15 +405,17 @@ fun MapScreen(
           Box(
               modifier =
                   Modifier.align(Alignment.TopStart)
-                      .padding(start = 8.dp, top = 8.dp)
+                      .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium)
                       .wrapContentSize()) {
                 // Main filter FAB
                 FloatingActionButton(
                     onClick = { showFilterButtons = !showFilterButtons },
                     containerColor = AppColors.neutral,
                     contentColor = AppColors.textIcons,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.testTag(MapScreenTestTags.FILTER_BUTTON).size(48.dp)) {
+                    shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                    modifier =
+                        Modifier.testTag(MapScreenTestTags.FILTER_BUTTON)
+                            .size(Dimensions.ButtonSize.standard)) {
                       Icon(Icons.Default.FilterList, contentDescription = "Filter pins")
                     }
 
@@ -424,16 +427,20 @@ fun MapScreen(
                     modifier = Modifier.align(Alignment.TopStart)) {
                       Surface(
                           modifier =
-                              Modifier.padding(top = 56.dp)
+                              Modifier.padding(top = Dimensions.Padding.giant)
                                   .widthIn(max = 120.dp)
                                   .wrapContentHeight()
-                                  .shadow(6.dp, RoundedCornerShape(12.dp)),
-                          tonalElevation = 4.dp,
-                          shape = RoundedCornerShape(12.dp),
+                                  .shadow(6.dp, RoundedCornerShape(Dimensions.CornerRadius.large)),
+                          tonalElevation = Dimensions.Elevation.high,
+                          shape = RoundedCornerShape(Dimensions.CornerRadius.large),
                           color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal = Dimensions.Padding.medium,
+                                        vertical = Dimensions.Padding.mediumSmall),
+                                verticalArrangement =
+                                    Arrangement.spacedBy(Dimensions.Spacing.small)) {
                                   PinType.entries.forEach { type ->
                                     val selected = includeTypes.contains(type)
                                     FilterChip(
@@ -455,11 +462,11 @@ fun MapScreen(
                                           Checkbox(
                                               checked = selected,
                                               onCheckedChange = null,
-                                              modifier = Modifier.size(18.dp))
+                                              modifier = Modifier.size(Dimensions.IconSize.medium))
                                         },
                                         modifier =
                                             Modifier.testTag(pinTypeTestTag(type))
-                                                .height(36.dp)
+                                                .height(Dimensions.Padding.huge)
                                                 .fillMaxWidth())
                                   }
                                 }
@@ -484,7 +491,8 @@ fun MapScreen(
                 modifier =
                     Modifier.testTag(MapScreenTestTags.ADD_FAB)
                         .align(Alignment.TopEnd)
-                        .padding(top = 8.dp, end = 8.dp)) {
+                        .padding(
+                            top = Dimensions.Padding.medium, end = Dimensions.Padding.medium)) {
                   Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
                 }
           }
@@ -496,18 +504,23 @@ fun MapScreen(
                   selectedCreateType = null
                 }) {
                   Surface(
-                      shape = RoundedCornerShape(16.dp),
+                      shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                       color = MaterialTheme.colorScheme.surface,
-                      tonalElevation = 12.dp,
+                      tonalElevation = Dimensions.Elevation.xxHigh,
                       modifier =
                           Modifier.testTag(MapScreenTestTags.ADD_CHOOSE_DIALOG)
                               .widthIn(min = 300.dp, max = 420.dp)
                               .wrapContentHeight()
-                              .border(1.dp, AppColors.textIcons, RoundedCornerShape(16.dp))) {
+                              .border(
+                                  1.dp,
+                                  AppColors.textIcons,
+                                  RoundedCornerShape(Dimensions.CornerRadius.extraLarge))) {
                         Column(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                                    .padding(
+                                        horizontal = Dimensions.Padding.xxLarge,
+                                        vertical = Dimensions.Padding.xLarge),
                             horizontalAlignment = Alignment.CenterHorizontally) {
                               // --- Title ---
                               Box(Modifier.fillMaxWidth()) {
@@ -520,17 +533,19 @@ fun MapScreen(
                                       showCreateDialog = false
                                       selectedCreateType = null
                                     },
-                                    modifier = Modifier.size(32.dp).align(Alignment.CenterEnd)) {
+                                    modifier =
+                                        Modifier.size(Dimensions.ButtonSize.small)
+                                            .align(Alignment.CenterEnd)) {
                                       Icon(Icons.Default.Close, contentDescription = "Close")
                                     }
                               }
 
-                              Spacer(Modifier.height(8.dp))
+                              Spacer(Modifier.height(Dimensions.Spacing.medium))
                               HorizontalDivider(
                                   modifier = Modifier.fillMaxWidth(0.8f),
-                                  thickness = 1.dp,
+                                  thickness = Dimensions.DividerThickness.standard,
                                   color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                              Spacer(Modifier.height(20.dp))
+                              Spacer(Modifier.height(Dimensions.Spacing.xLarge))
 
                               // --- Two-option selector ---
                               @Composable
@@ -557,7 +572,8 @@ fun MapScreen(
                                               Icon(
                                                   Icons.Default.Check,
                                                   contentDescription = null,
-                                                  modifier = Modifier.size(16.dp))
+                                                  modifier =
+                                                      Modifier.size(Dimensions.IconSize.small))
                                             }
                                             Text(
                                                 text = label,
@@ -573,7 +589,7 @@ fun MapScreen(
                                 Option("Rental Space", PinType.SPACE, index = 1)
                               }
 
-                              Spacer(Modifier.height(24.dp))
+                              Spacer(Modifier.height(Dimensions.Spacing.xxLarge))
                               Button(
                                   onClick = {
                                     showCreateDialog = false
@@ -583,7 +599,7 @@ fun MapScreen(
                                       Modifier.align(Alignment.CenterHorizontally)
                                           .fillMaxWidth(0.6f),
                                   enabled = selectedCreateType != null,
-                                  shape = RoundedCornerShape(24.dp),
+                                  shape = RoundedCornerShape(Dimensions.CornerRadius.round),
                                   colors =
                                       ButtonDefaults.buttonColors(
                                           containerColor = AppColors.affirmative)) {
@@ -595,7 +611,7 @@ fun MapScreen(
                                               else -> "Add"
                                             })
                                   }
-                              Spacer(Modifier.height(8.dp))
+                              Spacer(Modifier.height(Dimensions.Spacing.medium))
                             }
                       }
                 }
@@ -662,7 +678,9 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
 private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
   Column(
       modifier =
-          Modifier.fillMaxWidth().padding(16.dp).testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET),
+          Modifier.fillMaxWidth()
+              .padding(Dimensions.Padding.extraLarge)
+              .testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET),
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text =
@@ -673,7 +691,7 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
                 },
             style = MaterialTheme.typography.titleMedium)
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge))
 
         CircularProgressIndicator()
       }
@@ -702,7 +720,9 @@ private fun MarkerPreviewSheet(
 ) {
   Column(
       modifier =
-          Modifier.fillMaxWidth().padding(16.dp).testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
+          Modifier.fillMaxWidth()
+              .padding(Dimensions.Padding.extraLarge)
+              .testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
         Box(modifier = Modifier.fillMaxWidth()) {
           Text(
               text = preview.name,
@@ -719,24 +739,24 @@ private fun MarkerPreviewSheet(
               }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
         when (preview) {
           is MarkerPreview.ShopMarkerPreview,
           is MarkerPreview.SpaceMarkerPreview -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(8.dp))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
               Text(
                   text = preview.address,
                   modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
-              Spacer(modifier = Modifier.width(8.dp))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
               val isOpen =
                   when (preview) {
                     is MarkerPreview.ShopMarkerPreview -> preview.open
@@ -754,33 +774,33 @@ private fun MarkerPreviewSheet(
           is MarkerPreview.SessionMarkerPreview -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
-              Spacer(modifier = Modifier.width(4.dp))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
               Text(
                   text = "Playing: ${preview.game}",
                   modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(4.dp))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
               Text(
                   text = preview.address,
                   modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
-              Spacer(modifier = Modifier.width(4.dp))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
               Text(text = preview.date, modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
             }
           }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
         Button(
             onClick = { onRedirect(geoPin) },
