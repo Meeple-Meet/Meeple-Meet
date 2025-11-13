@@ -1,12 +1,15 @@
 package com.github.meeplemeet.end2end
 
+import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -14,6 +17,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.rule.GrantPermissionRule
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.ui.MapScreenTestTags
@@ -77,6 +81,11 @@ class E2E_M2 : FirestoreTests() {
     val acc = accountRepository.getAccount(uid)
     acc.shopOwner
   }
+
+  @get:Rule
+  val permissionRule: GrantPermissionRule =
+      GrantPermissionRule.grant(
+          Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
 
@@ -682,14 +691,28 @@ class E2E_M2 : FirestoreTests() {
         composeTestRule.waitForIdle()
       }
     }
+    val targetName = "Catan"
+    val itemTag = "${ShopComponentsTestTags.GAME_SEARCH_ITEM}:$0"
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
-    composeTestRule.waitUntil(timeoutMillis = 8_000) {
-      composeTestRule
-          .onAllNodesWithTag(
-              ShopComponentsTestTags.SHOP_GAME_PREFIX + "g_catan", useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+    // Wait until either the item tag or the item text is present
+    composeTestRule.waitUntil(8_000) {
+      val byTag =
+          composeTestRule
+              .onAllNodesWithTag(itemTag, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      val byTextUnmerged =
+          composeTestRule
+              .onAllNodes(hasText(targetName), useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      val byTextMerged =
+          composeTestRule
+              .onAllNodesWithText(targetName, useUnmergedTree = false)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      byTag || byTextUnmerged || byTextMerged
     }
 
     // Add Ticket to Ride stock
@@ -800,18 +823,39 @@ class E2E_M2 : FirestoreTests() {
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     composeTestRule.waitUntil(timeoutMillis = 8_000) {
-      val catan =
+      var byTag =
           composeTestRule
-              .onAllNodesWithTag(
-                  ShopComponentsTestTags.SHOP_GAME_PREFIX + "g_catan", useUnmergedTree = true)
+              .onAllNodesWithTag(itemTag, useUnmergedTree = true)
               .fetchSemanticsNodes()
               .isNotEmpty()
-      val ticket =
+      var byTextUnmerged =
           composeTestRule
-              .onAllNodesWithTag(
-                  ShopComponentsTestTags.SHOP_GAME_PREFIX + "g_ticket", useUnmergedTree = true)
+              .onAllNodes(hasText(targetName), useUnmergedTree = true)
               .fetchSemanticsNodes()
               .isNotEmpty()
+      var byTextMerged =
+          composeTestRule
+              .onAllNodesWithText(targetName, useUnmergedTree = false)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      val catan = byTag || byTextUnmerged || byTextMerged
+
+      byTag =
+          composeTestRule
+              .onAllNodesWithTag("Ticket", useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      byTextUnmerged =
+          composeTestRule
+              .onAllNodes(hasText(targetName), useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      byTextMerged =
+          composeTestRule
+              .onAllNodesWithText(targetName, useUnmergedTree = false)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+      val ticket = byTag || byTextUnmerged || byTextMerged
       catan && ticket
     }
 
