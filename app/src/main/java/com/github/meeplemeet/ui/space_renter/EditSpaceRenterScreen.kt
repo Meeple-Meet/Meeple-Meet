@@ -57,8 +57,6 @@ object EditSpaceRenterUi {
     const val REQUIREMENTS_SECTION = "Required Info"
     const val SECTION_AVAILABILITY = "Availability"
     const val SECTION_SPACES = "Available Spaces"
-
-    const val BTN_UPDATE = "Update"
     const val ERROR_VALIDATION = "Validation error"
     const val ERROR_UPDATE = "Failed to update space renter"
   }
@@ -325,8 +323,6 @@ internal fun EditSpaceRenterContent(
                           onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } },
                       )
                     },
-                    // Use the Edit\_... test tag so tests searching for "edit\_section\_spaces\_*"
-                    // succeed
                     testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
               }
 
