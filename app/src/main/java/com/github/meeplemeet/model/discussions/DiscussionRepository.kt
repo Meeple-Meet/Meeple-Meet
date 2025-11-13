@@ -98,15 +98,36 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /** Remove a user from the participants and admins array */
-  suspend fun removeUserFromDiscussion(discussion: Discussion, userId: String) {
-    collection
-        .document(discussion.uid)
-        .update(
-            Discussion::participants.name,
-            FieldValue.arrayRemove(userId),
-            Discussion::admins.name,
-            FieldValue.arrayRemove(userId))
-        .await()
+  suspend fun removeUserFromDiscussion(
+      discussion: Discussion,
+      userId: String,
+      changeOwner: Boolean = false
+  ) {
+    val updates =
+        mutableMapOf<String, Any>(
+            Discussion::participants.name to FieldValue.arrayRemove(userId),
+            Discussion::admins.name to FieldValue.arrayRemove(userId))
+
+    // If the user being removed is the owner, reassign ownership
+    if (changeOwner) {
+      val remainingParticipants = discussion.participants.filter { it != userId }
+
+      // Try to find a random admin first (excluding the user being removed)
+      val remainingAdmins = discussion.admins.filter { it != userId }
+      val newOwner = remainingAdmins.randomOrNull() ?: remainingParticipants.randomOrNull()
+
+      // Only update owner if there's someone to assign it to
+      if (newOwner != null) {
+        updates[DiscussionNoUid::creatorId.name] = newOwner
+
+        // Add new owner to admins if they're not already an admin
+        if (newOwner !in remainingAdmins) {
+          updates[Discussion::admins.name] = FieldValue.arrayUnion(newOwner)
+        }
+      }
+    }
+
+    collection.document(discussion.uid).update(updates).await()
     accounts
         .document(userId)
         .collection(Account::previews.name)

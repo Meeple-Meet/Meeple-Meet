@@ -117,9 +117,7 @@ fun DiscussionDetailsScreen(
   }
 
   discussion.let { d ->
-    val isAdmin = d.admins.contains(account.uid)
-    val isOwner = d.creatorId == account.uid
-    val isMember = !isAdmin && !isOwner
+    val isAdmin = d.admins.contains(account.uid) || d.creatorId == account.uid
 
     /** --- Name + Description --- */
     var newName by remember { mutableStateOf(d.name) }
@@ -160,8 +158,8 @@ fun DiscussionDetailsScreen(
                 /** Delete button only if not member */
                 if (discussion.creatorId == account.uid)
                     OutlinedButton(
-                        onClick = { if (!isMember) showDeleteDialog = true },
-                        enabled = !isMember,
+                        onClick = { if (isAdmin) showDeleteDialog = true },
+                        enabled = isAdmin,
                         colors =
                             ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative),
                         modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
@@ -290,7 +288,7 @@ fun DiscussionDetailsScreen(
                     color = AppColors.divider)
 
                 /** Row for search and member selection */
-                if (discussion.admins.contains(account.uid))
+                if (isAdmin)
                     MemberSearchField(
                         searchQuery = searchQuery,
                         onQueryChange = { searchQuery = it },
@@ -308,7 +306,7 @@ fun DiscussionDetailsScreen(
                 /** --- Members List --- */
                 MemberList(
                     selectedMembers = selectedMembers,
-                    isMember = isMember,
+                    isMember = !isAdmin,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     viewModel = viewModel,
                     currentAccount = account,

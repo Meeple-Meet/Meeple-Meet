@@ -127,7 +127,9 @@ class DiscussionDetailsViewModel(
     if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
-    viewModelScope.launch { repository.removeUserFromDiscussion(discussion, user.uid) }
+    viewModelScope.launch {
+      repository.removeUserFromDiscussion(discussion, user.uid, discussion.creatorId == user.uid)
+    }
   }
 
   /**

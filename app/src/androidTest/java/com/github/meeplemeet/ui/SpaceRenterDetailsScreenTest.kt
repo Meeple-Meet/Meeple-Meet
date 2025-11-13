@@ -120,12 +120,18 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
     checkpoint("Title visible") { title().assertExists() }
 
-    checkpoint("Phone text") { phoneText().assertTextEquals(SpaceRenterUi.phoneContactRow(renter.phone)) }
-    checkpoint("Email text") { emailText().assertTextEquals(SpaceRenterUi.emailContactRow(renter.email)) }
+    checkpoint("Phone text") {
+      phoneText().assertTextEquals(SpaceRenterUi.phoneContactRow(renter.phone))
+    }
+    checkpoint("Email text") {
+      emailText().assertTextEquals(SpaceRenterUi.emailContactRow(renter.email))
+    }
     checkpoint("Address text") {
       addressText().assertTextEquals("- Address: ${renter.address.name}")
     }
-    checkpoint("Website text") { websiteText().assertTextEquals(SpaceRenterUi.websiteContactRow(renter.website)) }
+    checkpoint("Website text") {
+      websiteText().assertTextEquals(SpaceRenterUi.websiteContactRow(renter.website))
+    }
 
     listOf(
             phoneBtn() to SpaceRenterUi.phoneContactRow(renter.phone),

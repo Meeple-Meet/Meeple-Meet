@@ -49,12 +49,14 @@ object SpaceRenterTestTags {
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
 }
 
-object SpaceRenterUi
-{
-    fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
-    fun emailContactRow(email: String) = "- Email: $email"
-    fun addressContactRow(address: String) = "- Address: $address"
-    fun websiteContactRow(website: String) = "- Website: $website"
+object SpaceRenterUi {
+  fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
+
+  fun emailContactRow(email: String) = "- Email: $email"
+
+  fun addressContactRow(address: String) = "- Address: $address"
+
+  fun websiteContactRow(website: String) = "- Website: $website"
 }
 
 /**
@@ -192,7 +194,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
-                SpaceRenterUi.websiteContactRow(spaceRenter.website),
+              SpaceRenterUi.websiteContactRow(spaceRenter.website),
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }

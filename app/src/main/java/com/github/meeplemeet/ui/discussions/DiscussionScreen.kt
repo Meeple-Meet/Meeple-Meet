@@ -170,7 +170,8 @@ fun DiscussionScreen(
               when {
                 discussion.session != null &&
                     discussion.session.participants.contains(account.uid) -> Icons.Default.Games
-                discussion.admins.contains(account.uid) -> Icons.Default.LibraryAdd
+                discussion.admins.contains(account.uid) || discussion.creatorId == account.uid ->
+                    Icons.Default.LibraryAdd
                 else -> null
               }
 
