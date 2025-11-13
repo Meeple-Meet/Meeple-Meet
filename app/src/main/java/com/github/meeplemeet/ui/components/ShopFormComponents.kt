@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -65,13 +64,8 @@ object ShopFormUi {
     val contentHPadding = Dimensions.Padding.extraLarge
     val contentVPadding = Dimensions.Padding.medium
     val sectionSpace = Dimensions.Padding.large
-    val bottomSpacer = 100.dp
-    val betweenControls = 6.dp
-  }
-
-  object Numbers {
-    const val EXPANDED_ANGLE = 180f
-    const val COLLAPSED_ANGLE = 0f
+    val bottomSpacer = Dimensions.ContainerSize.bottomSpacer
+    val betweenControls = Dimensions.Padding.mediumSmall
   }
 
   object Strings {
@@ -315,9 +309,7 @@ fun CollapsibleSection(
 
   val arrowRotation by
       animateFloatAsState(
-          targetValue =
-              if (isExpanded) ShopFormUi.Numbers.EXPANDED_ANGLE
-              else ShopFormUi.Numbers.COLLAPSED_ANGLE,
+          targetValue = if (isExpanded) Dimensions.Angles.expanded else Dimensions.Angles.collapsed,
           label = "arrow")
 
   Column(Modifier.fillMaxWidth()) {
@@ -358,14 +350,14 @@ fun CollapsibleSection(
         thickness = Dimensions.DividerThickness.standard,
         color = MaterialTheme.colorScheme.outlineVariant,
         modifier =
-            Modifier.padding(bottom = 12.dp).let { m ->
+            Modifier.padding(bottom = Dimensions.Spacing.large).let { m ->
               if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_DIVIDER_SUFFIX)
               else m
             })
 
     AnimatedVisibility(visible = isExpanded) {
       Column(
-          Modifier.padding(top = 0.dp).let { m ->
+          Modifier.padding(top = Dimensions.Spacing.none).let { m ->
             if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
           },
           content = content)
