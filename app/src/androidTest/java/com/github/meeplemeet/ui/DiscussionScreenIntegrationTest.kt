@@ -14,6 +14,7 @@ import com.github.meeplemeet.ui.discussions.DiscussionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
 import kotlin.io.println
@@ -40,9 +41,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
   private val report = linkedMapOf<String, Boolean>()
 
-  private inline fun checkpoint(name: String, crossinline block: () -> Unit) {
-    runCatching { block() }.onSuccess { report[name] = true }.onFailure { report[name] = false }
-  }
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   @Before
   fun setup() = runBlocking {
