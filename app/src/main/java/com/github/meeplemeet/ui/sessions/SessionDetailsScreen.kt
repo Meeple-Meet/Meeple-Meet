@@ -79,6 +79,7 @@ import com.github.meeplemeet.ui.components.SessionLocationSearchBar
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.UnderlinedLabel
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.appShapes
 import com.google.firebase.Timestamp
 import java.time.Instant
@@ -118,6 +119,25 @@ object SessionTestTags {
 
   fun removeParticipantTag(uid: String) = "remove:${uid}"
 }
+/* =======================================================================
+ * Magic String/Numbers
+ * ======================================================================= */
+
+private const val LABEL_PARTICIPANTS = "Participants:"
+private const val LABEL_NUM_PLAYERS = "Number of players"
+private const val LABEL_TITLE = "Title"
+private const val PLACEHOLDER_TIME = "Time"
+private const val BUTTON_PICK = "Pick"
+private const val BUTTON_LEAVE = "Leave"
+private const val BUTTON_DELETE = "Delete"
+private const val BUTTON_ADD = "+"
+private const val PLACEHOLDER_SEARCH = "Search"
+private const val PLACEHOLDER_LOCATION = "Location"
+private const val TEXT_LOADING = "Loading..."
+private const val SESSION_DETAILS_TITLE = "Session Details"
+private const val TEXT_NEW_SESSION = "New Session"
+
+private val SpacerPadding = 10.dp
 
 /* =======================================================================
  * Helpers
@@ -206,7 +226,7 @@ fun SessionDetailsScreen(
   Scaffold(
       topBar = {
         TopBarWithDivider(
-            text = "Session Details",
+            text = SESSION_DETAILS_TITLE,
             onReturn = {
               // Only admins/owners can persist changes to the session on back navigation.
               if (isCurrUserAdmin) {
@@ -228,8 +248,10 @@ fun SessionDetailsScreen(
       },
       bottomBar = {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = Dimensions.Spacing.xxxLarge, vertical = 25.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
               OutlinedButton(
                   onClick = {
                     val updatedParticipants = form.participants.filterNot { it.uid == account.uid }
@@ -248,8 +270,8 @@ fun SessionDetailsScreen(
                   modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
                   colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Leave", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
+                    Text(BUTTON_LEAVE, style = MaterialTheme.typography.bodyMedium)
                   }
 
               // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
@@ -267,8 +289,10 @@ fun SessionDetailsScreen(
                     .verticalScroll(rememberScrollState())
                     .background(AppColors.primary)
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    .padding(
+                        horizontal = Dimensions.Spacing.extraLarge,
+                        vertical = Dimensions.Spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
 
               // Organisation section (session info and controls)
               // Editable for admins and the session creator, read-only for members.
@@ -334,26 +358,28 @@ fun ParticipantsSection(
   SectionCard(modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary)) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
       UnderlinedLabel(
-          text = "Participants:",
+          text = LABEL_PARTICIPANTS,
           textColor = AppColors.textIcons,
           textStyle = MaterialTheme.typography.titleLarge,
       )
-      Spacer(Modifier.width(8.dp))
+      Spacer(Modifier.width(Dimensions.Spacing.medium))
       CountBubble(
           count = currentCount,
           modifier =
               Modifier.clip(CircleShape)
                   .background(AppColors.affirmative)
                   .border(1.dp, AppColors.affirmative, CircleShape)
-                  .padding(horizontal = 10.dp, vertical = 6.dp))
+                  .padding(
+                      horizontal = Dimensions.Spacing.large,
+                      vertical = Dimensions.Padding.mediumSmall))
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Dimensions.Spacing.large))
 
     // Slider (visual-only)
     if (game != null) {
       PillSliderNoBackground(
-          title = "Number of players",
+          title = LABEL_NUM_PLAYERS,
           range = (game.minPlayers.toFloat() - 1)..(game.maxPlayers.toFloat() + 1),
           values = game.minPlayers.toFloat()..game.maxPlayers.toFloat(),
           steps = (game.maxPlayers - game.minPlayers + 1).coerceAtLeast(0))
@@ -366,7 +392,9 @@ fun ParticipantsSection(
                 Modifier.clip(CircleShape)
                     .background(AppColors.secondary)
                     .border(1.dp, AppColors.secondary, CircleShape)
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(
+                        horizontal = Dimensions.Spacing.large,
+                        vertical = Dimensions.Padding.mediumSmall)
                     .testTag(SessionTestTags.MIN_PLAYERS))
         CountBubble(
             count = game.maxPlayers,
@@ -374,12 +402,14 @@ fun ParticipantsSection(
                 Modifier.clip(CircleShape)
                     .background(AppColors.secondary)
                     .border(1.dp, AppColors.secondary, CircleShape)
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(
+                        horizontal = Dimensions.Spacing.large,
+                        vertical = Dimensions.Padding.mediumSmall)
                     .testTag(SessionTestTags.MAX_PLAYERS))
       }
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(SpacerPadding))
 
     // 👉 Delegate chips + add-button + dropdown to UserChipsGrid
     UserChipsGrid(
@@ -426,15 +456,15 @@ fun UserChipsGrid(
 
   // Set up vertical scroll with a maximum height of 3 rows of chips.
   val chipHeight = 40.dp
-  val chipSpacing = 8.dp
+  val chipSpacing = Dimensions.Spacing.medium
   val maxRows = 3
   val maxHeight = (chipHeight * maxRows) + (chipSpacing * (maxRows - 1))
   val scrollState = rememberScrollState()
 
   Box(modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState)) {
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
         // Remove scrollable from here; vertical scroll applied to parent Box
         modifier = Modifier.fillMaxWidth()) {
           // Existing participant chips
@@ -454,18 +484,20 @@ fun UserChipsGrid(
                 modifier =
                     Modifier.background(AppColors.primary)
                         .padding(
-                            horizontal = 12.dp,
-                            vertical = 7.dp) // mimic chip padding to vertically align elements
+                            horizontal = Dimensions.Spacing.large,
+                            vertical =
+                                Dimensions.Padding
+                                    .mediumSmall) // mimic chip padding to vertically align elements
                 ) {
                   IconButton(
                       onClick = { showAddMenu = true },
                       modifier =
-                          Modifier.size(32.dp)
+                          Modifier.size(Dimensions.Spacing.xxxLarge)
                               .border(1.dp, AppColors.divider, CircleShape)
                               .clip(CircleShape)
                               .background(AppColors.primary)
                               .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
-                        Text("+", color = AppColors.textIcons, fontWeight = FontWeight.Bold)
+                        Text(BUTTON_ADD, color = AppColors.textIcons, fontWeight = FontWeight.Bold)
                       }
 
                   DropdownMenu(
@@ -477,14 +509,14 @@ fun UserChipsGrid(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search", color = AppColors.textIconsFade) },
+                        placeholder = { Text(PLACEHOLDER_SEARCH, color = AppColors.textIconsFade) },
                         singleLine = true,
                         modifier =
-                            Modifier.padding(horizontal = 12.dp)
+                            Modifier.padding(horizontal = Dimensions.Spacing.large)
                                 .fillMaxWidth()
                                 .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
 
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Dimensions.Spacing.small))
 
                     // Candidates list
                     filteredCandidates.forEach { member ->
@@ -498,7 +530,7 @@ fun UserChipsGrid(
                           text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                               AvatarBubble(member.name)
-                              Spacer(Modifier.width(10.dp))
+                              Spacer(Modifier.width(Dimensions.Spacing.large))
                               Text(member.handle, color = AppColors.textIcons)
                             }
                           })
@@ -513,7 +545,8 @@ fun UserChipsGrid(
 @Composable
 private fun AvatarBubble(name: String) {
   Box(
-      modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.LightGray),
+      modifier =
+          Modifier.size(Dimensions.AvatarSize.tiny).clip(CircleShape).background(Color.LightGray),
       contentAlignment = Alignment.Center) {
         Text(
             text = name.firstOrNull()?.uppercase() ?: "?",
@@ -535,18 +568,20 @@ private fun ProposedGameSection(
     if (editable) {
       SessionGameSearchBar(currentUser, discussion, viewModel, gameUIState.fetchedGame)
     } else {
-      val displayedName = gameUIState.fetchedGame?.name ?: "Loading..."
+      val displayedName = gameUIState.fetchedGame?.name ?: TEXT_LOADING
       Row {
         UnderlinedLabel(
             text = "Proposed Game:",
             textColor = AppColors.textIcons,
             textStyle = MaterialTheme.typography.titleLarge,
         )
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(Dimensions.Spacing.large))
         Text(
             text = displayedName,
             textAlign = TextAlign.Center,
-            modifier = Modifier.testTag(SessionTestTags.PROPOSED_GAME).padding(top = 4.dp),
+            modifier =
+                Modifier.testTag(SessionTestTags.PROPOSED_GAME)
+                    .padding(top = Dimensions.Spacing.small),
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textIcons)
       }
@@ -577,14 +612,14 @@ fun OrganizationSection(
   SectionCard(
       modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary).fillMaxWidth()) {
         Title(
-            text = form.title.ifEmpty { "New Session" },
+            text = form.title.ifEmpty { TEXT_NEW_SESSION },
             editable = isCurrUserAdmin,
             onValueChange = { onValueChangeTitle(it) },
             modifier =
                 Modifier.align(Alignment.CenterHorizontally)
                     .then(Modifier.testTag(SessionTestTags.TITLE)))
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(SpacerPadding))
 
         ProposedGameSection(
             viewModel = sessionViewModel,
@@ -593,7 +628,7 @@ fun OrganizationSection(
             editable = editable,
             gameUIState = gameUIState)
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(SpacerPadding))
 
         DatePickerDockedField(
             value = form.date,
@@ -601,7 +636,7 @@ fun OrganizationSection(
             onValueChange = { onFormChange(form.copy(date = it!!)) },
         )
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(SpacerPadding))
 
         // Time field using the new TimeField composable
         TimeField(
@@ -609,7 +644,7 @@ fun OrganizationSection(
             onValueChange = { onFormChange(form.copy(time = it)) },
             editable = editable,
             modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(SpacerPadding))
 
         if (editable) {
           // Admins and creators: interactive search field
@@ -624,8 +659,10 @@ fun OrganizationSection(
               value = form.locationText,
               editable = false,
               onValueChange = { if (editable) onFormChange(form.copy(locationText = it)) },
-              placeholder = "Location",
-              leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Location") },
+              placeholder = PLACEHOLDER_LOCATION,
+              leadingIcon = {
+                Icon(Icons.Default.LocationOn, contentDescription = PLACEHOLDER_LOCATION)
+              },
               modifier = Modifier.testTag(SessionTestTags.LOCATION_FIELD).fillMaxWidth(),
               textStyle = MaterialTheme.typography.bodySmall,
           )
@@ -651,7 +688,7 @@ fun Title(
   if (editable) {
     OutlinedTextField(
         value = text,
-        label = { Text("Title", color = AppColors.textIconsFade) },
+        label = { Text(LABEL_TITLE, color = AppColors.textIconsFade) },
         onValueChange = onValueChange,
         textStyle = MaterialTheme.typography.bodyMedium,
         singleLine = true,
@@ -687,7 +724,7 @@ fun UserChip(
       label = { Text(text = user.name, style = MaterialTheme.typography.bodySmall) },
       avatar = {
         Box(
-            modifier = Modifier.size(26.dp).clip(CircleShape).background(Color.LightGray),
+            modifier = Modifier.size(18.dp).clip(CircleShape).background(Color.LightGray),
             contentAlignment = Alignment.Center) {
               Text(
                   text = user.name.firstOrNull()?.toString() ?: "A",
@@ -700,7 +737,8 @@ fun UserChip(
           IconButton(
               onClick = onRemove,
               modifier =
-                  Modifier.size(18.dp).testTag(SessionTestTags.removeParticipantTag(user.name))) {
+                  Modifier.size(Dimensions.Padding.small)
+                      .testTag(SessionTestTags.removeParticipantTag(user.name))) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove participant",
@@ -734,7 +772,7 @@ fun PillSliderNoBackground(
 ) {
   Column {
     Text(title, style = MaterialTheme.typography.labelSmall, color = AppColors.textIconsFade)
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
     DiscretePillSlider(
         range = range,
         values = values,
@@ -743,7 +781,7 @@ fun PillSliderNoBackground(
             Modifier.fillMaxWidth()
                 .background(AppColors.primary, CircleShape)
                 .border(1.dp, AppColors.primary, CircleShape)
-                .padding(horizontal = 10.dp, vertical = 3.dp),
+                .padding(horizontal = Dimensions.Spacing.large, vertical = Dimensions.Padding.tiny),
         sliderModifier = Modifier.testTag(SessionTestTags.DISCRETE_PILL_SLIDER),
         sliderColors =
             SliderDefaults.colors(
@@ -829,14 +867,14 @@ fun TimeField(
   IconTextField(
       value = value,
       onValueChange = {}, // controlled externally
-      placeholder = "Time",
-      leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Time") },
+      placeholder = PLACEHOLDER_TIME,
+      leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = PLACEHOLDER_TIME) },
       trailingIcon = {
         if (editable) {
           TextButton(
               onClick = { showDialogTime = true },
               modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
-                Text("Pick")
+                Text(BUTTON_PICK)
               }
         }
       },
@@ -874,8 +912,8 @@ fun DeleteSessionBTN(
         modifier = modifier.testTag(SessionTestTags.DELETE_SESSION_BUTTON),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
           Icon(Icons.Default.Delete, contentDescription = "Delete Session")
-          Spacer(Modifier.width(8.dp))
-          Text("Delete", style = MaterialTheme.typography.bodyMedium)
+          Spacer(Modifier.width(Dimensions.Spacing.medium))
+          Text(BUTTON_DELETE, style = MaterialTheme.typography.bodyMedium)
         }
   }
 }
