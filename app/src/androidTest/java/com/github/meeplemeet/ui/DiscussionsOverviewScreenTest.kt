@@ -11,11 +11,11 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.mockk
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -25,6 +25,9 @@ import org.junit.Test
 class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: DiscussionViewModel
   private lateinit var nav: NavigationActions
@@ -117,69 +120,85 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   /* ================================================================
    * Tests
    * ================================================================ */
-
   @Test
-  fun should_pass_test_setup() {
+  fun smoke_old_account() = runBlocking {
     compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
-    assert(me.name == "Marco")
-    assert(bob.name == "Bob")
-    assert(d1.name == "Catan Crew")
-    assert(me.previews.containsKey(d1.uid))
-    assert(me.previews.containsKey(d2.uid))
+
+    checkpoint("Test setup") {
+      assert(me.name == "Marco")
+      assert(bob.name == "Bob")
+      assert(d1.name == "Catan Crew")
+      assert(me.previews.containsKey(d1.uid))
+      assert(me.previews.containsKey(d2.uid))
+    }
+
+    checkpoint("Overview display") {
+      compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+
+      compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
+      compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertIsDisplayed()
+    }
+    checkpoint("Non empty overview hides message") {
+      compose.onNodeWithText("No discussions yet").assertDoesNotExist()
+    }
+    checkpoint("Overview prefix display for self") {
+      compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
+    }
   }
 
   @Test
-  fun overview_shows_discussion_cards_with_names_and_messages() {
-    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
-    compose.waitForIdle()
-
-    compose.onNodeWithText("Catan Crew").assertIsDisplayed()
-    compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
-
-    compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
-    compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertIsDisplayed()
+  fun smoke_updated_account() = runBlocking {
+    vm.sendMessageToDiscussion(d1, me, "Changed plan")
+    delay(200)
+    discussionRepository.sendMessageToDiscussion(d2, bob, "Updated message")
+    delay(200)
+    val updatedMe: Account = accountRepository.getAccount(me.uid)
+    compose.setContent {
+      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
+    }
+    checkpoint("Overview displays no messages") {
+      runBlocking {
+        compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
+        compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
+      }
+    }
+    checkpoint("Overview updates for new message") {
+      runBlocking {
+        compose.onNodeWithText("You: Changed plan", substring = true).assertIsDisplayed()
+      }
+    }
+    checkpoint("Overview updates discussion order") {
+      runBlocking {
+        val d2Top = compose.onNodeWithText("Gloomhaven").fetchSemanticsNode().boundsInRoot.top
+        val d1Top = compose.onNodeWithText("Catan Crew").fetchSemanticsNode().boundsInRoot.top
+        assert(d2Top < d1Top) { "Gloomhaven should appear before Catan Crew" }
+      }
+    }
   }
 
   @Test
   fun overview_empty_state_shows_no_discussions_text() = runBlocking {
-    // Create a new user with no discussions
-    val emptyUser =
-        accountRepository.createAccount(
-            userHandle = "empty_${System.currentTimeMillis()}",
-            name = "Empty",
-            email = "empty@test.com",
-            photoUrl = null)
+    checkpoint("Overview empty state") {
+      runBlocking {
+        // Create a new user with no discussions
+        val emptyUser =
+            accountRepository.createAccount(
+                userHandle = "empty_${System.currentTimeMillis()}",
+                name = "Empty",
+                email = "empty@test.com",
+                photoUrl = null)
 
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(account = emptyUser, navigation = nav) }
+        compose.setContent {
+          AppTheme { DiscussionsOverviewScreen(account = emptyUser, navigation = nav) }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("No discussions yet").assertIsDisplayed()
+
+        // Cleanup
+        accountRepository.deleteAccount(emptyUser.uid)
+      }
     }
-    compose.waitForIdle()
-    compose.onNodeWithText("No discussions yet").assertIsDisplayed()
-
-    // Cleanup
-    accountRepository.deleteAccount(emptyUser.uid)
-  }
-
-  @Test
-  fun overview_non_empty_state_hides_empty_message() {
-    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
-    compose.waitForIdle()
-    compose.onNodeWithText("No discussions yet").assertDoesNotExist()
-  }
-
-  @Test
-  fun overview_renders_no_messages_placeholder_when_discussion_has_no_messages() = runTest {
-    // Fetch the account to get updated preview info
-    val updatedMe = accountRepository.getAccount(me.uid)
-
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
-    }
-    compose.waitForIdle()
-
-    // d3 (Weekend Plan) has no messages
-    compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
-    compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
   }
 
   @Ignore("Random behavior on GitHub CLI")
@@ -205,63 +224,5 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     // Cleanup
     discussionRepository.deleteDiscussion(d4)
-  }
-
-  @Test
-  fun overview_shows_you_prefix_for_own_messages() {
-    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
-    compose.waitForIdle()
-
-    // d1 has last message from me
-    compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
-  }
-
-  @Test
-  fun overview_updates_when_new_message_sent() = runTest {
-    // Send a new message using ViewModel API
-    vm.sendMessageToDiscussion(d1, me, "Changed plan")
-    delay(500) // Wait for Firebase update
-
-    // Fetch updated account
-    val updatedMe = accountRepository.getAccount(me.uid)
-
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
-    }
-    compose.waitForIdle()
-
-    compose.onNodeWithText("You: Changed plan", substring = true).assertIsDisplayed()
-  }
-
-  @Test
-  fun overview_sorts_cards_by_latest_message_time() = runBlocking {
-    // Send a new message to d2 to make it more recent
-    delay(200)
-    discussionRepository.sendMessageToDiscussion(d2, bob, "Updated message")
-    delay(200)
-
-    // Fetch updated account
-    val updatedMe = accountRepository.getAccount(me.uid)
-
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
-    }
-    compose.waitForIdle()
-
-    // d2 should now appear before d1 since it has a more recent message
-    val d2Top = compose.onNodeWithText("Gloomhaven").fetchSemanticsNode().boundsInRoot.top
-    val d1Top = compose.onNodeWithText("Catan Crew").fetchSemanticsNode().boundsInRoot.top
-    assert(d2Top < d1Top) { "Gloomhaven should appear before Catan Crew" }
-  }
-
-  @Test
-  fun overview_displays_all_discussions_with_previews() {
-    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
-    compose.waitForIdle()
-
-    // All three discussions should be visible
-    compose.onNodeWithText("Catan Crew").assertIsDisplayed()
-    compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
-    compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
   }
 }
