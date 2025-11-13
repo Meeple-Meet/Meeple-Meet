@@ -17,6 +17,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
+import com.github.meeplemeet.ui.space_renter.SpaceRenterUi
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -119,18 +120,18 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
     checkpoint("Title visible") { title().assertExists() }
 
-    checkpoint("Phone text") { phoneText().assertTextEquals("- Phone: ${renter.phone}") }
-    checkpoint("Email text") { emailText().assertTextEquals("- Email: ${renter.email}") }
+    checkpoint("Phone text") { phoneText().assertTextEquals(SpaceRenterUi.phoneContactRow(renter.phone)) }
+    checkpoint("Email text") { emailText().assertTextEquals(SpaceRenterUi.emailContactRow(renter.email)) }
     checkpoint("Address text") {
       addressText().assertTextEquals("- Address: ${renter.address.name}")
     }
-    checkpoint("Website text") { websiteText().assertTextEquals("- Website: ${renter.website}") }
+    checkpoint("Website text") { websiteText().assertTextEquals(SpaceRenterUi.websiteContactRow(renter.website)) }
 
     listOf(
-            phoneBtn() to "- Phone: ${renter.phone}",
-            emailBtn() to "- Email: ${renter.email}",
-            addressBtn() to "- Address: ${renter.address.name}",
-            websiteBtn() to "- Website: ${renter.website}")
+            phoneBtn() to SpaceRenterUi.phoneContactRow(renter.phone),
+            emailBtn() to SpaceRenterUi.emailContactRow(renter.email),
+            addressBtn() to SpaceRenterUi.addressContactRow(renter.address.name),
+            websiteBtn() to SpaceRenterUi.websiteContactRow(renter.website))
         .forEach { (btn, expected) ->
           checkpoint("Copy via $btn") {
             btn.performClick()

@@ -49,6 +49,14 @@ object SpaceRenterTestTags {
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
 }
 
+object SpaceRenterUi
+{
+    fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
+    fun emailContactRow(email: String) = "- Email: $email"
+    fun addressContactRow(address: String) = "- Address: $address"
+    fun websiteContactRow(website: String) = "- Website: $website"
+}
+
 /**
  * Composable that displays the Space Renter screen, including the top bar and Space Renter details.
  *
@@ -161,7 +169,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.phone.isNotBlank()) {
           ContactRow(
               Icons.Default.Phone,
-              "- Phone: ${spaceRenter.phone}",
+              SpaceRenterUi.phoneContactRow(spaceRenter.phone),
               SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
         }
@@ -169,14 +177,14 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         // Display email contact row
         ContactRow(
             Icons.Default.Email,
-            "- Email: ${spaceRenter.email}",
+            SpaceRenterUi.emailContactRow(spaceRenter.email),
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
 
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            "- Address: ${spaceRenter.address.name}",
+            SpaceRenterUi.addressContactRow(spaceRenter.address.name),
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
 
@@ -184,7 +192,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
-              "- Website: ${spaceRenter.website}",
+                SpaceRenterUi.websiteContactRow(spaceRenter.website),
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }
