@@ -25,6 +25,7 @@ import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.max
 
 /* ================================================================================================
