@@ -50,14 +50,17 @@ object SpaceRenterTestTags {
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
 }
 
-object SpaceRenterUi
-{
-    fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
-    fun emailContactRow(email: String) = "- Email: $email"
-    fun addressContactRow(address: String) = "- Address: $address"
-    fun websiteContactRow(website: String) = "- Website: $website"
-    val HORIZONTAL_PADDING: Dp = 100.dp
-    val ROW_WIDTH : Dp = 48.dp
+object SpaceRenterUi {
+  fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
+
+  fun emailContactRow(email: String) = "- Email: $email"
+
+  fun addressContactRow(address: String) = "- Address: $address"
+
+  fun websiteContactRow(website: String) = "- Website: $website"
+
+  val HORIZONTAL_PADDING: Dp = 100.dp
+  val ROW_WIDTH: Dp = 48.dp
 }
 
 /**
@@ -129,9 +132,13 @@ fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) 
               .padding(bottom = Dimensions.Padding.xxxLarge),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         ContactSection(spaceRenter)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         AvailabilitySection(spaceRenter.openingHours)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
@@ -195,7 +202,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
-                SpaceRenterUi.websiteContactRow(spaceRenter.website),
+              SpaceRenterUi.websiteContactRow(spaceRenter.website),
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }
@@ -283,6 +290,7 @@ fun TopBarAndDivider(
           }
     }
 
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
+    HorizontalDivider(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
   }
 }
