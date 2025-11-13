@@ -250,7 +250,7 @@ fun SessionDetailsScreen(
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .background(AppColors.secondary)
+                    .background(Color.Transparent)
                     .padding(horizontal = Dimensions.Spacing.xxxLarge, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
               OutlinedButton(
@@ -613,7 +613,7 @@ fun OrganizationSection(
   SectionCard(
       modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary).fillMaxWidth()) {
         Title(
-            text = form.title.ifEmpty { TEXT_NEW_SESSION },
+            text = form.title,
             editable = isCurrUserAdmin,
             onValueChange = { onValueChangeTitle(it) },
             modifier =
