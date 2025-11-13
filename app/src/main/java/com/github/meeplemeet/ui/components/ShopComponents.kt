@@ -864,7 +864,7 @@ fun ActionBar(
   Surface(
       color = MaterialTheme.colorScheme.background,
       contentColor = MaterialTheme.colorScheme.onSurface,
-      tonalElevation = Elevation.raised) {
+      tonalElevation = Dimensions.Elevation.raised) {
         Row(
             Modifier.fillMaxWidth()
                 .padding(Dimensions.Padding.extraLarge)
