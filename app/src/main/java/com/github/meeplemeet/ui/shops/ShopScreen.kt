@@ -29,6 +29,7 @@ import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.GameListSection
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
+import com.google.firebase.Timestamp
 import java.text.DateFormatSymbols
 import java.util.Calendar
 
@@ -246,29 +247,73 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
           } else {
             // Display each time interval for the day
             entry.hours.forEachIndexed { idx, (start, end) ->
-              Row(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS_${idx}"),
-                  horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (idx == 0) {
-                      // Show the day name only on the first interval row
+              Column {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS_${idx}"),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                      if (idx == 0) {
+                        // Show the day name only on the first interval row
+                        Text(
+                            dayName,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            modifier =
+                                Modifier.weight(1f)
+                                    .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"))
+                      } else {
+                        // Empty space for subsequent interval rows to align with day name column
+                        Text("", modifier = Modifier.weight(1f))
+                      }
+                      // Format the time interval or show "Closed" if times are null
+                      val timeText = if (start != null && end != null) "$start - $end" else "Closed"
                       Text(
-                          dayName,
-                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                          modifier =
-                              Modifier.weight(1f)
-                                  .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"))
-                    } else {
-                      // Empty space for subsequent interval rows to align with day name column
-                      Text("", modifier = Modifier.weight(1f))
+                          timeText,
+                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
                     }
-                    // Format the time interval or show "Closed" if times are null
-                    val timeText = if (start != null && end != null) "$start - $end" else "Closed"
-                    Text(timeText, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
-                  }
+                if (isToday && idx == 0) {
+                  val closed =
+                      Timestamp.now() < stringToTimestamp(start!!)!! ||
+                          Timestamp.now() > stringToTimestamp(end!!)!!
+                  Text(
+                      "Currently ${if (closed) "Closed" else "Open"}",
+                      fontWeight = FontWeight.Bold,
+                      color = if (closed) AppColors.negative else AppColors.affirmative,
+                      modifier = Modifier.padding(top = 4.dp).align(Alignment.End))
+                }
+              }
             }
           }
         }
       }
+}
+
+/**
+ * Converts a time string in "HH:mm" format to a Firebase Timestamp.
+ *
+ * @param timeString The time string to convert (e.g., "09:30").
+ * @return A Firebase Timestamp representing the time on the current date, or null if parsing fails.
+ */
+fun stringToTimestamp(timeString: String): Timestamp? {
+  return try {
+    val parts = timeString.split(":")
+    if (parts.size != 2) return null
+
+    val hour = parts[0].toIntOrNull() ?: return null
+    val minute = parts[1].toIntOrNull() ?: return null
+
+    if (hour !in 0..23 || minute !in 0..59) return null
+
+    val calendar =
+        Calendar.getInstance().apply {
+          set(Calendar.HOUR_OF_DAY, hour)
+          set(Calendar.MINUTE, minute)
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
+
+    Timestamp(calendar.time)
+  } catch (e: Exception) {
+    null
+  }
 }
