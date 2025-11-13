@@ -25,15 +25,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.SpacesList
-import com.github.meeplemeet.ui.components.humanize
+import com.github.meeplemeet.ui.shops.AvailabilitySection
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
-import java.text.DateFormatSymbols
-import java.util.Calendar
 
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
 object SpaceRenterTestTags {
@@ -50,6 +47,14 @@ object SpaceRenterTestTags {
 
   // Availability section tags
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
+}
+
+object SpaceRenterUi
+{
+    fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
+    fun emailContactRow(email: String) = "- Email: $email"
+    fun addressContactRow(address: String) = "- Address: $address"
+    fun websiteContactRow(website: String) = "- Website: $website"
 }
 
 /**
@@ -164,7 +169,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.phone.isNotBlank()) {
           ContactRow(
               Icons.Default.Phone,
-              "- Phone: ${spaceRenter.phone}",
+              SpaceRenterUi.phoneContactRow(spaceRenter.phone),
               SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
         }
@@ -172,14 +177,14 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         // Display email contact row
         ContactRow(
             Icons.Default.Email,
-            "- Email: ${spaceRenter.email}",
+            SpaceRenterUi.emailContactRow(spaceRenter.email),
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
 
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            "- Address: ${spaceRenter.address.name}",
+            SpaceRenterUi.addressContactRow(spaceRenter.address.name),
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
 
@@ -187,7 +192,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
-              "- Website: ${spaceRenter.website}",
+                SpaceRenterUi.websiteContactRow(spaceRenter.website),
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }
@@ -229,56 +234,6 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
             onClick = copyToClipboard,
             modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
               Icon(imageVector = icon, contentDescription = null, tint = AppColors.neutral)
-            }
-      }
-}
-
-// -------------------- AVAILABILITY SECTION --------------------
-
-/**
- * Composable that displays the space renter's opening hours for each day of the week.
- *
- * @param openingHours List of OpeningHours representing the space renter's weekly schedule.
- */
-@Composable
-fun AvailabilitySection(openingHours: List<OpeningHours>) {
-  val daysOfWeek = remember { DateFormatSymbols().weekdays }
-  val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
-        Text(
-            "Availability",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold)
-
-        // Loop through each day's opening hours
-        openingHours
-            .sortedBy { it.day }
-            .forEach { entry ->
-              val dayName = daysOfWeek.getOrNull(entry.day + 1) ?: "Unknown"
-              val isTodayFont =
-                  if ((entry.day + 1) == currentDay) FontWeight.Bold else FontWeight.Normal
-
-              val hoursText = humanize(entry.hours)
-
-              Row(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag("${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}"),
-                  horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = dayName, fontWeight = isTodayFont, modifier = Modifier.weight(1f))
-
-                    Text(
-                        text = hoursText,
-                        fontWeight = isTodayFont,
-                        textAlign = TextAlign.End,
-                        modifier =
-                            Modifier.weight(1f)
-                                .testTag(
-                                    "${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}_HOURS"))
-                  }
             }
       }
 }
