@@ -32,6 +32,7 @@ import com.github.meeplemeet.model.discussions.CreateDiscussionViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 object AddDiscussionTestTags {
@@ -43,6 +44,8 @@ object AddDiscussionTestTags {
 
   const val DISCARD_BUTTON = "Discard Button"
 }
+
+const val DEFAULT_SEARCH_ALPHA = 0.2f
 
 /**
  * Screen for creating a new discussion with title, description, and selected members.
@@ -137,21 +140,25 @@ fun CreateDiscussionScreen(
                   Modifier.fillMaxWidth(0.7f)
                       .padding(horizontal = 0.dp)
                       .align(Alignment.CenterHorizontally),
-              thickness = 1.dp,
-              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+              thickness = Dimensions.DividerThickness.standard,
+              color = MaterialTheme.colorScheme.onSurface.copy(alpha = DEFAULT_SEARCH_ALPHA))
         }
       },
       bottomBar = {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = Dimensions.Padding.xxxLarge,
+                        vertical = Dimensions.Padding.xxLarge),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
               OutlinedButton(
                   onClick = onBack,
                   modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
                   shape = RoundedCornerShape(percent = 50),
                   colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
                     Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
                     Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
                   }
 
@@ -180,13 +187,14 @@ fun CreateDiscussionScreen(
                   shape = RoundedCornerShape(percent = 50),
                   colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
                     Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
                     Text(text = "Create", style = MaterialTheme.typography.bodySmall)
                   }
             }
       }) { padding ->
         Column(
-            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
+            modifier =
+                Modifier.padding(padding).padding(Dimensions.Padding.extraLarge).fillMaxSize(),
             verticalArrangement = Arrangement.Top) {
               /** Title input field */
               OutlinedTextField(
@@ -207,7 +215,7 @@ fun CreateDiscussionScreen(
                   label = { Text("Title") },
                   modifier = Modifier.testTag(AddDiscussionTestTags.ADD_TITLE).fillMaxWidth())
 
-              Spacer(modifier = Modifier.height(12.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
               /** Description input field */
               OutlinedTextField(
@@ -231,7 +239,7 @@ fun CreateDiscussionScreen(
                           .fillMaxWidth()
                           .height(150.dp))
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge))
 
               /** Row for search and member selection */
               MemberSearchField(
@@ -247,7 +255,7 @@ fun CreateDiscussionScreen(
                     dropdownExpanded = false
                   })
 
-              Spacer(modifier = Modifier.height(20.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
               /** Divider between search and selected members */
               HorizontalDivider(
@@ -255,21 +263,22 @@ fun CreateDiscussionScreen(
                       Modifier.fillMaxWidth(0.9f)
                           .padding(horizontal = 0.dp)
                           .align(Alignment.CenterHorizontally),
-                  thickness = 1.dp,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                  thickness = Dimensions.DividerThickness.standard,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = DEFAULT_SEARCH_ALPHA))
 
               /** Display list of selected members */
               if (selectedMembers.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
                 LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                   items(selectedMembers) { member ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
                         verticalAlignment = Alignment.CenterVertically) {
                           /** Member avatar */
                           Box(
                               modifier =
-                                  Modifier.size(36.dp)
+                                  Modifier.size(Dimensions.Padding.huge)
                                       .clip(CircleShape)
                                       .background(Color.LightGray),
                               contentAlignment = Alignment.Center) {
@@ -278,7 +287,7 @@ fun CreateDiscussionScreen(
                                     color = Color(0xFFFFA000),
                                     fontWeight = FontWeight.Bold)
                               }
-                          Spacer(modifier = Modifier.width(12.dp))
+                          Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 
                           /** Member name */
                           Text(
@@ -302,6 +311,17 @@ fun CreateDiscussionScreen(
       }
 }
 
+/**
+ * Composable for the member search field with dropdown results
+ *
+ * @param searchQuery Current text in the search field
+ * @param onQueryChange Lambda called when the search query changes
+ * @param searchResults List of Account results from the search
+ * @param isSearching Whether a search is currently in progress
+ * @param dropdownExpanded Whether the dropdown menu is expanded
+ * @param onDismiss Lambda called to dismiss the dropdown
+ * @param onSelect Lambda called when an Account is selected from the dropdown
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberSearchField(

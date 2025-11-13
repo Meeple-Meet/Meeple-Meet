@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
@@ -30,6 +31,7 @@ import com.github.meeplemeet.model.posts.CreatePostViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 object CreatePostTestTags {
@@ -54,6 +56,17 @@ object CreatePostTestTags {
 private const val TITLE_FIELD_PLACEHOLDER = "Choose a title for your post"
 private const val BODY_FIELD_PLACEHOLDER =
     "Look for people, ask about games, or just share what's on your mind..."
+
+object CreatePostScreenUi {
+  val extraLargePadding = Dimensions.Padding.extraLarge
+  val largePadding = Dimensions.Padding.large
+  val mediumPadding = Dimensions.Padding.medium
+  val smallIconSize = Dimensions.IconSize.small
+  val xxxLargePadding = Dimensions.Padding.xxxLarge
+  val defaultSpacing: Dp = 16.dp
+  val spacerWidth: Dp = 8.dp
+  val mediumSpacing = Dimensions.Spacing.medium
+}
 
 /**
  * Screen for creating a new post, including title, body, and tags. Tags can be freely added and are
@@ -146,8 +159,10 @@ fun CreatePostScreen(
       },
       bottomBar = {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = CreatePostScreenUi.xxxLargePadding, vertical = 25.dp),
+            horizontalArrangement = Arrangement.spacedBy(CreatePostScreenUi.defaultSpacing)) {
               OutlinedButton(
                   onClick = onDiscard,
                   modifier = Modifier.weight(1f).testTag(CreatePostTestTags.DISCARD_BUTTON),
@@ -157,7 +172,7 @@ fun CreatePostScreen(
                       ButtonDefaults.outlinedButtonColors(
                           contentColor = MaterialTheme.colorScheme.error)) {
                     Icon(Icons.Default.Delete, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(CreatePostScreenUi.spacerWidth))
                     Text("Discard", style = MaterialTheme.typography.titleMedium)
                   }
 
@@ -188,7 +203,7 @@ fun CreatePostScreen(
                           containerColor = MaterialTheme.colorScheme.secondary,
                           contentColor = MaterialTheme.colorScheme.onBackground)) {
                     Icon(Icons.Default.Check, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(CreatePostScreenUi.spacerWidth))
                     Text("Post", style = MaterialTheme.typography.titleMedium)
                   }
             }
@@ -203,9 +218,11 @@ fun CreatePostScreen(
                 Modifier.fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
                     .padding(padding)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .padding(
+                        horizontal = CreatePostScreenUi.extraLargePadding,
+                        vertical = CreatePostScreenUi.extraLargePadding)
                     .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            verticalArrangement = Arrangement.spacedBy(CreatePostScreenUi.defaultSpacing)) {
 
               // Title field
               OutlinedTextField(
@@ -297,9 +314,13 @@ fun CreatePostScreen(
                                           .testTag(CreatePostTestTags.tagChip(tag))) {
                                     Row(
                                         modifier =
-                                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            Modifier.padding(
+                                                horizontal = CreatePostScreenUi.largePadding,
+                                                vertical = CreatePostScreenUi.mediumPadding),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(
+                                                CreatePostScreenUi.mediumSpacing)) {
                                           // tag text
                                           Text(
                                               text = tag,
@@ -317,7 +338,9 @@ fun CreatePostScreen(
                                                     imageVector = Icons.Default.Close,
                                                     contentDescription = "Remove tag",
                                                     tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(16.dp))
+                                                    modifier =
+                                                        Modifier.size(
+                                                            CreatePostScreenUi.smallIconSize))
                                               }
                                         }
                                   }
