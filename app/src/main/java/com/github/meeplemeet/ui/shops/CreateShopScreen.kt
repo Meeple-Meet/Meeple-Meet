@@ -81,10 +81,10 @@ object CreateShopScreenTestTags {
 private object AddShopUi {
   // Reuse shared dimensions
   object Dimensions {
-    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
-    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
-    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
-    val betweenControls = ShopFormUi.Dimensions.betweenControls
+    val contentHPadding = ShopFormUi.Dim.contentHPadding
+    val contentVPadding = ShopFormUi.Dim.contentVPadding
+    val bottomSpacer = ShopFormUi.Dim.bottomSpacer
+    val betweenControls = ShopFormUi.Dim.betweenControls
   }
 
   object Strings {

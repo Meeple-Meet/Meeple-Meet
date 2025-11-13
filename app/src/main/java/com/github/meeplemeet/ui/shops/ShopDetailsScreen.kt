@@ -79,11 +79,11 @@ object EditShopScreenTestTags {
 private object EditShopUi {
   // Reuse shared dimensions
   object Dimensions {
-    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
-    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
-    val sectionSpace = ShopFormUi.Dimensions.sectionSpace
-    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
-    val betweenControls = ShopFormUi.Dimensions.betweenControls
+    val contentHPadding = ShopFormUi.Dim.contentHPadding
+    val contentVPadding = ShopFormUi.Dim.contentVPadding
+    val sectionSpace = ShopFormUi.Dim.sectionSpace
+    val bottomSpacer = ShopFormUi.Dim.bottomSpacer
+    val betweenControls = ShopFormUi.Dim.betweenControls
   }
 
   object Strings {

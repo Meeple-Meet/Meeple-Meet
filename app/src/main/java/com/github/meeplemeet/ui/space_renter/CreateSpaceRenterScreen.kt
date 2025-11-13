@@ -49,10 +49,10 @@ object CreateSpaceRenterScreenTestTags {
  * ================================================================================================ */
 object AddSpaceRenterUi {
   object Dimensions {
-    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
-    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
-    val between = ShopFormUi.Dimensions.betweenControls
-    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
+    val contentHPadding = ShopFormUi.Dim.contentHPadding
+    val contentVPadding = ShopFormUi.Dim.contentVPadding
+    val between = ShopFormUi.Dim.betweenControls
+    val bottomSpacer = ShopFormUi.Dim.bottomSpacer
   }
 
   object Strings {
