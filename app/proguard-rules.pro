@@ -47,3 +47,13 @@
 # R classes
 # --------------------------
 -keepclassmembers class **.R$* { public static <fields>; }
+
+# --------------------------
+# Full keep test (temporary)
+# --------------------------
+# Uncomment the following lines to disable all minification/obfuscation for debugging
+-keep class * { *; }
+-keep interface * { *; }
+-keep enum * { *; }
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+-dontwarn **
