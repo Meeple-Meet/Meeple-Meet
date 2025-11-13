@@ -160,7 +160,6 @@ class CreateAccountScreenTest : FirestoreTests() {
       submitBtn().performClick()
 
       compose.waitForIdle()
-      Thread.sleep(1000) // Give time for async operations
       checkpoint("Renter checkbox has an impact on account") {
         runBlocking {
           val acc = accountRepository.getAccount(me.uid)
@@ -180,7 +179,6 @@ class CreateAccountScreenTest : FirestoreTests() {
         submitBtn().performClick()
 
         compose.waitForIdle()
-        Thread.sleep(1000) // Give time for async operations
         checkpoint("Multiple checkbox clicks have an impact on account") {
           runBlocking {
             val acc = accountRepository.getAccount(me.uid)
