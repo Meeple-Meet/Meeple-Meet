@@ -31,6 +31,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.SpacesList
 import com.github.meeplemeet.ui.components.humanize
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.DateFormatSymbols
 import java.util.Calendar
 
@@ -93,7 +94,10 @@ fun SpaceRenterScreen(
         spaceState?.let { space ->
           SpaceRenterDetails(
               spaceRenter = space,
-              modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxSize())
+              modifier =
+                  Modifier.padding(innerPadding)
+                      .padding(Dimensions.Padding.extraLarge)
+                      .fillMaxSize())
         }
             ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
               CircularProgressIndicator()
@@ -111,15 +115,18 @@ fun SpaceRenterScreen(
 @Composable
 fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) {
   Column(
-      modifier = modifier.verticalScroll(rememberScrollState()).padding(bottom = 32.dp),
-      verticalArrangement = Arrangement.spacedBy(24.dp)) {
+      modifier =
+          modifier
+              .verticalScroll(rememberScrollState())
+              .padding(bottom = Dimensions.Padding.xxxLarge),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         ContactSection(spaceRenter)
         HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
         AvailabilitySection(spaceRenter.openingHours)
         HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
         Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
               Text(
                   "Provided spaces",
                   style = MaterialTheme.typography.titleLarge,
@@ -146,8 +153,8 @@ fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) 
 @Composable
 fun ContactSection(spaceRenter: SpaceRenter) {
   Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
         Text(
             "Contact",
             style = MaterialTheme.typography.titleLarge,
@@ -211,16 +218,18 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
 
   Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
         Text(
             text,
             style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
             modifier = Modifier.weight(1f).testTag(textTag))
 
-        IconButton(onClick = copyToClipboard, modifier = Modifier.size(24.dp).testTag(buttonTag)) {
-          Icon(imageVector = icon, contentDescription = null, tint = AppColors.neutral)
-        }
+        IconButton(
+            onClick = copyToClipboard,
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
+              Icon(imageVector = icon, contentDescription = null, tint = AppColors.neutral)
+            }
       }
 }
 
@@ -237,8 +246,8 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
   val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
 
   Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
         Text(
             "Availability",
             style = MaterialTheme.typography.titleLarge,
@@ -289,7 +298,7 @@ fun TopBarAndDivider(
     trailingIcons: @Composable (() -> Unit)? = null
 ) {
   Column {
-    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.large)) {
       // Button to the left
       Row(
           modifier = Modifier.align(Alignment.CenterStart).width(48.dp),
