@@ -73,7 +73,7 @@ private object SpaceRenterUi {
 
   object Styles {
     const val editingBorderAlpha = 1f
-    const val readonlyBorderAlpha = 0.3f
+    const val readonlyBorderAlpha = 1f
   }
 }
 
