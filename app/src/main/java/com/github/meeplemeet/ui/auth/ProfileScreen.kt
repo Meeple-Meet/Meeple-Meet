@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
@@ -26,9 +25,15 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.Dimensions
 
 object ProfileTestTags {
   const val LOG_OUT_BUTTON = "Logout Button"
+}
+
+object ProfileScreenUi {
+  val extraLargeSpacing = Dimensions.Spacing.extraLarge
+  val xxLargePadding = Dimensions.Padding.xxLarge
 }
 
 /**
@@ -69,8 +74,8 @@ fun ProfileScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.Center) {
               Column(
-                  modifier = Modifier.fillMaxSize().padding(24.dp),
-                  verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                  modifier = Modifier.fillMaxSize().padding(ProfileScreenUi.xxLargePadding),
+                  verticalArrangement = Arrangement.spacedBy(ProfileScreenUi.extraLargeSpacing)) {
                     Text(text = "Email", style = MaterialTheme.typography.bodyMedium)
                     Text(text = account.email, style = MaterialTheme.typography.bodySmall)
 

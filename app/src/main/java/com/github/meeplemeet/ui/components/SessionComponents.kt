@@ -907,7 +907,9 @@ private fun GameSearchBar(
               isError = results.gameSearchError != null)
 
           ExposedDropdownMenu(
-              expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
+              expanded = menuOpen && hasSuggestions,
+              onDismissRequest = { menuOpen = false },
+              modifier = Modifier.background(AppColors.primary)) {
                 results.gameSuggestions
                     .filterNot { existing.contains(it.uid) }
                     .take(Dimensions.Numbers.searchResultLimit)
@@ -918,7 +920,9 @@ private fun GameSearchBar(
                             menuOpen = false
                             setGame(game)
                           },
-                          modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
+                          modifier =
+                              Modifier.testTag("$dropdownItemTestTag:$i")
+                                  .background(AppColors.primary))
                     }
               }
         }
