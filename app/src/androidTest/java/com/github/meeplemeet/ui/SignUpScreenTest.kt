@@ -12,8 +12,17 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.auth.SignUpViewModel
+import com.github.meeplemeet.ui.auth.ALREADY_HAVE_ACCOUNT_TEXT
+import com.github.meeplemeet.ui.auth.CANNOT_BE_EMPTY_EMAIL_TEXT
+import com.github.meeplemeet.ui.auth.EMPTY_PWD_TEXT
+import com.github.meeplemeet.ui.auth.INVALID_EMAIL_TEXT
+import com.github.meeplemeet.ui.auth.LOG_IN_TEXT
+import com.github.meeplemeet.ui.auth.OPTION_TEXT
+import com.github.meeplemeet.ui.auth.PWD_CONFIRMATION_TEXT
+import com.github.meeplemeet.ui.auth.PWD_MISSMATCH_TEXT
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
+import com.github.meeplemeet.ui.auth.WEAK_PWD_TEXT
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.Checkpoint
 import org.junit.Before
@@ -62,18 +71,18 @@ class SignUpScreenTest {
 
     checkpoint("Initial State – screen title & OR divider") {
       compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
-      compose.onNodeWithText("OR").assertExists()
-      compose.onNodeWithText("Already have an account? ").assertExists()
-      compose.onNodeWithText("Log in.").assertExists()
+      compose.onNodeWithText(OPTION_TEXT).assertExists()
+      compose.onNodeWithText(ALREADY_HAVE_ACCOUNT_TEXT).assertExists()
+      compose.onNodeWithText(LOG_IN_TEXT).assertExists()
     }
 
     checkpoint("Initial State – no validation errors") {
-      compose.onAllNodesWithText("Email cannot be empty").assertCountEquals(0)
-      compose.onAllNodesWithText("Password cannot be empty").assertCountEquals(0)
-      compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
-      compose.onAllNodesWithText("Password is too weak").assertCountEquals(0)
-      compose.onAllNodesWithText("Please confirm your password").assertCountEquals(0)
-      compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
+      compose.onAllNodesWithText(CANNOT_BE_EMPTY_EMAIL_TEXT).assertCountEquals(0)
+      compose.onAllNodesWithText(EMPTY_PWD_TEXT).assertCountEquals(0)
+      compose.onAllNodesWithText(INVALID_EMAIL_TEXT).assertCountEquals(0)
+      compose.onAllNodesWithText(WEAK_PWD_TEXT).assertCountEquals(0)
+      compose.onAllNodesWithText(PWD_CONFIRMATION_TEXT).assertCountEquals(0)
+      compose.onAllNodesWithText(PWD_MISSMATCH_TEXT).assertCountEquals(0)
     }
 
     // ===== Email field =====
@@ -87,18 +96,18 @@ class SignUpScreenTest {
     checkpoint("Email field – real-time invalid format error") {
       compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("notanemail")
       compose.waitForIdle()
-      compose.onNodeWithText("Invalid email format").assertExists()
+      compose.onNodeWithText(INVALID_EMAIL_TEXT).assertExists()
       clearFields()
     }
 
     checkpoint("Email field – error cleared on valid input") {
       compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("invalid")
       compose.waitForIdle()
-      compose.onNodeWithText("Invalid email format").assertExists()
+      compose.onNodeWithText(INVALID_EMAIL_TEXT).assertExists()
 
       compose.onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).performTextInput("@example.com")
       compose.waitForIdle()
-      compose.onAllNodesWithText("Invalid email format").assertCountEquals(0)
+      compose.onAllNodesWithText(INVALID_EMAIL_TEXT).assertCountEquals(0)
       clearFields()
     }
 
@@ -119,7 +128,7 @@ class SignUpScreenTest {
     checkpoint("Password field – real-time weak password error") {
       compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("12345")
       compose.waitForIdle()
-      compose.onNodeWithText("Password is too weak").assertExists()
+      compose.onNodeWithText(WEAK_PWD_TEXT).assertExists()
       clearFields()
     }
 
@@ -151,7 +160,7 @@ class SignUpScreenTest {
           .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
           .performTextInput("password124")
       compose.waitForIdle()
-      compose.onNodeWithText("Passwords do not match").assertExists()
+      compose.onNodeWithText(PWD_MISSMATCH_TEXT).assertExists()
       clearFields()
     }
 
@@ -186,9 +195,9 @@ class SignUpScreenTest {
       compose.onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON).assertExists()
       compose.onNodeWithTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON).assertExists()
       compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
-      compose.onNodeWithText("OR").assertExists()
-      compose.onNodeWithText("Already have an account? ").assertExists()
-      compose.onNodeWithText("Log in.").assertExists()
+      compose.onNodeWithText(OPTION_TEXT).assertExists()
+      compose.onNodeWithText(ALREADY_HAVE_ACCOUNT_TEXT).assertExists()
+      compose.onNodeWithText(LOG_IN_TEXT).assertExists()
       clearFields()
     }
 
@@ -224,11 +233,11 @@ class SignUpScreenTest {
           .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
           .performTextInput("password123")
       compose.waitForIdle()
-      compose.onAllNodesWithText("Passwords do not match").assertCountEquals(0)
+      compose.onAllNodesWithText(PWD_MISSMATCH_TEXT).assertCountEquals(0)
 
       compose.onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).performTextInput("4")
       compose.waitForIdle()
-      compose.onNodeWithText("Passwords do not match").assertExists()
+      compose.onNodeWithText(PWD_MISSMATCH_TEXT).assertExists()
       clearFields()
     }
   }

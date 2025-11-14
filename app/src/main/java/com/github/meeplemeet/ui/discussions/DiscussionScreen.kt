@@ -480,7 +480,8 @@ fun PollBubble(
                               modifier =
                                   Modifier.fillMaxWidth()
                                       .padding(
-                                          horizontal = Dimensions.Spacing.large, vertical = 10.dp),
+                                          horizontal = Dimensions.Spacing.large,
+                                          vertical = Dimensions.Padding.extraMedium),
                               horizontalArrangement = Arrangement.SpaceBetween,
                               verticalAlignment = Alignment.CenterVertically) {
                                 Row(

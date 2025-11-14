@@ -412,7 +412,7 @@ fun ParticipantsSection(
       }
     }
 
-    Spacer(Modifier.height(SpacerPadding))
+    Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
     // 👉 Delegate chips + add-button + dropdown to UserChipsGrid
     UserChipsGrid(
@@ -622,7 +622,7 @@ fun OrganizationSection(
                 Modifier.align(Alignment.CenterHorizontally)
                     .then(Modifier.testTag(SessionTestTags.TITLE)))
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         ProposedGameSection(
             viewModel = sessionViewModel,
@@ -631,7 +631,7 @@ fun OrganizationSection(
             editable = editable,
             gameUIState = gameUIState)
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         DatePickerDockedField(
             value = form.date,
@@ -639,7 +639,7 @@ fun OrganizationSection(
             onValueChange = { onFormChange(form.copy(date = it!!)) },
         )
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time field using the new TimeField composable
         TimeField(
@@ -647,7 +647,7 @@ fun OrganizationSection(
             onValueChange = { onFormChange(form.copy(time = it)) },
             editable = editable,
             modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         if (editable) {
           // Admins and creators: interactive search field
