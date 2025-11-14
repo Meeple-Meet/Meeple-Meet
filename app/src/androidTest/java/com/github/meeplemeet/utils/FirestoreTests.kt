@@ -27,7 +27,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 
 @OptIn(ExperimentalCoroutinesApi::class)
-open class FirestoreTests {
+open class  FirestoreTests {
   lateinit var db: FirebaseFirestore
   lateinit var auth: FirebaseAuth
   lateinit var storage: FirebaseStorage
