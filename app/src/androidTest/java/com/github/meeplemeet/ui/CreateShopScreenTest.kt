@@ -224,7 +224,7 @@ class CreateShopScreenTest {
     var backCalled = false
 
     lateinit var stage: MutableIntState
-    lateinit var viewModel: CreateShopViewModel
+    val viewModel = CreateShopViewModel()
 
     compose.setContent {
       AppTheme {
@@ -232,9 +232,6 @@ class CreateShopScreenTest {
         stage = s
         var query by remember { mutableStateOf("") }
 
-        val vmState = remember { mutableStateOf<CreateShopViewModel?>(null) }
-        vmState.value = viewModel // still needs to be done in SideEffect for safety
-        SideEffect { vmState.value = viewModel }
         val locationUi by viewModel.locationUIState.collectAsState()
         val gameUi by viewModel.gameUIState.collectAsState()
 
