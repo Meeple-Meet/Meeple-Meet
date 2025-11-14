@@ -137,8 +137,6 @@ private const val TEXT_LOADING = "Loading..."
 private const val SESSION_DETAILS_TITLE = "Session Details"
 private const val TEXT_NEW_SESSION = "New Session"
 
-private val extraMediumSpacing = Dimensions.Spacing.extraMedium
-
 /* =======================================================================
  * Helpers
  * ======================================================================= */
@@ -251,7 +249,9 @@ fun SessionDetailsScreen(
             modifier =
                 Modifier.fillMaxWidth()
                     .background(Color.Transparent)
-                    .padding(horizontal = Dimensions.Spacing.xxxLarge, vertical = 10.dp),
+                    .padding(
+                        horizontal = Dimensions.Spacing.xxxLarge,
+                        vertical = Dimensions.Padding.extraMedium),
             horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
               OutlinedButton(
                   onClick = {
@@ -410,7 +410,7 @@ fun ParticipantsSection(
       }
     }
 
-    Spacer(Modifier.height(extraMediumSpacing))
+    Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
     // 👉 Delegate chips + add-button + dropdown to UserChipsGrid
     UserChipsGrid(
@@ -620,7 +620,7 @@ fun OrganizationSection(
                 Modifier.align(Alignment.CenterHorizontally)
                     .then(Modifier.testTag(SessionTestTags.TITLE)))
 
-        Spacer(Modifier.height(extraMediumSpacing))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         ProposedGameSection(
             viewModel = sessionViewModel,
@@ -629,7 +629,7 @@ fun OrganizationSection(
             editable = editable,
             gameUIState = gameUIState)
 
-        Spacer(Modifier.height(extraMediumSpacing))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         DatePickerDockedField(
             value = form.date,
@@ -637,7 +637,7 @@ fun OrganizationSection(
             onValueChange = { onFormChange(form.copy(date = it!!)) },
         )
 
-        Spacer(Modifier.height(extraMediumSpacing))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time field using the new TimeField composable
         TimeField(
@@ -645,7 +645,7 @@ fun OrganizationSection(
             onValueChange = { onFormChange(form.copy(time = it)) },
             editable = editable,
             modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(extraMediumSpacing))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         if (editable) {
           // Admins and creators: interactive search field

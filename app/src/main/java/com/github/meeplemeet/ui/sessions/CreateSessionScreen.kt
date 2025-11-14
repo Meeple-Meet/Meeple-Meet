@@ -71,7 +71,6 @@ object SessionCreationTestTags {
  * Magic numbers and strings extracted as constants
  * ======================================================================= */
 
-private val CountBubbleHorizontalPadding = 10.dp
 private val CountBubbleVerticalPadding = 6.dp
 
 private const val LABEL_CREATE = "Create"
@@ -465,7 +464,9 @@ fun ParticipantsSection(
                           Dimensions.DividerThickness.standard,
                           MaterialTheme.colorScheme.outline,
                           CircleShape)
-                      .padding(horizontal = CountBubbleHorizontalPadding, vertical = CountBubbleVerticalPadding))
+                      .padding(
+                          horizontal = Dimensions.Padding.extraMedium,
+                          vertical = CountBubbleVerticalPadding))
         }
         Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
 
@@ -486,7 +487,7 @@ fun ParticipantsSection(
                                 MaterialTheme.colorScheme.outline,
                                 CircleShape)
                             .padding(
-                                horizontal = CountBubbleHorizontalPadding,
+                                horizontal = Dimensions.Padding.extraMedium,
                                 vertical = CountBubbleVerticalPadding))
 
                 DiscretePillSlider(
@@ -497,7 +498,7 @@ fun ParticipantsSection(
                     sliderModifier =
                         Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
                             .padding(
-                                horizontal = CountBubbleHorizontalPadding,
+                                horizontal = Dimensions.Padding.extraMedium,
                                 vertical = CountBubbleVerticalPadding))
 
                 CountBubble(
@@ -511,7 +512,7 @@ fun ParticipantsSection(
                                 MaterialTheme.colorScheme.outline,
                                 CircleShape)
                             .padding(
-                                horizontal = CountBubbleHorizontalPadding,
+                                horizontal = Dimensions.Padding.extraMedium,
                                 vertical = CountBubbleVerticalPadding))
               }
         }
