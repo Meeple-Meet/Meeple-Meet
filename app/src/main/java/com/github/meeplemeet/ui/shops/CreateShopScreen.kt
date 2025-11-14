@@ -203,7 +203,6 @@ fun AddShopContent(
   var shopName by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
   var addressText by rememberSaveable { mutableStateOf("") }
-  var selectedLocation by remember { mutableStateOf<Location?>(null) }
   var phone by rememberSaveable { mutableStateOf("") }
   var link by rememberSaveable { mutableStateOf("") }
 
@@ -214,16 +213,15 @@ fun AddShopContent(
 
   var showGameDialog by remember { mutableStateOf(false) }
   var qty by rememberSaveable { mutableIntStateOf(1) }
-  var picked by remember { mutableStateOf<Game?>(null) }
   var stock by remember { mutableStateOf(initialStock) }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
-      remember(shopName, email, addressText, hasOpeningHours) {
+      remember(shopName, email, locationUi.selectedLocation, hasOpeningHours) {
         derivedStateOf {
           shopName.isNotBlank() &&
               isValidEmail(email) &&
-              addressText.isNotBlank() &&
+              locationUi.selectedLocation != null &&
               hasOpeningHours
         }
       }
@@ -239,7 +237,6 @@ fun AddShopContent(
     shopName = ""
     email = ""
     addressText = ""
-    selectedLocation = null
     phone = ""
     link = ""
     week = emptyWeek()
@@ -247,7 +244,6 @@ fun AddShopContent(
     showHoursDialog = false
     showGameDialog = false
     qty = 1
-    picked = null
     stock = emptyList()
     onSetGameQuery("")
     onBack()
@@ -278,7 +274,7 @@ fun AddShopContent(
         ActionBar(
             onDiscard = { onDiscard() },
             onPrimary = {
-              val addr = selectedLocation ?: Location(name = addressText)
+              val addr = locationUi.selectedLocation ?: Location()
               scope.launch {
                 try {
                   val shopId = onCreate(shopName, email, addr, week, stock)
@@ -314,10 +310,7 @@ fun AddShopContent(
                           onPhone = { phone = it },
                           link = link,
                           onLink = { link = it },
-                          onPickLocation = { loc ->
-                            addressText = loc.name
-                            selectedLocation = loc
-                          },
+                          onPickLocation = { loc -> addressText = loc.name },
                           viewModel = viewModel,
                           owner = owner)
                     },
@@ -346,7 +339,6 @@ fun AddShopContent(
                     header = {
                       TextButton(
                           onClick = {
-                            picked = null
                             onSetGameQuery("")
                             showGameDialog = true
                           },

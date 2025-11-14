@@ -255,7 +255,8 @@ fun SpaceRenterRequiredInfoSection(
         account = owner,
         spaceRenter = spaceRenter,
         viewModel = viewModel,
-        inputFieldTestTag = SessionTestTags.LOCATION_FIELD)
+        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
   }
 }
 

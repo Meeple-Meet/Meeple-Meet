@@ -463,8 +463,20 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .performTextInput("123 Board Game Street")
+        .performTextInput("EPFL")
     composeTestRule.waitForIdle()
+
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      try {
+        composeTestRule
+            .onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0")
+            .assertExists()
+            .performClick()
+        true
+      } catch (_: Exception) {
+        false
+      }
+    }
 
     // Set weekday opening hours
     val availabilityToggleTag =

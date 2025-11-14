@@ -105,6 +105,7 @@ object SessionTestTags {
   const val DATE_FIELD = "date_field"
   const val TIME_FIELD = "time_field"
   const val LOCATION_FIELD = "location_field"
+  const val LOCATION_FIELD_ITEM = "location_field_item"
   const val QUIT_BUTTON = "quit_button"
   const val DATE_PICKER_OK_BUTTON = "date_picker_ok_button"
   const val DATE_PICK_BUTTON = "date_pick_button"

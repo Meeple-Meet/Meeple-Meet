@@ -254,7 +254,11 @@ fun RequiredInfoSection(
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
     ShopLocationSearchBar(
-        owner, shop, viewModel, inputFieldTestTag = SessionTestTags.LOCATION_FIELD)
+        owner,
+        shop,
+        viewModel,
+        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
   }
 }
 
