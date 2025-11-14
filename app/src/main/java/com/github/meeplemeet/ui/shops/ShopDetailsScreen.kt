@@ -211,7 +211,6 @@ fun EditShopContent(
   var shopName by rememberSaveable(shop) { mutableStateOf(shop?.name ?: "") }
   var email by rememberSaveable(shop) { mutableStateOf(shop?.email ?: "") }
   var addressText by rememberSaveable(shop) { mutableStateOf(shop?.address?.name ?: "") }
-  var selectedLocation by remember(shop) { mutableStateOf(shop?.address) }
   var phone by rememberSaveable(shop) { mutableStateOf(shop?.phone ?: "") }
   var link by rememberSaveable(shop) { mutableStateOf(shop?.website ?: "") }
 
@@ -226,9 +225,12 @@ fun EditShopContent(
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
-      remember(shopName, email, addressText, hasOpeningHours) {
+      remember(shopName, email, locationUi.selectedLocation, hasOpeningHours) {
         derivedStateOf {
-          shopName.isNotBlank() && email.isNotBlank() && addressText.isNotBlank() && hasOpeningHours
+          shopName.isNotBlank() &&
+              email.isNotBlank() &&
+              locationUi.selectedLocation != null &&
+              hasOpeningHours
         }
       }
 
@@ -268,12 +270,12 @@ fun EditShopContent(
             onDiscard = { onDiscard() },
             onPrimary = {
               if (shop != null) {
-                val addr = selectedLocation ?: Location(name = addressText)
+                val addr = locationUi.selectedLocation ?: Location()
                 val err = onSave(shop, shop.owner, shopName, email, phone, link, addr, week, stock)
                 if (err == null) onSaved() else scope.launch { snackbarHost.showSnackbar(err) }
               }
             },
-            enabled = isValid && shop != null,
+            enabled = isValid,
             primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
       },
       modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
@@ -298,10 +300,7 @@ fun EditShopContent(
                           onPhone = { phone = it },
                           link = link,
                           onLink = { link = it },
-                          onPickLocation = { loc ->
-                            addressText = loc.name
-                            selectedLocation = loc
-                          },
+                          onPickLocation = { loc -> addressText = loc.name },
                           viewModel = viewModel,
                           owner = owner)
                     },

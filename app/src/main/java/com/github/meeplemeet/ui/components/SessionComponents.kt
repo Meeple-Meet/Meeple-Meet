@@ -784,16 +784,18 @@ private fun LocationSearchBar(
   val results by viewModel.locationUIState.collectAsStateWithLifecycle()
 
   var menuOpen by rememberSaveable { mutableStateOf(false) }
+  var text by rememberSaveable { mutableStateOf(initial.name) }
   val hasSuggestions = results.locationSuggestions.isNotEmpty()
 
-  LaunchedEffect(initial) { if (initial.name.isNotBlank()) setLocation(initial) }
+  LaunchedEffect(Unit) { if (initial.name.isNotBlank()) setLocation(initial) }
 
   ExposedDropdownMenuBox(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         OutlinedTextField(
-            value = results.locationQuery.ifBlank { initial.name },
+            value = text,
             onValueChange = {
               menuOpen = true
+              text = it
               setLocationQuery(it)
             },
             label = { Text(LABEL_LOCATION) },
@@ -817,6 +819,7 @@ private fun LocationSearchBar(
                 text = { Text(loc.name) },
                 onClick = {
                   menuOpen = false
+                  text = loc.name
                   setLocation(loc)
                 },
                 modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
@@ -884,6 +887,7 @@ private fun GameSearchBar(
   val results by viewModel.gameUIState.collectAsStateWithLifecycle()
 
   var menuOpen by rememberSaveable { mutableStateOf(false) }
+  var text by rememberSaveable { mutableStateOf(initial?.name.orEmpty()) }
   val hasSuggestions = results.gameSuggestions.isNotEmpty()
 
   LaunchedEffect(initial) { if (initial?.name?.isNotBlank() == true) setGame(initial) }
@@ -892,9 +896,10 @@ private fun GameSearchBar(
     ExposedDropdownMenuBox(
         expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
           OutlinedTextField(
-              value = results.gameQuery.ifBlank { initial?.name.orEmpty() },
+              value = text,
               onValueChange = {
                 menuOpen = true
+                text = it
                 setGameQuery(it)
               },
               label = { Text(LABEL_GAME) },
@@ -918,6 +923,7 @@ private fun GameSearchBar(
                           text = { Text(game.name) },
                           onClick = {
                             menuOpen = false
+                            text = game.name
                             setGame(game)
                           },
                           modifier =
