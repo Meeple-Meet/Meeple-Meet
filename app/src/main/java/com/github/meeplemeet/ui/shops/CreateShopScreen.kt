@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -428,7 +427,7 @@ private fun GamesSection(
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
         contentPadding = PaddingValues(bottom = Dimensions.Padding.extraLarge),
-        modifier = Modifier.heightIn(max = 600.dp)) {
+        modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
           items(items = stock, key = { it.first.uid }) { (game, count) ->
             EditableGameItem(
                 game = game,

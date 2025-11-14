@@ -42,7 +42,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -302,7 +301,9 @@ private fun DiscussionCard(
 
     // Divider
     HorizontalDivider(
-        modifier = Modifier.padding(start = 84.dp),
+        modifier =
+            Modifier.padding(
+                start = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.extraLarge)),
         color = MessagingColors.divider,
         thickness = Dimensions.DividerThickness.standard)
   }

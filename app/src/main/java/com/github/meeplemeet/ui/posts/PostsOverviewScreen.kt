@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
@@ -115,7 +114,7 @@ fun PostsOverviewScreen(
         } else {
           LazyColumn(
               modifier = Modifier.fillMaxSize().padding(innerPadding),
-              verticalArrangement = Arrangement.spacedBy(0.dp)) {
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
                 items(postsSorted, key = { it.id }) { post ->
                   val dateFormatted =
                       SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -233,7 +232,8 @@ private fun FeedCard(
                               color = MessagingColors.redditBlue,
                               modifier =
                                   Modifier.padding(
-                                      horizontal = Dimensions.Spacing.small, vertical = 2.dp),
+                                      horizontal = Dimensions.Spacing.small,
+                                      vertical = Dimensions.Spacing.extraSmall),
                               maxLines = 1,
                               overflow = TextOverflow.Ellipsis)
                         }

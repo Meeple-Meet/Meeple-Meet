@@ -18,7 +18,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextIndent
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,7 +59,7 @@ private const val EMAIL_LINE_TEXT = "- Email:"
 private const val ADDRESS_LINE_TEXT = "- Address:"
 private const val WEBSITE_LINE_TEXT = "- Website:"
 
-private val horizontalPadding = 100.dp
+private val horizontalPadding = Dimensions.ComponentWidth.spaceLabelWidth
 
 /**
  * Composable that displays the Shop screen, including the top bar and shop details.
@@ -134,7 +133,7 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
         GameListSection(
             games = shop.gameCollection,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge),
             hasDeleteButton = false,
             title = "Games:")
       }
@@ -234,7 +233,7 @@ fun AvailabilitySection(
   val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
         Text(
             text = "Availability:",
             style = MaterialTheme.typography.titleLarge,
@@ -294,7 +293,9 @@ fun AvailabilitySection(
                       "Currently ${if (closed) "Closed" else "Open"}",
                       fontWeight = FontWeight.Bold,
                       color = if (closed) AppColors.negative else AppColors.affirmative,
-                      modifier = Modifier.padding(top = 4.dp).align(Alignment.End))
+                      modifier =
+                          Modifier.padding(top = Dimensions.Spacing.extraSmall)
+                              .align(Alignment.End))
                 }
               }
             }

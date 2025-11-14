@@ -27,7 +27,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -200,14 +199,21 @@ fun SignUpScreen(
 
               // App logo - changes based on theme
               val isDarkTheme = isSystemInDarkTheme()
-              Box(modifier = Modifier.size(250.dp)) {
-                Image(
-                    painter =
-                        painterResource(
-                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-                    contentDescription = "Meeple Meet Logo",
-                    modifier = Modifier.fillMaxSize())
-              }
+              Box(
+                  modifier =
+                      Modifier.size(
+                          Dimensions.IconSize.massive
+                              .times(3)
+                              .plus(Dimensions.Padding.extraLarge))) {
+                    Image(
+                        painter =
+                            painterResource(
+                                id =
+                                    if (isDarkTheme) R.drawable.logo_dark
+                                    else R.drawable.logo_clear),
+                        contentDescription = "Meeple Meet Logo",
+                        modifier = Modifier.fillMaxSize())
+                  }
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
 

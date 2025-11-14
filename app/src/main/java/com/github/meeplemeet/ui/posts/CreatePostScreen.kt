@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
@@ -63,8 +62,8 @@ object CreatePostScreenUi {
   val mediumPadding = Dimensions.Padding.medium
   val smallIconSize = Dimensions.IconSize.small
   val xxxLargePadding = Dimensions.Padding.xxxLarge
-  val defaultSpacing: Dp = 16.dp
-  val spacerWidth: Dp = 8.dp
+  val defaultSpacing: Dp = Dimensions.Spacing.extraLarge
+  val spacerWidth: Dp = Dimensions.Spacing.medium
   val mediumSpacing = Dimensions.Spacing.medium
 }
 
@@ -150,10 +149,10 @@ fun CreatePostScreen(
                       navigationIconContentColor = AppColors.textIcons))
           HorizontalDivider(
               modifier =
-                  Modifier.fillMaxWidth(0.7f)
-                      .padding(horizontal = 0.dp)
+                  Modifier.fillMaxWidth(Dimensions.Fractions.topBarDivider)
+                      .padding(horizontal = Dimensions.Spacing.none)
                       .align(Alignment.CenterHorizontally),
-              thickness = 1.dp,
+              thickness = Dimensions.DividerThickness.standard,
               color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
         }
       },
@@ -161,13 +160,17 @@ fun CreatePostScreen(
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(horizontal = CreatePostScreenUi.xxxLargePadding, vertical = 25.dp),
+                    .padding(
+                        horizontal = CreatePostScreenUi.xxxLargePadding,
+                        vertical = Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
             horizontalArrangement = Arrangement.spacedBy(CreatePostScreenUi.defaultSpacing)) {
               OutlinedButton(
                   onClick = onDiscard,
                   modifier = Modifier.weight(1f).testTag(CreatePostTestTags.DISCARD_BUTTON),
                   shape = CircleShape,
-                  border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                  border =
+                      BorderStroke(
+                          Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
                   colors =
                       ButtonDefaults.outlinedButtonColors(
                           contentColor = MaterialTheme.colorScheme.error)) {
@@ -241,7 +244,7 @@ fun CreatePostScreen(
                   placeholder = { Text(BODY_FIELD_PLACEHOLDER) },
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(200.dp)
+                          .height(Dimensions.ContainerSize.bottomSpacer.times(2))
                           .verticalScroll(bodyScroll)
                           .testTag(CreatePostTestTags.BODY_FIELD),
                   maxLines = Int.MAX_VALUE)
@@ -282,9 +285,9 @@ fun CreatePostScreen(
 
               // Selected tags display (wrap + max 3 lines then vertical scroll)
               if (selectedTags.isNotEmpty()) {
-                val horizontalSpacing = 8.dp
-                val verticalSpacing = 8.dp
-                val chipHeight = 36.dp
+                val horizontalSpacing = Dimensions.Spacing.medium
+                val verticalSpacing = Dimensions.Spacing.medium
+                val chipHeight = Dimensions.ButtonSize.medium
                 val maxLines = 3
                 val maxHeight = chipHeight * maxLines + verticalSpacing * (maxLines - 1)
                 val verticalScrollState = rememberScrollState()
@@ -306,9 +309,12 @@ fun CreatePostScreen(
                           modifier = Modifier.fillMaxWidth()) {
                             selectedTags.forEach { tag ->
                               Surface(
-                                  shape = RoundedCornerShape(20.dp),
+                                  shape = RoundedCornerShape(Dimensions.ButtonRadius.rounded),
                                   color = MaterialTheme.colorScheme.background,
-                                  border = BorderStroke(1.dp, AppColors.textIconsFade),
+                                  border =
+                                      BorderStroke(
+                                          Dimensions.DividerThickness.standard,
+                                          AppColors.textIconsFade),
                                   modifier =
                                       Modifier.defaultMinSize(minHeight = chipHeight)
                                           .testTag(CreatePostTestTags.tagChip(tag))) {
@@ -331,7 +337,7 @@ fun CreatePostScreen(
                                           IconButton(
                                               onClick = { selectedTags.remove(tag) },
                                               modifier =
-                                                  Modifier.size(20.dp)
+                                                  Modifier.size(Dimensions.IconSize.standard)
                                                       .testTag(
                                                           CreatePostTestTags.tagRemoveIcon(tag))) {
                                                 Icon(

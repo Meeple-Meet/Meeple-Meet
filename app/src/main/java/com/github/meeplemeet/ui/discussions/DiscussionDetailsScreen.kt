@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -159,7 +158,10 @@ fun DiscussionDetailsScreen(
           Row(
               modifier =
                   Modifier.fillMaxWidth()
-                      .padding(horizontal = Dimensions.Spacing.xxxLarge, vertical = 25.dp),
+                      .padding(
+                          horizontal = Dimensions.Spacing.xxxLarge,
+                          vertical =
+                              Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
               horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
@@ -199,7 +201,9 @@ fun DiscussionDetailsScreen(
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
                     contentDescription = "Icon",
-                    modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp),
+                    modifier =
+                        Modifier.align(Alignment.CenterHorizontally)
+                            .size(Dimensions.IconSize.massive.times(2)),
                     tint = AppColors.textIcons)
 
                 /** --- Discussion Name --- */
@@ -299,16 +303,6 @@ fun DiscussionDetailsScreen(
                             textAlign = TextAlign.Start),
                 )
 
-                /** --- Divider --- */
-                //                HorizontalDivider(
-                //                    modifier =
-                //                        Modifier.fillMaxWidth(0.945f) // 70% width to create
-                // middle effect
-                //                            .padding(horizontal = 0.dp)
-                //                            .align(Alignment.CenterHorizontally),
-                //                    thickness = 1.75.dp,
-                //                    color = AppColors.divider)
-
                 /** Row for search and member selection */
                 if (isAdmin)
                     MemberSearchField(
@@ -343,7 +337,7 @@ fun DiscussionDetailsScreen(
                       title = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 8.dp)) {
+                            modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
                               Icon(
                                   imageVector = Icons.Default.Delete,
                                   contentDescription = null,
@@ -401,7 +395,7 @@ fun DiscussionDetailsScreen(
                       title = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 8.dp)) {
+                            modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
                               Icon(
                                   imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                   contentDescription = null,
@@ -505,7 +499,9 @@ fun MemberList(
             modifier =
                 clickableModifier
                     .fillMaxWidth()
-                    .padding(vertical = Dimensions.Spacing.small, horizontal = 14.dp)
+                    .padding(
+                        vertical = Dimensions.Spacing.small,
+                        horizontal = Dimensions.Padding.extraMedium)
                     .testTag(UITestTags.memberRowTag(member.uid)),
             verticalAlignment = Alignment.CenterVertically) {
 
@@ -571,8 +567,13 @@ fun MemberList(
       item {
         /** --- Divider after the list --- */
         HorizontalDivider(
-            modifier = modifier.fillMaxWidth().padding(start = 60.dp, end = 60.dp),
-            thickness = 1.dp,
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.xxxxLarge),
+                        end = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.xxxxLarge)),
+            thickness = Dimensions.DividerThickness.standard,
             color = AppColors.divider)
       }
     }
@@ -600,7 +601,7 @@ fun MemberList(
           /** --- Selected Member Info --- */
           Row(
               verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier.padding(bottom = 8.dp)) {
+              modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
                 /** --- Avatar Circle --- */
                 Box(
                     modifier =

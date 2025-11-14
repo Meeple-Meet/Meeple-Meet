@@ -62,7 +62,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -136,8 +135,6 @@ private const val PLACEHOLDER_LOCATION = "Location"
 private const val TEXT_LOADING = "Loading..."
 private const val SESSION_DETAILS_TITLE = "Session Details"
 private const val TEXT_NEW_SESSION = "New Session"
-
-private val SpacerPadding = 10.dp
 
 /* =======================================================================
  * Helpers
@@ -269,7 +266,7 @@ fun SessionDetailsScreen(
                     }
                   },
                   shape = CircleShape,
-                  border = BorderStroke(1.5.dp, AppColors.negative),
+                  border = BorderStroke(Dimensions.DividerThickness.medium, AppColors.negative),
                   modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
                   colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -371,7 +368,7 @@ fun ParticipantsSection(
           modifier =
               Modifier.clip(CircleShape)
                   .background(AppColors.affirmative)
-                  .border(1.dp, AppColors.affirmative, CircleShape)
+                  .border(Dimensions.DividerThickness.standard, AppColors.affirmative, CircleShape)
                   .padding(
                       horizontal = Dimensions.Spacing.large,
                       vertical = Dimensions.Padding.mediumSmall))
@@ -394,7 +391,7 @@ fun ParticipantsSection(
             modifier =
                 Modifier.clip(CircleShape)
                     .background(AppColors.secondary)
-                    .border(1.dp, AppColors.secondary, CircleShape)
+                    .border(Dimensions.DividerThickness.standard, AppColors.secondary, CircleShape)
                     .padding(
                         horizontal = Dimensions.Spacing.large,
                         vertical = Dimensions.Padding.mediumSmall)
@@ -404,7 +401,7 @@ fun ParticipantsSection(
             modifier =
                 Modifier.clip(CircleShape)
                     .background(AppColors.secondary)
-                    .border(1.dp, AppColors.secondary, CircleShape)
+                    .border(Dimensions.DividerThickness.standard, AppColors.secondary, CircleShape)
                     .padding(
                         horizontal = Dimensions.Spacing.large,
                         vertical = Dimensions.Padding.mediumSmall)
@@ -458,7 +455,7 @@ fun UserChipsGrid(
           .filter { m -> m.handle.contains(searchQuery, ignoreCase = true) }
 
   // Set up vertical scroll with a maximum height of 3 rows of chips.
-  val chipHeight = 40.dp
+  val chipHeight = Dimensions.ButtonSize.medium
   val chipSpacing = Dimensions.Spacing.medium
   val maxRows = 3
   val maxHeight = (chipHeight * maxRows) + (chipSpacing * (maxRows - 1))
@@ -496,7 +493,10 @@ fun UserChipsGrid(
                       onClick = { showAddMenu = true },
                       modifier =
                           Modifier.size(Dimensions.Spacing.xxxLarge)
-                              .border(1.dp, AppColors.divider, CircleShape)
+                              .border(
+                                  Dimensions.DividerThickness.standard,
+                                  AppColors.divider,
+                                  CircleShape)
                               .clip(CircleShape)
                               .background(AppColors.primary)
                               .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
@@ -727,7 +727,10 @@ fun UserChip(
       label = { Text(text = user.name, style = MaterialTheme.typography.bodySmall) },
       avatar = {
         Box(
-            modifier = Modifier.size(18.dp).clip(CircleShape).background(Color.LightGray),
+            modifier =
+                Modifier.size(Dimensions.IconSize.small.plus(Dimensions.Spacing.extraSmall))
+                    .clip(CircleShape)
+                    .background(Color.LightGray),
             contentAlignment = Alignment.Center) {
               Text(
                   text = user.name.firstOrNull()?.toString() ?: "A",
@@ -783,7 +786,7 @@ fun PillSliderNoBackground(
         modifier =
             Modifier.fillMaxWidth()
                 .background(AppColors.primary, CircleShape)
-                .border(1.dp, AppColors.primary, CircleShape)
+                .border(Dimensions.DividerThickness.standard, AppColors.primary, CircleShape)
                 .padding(horizontal = Dimensions.Spacing.large, vertical = Dimensions.Padding.tiny),
         sliderModifier = Modifier.testTag(SessionTestTags.DISCRETE_PILL_SLIDER),
         sliderColors =
@@ -911,7 +914,7 @@ fun DeleteSessionBTN(
     OutlinedButton(
         onClick = { viewModel.deleteSession(currentUser, discussion) },
         shape = CircleShape,
-        border = BorderStroke(1.5.dp, AppColors.negative),
+        border = BorderStroke(Dimensions.DividerThickness.medium, AppColors.negative),
         modifier = modifier.testTag(SessionTestTags.DELETE_SESSION_BUTTON),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
           Icon(Icons.Default.Delete, contentDescription = "Delete Session")

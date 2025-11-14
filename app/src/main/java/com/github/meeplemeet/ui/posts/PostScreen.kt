@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.AccountViewModel
@@ -380,7 +379,9 @@ private fun ComposerBar(
                   verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onAttach,
-                        modifier = Modifier.size(36.dp).testTag(PostTags.COMPOSER_ATTACH)) {
+                        modifier =
+                            Modifier.size(Dimensions.ButtonSize.medium)
+                                .testTag(PostTags.COMPOSER_ATTACH)) {
                           Icon(
                               Icons.Default.AttachFile,
                               contentDescription = "Attach",
@@ -459,8 +460,8 @@ private fun PostContent(
               .fillMaxSize()
               .background(MessagingColors.messagingBackground)
               .testTag(PostTags.LIST),
-      contentPadding = PaddingValues(vertical = 0.dp),
-      verticalArrangement = Arrangement.spacedBy(0.dp)) {
+      contentPadding = PaddingValues(vertical = Dimensions.Spacing.none),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
         item {
           PostCard(
               post = post,
@@ -665,7 +666,7 @@ private fun ThreadCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MessagingColors.messagingSurface,
-        shadowElevation = 0.dp) {
+        shadowElevation = Dimensions.Elevation.none) {
           Column(
               modifier =
                   Modifier.testTag(PostTags.threadCard(root.id))
@@ -945,8 +946,10 @@ private fun CommentItem(
       Spacer(Modifier.height(Dimensions.Spacing.medium))
       TextButton(
           onClick = { onCardClick?.invoke() },
-          contentPadding = PaddingValues(horizontal = 0.dp, vertical = Dimensions.Spacing.small),
-          modifier = Modifier.padding(start = 0.dp)) {
+          contentPadding =
+              PaddingValues(
+                  horizontal = Dimensions.Spacing.none, vertical = Dimensions.Spacing.small),
+          modifier = Modifier.padding(start = Dimensions.Spacing.none)) {
             Icon(
                 imageVector =
                     if (isExpanded) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,

@@ -25,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.CreateDiscussionViewModel
@@ -137,8 +136,8 @@ fun CreateDiscussionScreen(
               })
           HorizontalDivider(
               modifier =
-                  Modifier.fillMaxWidth(0.7f)
-                      .padding(horizontal = 0.dp)
+                  Modifier.fillMaxWidth(Dimensions.Fractions.topBarDivider)
+                      .padding(horizontal = Dimensions.Spacing.none)
                       .align(Alignment.CenterHorizontally),
               thickness = Dimensions.DividerThickness.standard,
               color = MaterialTheme.colorScheme.onSurface.copy(alpha = DEFAULT_SEARCH_ALPHA))
@@ -237,7 +236,10 @@ fun CreateDiscussionScreen(
                   modifier =
                       Modifier.testTag(AddDiscussionTestTags.ADD_DESCRIPTION)
                           .fillMaxWidth()
-                          .height(150.dp))
+                          .height(
+                              Dimensions.ContainerSize.timeFieldHeight
+                                  .times(2)
+                                  .plus(Dimensions.Padding.xxxLarge)))
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge))
 
@@ -261,7 +263,7 @@ fun CreateDiscussionScreen(
               HorizontalDivider(
                   modifier =
                       Modifier.fillMaxWidth(0.9f)
-                          .padding(horizontal = 0.dp)
+                          .padding(horizontal = Dimensions.Spacing.none)
                           .align(Alignment.CenterHorizontally),
                   thickness = Dimensions.DividerThickness.standard,
                   color = MaterialTheme.colorScheme.onSurface.copy(alpha = DEFAULT_SEARCH_ALPHA))
@@ -269,43 +271,46 @@ fun CreateDiscussionScreen(
               /** Display list of selected members */
               if (selectedMembers.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
-                LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
-                  items(selectedMembers) { member ->
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
-                        verticalAlignment = Alignment.CenterVertically) {
-                          /** Member avatar */
-                          Box(
-                              modifier =
-                                  Modifier.size(Dimensions.Padding.huge)
-                                      .clip(CircleShape)
-                                      .background(Color.LightGray),
-                              contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = member.name.firstOrNull()?.toString() ?: "A",
-                                    color = Color(0xFFFFA000),
-                                    fontWeight = FontWeight.Bold)
-                              }
-                          Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+                LazyColumn(
+                    modifier =
+                        Modifier.heightIn(max = Dimensions.ContainerSize.bottomSpacer.times(2))) {
+                      items(selectedMembers) { member ->
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(vertical = Dimensions.Padding.small),
+                            verticalAlignment = Alignment.CenterVertically) {
+                              /** Member avatar */
+                              Box(
+                                  modifier =
+                                      Modifier.size(Dimensions.Padding.huge)
+                                          .clip(CircleShape)
+                                          .background(Color.LightGray),
+                                  contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = member.name.firstOrNull()?.toString() ?: "A",
+                                        color = Color(0xFFFFA000),
+                                        fontWeight = FontWeight.Bold)
+                                  }
+                              Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 
-                          /** Member name */
-                          Text(
-                              text = member.handle,
-                              modifier = Modifier.weight(1f),
-                              maxLines = 1,
-                              color = AppColors.textIcons,
-                              fontStyle = MaterialTheme.typography.bodySmall.fontStyle)
+                              /** Member name */
+                              Text(
+                                  text = member.handle,
+                                  modifier = Modifier.weight(1f),
+                                  maxLines = 1,
+                                  color = AppColors.textIcons,
+                                  fontStyle = MaterialTheme.typography.bodySmall.fontStyle)
 
-                          /** Remove member button */
-                          Icon(
-                              Icons.Default.Cancel,
-                              contentDescription = "Remove",
-                              tint = AppColors.negative,
-                              modifier = Modifier.clickable { selectedMembers.remove(member) })
-                        }
-                  }
-                }
+                              /** Remove member button */
+                              Icon(
+                                  Icons.Default.Cancel,
+                                  contentDescription = "Remove",
+                                  tint = AppColors.negative,
+                                  modifier = Modifier.clickable { selectedMembers.remove(member) })
+                            }
+                      }
+                    }
               }
             }
       }

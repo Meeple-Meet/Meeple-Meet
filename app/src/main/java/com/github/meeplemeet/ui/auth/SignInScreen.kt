@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -146,16 +145,21 @@ fun SignInScreen(
 
         // App logo - changes based on theme
         val isDarkTheme = isSystemInDarkTheme()
-        Box(modifier = Modifier.size(250.dp)) {
-          Image(
-              painter =
-                  painterResource(
-                      id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-              contentDescription = "Meeple Meet Logo",
-              modifier = Modifier.fillMaxSize())
-        }
+        Box(
+            modifier =
+                Modifier.size(
+                    Dimensions.IconSize.massive.times(3).plus(Dimensions.Padding.extraLarge))) {
+              Image(
+                  painter =
+                      painterResource(
+                          id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+                  contentDescription = "Meeple Meet Logo",
+                  modifier = Modifier.fillMaxSize())
+            }
 
-        Spacer(modifier = Modifier.height(26.dp))
+        Spacer(
+            modifier =
+                Modifier.height(Dimensions.Spacing.xxLarge.plus(Dimensions.Spacing.extraSmall)))
 
         // Welcome message
         Text(
@@ -302,7 +306,7 @@ fun SignInScreen(
                 if (uiState.isLoading) {
                   CircularProgressIndicator(
                       modifier =
-                          Modifier.size(16.dp)
+                          Modifier.size(Dimensions.IconSize.small)
                               .testTag(SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
                       color = MaterialTheme.colorScheme.onPrimary)
                 }
@@ -327,7 +331,7 @@ fun SignInScreen(
             colors =
                 ButtonDefaults.outlinedButtonColors(
                     containerColor = AppColors.primary, contentColor = AppColors.textIcons),
-            border = BorderStroke(1.dp, AppColors.divider),
+            border = BorderStroke(Dimensions.DividerThickness.standard, AppColors.divider),
             modifier =
                 Modifier.fillMaxWidth(0.6f)
                     .testTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON), // For UI testing
@@ -341,8 +345,9 @@ fun SignInScreen(
                         painter = painterResource(id = R.drawable.google_logo),
                         contentDescription = null,
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(22.dp))
-                    //                    Spacer(modifier = Modifier.width(16.dp))
+                        modifier =
+                            Modifier.size(
+                                Dimensions.IconSize.standard.plus(Dimensions.Spacing.extraSmall)))
                     Text(
                         "Connect with Google",
                         modifier = Modifier.weight(1f),

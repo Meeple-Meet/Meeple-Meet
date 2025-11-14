@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
@@ -129,7 +128,8 @@ fun CreateAccountScreen(
                   shape = CircleShape,
                   elevation =
                       ButtonDefaults.buttonElevation(
-                          defaultElevation = 4.dp, pressedElevation = 0.dp),
+                          defaultElevation = Dimensions.Elevation.high,
+                          pressedElevation = Dimensions.Elevation.none),
                   onClick = {
                     showErrors = true
                     validateHandle(handle)
@@ -162,14 +162,21 @@ fun CreateAccountScreen(
 
               // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
-              Box(modifier = Modifier.size(250.dp)) {
-                Image(
-                    painter =
-                        painterResource(
-                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-                    contentDescription = "Meeple Meet Logo",
-                    modifier = Modifier.fillMaxSize())
-              }
+              Box(
+                  modifier =
+                      Modifier.size(
+                          Dimensions.IconSize.massive
+                              .times(3)
+                              .plus(Dimensions.Padding.extraLarge))) {
+                    Image(
+                        painter =
+                            painterResource(
+                                id =
+                                    if (isDarkTheme) R.drawable.logo_dark
+                                    else R.drawable.logo_clear),
+                        contentDescription = "Meeple Meet Logo",
+                        modifier = Modifier.fillMaxSize())
+                  }
               /** Title text shown below the image placeholder. */
               Text(
                   "You're almost there!",

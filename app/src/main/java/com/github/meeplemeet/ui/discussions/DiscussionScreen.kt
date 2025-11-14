@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -143,7 +142,7 @@ fun DiscussionScreen(
                       .clickable { onOpenDiscussionInfo(discussion) }) {
                 Box(
                     modifier =
-                        Modifier.size(40.dp)
+                        Modifier.size(Dimensions.ButtonSize.medium)
                             .clip(CircleShape)
                             .background(AppColors.neutral, CircleShape))
                 Spacer(Modifier.width(Dimensions.Spacing.large))
@@ -207,9 +206,9 @@ fun DiscussionScreen(
                         current = message.createdAt.toDate(),
                         previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
                 if (showDateHeader) {
-                  Spacer(Modifier.height(3.dp))
+                  Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
                   DateSeparator(date = message.createdAt.toDate())
-                  Spacer(Modifier.height(3.dp))
+                  Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
                 }
 
                 if (message.poll != null) {
@@ -259,7 +258,8 @@ fun DiscussionScreen(
                       Box {
                         IconButton(
                             modifier =
-                                Modifier.size(36.dp).testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
+                                Modifier.size(Dimensions.ButtonSize.medium)
+                                    .testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
                             onClick = { showAttachmentMenu = true }) {
                               Icon(
                                   Icons.Default.AttachFile,
@@ -278,7 +278,8 @@ fun DiscussionScreen(
                                     shape = RoundedCornerShape(Dimensions.CornerRadius.large),
                                     color = MessagingColors.messageBubbleOther,
                                     shadowElevation = Dimensions.Elevation.high,
-                                    modifier = Modifier.widthIn(max = 60.dp)) {
+                                    modifier =
+                                        Modifier.widthIn(max = Dimensions.AvatarSize.large)) {
                                       Column {
                                         DropdownMenuItem(
                                             text = {
@@ -286,7 +287,8 @@ fun DiscussionScreen(
                                                   Icons.Default.Poll,
                                                   contentDescription = null,
                                                   tint = MessagingColors.primaryText,
-                                                  modifier = Modifier.size(60.dp))
+                                                  modifier =
+                                                      Modifier.size(Dimensions.AvatarSize.large))
                                             },
                                             onClick = {
                                               showAttachmentMenu = false
@@ -423,7 +425,13 @@ fun PollBubble(
                   if (isMine) MessagingColors.messageBubbleOwn
                   else MessagingColors.messageBubbleOther,
               shadowElevation = Dimensions.Elevation.minimal,
-              modifier = Modifier.widthIn(min = 200.dp, max = 280.dp)) {
+              modifier =
+                  Modifier.widthIn(
+                      min = Dimensions.ContainerSize.bottomSpacer.times(2),
+                      max =
+                          Dimensions.ContainerSize.bottomSpacer
+                              .times(2)
+                              .plus(Dimensions.Padding.giant))) {
                 Column(modifier = Modifier.padding(Dimensions.Spacing.large)) {
 
                   /*  header  */
@@ -461,7 +469,10 @@ fun PollBubble(
                         modifier =
                             Modifier.testTag(DiscussionTestTags.pollVoteButton(msgIndex, index))
                                 .fillMaxWidth()
-                                .defaultMinSize(minHeight = 44.dp)
+                                .defaultMinSize(
+                                    minHeight =
+                                        Dimensions.ButtonSize.medium.plus(
+                                            Dimensions.Spacing.extraSmall))
                                 .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
                                 .background(background)
                                 .clickable(
@@ -488,7 +499,9 @@ fun PollBubble(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f)) {
                                       val isCheckBox = poll.allowMultipleVotes
-                                      val shapeSize = 18.dp
+                                      val shapeSize =
+                                          Dimensions.IconSize.small.plus(
+                                              Dimensions.Spacing.extraSmall)
                                       val borderColor =
                                           if (selected) MessagingColors.whatsappGreen
                                           else MessagingColors.secondaryText
@@ -498,11 +511,13 @@ fun PollBubble(
                                           modifier =
                                               Modifier.size(shapeSize)
                                                   .border(
-                                                      1.5.dp,
+                                                      Dimensions.DividerThickness.medium,
                                                       borderColor,
-                                                      if (isCheckBox) RoundedCornerShape(4.dp)
+                                                      if (isCheckBox)
+                                                          RoundedCornerShape(
+                                                              Dimensions.Spacing.extraSmall)
                                                       else CircleShape)
-                                                  .padding(3.dp)) {
+                                                  .padding(Dimensions.Spacing.extraSmall)) {
                                             if (selected) {
                                               if (isCheckBox) {
                                                 // draw check-box fill + check mark
@@ -510,7 +525,9 @@ fun PollBubble(
                                                     color = fillColor,
                                                     size = size,
                                                     cornerRadius =
-                                                        CornerRadius(4.dp.toPx(), 4.dp.toPx()))
+                                                        CornerRadius(
+                                                            Dimensions.Spacing.extraSmall.toPx(),
+                                                            Dimensions.Spacing.extraSmall.toPx()))
                                                 // simple check mark (two lines)
                                                 val check =
                                                     Path().apply {
@@ -523,7 +540,9 @@ fun PollBubble(
                                                     color = Color.White,
                                                     style =
                                                         Stroke(
-                                                            width = 2.dp.toPx(),
+                                                            width =
+                                                                Dimensions.DividerThickness.thin
+                                                                    .toPx(),
                                                             cap = StrokeCap.Round))
                                               } else {
                                                 // original radio dot
@@ -550,7 +569,7 @@ fun PollBubble(
                                             DiscussionTestTags.pollPercent(msgIndex, index)))
                               }
                         }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Dimensions.Spacing.small))
                   }
 
                   // Timestamp inside poll bubble
@@ -606,7 +625,11 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
         // Message bubble
         Box(
             modifier =
-                Modifier.widthIn(max = 280.dp)
+                Modifier.widthIn(
+                        max =
+                            Dimensions.ContainerSize.bottomSpacer
+                                .times(2)
+                                .plus(Dimensions.Padding.giant))
                     .clip(
                         RoundedCornerShape(
                             topStart =
@@ -685,7 +708,9 @@ private fun DateSeparator(date: Date) {
                   fontSize = Dimensions.TextSize.small,
                   fontWeight = FontWeight.Medium,
                   modifier =
-                      Modifier.padding(horizontal = Dimensions.Spacing.large, vertical = 6.dp),
+                      Modifier.padding(
+                          horizontal = Dimensions.Spacing.large,
+                          vertical = Dimensions.Spacing.small),
                   style = MaterialTheme.typography.labelSmall)
             }
       }
@@ -710,7 +735,10 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
         TextButton(
             modifier =
                 Modifier.testTag(DiscussionTestTags.CREATE_POLL_CONFIRM)
-                    .defaultMinSize(minWidth = 130.dp)
+                    .defaultMinSize(
+                        minWidth =
+                            Dimensions.ComponentWidth.spaceLabelWidth.plus(
+                                Dimensions.Padding.xxxLarge))
                     .padding(
                         horizontal = Dimensions.Spacing.medium,
                         vertical = Dimensions.Spacing.small),
@@ -727,7 +755,10 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
         TextButton(
             onClick = onDismiss,
             modifier =
-                Modifier.defaultMinSize(minWidth = 130.dp)
+                Modifier.defaultMinSize(
+                        minWidth =
+                            Dimensions.ComponentWidth.spaceLabelWidth.plus(
+                                Dimensions.Padding.xxxLarge))
                     .padding(
                         horizontal = Dimensions.Spacing.medium,
                         vertical = Dimensions.Spacing.small),

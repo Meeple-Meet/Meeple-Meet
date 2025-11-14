@@ -19,6 +19,7 @@ object Dimensions {
     val xLarge: Dp = 20.dp
     val xxLarge: Dp = 24.dp
     val xxxLarge: Dp = 32.dp
+    val xxxxLarge: Dp = 60.dp
   }
 
   // Padding
@@ -82,6 +83,7 @@ object Dimensions {
     val low: Dp = 1.dp
     val medium: Dp = 2.dp
     val high: Dp = 4.dp
+    val floating: Dp = 6.dp
     val extraHigh: Dp = 8.dp
     val xxHigh: Dp = 12.dp
     val raised: Dp = 3.dp

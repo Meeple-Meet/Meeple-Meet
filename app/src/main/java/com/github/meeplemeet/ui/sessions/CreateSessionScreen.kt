@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -71,7 +70,7 @@ object SessionCreationTestTags {
  * Magic numbers and strings extracted as constants
  * ======================================================================= */
 
-private val CountBubbleVerticalPadding = 6.dp
+private val CountBubbleVerticalPadding = Dimensions.Spacing.small
 
 private const val LABEL_CREATE = "Create"
 private const val LABEL_DISCARD = "Discard"
@@ -324,7 +323,7 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
       onClick = onDiscard,
       modifier = modifier.testTag(SessionCreationTestTags.DISCARD_BUTTON),
       shape = CircleShape,
-      border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+      border = BorderStroke(Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
       colors =
           ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
         Icon(
@@ -516,7 +515,7 @@ fun ParticipantsSection(
                                 vertical = CountBubbleVerticalPadding))
               }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Dimensions.Spacing.large))
 
         // All candidate chips
         UserChipsGrid(

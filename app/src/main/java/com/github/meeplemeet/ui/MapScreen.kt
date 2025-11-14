@@ -84,7 +84,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -430,10 +429,15 @@ fun MapScreen(
                       Surface(
                           modifier =
                               Modifier.padding(top = Dimensions.Padding.giant)
-                                  .widthIn(max = 120.dp)
+                                  .widthIn(
+                                      max =
+                                          Dimensions.ComponentWidth.spaceLabelWidth.plus(
+                                              Dimensions.Padding.extraMedium))
                                   .wrapContentHeight()
                                   .background(AppColors.primary)
-                                  .shadow(6.dp, RoundedCornerShape(Dimensions.CornerRadius.large)),
+                                  .shadow(
+                                      Dimensions.Elevation.floating,
+                                      RoundedCornerShape(Dimensions.CornerRadius.large)),
                           tonalElevation = Dimensions.Elevation.high,
                           shape = RoundedCornerShape(Dimensions.CornerRadius.large),
                           color = AppColors.primary.copy(alpha = 0.95f)) {
@@ -529,10 +533,15 @@ fun MapScreen(
                       tonalElevation = Dimensions.Elevation.xxHigh,
                       modifier =
                           Modifier.testTag(MapScreenTestTags.ADD_CHOOSE_DIALOG)
-                              .widthIn(min = 300.dp, max = 420.dp)
+                              .widthIn(
+                                  min = Dimensions.ContainerSize.bottomSpacer.times(3),
+                                  max =
+                                      Dimensions.ContainerSize.bottomSpacer
+                                          .times(4)
+                                          .plus(Dimensions.Padding.xLarge))
                               .wrapContentHeight()
                               .border(
-                                  1.dp,
+                                  Dimensions.DividerThickness.standard,
                                   AppColors.textIcons,
                                   RoundedCornerShape(Dimensions.CornerRadius.extraLarge))) {
                         Column(
@@ -564,7 +573,9 @@ fun MapScreen(
                               HorizontalDivider(
                                   modifier = Modifier.fillMaxWidth(0.8f),
                                   thickness = Dimensions.DividerThickness.standard,
-                                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                                  color =
+                                      MaterialTheme.colorScheme.onSurface.copy(
+                                          alpha = Dimensions.Alpha.readonlyBorder))
                               Spacer(Modifier.height(Dimensions.Spacing.xLarge))
 
                               // --- Two-option selector ---
@@ -583,7 +594,10 @@ fun MapScreen(
                                         SegmentedButtonDefaults.colors(
                                             inactiveContainerColor = AppColors.primary,
                                             activeContainerColor = AppColors.focus),
-                                    border = BorderStroke(1.dp, AppColors.textIcons),
+                                    border =
+                                        BorderStroke(
+                                            Dimensions.DividerThickness.standard,
+                                            AppColors.textIcons),
                                     label = {
                                       Row(
                                           modifier = Modifier.fillMaxWidth(),
