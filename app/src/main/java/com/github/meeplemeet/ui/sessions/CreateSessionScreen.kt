@@ -145,8 +145,8 @@ fun CreateSessionScreen(
   // Holds the form state for the session
   var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
   // Holds the selected location (may be null)
-  var selectedLocation by remember { mutableStateOf<Location?>(null) }
   val gameUi by viewModel.gameUIState.collectAsState()
+  val locationUi by viewModel.locationUIState.collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
@@ -194,7 +194,6 @@ fun CreateSessionScreen(
                   modifier = Modifier.weight(1f),
                   onDiscard = {
                     form = SessionForm(participants = listOf(account))
-                    selectedLocation = null
                     onBack()
                   })
 
@@ -214,7 +213,7 @@ fun CreateSessionScreen(
                                     form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME }
                                   },
                               date = toTimestamp(form.date, form.time),
-                              location = selectedLocation ?: Location(),
+                              location = locationUi.selectedLocation ?: Location(),
                               *form.participants.toTypedArray())
                         }
                         .onFailure { e ->
@@ -223,7 +222,6 @@ fun CreateSessionScreen(
                         }
 
                     form = SessionForm(participants = listOf(account))
-                    selectedLocation = null
                     onBack()
                   },
                   modifier = Modifier.weight(1f),
