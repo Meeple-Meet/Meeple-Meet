@@ -9,6 +9,7 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,6 +46,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -1008,9 +1010,12 @@ fun GameStockDialog(
   AlertDialog(
       onDismissRequest = onDismiss,
       shape = MaterialTheme.shapes.extraLarge,
+      containerColor = AppColors.primary,
       title = {
         Box(
-            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE),
+            Modifier.fillMaxWidth()
+                .testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE)
+                .background(AppColors.primary),
             contentAlignment = Alignment.Center) {
               Text(
                   ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
@@ -1042,7 +1047,9 @@ fun GameStockDialog(
           GameAddUI(
               value = quantity,
               onValueChange = onQuantityChange,
-              modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER))
+              modifier =
+                  Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
+                      .background(AppColors.primary))
         }
       },
       dismissButton = {
