@@ -4,7 +4,6 @@ import android.util.Log
 import java.io.PrintWriter
 import java.io.StringWriter
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 

@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.auth.AccountRepository
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
@@ -17,6 +18,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -24,9 +26,10 @@ import org.junit.Before
 import org.junit.BeforeClass
 
 @OptIn(ExperimentalCoroutinesApi::class)
-open class  FirestoreTests {
+open class FirestoreTests {
   lateinit var db: FirebaseFirestore
   lateinit var auth: FirebaseAuth
+  lateinit var storage: FirebaseStorage
 
   lateinit var authenticationRepository: AuthenticationRepository
   lateinit var handlesRepository: HandlesRepository
@@ -40,10 +43,12 @@ open class  FirestoreTests {
   lateinit var postRepository: PostRepository
   lateinit var shopRepository: ShopRepository
   lateinit var spaceRenterRepository: SpaceRenterRepository
+  lateinit var imageRepository: ImageRepository
 
   companion object {
     var firestoreEmulatorLaunched = false
     var authEmulatorLaunched = false
+    var storageEmulatorLaunched = false
 
     @BeforeClass
     @JvmStatic
@@ -55,6 +60,10 @@ open class  FirestoreTests {
       if (!authEmulatorLaunched) {
         authEmulatorLaunched = true
         FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+      }
+      if (!storageEmulatorLaunched) {
+        storageEmulatorLaunched = true
+        FirebaseStorage.getInstance().useEmulator("10.0.2.2", 9199)
       }
     }
   }
@@ -98,6 +107,7 @@ open class  FirestoreTests {
   fun testsSetup() {
     db = FirebaseProvider.db
     auth = FirebaseProvider.auth
+    storage = FirebaseProvider.storage
 
     authenticationRepository = RepositoryProvider.authentication
     handlesRepository = RepositoryProvider.handles
@@ -111,6 +121,7 @@ open class  FirestoreTests {
     postRepository = RepositoryProvider.posts
     shopRepository = RepositoryProvider.shops
     spaceRenterRepository = RepositoryProvider.spaceRenters
+    imageRepository = RepositoryProvider.images
 
     runBlocking {
       val db = FirebaseProvider.db
