@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.github.meeplemeet.ui.theme.Dimensions
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -47,6 +48,20 @@ object UITestTags {
 
   fun memberRowTag(uid: String) = "member_row_$uid"
 }
+
+private const val TEXT_GROUP_INFO = "Group Info"
+private const val TEXT_LEAVE = "Leave"
+private const val TEXT_DELETE = "Delete"
+private const val TEXT_DELETE_DISCUSSION = "Delete Discussion"
+private const val TEXT_LEAVE_DISCUSSION = "Leave Discussion"
+private const val TEXT_DESCRIPTION = "Description:"
+private const val TEXT_EDIT = "Edit"
+private const val TEXT_MANAGE_MEMBER_PERMISSIONS = "Manage member permissions and actions"
+private const val TEXT_MAKE_ADMIN = "Make Admin"
+private const val TEXT_REMOVE_ADMIN = "Remove Admin"
+private const val TEXT_REMOVE_FROM_GROUP = "Remove from Group"
+private const val TEXT_CLOSE = "Close"
+private const val TEXT_DELETE_CONFIRM = "Delete"
 
 /**
  * Displays the discussion infos screen, allowing users to view and edit discussion details, manage
@@ -126,7 +141,7 @@ fun DiscussionDetailsScreen(
     Scaffold(
         topBar = {
           TopBarWithDivider(
-              text = "Group Info",
+              text = TEXT_GROUP_INFO,
               /**
                * Save Name and Description on back — this is the only time the DB is updated here
                */
@@ -142,8 +157,8 @@ fun DiscussionDetailsScreen(
         },
         bottomBar = {
           Row(
-              modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 25.dp),
-              horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+              modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.xxxLarge, vertical = 25.dp),
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
                 /** The actual leave operation happens only after the confirmation dialog */
                 /** Leave button is always enabled */
                 OutlinedButton(
@@ -151,7 +166,7 @@ fun DiscussionDetailsScreen(
                     enabled = true,
                     colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
                     modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                      Text("Leave", color = AppColors.textIcons)
+                      Text(TEXT_LEAVE, color = AppColors.textIcons)
                     }
 
                 /** The actual deletion happens only after the confirmation dialog */
@@ -167,16 +182,16 @@ fun DiscussionDetailsScreen(
                               imageVector = Icons.Default.Delete,
                               contentDescription = null,
                               tint = AppColors.textIcons)
-                          Spacer(modifier = Modifier.width(8.dp))
-                          Text("Delete", color = AppColors.textIcons)
+                          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                          Text(TEXT_DELETE, color = AppColors.textIcons)
                         }
               }
         }) { padding ->
 
           /** --- Main Content --- */
           Column(
-              modifier = modifier.padding(padding).padding(16.dp),
-              verticalArrangement = Arrangement.spacedBy(16.dp)) {
+              modifier = modifier.padding(padding).padding(Dimensions.Spacing.extraLarge),
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
 
                 /** --- Discussion Icon --- */
                 Icon(
@@ -194,7 +209,7 @@ fun DiscussionDetailsScreen(
                     enabled = isAdmin,
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = Dimensions.Spacing.extraMedium)
                             .testTag(UITestTags.DISCUSSION_NAME),
                     colors =
                         TextFieldDefaults.colors(
@@ -221,7 +236,7 @@ fun DiscussionDetailsScreen(
                     trailingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
-                          contentDescription = "Edit",
+                          contentDescription = TEXT_EDIT,
                           tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
                     },
                     textStyle =
@@ -233,11 +248,11 @@ fun DiscussionDetailsScreen(
 
                 /** --- Discussion Description --- */
                 Text(
-                    text = "Description:",
+                    text = TEXT_DESCRIPTION,
                     style =
                         MaterialTheme.typography.titleLarge.copy(
                             textDecoration = TextDecoration.Underline),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.extraMedium),
                     color = AppColors.textIcons)
 
                 /** --- Description TextField --- */
@@ -248,7 +263,7 @@ fun DiscussionDetailsScreen(
                     enabled = isAdmin,
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(start = 0.dp, end = 6.dp)
+                            .padding(start = Dimensions.Spacing.none, end = Dimensions.Padding.mediumSmall)
                             .testTag(UITestTags.DISCUSSION_DESCRIPTION),
                     /** Makes the textField look like a line */
                     colors =
@@ -268,7 +283,7 @@ fun DiscussionDetailsScreen(
                     trailingIcon = {
                       Icon(
                           imageVector = Icons.Default.Edit,
-                          contentDescription = "Edit",
+                          contentDescription = TEXT_EDIT,
                           modifier = Modifier,
                           tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
                     },
@@ -327,10 +342,10 @@ fun DiscussionDetailsScreen(
                                   imageVector = Icons.Default.Delete,
                                   contentDescription = null,
                                   tint = AppColors.negative,
-                                  modifier = Modifier.size(28.dp))
-                              Spacer(modifier = Modifier.width(12.dp))
+                                  modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+                              Spacer(modifier = Modifier.width(Dimensions.Spacing.extraMedium))
                               Text(
-                                  "Delete Discussion",
+                                  TEXT_DELETE_DISCUSSION,
                                   style = MaterialTheme.typography.titleLarge,
                                   fontWeight = FontWeight.Bold,
                                   color = AppColors.textIcons)
@@ -358,7 +373,7 @@ fun DiscussionDetailsScreen(
                                     contentColor = AppColors.textIcons),
                             modifier =
                                 Modifier.testTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON)) {
-                              Text("Delete", fontWeight = FontWeight.SemiBold)
+                              Text(TEXT_DELETE_CONFIRM, fontWeight = FontWeight.SemiBold)
                             }
                       },
                       dismissButton = {
@@ -385,10 +400,10 @@ fun DiscussionDetailsScreen(
                                   imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                   contentDescription = null,
                                   tint = AppColors.affirmative,
-                                  modifier = Modifier.size(28.dp))
-                              Spacer(modifier = Modifier.width(12.dp))
+                                  modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+                              Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
                               Text(
-                                  "Leave Discussion",
+                                  TEXT_LEAVE_DISCUSSION,
                                   style = MaterialTheme.typography.titleLarge,
                                   fontWeight = FontWeight.Bold,
                                   color = AppColors.textIcons)
@@ -418,7 +433,7 @@ fun DiscussionDetailsScreen(
                                     contentColor = AppColors.textIcons),
                             modifier =
                                 Modifier.testTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON)) {
-                              Text("Leave", fontWeight = FontWeight.SemiBold)
+                              Text(TEXT_LEAVE, fontWeight = FontWeight.SemiBold)
                             }
                       },
                       dismissButton = {
@@ -456,14 +471,14 @@ fun MemberList(
     discussion: Discussion,
 ) {
   /** Small spacer between search field and list */
-  Spacer(modifier = Modifier.height(0.dp))
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.none))
 
   /** Selected Members */
   var selectedMember by remember { mutableStateOf<Account?>(null) }
 
   /** Only show the list if there are members */
   if (selectedMembers.isNotEmpty()) {
-    Spacer(modifier = Modifier.height(4.dp))
+    Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
     /** --- Members List --- */
     LazyColumn {
@@ -484,13 +499,13 @@ fun MemberList(
             modifier =
                 clickableModifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp, horizontal = 14.dp)
+                    .padding(vertical = Dimensions.Spacing.small, horizontal = 14.dp)
                     .testTag(UITestTags.memberRowTag(member.uid)),
             verticalAlignment = Alignment.CenterVertically) {
 
               /** --- Avatar Circle --- */
               Box(
-                  modifier = Modifier.size(36.dp).clip(CircleShape).background(AppColors.primary),
+                  modifier = Modifier.size(Dimensions.ButtonSize.medium).clip(CircleShape).background(AppColors.primary),
                   contentAlignment = Alignment.Center) {
 
                     /** First letter of name or A if name is empty */
@@ -499,7 +514,7 @@ fun MemberList(
                         color = AppColors.affirmative,
                         fontWeight = FontWeight.Bold)
                   }
-              Spacer(modifier = Modifier.width(12.dp))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.extraMedium))
 
               /** Member name takes up remaining space */
               Text(
@@ -528,9 +543,9 @@ fun MemberList(
               /** --- Status Badge --- */
               Box(
                   modifier =
-                      Modifier.padding(end = 8.dp)
-                          .background(badgeColor, shape = RoundedCornerShape(12.dp))
-                          .padding(horizontal = 10.dp, vertical = 4.dp),
+                      Modifier.padding(end = Dimensions.Spacing.medium)
+                          .background(badgeColor, shape = RoundedCornerShape(Dimensions.Spacing.large))
+                          .padding(horizontal = Dimensions.Padding.extraMedium, vertical = Dimensions.Spacing.small),
                   contentAlignment = Alignment.Center) {
                     /** Badge text */
                     Text(
@@ -576,7 +591,7 @@ fun MemberList(
               modifier = Modifier.padding(bottom = 8.dp)) {
                 /** --- Avatar Circle --- */
                 Box(
-                    modifier = Modifier.size(40.dp).clip(CircleShape).background(AppColors.primary),
+                    modifier = Modifier.size(Dimensions.AvatarSize.medium).clip(CircleShape).background(AppColors.primary),
                     contentAlignment = Alignment.Center) {
                       /** First letter of name or A if name is empty */
                       Text(
@@ -585,7 +600,7 @@ fun MemberList(
                           fontWeight = FontWeight.Bold,
                           style = MaterialTheme.typography.titleMedium)
                     }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.extraMedium))
                 /** Member name */
                 Text(
                     text = selectedMember?.name ?: "",
@@ -596,13 +611,13 @@ fun MemberList(
               }
         },
         text = {
-          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
             Text(
-                "Manage member permissions and actions",
+                TEXT_MANAGE_MEMBER_PERMISSIONS,
                 style = MaterialTheme.typography.bodyMedium,
                 color = AppColors.textIconsFade)
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
             /**
              * OWNER or ADMIN can make admin, but only if the target is not already admin or owner
@@ -620,9 +635,9 @@ fun MemberList(
                     Icon(
                         imageVector = Icons.Default.PersonAdd,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Make Admin", fontWeight = FontWeight.SemiBold)
+                        modifier = Modifier.size(Dimensions.Spacing.xLarge))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                    Text(TEXT_MAKE_ADMIN, fontWeight = FontWeight.SemiBold)
                   }
             }
 
@@ -641,9 +656,9 @@ fun MemberList(
                     Icon(
                         imageVector = Icons.Default.PersonRemove,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Remove Admin", fontWeight = FontWeight.Medium)
+                        modifier = Modifier.size(Dimensions.Spacing.xLarge))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                    Text(TEXT_REMOVE_ADMIN, fontWeight = FontWeight.Medium)
                   }
             }
 
@@ -663,9 +678,9 @@ fun MemberList(
                     Icon(
                         imageVector = Icons.Default.PersonRemove,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Remove from Group", fontWeight = FontWeight.Medium)
+                        modifier = Modifier.size(Dimensions.Spacing.xLarge))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                    Text(TEXT_REMOVE_FROM_GROUP, fontWeight = FontWeight.Medium)
                   }
             }
           }
@@ -673,7 +688,7 @@ fun MemberList(
         confirmButton = {},
         dismissButton = {
           TextButton(onClick = { selectedMember = null }) {
-            Text("Close", color = AppColors.textIconsFade, fontWeight = FontWeight.Medium)
+            Text(TEXT_CLOSE, color = AppColors.textIconsFade, fontWeight = FontWeight.Medium)
           }
         })
   }
