@@ -232,7 +232,9 @@ class CreateShopScreenTest {
         stage = s
         var query by remember { mutableStateOf("") }
 
-        viewModel = remember { CreateShopViewModel() }
+        val vmState = remember { mutableStateOf<CreateShopViewModel?>(null) }
+        vmState.value = viewModel // still needs to be done in SideEffect for safety
+        SideEffect { vmState.value = viewModel }
         val locationUi by viewModel.locationUIState.collectAsState()
         val gameUi by viewModel.gameUIState.collectAsState()
 
