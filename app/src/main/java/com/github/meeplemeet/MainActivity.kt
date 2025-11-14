@@ -31,6 +31,7 @@ import com.github.meeplemeet.model.auth.AccountRepository
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
@@ -73,13 +74,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
-import java.io.File
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.flow.MutableStateFlow
+import okhttp3.OkHttpClient
 
 /**
  * Provider object for Firebase services.
@@ -141,6 +139,9 @@ object RepositoryProvider {
 
   /** Lazily initialized repository for space renter operations. */
   val spaceRenters: SpaceRenterRepository by lazy { SpaceRenterRepository() }
+
+  /** Lazily initialized repository for image operations. */
+  val images: ImageRepository by lazy { ImageRepository() }
 }
 
 object HttpClientProvider {

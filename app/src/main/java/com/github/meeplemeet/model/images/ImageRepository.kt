@@ -4,25 +4,29 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.github.meeplemeet.FirebaseProvider
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
 
 /**
- * Repository for managing image storage and retrieval.
- * Handles image encoding to WebP format, caching, and Firebase Storage operations.
+ * Repository for managing image storage and retrieval. Handles image encoding to WebP format,
+ * caching, and Firebase Storage operations.
  */
 class ImageRepository {
   private val storage = FirebaseProvider.storage
+
   private fun accountPath(id: String) = "accounts/$id"
+
   private fun discussionPath(id: String) = "discussions/$id"
+
   private fun shopPath(id: String) = "shops/$id"
+
   private fun spaceRenterPath(id: String) = "space_renters/$id"
 
   /**
@@ -30,9 +34,10 @@ class ImageRepository {
    *
    * @param accountId The unique identifier for the account
    * @param context Android context for accessing cache directory
+   * @param inputPath Absolute path to the source image file
    */
-  suspend fun saveAccountProfilePicture(accountId: String, context: Context) {
-    saveImage(context, accountPath(accountId))
+  suspend fun saveAccountProfilePicture(accountId: String, context: Context, inputPath: String) {
+    saveImage(context, inputPath, accountPath(accountId))
   }
 
   /**
@@ -51,10 +56,14 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
-   * @param paths Variable number of file paths to save
+   * @param inputPaths Variable number of absolute paths to source image files
    */
-  suspend fun saveDiscussionPhotos(context: Context, discussionId: String, vararg paths: String) {
-    saveImages(context, discussionPath(discussionId), *paths)
+  suspend fun saveDiscussionPhotos(
+      context: Context,
+      discussionId: String,
+      vararg inputPaths: String
+  ) {
+    saveImages(context, discussionPath(discussionId), *inputPaths)
   }
 
   /**
@@ -62,11 +71,15 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
-   * @param paths Variable number of file paths to load
-   * @return List of images as byte arrays in the same order as paths
+   * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
+   * @return List of images as byte arrays in index order
    */
-  suspend fun loadDiscussionPhotos(context: Context, discussionId: String, vararg paths: String): List<ByteArray> {
-    return loadImages(context, discussionPath(discussionId), *paths)
+  suspend fun loadDiscussionPhotos(
+      context: Context,
+      discussionId: String,
+      count: Int
+  ): List<ByteArray> {
+    return loadImages(context, discussionPath(discussionId), count)
   }
 
   /**
@@ -74,10 +87,10 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param shopId The unique identifier for the shop
-   * @param paths Variable number of file paths to save
+   * @param inputPaths Variable number of absolute paths to source image files
    */
-  suspend fun saveShopPhotos(context: Context, shopId: String, vararg paths: String) {
-    saveImages(context, shopPath(shopId), *paths)
+  suspend fun saveShopPhotos(context: Context, shopId: String, vararg inputPaths: String) {
+    saveImages(context, shopPath(shopId), *inputPaths)
   }
 
   /**
@@ -85,11 +98,11 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param shopId The unique identifier for the shop
-   * @param paths Variable number of file paths to load
-   * @return List of images as byte arrays in the same order as paths
+   * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
+   * @return List of images as byte arrays in index order
    */
-  suspend fun loadShopPhotos(context: Context, shopId: String, vararg paths: String): List<ByteArray> {
-    return loadImages(context, shopPath(shopId), *paths)
+  suspend fun loadShopPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
+    return loadImages(context, shopPath(shopId), count)
   }
 
   /**
@@ -97,10 +110,10 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param shopId The unique identifier for the space renter
-   * @param paths Variable number of file paths to save
+   * @param inputPaths Variable number of absolute paths to source image files
    */
-  suspend fun saveSpaceRenterPhotos(context: Context, shopId: String, vararg paths: String) {
-    saveImages(context, spaceRenterPath(shopId), *paths)
+  suspend fun saveSpaceRenterPhotos(context: Context, shopId: String, vararg inputPaths: String) {
+    saveImages(context, spaceRenterPath(shopId), *inputPaths)
   }
 
   /**
@@ -108,30 +121,31 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param shopId The unique identifier for the space renter
-   * @param paths Variable number of file paths to load
-   * @return List of images as byte arrays in the same order as paths
+   * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
+   * @return List of images as byte arrays in index order
    */
-  suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, vararg paths: String): List<ByteArray> {
-    return loadImages(context, spaceRenterPath(shopId), *paths)
+  suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
+    return loadImages(context, spaceRenterPath(shopId), count)
   }
 
   /**
    * Encodes an image to WebP format and saves it to both local cache and Firebase Storage.
    *
    * @param context Android context for accessing cache directory
-   * @param path Storage path (used for both local cache and Firebase Storage)
+   * @param inputPath Absolute path to the source image file
+   * @param storagePath Storage path (used for both local cache and Firebase Storage)
    */
-  private suspend fun saveImage(context: Context, path: String) {
-    val bytes = encodeWebP(path)
+  private suspend fun saveImage(context: Context, inputPath: String, storagePath: String) {
+    val bytes = encodeWebP(inputPath)
 
     // Save to disk
     withContext(Dispatchers.IO) {
-      FileOutputStream("${context.cacheDir}/$path").use { fos ->
-        fos.write(bytes)
-      }
+      val diskPath = "${context.cacheDir}/$storagePath"
+      File(diskPath).parentFile?.mkdirs()
+      FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
     }
 
-    storage.reference.child(path).putBytes(bytes).await()
+    storage.reference.child(storagePath).putBytes(bytes).await()
   }
 
   /**
@@ -148,9 +162,7 @@ class ImageRepository {
 
     // Check if image exists in cache
     if (file.exists()) {
-      return withContext(Dispatchers.IO) {
-        file.readBytes()
-      }
+      return withContext(Dispatchers.IO) { file.readBytes() }
     }
 
     // Download from Firebase Storage
@@ -159,9 +171,7 @@ class ImageRepository {
     // Save to cache for future use
     withContext(Dispatchers.IO) {
       file.parentFile?.mkdirs()
-      FileOutputStream(diskPath).use { fos ->
-        fos.write(bytes)
-      }
+      FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
     }
 
     return bytes
@@ -172,56 +182,63 @@ class ImageRepository {
    *
    * @param context Android context for accessing cache directory
    * @param parentPath Parent directory path in storage
-   * @param childPaths Variable number of child paths to be appended to the parent path
+   * @param inputPaths Variable number of absolute paths to source image files
    */
-  private suspend fun saveImages(context: Context, parentPath: String, vararg childPaths: String) = coroutineScope {
-    childPaths.map { childPath ->
-      async {
-        val fullPath = "$parentPath/$childPath"
-        saveImage(context, fullPath)
+  private suspend fun saveImages(context: Context, parentPath: String, vararg inputPaths: String) =
+      coroutineScope {
+        inputPaths
+            .mapIndexed { index, inputPath ->
+              async {
+                val storagePath = "$parentPath/$index.webp"
+                saveImage(context, inputPath, storagePath)
+              }
+            }
+            .awaitAll()
       }
-    }.awaitAll()
-  }
 
   /**
-   * Loads multiple images in parallel from cache or Firebase Storage.
-   * All images are loaded concurrently for optimal performance.
+   * Loads multiple images in parallel from cache or Firebase Storage. All images are loaded
+   * concurrently for optimal performance.
    *
    * @param context Android context for accessing cache directory
    * @param parentPath Parent directory path in storage
-   * @param childPaths Variable number of child paths to be appended to the parent path
-   * @return List of images as byte arrays in the same order as childPaths
+   * @param count Number of images to load (0.webp through (count-1).webp)
+   * @return List of images as byte arrays in index order
    */
-  private suspend fun loadImages(context: Context, parentPath: String, vararg childPaths: String): List<ByteArray> = coroutineScope {
-    childPaths.map { childPath ->
-      async {
-        val fullPath = "$parentPath/$childPath"
-        loadImage(context, fullPath)
-      }
-    }.awaitAll()
+  private suspend fun loadImages(
+      context: Context,
+      parentPath: String,
+      count: Int
+  ): List<ByteArray> = coroutineScope {
+    (0 until count)
+        .map { index ->
+          async {
+            val storagePath = "$parentPath/$index.webp"
+            loadImage(context, storagePath)
+          }
+        }
+        .awaitAll()
   }
 
   /**
    * Encodes an image from the file system to WebP format with compression and downscaling.
    *
    * @param inputPath Absolute path to the input image file
-   * @param targetMaxPx Maximum dimension (width or height) in pixels. Images larger than this are downscaled
+   * @param targetMaxPx Maximum dimension (width or height) in pixels. Images larger than this are
+   *   downscaled
    * @param quality WebP compression quality (0-100, lower means smaller file size)
    * @return The encoded WebP image as a byte array
    */
-  private fun encodeWebP(
-    inputPath: String,
-    targetMaxPx: Int = 800,
-    quality: Int = 40
-  ): ByteArray {
-    val opts = BitmapFactory.Options().apply {
-      inJustDecodeBounds = true
-      BitmapFactory.decodeFile(inputPath, this)
+  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 800, quality: Int = 40): ByteArray {
+    val opts =
+        BitmapFactory.Options().apply {
+          inJustDecodeBounds = true
+          BitmapFactory.decodeFile(inputPath, this)
 
-      val maxDim = maxOf(outWidth, outHeight)
-      inSampleSize = (maxDim / targetMaxPx).coerceAtLeast(1)
-      inJustDecodeBounds = false
-    }
+          val maxDim = maxOf(outWidth, outHeight)
+          inSampleSize = (maxDim / targetMaxPx).coerceAtLeast(1)
+          inJustDecodeBounds = false
+        }
 
     val bmp = BitmapFactory.decodeFile(inputPath, opts)
 
