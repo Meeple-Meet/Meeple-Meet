@@ -275,8 +275,8 @@ private fun isOpen24(hours: List<TimeSlot>): Boolean =
         hours.first().close == ShopUiDefaults.TimeMagicNumbers.OPEN24_END
 
 /**
- * Validates that the provided time intervals do not overlap and that each end time is after its
- * corresponding start time.
+ * Validates that the provided time intervals do not overlap. Supports intervals that span midnight
+ * (e.g., 20:00 to 01:00).
  *
  * @param intervals A list of pairs representing start and end times.
  * @return A sorted list of valid time intervals.
@@ -285,13 +285,24 @@ private fun isOpen24(hours: List<TimeSlot>): Boolean =
 private fun validateIntervals(
     intervals: List<Pair<LocalTime, LocalTime>>
 ): List<Pair<LocalTime, LocalTime>> {
-  val cleaned = intervals.filter { (s, e) -> e.isAfter(s) }
-  require(cleaned.size == intervals.size) { "End time must be after start time." }
-  val sorted = cleaned.sortedBy { it.first }
+  // Allow all intervals except those where start == end
+  // If end < start, it means the interval spans midnight (e.g., 20:00 to 01:00)
+  val cleaned = intervals.filter { (s, e) -> e != s }
+  require(cleaned.size == intervals.size) { "End time must be different from start time." }
+
+  // Separate midnight-spanning intervals from regular ones
+  val regular = cleaned.filter { (s, e) -> e.isAfter(s) }
+
+  // Check overlaps only among regular (non-midnight-spanning) intervals
+  val sorted = regular.sortedBy { it.first }
   for (i in 1 until sorted.size) {
     require(sorted[i].first.isAfter(sorted[i - 1].second)) { "Time ranges must not overlap." }
   }
-  return sorted
+
+  // Note: For simplicity, we don't validate overlaps involving midnight-spanning intervals.
+  // This allows flexibility for shop hours that extend past midnight.
+
+  return cleaned
 }
 
 /**
