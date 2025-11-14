@@ -73,8 +73,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.storage
 
 /**
  * Provider object for Firebase services.
@@ -88,6 +93,9 @@ object FirebaseProvider {
 
   /** Lazily initialized Firebase Auth instance for authentication operations. */
   val auth: FirebaseAuth by lazy { Firebase.auth }
+
+  /** Lazily initialized Firebase Storage instance for storage operations. */
+  val storage: FirebaseStorage by lazy { Firebase.storage }
 }
 
 /**
