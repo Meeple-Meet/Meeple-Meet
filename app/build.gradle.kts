@@ -74,7 +74,7 @@ android {
 
   defaultConfig {
     applicationId = "com.github.meeplemeet"
-    minSdk = 29
+    minSdk = 30
     versionCode = 1
     versionName = "1.0"
 
@@ -230,6 +230,7 @@ dependencies {
   implementation(libs.firebase.firestore)
   implementation(libs.firebase.auth.ktx)
   implementation(libs.firebase.auth)
+  implementation(libs.firebase.storage)
   implementation(libs.geofirestore)
 
   // Credential Manager (for Google Sign-In)
