@@ -219,9 +219,13 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
  * Composable that displays the shop's opening hours for each day of the week.
  *
  * @param openingHours List of OpeningHours representing the shop's weekly schedule.
+ * @param dayTagPrefix Optional prefix for day test tags. Defaults to SHOP_DAY_ prefix.
  */
 @Composable
-fun AvailabilitySection(openingHours: List<OpeningHours>) {
+fun AvailabilitySection(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopTestTags.SHOP_DAY_PREFIX
+) {
   val daysOfWeek = remember { DateFormatSymbols().weekdays }
   val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
   Column(
@@ -243,8 +247,7 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
           if (entry.hours.isEmpty()) {
             // No opening hours means the shop is closed on this day
             Row(
-                modifier =
-                    Modifier.fillMaxWidth().testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"),
+                modifier = Modifier.fillMaxWidth().testTag("${dayTagPrefix}${entry.day}"),
                 horizontalArrangement = Arrangement.SpaceBetween) {
                   Text(
                       dayName,
@@ -253,8 +256,7 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
                   Text(
                       CLOSED_MSG,
                       fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier =
-                          Modifier.testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS"))
+                      modifier = Modifier.testTag("${dayTagPrefix}${entry.day}_HOURS"))
                 }
           } else {
             // Display each time interval for the day
@@ -262,17 +264,14 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
               Column {
                 Row(
                     modifier =
-                        Modifier.fillMaxWidth()
-                            .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS_${idx}"),
+                        Modifier.fillMaxWidth().testTag("${dayTagPrefix}${entry.day}_HOURS_${idx}"),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                       if (idx == 0) {
                         // Show the day name only on the first interval row
                         Text(
                             dayName,
                             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                            modifier =
-                                Modifier.weight(1f)
-                                    .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"))
+                            modifier = Modifier.weight(1f).testTag("${dayTagPrefix}${entry.day}"))
                       } else {
                         // Empty space for subsequent interval rows to align with day name column
                         Text("", modifier = Modifier.weight(1f))

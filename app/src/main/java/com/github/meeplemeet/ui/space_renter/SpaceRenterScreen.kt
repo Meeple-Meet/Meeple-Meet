@@ -135,7 +135,7 @@ fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) 
         HorizontalDivider(
             modifier =
                 Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
-        AvailabilitySection(spaceRenter.openingHours)
+        AvailabilitySection(spaceRenter.openingHours, SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
         HorizontalDivider(
             modifier =
                 Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))

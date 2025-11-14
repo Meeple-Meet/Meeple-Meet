@@ -292,6 +292,7 @@ private fun validateIntervals(
 
   // Separate midnight-spanning intervals from regular ones
   val regular = cleaned.filter { (s, e) -> e.isAfter(s) }
+  val midnightSpanning = cleaned.filter { (s, e) -> e.isBefore(s) }
 
   // Check overlaps only among regular (non-midnight-spanning) intervals
   val sorted = regular.sortedBy { it.first }
@@ -302,7 +303,8 @@ private fun validateIntervals(
   // Note: For simplicity, we don't validate overlaps involving midnight-spanning intervals.
   // This allows flexibility for shop hours that extend past midnight.
 
-  return cleaned
+  // Return sorted regular intervals followed by midnight-spanning ones
+  return sorted + midnightSpanning
 }
 
 /**
