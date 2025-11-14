@@ -221,6 +221,8 @@ fun DiscussionDetailsScreen(
                         TextFieldDefaults.colors(
                             focusedContainerColor = AppColors.primary,
                             unfocusedContainerColor = AppColors.primary,
+                            disabledContainerColor = AppColors.primary,
+                            disabledTextColor = AppColors.textIcons,
                             focusedIndicatorColor = AppColors.textIcons,
                             unfocusedIndicatorColor = AppColors.textIconsFade,
                             cursorColor = AppColors.textIcons,
@@ -280,6 +282,8 @@ fun DiscussionDetailsScreen(
                         TextFieldDefaults.colors(
                             focusedContainerColor = AppColors.primary,
                             unfocusedContainerColor = AppColors.primary,
+                            disabledContainerColor = AppColors.primary,
+                            disabledTextColor = AppColors.textIcons,
                             focusedIndicatorColor = AppColors.textIcons,
                             unfocusedIndicatorColor = AppColors.textIconsFade,
                             cursorColor = AppColors.textIcons,
