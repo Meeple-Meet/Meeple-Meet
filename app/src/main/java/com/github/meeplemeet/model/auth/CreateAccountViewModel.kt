@@ -8,9 +8,14 @@ import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.HandleAlreadyTakenException
 import com.github.meeplemeet.model.InvalidHandleFormatException
 import com.github.meeplemeet.model.discussions.SUGGESTIONS_LIMIT
+import com.github.meeplemeet.model.shared.DEBOUNCE_TIME_MS
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 /**
@@ -22,6 +27,7 @@ import kotlinx.coroutines.launch
  *
  * @property handlesRepository Repository for handle operations
  */
+@OptIn(FlowPreview::class)
 open class CreateAccountViewModel(
     val handlesRepository: HandlesRepository = RepositoryProvider.handles,
 ) : ViewModel(), AccountViewModel {
@@ -33,8 +39,30 @@ open class CreateAccountViewModel(
   val errorMessage: StateFlow<String> = _errorMsg
 
   /** StateFlow containing account suggestions from handle searches. */
+  private val handleQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
   private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
   val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
+
+  init {
+    viewModelScope.launch {
+      handleQueryFlow.debounce(DEBOUNCE_TIME_MS).collectLatest { prefix ->
+        if (prefix.isBlank()) {
+          _handleSuggestions.value = emptyList()
+          return@collectLatest
+        }
+
+        try {
+          // searchByHandle returns a Flow<List<Handle>>
+          handlesRepository.searchByHandle(prefix).collect { list ->
+            _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
+          }
+        } catch (_: Exception) {
+          _handleSuggestions.value = emptyList()
+          // optionally set an error StateFlow here, similar to gameSearchError/locationSearchError
+        }
+      }
+    }
+  }
 
   /**
    * Checks if a handle exists for the given account.
@@ -155,11 +183,12 @@ open class CreateAccountViewModel(
    * @param prefix The handle prefix to search for
    */
   fun searchByHandle(prefix: String) {
-    if (prefix.isBlank()) return
-    viewModelScope.launch {
-      handlesRepository.searchByHandle(prefix).collect { list ->
-        _handleSuggestions.value = list.take(SUGGESTIONS_LIMIT)
-      }
+    // Keep behaviour consistent with game/location: blank query clears suggestions
+    if (prefix.isBlank()) {
+      _handleSuggestions.value = emptyList()
+      return
     }
+
+    handleQueryFlow.tryEmit(prefix)
   }
 }
