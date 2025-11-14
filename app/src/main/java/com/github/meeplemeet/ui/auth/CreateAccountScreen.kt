@@ -27,6 +27,7 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 
 object CreateAccountTestTags {
   const val HANDLE_FIELD = "CreateAccountHandleField"
@@ -36,6 +37,19 @@ object CreateAccountTestTags {
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
   const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
   const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
+}
+
+object CreateAccountScreenUi {
+  val xxxLargePadding = Dimensions.Padding.xxxLarge
+  val xxLargePadding = Dimensions.Padding.xxLarge
+  val extraLargePadding = Dimensions.Padding.extraLarge
+  val smallPadding = Dimensions.Padding.small
+  val mediumPadding = Dimensions.Padding.medium
+  val largePadding = Dimensions.Padding.large
+  val tinyPadding = Dimensions.Padding.tiny
+  val extraLargeSpacing = Dimensions.Spacing.extraLarge
+  val mediumSpacing = Dimensions.Spacing.medium
+  val xxLargeSpacing = Dimensions.Spacing.xxLarge
 }
 
 /**
@@ -91,8 +105,12 @@ fun CreateAccountScreen(
   Scaffold(
       bottomBar = {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = CreateAccountScreenUi.xxxLargePadding,
+                        vertical = CreateAccountScreenUi.xxLargePadding),
+            horizontalArrangement = Arrangement.spacedBy(CreateAccountScreenUi.extraLargeSpacing)) {
               OutlinedButton(
                   onClick = onBack,
                   modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
@@ -101,7 +119,7 @@ fun CreateAccountScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(CreateAccountScreenUi.mediumSpacing))
                     Text(text = "Back", style = MaterialTheme.typography.bodySmall)
                   }
 
@@ -135,7 +153,10 @@ fun CreateAccountScreen(
             }
       }) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().background(AppColors.primary).padding(24.dp),
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(AppColors.primary)
+                    .padding(CreateAccountScreenUi.xxLargePadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
 
@@ -153,7 +174,7 @@ fun CreateAccountScreen(
               Text(
                   "You're almost there!",
                   style = TextStyle(fontSize = 36.sp, color = AppColors.neutral),
-                  modifier = Modifier.padding(bottom = 16.dp))
+                  modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
               /** Input field for entering the user's unique handle. */
               OutlinedTextField(
@@ -194,11 +215,13 @@ fun CreateAccountScreen(
                     style = MaterialTheme.typography.bodySmall,
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(start = 16.dp, top = 4.dp)
+                            .padding(
+                                start = CreateAccountScreenUi.extraLargePadding,
+                                top = CreateAccountScreenUi.smallPadding)
                             .testTag(CreateAccountTestTags.HANDLE_ERROR))
               }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(CreateAccountScreenUi.extraLargeSpacing))
 
               /** Input field for entering the user's display username. */
               OutlinedTextField(
@@ -234,18 +257,21 @@ fun CreateAccountScreen(
                     style = MaterialTheme.typography.bodySmall,
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(start = 16.dp, top = 4.dp)
+                            .padding(
+                                start = CreateAccountScreenUi.extraLargePadding,
+                                top = CreateAccountScreenUi.smallPadding)
                             .testTag(CreateAccountTestTags.USERNAME_ERROR))
               }
 
               // Spacing between input fields and text
-              Spacer(modifier = Modifier.height(24.dp))
+              Spacer(modifier = Modifier.height(CreateAccountScreenUi.xxLargeSpacing))
 
               Text(
                   text = "I also want to:",
                   color = AppColors.textIcons,
                   style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                  modifier =
+                      Modifier.fillMaxWidth().padding(bottom = CreateAccountScreenUi.mediumPadding))
 
               RoleCheckBox(
                   isChecked = isShopChecked,
@@ -286,7 +312,7 @@ fun RoleCheckBox(
       modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }) {
         Checkbox(
             checked = isChecked,
-            modifier = Modifier.testTag(testTag).padding(top = 2.dp),
+            modifier = Modifier.testTag(testTag).padding(top = CreateAccountScreenUi.tinyPadding),
             onCheckedChange = onCheckedChange,
             colors =
                 CheckboxDefaults.colors(
@@ -294,7 +320,10 @@ fun RoleCheckBox(
                     uncheckedColor = AppColors.textIcons,
                     checkmarkColor = AppColors.textIcons))
         Column(
-            modifier = Modifier.padding(top = 12.dp, bottom = 12.dp),
+            modifier =
+                Modifier.padding(
+                    top = CreateAccountScreenUi.largePadding,
+                    bottom = CreateAccountScreenUi.largePadding),
             verticalArrangement = Arrangement.Center) {
               Text(
                   text = label,
