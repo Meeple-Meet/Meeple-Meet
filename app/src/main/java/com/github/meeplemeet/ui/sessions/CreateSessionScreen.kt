@@ -466,7 +466,7 @@ fun ParticipantsSection(
                           Dimensions.DividerThickness.standard,
                           MaterialTheme.colorScheme.outline,
                           CircleShape)
-                      .padding(horizontal = 10.dp, vertical = CountBubbleVerticalPadding))
+                      .padding(horizontal = CountBubbleHorizontalPadding, vertical = CountBubbleVerticalPadding))
         }
         Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
 

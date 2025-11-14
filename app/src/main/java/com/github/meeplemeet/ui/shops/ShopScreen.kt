@@ -60,6 +60,8 @@ private const val EMAIL_LINE_TEXT = "- Email:"
 private const val ADDRESS_LINE_TEXT = "- Address:"
 private const val WEBSITE_LINE_TEXT = "- Website:"
 
+private val horizontalPadding = 100.dp
+
 /**
  * Composable that displays the Shop screen, including the top bar and shop details.
  *
@@ -125,9 +127,9 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
   Column(
       modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         ContactSection(shop)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
         AvailabilitySection(shop.openingHours)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
         GameListSection(
             games = shop.gameCollection,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp),
