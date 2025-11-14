@@ -27,7 +27,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,6 +34,7 @@ import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.SignUpViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 
 object SignUpScreenTestTags {
   const val EMAIL_FIELD = "email_field"
@@ -42,11 +42,24 @@ object SignUpScreenTestTags {
   const val PASSWORD_FIELD = "password_field"
   const val SIGN_UP_BUTTON = "sign_up_button"
   const val GOOGLE_SIGN_UP_BUTTON = "google_sign_up_button"
-  const val LOADING_INDICATOR = "loading_indicator"
   const val CONFIRM_PASSWORD_FIELD = "confirm_password_field"
   const val CONFIRM_PASSWORD_VISIBILITY_TOGGLE = "confirm_password_visibility_toggle"
   const val SIGN_IN_BUTTON = "sign_in_button"
 }
+
+const val SIGN_UP_TEXT = "Sign Up"
+const val HIDE_PWD_TEXT = "Hide password"
+const val SHOW_PWD_TEXT = "Show password"
+const val INVALID_EMAIL_TEXT = "Invalid email format"
+const val WEAK_PWD_TEXT = "Password is too weak"
+const val MINIMAL_PWD_LENGTH = 6
+const val PWD_MISSMATCH_TEXT = "Passwords do not match"
+const val PWD_CONFIRMATION_TEXT = "Please confirm your password"
+const val EMPTY_PWD_TEXT = "Password cannot be empty"
+const val CANNOT_BE_EMPTY_EMAIL_TEXT = "Email cannot be empty"
+const val ALREADY_HAVE_ACCOUNT_TEXT = "Already have an account? "
+const val LOG_IN_TEXT = "Log in."
+const val OPTION_TEXT = "OR"
 
 /**
  * SignUpScreen - User registration interface for new users
@@ -104,7 +117,7 @@ fun SignUpScreen(
         email.isNotBlank() &&
             Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
             password.isNotBlank() &&
-            password.length >= 6 &&
+            password.length >= MINIMAL_PWD_LENGTH &&
             confirmPassword.isNotBlank() &&
             password == confirmPassword
       }
@@ -118,8 +131,8 @@ fun SignUpScreen(
       val errorMessage =
           when {
             error.contains("email-already-in-use") -> "Email already in use"
-            error.contains("weak-password") -> "Password is too weak"
-            error.contains("invalid-email") -> "Invalid email format"
+            error.contains("weak-password") -> WEAK_PWD_TEXT
+            error.contains("invalid-email") -> INVALID_EMAIL_TEXT
             else -> error
           }
       snackbarHostState.showSnackbar(errorMessage)
@@ -134,8 +147,8 @@ fun SignUpScreen(
    */
   fun validateEmail(email: String): String? {
     return when {
-      email.isBlank() -> "Email cannot be empty"
-      !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email format"
+      email.isBlank() -> CANNOT_BE_EMPTY_EMAIL_TEXT
+      !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> INVALID_EMAIL_TEXT
       else -> null
     }
   }
@@ -148,8 +161,8 @@ fun SignUpScreen(
    */
   fun validatePassword(password: String): String? {
     return when {
-      password.isBlank() -> "Password cannot be empty"
-      password.length < 6 -> "Password is too weak"
+      password.isBlank() -> EMPTY_PWD_TEXT
+      password.length < MINIMAL_PWD_LENGTH -> WEAK_PWD_TEXT
       else -> null
     }
   }
@@ -163,8 +176,8 @@ fun SignUpScreen(
    */
   fun validateConfirmPassword(password: String, confirmPassword: String): String? {
     return when {
-      confirmPassword.isBlank() -> "Please confirm your password"
-      password != confirmPassword -> "Passwords do not match"
+      confirmPassword.isBlank() -> PWD_CONFIRMATION_TEXT
+      password != confirmPassword -> PWD_MISSMATCH_TEXT
       else -> null
     }
   }
@@ -177,33 +190,41 @@ fun SignUpScreen(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(paddingValues)
-                    .padding(24.dp)
+                    .padding(Dimensions.Padding.xxLarge)
                     .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween) {
               // Top spacing
-              Spacer(modifier = Modifier.height(8.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
               // App logo - changes based on theme
               val isDarkTheme = isSystemInDarkTheme()
-              Box(modifier = Modifier.size(250.dp)) {
-                Image(
-                    painter =
-                        painterResource(
-                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-                    contentDescription = "Meeple Meet Logo",
-                    modifier = Modifier.fillMaxSize())
-              }
+              Box(
+                  modifier =
+                      Modifier.size(
+                          Dimensions.IconSize.massive
+                              .times(3)
+                              .plus(Dimensions.Padding.extraLarge))) {
+                    Image(
+                        painter =
+                            painterResource(
+                                id =
+                                    if (isDarkTheme) R.drawable.logo_dark
+                                    else R.drawable.logo_clear),
+                        contentDescription = "Meeple Meet Logo",
+                        modifier = Modifier.fillMaxSize())
+                  }
 
-              Spacer(modifier = Modifier.height(24.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
 
               // Welcome message
               Text(
-                  "Sign Up",
+                  SIGN_UP_TEXT,
                   style = TextStyle(fontSize = 56.sp),
                   color = AppColors.neutral,
                   modifier =
-                      Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
+                      Modifier.padding(bottom = Dimensions.Padding.extraLarge)
+                          .testTag(NavigationTestTags.SCREEN_TITLE))
 
               // Email input field with validation
               OutlinedTextField(
@@ -219,10 +240,7 @@ fun SignUpScreen(
                   label = { Text("Email") },
                   singleLine = true,
                   isError = emailError != null, // Show error state visually
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag(SignUpScreenTestTags.EMAIL_FIELD) // For UI testing
-                  )
+                  modifier = Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.EMAIL_FIELD))
 
               // Display email validation error if present
               if (emailError != null) {
@@ -230,10 +248,14 @@ fun SignUpScreen(
                     text = emailError!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                start = Dimensions.Padding.extraLarge,
+                                top = Dimensions.Padding.small))
               }
 
-              Spacer(modifier = Modifier.height(12.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
               // Password input field with visibility toggle and validation
               OutlinedTextField(
@@ -269,13 +291,10 @@ fun SignUpScreen(
                                   if (passwordVisible) Icons.Filled.Visibility
                                   else Icons.Filled.VisibilityOff,
                               contentDescription =
-                                  if (passwordVisible) "Hide password" else "Show password")
+                                  if (passwordVisible) HIDE_PWD_TEXT else SHOW_PWD_TEXT)
                         }
                   },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag(SignUpScreenTestTags.PASSWORD_FIELD) // For UI testing
-                  )
+                  modifier = Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.PASSWORD_FIELD))
 
               // Display password validation error if present
               if (passwordError != null) {
@@ -283,10 +302,14 @@ fun SignUpScreen(
                     text = passwordError!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                start = Dimensions.Padding.extraLarge,
+                                top = Dimensions.Padding.small))
               }
 
-              Spacer(modifier = Modifier.height(8.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
               // Password confirmation field with visibility toggle and validation
               // This ensures users enter their password correctly by requiring them to type it
@@ -323,13 +346,11 @@ fun SignUpScreen(
                                   if (confirmPasswordVisible) Icons.Filled.Visibility
                                   else Icons.Filled.VisibilityOff,
                               contentDescription =
-                                  if (confirmPasswordVisible) "Hide password" else "Show password")
+                                  if (confirmPasswordVisible) HIDE_PWD_TEXT else SHOW_PWD_TEXT)
                         }
                   },
                   modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD) // For UI testing
-                  )
+                      Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD))
 
               // Display password confirmation validation error if present
               if (confirmPasswordError != null) {
@@ -337,10 +358,14 @@ fun SignUpScreen(
                     text = confirmPasswordError!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                start = Dimensions.Padding.extraLarge,
+                                top = Dimensions.Padding.small))
               }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge))
 
               // Email/Password Registration Button
               Button(
@@ -367,8 +392,7 @@ fun SignUpScreen(
                           containerColor = AppColors.affirmative,
                           contentColor = AppColors.textIcons),
                   modifier =
-                      Modifier.fillMaxWidth(0.6f)
-                          .testTag(SignUpScreenTestTags.SIGN_UP_BUTTON), // For UI testing
+                      Modifier.fillMaxWidth(0.6f).testTag(SignUpScreenTestTags.SIGN_UP_BUTTON),
                   enabled =
                       isFormValid &&
                           !uiState.isLoading // Enable only when form is valid and not loading
@@ -379,28 +403,29 @@ fun SignUpScreen(
                           modifier = Modifier.align(Alignment.CenterStart)) {
                             Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null)
                           }
-                      Spacer(modifier = Modifier.width(16.dp))
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.extraLarge))
 
                       // Show loading indicator during authentication
                       if (uiState.isLoading) {
                         CircularProgressIndicator(
                             modifier =
-                                Modifier.size(16.dp)
-                                    .testTag(
-                                        SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
+                                Modifier.size(Dimensions.IconSize.small)
+                                    .testTag(SignInScreenTestTags.LOADING_INDICATOR),
                             color = MaterialTheme.colorScheme.onPrimary)
                       }
-                      Text("Sign Up")
+                      Text(SIGN_UP_TEXT)
                     }
                   }
 
               // Divider between authentication methods
-              Spacer(modifier = Modifier.height(12.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
               Text(
-                  "OR",
-                  style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+                  OPTION_TEXT,
+                  style =
+                      MaterialTheme.typography.bodyMedium.copy(
+                          fontSize = Dimensions.TextSize.subtitle),
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  modifier = Modifier.padding(vertical = 4.dp))
+                  modifier = Modifier.padding(vertical = Dimensions.Padding.small))
 
               // Google Sign Up Button
               OutlinedButton(
@@ -413,18 +438,18 @@ fun SignUpScreen(
                   colors =
                       ButtonDefaults.outlinedButtonColors(
                           containerColor = AppColors.primary, contentColor = AppColors.textIcons),
-                  border = BorderStroke(1.dp, AppColors.divider),
+                  border = BorderStroke(Dimensions.Elevation.low, AppColors.divider),
                   modifier =
                       Modifier.fillMaxWidth(0.6f)
-                          .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON), // For UI testing
+                          .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON),
                   enabled = !uiState.isLoading // Disable during any authentication process
                   ) {
                     Icon(
                         painter = painterResource(id = R.drawable.google_logo),
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(Dimensions.IconSize.standard),
                         tint = Color.Unspecified)
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.extraLarge))
                     Text("Connect with Google")
                   }
 
@@ -433,9 +458,9 @@ fun SignUpScreen(
 
               // Navigation to Sign In screen for existing users
               Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Text("Already have an account? ")
+                Text(ALREADY_HAVE_ACCOUNT_TEXT)
                 Text(
-                    text = "Log in.",
+                    text = LOG_IN_TEXT,
                     color = MaterialTheme.colorScheme.primary,
                     modifier =
                         Modifier.testTag(SignUpScreenTestTags.SIGN_IN_BUTTON).clickable {
@@ -444,7 +469,7 @@ fun SignUpScreen(
               }
 
               // Bottom spacing
-              Spacer(modifier = Modifier.height(8.dp))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
             }
       }
 }

@@ -58,6 +58,8 @@ data class LocationUIState(
     val locationSearchError: String? = null
 )
 
+const val DEBOUNCE_TIME_MS = 500L
+
 /**
  * ViewModel that provides shared search logic for both games and locations.
  *
@@ -75,10 +77,6 @@ open class SearchViewModel(
     private val gameRepository: GameRepository = RepositoryProvider.games,
     private val locationRepository: LocationRepository = RepositoryProvider.locations
 ) : ViewModel() {
-
-  private companion object {
-    const val DEBOUNCE_TIME_MS = 500L
-  }
 
   /** Debounce flows */
   private val gameQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)

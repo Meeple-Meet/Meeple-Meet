@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -463,8 +464,21 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .performTextInput("123 Board Game Street")
+        .performTextInput("EPFL")
     composeTestRule.waitForIdle()
+
+    composeTestRule.waitUntil(timeoutMillis = 150_000) {
+      try {
+        composeTestRule.onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0").isDisplayed()
+      } catch (_: Exception) {
+        false
+      }
+    }
+
+    composeTestRule
+        .onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0")
+        .assertExists()
+        .performClick()
 
     // Set weekday opening hours
     val availabilityToggleTag =

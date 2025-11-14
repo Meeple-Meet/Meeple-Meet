@@ -20,19 +20,18 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.SpacesList
-import com.github.meeplemeet.ui.components.humanize
+import com.github.meeplemeet.ui.shops.AvailabilitySection
 import com.github.meeplemeet.ui.theme.AppColors
-import java.text.DateFormatSymbols
-import java.util.Calendar
+import com.github.meeplemeet.ui.theme.Dimensions
 
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
 object SpaceRenterTestTags {
@@ -49,6 +48,19 @@ object SpaceRenterTestTags {
 
   // Availability section tags
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
+}
+
+object SpaceRenterUi {
+  fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
+
+  fun emailContactRow(email: String) = "- Email: $email"
+
+  fun addressContactRow(address: String) = "- Address: $address"
+
+  fun websiteContactRow(website: String) = "- Website: $website"
+
+  val HORIZONTAL_PADDING: Dp = 100.dp
+  val ROW_WIDTH: Dp = 48.dp
 }
 
 /**
@@ -93,7 +105,10 @@ fun SpaceRenterScreen(
         spaceState?.let { space ->
           SpaceRenterDetails(
               spaceRenter = space,
-              modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxSize())
+              modifier =
+                  Modifier.padding(innerPadding)
+                      .padding(Dimensions.Padding.extraLarge)
+                      .fillMaxSize())
         }
             ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
               CircularProgressIndicator()
@@ -111,15 +126,22 @@ fun SpaceRenterScreen(
 @Composable
 fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) {
   Column(
-      modifier = modifier.verticalScroll(rememberScrollState()).padding(bottom = 32.dp),
-      verticalArrangement = Arrangement.spacedBy(24.dp)) {
+      modifier =
+          modifier
+              .verticalScroll(rememberScrollState())
+              .padding(bottom = Dimensions.Padding.xxxLarge),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         ContactSection(spaceRenter)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-        AvailabilitySection(spaceRenter.openingHours)
-        HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
+        AvailabilitySection(spaceRenter.openingHours, SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
               Text(
                   "Provided spaces",
                   style = MaterialTheme.typography.titleLarge,
@@ -146,8 +168,8 @@ fun SpaceRenterDetails(spaceRenter: SpaceRenter, modifier: Modifier = Modifier) 
 @Composable
 fun ContactSection(spaceRenter: SpaceRenter) {
   Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
         Text(
             "Contact",
             style = MaterialTheme.typography.titleLarge,
@@ -157,7 +179,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.phone.isNotBlank()) {
           ContactRow(
               Icons.Default.Phone,
-              "- Phone: ${spaceRenter.phone}",
+              SpaceRenterUi.phoneContactRow(spaceRenter.phone),
               SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
         }
@@ -165,14 +187,14 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         // Display email contact row
         ContactRow(
             Icons.Default.Email,
-            "- Email: ${spaceRenter.email}",
+            SpaceRenterUi.emailContactRow(spaceRenter.email),
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
 
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            "- Address: ${spaceRenter.address.name}",
+            SpaceRenterUi.addressContactRow(spaceRenter.address.name),
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT,
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
 
@@ -180,7 +202,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
-              "- Website: ${spaceRenter.website}",
+              SpaceRenterUi.websiteContactRow(spaceRenter.website),
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
               SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }
@@ -211,65 +233,17 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
 
   Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
         Text(
             text,
             style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
             modifier = Modifier.weight(1f).testTag(textTag))
 
-        IconButton(onClick = copyToClipboard, modifier = Modifier.size(24.dp).testTag(buttonTag)) {
-          Icon(imageVector = icon, contentDescription = null, tint = AppColors.neutral)
-        }
-      }
-}
-
-// -------------------- AVAILABILITY SECTION --------------------
-
-/**
- * Composable that displays the space renter's opening hours for each day of the week.
- *
- * @param openingHours List of OpeningHours representing the space renter's weekly schedule.
- */
-@Composable
-fun AvailabilitySection(openingHours: List<OpeningHours>) {
-  val daysOfWeek = remember { DateFormatSymbols().weekdays }
-  val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-
-  Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
-        Text(
-            "Availability",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold)
-
-        // Loop through each day's opening hours
-        openingHours
-            .sortedBy { it.day }
-            .forEach { entry ->
-              val dayName = daysOfWeek.getOrNull(entry.day + 1) ?: "Unknown"
-              val isTodayFont =
-                  if ((entry.day + 1) == currentDay) FontWeight.Bold else FontWeight.Normal
-
-              val hoursText = humanize(entry.hours)
-
-              Row(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag("${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}"),
-                  horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = dayName, fontWeight = isTodayFont, modifier = Modifier.weight(1f))
-
-                    Text(
-                        text = hoursText,
-                        fontWeight = isTodayFont,
-                        textAlign = TextAlign.End,
-                        modifier =
-                            Modifier.weight(1f)
-                                .testTag(
-                                    "${SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX}${entry.day}_HOURS"))
-                  }
+        IconButton(
+            onClick = copyToClipboard,
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
+              Icon(imageVector = icon, contentDescription = null, tint = AppColors.neutral)
             }
       }
 }
@@ -289,10 +263,10 @@ fun TopBarAndDivider(
     trailingIcons: @Composable (() -> Unit)? = null
 ) {
   Column {
-    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.large)) {
       // Button to the left
       Row(
-          modifier = Modifier.align(Alignment.CenterStart).width(48.dp),
+          modifier = Modifier.align(Alignment.CenterStart).width(SpaceRenterUi.ROW_WIDTH),
           verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onReturn) {
               Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -309,13 +283,14 @@ fun TopBarAndDivider(
 
       // (Optional) Button to the right
       Row(
-          modifier = Modifier.align(Alignment.CenterEnd).width(48.dp),
+          modifier = Modifier.align(Alignment.CenterEnd).width(SpaceRenterUi.ROW_WIDTH),
           horizontalArrangement = Arrangement.End,
           verticalAlignment = Alignment.CenterVertically) {
             trailingIcons?.invoke()
           }
     }
 
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
+    HorizontalDivider(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
   }
 }

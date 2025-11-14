@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
@@ -42,6 +41,10 @@ import java.util.*
 object FeedsOverviewTestTags {
   const val ADD_POST_BUTTON = "AddPostButton"
   const val POST_CARD_PREFIX = "Post/"
+}
+
+object PostOverviewScreenUi {
+  val xxxLargePadding = Dimensions.Padding.xxxLarge
 }
 
 /* ==========  CONSTANTS  ====================================================== */
@@ -111,7 +114,7 @@ fun PostsOverviewScreen(
         } else {
           LazyColumn(
               modifier = Modifier.fillMaxSize().padding(innerPadding),
-              verticalArrangement = Arrangement.spacedBy(0.dp)) {
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
                 items(postsSorted, key = { it.id }) { post ->
                   val dateFormatted =
                       SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -142,23 +145,25 @@ fun PostsOverviewScreen(
 /** Displays a centred label when the feed contains no posts. */
 @Composable
 private fun EmptyFeedListText() {
-  Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-          Icon(
-              imageVector = Icons.AutoMirrored.Filled.Article,
-              contentDescription = null,
-              modifier = Modifier.size(Dimensions.IconSize.giant),
-              tint = MessagingColors.secondaryText)
-          Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-          Text(
-              text = NO_POSTS_DEFAULT_TEXT,
-              style = MaterialTheme.typography.bodyLarge,
-              fontSize = Dimensions.TextSize.title,
-              color = MessagingColors.secondaryText)
-        }
-  }
+  Box(
+      modifier = Modifier.fillMaxSize().padding(PostOverviewScreenUi.xxxLargePadding),
+      contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.Article,
+                  contentDescription = null,
+                  modifier = Modifier.size(Dimensions.IconSize.giant),
+                  tint = MessagingColors.secondaryText)
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+              Text(
+                  text = NO_POSTS_DEFAULT_TEXT,
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontSize = Dimensions.TextSize.title,
+                  color = MessagingColors.secondaryText)
+            }
+      }
 }
 
 /* ==========  FEED CARD  ====================================================== */
@@ -227,7 +232,8 @@ private fun FeedCard(
                               color = MessagingColors.redditBlue,
                               modifier =
                                   Modifier.padding(
-                                      horizontal = Dimensions.Spacing.small, vertical = 2.dp),
+                                      horizontal = Dimensions.Spacing.small,
+                                      vertical = Dimensions.Spacing.extraSmall),
                               maxLines = 1,
                               overflow = TextOverflow.Ellipsis)
                         }

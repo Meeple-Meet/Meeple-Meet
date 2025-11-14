@@ -27,11 +27,12 @@ class DiscussionViewModel(
     get() = this.viewModelScope
   /** Send a message to a discussion. */
   fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
-    if (content.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
+    val cleaned = content.trimEnd()
+    if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
 
     viewModelScope.launch {
       readDiscussionMessages(sender, discussion)
-      discussionRepository.sendMessageToDiscussion(discussion, sender, content)
+      discussionRepository.sendMessageToDiscussion(discussion, sender, cleaned)
     }
   }
 
@@ -41,7 +42,8 @@ class DiscussionViewModel(
     if (!discussion.participants.contains(account.uid)) return
 
     if (discussion.messages.isEmpty()) return
-    if (account.previews[discussion.uid]!!.unreadCount == 0) return
+    val preview = account.previews[discussion.uid] ?: return
+    if (preview.unreadCount == 0) return
 
     viewModelScope.launch {
       discussionRepository.readDiscussionMessages(

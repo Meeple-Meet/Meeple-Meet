@@ -13,19 +13,29 @@ object Dimensions {
     val extraSmall: Dp = 2.dp
     val small: Dp = 4.dp
     val medium: Dp = 8.dp
+    val extraMedium: Dp = 10.dp
     val large: Dp = 12.dp
     val extraLarge: Dp = 16.dp
+    val xLarge: Dp = 20.dp
     val xxLarge: Dp = 24.dp
     val xxxLarge: Dp = 32.dp
+    val xxxxLarge: Dp = 60.dp
   }
 
   // Padding
   object Padding {
     val tiny: Dp = 2.dp
     val small: Dp = 4.dp
+    val mediumSmall: Dp = 6.dp
     val medium: Dp = 8.dp
+    val extraMedium: Dp = 10.dp
     val large: Dp = 12.dp
     val extraLarge: Dp = 16.dp
+    val xLarge: Dp = 20.dp
+    val xxLarge: Dp = 24.dp
+    val xxxLarge: Dp = 32.dp
+    val huge: Dp = 36.dp
+    val giant: Dp = 56.dp
   }
 
   // Icon sizes
@@ -73,7 +83,10 @@ object Dimensions {
     val low: Dp = 1.dp
     val medium: Dp = 2.dp
     val high: Dp = 4.dp
+    val floating: Dp = 6.dp
     val extraHigh: Dp = 8.dp
+    val xxHigh: Dp = 12.dp
+    val raised: Dp = 3.dp
   }
 
   // Text sizes
@@ -95,5 +108,67 @@ object Dimensions {
     val standard: Dp = 1.dp
     val medium: Dp = 2.dp
     val thick: Dp = 8.dp
+  }
+
+  // Component-specific widths
+  object ComponentWidth {
+    val spaceLabelWidth: Dp = 110.dp
+    val fieldBoxWidth: Dp = 88.dp
+    val inputFieldWidth: Dp = 80.dp
+    val chipSize: Dp = 35.dp
+  }
+
+  // List and container dimensions
+  object ContainerSize {
+    val maxListHeight: Dp = 600.dp
+    val bottomSpacer: Dp = 100.dp
+    val timeFieldHeight: Dp = 56.dp
+    val iconButtonTouch: Dp = 40.dp
+    val iconButtonSize: Dp = 48.dp
+  }
+
+  // Badge dimensions
+  object BadgeSize {
+    val offsetX: Dp = 8.dp
+    val offsetY: Dp = (-6).dp
+    val minSize: Dp = 20.dp
+  }
+
+  // Button corner radius
+  object ButtonRadius {
+    val rounded: Dp = 20.dp
+  }
+
+  // Numeric constants
+  object Numbers {
+    const val searchResultLimit: Int = 5
+    const val defaultTimeHour: Int = 19
+    const val defaultTimeMinute: Int = 0
+    const val defaultShopStartHour: Int = 7
+    const val defaultShopStartMinute: Int = 30
+    const val defaultShopEndHour: Int = 20
+    const val defaultShopEndMinute: Int = 0
+    const val singleLine: Int = 1
+    const val quantityMin: Int = 1
+    const val quantityMax: Int = 40
+  }
+
+  // Fractions (for width/height multipliers)
+  object Fractions {
+    const val topBarDivider: Float = 0.7f
+  }
+
+  // Alpha values
+  object Alpha {
+    const val full: Float = 1f
+    const val editingBorder: Float = 1f
+    const val readonlyBorder: Float = 0.3f
+  }
+
+  // Rotation angles
+  object Angles {
+    const val none: Float = 0f
+    const val expanded: Float = 180f
+    const val collapsed: Float = 0f
   }
 }

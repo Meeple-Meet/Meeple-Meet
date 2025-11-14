@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +36,7 @@ import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.SignInViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 
 object SignInScreenTestTags {
   const val EMAIL_FIELD = "email_field"
@@ -46,6 +46,16 @@ object SignInScreenTestTags {
   const val GOOGLE_SIGN_IN_BUTTON = "google_sign_in_button"
   const val LOADING_INDICATOR = "loading_indicator"
   const val SIGN_UP_BUTTON = "sign_up_button"
+}
+
+object SignInScreenUi {
+  val xxLargePadding = Dimensions.Padding.xxLarge
+  val mediumSpacing = Dimensions.Spacing.medium
+  val extraLargePadding = Dimensions.Padding.extraLarge
+  val smallPadding = Dimensions.Padding.small
+  val extraLargeSpacing = Dimensions.Spacing.extraLarge
+  val mediumPadding = Dimensions.Padding.medium
+  val largeSpacing = Dimensions.Spacing.large
 }
 
 /**
@@ -125,31 +135,40 @@ fun SignInScreen(
   // Main UI layout using Column for vertical arrangement
   Column(
       modifier =
-          Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
+          Modifier.fillMaxSize()
+              .background(MaterialTheme.colorScheme.background)
+              .padding(SignInScreenUi.xxLargePadding),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.SpaceBetween) {
         // Top spacing
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(SignInScreenUi.mediumSpacing))
 
         // App logo - changes based on theme
         val isDarkTheme = isSystemInDarkTheme()
-        Box(modifier = Modifier.size(250.dp)) {
-          Image(
-              painter =
-                  painterResource(
-                      id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-              contentDescription = "Meeple Meet Logo",
-              modifier = Modifier.fillMaxSize())
-        }
+        Box(
+            modifier =
+                Modifier.size(
+                    Dimensions.IconSize.massive.times(3).plus(Dimensions.Padding.extraLarge))) {
+              Image(
+                  painter =
+                      painterResource(
+                          id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+                  contentDescription = "Meeple Meet Logo",
+                  modifier = Modifier.fillMaxSize())
+            }
 
-        Spacer(modifier = Modifier.height(26.dp))
+        Spacer(
+            modifier =
+                Modifier.height(Dimensions.Spacing.xxLarge.plus(Dimensions.Spacing.extraSmall)))
 
         // Welcome message
         Text(
             "Welcome!",
             color = AppColors.neutral,
             style = TextStyle(fontSize = 56.sp),
-            modifier = Modifier.padding(bottom = 16.dp).testTag(NavigationTestTags.SCREEN_TITLE))
+            modifier =
+                Modifier.padding(bottom = SignInScreenUi.extraLargePadding)
+                    .testTag(NavigationTestTags.SCREEN_TITLE))
 
         // Email input field with validation
         OutlinedTextField(
@@ -173,10 +192,14 @@ fun SignInScreen(
               text = emailError!!,
               color = MaterialTheme.colorScheme.error,
               style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          start = SignInScreenUi.extraLargePadding,
+                          top = SignInScreenUi.smallPadding))
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(SignInScreenUi.mediumSpacing))
 
         // Password input field with visibility toggle and validation
         OutlinedTextField(
@@ -218,16 +241,20 @@ fun SignInScreen(
               text = passwordError!!,
               color = MaterialTheme.colorScheme.error,
               style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp))
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          start = SignInScreenUi.extraLargePadding,
+                          top = SignInScreenUi.smallPadding))
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SignInScreenUi.extraLargeSpacing))
 
         // Display authentication errors from ViewModel (server-side errors)
         if (uiState.errorMsg != null) {
           val errorMessage = uiState.errorMsg ?: "An unknown error occurred"
           Card(
-              modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+              modifier = Modifier.fillMaxWidth().padding(vertical = SignInScreenUi.mediumPadding),
               colors =
                   CardDefaults.cardColors(
                       containerColor = MaterialTheme.colorScheme.errorContainer)) {
@@ -235,9 +262,9 @@ fun SignInScreen(
                     text = errorMessage,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(16.dp))
+                    modifier = Modifier.padding(SignInScreenUi.extraLargePadding))
               }
-          Spacer(modifier = Modifier.height(8.dp))
+          Spacer(modifier = Modifier.height(SignInScreenUi.mediumSpacing))
         }
 
         // Email/Password Sign In Button
@@ -273,13 +300,13 @@ fun SignInScreen(
                     modifier = Modifier.align(Alignment.CenterStart)) {
                       Icon(imageVector = Icons.AutoMirrored.Filled.Login, contentDescription = null)
                     }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(SignInScreenUi.extraLargeSpacing))
 
                 // Show loading indicator during authentication
                 if (uiState.isLoading) {
                   CircularProgressIndicator(
                       modifier =
-                          Modifier.size(16.dp)
+                          Modifier.size(Dimensions.IconSize.small)
                               .testTag(SignInScreenTestTags.LOADING_INDICATOR), // For UI testing
                       color = MaterialTheme.colorScheme.onPrimary)
                 }
@@ -288,12 +315,12 @@ fun SignInScreen(
             }
 
         // Divider between authentication methods
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(SignInScreenUi.largeSpacing))
         Text(
             "OR",
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 4.dp))
+            modifier = Modifier.padding(vertical = SignInScreenUi.smallPadding))
 
         // Google Sign In Button
         OutlinedButton(
@@ -304,7 +331,7 @@ fun SignInScreen(
             colors =
                 ButtonDefaults.outlinedButtonColors(
                     containerColor = AppColors.primary, contentColor = AppColors.textIcons),
-            border = BorderStroke(1.dp, AppColors.divider),
+            border = BorderStroke(Dimensions.DividerThickness.standard, AppColors.divider),
             modifier =
                 Modifier.fillMaxWidth(0.6f)
                     .testTag(SignInScreenTestTags.GOOGLE_SIGN_IN_BUTTON), // For UI testing
@@ -318,8 +345,9 @@ fun SignInScreen(
                         painter = painterResource(id = R.drawable.google_logo),
                         contentDescription = null,
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(22.dp))
-                    //                    Spacer(modifier = Modifier.width(16.dp))
+                        modifier =
+                            Modifier.size(
+                                Dimensions.IconSize.standard.plus(Dimensions.Spacing.extraSmall)))
                     Text(
                         "Connect with Google",
                         modifier = Modifier.weight(1f),
@@ -344,6 +372,6 @@ fun SignInScreen(
         }
 
         // Bottom spacing
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(SignInScreenUi.mediumSpacing))
       }
 }

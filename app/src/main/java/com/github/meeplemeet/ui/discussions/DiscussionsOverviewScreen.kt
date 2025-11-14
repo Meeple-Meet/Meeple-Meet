@@ -42,7 +42,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -69,6 +68,8 @@ const val MY_MSG_USERNAME = "You"
 const val DEFAULT_DISCUSSION_NAME = "Discussion"
 const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
 const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
+
+private const val MAXLINE = 1
 
 object DiscussionOverviewTestTags {
   const val ADD_DISCUSSION_BUTTON = "Add Discussion"
@@ -189,7 +190,9 @@ fun DiscussionsOverviewScreen(
 private fun EmptyDiscussionsListText() {
   Box(
       modifier =
-          Modifier.fillMaxSize().padding(32.dp).background(MaterialTheme.colorScheme.background),
+          Modifier.fillMaxSize()
+              .padding(Dimensions.Spacing.xxxLarge)
+              .background(MaterialTheme.colorScheme.background),
       contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -197,7 +200,7 @@ private fun EmptyDiscussionsListText() {
               Icon(
                   imageVector = Icons.Default.ChatBubbleOutline,
                   contentDescription = null,
-                  modifier = Modifier.size(64.dp),
+                  modifier = Modifier.size(Dimensions.IconSize.giant),
                   tint = MessagingColors.secondaryText.copy(alpha = 0.7f))
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
               Text(
@@ -249,31 +252,33 @@ private fun DiscussionCard(
           Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 
           // Text content
-          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = discussionName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontSize = Dimensions.TextSize.title,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (unreadMsgCount > 0) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
+          Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                Text(
+                    text = discussionName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = Dimensions.TextSize.title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (unreadMsgCount > 0) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = MAXLINE,
+                    overflow = TextOverflow.Ellipsis)
 
-            Text(
-                text = lastMsg,
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = Dimensions.TextSize.body,
-                color = MessagingColors.secondaryText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
-          }
+                Text(
+                    text = lastMsg,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = Dimensions.TextSize.body,
+                    color = MessagingColors.secondaryText,
+                    maxLines = MAXLINE,
+                    overflow = TextOverflow.Ellipsis)
+              }
 
           Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
 
           // Time and unread badge column
           Column(
               horizontalAlignment = Alignment.End,
-              verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
                 RelativeTimestampText(lastMsgDate, modifier = Modifier)
 
                 if (unreadMsgCount > 0) {
@@ -296,9 +301,11 @@ private fun DiscussionCard(
 
     // Divider
     HorizontalDivider(
-        modifier = Modifier.padding(start = 84.dp),
+        modifier =
+            Modifier.padding(
+                start = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.extraLarge)),
         color = MessagingColors.divider,
-        thickness = 1.0.dp)
+        thickness = Dimensions.DividerThickness.standard)
   }
 }
 

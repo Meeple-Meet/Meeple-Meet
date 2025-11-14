@@ -73,7 +73,18 @@ class SessionViewModel(
     }
 
     var participantsList: List<String>? = null
-    if (newParticipantList != null) participantsList = newParticipantList.toList().map { it.uid }
+    // Check if the new participant list contains at least one discussion admin
+    if (newParticipantList != null) {
+      participantsList = newParticipantList.toList().map { it.uid }
+      val newParticipantUids = newParticipantList.map { it.uid }
+      val hasAdmin = discussion.admins.any { adminUid -> newParticipantUids.contains(adminUid) }
+
+      if (!hasAdmin) {
+        // No admin in the new participant list, delete the session instead
+        deleteSession(requester, discussion)
+        return
+      }
+    }
 
     viewModelScope.launch {
       sessionRepository.updateSession(

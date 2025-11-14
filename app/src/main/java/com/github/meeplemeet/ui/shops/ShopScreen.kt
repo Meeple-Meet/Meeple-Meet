@@ -18,7 +18,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextIndent
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,6 +28,8 @@ import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.GameListSection
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
+import com.google.firebase.Timestamp
 import java.text.DateFormatSymbols
 import java.util.Calendar
 
@@ -51,6 +52,14 @@ object ShopTestTags {
   // Game list tags
   const val SHOP_GAME_PREFIX = "SHOP_GAME_"
 }
+
+private const val CLOSED_MSG = "Closed"
+private const val PHONE_LINE_TEXT = "- Phone:"
+private const val EMAIL_LINE_TEXT = "- Email:"
+private const val ADDRESS_LINE_TEXT = "- Address:"
+private const val WEBSITE_LINE_TEXT = "- Website:"
+
+private val horizontalPadding = Dimensions.ComponentWidth.spaceLabelWidth
 
 /**
  * Composable that displays the Shop screen, including the top bar and shop details.
@@ -81,7 +90,7 @@ fun ShopScreen(
             onReturn = { onBack() },
             trailingIcons = {
               // Show edit button only if current account is the shop owner
-              if (account == (shopState?.owner ?: false)) {
+              if (account.uid == (shopState?.owner?.uid)) {
                 IconButton(
                     onClick = { onEdit(shopState) },
                     modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
@@ -93,7 +102,11 @@ fun ShopScreen(
         // Show shop details if loaded, otherwise show a loading indicator
         shopState?.let { shop ->
           ShopDetails(
-              shop = shop, modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxSize())
+              shop = shop,
+              modifier =
+                  Modifier.padding(innerPadding)
+                      .padding(Dimensions.Padding.extraLarge)
+                      .fillMaxSize())
         }
             ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
               CircularProgressIndicator()
@@ -110,17 +123,20 @@ fun ShopScreen(
  */
 @Composable
 fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
-  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-    ContactSection(shop)
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    AvailabilitySection(shop.openingHours)
-    HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 100.dp))
-    GameListSection(
-        games = shop.gameCollection,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp),
-        hasDeleteButton = false,
-        title = "Games:")
-  }
+  Column(
+      modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
+        ContactSection(shop)
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
+        AvailabilitySection(shop.openingHours)
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
+        GameListSection(
+            games = shop.gameCollection,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge),
+            hasDeleteButton = false,
+            title = "Games:")
+      }
 }
 
 // -------------------- CONTACT SECTION --------------------
@@ -133,10 +149,10 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
 @Composable
 fun ContactSection(shop: Shop) {
   Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 25.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
         Text(
-            "Contact:",
+            text = "Contact:",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textDecoration = TextDecoration.Underline)
@@ -144,25 +160,25 @@ fun ContactSection(shop: Shop) {
         // Display phone contact row
         ContactRow(
             Icons.Default.Phone,
-            "- Phone: ${shop.phone}",
+            "$PHONE_LINE_TEXT ${shop.phone}",
             ShopTestTags.SHOP_PHONE_TEXT,
             ShopTestTags.SHOP_PHONE_BUTTON)
         // Display email contact row
         ContactRow(
             Icons.Default.Email,
-            "- Email: ${shop.email}",
+            "$EMAIL_LINE_TEXT ${shop.email}",
             ShopTestTags.SHOP_EMAIL_TEXT,
             ShopTestTags.SHOP_EMAIL_BUTTON)
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            "- Address: ${shop.address.name}",
+            "$ADDRESS_LINE_TEXT ${shop.address.name}",
             ShopTestTags.SHOP_ADDRESS_TEXT,
             ShopTestTags.SHOP_ADDRESS_BUTTON)
         // Display website contact row
         ContactRow(
             Icons.Default.Language,
-            "- Website: ${shop.website}",
+            "$WEBSITE_LINE_TEXT ${shop.website}",
             ShopTestTags.SHOP_WEBSITE_TEXT,
             ShopTestTags.SHOP_WEBSITE_BUTTON)
       }
@@ -183,8 +199,8 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
   val context = LocalContext.current
   Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
         Text(
             text,
             style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
@@ -196,7 +212,7 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
               Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             },
             content = { Icon(icon, contentDescription = null, tint = AppColors.neutral) },
-            modifier = Modifier.size(24.dp).testTag(buttonTag))
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag))
       }
 }
 
@@ -206,16 +222,20 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
  * Composable that displays the shop's opening hours for each day of the week.
  *
  * @param openingHours List of OpeningHours representing the shop's weekly schedule.
+ * @param dayTagPrefix Optional prefix for day test tags. Defaults to SHOP_DAY_ prefix.
  */
 @Composable
-fun AvailabilitySection(openingHours: List<OpeningHours>) {
+fun AvailabilitySection(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopTestTags.SHOP_DAY_PREFIX
+) {
   val daysOfWeek = remember { DateFormatSymbols().weekdays }
   val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
   Column(
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
         Text(
-            "Availability:",
+            text = "Availability:",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textDecoration = TextDecoration.Underline)
@@ -230,45 +250,86 @@ fun AvailabilitySection(openingHours: List<OpeningHours>) {
           if (entry.hours.isEmpty()) {
             // No opening hours means the shop is closed on this day
             Row(
-                modifier =
-                    Modifier.fillMaxWidth().testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"),
+                modifier = Modifier.fillMaxWidth().testTag("${dayTagPrefix}${entry.day}"),
                 horizontalArrangement = Arrangement.SpaceBetween) {
                   Text(
                       dayName,
                       fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                       modifier = Modifier.weight(1f))
                   Text(
-                      "Closed",
+                      CLOSED_MSG,
                       fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier =
-                          Modifier.testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS"))
+                      modifier = Modifier.testTag("${dayTagPrefix}${entry.day}_HOURS"))
                 }
           } else {
             // Display each time interval for the day
             entry.hours.forEachIndexed { idx, (start, end) ->
-              Row(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}_HOURS_${idx}"),
-                  horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (idx == 0) {
-                      // Show the day name only on the first interval row
+              Column {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth().testTag("${dayTagPrefix}${entry.day}_HOURS_${idx}"),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                      if (idx == 0) {
+                        // Show the day name only on the first interval row
+                        Text(
+                            dayName,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.weight(1f).testTag("${dayTagPrefix}${entry.day}"))
+                      } else {
+                        // Empty space for subsequent interval rows to align with day name column
+                        Text("", modifier = Modifier.weight(1f))
+                      }
+                      // Format the time interval or show "Closed" if times are null
+                      val timeText = if (start != null && end != null) "$start - $end" else "Closed"
                       Text(
-                          dayName,
-                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                          modifier =
-                              Modifier.weight(1f)
-                                  .testTag("${ShopTestTags.SHOP_DAY_PREFIX}${entry.day}"))
-                    } else {
-                      // Empty space for subsequent interval rows to align with day name column
-                      Text("", modifier = Modifier.weight(1f))
+                          timeText,
+                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
                     }
-                    // Format the time interval or show "Closed" if times are null
-                    val timeText = if (start != null && end != null) "$start - $end" else "Closed"
-                    Text(timeText, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
-                  }
+                if (isToday && idx == 0) {
+                  val closed =
+                      Timestamp.now() < stringToTimestamp(start!!)!! ||
+                          Timestamp.now() > stringToTimestamp(end!!)!!
+                  Text(
+                      "Currently ${if (closed) "Closed" else "Open"}",
+                      fontWeight = FontWeight.Bold,
+                      color = if (closed) AppColors.negative else AppColors.affirmative,
+                      modifier =
+                          Modifier.padding(top = Dimensions.Spacing.extraSmall)
+                              .align(Alignment.End))
+                }
+              }
             }
           }
         }
       }
+}
+
+/**
+ * Converts a time string in "HH:mm" format to a Firebase Timestamp.
+ *
+ * @param timeString The time string to convert (e.g., "09:30").
+ * @return A Firebase Timestamp representing the time on the current date, or null if parsing fails.
+ */
+fun stringToTimestamp(timeString: String): Timestamp? {
+  return try {
+    val parts = timeString.split(":")
+    if (parts.size != 2) return null
+
+    val hour = parts[0].toIntOrNull() ?: return null
+    val minute = parts[1].toIntOrNull() ?: return null
+
+    if (hour !in 0..23 || minute !in 0..59) return null
+
+    val calendar =
+        Calendar.getInstance().apply {
+          set(Calendar.HOUR_OF_DAY, hour)
+          set(Calendar.MINUTE, minute)
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
+
+    Timestamp(calendar.time)
+  } catch (e: Exception) {
+    null
+  }
 }

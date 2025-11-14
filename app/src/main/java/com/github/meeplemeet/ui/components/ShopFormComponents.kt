@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -27,6 +26,8 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -59,17 +60,12 @@ object ShopFormTestTags {
  * Shared UI Defaults
  * ================================================================================================ */
 object ShopFormUi {
-  object Dimensions {
-    val contentHPadding = 16.dp
-    val contentVPadding = 8.dp
-    val sectionSpace = 12.dp
-    val bottomSpacer = 100.dp
-    val betweenControls = 6.dp
-  }
-
-  object Numbers {
-    const val EXPANDED_ANGLE = 180f
-    const val COLLAPSED_ANGLE = 0f
+  object Dim {
+    val contentHPadding = Dimensions.Padding.extraLarge
+    val contentVPadding = Dimensions.Padding.medium
+    val sectionSpace = Dimensions.Padding.large
+    val bottomSpacer = Dimensions.ContainerSize.bottomSpacer
+    val betweenControls = Dimensions.Padding.mediumSmall
   }
 
   object Strings {
@@ -90,6 +86,8 @@ object ShopFormUi {
 
     const val CLOSED_LABEL = "Closed"
     const val OPEN24_LABEL = "Open 24 hours"
+
+    const val ERROR_EMAIL_MSG = "Enter a valid email address."
   }
 
   val dayNames: List<String> by lazy {
@@ -232,7 +230,7 @@ fun RequiredInfoSection(
   val showEmailError = email.isNotEmpty() && !isValidEmail(email)
   if (showEmailError) {
     Text(
-        "Enter a valid email address.",
+        text = ShopFormUi.Strings.ERROR_EMAIL_MSG,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall)
   }
@@ -259,7 +257,8 @@ fun RequiredInfoSection(
         owner,
         shop,
         viewModel,
-        inputFieldTestTag = com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_FIELD)
+        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
   }
 }
 
@@ -278,10 +277,10 @@ fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
           dayName = ShopFormUi.dayNames[day], value = humanize(oh.hours), onEdit = { onEdit(day) })
       HorizontalDivider(
           modifier = Modifier.testTag(ShopFormTestTags.AVAILABILITY_DIVIDER_PREFIX + day),
-          thickness = 0.5.dp)
+          thickness = Dimensions.DividerThickness.thin)
     }
   }
-  Spacer(Modifier.height(4.dp))
+  Spacer(Modifier.height(Dimensions.Spacing.small))
 }
 
 /**
@@ -314,15 +313,13 @@ fun CollapsibleSection(
 
   val arrowRotation by
       animateFloatAsState(
-          targetValue =
-              if (isExpanded) ShopFormUi.Numbers.EXPANDED_ANGLE
-              else ShopFormUi.Numbers.COLLAPSED_ANGLE,
+          targetValue = if (isExpanded) Dimensions.Angles.expanded else Dimensions.Angles.collapsed,
           label = "arrow")
 
   Column(Modifier.fillMaxWidth()) {
     Row(
         modifier =
-            Modifier.fillMaxWidth().padding(top = 8.dp).let { m ->
+            Modifier.fillMaxWidth().padding(top = Dimensions.Padding.medium).let { m ->
               if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_HEADER_SUFFIX)
               else m
             },
@@ -354,17 +351,17 @@ fun CollapsibleSection(
         }
 
     HorizontalDivider(
-        thickness = 1.dp,
+        thickness = Dimensions.DividerThickness.standard,
         color = MaterialTheme.colorScheme.outlineVariant,
         modifier =
-            Modifier.padding(bottom = 12.dp).let { m ->
+            Modifier.padding(bottom = Dimensions.Spacing.large).let { m ->
               if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_DIVIDER_SUFFIX)
               else m
             })
 
     AnimatedVisibility(visible = isExpanded) {
       Column(
-          Modifier.padding(top = 0.dp).let { m ->
+          Modifier.padding(top = Dimensions.Spacing.none).let { m ->
             if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
           },
           content = content)

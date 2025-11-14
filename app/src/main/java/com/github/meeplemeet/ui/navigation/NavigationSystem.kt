@@ -41,6 +41,8 @@ object NavigationTestTags {
   const val MAP_TAB = "MapTab"
 }
 
+private const val UNSELECTED_ALPHA = 0.5f
+
 /**
  * Defines all navigation destinations (screens) in the Meeple Meet app.
  *
@@ -181,8 +183,8 @@ fun BottomNavigationMenu(
                           selectedIndicatorColor = Color.Transparent,
                           disabledTextColor = Color.Transparent,
                           disabledIconColor = Color.Transparent,
-                          unselectedIconColor = AppColors.textIcons.copy(alpha = 0.5f),
-                          unselectedTextColor = AppColors.textIcons.copy(alpha = 0.5f)),
+                          unselectedIconColor = AppColors.textIcons.copy(alpha = UNSELECTED_ALPHA),
+                          unselectedTextColor = AppColors.textIcons.copy(alpha = UNSELECTED_ALPHA)),
                   icon = {
                     val iconToUse =
                         if (screen == currentScreen) screen.iconSelected ?: screen.icon

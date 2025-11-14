@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -52,6 +51,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBarDefaults
@@ -73,7 +73,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -88,6 +87,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -110,11 +110,6 @@ object ComponentsTestTags {
   const val DATE_PICKER = "comp_date_picker"
   const val TIME_PICKER = "comp_time_picker"
 
-  const val SEARCH_POPUP_SURFACE = "comp_search_popup_surface"
-  const val SEARCH_LOADING = "comp_search_loading"
-  const val SEARCH_EMPTY = "comp_search_empty"
-  const val SEARCH_ITEM_PREFIX = "comp_search_item_"
-
   const val SESSION_GAME_SEARCH_INPUT = "comp_session_game_search_input"
   const val SESSION_GAME_SEARCH_ITEM = "comp_session_game_search_item"
   const val SESSION_LOCATION_SEARCH_INPUT = "comp_session_location_search_input"
@@ -122,6 +117,19 @@ object ComponentsTestTags {
 
   fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
 }
+/** Common labels, placeholders, and button texts used across components. */
+private const val LABEL_DATE = "Date"
+private const val LABEL_TIME = "Time"
+private const val LABEL_LOCATION = "Location"
+private const val PLACEHOLDER_LOCATION = "Enter an address"
+private const val PLACEHOLDER_SEARCH_GAMES = "Search games"
+private const val PLACEHOLDER_SEARCH = "Search"
+private const val BUTTON_PICK = "Pick"
+private const val BUTTON_OK = "OK"
+private const val BUTTON_CANCEL = "Cancel"
+private const val TITLE_SELECT_TIME = "Select Time"
+private const val LABEL_GAME = "Game"
+private const val OUTLINE_DEFAULT_ALPHA = 0.5f
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
@@ -143,7 +151,7 @@ enum class ParticipantAction {
 @Composable
 fun SectionCard(
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(Dimensions.Padding.extraLarge),
     content: @Composable ColumnScope.() -> Unit
 ) {
   Column(modifier = modifier.padding(contentPadding), content = content)
@@ -202,7 +210,7 @@ fun LabeledTextField(
         style = labelTextStyle,
         color = labelTextColor,
         modifier = Modifier.testTag(ComponentsTestTags.LABELED_LABEL))
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -239,13 +247,44 @@ fun IconTextField(
 ) {
   OutlinedTextField(
       value = value,
-      onValueChange = onValueChange,
+      onValueChange = { if (editable) onValueChange(it) },
       modifier = modifier,
+      enabled = editable,
       readOnly = !editable,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       label = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-      textStyle = textStyle)
+      textStyle = textStyle,
+      colors =
+          TextFieldDefaults.colors(
+              // text
+              focusedTextColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+              disabledTextColor = MaterialTheme.colorScheme.onBackground,
+
+              // icons
+              focusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              disabledLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              focusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+              disabledTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+
+              // indicator
+              focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant,
+              disabledIndicatorColor =
+                  MaterialTheme.colorScheme.onBackground.copy(alpha = OUTLINE_DEFAULT_ALPHA),
+
+              // background
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent,
+              disabledContainerColor = Color.Transparent,
+
+              // cursor
+              cursorColor = MaterialTheme.colorScheme.onBackground,
+          ),
+  )
 }
 
 /**
@@ -350,10 +389,10 @@ fun TopBarWithDivider(
     /** --- Divider --- */
     HorizontalDivider(
         modifier =
-            Modifier.fillMaxWidth(0.7f) // 70% width to create middle effect
-                .padding(horizontal = 0.dp)
+            Modifier.fillMaxWidth(Dimensions.Fractions.topBarDivider)
+                .padding(horizontal = Dimensions.Spacing.none)
                 .align(Alignment.CenterHorizontally),
-        thickness = 1.dp,
+        thickness = Dimensions.DividerThickness.standard,
         color = AppColors.textIconsFade)
   }
 }
@@ -395,8 +434,10 @@ fun ParticipantChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(18.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
-            Spacer(Modifier.width(6.dp))
+            Box(
+                Modifier.size(Dimensions.IconSize.medium)
+                    .background(MaterialTheme.colorScheme.tertiary, CircleShape))
+            Spacer(Modifier.width(Dimensions.Padding.mediumSmall))
           }
 
           val (icon, tint) =
@@ -407,7 +448,7 @@ fun ParticipantChip(
           IconButton(
               onClick = { onClick(account) },
               modifier =
-                  Modifier.size(20.dp)
+                  Modifier.size(Dimensions.IconSize.standard)
                       .testTag(
                           "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
               colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
@@ -433,14 +474,17 @@ fun <T> TwoPerRowGrid(
     content: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
   val rows = remember(items) { items.chunked(2) }
-  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-    rows.forEach { row ->
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = rowsModifier) {
-        row.forEach { item -> content(item, rowsModifier.weight(1f, fill = true)) }
-        if (row.size == 1) Spacer(rowsModifier.weight(1f, fill = true))
+  Column(
+      modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
+        rows.forEach { row ->
+          Row(
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+              modifier = rowsModifier) {
+                row.forEach { item -> content(item, rowsModifier.weight(1f, fill = true)) }
+                if (row.size == 1) Spacer(rowsModifier.weight(1f, fill = true))
+              }
+        }
       }
-    }
-  }
 }
 
 /**
@@ -458,7 +502,7 @@ fun <T> TwoPerRowGrid(
 fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
-    label: String = "Date",
+    label: String = LABEL_DATE,
     editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault(),
@@ -472,12 +516,13 @@ fun DatePickerDockedField(
       value = text,
       onValueChange = {},
       placeholder = label,
-      leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = "Date") },
+      editable = editable,
+      leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = LABEL_DATE) },
       trailingIcon = {
         if (editable) {
           TextButton(
               onClick = { showDialogDate = true }, modifier = Modifier.testTag(testTagPick)) {
-                Text("Pick")
+                Text(BUTTON_PICK)
               }
         }
       },
@@ -527,12 +572,12 @@ fun AppDatePickerDialog(
               }
               onDismiss()
             }) {
-              Text("OK")
+              Text(BUTTON_OK)
             }
       },
       dismissButton = {
         TextButton(onClick = onDismiss, modifier = Modifier.testTag("date-picker-cancel")) {
-          Text("Cancel")
+          Text(BUTTON_CANCEL)
         }
       },
   ) {
@@ -564,14 +609,16 @@ fun AppDatePickerDialog(
 fun TimePickerField(
     value: LocalTime?,
     onValueChange: (LocalTime?) -> Unit,
-    label: String = "Time",
+    label: String = LABEL_TIME,
     is24Hour: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 ) {
   var open by remember { mutableStateOf(false) }
   val state =
       rememberTimePickerState(
-          is24Hour = is24Hour, initialHour = value?.hour ?: 19, initialMinute = value?.minute ?: 0)
+          is24Hour = is24Hour,
+          initialHour = value?.hour ?: Dimensions.Numbers.defaultTimeHour,
+          initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: ""
 
   OutlinedTextField(
@@ -579,36 +626,43 @@ fun TimePickerField(
       onValueChange = { /* read-only; picker controls it */},
       label = { Text(label) },
       readOnly = true,
-      leadingIcon = { Icon(Icons.Default.Timer, contentDescription = "Select time") },
+      leadingIcon = { Icon(Icons.Default.Timer, contentDescription = LABEL_TIME) },
       trailingIcon = {
         TextButton(
             onClick = { open = true },
             modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
-              Text("Pick")
+              Text(BUTTON_PICK)
             }
       },
-      modifier = Modifier.fillMaxWidth().height(64.dp).testTag(SessionTestTags.TIME_FIELD))
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimensions.IconSize.giant)
+              .testTag(SessionTestTags.TIME_FIELD))
 
   if (open) {
     AlertDialog(
         onDismissRequest = { open = false },
         containerColor = AppColors.primary,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(Dimensions.Spacing.xxxLarge),
         confirmButton = {
           Row(
-              modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
-              horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          horizontal = Dimensions.Spacing.xxLarge,
+                          vertical = Dimensions.Padding.medium),
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Padding.large)) {
                 // Cancel button
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimensions.Spacing.large),
                     color = AppColors.secondary,
                     modifier = Modifier.weight(1f)) {
                       TextButton(
                           onClick = { open = false },
                           modifier = Modifier.fillMaxWidth(),
-                          contentPadding = PaddingValues(vertical = 8.dp)) {
+                          contentPadding = PaddingValues(vertical = Dimensions.Padding.medium)) {
                             Text(
-                                "Cancel",
+                                BUTTON_CANCEL,
                                 style = MaterialTheme.typography.titleMedium,
                                 color = AppColors.textIconsFade)
                           }
@@ -616,20 +670,20 @@ fun TimePickerField(
 
                 // OK button
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimensions.Spacing.extraLarge),
                     color = AppColors.neutral,
                     modifier = Modifier.weight(1f)) {
                       TextButton(
                           modifier =
                               Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON)
                                   .fillMaxWidth(),
-                          contentPadding = PaddingValues(vertical = 8.dp),
+                          contentPadding = PaddingValues(vertical = Dimensions.Padding.medium),
                           onClick = {
                             onValueChange(LocalTime.of(state.hour, state.minute))
                             open = false
                           }) {
                             Text(
-                                "OK",
+                                BUTTON_OK,
                                 style = MaterialTheme.typography.titleMedium,
                                 color = AppColors.primary)
                           }
@@ -639,21 +693,21 @@ fun TimePickerField(
         dismissButton = {},
         text = {
           Column(
-              modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+              modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.medium),
               horizontalAlignment = Alignment.CenterHorizontally) {
                 // Header with icon and label
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Spacing.xxLarge),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center) {
                       Icon(
                           Icons.Default.Timer,
                           contentDescription = null,
                           tint = AppColors.neutral,
-                          modifier = Modifier.size(28.dp))
-                      Spacer(Modifier.width(12.dp))
+                          modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+                      Spacer(Modifier.width(Dimensions.Padding.large))
                       Text(
-                          "Select Time",
+                          TITLE_SELECT_TIME,
                           style = MaterialTheme.typography.titleLarge,
                           color = AppColors.textIcons)
                     }
@@ -663,7 +717,9 @@ fun TimePickerField(
                     state = state,
                     modifier =
                         Modifier.testTag(ComponentsTestTags.TIME_PICKER)
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = Dimensions.Padding.extraLarge,
+                                vertical = Dimensions.Padding.medium),
                     TimePickerDefaults.colors(
                         clockDialColor = AppColors.primary,
                         clockDialSelectedContentColor = AppColors.primary,
@@ -762,20 +818,22 @@ private fun LocationSearchBar(
   val results by viewModel.locationUIState.collectAsStateWithLifecycle()
 
   var menuOpen by rememberSaveable { mutableStateOf(false) }
+  var text by rememberSaveable { mutableStateOf(initial.name) }
   val hasSuggestions = results.locationSuggestions.isNotEmpty()
 
-  LaunchedEffect(initial) { if (initial.name.isNotBlank()) setLocation(initial) }
+  LaunchedEffect(Unit) { if (initial.name.isNotBlank()) setLocation(initial) }
 
   ExposedDropdownMenuBox(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         OutlinedTextField(
-            value = results.locationQuery.ifBlank { initial.name },
+            value = text,
             onValueChange = {
               menuOpen = true
+              text = it
               setLocationQuery(it)
             },
-            label = { Text("Location") },
-            placeholder = { Text("Enter an address") },
+            label = { Text(LABEL_LOCATION) },
+            placeholder = { Text(PLACEHOLDER_LOCATION) },
             modifier =
                 Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                     .fillMaxWidth()
@@ -788,11 +846,14 @@ private fun LocationSearchBar(
             onDismissRequest = { menuOpen = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
-          results.locationSuggestions.take(5).forEachIndexed { i, loc ->
+          results.locationSuggestions.take(Dimensions.Numbers.searchResultLimit).forEachIndexed {
+              i,
+              loc ->
             DropdownMenuItem(
                 text = { Text(loc.name) },
                 onClick = {
                   menuOpen = false
+                  text = loc.name
                   setLocation(loc)
                 },
                 modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
@@ -860,6 +921,7 @@ private fun GameSearchBar(
   val results by viewModel.gameUIState.collectAsStateWithLifecycle()
 
   var menuOpen by rememberSaveable { mutableStateOf(false) }
+  var text by rememberSaveable { mutableStateOf(initial?.name.orEmpty()) }
   val hasSuggestions = results.gameSuggestions.isNotEmpty()
 
   LaunchedEffect(initial) { if (initial?.name?.isNotBlank() == true) setGame(initial) }
@@ -868,13 +930,14 @@ private fun GameSearchBar(
     ExposedDropdownMenuBox(
         expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
           OutlinedTextField(
-              value = results.gameQuery.ifBlank { initial?.name.orEmpty() },
+              value = text,
               onValueChange = {
                 menuOpen = true
+                text = it
                 setGameQuery(it)
               },
-              label = { Text("Game") },
-              placeholder = { Text("Search games") },
+              label = { Text(LABEL_GAME) },
+              placeholder = { Text(PLACEHOLDER_SEARCH_GAMES) },
               modifier =
                   Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                       .fillMaxWidth()
@@ -883,18 +946,23 @@ private fun GameSearchBar(
               isError = results.gameSearchError != null)
 
           ExposedDropdownMenu(
-              expanded = menuOpen && hasSuggestions, onDismissRequest = { menuOpen = false }) {
+              expanded = menuOpen && hasSuggestions,
+              onDismissRequest = { menuOpen = false },
+              modifier = Modifier.background(AppColors.primary)) {
                 results.gameSuggestions
                     .filterNot { existing.contains(it.uid) }
-                    .take(5)
+                    .take(Dimensions.Numbers.searchResultLimit)
                     .forEachIndexed { i, game ->
                       DropdownMenuItem(
                           text = { Text(game.name) },
                           onClick = {
                             menuOpen = false
+                            text = game.name
                             setGame(game)
                           },
-                          modifier = Modifier.testTag("$dropdownItemTestTag:$i"))
+                          modifier =
+                              Modifier.testTag("$dropdownItemTestTag:$i")
+                                  .background(AppColors.primary))
                     }
               }
         }
@@ -907,7 +975,7 @@ private fun GameSearchBar(
           style = MaterialTheme.typography.bodySmall,
           modifier =
               Modifier.fillMaxWidth()
-                  .padding(start = 16.dp, top = 4.dp)
+                  .padding(start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
                   .testTag(
                       com.github.meeplemeet.ui.sessions.SessionCreationTestTags.GAME_SEARCH_ERROR))
     }

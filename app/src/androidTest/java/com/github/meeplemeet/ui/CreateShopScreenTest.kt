@@ -10,9 +10,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.shops.AddShopContent
 import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
@@ -82,6 +82,7 @@ class CreateShopScreenTest {
           useUnmergedTree = true)
 
   private fun fillRequiredFields(
+      viewModel: CreateShopViewModel,
       name: String = "Meeple Mart",
       email: String = "shop@example.com",
       address: String = "123 Meeple St"
@@ -91,16 +92,9 @@ class CreateShopScreenTest {
     inputIn(CreateShopScreenTestTags.FIELD_SHOP).performTextInput(name)
     inputIn(CreateShopScreenTestTags.FIELD_EMAIL).assertExists().performTextClearance()
     inputIn(CreateShopScreenTestTags.FIELD_EMAIL).performTextInput(email)
-    compose
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
-    compose
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .performTextClearance()
-    compose
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .performTextInput(address)
+
+    viewModel.setLocation(Location(name = address))
+    compose.waitForIdle()
   }
 
   /** Flip Sunday to “Open 24 hours” via the dialog and assert the 1st row value. */
@@ -230,13 +224,14 @@ class CreateShopScreenTest {
     var backCalled = false
 
     lateinit var stage: MutableIntState
+    val viewModel = CreateShopViewModel()
 
     compose.setContent {
       AppTheme {
         val s = remember { mutableIntStateOf(0) }
         stage = s
         var query by remember { mutableStateOf("") }
-        val viewModel = CreateShopViewModel()
+
         val locationUi by viewModel.locationUIState.collectAsState()
         val gameUi by viewModel.gameUIState.collectAsState()
 
@@ -365,7 +360,7 @@ class CreateShopScreenTest {
       compose.runOnUiThread { stage.intValue = 1 }
       compose.waitForIdle()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsNotEnabled()
-      fillRequiredFields()
+      fillRequiredFields(viewModel)
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsNotEnabled()
       setAnyOpeningHoursViaDialog()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsEnabled()
@@ -375,7 +370,7 @@ class CreateShopScreenTest {
     checkpoint("Create success path") {
       compose.runOnUiThread { stage.intValue = 2 }
       compose.waitForIdle()
-      fillRequiredFields("Meeple", "meeple@shop.com", "42 Boardgame Ave")
+      fillRequiredFields(viewModel, "Meeple", "meeple@shop.com", "42 Boardgame Ave")
       setAnyOpeningHoursViaDialog()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsEnabled().performClick()
       assertEquals(true, calledCreate)
@@ -387,9 +382,16 @@ class CreateShopScreenTest {
     checkpoint("Create error -> snackbar") {
       compose.runOnUiThread { stage.intValue = 3 }
       compose.waitForIdle()
-      fillRequiredFields()
+      fillRequiredFields(viewModel)
       setAnyOpeningHoursViaDialog()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).performClick()
+      compose.waitForIdle()
+      compose.waitUntil(5_000) {
+        compose
+            .onAllNodes(hasText("Failed to create shop", substring = true), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
       compose
           .onAllNodes(hasText("Failed to create shop", substring = true), useUnmergedTree = true)
           .assertCountEquals(1)
@@ -410,7 +412,7 @@ class CreateShopScreenTest {
       inputIn(CreateShopScreenTestTags.FIELD_PHONE).performTextInput("+41 79 555 55 55")
       inputIn(CreateShopScreenTestTags.FIELD_LINK).performTextInput("https://example.com")
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsNotEnabled()
-      fillRequiredFields()
+      fillRequiredFields(viewModel)
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsNotEnabled()
       setAnyOpeningHoursViaDialog()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsEnabled()
@@ -420,7 +422,7 @@ class CreateShopScreenTest {
     checkpoint("Discard") {
       compose.runOnUiThread { stage.intValue = 5 }
       compose.waitForIdle()
-      fillRequiredFields()
+      fillRequiredFields(viewModel)
       setAnyOpeningHoursViaDialog()
       compose.onTag(ShopComponentsTestTags.ACTION_DISCARD).performClick()
       assertEquals(true, backCalled)
@@ -662,8 +664,6 @@ class CreateShopScreenTest {
       ensureSectionExpanded(CreateShopScreenTestTags.SECTION_GAMES)
       compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${g1.uid}").performClick()
       compose.waitForIdle()
-      fillRequiredFields()
-      setAnyOpeningHoursViaDialog()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsEnabled().performClick()
       compose.waitForIdle()
       val uids = requireNotNull(capturedStock).map { it.first.uid }

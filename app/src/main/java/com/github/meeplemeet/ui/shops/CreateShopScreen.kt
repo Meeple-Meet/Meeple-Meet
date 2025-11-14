@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -36,6 +35,7 @@ import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -81,10 +81,10 @@ object CreateShopScreenTestTags {
 private object AddShopUi {
   // Reuse shared dimensions
   object Dimensions {
-    val contentHPadding = ShopFormUi.Dimensions.contentHPadding
-    val contentVPadding = ShopFormUi.Dimensions.contentVPadding
-    val bottomSpacer = ShopFormUi.Dimensions.bottomSpacer
-    val betweenControls = ShopFormUi.Dimensions.betweenControls
+    val contentHPadding = ShopFormUi.Dim.contentHPadding
+    val contentVPadding = ShopFormUi.Dim.contentVPadding
+    val bottomSpacer = ShopFormUi.Dim.bottomSpacer
+    val betweenControls = ShopFormUi.Dim.betweenControls
   }
 
   object Strings {
@@ -203,7 +203,6 @@ fun AddShopContent(
   var shopName by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
   var addressText by rememberSaveable { mutableStateOf("") }
-  var selectedLocation by remember { mutableStateOf<Location?>(null) }
   var phone by rememberSaveable { mutableStateOf("") }
   var link by rememberSaveable { mutableStateOf("") }
 
@@ -214,16 +213,15 @@ fun AddShopContent(
 
   var showGameDialog by remember { mutableStateOf(false) }
   var qty by rememberSaveable { mutableIntStateOf(1) }
-  var picked by remember { mutableStateOf<Game?>(null) }
   var stock by remember { mutableStateOf(initialStock) }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
-      remember(shopName, email, addressText, hasOpeningHours) {
+      remember(shopName, email, locationUi.selectedLocation, hasOpeningHours) {
         derivedStateOf {
           shopName.isNotBlank() &&
               isValidEmail(email) &&
-              addressText.isNotBlank() &&
+              locationUi.selectedLocation != null &&
               hasOpeningHours
         }
       }
@@ -239,7 +237,6 @@ fun AddShopContent(
     shopName = ""
     email = ""
     addressText = ""
-    selectedLocation = null
     phone = ""
     link = ""
     week = emptyWeek()
@@ -247,7 +244,6 @@ fun AddShopContent(
     showHoursDialog = false
     showGameDialog = false
     qty = 1
-    picked = null
     stock = emptyList()
     onSetGameQuery("")
     onBack()
@@ -278,7 +274,7 @@ fun AddShopContent(
         ActionBar(
             onDiscard = { onDiscard() },
             onPrimary = {
-              val addr = selectedLocation ?: Location(name = addressText)
+              val addr = locationUi.selectedLocation ?: Location()
               scope.launch {
                 try {
                   val shopId = onCreate(shopName, email, addr, week, stock)
@@ -314,10 +310,7 @@ fun AddShopContent(
                           onPhone = { phone = it },
                           link = link,
                           onLink = { link = it },
-                          onPickLocation = { loc ->
-                            addressText = loc.name
-                            selectedLocation = loc
-                          },
+                          onPickLocation = { loc -> addressText = loc.name },
                           viewModel = viewModel,
                           owner = owner)
                     },
@@ -346,7 +339,6 @@ fun AddShopContent(
                     header = {
                       TextButton(
                           onClick = {
-                            picked = null
                             onSetGameQuery("")
                             showGameDialog = true
                           },
@@ -425,9 +417,9 @@ private fun GamesSection(
 ) {
   if (stock.isNotEmpty()) {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 16.dp),
-        modifier = Modifier.heightIn(max = 600.dp)) {
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+        contentPadding = PaddingValues(bottom = Dimensions.Padding.extraLarge),
+        modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
           items(items = stock, key = { it.first.uid }) { (game, count) ->
             EditableGameItem(
                 game = game,
