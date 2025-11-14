@@ -250,8 +250,10 @@ fun SessionDetailsScreen(
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .background(Color.Transparent)
-                    .padding(horizontal = Dimensions.Spacing.xxxLarge, vertical = 10.dp),
+                    .background(AppColors.secondary)
+                    .padding(
+                        horizontal = Dimensions.Spacing.xxxLarge,
+                        vertical = Dimensions.Padding.extraMedium),
             horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
               OutlinedButton(
                   onClick = {
