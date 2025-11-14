@@ -73,7 +73,6 @@ object SessionCreationTestTags {
 
 private val CountBubbleHorizontalPadding = 10.dp
 private val CountBubbleVerticalPadding = 6.dp
-private val SpacerPadding = 10.dp
 
 private const val LABEL_CREATE = "Create"
 private const val LABEL_DISCARD = "Discard"
@@ -391,23 +390,23 @@ fun OrganisationSection(
             },
             modifier = Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Game search section
         SessionGameSearchBar(account, discussion, viewModel, gameUi.fetchedGame)
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Date picker for session date
         DatePickerDockedField(
             value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time picker for session time
         TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
 
-        Spacer(Modifier.height(SpacerPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Location search field with suggestions
         SessionLocationSearchBar(account, discussion, viewModel)
