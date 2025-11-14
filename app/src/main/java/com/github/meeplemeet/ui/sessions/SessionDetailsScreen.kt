@@ -875,6 +875,7 @@ fun TimeField(
       value = value,
       onValueChange = {}, // controlled externally
       placeholder = PLACEHOLDER_TIME,
+      editable = editable,
       leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = PLACEHOLDER_TIME) },
       trailingIcon = {
         if (editable) {

@@ -51,6 +51,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBarDefaults
@@ -128,6 +129,7 @@ private const val BUTTON_OK = "OK"
 private const val BUTTON_CANCEL = "Cancel"
 private const val TITLE_SELECT_TIME = "Select Time"
 private const val LABEL_GAME = "Game"
+private const val OUTLINE_DEFAULT_ALPHA = 0.5f
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
@@ -245,13 +247,44 @@ fun IconTextField(
 ) {
   OutlinedTextField(
       value = value,
-      onValueChange = onValueChange,
+      onValueChange = { if (editable) onValueChange(it) },
       modifier = modifier,
+      enabled = editable,
       readOnly = !editable,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       label = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-      textStyle = textStyle)
+      textStyle = textStyle,
+      colors =
+          TextFieldDefaults.colors(
+              // text
+              focusedTextColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+              disabledTextColor = MaterialTheme.colorScheme.onBackground,
+
+              // icons
+              focusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              disabledLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              focusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+              disabledTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+
+              // indicator
+              focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant,
+              disabledIndicatorColor =
+                  MaterialTheme.colorScheme.onBackground.copy(alpha = OUTLINE_DEFAULT_ALPHA),
+
+              // background
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent,
+              disabledContainerColor = Color.Transparent,
+
+              // cursor
+              cursorColor = MaterialTheme.colorScheme.onBackground,
+          ),
+  )
 }
 
 /**
@@ -483,6 +516,7 @@ fun DatePickerDockedField(
       value = text,
       onValueChange = {},
       placeholder = label,
+      editable = editable,
       leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = LABEL_DATE) },
       trailingIcon = {
         if (editable) {
