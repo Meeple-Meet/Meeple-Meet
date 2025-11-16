@@ -103,27 +103,26 @@ fun DiscussionScreen(
   val userCache = remember { mutableStateMapOf<String, Account>() }
 
   val discussionState by viewModel.discussionFlow(discussion.uid).collectAsState()
+  val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
 
   LaunchedEffect(discussion.uid) { viewModel.readDiscussionMessages(account, discussion) }
 
-  LaunchedEffect(discussionState) {
-    discussionState?.let { disc ->
-      discussionName = disc.name
-      disc.messages.forEach { msg ->
-        if (!userCache.containsKey(msg.senderId) && msg.senderId != account.uid) {
-          try {
-            viewModel.getOtherAccount(msg.senderId) { acct -> userCache[msg.senderId] = acct }
-          } catch (_: Exception) {}
-        }
+  LaunchedEffect(discussionState) { discussionState?.let { disc -> discussionName = disc.name } }
+
+  LaunchedEffect(messages) {
+    messages.forEach { msg ->
+      if (!userCache.containsKey(msg.senderId) && msg.senderId != account.uid) {
+        try {
+          viewModel.getOtherAccount(msg.senderId) { acct -> userCache[msg.senderId] = acct }
+        } catch (_: Exception) {}
       }
     }
   }
 
-  LaunchedEffect(discussionState?.messages?.size) {
-    val size = discussionState?.messages?.size ?: 0
-    if (size > 0) {
+  LaunchedEffect(messages.size) {
+    if (messages.isNotEmpty()) {
       try {
-        listState.animateScrollToItem(maxOf(0, size - 1))
+        listState.animateScrollToItem(maxOf(0, messages.size - 1))
       } catch (_: Exception) {}
     }
   }
@@ -183,8 +182,6 @@ fun DiscussionScreen(
           }
         })
 
-    val messages: List<Message> = discussionState?.messages ?: emptyList()
-
     LazyColumn(
         state = listState,
         modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -192,42 +189,39 @@ fun DiscussionScreen(
             PaddingValues(
                 horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.large),
         verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-          itemsIndexed(
-              items = messages,
-              key = { _, msg ->
-                "${msg.senderId}-${msg.createdAt.seconds}-${msg.createdAt.nanoseconds}"
-              }) { index, message ->
-                val isMine = message.senderId == account.uid
-                val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
+          itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
+            val isMine = message.senderId == account.uid
+            val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
-                val showDateHeader =
-                    shouldShowDateHeader(
-                        current = message.createdAt.toDate(),
-                        previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
-                if (showDateHeader) {
-                  Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                  DateSeparator(date = message.createdAt.toDate())
-                  Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                }
+            val showDateHeader =
+                shouldShowDateHeader(
+                    current = message.createdAt.toDate(),
+                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
+            if (showDateHeader) {
+              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+              DateSeparator(date = message.createdAt.toDate())
+              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+            }
 
-                if (message.poll != null) {
-                  PollBubble(
-                      msgIndex = index,
-                      poll = message.poll,
-                      authorName = sender,
-                      currentUserId = account.uid,
-                      onVote = { optionIndex, isRemoving ->
-                        if (isRemoving) {
-                          viewModel.removeVoteFromPoll(discussion, message, account, optionIndex)
-                        } else {
-                          viewModel.voteOnPoll(discussion, message, account, optionIndex)
-                        }
-                      },
-                      createdAt = message.createdAt.toDate())
-                } else {
-                  ChatBubble(message, isMine, sender)
-                }
-              }
+            if (message.poll != null) {
+              PollBubble(
+                  msgIndex = index,
+                  poll = message.poll,
+                  authorName = sender,
+                  currentUserId = account.uid,
+                  onVote = { optionIndex, isRemoving ->
+                    if (isRemoving) {
+                      viewModel.removeVoteFromPoll(
+                          discussion.uid, message.uid, account, optionIndex)
+                    } else {
+                      viewModel.voteOnPoll(discussion.uid, message.uid, account, optionIndex)
+                    }
+                  },
+                  createdAt = message.createdAt.toDate())
+            } else {
+              ChatBubble(message, isMine, sender)
+            }
+          }
         }
 
     var showAttachmentMenu by remember { mutableStateOf(false) }

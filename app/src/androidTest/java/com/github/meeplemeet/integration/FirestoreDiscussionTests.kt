@@ -188,8 +188,8 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val content = "Hello"
     discussionRepository.sendMessageToDiscussion(discussion, account2, content)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertTrue(updated.messages.size == 1 && updated.messages.any { it.content == content })
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertTrue(messages.size == 1 && messages.any { it.content == content })
   }
 
   @Test
@@ -305,7 +305,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     // account2 is a participant and should be able to read messages
     discussionViewModel.readDiscussionMessages(acc2WithPreviews, withMessage)
-    advanceUntilIdle()
+    Thread.sleep(200)
 
     // Verify unread count is now 0
     val updatedAccount = accountRepository.getAccount(account2.uid)
