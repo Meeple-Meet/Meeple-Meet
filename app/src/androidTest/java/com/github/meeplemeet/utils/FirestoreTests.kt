@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -103,6 +104,28 @@ open class FirestoreTests {
     }
   }
 
+  private suspend fun deleteAllStorageFiles(storage: FirebaseStorage) {
+    try {
+      val listResult = storage.reference.listAll().await()
+
+      // Delete all files in the root
+      for (item in listResult.items) item.delete().await()
+
+      // Recursively delete all files in subdirectories
+      for (prefix in listResult.prefixes) deleteStoragePrefix(prefix)
+    } catch (_: Exception) {}
+  }
+
+  private suspend fun deleteStoragePrefix(ref: StorageReference) {
+    try {
+      val listResult = ref.listAll().await()
+
+      for (item in listResult.items) item.delete().await()
+
+      for (prefix in listResult.prefixes) deleteStoragePrefix(prefix)
+    } catch (_: Exception) {}
+  }
+
   @Before
   fun testsSetup() {
     db = FirebaseProvider.db
@@ -126,6 +149,7 @@ open class FirestoreTests {
     runBlocking {
       val db = FirebaseProvider.db
       deleteAllCollectionsOnce(db)
+      deleteAllStorageFiles(storage)
     }
   }
 }
