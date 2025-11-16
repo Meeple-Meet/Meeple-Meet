@@ -43,10 +43,10 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, question, options, false)
     delay(500)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertEquals(1, updated.messages.size)
-    assertNotNull(updated.messages[0].poll)
-    assertEquals(question, updated.messages[0].poll?.question)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertEquals(1, messages.size)
+    assertNotNull(messages[0].poll)
+    assertEquals(question, messages[0].poll?.question)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -72,14 +72,14 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
     delay(500)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessage = messages[0]
 
-    viewModel.voteOnPoll(d1, pollMessage, testAccount1, 0)
+    viewModel.voteOnPoll(discussion.uid, pollMessage.uid, testAccount1, 0)
     delay(500)
 
-    val afterVote = discussionRepository.getDiscussion(discussion.uid)
-    val poll = afterVote.messages[0].poll
+    val afterVoteMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = afterVoteMessages[0].poll
     assertNotNull(poll)
     assertTrue(poll!!.votes.containsKey(testAccount1.uid))
     assertEquals(listOf(0), poll.votes[testAccount1.uid])
@@ -92,18 +92,16 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
     delay(500)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
-    viewModel.voteOnPoll(d1, pollMessage, testAccount1, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessage = messages[0]
+    viewModel.voteOnPoll(discussion.uid, pollMessage.uid, testAccount1, 0)
     delay(500)
 
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    val updatedMessage = d2.messages[0]
-    viewModel.removeVoteFromPoll(d2, updatedMessage, testAccount1, 0)
+    viewModel.removeVoteFromPoll(discussion.uid, pollMessage.uid, testAccount1, 0)
     delay(500)
 
-    val afterRemoval = discussionRepository.getDiscussion(discussion.uid)
-    val poll = afterRemoval.messages[0].poll
+    val afterRemovalMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = afterRemovalMessages[0].poll
     assertNotNull(poll)
     assertTrue(poll!!.votes[testAccount1.uid]?.isEmpty() ?: true)
   }
@@ -125,9 +123,9 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
     delay(500)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertNotNull(updated.messages[0].poll)
-    assertTrue(updated.messages[0].poll?.allowMultipleVotes ?: false)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertNotNull(messages[0].poll)
+    assertTrue(messages[0].poll?.allowMultipleVotes ?: false)
   }
 
   @Test
@@ -138,9 +136,9 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B"))
     delay(500)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertNotNull(updated.messages[0].poll)
-    assertFalse(updated.messages[0].poll?.allowMultipleVotes ?: true)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertNotNull(messages[0].poll)
+    assertFalse(messages[0].poll?.allowMultipleVotes ?: true)
   }
 
   @Test
@@ -150,17 +148,16 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B", "C"), false)
     delay(500)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessageId = messages[0].uid
 
-    viewModel.voteOnPoll(d1, pollMessage, testAccount1, 0)
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 0)
     delay(500)
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d2, d2.messages[0], testAccount2, 1)
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount2, 1)
     delay(500)
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    val finalMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = finalMessages[0].poll
     assertNotNull(poll)
     assertTrue(poll!!.hasUserVoted(testAccount1.uid))
     assertTrue(poll.hasUserVoted(testAccount2.uid))
@@ -174,16 +171,16 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B", "C"), false)
     delay(500)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d1, d1.messages[0], testAccount1, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessageId = messages[0].uid
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 0)
     delay(500)
 
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d2, d2.messages[0], testAccount1, 2)
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 2)
     delay(500)
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    val finalMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = finalMessages[0].poll
     assertNotNull(poll)
     // Should only have vote for option 2 (replaces previous vote)
     assertEquals(listOf(2), poll!!.votes[testAccount1.uid])
@@ -196,20 +193,19 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
         discussion, testAccount1.uid, "Select all", listOf("A", "B", "C", "D"), true)
     delay(500)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d1, d1.messages[0], testAccount1, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessageId = messages[0].uid
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 0)
     delay(500)
 
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d2, d2.messages[0], testAccount1, 2)
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 2)
     delay(500)
 
-    val d3 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d3, d3.messages[0], testAccount1, 3)
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 3)
     delay(500)
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    val finalMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = finalMessages[0].poll
     assertNotNull(poll)
     assertEquals(3, poll!!.votes[testAccount1.uid]?.size)
     assertTrue(poll.hasUserVotedFor(testAccount1.uid, 0))
@@ -223,19 +219,18 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
     viewModel.createPoll(discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
     delay(500)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d1, d1.messages[0], testAccount1, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessageId = messages[0].uid
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 0)
     delay(500)
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.voteOnPoll(d2, d2.messages[0], testAccount1, 1)
-    delay(500)
-
-    val d3 = discussionRepository.getDiscussion(discussion.uid)
-    viewModel.removeVoteFromPoll(d3, d3.messages[0], testAccount1, 0)
+    viewModel.voteOnPoll(discussion.uid, pollMessageId, testAccount1, 1)
     delay(500)
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    viewModel.removeVoteFromPoll(discussion.uid, pollMessageId, testAccount1, 0)
+    delay(500)
+
+    val finalMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = finalMessages[0].poll
     assertNotNull(poll)
     assertEquals(listOf(1), poll!!.votes[testAccount1.uid])
   }

@@ -634,7 +634,6 @@ class SessionComponentsTest : FirestoreTests() {
             uid = "disc1",
             name = "Game Night",
             description = "",
-            messages = emptyList(),
             participants = listOf("user1"),
             admins = listOf("user1"),
             creatorId = "user1")
@@ -667,7 +666,6 @@ class SessionComponentsTest : FirestoreTests() {
             uid = "disc1",
             name = "Game Night",
             description = "",
-            messages = emptyList(),
             participants = listOf("user1"),
             admins = listOf("user1"),
             creatorId = "user1")
@@ -697,7 +695,6 @@ class SessionComponentsTest : FirestoreTests() {
             uid = "disc1",
             name = "Game Night",
             description = "",
-            messages = emptyList(),
             participants = listOf("user1"),
             admins = listOf("user1"),
             creatorId = "user1")
@@ -723,7 +720,6 @@ class SessionComponentsTest : FirestoreTests() {
             uid = "disc1",
             name = "Game Night",
             description = "",
-            messages = emptyList(),
             participants = listOf("user1"),
             admins = listOf("user1"),
             creatorId = "user1")
@@ -759,7 +755,6 @@ class SessionComponentsTest : FirestoreTests() {
             uid = "disc1",
             name = "Game Night",
             description = "",
-            messages = emptyList(),
             participants = listOf("user1"),
             admins = listOf("user1"),
             creatorId = "user1",
@@ -785,7 +780,6 @@ class SessionComponentsTest : FirestoreTests() {
             uid = "disc1",
             name = "Game Night",
             description = "",
-            messages = emptyList(),
             participants = listOf("user1"),
             admins = listOf("user1"),
             creatorId = "user1")

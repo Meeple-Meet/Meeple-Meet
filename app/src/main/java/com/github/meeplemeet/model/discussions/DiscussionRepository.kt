@@ -21,10 +21,16 @@ private const val ERROR_NO_POLL = "Message does not contain a poll"
  *
  * Provides suspend functions for one-shot reads/writes and Flow-based listeners for real-time
  * updates.
+ *
+ * Messages are now stored in a subcollection called "messages" under each discussion document.
  */
 class DiscussionRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
     FirestoreRepository("discussions") {
   private val accounts = accountRepository.collection
+
+  /** Get the messages subcollection for a specific discussion. */
+  private fun messagesCollection(discussionId: String) =
+      collection.document(discussionId).collection("messages")
 
   /** Create a new discussion and store an empty preview for the creator. */
   suspend fun createDiscussion(
@@ -39,7 +45,6 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
             creatorId,
             name,
             description,
-            emptyList(),
             participants + creatorId,
             listOf(creatorId),
             Timestamp.now(),
@@ -91,11 +96,16 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(userId))
         .await()
+
+    // Get the last message to populate the preview
+    val messages = getMessages(discussion.uid)
+    val lastMessage = messages.lastOrNull()
+
     accounts
         .document(userId)
         .collection(Account::previews.name)
         .document(discussion.uid)
-        .set(toPreview(discussion))
+        .set(toPreview(discussion, lastMessage))
         .await()
   }
 
@@ -144,10 +154,15 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(*userIds.toTypedArray()))
         .await()
+
+    // Get the last message to populate the preview
+    val messages = getMessages(discussion.uid)
+    val lastMessage = messages.lastOrNull()
+
     val batch = db.batch()
     userIds.forEach { id ->
       val ref = accounts.document(id).collection(Account::previews.name).document(discussion.uid)
-      batch.set(ref, toPreview(discussion))
+      batch.set(ref, toPreview(discussion, lastMessage))
     }
     batch.commit().await()
   }
@@ -222,14 +237,13 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    * Handles both regular messages and poll messages.
    */
   suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
-    val message = Message(sender.uid, content)
+    val timestamp = Timestamp.now()
+    val messageNoUid = MessageNoUid(sender.uid, content, timestamp)
     val batch = FirebaseFirestore.getInstance().batch()
 
-    // Append message
-    batch.update(
-        collection.document(discussion.uid),
-        Discussion::messages.name,
-        FieldValue.arrayUnion(message))
+    // Add message to subcollection
+    val messageRef = messagesCollection(discussion.uid).document()
+    batch.set(messageRef, messageNoUid)
 
     // Update previews for all participants
     discussion.participants.forEach { userId ->
@@ -239,9 +253,9 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       batch.set(
           ref,
           mapOf(
-              "lastMessage" to message.content,
-              "lastMessageSender" to message.senderId,
-              "lastMessageAt" to message.createdAt,
+              "lastMessage" to content,
+              "lastMessageSender" to sender.uid,
+              "lastMessageAt" to timestamp,
               "unreadCount" to unreadCountValue),
           SetOptions.merge())
     }
@@ -251,42 +265,44 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
 
   /**
    * Append a message (regular or poll) to the discussion and update previews. This overload accepts
-   * a pre-constructed Message object.
+   * a MessageNoUid object to create the message.
    */
-  private suspend fun sendMessageToDiscussion(discussion: Discussion, message: Message) {
+  private suspend fun sendMessageToDiscussion(
+      discussion: Discussion,
+      messageNoUid: MessageNoUid
+  ): String {
     val batch = FirebaseFirestore.getInstance().batch()
 
-    // Append message
-    batch.update(
-        collection.document(discussion.uid),
-        Discussion::messages.name,
-        FieldValue.arrayUnion(message))
+    // Add message to subcollection
+    val messageRef = messagesCollection(discussion.uid).document()
+    batch.set(messageRef, messageNoUid)
 
     // Update previews for all participants
     discussion.participants.forEach { userId ->
       val ref =
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
-      val unreadCountValue = if (userId == message.senderId) 0 else FieldValue.increment(1)
+      val unreadCountValue = if (userId == messageNoUid.senderId) 0 else FieldValue.increment(1)
 
       // Use poll-specific preview text if message contains a poll
       val previewText =
-          if (message.poll != null) {
-            "Poll: ${message.poll.question}"
+          if (messageNoUid.poll != null) {
+            "Poll: ${messageNoUid.poll.question}"
           } else {
-            message.content
+            messageNoUid.content
           }
 
       batch.set(
           ref,
           mapOf(
               "lastMessage" to previewText,
-              "lastMessageSender" to message.senderId,
-              "lastMessageAt" to message.createdAt,
+              "lastMessageSender" to messageNoUid.senderId,
+              "lastMessageAt" to messageNoUid.createdAt,
               "unreadCount" to unreadCountValue),
           SetOptions.merge())
     }
 
     batch.commit().await()
+    return messageRef.id
   }
 
   /** Reset unread count for a given discussion for this account. */
@@ -318,6 +334,54 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     awaitClose { reg.remove() }
   }
 
+  /**
+   * Retrieve all messages for a discussion, ordered by creation time.
+   *
+   * @param discussionId The discussion UID.
+   * @return List of messages ordered by createdAt timestamp.
+   */
+  suspend fun getMessages(discussionId: String): List<Message> {
+    val snapshot = messagesCollection(discussionId).orderBy("createdAt").get().await()
+    return snapshot.documents.mapNotNull { doc ->
+      doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) }
+    }
+  }
+
+  /**
+   * Retrieve a specific message by ID.
+   *
+   * @param discussionId The discussion UID.
+   * @param messageId The message UID.
+   * @return The message if found.
+   */
+  suspend fun getMessage(discussionId: String, messageId: String): Message? {
+    val snapshot = messagesCollection(discussionId).document(messageId).get().await()
+    return snapshot.toObject(MessageNoUid::class.java)?.let { fromNoUid(snapshot.id, it) }
+  }
+
+  /**
+   * Listen for changes to messages in a discussion.
+   *
+   * Emits a new list of messages every time the subcollection updates.
+   */
+  fun listenMessages(discussionId: String): Flow<List<Message>> = callbackFlow {
+    val reg =
+        messagesCollection(discussionId).orderBy("createdAt").addSnapshotListener { snap, e ->
+          if (e != null) {
+            close(e)
+            return@addSnapshotListener
+          }
+          if (snap != null) {
+            val messages =
+                snap.documents.mapNotNull { doc ->
+                  doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) }
+                }
+            trySend(messages)
+          }
+        }
+    awaitClose { reg.remove() }
+  }
+
   // ============================================================================
   // Poll Methods
   // ============================================================================
@@ -330,7 +394,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    * @param question The poll question.
    * @param options List of options users can vote for.
    * @param allowMultipleVotes Whether users can vote multiple times.
-   * @return The created poll message.
+   * @return The created poll message with its UID.
    */
   suspend fun createPoll(
       discussion: Discussion,
@@ -346,40 +410,39 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
             votes = emptyMap(),
             allowMultipleVotes = allowMultipleVotes)
 
-    val message =
-        Message(senderId = creatorId, content = question, createdAt = Timestamp.now(), poll = poll)
+    val timestamp = Timestamp.now()
+    val messageNoUid =
+        MessageNoUid(senderId = creatorId, content = question, createdAt = timestamp, poll = poll)
 
-    sendMessageToDiscussion(discussion, message)
+    val messageId = sendMessageToDiscussion(discussion, messageNoUid)
 
-    return message
+    return Message(messageId, creatorId, question, timestamp, poll)
   }
 
   /**
    * Vote on a poll option.
    *
-   * @param discussion The discussion containing the poll.
-   * @param pollMessage The message containing the poll.
+   * @param discussionId The discussion UID containing the poll.
+   * @param messageId The message UID containing the poll.
    * @param userId The user's UID.
    * @param optionIndex The index of the option to vote for.
    */
   suspend fun voteOnPoll(
-      discussion: Discussion,
-      pollMessage: Message,
+      discussionId: String,
+      messageId: String,
       userId: String,
       optionIndex: Int
   ) {
-    val poll = pollMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
+    // Get the current message
+    val currentMessage =
+        getMessage(discussionId, messageId) ?: throw IllegalArgumentException("Message not found")
 
-    if (optionIndex !in poll.options.indices) throw IllegalArgumentException("Invalid option index")
+    val currentPoll =
+        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
 
-    // Find the message index in the discussion
-    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessage.createdAt }
-    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found in discussion")
-
-    // Get the latest discussion state
-    val latestDiscussion = getDiscussion(discussion.uid)
-    val currentMessage = latestDiscussion.messages[messageIndex]
-    val currentPoll = currentMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
+    if (optionIndex !in currentPoll.options.indices) {
+      throw IllegalArgumentException("Invalid option index")
+    }
 
     // Calculate updated votes
     val updatedVotes = currentPoll.votes.toMutableMap()
@@ -396,39 +459,32 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       updatedVotes[userId] = listOf(optionIndex)
     }
 
-    // Update the message with new poll data
+    // Update the message document with new poll data
     val updatedPoll = currentPoll.copy(votes = updatedVotes)
-    val updatedMessage = currentMessage.copy(poll = updatedPoll)
-    val updatedMessages = latestDiscussion.messages.toMutableList()
-    updatedMessages[messageIndex] = updatedMessage
-
-    // Update the entire messages array
-    collection.document(discussion.uid).update(Discussion::messages.name, updatedMessages).await()
+    messagesCollection(discussionId).document(messageId).update("poll", updatedPoll).await()
   }
 
   /**
    * Remove a user's vote for a specific poll option. Called when user clicks an option they
    * previously selected to deselect it.
    *
-   * @param discussion The discussion containing the poll.
-   * @param pollMessage The message containing the poll.
+   * @param discussionId The discussion UID containing the poll.
+   * @param messageId The message UID containing the poll.
    * @param userId The user's UID.
    * @param optionIndex The specific option index to remove.
    */
   suspend fun removeVoteFromPoll(
-      discussion: Discussion,
-      pollMessage: Message,
+      discussionId: String,
+      messageId: String,
       userId: String,
       optionIndex: Int
   ) {
-    // Find the message index in the discussion
-    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessage.createdAt }
-    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found in discussion")
+    // Get the current message
+    val currentMessage =
+        getMessage(discussionId, messageId) ?: throw IllegalArgumentException("Message not found")
 
-    // Get the latest discussion state
-    val latestDiscussion = getDiscussion(discussion.uid)
-    val currentMessage = latestDiscussion.messages[messageIndex]
-    val currentPoll = currentMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
+    val currentPoll =
+        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
 
     // Check if user has voted
     val currentVotes = currentPoll.votes[userId]
@@ -453,13 +509,8 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       updatedVotes[userId] = updatedUserVotes
     }
 
-    // Update the message with new poll data
+    // Update the message document with new poll data
     val updatedPoll = currentPoll.copy(votes = updatedVotes)
-    val updatedMessage = currentMessage.copy(poll = updatedPoll)
-    val updatedMessages = latestDiscussion.messages.toMutableList()
-    updatedMessages[messageIndex] = updatedMessage
-
-    // Update the entire messages array
-    collection.document(discussion.uid).update(Discussion::messages.name, updatedMessages).await()
+    messagesCollection(discussionId).document(messageId).update("poll", updatedPoll).await()
   }
 }
