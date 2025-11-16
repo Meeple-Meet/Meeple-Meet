@@ -41,13 +41,15 @@ class DiscussionViewModel(
     // Return early if user is not part of discussion (can happen during navigation transitions)
     if (!discussion.participants.contains(account.uid)) return
 
-    if (discussion.messages.isEmpty()) return
     val preview = account.previews[discussion.uid] ?: return
     if (preview.unreadCount == 0) return
 
     viewModelScope.launch {
-      discussionRepository.readDiscussionMessages(
-          account.uid, discussion.uid, discussion.messages.last())
+      // Get the latest messages to find the last one
+      val messages = discussionRepository.getMessages(discussion.uid)
+      if (messages.isEmpty()) return@launch
+
+      discussionRepository.readDiscussionMessages(account.uid, discussion.uid, messages.last())
     }
   }
 
@@ -80,14 +82,14 @@ class DiscussionViewModel(
   /**
    * Vote on a poll option.
    *
-   * @param discussion The discussion containing the poll.
-   * @param pollMessage The message containing the poll.
+   * @param discussionId The discussion UID containing the poll.
+   * @param messageId The message UID containing the poll.
    * @param voter The account voting.
    * @param optionIndex The index of the option to vote for.
    */
-  fun voteOnPoll(discussion: Discussion, pollMessage: Message, voter: Account, optionIndex: Int) {
+  fun voteOnPoll(discussionId: String, messageId: String, voter: Account, optionIndex: Int) {
     viewModelScope.launch {
-      discussionRepository.voteOnPoll(discussion, pollMessage, voter.uid, optionIndex)
+      discussionRepository.voteOnPoll(discussionId, messageId, voter.uid, optionIndex)
     }
   }
 
@@ -95,19 +97,19 @@ class DiscussionViewModel(
    * Remove a user's vote for a specific poll option. Called when user clicks an option they
    * previously selected to deselect it.
    *
-   * @param discussion The discussion containing the poll.
-   * @param pollMessage The message containing the poll.
+   * @param discussionId The discussion UID containing the poll.
+   * @param messageId The message UID containing the poll.
    * @param voter The account whose vote to remove.
    * @param optionIndex The specific option to remove.
    */
   fun removeVoteFromPoll(
-      discussion: Discussion,
-      pollMessage: Message,
+      discussionId: String,
+      messageId: String,
       voter: Account,
       optionIndex: Int
   ) {
     viewModelScope.launch {
-      discussionRepository.removeVoteFromPoll(discussion, pollMessage, voter.uid, optionIndex)
+      discussionRepository.removeVoteFromPoll(discussionId, messageId, voter.uid, optionIndex)
     }
   }
 
@@ -129,6 +131,26 @@ class DiscussionViewModel(
               scope = viewModelScope,
               started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
               initialValue = null)
+    }
+  }
+
+  /** Holds a [StateFlow] of messages keyed by discussion ID. */
+  private val messagesFlows = mutableMapOf<String, StateFlow<List<Message>>>()
+
+  /**
+   * Real-time flow of messages in a discussion.
+   *
+   * Emits a new list of messages on every snapshot change.
+   */
+  fun messagesFlow(discussionId: String): StateFlow<List<Message>> {
+    if (discussionId.isBlank()) return MutableStateFlow(emptyList())
+    return messagesFlows.getOrPut(discussionId) {
+      discussionRepository
+          .listenMessages(discussionId)
+          .stateIn(
+              scope = viewModelScope,
+              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+              initialValue = emptyList())
     }
   }
 }
