@@ -161,35 +161,73 @@ class ImageRepositoryTests : FirestoreTests() {
     }
 
     // ========================================================================
-    // Discussion Photos Tests
+    // Discussion Profile Picture Tests
     // ========================================================================
 
-    checkpoint("Save discussion photos succeeds") {
-      val discussionId = "test_discussion_123"
+    checkpoint("Save discussion profile picture succeeds") {
+      val discussionId = "test_discussion_profile_123"
 
       runTest {
-        imageRepository.saveDiscussionPhotos(
-            context, discussionId, testImagePath1, testImagePath2, testImagePath3)
+        imageRepository.saveDiscussionProfilePicture(context, discussionId, testImagePath1)
       }
     }
 
-    checkpoint("Load discussion photos returns list") {
-      val discussionId = "test_discussion_123"
+    checkpoint("Load discussion profile picture returns correct data") {
+      val discussionId = "test_discussion_profile_123"
 
       runTest {
-        val images = imageRepository.loadDiscussionPhotos(context, discussionId, 3)
+        val bytes = imageRepository.loadDiscussionProfilePicture(context, discussionId)
+        assertNotNull(bytes)
+        assertTrue(bytes.isNotEmpty())
+      }
+    }
+
+    // ========================================================================
+    // Discussion Photo Messages Tests
+    // ========================================================================
+
+    checkpoint("Save discussion photo messages succeeds") {
+      val discussionId = "test_discussion_messages_123"
+
+      runTest {
+        val urls =
+            imageRepository.saveDiscussionPhotoMessages(
+                context, discussionId, testImagePath1, testImagePath2, testImagePath3)
+        assertNotNull(urls)
+        assertEquals(3, urls.size)
+        urls.forEach { url -> assertTrue("URL should not be empty", url.isNotEmpty()) }
+      }
+    }
+
+    checkpoint("Load discussion photo messages returns list") {
+      val discussionId = "test_discussion_messages_123"
+
+      runTest {
+        val images = imageRepository.loadDiscussionPhotoMessages(context, discussionId, 3)
         assertNotNull(images)
         assertEquals(3, images.size)
       }
     }
 
-    checkpoint("Load discussion photos with zero count returns empty list") {
-      val discussionId = "test_discussion_789"
+    checkpoint("Load discussion photo messages with zero count returns empty list") {
+      val discussionId = "test_discussion_messages_789"
 
       runTest {
-        val images = imageRepository.loadDiscussionPhotos(context, discussionId, 0)
+        val images = imageRepository.loadDiscussionPhotoMessages(context, discussionId, 0)
         assertNotNull(images)
         assertTrue(images.isEmpty())
+      }
+    }
+
+    checkpoint("Save single discussion photo message succeeds") {
+      val discussionId = "test_discussion_single_message"
+
+      runTest {
+        val urls =
+            imageRepository.saveDiscussionPhotoMessages(context, discussionId, testImagePath1)
+        assertNotNull(urls)
+        assertEquals(1, urls.size)
+        assertTrue("URL should not be empty", urls[0].isNotEmpty())
       }
     }
 
@@ -288,11 +326,11 @@ class ImageRepositoryTests : FirestoreTests() {
 
       runTest {
         // Save images
-        imageRepository.saveDiscussionPhotos(
+        imageRepository.saveDiscussionPhotoMessages(
             context, discussionId, testImagePath1, testImagePath2, testImagePath3)
 
         // Load images
-        val images = imageRepository.loadDiscussionPhotos(context, discussionId, 3)
+        val images = imageRepository.loadDiscussionPhotoMessages(context, discussionId, 3)
 
         assertEquals(3, images.size)
         // All images should be non-empty
