@@ -3,10 +3,14 @@ package com.github.meeplemeet.model.images
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.storage.StorageManager
 import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.RepositoryProvider
+import com.google.firebase.storage.StorageException
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -15,6 +19,17 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+/** Exception thrown when disk operations fail (e.g., full disk, permission issues) */
+class DiskStorageException(message: String, cause: Throwable? = null) : IOException(message, cause)
+
+/** Exception thrown when Firebase Storage operations fail */
+class RemoteStorageException(message: String, cause: Throwable? = null) :
+    IOException(message, cause)
+
+/** Exception thrown when image encoding/decoding fails */
+class ImageProcessingException(message: String, cause: Throwable? = null) :
+    Exception(message, cause)
+
 /**
  * Repository for managing image storage and retrieval. Handles image encoding to WebP format,
  * caching, and Firebase Storage operations.
@@ -22,9 +37,39 @@ import kotlinx.coroutines.withContext
 class ImageRepository {
   private val storage = FirebaseProvider.storage
 
-  private fun accountPath(id: String) = "accounts/$id"
+  /**
+   * Modern storage allocation using StorageManager (Android O+). Considers clearable cached data
+   * and can trigger automatic cleanup.
+   *
+   * @param context Android context
+   * @param bytesNeeded Number of bytes required
+   * @throws DiskStorageException if insufficient space cannot be allocated
+   */
+  private fun ensureStorageSpace(context: Context, bytesNeeded: Long) {
+    val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+    val appSpecificDir = context.cacheDir
+    val uuid = storageManager.getUuidForPath(appSpecificDir)
 
-  private fun discussionBasePath(id: String) = "discussions/$id"
+    try {
+      val allocatableBytes = storageManager.getAllocatableBytes(uuid)
+
+      if (allocatableBytes < bytesNeeded) {
+        throw DiskStorageException(
+            "Insufficient storage: need ${bytesNeeded / 1024}KB, " +
+                "allocatable ${allocatableBytes / 1024}KB")
+      }
+
+      // Attempt to allocate the required space (may clear cached data automatically)
+      storageManager.allocateBytes(uuid, bytesNeeded)
+    } catch (e: IOException) {
+      throw DiskStorageException("Failed to allocate storage space: ${e.message}", e)
+    }
+  }
+
+  private fun accountPath(id: String) = "${RepositoryProvider.accounts.collectionName}/$id"
+
+  private fun discussionBasePath(id: String) =
+      "${RepositoryProvider.discussions.collectionName}/$id"
 
   private fun discussionProfilePath(id: String) = "${discussionBasePath(id)}/profile.webp"
 
@@ -33,9 +78,9 @@ class ImageRepository {
   private fun discussionMessagePath(id: String) =
       "${discussionMessagesDir(id)}/${UUID.randomUUID()}.webp"
 
-  private fun shopPath(id: String) = "shops/$id"
+  private fun shopPath(id: String) = "${RepositoryProvider.shops.collectionName}/$id"
 
-  private fun spaceRenterPath(id: String) = "space_renters/$id"
+  private fun spaceRenterPath(id: String) = "${RepositoryProvider.spaceRenters.collectionName}/$id"
 
   /**
    * Saves an account profile picture to Firebase Storage and local cache.
@@ -44,6 +89,9 @@ class ImageRepository {
    * @param context Android context for accessing cache directory
    * @param inputPath Absolute path to the source image file
    * @return The public download URL of the saved picture
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   suspend fun saveAccountProfilePicture(
       accountId: String,
@@ -57,6 +105,8 @@ class ImageRepository {
    * @param accountId The unique identifier for the account
    * @param context Android context for accessing cache directory
    * @return The image as a byte array
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage download fails
    */
   suspend fun loadAccountProfilePicture(accountId: String, context: Context): ByteArray {
     return loadImage(context, accountPath(accountId))
@@ -68,6 +118,9 @@ class ImageRepository {
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
    * @return List of public download URLs in the same order as inputPaths
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   suspend fun saveDiscussionProfilePicture(
       context: Context,
@@ -81,6 +134,8 @@ class ImageRepository {
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
    * @return The image as a byte array
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage download fails
    */
   suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray =
       loadImage(context, discussionProfilePath(discussionId))
@@ -92,6 +147,9 @@ class ImageRepository {
    * @param discussionId The unique identifier for the discussion
    * @param inputPaths Variable number of absolute paths to source image files
    * @return List of public download URLs in the same order as inputPaths
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   suspend fun saveDiscussionPhotoMessages(
       context: Context,
@@ -106,6 +164,8 @@ class ImageRepository {
    * @param discussionId The unique identifier for the discussion
    * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
    * @return List of images as byte arrays in index order
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage operations fail
    */
   suspend fun loadDiscussionPhotoMessages(
       context: Context,
@@ -122,6 +182,9 @@ class ImageRepository {
    * @param shopId The unique identifier for the shop
    * @param inputPaths Variable number of absolute paths to source image files
    * @return List of public download URLs in the same order as inputPaths
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   suspend fun saveShopPhotos(
       context: Context,
@@ -137,6 +200,8 @@ class ImageRepository {
    * @param shopId The unique identifier for the shop
    * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
    * @return List of images as byte arrays in index order
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage operations fail
    */
   suspend fun loadShopPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
     return loadImages(context, shopPath(shopId), count)
@@ -149,6 +214,9 @@ class ImageRepository {
    * @param shopId The unique identifier for the space renter
    * @param inputPaths Variable number of absolute paths to source image files
    * @return List of public download URLs in the same order as inputPaths
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   suspend fun saveSpaceRenterPhotos(
       context: Context,
@@ -164,6 +232,8 @@ class ImageRepository {
    * @param shopId The unique identifier for the space renter
    * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
    * @return List of images as byte arrays in index order
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage operations fail
    */
   suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
     return loadImages(context, spaceRenterPath(shopId), count)
@@ -175,20 +245,53 @@ class ImageRepository {
    * @param context Android context for accessing cache directory
    * @param inputPath Absolute path to the source image file
    * @param storagePath Storage path (used for both local cache and Firebase Storage)
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   private suspend fun saveImage(context: Context, inputPath: String, storagePath: String): String {
-    val bytes = encodeWebP(inputPath)
+    val bytes =
+        try {
+          encodeWebP(inputPath)
+        } catch (e: Exception) {
+          throw ImageProcessingException("Failed to encode image at $inputPath", e)
+        }
 
     // Save to disk
-    withContext(Dispatchers.IO) {
-      val diskPath = "${context.cacheDir}/$storagePath"
-      File(diskPath).parentFile?.mkdirs()
-      FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
+    try {
+      withContext(Dispatchers.IO) {
+        val diskPath = "${context.cacheDir}/$storagePath"
+        val parentDir = File(diskPath).parentFile
+
+        // Check if parent directory can be created
+        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+          throw DiskStorageException("Failed to create directory: ${parentDir.absolutePath}")
+        }
+
+        // Ensure sufficient storage space (uses StorageManager on O+ to clear cache if needed)
+        ensureStorageSpace(context, bytes.size.toLong())
+
+        FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
+      }
+    } catch (e: DiskStorageException) {
+      throw e
+    } catch (e: IOException) {
+      throw DiskStorageException("Failed to write image to disk at $storagePath", e)
+    } catch (e: SecurityException) {
+      throw DiskStorageException("Permission denied writing to $storagePath", e)
     }
 
-    val ref = storage.reference.child(storagePath)
-    ref.putBytes(bytes).await()
-    return ref.downloadUrl.await().toString()
+    // Upload to Firebase Storage
+    try {
+      val ref = storage.reference.child(storagePath)
+      ref.putBytes(bytes).await()
+      return ref.downloadUrl.await().toString()
+    } catch (e: StorageException) {
+      throw RemoteStorageException(
+          "Firebase Storage upload failed for $storagePath: ${e.errorCode}", e)
+    } catch (e: Exception) {
+      throw RemoteStorageException("Failed to upload image to Firebase Storage at $storagePath", e)
+    }
   }
 
   /**
@@ -198,6 +301,10 @@ class ImageRepository {
    * @param context Android context for accessing cache directory
    * @param path Storage path (used for both local cache and Firebase Storage)
    * @return The image as a byte array
+   * @throws DiskStorageException if disk read/write fails
+   * @throws RemoteStorageException if Firebase Storage download fails
+   *
+   * New version with streamin generated with Claude
    */
   private suspend fun loadImage(context: Context, path: String): ByteArray {
     val diskPath = "${context.cacheDir}/$path"
@@ -205,19 +312,77 @@ class ImageRepository {
 
     // Check if image exists in cache
     if (file.exists()) {
-      return withContext(Dispatchers.IO) { file.readBytes() }
+      return try {
+        withContext(Dispatchers.IO) { file.readBytes() }
+      } catch (e: IOException) {
+        throw DiskStorageException("Failed to read cached image at $path", e)
+      } catch (e: SecurityException) {
+        throw DiskStorageException("Permission denied reading $path", e)
+      }
     }
 
-    // Download from Firebase Storage
-    val bytes = storage.reference.child(path).getBytes(Long.MAX_VALUE).await()
+    // Download from Firebase Storage using streaming for better memory efficiency
+    return try {
+      withContext(Dispatchers.IO) {
+        // Prepare cache directory
+        val parentDir = file.parentFile
+        if (parentDir != null && !parentDir.exists()) {
+          parentDir.mkdirs()
+        }
 
-    // Save to cache for future use
-    withContext(Dispatchers.IO) {
-      file.parentFile?.mkdirs()
-      FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
+        // Fetch the stream from Firebase Storage
+        val streamTask = storage.reference.child(path).stream
+        val result = streamTask.await()
+
+        // Determine if we can cache directly to disk
+        val canCache =
+            try {
+              // Check if we have reasonable disk space available
+              file.parentFile?.usableSpace?.let { it > 10 * 1024 * 1024 } ?: false // 10MB minimum
+            } catch (_: Exception) {
+              false
+            }
+
+        val buffer = ByteArray(8192) // 8KB buffer
+
+        if (canCache) {
+          // Stream directly to cache file to avoid loading entire file into memory
+          try {
+            result.stream.use { inputStream ->
+              FileOutputStream(diskPath).use { outputStream ->
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                  outputStream.write(buffer, 0, bytesRead)
+                }
+              }
+            }
+
+            // Successfully cached, read and return
+            file.readBytes()
+          } catch (e: IOException) {
+            // Failed to cache, clean up and throw
+            if (file.exists()) file.delete()
+            throw e
+          }
+        } else {
+          // Stream to memory when caching is not feasible
+          val outputStream = ByteArrayOutputStream()
+          result.stream.use { inputStream ->
+            var bytesRead: Int
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+              outputStream.write(buffer, 0, bytesRead)
+            }
+          }
+          outputStream.toByteArray()
+        }
+      }
+    } catch (e: StorageException) {
+      throw RemoteStorageException("Firebase Storage download failed for $path: ${e.errorCode}", e)
+    } catch (e: IOException) {
+      throw RemoteStorageException("Failed to stream image from Firebase Storage at $path", e)
+    } catch (e: Exception) {
+      throw RemoteStorageException("Failed to download image from Firebase Storage at $path", e)
     }
-
-    return bytes
   }
 
   /**
@@ -244,6 +409,8 @@ class ImageRepository {
    * @param parentPath Parent directory path in storage
    * @param count Number of images to load (0.webp through (count-1).webp)
    * @return List of images as byte arrays in index order
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage operations fail
    */
   private suspend fun loadImages(
       context: Context,
@@ -251,26 +418,45 @@ class ImageRepository {
       count: Int
   ): List<ByteArray> = coroutineScope {
     val cachedFiles =
-        withContext(Dispatchers.IO) {
-          val dir = File("${context.cacheDir}/$parentPath")
-          if (dir.exists()) dir.listFiles()?.sortedBy { it.name } ?: emptyList() else emptyList()
+        try {
+          withContext(Dispatchers.IO) {
+            val dir = File("${context.cacheDir}/$parentPath")
+            if (dir.exists()) dir.listFiles()?.sortedBy { it.name } ?: emptyList() else emptyList()
+          }
+        } catch (e: IOException) {
+          throw DiskStorageException("Failed to list cached images at $parentPath", e)
+        } catch (e: SecurityException) {
+          throw DiskStorageException("Permission denied accessing $parentPath", e)
         }
 
     val cachedBytes =
         cachedFiles.take(count).map { file ->
-          async { withContext(Dispatchers.IO) { file.readBytes() } }
+          async {
+            try {
+              withContext(Dispatchers.IO) { file.readBytes() }
+            } catch (e: IOException) {
+              throw DiskStorageException("Failed to read cached file ${file.name}", e)
+            }
+          }
         }
 
     val remaining = count - cachedBytes.size
     val remoteBytes =
         if (remaining > 0) {
-          val refs =
-              storage.reference.child(parentPath).listAll().await().items.sortedBy { it.name }
-          refs.take(remaining).map { ref ->
-            async {
-              val path = ref.path.trimStart('/')
-              loadImage(context, path)
+          try {
+            val refs =
+                storage.reference.child(parentPath).listAll().await().items.sortedBy { it.name }
+            refs.take(remaining).map { ref ->
+              async {
+                val path = ref.path.trimStart('/')
+                loadImage(context, path)
+              }
             }
+          } catch (e: StorageException) {
+            throw RemoteStorageException(
+                "Failed to list images in Firebase Storage at $parentPath: ${e.errorCode}", e)
+          } catch (e: Exception) {
+            throw RemoteStorageException("Failed to access Firebase Storage at $parentPath", e)
           }
         } else {
           emptyList()
@@ -287,24 +473,58 @@ class ImageRepository {
    *   downscaled
    * @param quality WebP compression quality (0-100, lower means smaller file size)
    * @return The encoded WebP image as a byte array
+   * @throws ImageProcessingException if image decoding or encoding fails
    */
   private fun encodeWebP(inputPath: String, targetMaxPx: Int = 800, quality: Int = 40): ByteArray {
+    // Check if file exists and is readable
+    val inputFile = File(inputPath)
+    if (!inputFile.exists()) {
+      throw ImageProcessingException("Input file does not exist: $inputPath")
+    }
+    if (!inputFile.canRead()) {
+      throw ImageProcessingException("Cannot read input file: $inputPath")
+    }
+
     val opts =
         BitmapFactory.Options().apply {
           inJustDecodeBounds = true
           BitmapFactory.decodeFile(inputPath, this)
+
+          // Check if image was successfully decoded
+          if (outWidth <= 0 || outHeight <= 0) {
+            throw ImageProcessingException("Invalid or corrupted image file: $inputPath")
+          }
 
           val maxDim = maxOf(outWidth, outHeight)
           inSampleSize = (maxDim / targetMaxPx).coerceAtLeast(1)
           inJustDecodeBounds = false
         }
 
-    val bmp = BitmapFactory.decodeFile(inputPath, opts)
+    val bmp =
+        try {
+          BitmapFactory.decodeFile(inputPath, opts)
+              ?: throw ImageProcessingException("Failed to decode image: $inputPath (null bitmap)")
+        } catch (e: OutOfMemoryError) {
+          throw ImageProcessingException("Out of memory while decoding image: $inputPath", e)
+        } catch (e: Exception) {
+          throw ImageProcessingException("Failed to decode image: $inputPath", e)
+        }
 
-    val out = ByteArrayOutputStream()
-    bmp.compress(Bitmap.CompressFormat.WEBP_LOSSY, quality, out)
-    bmp.recycle()
-
-    return out.toByteArray()
+    return try {
+      val out = ByteArrayOutputStream()
+      val compressed = bmp.compress(Bitmap.CompressFormat.WEBP_LOSSY, quality, out)
+      if (!compressed) {
+        throw ImageProcessingException("Failed to compress image to WebP format: $inputPath")
+      }
+      out.toByteArray()
+    } catch (e: OutOfMemoryError) {
+      throw ImageProcessingException("Out of memory while compressing image: $inputPath", e)
+    } catch (e: ImageProcessingException) {
+      throw e
+    } catch (e: Exception) {
+      throw ImageProcessingException("Failed to encode image to WebP: $inputPath", e)
+    } finally {
+      bmp.recycle()
+    }
   }
 }
