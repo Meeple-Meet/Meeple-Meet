@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavHostController
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch

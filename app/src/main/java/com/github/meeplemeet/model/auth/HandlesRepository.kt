@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-private const val FIELD_ACCOUNT_ID = FIELD_ACCOUNT_ID
+private const val FIELD_ACCOUNT_ID = "accountId"
 
 class HandlesRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
     FirestoreRepository("handles") {
@@ -52,7 +52,7 @@ class HandlesRepository(accountRepository: AccountRepository = RepositoryProvide
               val existing = tx.get(handleRef)
               if (existing.exists()) throw HandleAlreadyTakenException()
 
-              tx.set(handleRef, mapOf(FIELD_ACCOUNT_ID to accountId))
+              tx.set(handleRef, mapOf<String, Any>(FIELD_ACCOUNT_ID to accountId))
               tx.update(accountRef, Account::handle.name, handle)
               account
             }
@@ -79,7 +79,7 @@ class HandlesRepository(accountRepository: AccountRepository = RepositoryProvide
               val account = fromNoUid(accountId, accountNoUid.copy(handle = newHandle))
 
               tx.delete(oldHandleRef)
-              tx.set(newHandleRef, mapOf(FIELD_ACCOUNT_ID to accountId))
+              tx.set(newHandleRef, mapOf<String, Any>(FIELD_ACCOUNT_ID to accountId))
               tx.update(accountRef, Account::handle.name, newHandle)
 
               account

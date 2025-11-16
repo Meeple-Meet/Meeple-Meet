@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -270,7 +271,7 @@ fun TopBarAndDivider(
           modifier = Modifier.align(Alignment.CenterStart).width(SpaceRenterUi.ROW_WIDTH),
           verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onReturn) {
-              Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
           }
 
