@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-private const val ERROR_NO_POLL = "Message does not contain a poll"
-
 /**
  * Repository wrapping Firestore CRUD operations and snapshot listeners.
  *
@@ -233,8 +231,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Append a new message to the discussion and update unread counts in all participants' previews.
-   * Handles both regular messages and poll messages.
+   * Append a text message to the discussion and update unread counts in all participants' previews.
    */
   suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
     val timestamp = Timestamp.now()
@@ -264,8 +261,29 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Append a message (regular or poll) to the discussion and update previews. This overload accepts
-   * a MessageNoUid object to create the message.
+   * Send a message with a photo to the discussion.
+   *
+   * @param discussion The discussion to send the message to.
+   * @param sender The account sending the message.
+   * @param content Text content of the message.
+   * @param photoUrl URL of the photo to attach.
+   * @return The ID of the created message.
+   */
+  suspend fun sendPhotoMessageToDiscussion(
+      discussion: Discussion,
+      sender: Account,
+      content: String,
+      photoUrl: String
+  ): String {
+    val timestamp = Timestamp.now()
+    val messageNoUid =
+        MessageNoUid(sender.uid, content, timestamp, poll = null, photoUrl = photoUrl)
+    return sendMessageToDiscussion(discussion, messageNoUid)
+  }
+
+  /**
+   * Append a message (regular, poll, or photo) to the discussion and update previews. This overload
+   * accepts a MessageNoUid object to create the message.
    */
   private suspend fun sendMessageToDiscussion(
       discussion: Discussion,
@@ -283,12 +301,12 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
       val unreadCountValue = if (userId == messageNoUid.senderId) 0 else FieldValue.increment(1)
 
-      // Use poll-specific preview text if message contains a poll
+      // Determine preview text based on message type
       val previewText =
-          if (messageNoUid.poll != null) {
-            "Poll: ${messageNoUid.poll.question}"
-          } else {
-            messageNoUid.content
+          when {
+            messageNoUid.poll != null -> "Poll: ${messageNoUid.poll.question}"
+            messageNoUid.photoUrl != null -> "📷 Photo"
+            else -> messageNoUid.content
           }
 
       batch.set(
