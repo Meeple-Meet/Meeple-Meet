@@ -281,7 +281,8 @@ fun AvailabilitySection(
                         Text("", modifier = Modifier.weight(1f))
                       }
                       // Format the time interval or show "Closed" if times are null
-                      val timeText = if (start != null && end != null) "$start - $end" else "Closed"
+                      val timeText =
+                          if (start != null && end != null) "$start - $end" else CLOSED_MSG
                       Text(
                           timeText,
                           fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
@@ -291,7 +292,7 @@ fun AvailabilitySection(
                       Timestamp.now() < stringToTimestamp(start!!)!! ||
                           Timestamp.now() > stringToTimestamp(end!!)!!
                   Text(
-                      "Currently ${if (closed) "Closed" else "Open"}",
+                      "Currently ${if (closed) CLOSED_MSG else "Open"}",
                       fontWeight = FontWeight.Bold,
                       color = if (closed) AppColors.negative else AppColors.affirmative,
                       modifier =

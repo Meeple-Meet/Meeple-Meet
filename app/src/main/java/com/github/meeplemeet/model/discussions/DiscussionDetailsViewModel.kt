@@ -8,6 +8,8 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import kotlinx.coroutines.launch
 
+private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
+
 /**
  * ViewModel for managing discussion details and settings.
  *
@@ -46,7 +48,7 @@ class DiscussionDetailsViewModel(
    */
   fun setDiscussionName(discussion: Discussion, changeRequester: Account, name: String) {
     if (!isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch {
       /*_discussion.value =*/
@@ -70,7 +72,7 @@ class DiscussionDetailsViewModel(
       description: String
   ) {
     if (!isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch { repository.setDiscussionDescription(discussion.uid, description) }
   }
@@ -104,7 +106,7 @@ class DiscussionDetailsViewModel(
   fun addUserToDiscussion(discussion: Discussion, changeRequester: Account, user: Account) {
     if (discussion.participants.contains(user.uid)) return
     if (!isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch { repository.addUserToDiscussion(discussion, user.uid) }
   }
@@ -123,7 +125,7 @@ class DiscussionDetailsViewModel(
    */
   fun removeUserFromDiscussion(discussion: Discussion, changeRequester: Account, user: Account) {
     if (changeRequester != user && !isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
     if (discussion.creatorId == user.uid && changeRequester.uid != discussion.creatorId)
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
@@ -142,7 +144,7 @@ class DiscussionDetailsViewModel(
    */
   fun addAdminToDiscussion(discussion: Discussion, changeRequester: Account, admin: Account) {
     if (!isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch { repository.addAdminToDiscussion(discussion, admin.uid) }
   }
@@ -160,7 +162,7 @@ class DiscussionDetailsViewModel(
    */
   fun removeAdminFromDiscussion(discussion: Discussion, changeRequester: Account, admin: Account) {
     if (!isAdmin(changeRequester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
     if (discussion.creatorId == admin.uid)
         throw PermissionDeniedException("Cannot demote the owner of this discussion")
 

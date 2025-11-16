@@ -14,6 +14,8 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
+
 open class CreateSessionViewModel(
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
     gameRepository: GameRepository = RepositoryProvider.games
@@ -54,8 +56,7 @@ open class CreateSessionViewModel(
       location: Location,
       vararg participants: Account
   ) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     val participantsList = participants.toList().map { it.uid }
     if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
@@ -78,8 +79,7 @@ open class CreateSessionViewModel(
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
   fun setLocation(requester: Account, discussion: Discussion, location: Location) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     setLocation(location)
   }
@@ -102,8 +102,7 @@ open class CreateSessionViewModel(
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
   fun setLocationQuery(requester: Account, discussion: Discussion, query: String) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     setLocationQuery(query)
   }
@@ -122,8 +121,7 @@ open class CreateSessionViewModel(
    * @param game The [Game] object to select
    */
   fun setGame(requester: Account, discussion: Discussion, game: Game) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
     setGame(game)
   }
 
@@ -148,8 +146,7 @@ open class CreateSessionViewModel(
    * @param query The substring to search for in game names.
    */
   fun setGameQuery(requester: Account, discussion: Discussion, query: String) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     setGameQuery(query)
   }

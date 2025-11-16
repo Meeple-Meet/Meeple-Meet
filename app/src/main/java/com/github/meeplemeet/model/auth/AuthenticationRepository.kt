@@ -8,6 +8,8 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Co
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
 
+private const val OPERATION_LOGIN = "Login"
+
 /**
  * Firebase implementation of the AuthRepo interface. Handles user authentication using Firebase
  * Auth and delegates account creation to FirestoreRepository.
@@ -157,7 +159,7 @@ class AuthenticationRepository(
                 "Login failed: User profile not found. ${firestoreException.localizedMessage}"))
       }
     } catch (e: Exception) {
-      createFailureResult("Login", e)
+      createFailureResult(OPERATION_LOGIN, e)
     }
   }
 
@@ -210,7 +212,7 @@ class AuthenticationRepository(
             IllegalStateException("Login failed: Credential is not of type Google ID"))
       }
     } catch (e: Exception) {
-      createFailureResult("Login", e)
+      createFailureResult(OPERATION_LOGIN, e)
     }
   }
 
