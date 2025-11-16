@@ -120,12 +120,17 @@ fun DiscussionScreen(
   var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val context = LocalContext.current
+  val snackbarHostState = remember { SnackbarHostState() }
 
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
       viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
       messageText = ""
+    } catch (e: Exception) {
+      snackbarHostState.showSnackbar(
+          message = "Failed to send image: ${e.message ?: "Unknown error"}",
+          duration = SnackbarDuration.Long)
     } finally {
       isSending = false
     }
@@ -181,298 +186,333 @@ fun DiscussionScreen(
     }
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(MessagingColors.messagingBackground)) {
-    TopAppBar(
-        colors =
-            TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
-        title = {
-          Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier =
-                  Modifier.fillMaxSize()
-                      .testTag(DiscussionTestTags.discussionInfo(discussion.name))
-                      .clickable { onOpenDiscussionInfo(discussion) }) {
-                Box(
-                    modifier =
-                        Modifier.size(Dimensions.ButtonSize.medium)
-                            .clip(CircleShape)
-                            .background(AppColors.neutral, CircleShape))
-                Spacer(Modifier.width(Dimensions.Spacing.large))
-                Text(
-                    text = discussionName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontSize = Dimensions.TextSize.heading,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-              }
-        },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
-          }
-        },
-        actions = {
-          val icon =
-              when {
-                discussion.session != null &&
-                    discussion.session.participants.contains(account.uid) -> Icons.Default.Games
-                discussion.admins.contains(account.uid) || discussion.creatorId == account.uid ->
-                    Icons.Default.LibraryAdd
-                else -> null
-              }
-
-          if (icon != null) {
-            IconButton(onClick = { onCreateSessionClick(discussion) }) {
-              Icon(
-                  icon,
-                  contentDescription = "Session action",
-                  tint = MaterialTheme.colorScheme.onSurface)
-            }
-          }
-        })
-
-    LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
-      itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
-        val isMine = message.senderId == account.uid
-        val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
-
-        val showDateHeader =
-            shouldShowDateHeader(
-                current = message.createdAt.toDate(),
-                previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
-        if (showDateHeader) {
-          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-          DateSeparator(date = message.createdAt.toDate())
-          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-        }
-
-        // Check if this is the last message from this sender
-        val nextMessage = messages.getOrNull(index + 1)
-        val isLastFromSender = nextMessage?.senderId != message.senderId
-
-        // Check if the previous message is from the same sender
-        val prevMessage = messages.getOrNull(index - 1)
-        prevMessage?.senderId == message.senderId && !showDateHeader
-
-        when {
-          message.poll != null ->
-              PollBubble(
-                  msgIndex = index,
-                  poll = message.poll,
-                  authorName = sender,
-                  currentUserId = account.uid,
-                  onVote = { optionIndex, isRemoving ->
-                    if (isRemoving) {
-                      viewModel.removeVoteFromPoll(
-                          discussion.uid, message.uid, account, optionIndex)
-                    } else {
-                      viewModel.voteOnPoll(discussion.uid, message.uid, account, optionIndex)
+  Scaffold(
+      snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+      containerColor = MessagingColors.messagingBackground) { paddingValues ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(MessagingColors.messagingBackground)
+                    .padding(paddingValues)) {
+              TopAppBar(
+                  colors =
+                      TopAppBarDefaults.topAppBarColors(
+                          containerColor = MaterialTheme.colorScheme.surface),
+                  title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .testTag(DiscussionTestTags.discussionInfo(discussion.name))
+                                .clickable { onOpenDiscussionInfo(discussion) }) {
+                          Box(
+                              modifier =
+                                  Modifier.size(Dimensions.ButtonSize.medium)
+                                      .clip(CircleShape)
+                                      .background(AppColors.neutral, CircleShape))
+                          Spacer(Modifier.width(Dimensions.Spacing.large))
+                          Text(
+                              text = discussionName,
+                              style = MaterialTheme.typography.titleMedium,
+                              fontSize = Dimensions.TextSize.heading,
+                              fontWeight = FontWeight.SemiBold,
+                              color = MaterialTheme.colorScheme.onSurface,
+                              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+                        }
+                  },
+                  navigationIcon = {
+                    IconButton(onClick = onBack) {
+                      Icon(
+                          Icons.AutoMirrored.Filled.ArrowBack,
+                          contentDescription = "Back",
+                          tint = MaterialTheme.colorScheme.onSurface,
+                          modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
                     }
                   },
-                  createdAt = message.createdAt.toDate(),
-                  showProfilePicture = isLastFromSender)
-          message.photoUrl != null ->
-              PhotoBubble(
-                  message, isMine, sender, isLastFromSender, messages, userCache, account.uid)
-          else -> ChatBubble(message, isMine, sender, isLastFromSender)
-        }
+                  actions = {
+                    val icon =
+                        when {
+                          discussion.session != null &&
+                              discussion.session.participants.contains(account.uid) ->
+                              Icons.Default.Games
+                          discussion.admins.contains(account.uid) ||
+                              discussion.creatorId == account.uid -> Icons.Default.LibraryAdd
+                          else -> null
+                        }
 
-        // Add spacing between messages
-        if (!isLastFromSender) {
-          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-        } else {
-          Spacer(Modifier.height(Dimensions.Spacing.small))
-        }
-      }
-    }
+                    if (icon != null) {
+                      IconButton(onClick = { onCreateSessionClick(discussion) }) {
+                        Icon(
+                            icon,
+                            contentDescription = "Session action",
+                            tint = MaterialTheme.colorScheme.onSurface)
+                      }
+                    }
+                  })
 
-    var showAttachmentMenu by remember { mutableStateOf(false) }
-    var showPollDialog by remember { mutableStateOf(false) }
+              LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
+                itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
+                  val isMine = message.senderId == account.uid
+                  val sender =
+                      if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = Dimensions.Elevation.medium) {
-          Row(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(
-                          horizontal = Dimensions.Spacing.medium,
-                          vertical = Dimensions.Spacing.medium),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-                Row(
-                    modifier =
-                        Modifier.weight(1f)
-                            .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
-                            .background(MessagingColors.inputBackground)
-                            .padding(
-                                horizontal = Dimensions.Spacing.large,
-                                vertical = Dimensions.Spacing.medium),
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Box {
-                        IconButton(
-                            modifier =
-                                Modifier.size(Dimensions.ButtonSize.medium)
-                                    .testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
-                            onClick = { showAttachmentMenu = true }) {
-                              Icon(
-                                  Icons.Default.AttachFile,
-                                  contentDescription = "Attach",
-                                  tint = MessagingColors.primaryText,
-                                  modifier = Modifier.size(Dimensions.IconSize.standard))
-                            }
+                  val showDateHeader =
+                      shouldShowDateHeader(
+                          current = message.createdAt.toDate(),
+                          previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
+                  if (showDateHeader) {
+                    Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+                    DateSeparator(date = message.createdAt.toDate())
+                    Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+                  }
 
-                        if (showAttachmentMenu) {
-                          val popupOffset = IntOffset(x = -30, y = -200)
-                          Popup(
-                              onDismissRequest = { showAttachmentMenu = false },
-                              offset = popupOffset,
-                              properties = PopupProperties(focusable = true)) {
-                                Surface(
-                                    shape = RoundedCornerShape(Dimensions.CornerRadius.large),
-                                    color = MessagingColors.messageBubbleOther,
-                                    shadowElevation = Dimensions.Elevation.high,
+                  // Check if this is the last message from this sender
+                  val nextMessage = messages.getOrNull(index + 1)
+                  val isLastFromSender = nextMessage?.senderId != message.senderId
+
+                  // Check if the previous message is from the same sender
+                  val prevMessage = messages.getOrNull(index - 1)
+                  prevMessage?.senderId == message.senderId && !showDateHeader
+
+                  when {
+                    message.poll != null ->
+                        PollBubble(
+                            msgIndex = index,
+                            poll = message.poll,
+                            authorName = sender,
+                            currentUserId = account.uid,
+                            onVote = { optionIndex, isRemoving ->
+                              if (isRemoving) {
+                                viewModel.removeVoteFromPoll(
+                                    discussion.uid, message.uid, account, optionIndex)
+                              } else {
+                                viewModel.voteOnPoll(
+                                    discussion.uid, message.uid, account, optionIndex)
+                              }
+                            },
+                            createdAt = message.createdAt.toDate(),
+                            showProfilePicture = isLastFromSender)
+                    message.photoUrl != null ->
+                        PhotoBubble(
+                            message,
+                            isMine,
+                            sender,
+                            isLastFromSender,
+                            messages,
+                            userCache,
+                            account.uid)
+                    else -> ChatBubble(message, isMine, sender, isLastFromSender)
+                  }
+
+                  // Add spacing between messages
+                  if (!isLastFromSender) {
+                    Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+                  } else {
+                    Spacer(Modifier.height(Dimensions.Spacing.small))
+                  }
+                }
+              }
+
+              var showAttachmentMenu by remember { mutableStateOf(false) }
+              var showPollDialog by remember { mutableStateOf(false) }
+
+              Surface(
+                  modifier = Modifier.fillMaxWidth(),
+                  color = MaterialTheme.colorScheme.surface,
+                  shadowElevation = Dimensions.Elevation.medium) {
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(
+                                    horizontal = Dimensions.Spacing.medium,
+                                    vertical = Dimensions.Spacing.medium),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                          Row(
+                              modifier =
+                                  Modifier.weight(1f)
+                                      .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
+                                      .background(MessagingColors.inputBackground)
+                                      .padding(
+                                          horizontal = Dimensions.Spacing.large,
+                                          vertical = Dimensions.Spacing.medium),
+                              verticalAlignment = Alignment.CenterVertically) {
+                                Box {
+                                  IconButton(
+                                      modifier =
+                                          Modifier.size(Dimensions.ButtonSize.medium)
+                                              .testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
+                                      onClick = { showAttachmentMenu = true }) {
+                                        Icon(
+                                            Icons.Default.AttachFile,
+                                            contentDescription = "Attach",
+                                            tint = MessagingColors.primaryText,
+                                            modifier = Modifier.size(Dimensions.IconSize.standard))
+                                      }
+
+                                  if (showAttachmentMenu) {
+                                    val popupOffset = IntOffset(x = -30, y = -200)
+                                    Popup(
+                                        onDismissRequest = { showAttachmentMenu = false },
+                                        offset = popupOffset,
+                                        properties = PopupProperties(focusable = true)) {
+                                          Surface(
+                                              shape =
+                                                  RoundedCornerShape(Dimensions.CornerRadius.large),
+                                              color = MessagingColors.messageBubbleOther,
+                                              shadowElevation = Dimensions.Elevation.high,
+                                              modifier =
+                                                  Modifier.wrapContentWidth()
+                                                      .padding(
+                                                          horizontal = Dimensions.Spacing.small)) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement =
+                                                        Arrangement.spacedBy(
+                                                            Dimensions.Spacing.small),
+                                                    modifier =
+                                                        Modifier.padding(
+                                                            Dimensions.Spacing.small)) {
+                                                      IconButton(
+                                                          onClick = {
+                                                            showAttachmentMenu = false
+                                                            val cameraPermissionGranted =
+                                                                ContextCompat.checkSelfPermission(
+                                                                    context,
+                                                                    Manifest.permission.CAMERA) ==
+                                                                    PackageManager
+                                                                        .PERMISSION_GRANTED
+                                                            if (cameraPermissionGranted) {
+                                                              cameraLauncher.launch(null)
+                                                            } else {
+                                                              cameraPermissionLauncher.launch(
+                                                                  Manifest.permission.CAMERA)
+                                                            }
+                                                          },
+                                                          modifier =
+                                                              Modifier.testTag(
+                                                                  DiscussionTestTags
+                                                                      .ATTACHMENT_CAMERA_OPTION)) {
+                                                            Icon(
+                                                                Icons.Default.PhotoCamera,
+                                                                contentDescription = "Camera",
+                                                                tint = MessagingColors.primaryText,
+                                                                modifier =
+                                                                    Modifier.size(
+                                                                        Dimensions.AvatarSize
+                                                                            .medium))
+                                                          }
+                                                      IconButton(
+                                                          onClick = {
+                                                            showAttachmentMenu = false
+                                                            galleryLauncher.launch("image/*")
+                                                          },
+                                                          modifier =
+                                                              Modifier.testTag(
+                                                                  DiscussionTestTags
+                                                                      .ATTACHMENT_GALLERY_OPTION)) {
+                                                            Icon(
+                                                                Icons.Default.Image,
+                                                                contentDescription = "Gallery",
+                                                                tint = MessagingColors.primaryText,
+                                                                modifier =
+                                                                    Modifier.size(
+                                                                        Dimensions.AvatarSize
+                                                                            .medium))
+                                                          }
+                                                      IconButton(
+                                                          onClick = {
+                                                            showAttachmentMenu = false
+                                                            showPollDialog = true
+                                                          },
+                                                          modifier =
+                                                              Modifier.testTag(
+                                                                  DiscussionTestTags
+                                                                      .ATTACHMENT_POLL_OPTION)) {
+                                                            Icon(
+                                                                Icons.Default.Poll,
+                                                                contentDescription = "Poll",
+                                                                tint = MessagingColors.primaryText,
+                                                                modifier =
+                                                                    Modifier.size(
+                                                                        Dimensions.AvatarSize
+                                                                            .medium))
+                                                          }
+                                                    }
+                                              }
+                                        }
+                                  }
+                                }
+
+                                if (showPollDialog) {
+                                  CreatePollDialog(
+                                      onDismiss = { showPollDialog = false },
+                                      onCreate = { question, options, allowMultiple ->
+                                        viewModel.createPoll(
+                                            discussion = discussion,
+                                            creatorId = account.uid,
+                                            question = question,
+                                            options = options,
+                                            allowMultipleVotes = allowMultiple)
+                                        showPollDialog = false
+                                      })
+                                }
+
+                                BasicTextField(
+                                    value = messageText,
+                                    onValueChange = { if (it.length <= 4096) messageText = it },
                                     modifier =
-                                        Modifier.wrapContentWidth()
-                                            .padding(horizontal = Dimensions.Spacing.small)) {
-                                      Row(
-                                          verticalAlignment = Alignment.CenterVertically,
-                                          horizontalArrangement =
-                                              Arrangement.spacedBy(Dimensions.Spacing.small),
-                                          modifier = Modifier.padding(Dimensions.Spacing.small)) {
-                                            IconButton(
-                                                onClick = {
-                                                  showAttachmentMenu = false
-                                                  val cameraPermissionGranted =
-                                                      ContextCompat.checkSelfPermission(
-                                                          context, Manifest.permission.CAMERA) ==
-                                                          PackageManager.PERMISSION_GRANTED
-                                                  if (cameraPermissionGranted) {
-                                                    cameraLauncher.launch(null)
-                                                  } else {
-                                                    cameraPermissionLauncher.launch(
-                                                        Manifest.permission.CAMERA)
-                                                  }
-                                                },
-                                                modifier =
-                                                    Modifier.testTag(
-                                                        DiscussionTestTags
-                                                            .ATTACHMENT_CAMERA_OPTION)) {
-                                                  Icon(
-                                                      Icons.Default.PhotoCamera,
-                                                      contentDescription = "Camera",
-                                                      tint = MessagingColors.primaryText,
-                                                      modifier =
-                                                          Modifier.size(
-                                                              Dimensions.AvatarSize.medium))
-                                                }
-                                            IconButton(
-                                                onClick = {
-                                                  showAttachmentMenu = false
-                                                  galleryLauncher.launch("image/*")
-                                                },
-                                                modifier =
-                                                    Modifier.testTag(
-                                                        DiscussionTestTags
-                                                            .ATTACHMENT_GALLERY_OPTION)) {
-                                                  Icon(
-                                                      Icons.Default.Image,
-                                                      contentDescription = "Gallery",
-                                                      tint = MessagingColors.primaryText,
-                                                      modifier =
-                                                          Modifier.size(
-                                                              Dimensions.AvatarSize.medium))
-                                                }
-                                            IconButton(
-                                                onClick = {
-                                                  showAttachmentMenu = false
-                                                  showPollDialog = true
-                                                },
-                                                modifier =
-                                                    Modifier.testTag(
-                                                        DiscussionTestTags
-                                                            .ATTACHMENT_POLL_OPTION)) {
-                                                  Icon(
-                                                      Icons.Default.Poll,
-                                                      contentDescription = "Poll",
-                                                      tint = MessagingColors.primaryText,
-                                                      modifier =
-                                                          Modifier.size(
-                                                              Dimensions.AvatarSize.medium))
-                                                }
-                                          }
+                                        Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
+                                    textStyle =
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = Dimensions.TextSize.body,
+                                            color = MessagingColors.primaryText),
+                                    decorationBox = { inner ->
+                                      if (messageText.isEmpty())
+                                          Text(
+                                              "Message",
+                                              style = MaterialTheme.typography.bodyMedium,
+                                              fontSize = Dimensions.TextSize.body,
+                                              color = MessagingColors.metadataText)
+                                      inner()
+                                    })
+                              }
+
+                          FloatingActionButton(
+                              onClick = {
+                                if (messageText.isNotBlank() && !isSending) {
+                                  scope.launch {
+                                    isSending = true
+                                    try {
+                                      viewModel.sendMessageToDiscussion(
+                                          discussion, account, messageText)
+                                      messageText = ""
+                                    } catch (e: Exception) {
+                                      snackbarHostState.showSnackbar(
+                                          message =
+                                              "Failed to send message: ${e.message ?: "Unknown error"}",
+                                          duration = SnackbarDuration.Long)
+                                    } finally {
+                                      isSending = false
                                     }
+                                  }
+                                }
+                              },
+                              modifier =
+                                  Modifier.size(Dimensions.ButtonSize.standard)
+                                      .testTag(DiscussionTestTags.SEND_BUTTON),
+                              containerColor = MessagingColors.whatsappGreen,
+                              contentColor = MessagingColors.messageBubbleOther,
+                              shape = CircleShape) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Send",
+                                    modifier = Modifier.size(Dimensions.IconSize.standard))
                               }
                         }
-                      }
-
-                      if (showPollDialog) {
-                        CreatePollDialog(
-                            onDismiss = { showPollDialog = false },
-                            onCreate = { question, options, allowMultiple ->
-                              viewModel.createPoll(
-                                  discussion = discussion,
-                                  creatorId = account.uid,
-                                  question = question,
-                                  options = options,
-                                  allowMultipleVotes = allowMultiple)
-                              showPollDialog = false
-                            })
-                      }
-
-                      BasicTextField(
-                          value = messageText,
-                          onValueChange = { messageText = it },
-                          modifier = Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
-                          textStyle =
-                              MaterialTheme.typography.bodyMedium.copy(
-                                  fontSize = Dimensions.TextSize.body,
-                                  color = MessagingColors.primaryText),
-                          decorationBox = { inner ->
-                            if (messageText.isEmpty())
-                                Text(
-                                    "Message",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontSize = Dimensions.TextSize.body,
-                                    color = MessagingColors.metadataText)
-                            inner()
-                          })
-                    }
-
-                FloatingActionButton(
-                    onClick = {
-                      if (messageText.isNotBlank() && !isSending) {
-                        scope.launch {
-                          isSending = true
-                          try {
-                            viewModel.sendMessageToDiscussion(discussion, account, messageText)
-                            messageText = ""
-                          } finally {
-                            isSending = false
-                          }
-                        }
-                      }
-                    },
-                    modifier =
-                        Modifier.size(Dimensions.ButtonSize.standard)
-                            .testTag(DiscussionTestTags.SEND_BUTTON),
-                    containerColor = MessagingColors.whatsappGreen,
-                    contentColor = MessagingColors.messageBubbleOther,
-                    shape = CircleShape) {
-                      Icon(
-                          Icons.AutoMirrored.Filled.Send,
-                          contentDescription = "Send",
-                          modifier = Modifier.size(Dimensions.IconSize.standard))
-                    }
-              }
-        }
-  }
+                  }
+            }
+      }
 }
 
 /**
