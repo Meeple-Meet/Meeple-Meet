@@ -77,7 +77,6 @@ const val COMMENT_TEXT_ZONE_PLACEHOLDER: String = "Share your thoughts..."
 const val REPLY_TEXT_ZONE_PLACEHOLDER: String = "Write a reply…"
 const val UNKNOWN_USER_PLACEHOLDER: String = "<Unknown User>"
 const val TIMESTAMP_COMMENT_FORMAT: String = "MMM d, yyyy · HH:mm"
-const val PLURAL_SUFFIX_ELSE: String = " else "
 const val SEE_REPLIES_TEXT: String = "See replies"
 const val HIDE_REPLIES_TEXT: String = "Hide replies"
 
