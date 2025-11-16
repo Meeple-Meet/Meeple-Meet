@@ -109,7 +109,8 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         checkpoint("Discussion title displayed") {
           composeTestRule.onNodeWithText(testDiscussion.name).assertExists()
         }
-        testDiscussion.messages.forEach { msg ->
+        val messages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
+        messages.forEach { msg ->
           checkpoint("Message '${msg.content}' displayed") {
             composeTestRule.onNodeWithText(msg.content).assertExists()
           }
@@ -321,9 +322,11 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
   /* waits until the discussion contains a message with a poll */
   private suspend fun awaitPollMessage(discussion: Discussion, minCount: Int = 1): Discussion {
     var disc = discussion
-    while (disc.messages.count { it.poll != null } < minCount) {
+    var messages = discussionRepository.getMessages(discussion.uid)
+    while (messages.count { it.poll != null } < minCount) {
       kotlinx.coroutines.delay(200)
       disc = discussionRepository.getDiscussion(discussion.uid)
+      messages = discussionRepository.getMessages(discussion.uid)
     }
     return disc
   }

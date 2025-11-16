@@ -50,9 +50,14 @@ fun fromNoUid(id: String, discussionPreviewNoUid: DiscussionPreviewNoUid): Discu
         discussionPreviewNoUid.lastMessageAt,
         discussionPreviewNoUid.unreadCount)
 
-fun toPreview(discussion: Discussion): DiscussionPreview {
-  val lastMessage: Message? =
-      if (discussion.messages.isNotEmpty()) discussion.messages.last() else null
+/**
+ * Creates a preview from a discussion and optional last message.
+ *
+ * @param discussion The discussion to create preview for.
+ * @param lastMessage Optional last message to include in preview.
+ * @return A [DiscussionPreview] instance.
+ */
+fun toPreview(discussion: Discussion, lastMessage: Message? = null): DiscussionPreview {
   return DiscussionPreview(
       discussion.uid,
       lastMessage?.content ?: "",
