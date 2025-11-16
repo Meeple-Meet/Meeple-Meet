@@ -1,10 +1,12 @@
 package com.github.meeplemeet.model.discussions
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.AccountViewModel
+import com.github.meeplemeet.model.images.ImageRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,11 +23,12 @@ const val SUGGESTIONS_LIMIT = 30
  * listeners are exposed as [StateFlow] streams.
  */
 class DiscussionViewModel(
-    private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions
+    private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : ViewModel(), AccountViewModel {
   override val scope: CoroutineScope
     get() = this.viewModelScope
-  /** Send a message to a discussion. */
+  /** Send a text message to a discussion. */
   fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
     val cleaned = content.trimEnd()
     if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
@@ -33,6 +36,32 @@ class DiscussionViewModel(
     viewModelScope.launch {
       readDiscussionMessages(sender, discussion)
       discussionRepository.sendMessageToDiscussion(discussion, sender, cleaned)
+    }
+  }
+
+  /**
+   * Upload a local image and send it as a photo message.
+   *
+   * @param discussion The discussion to send the message to.
+   * @param sender The account sending the message.
+   * @param content Optional text to accompany the photo.
+   * @param context Android context for storage/cache access.
+   * @param localPath Absolute path to the local image file.
+   */
+  fun sendMessageWithPhoto(
+      discussion: Discussion,
+      sender: Account,
+      content: String,
+      context: Context,
+      localPath: String
+  ) {
+    if (localPath.isBlank()) throw IllegalArgumentException("Photo path cannot be blank")
+
+    viewModelScope.launch {
+      readDiscussionMessages(sender, discussion)
+      val urls = imageRepository.saveDiscussionPhotoMessages(context, discussion.uid, localPath)
+      val downloadUrl = urls.firstOrNull() ?: throw IllegalStateException("Upload failed")
+      discussionRepository.sendPhotoMessageToDiscussion(discussion, sender, content, downloadUrl)
     }
   }
 
