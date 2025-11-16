@@ -1,7 +1,11 @@
 /** Documentation was written with the help of ChatGPT */
 package com.github.meeplemeet.ui.discussions
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,7 +24,9 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Games
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
@@ -30,26 +36,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
+import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
@@ -60,6 +75,8 @@ object DiscussionTestTags {
   const val SEND_BUTTON = "Send Button"
   const val ATTACHMENT_BUTTON = "attachment_button"
   const val ATTACHMENT_POLL_OPTION = "attachment_poll_option"
+  const val ATTACHMENT_CAMERA_OPTION = "attachment_camera_option"
+  const val ATTACHMENT_GALLERY_OPTION = "attachment_gallery_option"
 
   const val DIALOG_ROOT = "poll_dialog_root"
   const val QUESTION_FIELD = "poll_question_field"
@@ -102,6 +119,42 @@ fun DiscussionScreen(
   var isSending by remember { mutableStateOf(false) }
   var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
+  val context = LocalContext.current
+
+  val sendPhoto: suspend (String) -> Unit = { path ->
+    isSending = true
+    try {
+      viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
+      messageText = ""
+    } finally {
+      isSending = false
+    }
+  }
+
+  val cameraLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap != null && !isSending) {
+          scope.launch {
+            val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
+            sendPhoto(path)
+          }
+        }
+      }
+
+  val cameraPermissionLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) cameraLauncher.launch(null)
+      }
+
+  val galleryLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null && !isSending) {
+          scope.launch {
+            val path = ImageFileUtils.cacheUriToFile(context, uri)
+            sendPhoto(path)
+          }
+        }
+      }
 
   val discussionState by viewModel.discussionFlow(discussion.uid).collectAsState()
   val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
@@ -204,25 +257,29 @@ fun DiscussionScreen(
 
         // Check if the previous message is from the same sender
         val prevMessage = messages.getOrNull(index - 1)
-        val isSameSenderAsPrevious = prevMessage?.senderId == message.senderId && !showDateHeader
+        prevMessage?.senderId == message.senderId && !showDateHeader
 
-        if (message.poll != null) {
-          PollBubble(
-              msgIndex = index,
-              poll = message.poll,
-              authorName = sender,
-              currentUserId = account.uid,
-              onVote = { optionIndex, isRemoving ->
-                if (isRemoving) {
-                  viewModel.removeVoteFromPoll(discussion.uid, message.uid, account, optionIndex)
-                } else {
-                  viewModel.voteOnPoll(discussion.uid, message.uid, account, optionIndex)
-                }
-              },
-              createdAt = message.createdAt.toDate(),
-              showProfilePicture = isLastFromSender)
-        } else {
-          ChatBubble(message, isMine, sender, isLastFromSender)
+        when {
+          message.poll != null ->
+              PollBubble(
+                  msgIndex = index,
+                  poll = message.poll,
+                  authorName = sender,
+                  currentUserId = account.uid,
+                  onVote = { optionIndex, isRemoving ->
+                    if (isRemoving) {
+                      viewModel.removeVoteFromPoll(
+                          discussion.uid, message.uid, account, optionIndex)
+                    } else {
+                      viewModel.voteOnPoll(discussion.uid, message.uid, account, optionIndex)
+                    }
+                  },
+                  createdAt = message.createdAt.toDate(),
+                  showProfilePicture = isLastFromSender)
+          message.photoUrl != null ->
+              PhotoBubble(
+                  message, isMine, sender, isLastFromSender, messages, userCache, account.uid)
+          else -> ChatBubble(message, isMine, sender, isLastFromSender)
         }
 
         // Add spacing between messages
@@ -282,25 +339,74 @@ fun DiscussionScreen(
                                     color = MessagingColors.messageBubbleOther,
                                     shadowElevation = Dimensions.Elevation.high,
                                     modifier =
-                                        Modifier.widthIn(max = Dimensions.AvatarSize.large)) {
-                                      Column {
-                                        DropdownMenuItem(
-                                            text = {
-                                              Icon(
-                                                  Icons.Default.Poll,
-                                                  contentDescription = null,
-                                                  tint = MessagingColors.primaryText,
-                                                  modifier =
-                                                      Modifier.size(Dimensions.AvatarSize.large))
-                                            },
-                                            onClick = {
-                                              showAttachmentMenu = false
-                                              showPollDialog = true
-                                            },
-                                            modifier =
-                                                Modifier.testTag(
-                                                    DiscussionTestTags.ATTACHMENT_POLL_OPTION))
-                                      }
+                                        Modifier.wrapContentWidth()
+                                            .padding(horizontal = Dimensions.Spacing.small)) {
+                                      Row(
+                                          verticalAlignment = Alignment.CenterVertically,
+                                          horizontalArrangement =
+                                              Arrangement.spacedBy(Dimensions.Spacing.small),
+                                          modifier = Modifier.padding(Dimensions.Spacing.small)) {
+                                            IconButton(
+                                                onClick = {
+                                                  showAttachmentMenu = false
+                                                  val cameraPermissionGranted =
+                                                      ContextCompat.checkSelfPermission(
+                                                          context, Manifest.permission.CAMERA) ==
+                                                          PackageManager.PERMISSION_GRANTED
+                                                  if (cameraPermissionGranted) {
+                                                    cameraLauncher.launch(null)
+                                                  } else {
+                                                    cameraPermissionLauncher.launch(
+                                                        Manifest.permission.CAMERA)
+                                                  }
+                                                },
+                                                modifier =
+                                                    Modifier.testTag(
+                                                        DiscussionTestTags
+                                                            .ATTACHMENT_CAMERA_OPTION)) {
+                                                  Icon(
+                                                      Icons.Default.PhotoCamera,
+                                                      contentDescription = "Camera",
+                                                      tint = MessagingColors.primaryText,
+                                                      modifier =
+                                                          Modifier.size(
+                                                              Dimensions.AvatarSize.medium))
+                                                }
+                                            IconButton(
+                                                onClick = {
+                                                  showAttachmentMenu = false
+                                                  galleryLauncher.launch("image/*")
+                                                },
+                                                modifier =
+                                                    Modifier.testTag(
+                                                        DiscussionTestTags
+                                                            .ATTACHMENT_GALLERY_OPTION)) {
+                                                  Icon(
+                                                      Icons.Default.Image,
+                                                      contentDescription = "Gallery",
+                                                      tint = MessagingColors.primaryText,
+                                                      modifier =
+                                                          Modifier.size(
+                                                              Dimensions.AvatarSize.medium))
+                                                }
+                                            IconButton(
+                                                onClick = {
+                                                  showAttachmentMenu = false
+                                                  showPollDialog = true
+                                                },
+                                                modifier =
+                                                    Modifier.testTag(
+                                                        DiscussionTestTags
+                                                            .ATTACHMENT_POLL_OPTION)) {
+                                                  Icon(
+                                                      Icons.Default.Poll,
+                                                      contentDescription = "Poll",
+                                                      tint = MessagingColors.primaryText,
+                                                      modifier =
+                                                          Modifier.size(
+                                                              Dimensions.AvatarSize.medium))
+                                                }
+                                          }
                                     }
                               }
                         }
@@ -562,7 +668,7 @@ fun PollBubble(
                                       Text(
                                           label,
                                           color = MessagingColors.primaryText,
-                                          fontSize = 14.sp,
+                                          fontSize = Dimensions.TextSize.standard,
                                           modifier = Modifier.weight(1f))
                                     }
                                 Text(
@@ -601,6 +707,251 @@ fun PollBubble(
                         .background(AppColors.focus, CircleShape))
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
+        }
+      }
+}
+
+/** Photo message bubble showing an image with optional caption. */
+@Composable
+private fun PhotoBubble(
+    message: Message,
+    isMine: Boolean,
+    senderName: String,
+    showProfilePicture: Boolean = true,
+    allMessages: List<Message> = emptyList(),
+    userCache: Map<String, Account> = emptyMap(),
+    currentUserId: String = ""
+) {
+  var showFullImage by remember { mutableStateOf(false) }
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
+      horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
+      verticalAlignment = Alignment.Bottom) {
+        if (!isMine) {
+          if (showProfilePicture) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .clip(CircleShape)
+                        .background(AppColors.neutral, CircleShape))
+          } else {
+            Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
+          Spacer(Modifier.width(Dimensions.Spacing.small))
+        }
+
+        Box(
+            modifier =
+                Modifier.widthIn(
+                        max =
+                            Dimensions.ContainerSize.bottomSpacer
+                                .times(2)
+                                .plus(Dimensions.Padding.giant))
+                    .clip(
+                        RoundedCornerShape(
+                            topStart =
+                                if (isMine) Dimensions.CornerRadius.large
+                                else Dimensions.Spacing.extraSmall,
+                            topEnd =
+                                if (isMine) Dimensions.Spacing.extraSmall
+                                else Dimensions.CornerRadius.large,
+                            bottomStart = Dimensions.CornerRadius.large,
+                            bottomEnd = Dimensions.CornerRadius.large))
+                    .background(
+                        color =
+                            if (isMine) MessagingColors.messageBubbleOwn
+                            else MessagingColors.messageBubbleOther)
+                    .padding(
+                        horizontal = Dimensions.Spacing.small,
+                        vertical = Dimensions.Spacing.small)) {
+              Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                if (!isMine) {
+                  Text(
+                      senderName,
+                      style = MaterialTheme.typography.labelSmall,
+                      fontSize = Dimensions.TextSize.small,
+                      fontWeight = FontWeight.SemiBold,
+                      color = MessagingColors.whatsappGreen)
+                }
+
+                AsyncImage(
+                    model = message.photoUrl,
+                    contentDescription = "Photo message",
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .aspectRatio(4f / 3f)
+                            .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                            .background(AppColors.neutral)
+                            .clickable { showFullImage = true })
+
+                if (message.content.isNotBlank()) {
+                  Text(
+                      message.content,
+                      style = MaterialTheme.typography.bodyMedium,
+                      fontSize = Dimensions.TextSize.body,
+                      color = MessagingColors.primaryText)
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                  Text(
+                      text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
+                      style = MaterialTheme.typography.labelSmall,
+                      fontSize = Dimensions.TextSize.tiny,
+                      color = MessagingColors.metadataText)
+                }
+              }
+            }
+
+        if (isMine) {
+          Spacer(Modifier.width(Dimensions.Spacing.small))
+          if (showProfilePicture) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .clip(CircleShape)
+                        .background(AppColors.focus, CircleShape))
+          } else {
+            Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
+        }
+      }
+
+  if (showFullImage) {
+    FullscreenImageDialog(
+        photoUrl = message.photoUrl,
+        senderName = senderName,
+        sentAt = message.createdAt,
+        show = true,
+        onDismiss = { showFullImage = false },
+        allPhotoMessages = allMessages,
+        currentMessage = message,
+        userCache = userCache,
+        currentUserId = currentUserId)
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FullscreenImageDialog(
+    photoUrl: String?,
+    senderName: String,
+    sentAt: Timestamp,
+    show: Boolean,
+    onDismiss: () -> Unit,
+    allPhotoMessages: List<Message> = emptyList(),
+    currentMessage: Message? = null,
+    userCache: Map<String, Account> = emptyMap(),
+    currentUserId: String = ""
+) {
+  if (!show || photoUrl == null) return
+
+  var currentPhotoMessage by remember(currentMessage) { mutableStateOf(currentMessage) }
+  val photoMessages = remember(allPhotoMessages) { allPhotoMessages.filter { it.photoUrl != null } }
+
+  val dateText =
+      remember(currentPhotoMessage?.createdAt ?: sentAt) {
+        val fmt = SimpleDateFormat("dd/MM/yyyy, HH:mm", Locale.getDefault())
+        fmt.format((currentPhotoMessage?.createdAt ?: sentAt).toDate())
+      }
+
+  val currentSenderName =
+      remember(currentPhotoMessage, userCache) {
+        currentPhotoMessage?.let { msg ->
+          if (msg.senderId == currentUserId) "You" else userCache[msg.senderId]?.name ?: "Unknown"
+        } ?: senderName
+      }
+
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties =
+          DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+        ) {
+          // Image
+          AsyncImage(
+              model = currentPhotoMessage?.photoUrl ?: photoUrl,
+              contentDescription = null,
+              contentScale = ContentScale.Fit,
+              modifier = Modifier.fillMaxSize().clickable { onDismiss() })
+
+          // Top bar overlay
+          Box(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .statusBarsPadding()
+                      .background(
+                          Brush.verticalGradient(
+                              listOf(
+                                  Color.Black.copy(alpha = 0.9f), Color.Black.copy(alpha = 0.0f))))
+                      .align(Alignment.TopCenter)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                      IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White)
+                      }
+
+                      Column(
+                          horizontalAlignment = Alignment.CenterHorizontally,
+                          modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currentSenderName,
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = dateText,
+                                color = Color.White.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodySmall)
+                          }
+                    }
+              }
+
+          // Bottom thumbnail bar (like WhatsApp)
+          if (photoMessages.isNotEmpty()) {
+            Box(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .navigationBarsPadding()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Black.copy(alpha = 0.0f),
+                                    Color.Black.copy(alpha = 0.9f))))
+                        .align(Alignment.BottomCenter)) {
+                  androidx.compose.foundation.lazy.LazyRow(
+                      modifier = Modifier.fillMaxWidth().padding(16.dp),
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(photoMessages.size) { index ->
+                          val msg = photoMessages[index]
+                          val isSelected =
+                              msg.uid == (currentPhotoMessage?.uid ?: currentMessage?.uid)
+
+                          Box(
+                              modifier =
+                                  Modifier.size(60.dp)
+                                      .clip(RoundedCornerShape(8.dp))
+                                      .border(
+                                          width = if (isSelected) 3.dp else 0.dp,
+                                          color =
+                                              if (isSelected) Color.White else Color.Transparent,
+                                          shape = RoundedCornerShape(8.dp))
+                                      .clickable { currentPhotoMessage = msg }) {
+                                AsyncImage(
+                                    model = msg.photoUrl,
+                                    contentDescription = "Photo thumbnail",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize())
+                              }
+                        }
+                      }
+                }
           }
         }
       }
