@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
@@ -91,6 +90,12 @@ object DiscussionTestTags {
   fun pollPercent(msgIndex: Int, optIndex: Int) = "poll_msg${msgIndex}_opt${optIndex}_percent"
 
   fun discussionInfo(name: String) = "DiscussionInfo/$name"
+}
+
+/** Constants for the Discussion screen. */
+private object DiscussionConstants {
+  const val TIME_FORMAT = "HH:mm"
+  const val YOU_SENDER_NAME = "You"
 }
 
 /**
@@ -254,7 +259,8 @@ fun DiscussionScreen(
                 itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
                   val isMine = message.senderId == account.uid
                   val sender =
-                      if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
+                      if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
+                      else DiscussionConstants.YOU_SENDER_NAME
 
                   val showDateHeader =
                       shouldShowDateHeader(
@@ -536,7 +542,7 @@ fun PollBubble(
     onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit,
     showProfilePicture: Boolean = true
 ) {
-  val isMine = authorName == "You"
+  val isMine = authorName == DiscussionConstants.YOU_SENDER_NAME
   val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
   val counts = poll.getVoteCountsByOption()
   val total = poll.getTotalVotes()
@@ -727,7 +733,9 @@ fun PollBubble(
                   // Timestamp inside poll bubble
                   Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     Text(
-                        text = DateFormat.format("HH:mm", createdAt).toString(),
+                        text =
+                            DateFormat.format(DiscussionConstants.TIME_FORMAT, createdAt)
+                                .toString(),
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = Dimensions.TextSize.tiny,
                         color = MessagingColors.metadataText)
@@ -836,7 +844,10 @@ private fun PhotoBubble(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                   Text(
-                      text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
+                      text =
+                          DateFormat.format(
+                                  DiscussionConstants.TIME_FORMAT, message.createdAt.toDate())
+                              .toString(),
                       style = MaterialTheme.typography.labelSmall,
                       fontSize = Dimensions.TextSize.tiny,
                       color = MessagingColors.metadataText)
@@ -899,7 +910,8 @@ fun FullscreenImageDialog(
   val currentSenderName =
       remember(currentPhotoMessage, userCache) {
         currentPhotoMessage?.let { msg ->
-          if (msg.senderId == currentUserId) "You" else userCache[msg.senderId]?.name ?: "Unknown"
+          if (msg.senderId == currentUserId) DiscussionConstants.YOU_SENDER_NAME
+          else userCache[msg.senderId]?.name ?: "Unknown"
         } ?: senderName
       }
 
@@ -928,7 +940,11 @@ fun FullscreenImageDialog(
                                   Color.Black.copy(alpha = 0.9f), Color.Black.copy(alpha = 0.0f))))
                       .align(Alignment.TopCenter)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                horizontal = Dimensions.Padding.extraLarge,
+                                vertical = Dimensions.Spacing.medium),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
                       IconButton(onClick = onDismiss) {
@@ -966,8 +982,8 @@ fun FullscreenImageDialog(
                                     Color.Black.copy(alpha = 0.9f))))
                         .align(Alignment.BottomCenter)) {
                   androidx.compose.foundation.lazy.LazyRow(
-                      modifier = Modifier.fillMaxWidth().padding(16.dp),
-                      horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.extraLarge),
+                      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
                         items(photoMessages.size) { index ->
                           val msg = photoMessages[index]
                           val isSelected =
@@ -975,13 +991,16 @@ fun FullscreenImageDialog(
 
                           Box(
                               modifier =
-                                  Modifier.size(60.dp)
-                                      .clip(RoundedCornerShape(8.dp))
+                                  Modifier.size(Dimensions.Spacing.xxxxLarge)
+                                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
                                       .border(
-                                          width = if (isSelected) 3.dp else 0.dp,
+                                          width =
+                                              if (isSelected) Dimensions.DividerThickness.medium
+                                              else Dimensions.CornerRadius.none,
                                           color =
                                               if (isSelected) Color.White else Color.Transparent,
-                                          shape = RoundedCornerShape(8.dp))
+                                          shape =
+                                              RoundedCornerShape(Dimensions.CornerRadius.medium))
                                       .clickable { currentPhotoMessage = msg }) {
                                 AsyncImage(
                                     model = msg.photoUrl,
@@ -1076,7 +1095,10 @@ private fun ChatBubble(
                           color = MessagingColors.primaryText,
                           modifier = Modifier.weight(1f, fill = false))
                       Text(
-                          text = DateFormat.format("HH:mm", message.createdAt.toDate()).toString(),
+                          text =
+                              DateFormat.format(
+                                      DiscussionConstants.TIME_FORMAT, message.createdAt.toDate())
+                                  .toString(),
                           style = MaterialTheme.typography.labelSmall,
                           fontSize = Dimensions.TextSize.tiny,
                           color = MessagingColors.metadataText)
