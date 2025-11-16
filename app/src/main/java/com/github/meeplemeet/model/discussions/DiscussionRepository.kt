@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+private const val ERROR_NO_POLL = "Message does not contain a poll"
+
 /**
  * Repository wrapping Firestore CRUD operations and snapshot listeners.
  *
@@ -366,7 +368,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       userId: String,
       optionIndex: Int
   ) {
-    val poll = pollMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+    val poll = pollMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
 
     if (optionIndex !in poll.options.indices) throw IllegalArgumentException("Invalid option index")
 
@@ -377,8 +379,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     // Get the latest discussion state
     val latestDiscussion = getDiscussion(discussion.uid)
     val currentMessage = latestDiscussion.messages[messageIndex]
-    val currentPoll =
-        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+    val currentPoll = currentMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
 
     // Calculate updated votes
     val updatedVotes = currentPoll.votes.toMutableMap()
@@ -427,8 +428,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     // Get the latest discussion state
     val latestDiscussion = getDiscussion(discussion.uid)
     val currentMessage = latestDiscussion.messages[messageIndex]
-    val currentPoll =
-        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
+    val currentPoll = currentMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
 
     // Check if user has voted
     val currentVotes = currentPoll.votes[userId]

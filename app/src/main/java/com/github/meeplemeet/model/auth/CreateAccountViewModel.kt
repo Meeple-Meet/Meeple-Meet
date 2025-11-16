@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
+private const val ERROR_HANDLE_BLANK = "Handle can not be blank"
+
 /**
  * ViewModel for creating and managing account handles.
  *
@@ -91,7 +93,7 @@ open class CreateAccountViewModel(
    * @param handle The handle to check
    */
   fun checkHandleAvailable(handle: String) {
-    if (handle.isBlank()) _errorMsg.value = "Handle can not be blank"
+    if (handle.isBlank()) _errorMsg.value = ERROR_HANDLE_BLANK
     else if (!handlesRepository.validHandle(handle))
         _errorMsg.value = InvalidHandleFormatException.Companion.DEFAULT_MESSAGE
     else
@@ -125,7 +127,7 @@ open class CreateAccountViewModel(
       shopOwner: Boolean? = null,
       spaceRenter: Boolean? = null
   ) {
-    if (handle.isBlank()) _errorMsg.value = "Handle can not be blank"
+    if (handle.isBlank()) _errorMsg.value = ERROR_HANDLE_BLANK
     else if (!handlesRepository.validHandle(handle))
         _errorMsg.value = InvalidHandleFormatException.Companion.DEFAULT_MESSAGE
     else
@@ -151,7 +153,7 @@ open class CreateAccountViewModel(
    * @param newHandle The new handle to set
    */
   fun setAccountHandle(account: Account, newHandle: String) {
-    if (newHandle.isBlank()) _errorMsg.value = "Handle can not be blank"
+    if (newHandle.isBlank()) _errorMsg.value = ERROR_HANDLE_BLANK
     else if (!handlesRepository.validHandle(newHandle))
         _errorMsg.value = InvalidHandleFormatException.Companion.DEFAULT_MESSAGE
     else

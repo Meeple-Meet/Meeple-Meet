@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+private const val FIELD_ACCOUNT_ID = "accountId"
+
 class HandlesRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
     FirestoreRepository("handles") {
   private val accounts = accountRepository.collection
@@ -25,7 +27,7 @@ class HandlesRepository(accountRepository: AccountRepository = RepositoryProvide
     if (handle.isBlank() || !validHandle(handle)) return false
     val snapshot = collection.document(handle).get().await()
     val data = snapshot.data ?: return false
-    val id = data["accountId"] as? String
+    val id = data[FIELD_ACCOUNT_ID] as? String
     return id == accountId
   }
 
@@ -50,7 +52,7 @@ class HandlesRepository(accountRepository: AccountRepository = RepositoryProvide
               val existing = tx.get(handleRef)
               if (existing.exists()) throw HandleAlreadyTakenException()
 
-              tx.set(handleRef, mapOf("accountId" to accountId))
+              tx.set(handleRef, mapOf<String, Any>(FIELD_ACCOUNT_ID to accountId))
               tx.update(accountRef, Account::handle.name, handle)
               account
             }
@@ -77,7 +79,7 @@ class HandlesRepository(accountRepository: AccountRepository = RepositoryProvide
               val account = fromNoUid(accountId, accountNoUid.copy(handle = newHandle))
 
               tx.delete(oldHandleRef)
-              tx.set(newHandleRef, mapOf("accountId" to accountId))
+              tx.set(newHandleRef, mapOf<String, Any>(FIELD_ACCOUNT_ID to accountId))
               tx.update(accountRef, Account::handle.name, newHandle)
 
               account
@@ -109,7 +111,7 @@ class HandlesRepository(accountRepository: AccountRepository = RepositoryProvide
               }
               if (qs != null) {
                 // Extract account IDs from handle docs
-                val accountIds = qs.documents.mapNotNull { doc -> doc.getString("accountId") }
+                val accountIds = qs.documents.mapNotNull { doc -> doc.getString(FIELD_ACCOUNT_ID) }
 
                 if (accountIds.isEmpty()) {
                   trySend(emptyList())
