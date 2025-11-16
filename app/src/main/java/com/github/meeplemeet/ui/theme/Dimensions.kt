@@ -100,6 +100,13 @@ object Dimensions {
     val title: TextUnit = 17.sp
     val heading: TextUnit = 18.sp
     val largeHeading: TextUnit = 20.sp
+    val extraLarge: TextUnit = 36.sp
+    val displayMedium: TextUnit = 56.sp
+  }
+
+  // Text indentation
+  object TextIndent {
+    val listIndent: TextUnit = 8.sp
   }
 
   // Divider thickness

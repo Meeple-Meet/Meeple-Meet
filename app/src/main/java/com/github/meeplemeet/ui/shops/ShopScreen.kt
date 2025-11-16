@@ -18,7 +18,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextIndent
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
@@ -203,7 +202,9 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
         Text(
             text,
-            style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
+            style =
+                LocalTextStyle.current.copy(
+                    textIndent = TextIndent(restLine = Dimensions.TextIndent.listIndent)),
             modifier = Modifier.weight(1f).testTag(textTag))
         IconButton(
             onClick = {

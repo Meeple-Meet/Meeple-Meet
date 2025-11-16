@@ -40,8 +40,21 @@ jobs:
       - name: KTFmt Check
         run: ./gradlew ktfmtCheck
 
+  magic-number-check:
+    name: Magic Number Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check for magic numbers in UI package
+        run: |
+          chmod +x ./scripts/check-magic-numbers.sh
+          ./scripts/check-magic-numbers.sh
+
   assemble-lint:
     name: Assemble and Lint
+    needs: [format-check, magic-number-check]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -96,6 +109,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
+    needs: [format-check, magic-number-check]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -181,6 +195,7 @@ jobs:
 
   android-tests:
     name: Android Instrumentation Tests
+    needs: [format-check, magic-number-check]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
@@ -280,6 +295,7 @@ jobs:
 
   compile-debug-classes:
     name: Compile Debug Classes
+    needs: [format-check, magic-number-check]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -335,7 +351,7 @@ jobs:
 
   coverage-report:
     name: Coverage Report
-    needs: [unit-tests, android-tests, compile-debug-classes, assemble-lint]
+    needs: [format-check, magic-number-check, unit-tests, android-tests, compile-debug-classes, assemble-lint]
     runs-on: ubuntu-latest
     outputs:
       coverage: ${{ steps.coverage.outputs.percentage }}

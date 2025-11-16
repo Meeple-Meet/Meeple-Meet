@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -556,7 +555,7 @@ fun PollBubble(
                                       Text(
                                           label,
                                           color = MessagingColors.primaryText,
-                                          fontSize = 14.sp,
+                                          fontSize = Dimensions.TextSize.standard,
                                           modifier = Modifier.weight(1f))
                                     }
                                 Text(

@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
@@ -237,7 +236,9 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
         Text(
             text,
-            style = LocalTextStyle.current.copy(textIndent = TextIndent(restLine = 8.sp)),
+            style =
+                LocalTextStyle.current.copy(
+                    textIndent = TextIndent(restLine = Dimensions.TextIndent.listIndent)),
             modifier = Modifier.weight(1f).testTag(textTag))
 
         IconButton(
@@ -278,7 +279,10 @@ fun TopBarAndDivider(
           style = MaterialTheme.typography.titleLarge,
           maxLines =
               Int.MAX_VALUE, // Allows vertical expansion when text is too to fit horizontally
-          modifier = Modifier.align(Alignment.Center).padding(horizontal = 48.dp).fillMaxWidth(),
+          modifier =
+              Modifier.align(Alignment.Center)
+                  .padding(horizontal = Dimensions.AvatarSize.large)
+                  .fillMaxWidth(),
           textAlign = TextAlign.Center)
 
       // (Optional) Button to the right

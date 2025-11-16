@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.github.meeplemeet.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
@@ -170,7 +169,7 @@ fun BottomNavigationMenu(
       modifier =
           modifier
               .fillMaxWidth()
-              .height(64.dp)
+              .height(Dimensions.IconSize.giant)
               .testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)) {
         MeepleMeetScreen.entries
             .filter { it -> it.inBottomBar }

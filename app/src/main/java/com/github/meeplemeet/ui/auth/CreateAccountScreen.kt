@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.Account
@@ -180,7 +179,9 @@ fun CreateAccountScreen(
               /** Title text shown below the image placeholder. */
               Text(
                   "You're almost there!",
-                  style = TextStyle(fontSize = 36.sp, color = AppColors.neutral),
+                  style =
+                      TextStyle(
+                          fontSize = Dimensions.TextSize.extraLarge, color = AppColors.neutral),
                   modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
               /** Input field for entering the user's unique handle. */

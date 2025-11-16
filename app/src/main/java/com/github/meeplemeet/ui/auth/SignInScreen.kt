@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -165,7 +164,7 @@ fun SignInScreen(
         Text(
             "Welcome!",
             color = AppColors.neutral,
-            style = TextStyle(fontSize = 56.sp),
+            style = TextStyle(fontSize = Dimensions.TextSize.displayMedium),
             modifier =
                 Modifier.padding(bottom = SignInScreenUi.extraLargePadding)
                     .testTag(NavigationTestTags.SCREEN_TITLE))
@@ -318,7 +317,8 @@ fun SignInScreen(
         Spacer(modifier = Modifier.height(SignInScreenUi.largeSpacing))
         Text(
             "OR",
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+            style =
+                MaterialTheme.typography.bodyMedium.copy(fontSize = Dimensions.TextSize.subtitle),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = SignInScreenUi.smallPadding))
 
