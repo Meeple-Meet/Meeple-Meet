@@ -182,47 +182,56 @@ fun DiscussionScreen(
           }
         })
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.weight(1f).fillMaxWidth(),
-        contentPadding =
-            PaddingValues(
-                horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.large),
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-          itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
-            val isMine = message.senderId == account.uid
-            val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
+    LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
+      itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
+        val isMine = message.senderId == account.uid
+        val sender = if (!isMine) userCache[message.senderId]?.name ?: "Unknown" else "You"
 
-            val showDateHeader =
-                shouldShowDateHeader(
-                    current = message.createdAt.toDate(),
-                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
-            if (showDateHeader) {
-              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-              DateSeparator(date = message.createdAt.toDate())
-              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-            }
-
-            if (message.poll != null) {
-              PollBubble(
-                  msgIndex = index,
-                  poll = message.poll,
-                  authorName = sender,
-                  currentUserId = account.uid,
-                  onVote = { optionIndex, isRemoving ->
-                    if (isRemoving) {
-                      viewModel.removeVoteFromPoll(
-                          discussion.uid, message.uid, account, optionIndex)
-                    } else {
-                      viewModel.voteOnPoll(discussion.uid, message.uid, account, optionIndex)
-                    }
-                  },
-                  createdAt = message.createdAt.toDate())
-            } else {
-              ChatBubble(message, isMine, sender)
-            }
-          }
+        val showDateHeader =
+            shouldShowDateHeader(
+                current = message.createdAt.toDate(),
+                previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
+        if (showDateHeader) {
+          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+          DateSeparator(date = message.createdAt.toDate())
+          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
         }
+
+        // Check if this is the last message from this sender
+        val nextMessage = messages.getOrNull(index + 1)
+        val isLastFromSender = nextMessage?.senderId != message.senderId
+
+        // Check if the previous message is from the same sender
+        val prevMessage = messages.getOrNull(index - 1)
+        val isSameSenderAsPrevious = prevMessage?.senderId == message.senderId && !showDateHeader
+
+        if (message.poll != null) {
+          PollBubble(
+              msgIndex = index,
+              poll = message.poll,
+              authorName = sender,
+              currentUserId = account.uid,
+              onVote = { optionIndex, isRemoving ->
+                if (isRemoving) {
+                  viewModel.removeVoteFromPoll(discussion.uid, message.uid, account, optionIndex)
+                } else {
+                  viewModel.voteOnPoll(discussion.uid, message.uid, account, optionIndex)
+                }
+              },
+              createdAt = message.createdAt.toDate(),
+              showProfilePicture = isLastFromSender)
+        } else {
+          ChatBubble(message, isMine, sender, isLastFromSender)
+        }
+
+        // Add spacing between messages
+        if (!isLastFromSender) {
+          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+        } else {
+          Spacer(Modifier.height(Dimensions.Spacing.small))
+        }
+      }
+    }
 
     var showAttachmentMenu by remember { mutableStateOf(false) }
     var showPollDialog by remember { mutableStateOf(false) }
@@ -368,6 +377,7 @@ fun DiscussionScreen(
  * @param currentUserId Id of the viewer (to show personal vote).
  * @param createdAt Time-stamp shown under the card.
  * @param onVote Callback when an option is tapped (index, isRemoving).
+ * @param showProfilePicture Whether to show the profile picture for this message.
  */
 @Composable
 fun PollBubble(
@@ -376,7 +386,8 @@ fun PollBubble(
     authorName: String,
     currentUserId: String,
     createdAt: Date,
-    onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit
+    onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit,
+    showProfilePicture: Boolean = true
 ) {
   val isMine = authorName == "You"
   val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
@@ -384,20 +395,21 @@ fun PollBubble(
   val total = poll.getTotalVotes()
 
   Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(
-                  horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.extraSmall),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
         // Profile picture for received messages (on the left)
         if (!isMine) {
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.small)
-                      .clip(CircleShape)
-                      .background(AppColors.neutral, CircleShape))
-          Spacer(Modifier.width(Dimensions.Spacing.medium))
+          if (showProfilePicture) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .clip(CircleShape)
+                        .background(AppColors.neutral, CircleShape))
+          } else {
+            Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
+          Spacer(Modifier.width(Dimensions.Spacing.small))
         }
 
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
@@ -579,12 +591,16 @@ fun PollBubble(
 
         // Profile picture for sent messages (on the right)
         if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.medium))
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.small)
-                      .clip(CircleShape)
-                      .background(AppColors.focus, CircleShape))
+          Spacer(Modifier.width(Dimensions.Spacing.small))
+          if (showProfilePicture) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .clip(CircleShape)
+                        .background(AppColors.focus, CircleShape))
+          } else {
+            Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
         }
       }
 }
@@ -595,24 +611,31 @@ fun PollBubble(
  * @param message Content to render.
  * @param isMine Whether the message was sent by the current user (aligns right).
  * @param senderName Display name of the sender (null for own messages).
+ * @param showProfilePicture Whether to show the profile picture for this message.
  */
 @Composable
-private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
+private fun ChatBubble(
+    message: Message,
+    isMine: Boolean,
+    senderName: String?,
+    showProfilePicture: Boolean = true
+) {
   Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(
-                  horizontal = Dimensions.Spacing.medium, vertical = Dimensions.Spacing.extraSmall),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
         // Profile picture for received messages (on the left)
         if (!isMine) {
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.small)
-                      .clip(CircleShape)
-                      .background(AppColors.neutral, CircleShape))
-          Spacer(Modifier.width(Dimensions.Spacing.medium))
+          if (showProfilePicture) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .clip(CircleShape)
+                        .background(AppColors.neutral, CircleShape))
+          } else {
+            Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
+          Spacer(Modifier.width(Dimensions.Spacing.small))
         }
 
         // Message bubble
@@ -671,12 +694,16 @@ private fun ChatBubble(message: Message, isMine: Boolean, senderName: String?) {
 
         // Profile picture for sent messages (on the right)
         if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.medium))
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.small)
-                      .clip(CircleShape)
-                      .background(AppColors.focus, CircleShape))
+          Spacer(Modifier.width(Dimensions.Spacing.small))
+          if (showProfilePicture) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.AvatarSize.small)
+                        .clip(CircleShape)
+                        .background(AppColors.focus, CircleShape))
+          } else {
+            Spacer(Modifier.width(Dimensions.AvatarSize.small))
+          }
         }
       }
 }
