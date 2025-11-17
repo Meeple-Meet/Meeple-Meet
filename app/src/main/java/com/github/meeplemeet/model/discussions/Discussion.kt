@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
  * @property participants List of account UIDs participating in this discussion.
  * @property admins List of account UIDs with administrative privileges in this discussion.
  * @property createdAt Timestamp indicating when the discussion was created.
+ * @property profilePictureUrl Optional URL to the discussion's profile picture.
  *
  * Note: Messages are stored in a subcollection and not included in this data class.
  */
@@ -25,7 +26,8 @@ data class Discussion(
     val participants: List<String> = emptyList(),
     val admins: List<String> = emptyList(),
     val createdAt: Timestamp = Timestamp.now(),
-    val session: Session? = null
+    val session: Session? = null,
+    val profilePictureUrl: String? = null
 )
 
 /**
@@ -43,7 +45,8 @@ data class DiscussionNoUid(
     val participants: List<String> = emptyList(),
     val admins: List<String> = emptyList(),
     val createdAt: Timestamp = Timestamp.now(),
-    val session: Session? = null
+    val session: Session? = null,
+    val profilePictureUrl: String? = null
 )
 
 /**
@@ -60,7 +63,8 @@ fun toNoUid(discussion: Discussion): DiscussionNoUid =
         discussion.participants,
         discussion.admins,
         discussion.createdAt,
-        discussion.session)
+        discussion.session,
+        discussion.profilePictureUrl)
 
 /**
  * Reconstructs a full [Discussion] object from its Firestore representation.
@@ -78,4 +82,5 @@ fun fromNoUid(id: String, discussionNoUid: DiscussionNoUid): Discussion =
         discussionNoUid.participants,
         discussionNoUid.admins,
         discussionNoUid.createdAt,
-        discussionNoUid.session)
+        discussionNoUid.session,
+        discussionNoUid.profilePictureUrl)

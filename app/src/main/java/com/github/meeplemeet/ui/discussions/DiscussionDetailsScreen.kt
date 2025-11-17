@@ -1,5 +1,9 @@
 package com.github.meeplemeet.ui.discussions
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,27 +12,38 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
+import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -44,6 +59,9 @@ object UITestTags {
   const val LEAVE_DISCUSSION_CONFIRM_BUTTON = "confirm_leave_button"
   const val MAKE_ADMIN_BUTTON = "make_admin_button"
   const val DISCUSSION_NAME = "discussion_name"
+  const val PROFILE_PICTURE = "profile_picture"
+  const val PROFILE_PICTURE_CAMERA_OPTION = "profile_picture_camera_option"
+  const val PROFILE_PICTURE_GALLERY_OPTION = "profile_picture_gallery_option"
 
   fun memberRowTag(uid: String) = "member_row_$uid"
 }
@@ -81,6 +99,7 @@ fun DiscussionDetailsScreen(
     onDelete: () -> Unit = {}
 ) {
   val coroutineScope = rememberCoroutineScope()
+  val context = LocalContext.current
 
   /** --- Search state --- */
   var searchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -89,6 +108,48 @@ fun DiscussionDetailsScreen(
   var dropdownExpanded by remember { mutableStateOf(false) }
 
   val selectedMembers = remember { mutableStateListOf<Account>() }
+
+  /** --- Image source selection state --- */
+  var showImageSourceMenu by remember { mutableStateOf(false) }
+
+  /** --- Image upload handler --- */
+  val uploadImage: suspend (String) -> Unit = { path ->
+    try {
+      viewModel.setDiscussionProfilePicture(discussion, account, context, path)
+    } catch (e: Exception) {
+      // Handle error silently or show a snackbar
+    }
+  }
+
+  /** --- Camera launcher --- */
+  val cameraLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap != null) {
+          coroutineScope.launch {
+            val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
+            uploadImage(path)
+          }
+        }
+      }
+
+  /** --- Camera permission launcher --- */
+  val cameraPermissionLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+          cameraLauncher.launch(null)
+        }
+      }
+
+  /** --- Gallery launcher --- */
+  val galleryLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+          coroutineScope.launch {
+            val path = ImageFileUtils.cacheUriToFile(context, uri)
+            uploadImage(path)
+          }
+        }
+      }
 
   /** delete and leave alert state */
   var showDeleteDialog by remember { mutableStateOf(false) }
@@ -197,14 +258,52 @@ fun DiscussionDetailsScreen(
               modifier = modifier.padding(padding).padding(Dimensions.Spacing.extraLarge),
               verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
 
-                /** --- Discussion Icon --- */
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Icon",
+                /** --- Discussion Icon/Profile Picture --- */
+                Box(
                     modifier =
                         Modifier.align(Alignment.CenterHorizontally)
-                            .size(Dimensions.IconSize.massive.times(2)),
-                    tint = AppColors.textIcons)
+                            .size(Dimensions.IconSize.massive.times(2))
+                            .clip(CircleShape)
+                            .clickable(enabled = isAdmin) {
+                              if (isAdmin) showImageSourceMenu = true
+                            }
+                            .testTag(UITestTags.PROFILE_PICTURE)) {
+                      if (discussion.profilePictureUrl != null) {
+                        AsyncImage(
+                            model = discussion.profilePictureUrl,
+                            contentDescription = "Discussion Profile Picture",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop)
+                      } else {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Icon",
+                            modifier = Modifier.fillMaxSize(),
+                            tint = AppColors.textIcons)
+                      }
+                    }
+
+                /** --- Fullscreen Profile Picture Dialog --- */
+                if (showImageSourceMenu) {
+                  ProfilePictureDialog(
+                      discussionName = newName,
+                      profilePictureUrl = discussion.profilePictureUrl,
+                      onDismiss = { showImageSourceMenu = false },
+                      onTakePhoto = {
+                        showImageSourceMenu = false
+                        val permission = Manifest.permission.CAMERA
+                        if (ContextCompat.checkSelfPermission(context, permission) ==
+                            PackageManager.PERMISSION_GRANTED) {
+                          cameraLauncher.launch(null)
+                        } else {
+                          cameraPermissionLauncher.launch(permission)
+                        }
+                      },
+                      onChooseFromGallery = {
+                        showImageSourceMenu = false
+                        galleryLauncher.launch("image/*")
+                      })
+                }
 
                 /** --- Discussion Name --- */
                 /** These ensure only admins can edit the name field */
@@ -712,4 +811,144 @@ fun MemberList(
           }
         })
   }
+}
+
+/**
+ * Fullscreen dialog for viewing and changing the discussion profile picture.
+ *
+ * @param discussionName Name of the discussion
+ * @param profilePictureUrl Optional URL to the discussion's profile picture
+ * @param onDismiss Callback when the dialog is dismissed
+ * @param onTakePhoto Callback when the user chooses to take a photo
+ * @param onChooseFromGallery Callback when the user chooses to select from gallery
+ */
+@Composable
+fun ProfilePictureDialog(
+    discussionName: String,
+    profilePictureUrl: String?,
+    onDismiss: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onChooseFromGallery: () -> Unit
+) {
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties =
+          DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+          // Image or default icon
+          if (profilePictureUrl != null) {
+            AsyncImage(
+                model = profilePictureUrl,
+                contentDescription = "Discussion Profile Picture",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().clickable { onDismiss() })
+          } else {
+            Box(
+                modifier = Modifier.fillMaxSize().clickable { onDismiss() },
+                contentAlignment = Alignment.Center) {
+                  Icon(
+                      imageVector = Icons.Default.AccountCircle,
+                      contentDescription = "Default Icon",
+                      modifier = Modifier.size(Dimensions.IconSize.massive.times(4)),
+                      tint = Color.White.copy(alpha = 0.7f))
+                }
+          }
+
+          // Top bar overlay
+          Box(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .statusBarsPadding()
+                      .background(
+                          Brush.verticalGradient(
+                              listOf(
+                                  Color.Black.copy(alpha = 0.9f), Color.Black.copy(alpha = 0.0f))))
+                      .align(Alignment.TopCenter)) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                horizontal = Dimensions.Padding.extraLarge,
+                                vertical = Dimensions.Spacing.medium),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                      IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White)
+                      }
+
+                      Text(
+                          text = discussionName,
+                          color = Color.White,
+                          style = MaterialTheme.typography.titleMedium,
+                          modifier =
+                              Modifier.weight(1f).padding(horizontal = Dimensions.Spacing.large),
+                          textAlign = TextAlign.Center)
+
+                      // Empty space to balance the back button
+                      Spacer(modifier = Modifier.width(Dimensions.IconSize.extraLarge))
+                    }
+              }
+
+          // Bottom action bar
+          Box(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .navigationBarsPadding()
+                      .background(
+                          Brush.verticalGradient(
+                              listOf(
+                                  Color.Black.copy(alpha = 0.0f), Color.Black.copy(alpha = 0.9f))))
+                      .align(Alignment.BottomCenter)) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                horizontal = Dimensions.Padding.extraLarge,
+                                vertical = Dimensions.Spacing.extraLarge),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            Dimensions.Spacing.large, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      // Camera button
+                      Button(
+                          onClick = onTakePhoto,
+                          colors =
+                              ButtonDefaults.buttonColors(
+                                  containerColor = Color.White.copy(alpha = 0.2f),
+                                  contentColor = Color.White),
+                          modifier =
+                              Modifier.weight(1f)
+                                  .testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = "Take Photo",
+                                modifier = Modifier.size(Dimensions.IconSize.large))
+                            Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                            Text("Camera", style = MaterialTheme.typography.bodyLarge)
+                          }
+
+                      // Gallery button
+                      Button(
+                          onClick = onChooseFromGallery,
+                          colors =
+                              ButtonDefaults.buttonColors(
+                                  containerColor = Color.White.copy(alpha = 0.2f),
+                                  contentColor = Color.White),
+                          modifier =
+                              Modifier.weight(1f)
+                                  .testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = "Choose from Gallery",
+                                modifier = Modifier.size(Dimensions.IconSize.large))
+                            Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                            Text("Gallery", style = MaterialTheme.typography.bodyLarge)
+                          }
+                    }
+              }
+        }
+      }
 }

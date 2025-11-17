@@ -77,6 +77,11 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     collection.document(id).update(Discussion::description.name, description).await()
   }
 
+  /** Update a discussion's profile picture URL. */
+  suspend fun setDiscussionProfilePictureUrl(id: String, profilePictureUrl: String) {
+    collection.document(id).update(Discussion::profilePictureUrl.name, profilePictureUrl).await()
+  }
+
   /** Delete a discussion document. */
   suspend fun deleteDiscussion(discussion: Discussion) {
     val batch = db.batch()

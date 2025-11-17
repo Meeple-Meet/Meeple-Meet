@@ -38,11 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -171,6 +173,7 @@ fun DiscussionsOverviewScreen(
                       lastMsg = msgText,
                       lastMsgDate = preview.lastMessageAt,
                       unreadMsgCount = preview.unreadCount,
+                      profilePictureUrl = discussion?.profilePictureUrl,
                       modifier =
                           Modifier.fillMaxWidth()
                               .testTag(DiscussionTestTags.discussionInfo(discussionName)),
@@ -219,6 +222,7 @@ private fun EmptyDiscussionsListText() {
  * @param discussionName Discussion name
  * @param lastMsg Last message text
  * @param unreadMsgCount Number of unseen messages in this discussion
+ * @param profilePictureUrl Optional URL to the discussion's profile picture
  * @param modifier Optional [Modifier] for this composable
  * @param onClick Function to operate when clicked
  */
@@ -230,6 +234,7 @@ private fun DiscussionCard(
     lastMsg: String = "Hello world",
     lastMsgDate: Timestamp = Timestamp.now(),
     unreadMsgCount: Int = 1,
+    profilePictureUrl: String? = null,
     onClick: () -> Unit = {}
 ) {
   Column(modifier = modifier) {
@@ -247,7 +252,15 @@ private fun DiscussionCard(
               modifier =
                   Modifier.size(Dimensions.AvatarSize.extraLarge)
                       .clip(CircleShape)
-                      .background(AppColors.neutral, CircleShape))
+                      .background(AppColors.neutral, CircleShape)) {
+                if (profilePictureUrl != null) {
+                  AsyncImage(
+                      model = profilePictureUrl,
+                      contentDescription = "Discussion Profile Picture",
+                      modifier = Modifier.fillMaxSize(),
+                      contentScale = ContentScale.Crop)
+                }
+              }
 
           Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 
