@@ -62,6 +62,7 @@ object UITestTags {
   const val PROFILE_PICTURE = "profile_picture"
   const val PROFILE_PICTURE_CAMERA_OPTION = "profile_picture_camera_option"
   const val PROFILE_PICTURE_GALLERY_OPTION = "profile_picture_gallery_option"
+  const val PROFILE_PICTURE_DIALOG_TITLE = "profile_picture_dialog_title"
 
   fun memberRowTag(uid: String) = "member_row_$uid"
 }
@@ -299,7 +300,7 @@ fun DiscussionDetailsScreen(
                 Box(
                     modifier =
                         Modifier.align(Alignment.CenterHorizontally)
-                            .size(Dimensions.IconSize.massive.times(2))
+                            .size(Dimensions.IconSize.massive.times(Dimensions.Multipliers.double))
                             .clip(CircleShape)
                             .clickable(enabled = isAdmin) {
                               if (isAdmin) showImageSourceMenu = true
@@ -886,8 +887,10 @@ fun ProfilePictureDialog(
                   Icon(
                       imageVector = Icons.Default.AccountCircle,
                       contentDescription = "Default Icon",
-                      modifier = Modifier.size(Dimensions.IconSize.massive.times(4)),
-                      tint = Color.White.copy(alpha = 0.7f))
+                      modifier =
+                          Modifier.size(
+                              Dimensions.IconSize.massive.times(Dimensions.Multipliers.quadruple)),
+                      tint = Color.White.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
                 }
           }
 
@@ -899,7 +902,9 @@ fun ProfilePictureDialog(
                       .background(
                           Brush.verticalGradient(
                               listOf(
-                                  Color.Black.copy(alpha = 0.9f), Color.Black.copy(alpha = 0.0f))))
+                                  Color.Black.copy(alpha = Dimensions.Alpha.dialogOverlayDark),
+                                  Color.Black.copy(
+                                      alpha = Dimensions.Alpha.dialogOverlayTransparent))))
                       .align(Alignment.TopCenter)) {
                 Row(
                     modifier =
@@ -921,7 +926,9 @@ fun ProfilePictureDialog(
                           color = Color.White,
                           style = MaterialTheme.typography.titleMedium,
                           modifier =
-                              Modifier.weight(1f).padding(horizontal = Dimensions.Spacing.large),
+                              Modifier.weight(Dimensions.Weight.full)
+                                  .padding(horizontal = Dimensions.Spacing.large)
+                                  .testTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE),
                           textAlign = TextAlign.Center)
 
                       // Empty space to balance the back button

@@ -7,13 +7,13 @@ import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionDetailsScreen
+import com.github.meeplemeet.ui.discussions.UITestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -184,98 +184,6 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     }
   }
 
-  @Ignore
-  @Test
-  fun memberList_displaysMembersWithBadges() {
-    compose.setContent {
-      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
-    }
-
-    compose.waitForIdle()
-
-    compose.onNodeWithTag("member_row_${currentAccount.uid}").assertIsDisplayed()
-    compose.onNodeWithTag("member_row_${otherUser.uid}").assertIsDisplayed()
-    compose.onNodeWithText("Owner").assertIsDisplayed()
-    compose.onNodeWithText("Member").assertIsDisplayed()
-  }
-
-  @Ignore
-  @Test
-  fun participantView_cannotEditOrAddMembers() = runBlocking {
-    // Create a discussion where current user is participant but not admin or owner
-    val participantDiscussion =
-        discussionRepository.createDiscussion(
-            name = "Participant Test",
-            description = "Test description",
-            creatorId = thirdUser.uid, // Third user is the owner
-            participants = listOf(currentAccount.uid, otherUser.uid))
-
-    discussionRepository.sendMessageToDiscussion(participantDiscussion, thirdUser, "Test message")
-    val updatedDiscussion = discussionRepository.getDiscussion(participantDiscussion.uid)
-
-    compose.setContent {
-      DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
-    }
-
-    compose.waitForIdle()
-
-    // Name and description should be visible but read-only
-    compose.onNodeWithTag("discussion_name").assertIsDisplayed().assertIsNotEnabled()
-    compose.onNodeWithTag("discussion_description").assertIsDisplayed().assertIsNotEnabled()
-
-    // Member search field should not be displayed
-    compose.onAllNodesWithText("Add Members").assertCountEquals(0)
-
-    // Member row for current user: just check displayed
-    compose.onNodeWithTag("member_row_${currentAccount.uid}").assertIsDisplayed()
-
-    // Member row for other user: check displayed and not clickable
-    compose
-        .onNodeWithTag("member_row_${otherUser.uid}")
-        .assertIsDisplayed()
-        .assertHasNoClickAction()
-
-    // Cleanup
-    discussionRepository.deleteDiscussion(updatedDiscussion)
-  }
-
-  @Ignore
-  @Test
-  fun ownerView_canRemoveAdmins() = runBlocking {
-    // Create a discussion where current user is the owner
-    val ownerDiscussion =
-        discussionRepository.createDiscussion(
-            name = "Owner Test",
-            description = "Test description",
-            creatorId = currentAccount.uid,
-            participants = listOf(otherUser.uid))
-
-    // Make other user an admin
-    discussionRepository.addAdminToDiscussion(ownerDiscussion, otherUser.uid)
-
-    discussionRepository.sendMessageToDiscussion(ownerDiscussion, currentAccount, "Test message")
-    val updatedDiscussion = discussionRepository.getDiscussion(ownerDiscussion.uid)
-
-    compose.setContent {
-      DiscussionDetailsScreen(
-          discussion = updatedDiscussion,
-          account = currentAccount,
-      )
-    }
-
-    compose.waitForIdle()
-
-    // Can click member to open dialog
-    compose.onNodeWithTag("member_row_${otherUser.uid}").performClick()
-    compose.waitForIdle()
-
-    // Owner can remove admin
-    compose.onNodeWithText("Remove Admin").assertIsDisplayed()
-
-    // Cleanup
-    discussionRepository.deleteDiscussion(updatedDiscussion)
-  }
-
   private fun clearFields() {
     compose.onNodeWithTag("discussion_name").performTextClearance()
     compose.onNodeWithTag("discussion_description").performTextClearance()
@@ -370,7 +278,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
         compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
 
         // Verify dialog shows discussion name
-        compose.onNodeWithText("Test Discussion").assertIsDisplayed()
+        compose.onNodeWithTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE).assertIsDisplayed()
+        compose
+            .onNodeWithTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE)
+            .assertTextContains("Test Discussion")
       }
     }
   }
