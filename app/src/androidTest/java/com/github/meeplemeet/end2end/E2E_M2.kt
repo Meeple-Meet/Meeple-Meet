@@ -467,7 +467,7 @@ class E2E_M2 : FirestoreTests() {
         .performTextInput("EPFL")
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 150_000) {
+    composeTestRule.waitUntil(timeoutMillis = 10_000) {
       try {
         composeTestRule.onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0").isDisplayed()
       } catch (_: Exception) {
@@ -783,9 +783,7 @@ class E2E_M2 : FirestoreTests() {
     // Increase quantity to 3
     repeat(2) {
       composeTestRule
-          .onNodeWithTag(
-              com.github.meeplemeet.ui.components.ShopComponentsTestTags.QTY_PLUS_BUTTON,
-              useUnmergedTree = true)
+          .onNodeWithTag(ShopComponentsTestTags.QTY_PLUS_BUTTON, useUnmergedTree = true)
           .assertExists()
           .performClick()
       composeTestRule.waitForIdle()
@@ -793,17 +791,13 @@ class E2E_M2 : FirestoreTests() {
 
     // Click save and wait for dialog to dismiss
     composeTestRule
-        .onNodeWithTag(
-            com.github.meeplemeet.ui.components.ShopComponentsTestTags.GAME_DIALOG_SAVE,
-            useUnmergedTree = true)
+        .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
         .assertExists()
         .performClick()
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       try {
         composeTestRule
-            .onAllNodesWithTag(
-                com.github.meeplemeet.ui.components.ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER,
-                useUnmergedTree = true)
+            .onAllNodesWithTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
             .fetchSemanticsNodes()
             .isEmpty()
       } catch (_: Throwable) {

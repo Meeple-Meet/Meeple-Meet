@@ -1,5 +1,6 @@
 package com.github.meeplemeet.integration
 
+import com.github.meeplemeet.model.LocationSearchException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
@@ -155,6 +156,11 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   @Test(expected = IllegalArgumentException::class)
   fun getSpaceRenterThrowsForNonExistentSpaceRenter() = runTest {
     spaceRenterRepository.getSpaceRenter("non-existent-space-renter-id")
+  }
+
+  @Test(expected = LocationSearchException::class)
+  fun bidon() {
+    throw LocationSearchException("")
   }
 
   @Test

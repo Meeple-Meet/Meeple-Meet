@@ -16,7 +16,7 @@ import com.google.firebase.firestore.FirebaseFirestore
  *   FirebaseProvider
  */
 open class FirestoreRepository(
-    collectionName: String,
+    val collectionName: String,
     val db: FirebaseFirestore = FirebaseProvider.db
 ) {
   init {
