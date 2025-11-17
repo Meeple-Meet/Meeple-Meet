@@ -116,11 +116,16 @@ class DiscussionViewModel(
    * @param voter The account voting.
    * @param optionIndex The index of the option to vote for.
    */
-  fun voteOnPoll(discussionId: String, messageId: String, voter: Account, optionIndex: Int) {
-    viewModelScope.launch {
-      discussionRepository.voteOnPoll(discussionId, messageId, voter.uid, optionIndex)
-    }
-  }
+  suspend fun voteOnPoll(
+      discussionId: String,
+      messageId: String,
+      voter: Account,
+      optionIndex: Int
+  ) = discussionRepository.voteOnPoll(discussionId, messageId, voter.uid, optionIndex)
+
+  /** Non-suspending wrapper used by UI callbacks. */
+  fun voteOnPollAsync(discussionId: String, messageId: String, voter: Account, optionIndex: Int) =
+      viewModelScope.launch { voteOnPoll(discussionId, messageId, voter, optionIndex) }
 
   /**
    * Remove a user's vote for a specific poll option. Called when user clicks an option they
@@ -131,16 +136,20 @@ class DiscussionViewModel(
    * @param voter The account whose vote to remove.
    * @param optionIndex The specific option to remove.
    */
-  fun removeVoteFromPoll(
+  suspend fun removeVoteFromPoll(
       discussionId: String,
       messageId: String,
       voter: Account,
       optionIndex: Int
-  ) {
-    viewModelScope.launch {
-      discussionRepository.removeVoteFromPoll(discussionId, messageId, voter.uid, optionIndex)
-    }
-  }
+  ) = discussionRepository.removeVoteFromPoll(discussionId, messageId, voter.uid, optionIndex)
+
+  /** Non-suspending wrapper used by UI callbacks. */
+  fun removeVoteFromPollAsync(
+      discussionId: String,
+      messageId: String,
+      voter: Account,
+      optionIndex: Int
+  ) = viewModelScope.launch { removeVoteFromPoll(discussionId, messageId, voter, optionIndex) }
 
   /** Holds a [StateFlow] of discussion documents keyed by discussion ID. */
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()

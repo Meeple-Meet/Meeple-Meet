@@ -297,10 +297,10 @@ fun DiscussionScreen(
                             currentUserId = account.uid,
                             onVote = { optionIndex, isRemoving ->
                               if (isRemoving) {
-                                viewModel.removeVoteFromPoll(
+                                viewModel.removeVoteFromPollAsync(
                                     discussion.uid, message.uid, account, optionIndex)
                               } else {
-                                viewModel.voteOnPoll(
+                                viewModel.voteOnPollAsync(
                                     discussion.uid, message.uid, account, optionIndex)
                               }
                             },

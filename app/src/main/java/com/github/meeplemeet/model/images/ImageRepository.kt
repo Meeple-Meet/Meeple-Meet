@@ -89,6 +89,9 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     return if (path.startsWith(expectedPrefix)) path else "$expectedPrefix/${File(path).name}"
   }
 
+  private fun toHttps(url: String): String =
+      if (url.startsWith("http://")) "https://${url.removePrefix("http://")}" else url
+
   /**
    * Saves an account profile picture to Firebase Storage and local cache.
    *
@@ -145,17 +148,6 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
       discussionId: String,
       inputPath: String
   ): String = saveImage(context, inputPath, discussionProfilePath(discussionId))
-
-  /**
-   * Deletes the discussion profile picture from both cache and Firebase Storage.
-   *
-   * @param context Android context for accessing cache directory
-   * @param discussionId The unique identifier for the discussion
-   * @throws DiskStorageException if disk delete fails
-   * @throws RemoteStorageException if Firebase Storage delete fails
-   */
-  suspend fun deleteDiscussionProfilePicture(context: Context, discussionId: String) =
-      deleteImages(context, discussionProfilePath(discussionId))
 
   /**
    * Loads the discussion profile picture from cache or Firebase Storage.
@@ -376,7 +368,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     try {
       val ref = storage.reference.child(storagePath)
       ref.putBytes(bytes).await()
-      return ref.downloadUrl.await().toString()
+      return toHttps(ref.downloadUrl.await().toString())
     } catch (e: StorageException) {
       throw RemoteStorageException(
           "Firebase Storage upload failed for $storagePath: ${e.errorCode}", e)
