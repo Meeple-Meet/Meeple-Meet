@@ -349,6 +349,25 @@ class ImageRepositoryTests : FirestoreTests() {
       val discussionId = "discussion_messages_delete_${System.currentTimeMillis()}"
 
       runTest {
+        val urls =
+            imageRepository.saveDiscussionPhotoMessages(
+                context, discussionId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "discussions/$discussionId/messages")
+        assertTrue("Cache dir created", cacheDir.exists())
+
+        imageRepository.deleteDiscussionPhotoMessages(context, discussionId, *urls.toTypedArray())
+        assertTrue("Cached files removed", cacheDir.listFiles().isNullOrEmpty())
+
+        val images = imageRepository.loadDiscussionPhotoMessages(context, discussionId, 2)
+        assertTrue("No images after deletion", images.isEmpty())
+      }
+    }
+
+    checkpoint("Delete discussion photo messages without paths removes all") {
+      val discussionId = "discussion_messages_delete_all_${System.currentTimeMillis()}"
+
+      runTest {
         imageRepository.saveDiscussionPhotoMessages(
             context, discussionId, testImagePath1, testImagePath2)
 
@@ -356,15 +375,32 @@ class ImageRepositoryTests : FirestoreTests() {
         assertTrue("Cache dir created", cacheDir.exists())
 
         imageRepository.deleteDiscussionPhotoMessages(context, discussionId)
-        assertTrue("Cache dir removed", !cacheDir.exists())
+        assertTrue("Cache dir cleared", cacheDir.listFiles().isNullOrEmpty())
 
         val images = imageRepository.loadDiscussionPhotoMessages(context, discussionId, 2)
-        assertTrue("No images after deletion", images.isEmpty())
+        assertTrue("No images after deleting all", images.isEmpty())
       }
     }
 
     checkpoint("Delete shop photos clears directory") {
       val shopId = "shop_delete_${System.currentTimeMillis()}"
+
+      runTest {
+        val urls = imageRepository.saveShopPhotos(context, shopId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "shops/$shopId")
+        assertTrue("Shop cache created", cacheDir.exists())
+
+        imageRepository.deleteShopPhotos(context, shopId, *urls.toTypedArray())
+        assertTrue("Shop cache files removed", cacheDir.listFiles().isNullOrEmpty())
+
+        val images = imageRepository.loadShopPhotos(context, shopId, 2)
+        assertTrue("No shop photos after deletion", images.isEmpty())
+      }
+    }
+
+    checkpoint("Delete shop photos without paths removes all") {
+      val shopId = "shop_delete_all_${System.currentTimeMillis()}"
 
       runTest {
         imageRepository.saveShopPhotos(context, shopId, testImagePath1, testImagePath2)
@@ -373,15 +409,34 @@ class ImageRepositoryTests : FirestoreTests() {
         assertTrue("Shop cache created", cacheDir.exists())
 
         imageRepository.deleteShopPhotos(context, shopId)
-        assertTrue("Shop cache removed", !cacheDir.exists())
+        assertTrue("Shop cache cleared", cacheDir.listFiles().isNullOrEmpty())
 
         val images = imageRepository.loadShopPhotos(context, shopId, 2)
-        assertTrue("No shop photos after deletion", images.isEmpty())
+        assertTrue("No shop photos after deleting all", images.isEmpty())
       }
     }
 
     checkpoint("Delete space renter photos clears directory") {
       val spaceRenterId = "space_delete_${System.currentTimeMillis()}"
+
+      runTest {
+        val urls =
+            imageRepository.saveSpaceRenterPhotos(
+                context, spaceRenterId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "space_renters/$spaceRenterId")
+        assertTrue("Space renter cache created", cacheDir.exists())
+
+        imageRepository.deleteSpaceRenterPhotos(context, spaceRenterId, *urls.toTypedArray())
+        assertTrue("Space renter cache files removed", cacheDir.listFiles().isNullOrEmpty())
+
+        val images = imageRepository.loadSpaceRenterPhotos(context, spaceRenterId, 2)
+        assertTrue("No space renter photos after deletion", images.isEmpty())
+      }
+    }
+
+    checkpoint("Delete space renter photos without paths removes all") {
+      val spaceRenterId = "space_delete_all_${System.currentTimeMillis()}"
 
       runTest {
         imageRepository.saveSpaceRenterPhotos(
@@ -391,10 +446,10 @@ class ImageRepositoryTests : FirestoreTests() {
         assertTrue("Space renter cache created", cacheDir.exists())
 
         imageRepository.deleteSpaceRenterPhotos(context, spaceRenterId)
-        assertTrue("Space renter cache removed", !cacheDir.exists())
+        assertTrue("Space renter cache cleared", cacheDir.listFiles().isNullOrEmpty())
 
         val images = imageRepository.loadSpaceRenterPhotos(context, spaceRenterId, 2)
-        assertTrue("No space renter photos after deletion", images.isEmpty())
+        assertTrue("No space renter photos after deleting all", images.isEmpty())
       }
     }
 
