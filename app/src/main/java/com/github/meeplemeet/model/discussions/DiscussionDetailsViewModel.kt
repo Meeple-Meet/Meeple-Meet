@@ -1,11 +1,13 @@
 // Docs generated with Claude Code.
 package com.github.meeplemeet.model.discussions
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
+import com.github.meeplemeet.model.images.ImageRepository
 import kotlinx.coroutines.launch
 
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
@@ -18,9 +20,11 @@ private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform t
  * account management functionality.
  *
  * @property repository Repository for discussion operations
+ * @property imageRepository Repository for image operations
  */
 class DiscussionDetailsViewModel(
-    private val repository: DiscussionRepository = RepositoryProvider.discussions
+    private val repository: DiscussionRepository = RepositoryProvider.discussions,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : CreateAccountViewModel() {
   /**
    * Checks if an account has admin privileges for a discussion.
@@ -167,5 +171,32 @@ class DiscussionDetailsViewModel(
         throw PermissionDeniedException("Cannot demote the owner of this discussion")
 
     viewModelScope.launch { repository.removeAdminFromDiscussion(discussion, admin.uid) }
+  }
+
+  /**
+   * Updates the discussion profile picture (admin-only operation).
+   *
+   * Uploads the image to storage and updates the discussion's profile picture URL.
+   *
+   * @param discussion The discussion to update
+   * @param changeRequester The account requesting the change
+   * @param context Android context for storage/cache access
+   * @param localPath Absolute path to the local image file
+   * @throws PermissionDeniedException if the requester is not an admin
+   */
+  fun setDiscussionProfilePicture(
+      discussion: Discussion,
+      changeRequester: Account,
+      context: Context,
+      localPath: String
+  ) {
+    if (!isAdmin(changeRequester, discussion))
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
+
+    viewModelScope.launch {
+      val downloadUrl =
+          imageRepository.saveDiscussionProfilePicture(context, discussion.uid, localPath)
+      repository.setDiscussionProfilePictureUrl(discussion.uid, downloadUrl)
+    }
   }
 }

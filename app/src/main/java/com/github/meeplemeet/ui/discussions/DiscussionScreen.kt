@@ -214,7 +214,15 @@ fun DiscussionScreen(
                               modifier =
                                   Modifier.size(Dimensions.ButtonSize.medium)
                                       .clip(CircleShape)
-                                      .background(AppColors.neutral, CircleShape))
+                                      .background(AppColors.neutral, CircleShape)) {
+                                if (discussion.profilePictureUrl != null) {
+                                  AsyncImage(
+                                      model = discussion.profilePictureUrl,
+                                      contentDescription = "Discussion Profile Picture",
+                                      modifier = Modifier.fillMaxSize(),
+                                      contentScale = ContentScale.Crop)
+                                }
+                              }
                           Spacer(Modifier.width(Dimensions.Spacing.large))
                           Text(
                               text = discussionName,
