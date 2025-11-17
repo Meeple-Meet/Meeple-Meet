@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+private const val PHOTO_MESSAGE_PREVIEW = "📷 Photo"
+
 /**
  * Repository for managing discussion data in Firestore.
  *
@@ -45,7 +47,7 @@ import kotlinx.coroutines.tasks.await
  * ## Preview Updates
  * All messaging operations (text, photo, poll) automatically update discussion previews for all
  * participants, including:
- * - Last message content (with special formatting for photos "📷 Photo" and polls "📊 Poll: ...")
+ * - Last message content (with special formatting for photos and polls "📊 Poll: ...")
  * - Last message sender and timestamp
  * - Unread count (incremented for all participants except sender)
  *
@@ -353,7 +355,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    * Send a message with a photo attachment to the discussion.
    *
    * Creates a new message document with a `photoUrl` field and updates all participants' previews
-   * with special "📷 Photo" formatting.
+   * with special photo formatting.
    *
    * ## Usage Flow
    * 1. User selects/captures photo
@@ -363,8 +365,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    * 5. Message is created and previews are updated
    *
    * ## Preview Formatting
-   * The preview text shown in discussion lists will be "📷 Photo" (or "📷 {first 5 chars}" if
-   * content is provided).
+   * The preview text shown in discussion lists will use a photo icon prefix.
    *
    * @param discussion The discussion to send the message to.
    * @param sender The account sending the message.
@@ -393,7 +394,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    * This private overload handles all message types (text, photo, poll) and formats the preview
    * text appropriately:
    * - **Text messages**: Shows full content
-   * - **Photo messages**: Shows "📷 Photo" prefix
+   * - **Photo messages**: Shows photo icon prefix
    * - **Poll messages**: Shows "📊 Poll: {question}" format
    *
    * Used internally by:
@@ -425,7 +426,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       val previewText =
           when {
             messageNoUid.poll != null -> "Poll: ${messageNoUid.poll.question}"
-            messageNoUid.photoUrl != null -> "📷 Photo"
+            messageNoUid.photoUrl != null -> PHOTO_MESSAGE_PREVIEW
             else -> messageNoUid.content
           }
 
