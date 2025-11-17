@@ -6,6 +6,9 @@ import android.graphics.BitmapFactory
 import android.os.storage.StorageManager
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.DiskStorageException
+import com.github.meeplemeet.model.ImageProcessingException
+import com.github.meeplemeet.model.RemoteStorageException
 import com.google.firebase.storage.StorageException
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -18,17 +21,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-
-/** Exception thrown when disk operations fail (e.g., full disk, permission issues) */
-class DiskStorageException(message: String, cause: Throwable? = null) : IOException(message, cause)
-
-/** Exception thrown when Firebase Storage operations fail */
-class RemoteStorageException(message: String, cause: Throwable? = null) :
-    IOException(message, cause)
-
-/** Exception thrown when image encoding/decoding fails */
-class ImageProcessingException(message: String, cause: Throwable? = null) :
-    Exception(message, cause)
 
 /**
  * Repository for managing image storage and retrieval. Handles image encoding to WebP format,
