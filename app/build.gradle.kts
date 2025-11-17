@@ -239,6 +239,7 @@ dependencies {
 
   // Networking with OkHttp
   implementation(libs.okhttp)
+  implementation(libs.jdom2)
 
   // Testing Unit
   testImplementation(libs.junit)

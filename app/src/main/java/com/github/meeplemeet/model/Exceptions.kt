@@ -45,3 +45,6 @@ class GameNotFoundException(message: String = DEFAULT_MESSAGE) : Exception(messa
 class LocationSearchException(message: String) : Exception(message)
 
 class GameSearchException(message: String) : Exception(message)
+
+class GameParseException(val itemId: String?, val field: String, message: String) :
+    Exception(message)

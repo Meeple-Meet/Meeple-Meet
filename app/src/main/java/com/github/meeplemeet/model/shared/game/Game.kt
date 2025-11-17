@@ -22,9 +22,10 @@ data class Game(
     val imageURL: String,
     val minPlayers: Int,
     val maxPlayers: Int,
-    val recommendedPlayers: Int?,
-    val averagePlayTime: Int?,
-    val genres: List<Int> = emptyList()
+    val recommendedPlayers: Int,
+    val averagePlayTime: Int,
+    val minAge: Int,
+    val genres: List<String> = emptyList()
 )
 
 /**
@@ -39,9 +40,10 @@ data class GameNoUid(
     val imageURL: String = "",
     val minPlayers: Int = 0,
     val maxPlayers: Int = 0,
-    val recommendedPlayers: Int? = null,
-    val averagePlayTime: Int? = null,
-    val genres: List<Int> = emptyList()
+    val recommendedPlayers: Int = 0,
+    val averagePlayTime: Int = 0,
+    val minAge: Int = 0,
+    val genres: List<String> = emptyList()
 )
 
 /**
@@ -61,4 +63,5 @@ fun fromNoUid(id: String, gameNoUid: GameNoUid): Game =
         gameNoUid.maxPlayers,
         gameNoUid.recommendedPlayers,
         gameNoUid.averagePlayTime,
+        gameNoUid.minAge,
         gameNoUid.genres)
