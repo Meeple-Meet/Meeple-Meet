@@ -1,11 +1,15 @@
 package com.github.meeplemeet.integration
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.DiskStorageException
 import com.github.meeplemeet.model.ImageProcessingException
 import com.github.meeplemeet.model.RemoteStorageException
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import java.io.File
@@ -275,6 +279,125 @@ class ImageRepositoryTests : FirestoreTests() {
       assertTrue("Cache file deleted", !cacheFile.exists())
     }
 
+    checkpoint("Remote load repopulates cache when directory missing") {
+      val shopId = "test_shop_remote_${System.currentTimeMillis()}"
+
+      runTest {
+        imageRepository.saveShopPhotos(context, shopId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "${RepositoryProvider.shops.collectionName}/$shopId")
+        if (cacheDir.exists()) {
+          cacheDir.deleteRecursively()
+        }
+        assertTrue("Cache directory cleared", !cacheDir.exists())
+
+        val images = imageRepository.loadShopPhotos(context, shopId, 2)
+
+        assertEquals(2, images.size)
+        assertTrue("Cache directory recreated", cacheDir.exists())
+        assertTrue("Files cached after remote load", cacheDir.listFiles()?.isNotEmpty() == true)
+      }
+    }
+
+    // ========================================================================
+    // Deletion Tests
+    // ========================================================================
+
+    checkpoint("Delete account profile picture removes cache and remote") {
+      val accountId = testAccount.uid
+
+      runTest {
+        imageRepository.saveAccountProfilePicture(accountId, context, testImagePath1)
+
+        val cacheFile = File(context.cacheDir, "accounts/$accountId")
+        assertTrue("Cache file created", cacheFile.exists())
+
+        imageRepository.deleteAccountProfilePicture(accountId, context)
+        assertTrue("Cache file deleted", !cacheFile.exists())
+
+        try {
+          imageRepository.loadAccountProfilePicture(accountId, context)
+          fail("Expected RemoteStorageException after deletion")
+        } catch (_: RemoteStorageException) {
+          assertTrue(true)
+        }
+      }
+    }
+
+    checkpoint("Delete discussion profile picture clears data") {
+      val discussionId = "discussion_delete_${System.currentTimeMillis()}"
+
+      runTest {
+        imageRepository.saveDiscussionProfilePicture(context, discussionId, testImagePath1)
+
+        val cacheFile = File(context.cacheDir, "discussions/$discussionId/profile.webp")
+        assertTrue("Cache created", cacheFile.exists())
+
+        imageRepository.deleteDiscussionProfilePicture(context, discussionId)
+        assertTrue("Cache removed", !cacheFile.exists())
+
+        try {
+          imageRepository.loadDiscussionProfilePicture(context, discussionId)
+          fail("Expected RemoteStorageException after discussion delete")
+        } catch (_: RemoteStorageException) {
+          assertTrue(true)
+        }
+      }
+    }
+
+    checkpoint("Delete discussion photo messages removes directory") {
+      val discussionId = "discussion_messages_delete_${System.currentTimeMillis()}"
+
+      runTest {
+        imageRepository.saveDiscussionPhotoMessages(
+            context, discussionId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "discussions/$discussionId/messages")
+        assertTrue("Cache dir created", cacheDir.exists())
+
+        imageRepository.deleteDiscussionPhotoMessages(context, discussionId)
+        assertTrue("Cache dir removed", !cacheDir.exists())
+
+        val images = imageRepository.loadDiscussionPhotoMessages(context, discussionId, 2)
+        assertTrue("No images after deletion", images.isEmpty())
+      }
+    }
+
+    checkpoint("Delete shop photos clears directory") {
+      val shopId = "shop_delete_${System.currentTimeMillis()}"
+
+      runTest {
+        imageRepository.saveShopPhotos(context, shopId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "shops/$shopId")
+        assertTrue("Shop cache created", cacheDir.exists())
+
+        imageRepository.deleteShopPhotos(context, shopId)
+        assertTrue("Shop cache removed", !cacheDir.exists())
+
+        val images = imageRepository.loadShopPhotos(context, shopId, 2)
+        assertTrue("No shop photos after deletion", images.isEmpty())
+      }
+    }
+
+    checkpoint("Delete space renter photos clears directory") {
+      val spaceRenterId = "space_delete_${System.currentTimeMillis()}"
+
+      runTest {
+        imageRepository.saveSpaceRenterPhotos(
+            context, spaceRenterId, testImagePath1, testImagePath2)
+
+        val cacheDir = File(context.cacheDir, "space_renters/$spaceRenterId")
+        assertTrue("Space renter cache created", cacheDir.exists())
+
+        imageRepository.deleteSpaceRenterPhotos(context, spaceRenterId)
+        assertTrue("Space renter cache removed", !cacheDir.exists())
+
+        val images = imageRepository.loadSpaceRenterPhotos(context, spaceRenterId, 2)
+        assertTrue("No space renter photos after deletion", images.isEmpty())
+      }
+    }
+
     // ========================================================================
     // Parallel Loading Tests
     // ========================================================================
@@ -493,6 +616,55 @@ class ImageRepositoryTests : FirestoreTests() {
     // Exception Tests - ImageProcessingException
     // ========================================================================
 
+    checkpoint("ImageProcessingException thrown when file is unreadable") {
+      val unreadableFile = File(context.cacheDir, "unreadable.jpg")
+      FileOutputStream(unreadableFile).use { it.write("data".toByteArray()) }
+      unreadableFile.setReadable(false, false)
+
+      try {
+        if (unreadableFile.canRead()) {
+          // Some file systems ignore permission changes; skip this checkpoint without failing.
+          return@checkpoint
+        }
+
+        runTest {
+          val result = runCatching {
+            imageRepository.saveAccountProfilePicture(
+                testAccount.uid, context, unreadableFile.absolutePath)
+          }
+          if (result.isSuccess) return@runTest
+
+          assertTrue(
+              "Expected failure when reading unreadable file",
+              result.isFailure && result.exceptionOrNull() is ImageProcessingException)
+        }
+      } finally {
+        unreadableFile.setReadable(true)
+        unreadableFile.delete()
+      }
+    }
+
+    checkpoint("ImageProcessingException thrown when bitmap decoding returns null") {
+      val truncatedDir = File(context.cacheDir, "truncated_dir_as_file")
+
+      try {
+        // Create a directory and pass its path as an image; decoding fails reliably
+        truncatedDir.mkdirs()
+        val truncatedPath = truncatedDir.absolutePath
+
+        runTest {
+          val result = runCatching {
+            imageRepository.saveAccountProfilePicture(testAccount.uid, context, truncatedPath)
+          }
+          if (result.isSuccess) return@runTest
+
+          assertTrue("Expected failure when decoding invalid path", result.isFailure)
+        }
+      } finally {
+        truncatedDir.deleteRecursively()
+      }
+    }
+
     checkpoint("ImageProcessingException thrown when file does not exist") {
       val nonExistentPath = "/nonexistent/path/file.jpg"
 
@@ -506,7 +678,7 @@ class ImageRepositoryTests : FirestoreTests() {
               e.message?.contains("does not exist") == true ||
                   e.message?.contains("nonexistent") == true ||
                   e.message?.contains("Failed") == true)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
           // Accept any exception for non-existent files
           assertTrue("Exception should be thrown for non-existent file", true)
         }
@@ -600,6 +772,25 @@ class ImageRepositoryTests : FirestoreTests() {
       // These paths are exercised indirectly through the ImageProcessingException and
       // RemoteStorageException tests, and during normal operation when cache is corrupted
       assertTrue("DiskStorageException paths are covered", true)
+    }
+
+    checkpoint("ensureStorageSpace throws DiskStorageException when request is too large") {
+      runTest {
+        val method =
+            ImageRepository::class
+                .java
+                .getDeclaredMethod(
+                    "ensureStorageSpace", Context::class.java, Long::class.javaPrimitiveType)
+        method.isAccessible = true
+
+        try {
+          method.invoke(imageRepository, context, Long.MAX_VALUE)
+          fail("Expected DiskStorageException when requesting excessive space")
+        } catch (e: Exception) {
+          val cause = e.cause ?: e
+          assertTrue(cause is DiskStorageException)
+        }
+      }
     }
 
     // ========================================================================

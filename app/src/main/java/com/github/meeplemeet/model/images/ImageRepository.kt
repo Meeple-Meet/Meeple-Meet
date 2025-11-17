@@ -10,11 +10,13 @@ import com.github.meeplemeet.model.DiskStorageException
 import com.github.meeplemeet.model.ImageProcessingException
 import com.github.meeplemeet.model.RemoteStorageException
 import com.google.firebase.storage.StorageException
+import com.google.firebase.storage.StorageReference
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.UUID
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -26,7 +28,7 @@ import kotlinx.coroutines.withContext
  * Repository for managing image storage and retrieval. Handles image encoding to WebP format,
  * caching, and Firebase Storage operations.
  */
-class ImageRepository {
+class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
   private val storage = FirebaseProvider.storage
 
   /**
@@ -92,6 +94,18 @@ class ImageRepository {
   ): String = saveImage(context, inputPath, accountPath(accountId))
 
   /**
+   * Deletes the account profile picture from both cache and Firebase Storage.
+   *
+   * @param accountId The unique identifier for the account
+   * @param context Android context for accessing cache directory
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  suspend fun deleteAccountProfilePicture(accountId: String, context: Context) {
+    deleteImage(context, accountPath(accountId))
+  }
+
+  /**
    * Loads an account profile picture from cache or Firebase Storage.
    *
    * @param accountId The unique identifier for the account
@@ -121,6 +135,18 @@ class ImageRepository {
   ): String = saveImage(context, inputPath, discussionProfilePath(discussionId))
 
   /**
+   * Deletes the discussion profile picture from both cache and Firebase Storage.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  suspend fun deleteDiscussionProfilePicture(context: Context, discussionId: String) {
+    deleteImage(context, discussionProfilePath(discussionId))
+  }
+
+  /**
    * Loads the discussion profile picture from cache or Firebase Storage.
    *
    * @param context Android context for accessing cache directory
@@ -148,6 +174,18 @@ class ImageRepository {
       discussionId: String,
       vararg inputPaths: String
   ): List<String> = saveImages(context, { discussionMessagePath(discussionId) }, *inputPaths)
+
+  /**
+   * Deletes all discussion message photos from cache and Firebase Storage.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  suspend fun deleteDiscussionPhotoMessages(context: Context, discussionId: String) {
+    deleteImages(context, discussionMessagesDir(discussionId))
+  }
 
   /**
    * Loads multiple discussion photos in parallel from cache or Firebase Storage.
@@ -184,6 +222,18 @@ class ImageRepository {
       vararg inputPaths: String
   ): List<String> =
       saveImages(context, { "${shopPath(shopId)}/${UUID.randomUUID()}.webp" }, *inputPaths)
+
+  /**
+   * Deletes all shop photos from cache and Firebase Storage.
+   *
+   * @param context Android context for accessing cache directory
+   * @param shopId The unique identifier for the shop
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  suspend fun deleteShopPhotos(context: Context, shopId: String) {
+    deleteImages(context, shopPath(shopId))
+  }
 
   /**
    * Loads multiple shop photos in parallel from cache or Firebase Storage.
@@ -232,6 +282,18 @@ class ImageRepository {
   }
 
   /**
+   * Deletes all space renter photos from cache and Firebase Storage.
+   *
+   * @param context Android context for accessing cache directory
+   * @param shopId The unique identifier for the space renter
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  suspend fun deleteSpaceRenterPhotos(context: Context, shopId: String) {
+    deleteImages(context, spaceRenterPath(shopId))
+  }
+
+  /**
    * Encodes an image to WebP format and saves it to both local cache and Firebase Storage.
    *
    * @param context Android context for accessing cache directory
@@ -251,7 +313,7 @@ class ImageRepository {
 
     // Save to disk
     try {
-      withContext(Dispatchers.IO) {
+      withContext(dispatcher) {
         val diskPath = "${context.cacheDir}/$storagePath"
         val parentDir = File(diskPath).parentFile
 
@@ -305,7 +367,7 @@ class ImageRepository {
     // Check if image exists in cache
     if (file.exists()) {
       return try {
-        withContext(Dispatchers.IO) { file.readBytes() }
+        withContext(dispatcher) { file.readBytes() }
       } catch (e: IOException) {
         throw DiskStorageException("Failed to read cached image at $path", e)
       } catch (e: SecurityException) {
@@ -315,7 +377,7 @@ class ImageRepository {
 
     // Download from Firebase Storage using streaming for better memory efficiency
     return try {
-      withContext(Dispatchers.IO) {
+      withContext(dispatcher) {
         // Prepare cache directory
         val parentDir = file.parentFile
         if (parentDir != null && !parentDir.exists()) {
@@ -411,7 +473,7 @@ class ImageRepository {
   ): List<ByteArray> = coroutineScope {
     val cachedFiles =
         try {
-          withContext(Dispatchers.IO) {
+          withContext(dispatcher) {
             val dir = File("${context.cacheDir}/$parentPath")
             if (dir.exists()) dir.listFiles()?.sortedBy { it.name } ?: emptyList() else emptyList()
           }
@@ -425,7 +487,7 @@ class ImageRepository {
         cachedFiles.take(count).map { file ->
           async {
             try {
-              withContext(Dispatchers.IO) { file.readBytes() }
+              withContext(dispatcher) { file.readBytes() }
             } catch (e: IOException) {
               throw DiskStorageException("Failed to read cached file ${file.name}", e)
             }
@@ -455,6 +517,81 @@ class ImageRepository {
         }
 
     (cachedBytes + remoteBytes).awaitAll()
+  }
+
+  /**
+   * Deletes a single image from cache and Firebase Storage.
+   *
+   * @param context Android context for accessing cache directory
+   * @param storagePath Storage path (used for both local cache and Firebase Storage)
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  private suspend fun deleteImage(context: Context, storagePath: String) {
+    try {
+      withContext(dispatcher) {
+        val diskPath = "${context.cacheDir}/$storagePath"
+        val file = File(diskPath)
+        if (file.exists() && !file.delete()) {
+          throw DiskStorageException("Failed to delete cached image at $storagePath")
+        }
+      }
+    } catch (e: DiskStorageException) {
+      throw e
+    } catch (e: SecurityException) {
+      throw DiskStorageException("Permission denied deleting $storagePath", e)
+    }
+
+    try {
+      storage.reference.child(storagePath).delete().await()
+    } catch (e: StorageException) {
+      throw RemoteStorageException(
+          "Firebase Storage delete failed for $storagePath: ${e.errorCode}", e)
+    } catch (e: Exception) {
+      throw RemoteStorageException("Failed to delete image at $storagePath", e)
+    }
+  }
+
+  /**
+   * Deletes all images under a parent directory from cache and Firebase Storage.
+   *
+   * @param context Android context for accessing cache directory
+   * @param parentPath Parent directory path in storage
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  private suspend fun deleteImages(context: Context, parentPath: String) {
+    try {
+      withContext(dispatcher) {
+        val dir = File("${context.cacheDir}/$parentPath")
+        if (dir.exists() && !dir.deleteRecursively()) {
+          throw DiskStorageException("Failed to delete cached directory at $parentPath")
+        }
+      }
+    } catch (e: DiskStorageException) {
+      throw e
+    } catch (e: SecurityException) {
+      throw DiskStorageException("Permission denied deleting $parentPath", e)
+    }
+
+    try {
+      deleteRemoteDirectory(storage.reference.child(parentPath))
+    } catch (e: StorageException) {
+      throw RemoteStorageException(
+          "Firebase Storage delete failed for $parentPath: ${e.errorCode}", e)
+    } catch (e: Exception) {
+      throw RemoteStorageException("Failed to delete images at $parentPath", e)
+    }
+  }
+
+  private suspend fun deleteRemoteDirectory(root: StorageReference) {
+    val listResult = root.listAll().await()
+    coroutineScope {
+      val prefixDeletes =
+          listResult.prefixes.map { prefix -> async { deleteRemoteDirectory(prefix) } }
+      val itemDeletes = listResult.items.map { item -> async { item.delete().await() } }
+      (prefixDeletes + itemDeletes).awaitAll()
+    }
   }
 
   /**
