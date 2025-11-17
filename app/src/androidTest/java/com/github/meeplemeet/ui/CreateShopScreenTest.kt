@@ -474,13 +474,7 @@ class CreateShopScreenTest {
     // Fake game repository that returns our test data
     val fakeGameRepo =
         object : com.github.meeplemeet.model.shared.game.GameRepository {
-          override suspend fun getGames(maxResults: Int) = suggestions
-
           override suspend fun getGameById(gameID: String) = suggestions.first { it.uid == gameID }
-
-          override suspend fun getGamesByGenre(genreID: Int, maxResults: Int) = suggestions
-
-          override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int) = suggestions
 
           override suspend fun searchGamesByNameContains(
               query: String,

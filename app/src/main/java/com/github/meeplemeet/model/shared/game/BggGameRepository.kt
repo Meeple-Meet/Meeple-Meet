@@ -29,10 +29,6 @@ class BggGameRepository(
             .build()
   }
 
-  override suspend fun getGames(maxResults: Int): List<Game> {
-    throw NotImplementedError("getGames() is intentionally not implemented and will be removed.")
-  }
-
   override suspend fun getGameById(gameID: String): Game =
       withContext(Dispatchers.IO) {
         val url =
@@ -71,16 +67,6 @@ class BggGameRepository(
           throw GameSearchException("Failed to fetch game by id: ${e.message}")
         }
       }
-
-  override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> {
-    throw NotImplementedError(
-        "getGamesByGenre() is intentionally not implemented and will be removed.")
-  }
-
-  override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int): List<Game> {
-    throw NotImplementedError(
-        "getGamesByGenres() is intentionally not implemented and will be removed.")
-  }
 
   override suspend fun searchGamesByNameContains(
       query: String,

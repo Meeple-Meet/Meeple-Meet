@@ -19,46 +19,11 @@ const val GAMES_COLLECTION_PATH = "games"
 class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : GameRepository {
   private val games = db.collection(GAMES_COLLECTION_PATH)
 
-  /** Retrieves all games (within [maxResults]) from Firestore. */
-  override suspend fun getGames(maxResults: Int): List<Game> {
-    val snapshot = games.limit(maxResults.toLong()).get().await()
-    return mapSnapshotToGames(snapshot.documents)
-  }
-
   /** Retrieves a single game by its Firestore document ID. */
   override suspend fun getGameById(gameID: String): Game {
     val snapshot = games.document(gameID).get().await()
     val game = snapshot.toObject(GameNoUid::class.java)
     return game?.let { fromNoUid(gameID, it) } ?: throw GameNotFoundException()
-  }
-
-  /**
-   * Retrieves all games (within [maxResults]) that include a given genre ID.
-   *
-   * This uses Firestore's `array-contains` query operator.
-   */
-  override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> {
-    val query = games.whereArrayContains("genres", genreID).limit(maxResults.toLong()).get().await()
-    return mapSnapshotToGames(query.documents)
-  }
-
-  /**
-   * Retrieves all games (within [maxResults]) that include **all** of the specified genre IDs.
-   *
-   * Since Firestore doesn't support multiple `array-contains` filters simultaneously, this method
-   * performs the intersection manually on the client side.
-   */
-  override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int): List<Game> {
-    if (genreIDs.isEmpty()) return emptyList()
-
-    // Fetch all games that match at least one of the genres (no multiple array-contains allowed on
-    // Firestore)
-    val firstGenre = genreIDs.first()
-    val initialQuery = games.whereArrayContains("genres", firstGenre).get().await()
-    val initialGames = mapSnapshotToGames(initialQuery.documents)
-
-    // Filter locally to include only games that have all the specified genres
-    return initialGames.filter { game -> genreIDs.all { it in game.genres } }.take(maxResults)
   }
 
   /**

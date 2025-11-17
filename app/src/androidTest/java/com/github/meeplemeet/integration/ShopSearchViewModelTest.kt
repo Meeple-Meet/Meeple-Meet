@@ -37,14 +37,7 @@ class CountingGameRepository : GameRepository {
     return emptyList()
   }
 
-  override suspend fun getGames(maxResults: Int): List<Game> = error("Unused")
-
   override suspend fun getGameById(gameID: String): Game = error("Unused")
-
-  override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> = error("Unused")
-
-  override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int): List<Game> =
-      error("Unused")
 }
 
 class CountingLocationRepository : LocationRepository {

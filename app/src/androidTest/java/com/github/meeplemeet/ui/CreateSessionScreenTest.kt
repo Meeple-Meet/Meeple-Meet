@@ -90,15 +90,9 @@ class CreateSessionScreenTest {
   private class FakeGameRepository : GameRepository {
     var throwOnSearch: Boolean = false
 
-    override suspend fun getGames(maxResults: Int) = emptyList<Game>()
-
     override suspend fun getGameById(gameID: String): Game {
       throw RuntimeException("not used")
     }
-
-    override suspend fun getGamesByGenre(genreID: Int, maxResults: Int) = emptyList<Game>()
-
-    override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int) = emptyList<Game>()
 
     override suspend fun searchGamesByNameContains(
         query: String,
