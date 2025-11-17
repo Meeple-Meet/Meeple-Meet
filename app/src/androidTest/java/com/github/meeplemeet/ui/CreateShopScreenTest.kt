@@ -476,6 +476,8 @@ class CreateShopScreenTest {
         object : com.github.meeplemeet.model.shared.game.GameRepository {
           override suspend fun getGameById(gameID: String) = suggestions.first { it.uid == gameID }
 
+          override suspend fun getGamesById(vararg gameIDs: String): List<Game> = suggestions
+
           override suspend fun searchGamesByNameContains(
               query: String,
               maxResults: Int,

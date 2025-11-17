@@ -47,28 +47,6 @@ class FirestoreGameTests : FirestoreTests() {
   }
 
   @Test
-  fun getGames_returns_up_to_maxResults() = runTest {
-    runBlocking {
-      for (i in 1..5) {
-        addGameDoc("g_extra_$i", "ExtraGame$i", genres = listOf(1))
-      }
-    }
-
-    val results = gameRepository.getGames(maxResults = 3)
-    assertEquals(3, results.size)
-  }
-
-  @Test
-  fun getGames_returns_all_games_without_exception() = runTest {
-    val results = gameRepository.getGames(maxResults = 10)
-
-    assertTrue(results.size >= 3)
-    assertTrue(results.any { it.name == "Catan" })
-    assertTrue(results.any { it.name == "Carcassonne" })
-    assertTrue(results.any { it.name == "Chess" })
-  }
-
-  @Test
   fun getGameById_returns_expected_game() = runTest {
     val game: Game = gameRepository.getGameById("g_catan")
     assertEquals("Catan", game.name)
@@ -79,8 +57,8 @@ class FirestoreGameTests : FirestoreTests() {
   fun getGameById_throws_when_missing() = runTest { gameRepository.getGameById("non-existent-id") }
 
   @Test
-  fun getGamesByGenre_returns_only_games_containing_genre() = runTest {
-    val results = gameRepository.getGamesByGenre(2, maxResults = 10)
+  fun getGamesById_returns_multiple_games() = runTest {
+    val results = gameRepository.getGamesById("g_catan", "g_carcassonne")
     val names = results.map { it.name }
     assertTrue(names.contains("Catan"))
     assertTrue(names.contains("Carcassonne"))
@@ -88,52 +66,15 @@ class FirestoreGameTests : FirestoreTests() {
   }
 
   @Test
-  fun getGamesByGenre_respects_maxResults() = runTest {
-    // insert 5 games that contain genre 99
-    runBlocking {
-      for (i in 1..5) {
-        addGameDoc("g_gen_99_$i", "Genre99Game$i", genres = listOf(99))
-      }
-    }
-
-    val results = gameRepository.getGamesByGenre(99, maxResults = 2)
-    assertEquals(2, results.size)
-    // ensure all results contain the genre
-    assertTrue(results.all { 99 in it.genres })
+  fun getGamesById_returns_empty_list_when_ids_missing() = runTest {
+    val results = gameRepository.getGamesById("nonexistent1", "nonexistent2")
+    assertTrue(results.isEmpty())
   }
 
-  @Test
-  fun getGamesByGenres_returns_only_games_containing_all_genres() = runTest {
-    // add a document that has genres 1 and 2
-    runBlocking {
-      addGameDoc("g_complex", "ComplexGame", genres = listOf(1, 2, 3))
-      addGameDoc("g_partial", "PartialGame", genres = listOf(1, 2))
-      addGameDoc("g_other", "OtherGame", genres = listOf(2, 3))
-    }
-
-    val results = gameRepository.getGamesByGenres(listOf(1, 2), maxResults = 10)
-    val names = results.map { it.name }
-    assertTrue(names.contains("ComplexGame"))
-    assertTrue(names.contains("PartialGame"))
-    assertFalse(names.contains("OtherGame"))
-  }
-
-  @Test
-  fun getGamesByGenres_respects_maxResults_and_intersection() = runTest {
-    // create several games with genres [10,20], some extra ones that don't match fully
-    runBlocking {
-      addGameDoc("g_both_1", "BothOne", genres = listOf(10, 20))
-      addGameDoc("g_both_2", "BothTwo", genres = listOf(10, 20))
-      addGameDoc("g_both_3", "BothThree", genres = listOf(10, 20))
-      addGameDoc("g_partial", "Only10", genres = listOf(10))
-      addGameDoc("g_other", "Only20", genres = listOf(20))
-    }
-
-    val results = gameRepository.getGamesByGenres(listOf(10, 20), maxResults = 2)
-    // limited by maxResults
-    assertEquals(2, results.size)
-    // all returned games must contain both genres
-    assertTrue(results.all { game -> listOf(10, 20).all { it in game.genres } })
+  @Test(expected = IllegalArgumentException::class)
+  fun getGamesById_throws_when_more_than_20_ids() = runTest {
+    val ids = (1..21).map { "id_$it" }.toTypedArray()
+    gameRepository.getGamesById(*ids)
   }
 
   @Test

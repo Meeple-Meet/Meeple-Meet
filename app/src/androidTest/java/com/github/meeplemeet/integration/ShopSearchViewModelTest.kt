@@ -38,6 +38,8 @@ class CountingGameRepository : GameRepository {
   }
 
   override suspend fun getGameById(gameID: String): Game = error("Unused")
+
+  override suspend fun getGamesById(vararg gameIDs: String): List<Game> = error("Unused")
 }
 
 class CountingLocationRepository : LocationRepository {

@@ -94,6 +94,10 @@ class CreateSessionScreenTest {
       throw RuntimeException("not used")
     }
 
+    override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
+      throw RuntimeException("not used")
+    }
+
     override suspend fun searchGamesByNameContains(
         query: String,
         maxResults: Int,

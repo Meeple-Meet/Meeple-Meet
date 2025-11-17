@@ -131,7 +131,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
     vm = ShopViewModel()
 
-    games = runBlocking { gameRepository.getGames(2) }
+    games = runBlocking { gameRepository.getGamesById("g1", "g2") }
     dummyGames = listOf(Pair(games[0], 2), Pair(games[1], 1))
 
     currentUser = runBlocking {
