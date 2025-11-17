@@ -13,13 +13,41 @@ import okhttp3.Request
 import org.jdom2.Document
 import org.jdom2.input.SAXBuilder
 
+/**
+ * Result of fetching games from BoardGameGeek (BGG) API.
+ *
+ * Contains a list of successfully parsed [Game] objects and a list of [GameParseException] for
+ * games that could not be parsed.
+ *
+ * @property games List of successfully parsed games.
+ * @property errors List of parsing errors encountered while fetching games.
+ */
 data class GameFetchResult(val games: List<Game>, val errors: List<GameParseException>)
 
+/**
+ * Repository implementation for fetching BoardGameGeek (BGG) games.
+ *
+ * This repository uses the BGG XML API v2 to fetch game details by ID or to search games by name.
+ * It uses [OkHttpClient] to perform HTTP requests and [JDOM2] to parse XML responses.
+ *
+ * @property client The HTTP client used to make requests. Defaults to [HttpClientProvider.client].
+ * @property baseUrl The base URL for the BGG XML API. Defaults to
+ *   "https://boardgamegeek.com/xmlapi2".
+ * @property authorizationToken Optional bearer token for authorization if needed.
+ */
 class BggGameRepository(
     private val client: OkHttpClient = HttpClientProvider.client,
     private val baseUrl: HttpUrl = DEFAULT_URL,
     private val authorizationToken: String? = null
 ) : GameRepository {
+
+  /**
+   * Constants used for BGG API requests.
+   *
+   * Includes the default base URL and user-agent string required by BGG.
+   *
+   * See: https://boardgamegeek.com/wiki/page/XML_API_Terms_of_Use
+   */
   companion object {
     private const val APP_NAME = "MeepleMeet"
     private const val APP_VERSION = "1.0"
@@ -34,17 +62,45 @@ class BggGameRepository(
             .build()
   }
 
+  /**
+   * Fetch a single game by its BGG ID.
+   *
+   * @param gameID The BGG game ID.
+   * @return The [Game] corresponding to the given ID.
+   * @throws GameSearchException If the game cannot be fetched or parsed.
+   */
   override suspend fun getGameById(gameID: String): Game {
     val result = getGamesByIdWithErrors(gameID)
     return result.games.first()
   }
 
+  /**
+   * Fetch multiple games by their BGG IDs.
+   *
+   * **Deprecated:** Use [getGamesByIdWithErrors] to get partial results and parse errors.
+   *
+   * @param gameIDs One or more BGG game IDs.
+   * @return A list of successfully parsed [Game] objects.
+   * @throws GameSearchException If all requested games fail to fetch or parse.
+   */
   @Deprecated("Use getGamesByIdWithErrors() for partial results and parse errors")
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
     val result = getGamesByIdWithErrors(*gameIDs)
     return result.games
   }
 
+  /**
+   * Fetch multiple games by their BGG IDs, returning both successfully parsed games and any parsing
+   * errors.
+   *
+   * Unlike [getGamesById], this method does not discard parsing errors. The caller can inspect
+   * which games were successfully parsed and which failed.
+   *
+   * @param gameIDs One or more BGG game IDs (maximum 20 per request).
+   * @return A [GameFetchResult] containing successfully parsed games and a list of
+   *   [GameParseException] for failed items.
+   * @throws GameSearchException If all games fail to fetch or parse.
+   */
   suspend fun getGamesByIdWithErrors(vararg gameIDs: String): GameFetchResult =
       withContext(Dispatchers.IO) {
         if (gameIDs.isEmpty()) return@withContext GameFetchResult(emptyList(), emptyList())
@@ -105,6 +161,15 @@ class BggGameRepository(
         }
       }
 
+  /**
+   * Search for board games whose name contains the given query string.
+   *
+   * @param query The string to search for in game names.
+   * @param maxResults Maximum number of results to return.
+   * @param ignoreCase Whether the search should ignore case.
+   * @return A list of [Game] objects matching the search.
+   * @throws GameSearchException If the search request fails.
+   */
   override suspend fun searchGamesByNameContains(
       query: String,
       maxResults: Int,
@@ -153,6 +218,14 @@ class BggGameRepository(
   // ----------------------------
   // XML parsing helpers
   // ----------------------------
+
+  /**
+   * Parse a BGG XML "thing" response and extract games, collecting any parse errors.
+   *
+   * @param doc The XML [Document] returned by the BGG API.
+   * @return A pair containing a list of successfully parsed [Game] objects and a list of
+   *   [GameParseException].
+   */
   private fun parseThings(doc: Document): Pair<List<Game>, List<GameParseException>> {
     val root = doc.rootElement
     val items = root.getChildren("item")
@@ -240,6 +313,14 @@ class BggGameRepository(
     return games to errors
   }
 
+  /**
+   * Throws a [GameParseException] if the receiver is null.
+   *
+   * @param field The field that was expected in the XML.
+   * @param id The BGG ID of the game being parsed.
+   * @return The non-null value of the receiver.
+   * @throws GameParseException if the receiver is null.
+   */
   private fun <T> T?.orThrow(field: String, id: String?): T =
       this
           ?: throw GameParseException(
@@ -247,6 +328,13 @@ class BggGameRepository(
               field = field,
               message = "Missing required field '$field' for item id '$id'")
 
+  /**
+   * Parse search results XML from BGG API.
+   *
+   * @param doc The XML [Document] returned by the search API.
+   * @return A list of [Game] objects from the search results.
+   * @throws NotImplementedError Currently not implemented.
+   */
   private fun parseSearchResults(doc: Document): List<Game> {
     throw NotImplementedError("parseSearchResult() is not implemented yet")
   }

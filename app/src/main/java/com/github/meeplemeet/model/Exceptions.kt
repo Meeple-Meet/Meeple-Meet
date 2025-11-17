@@ -42,9 +42,26 @@ class GameNotFoundException(message: String = DEFAULT_MESSAGE) : Exception(messa
   }
 }
 
+/**
+ * Exception thrown when a Nominatim API search fails.
+ *
+ * @param message A human-readable message describing the failure.
+ */
 class LocationSearchException(message: String) : Exception(message)
 
+/**
+ * Exception thrown when a BGG API request or search fails.
+ *
+ * @param message A human-readable message describing the failure.
+ */
 class GameSearchException(message: String) : Exception(message)
 
+/**
+ * Exception thrown when a required field cannot be parsed from a BGG XML response.
+ *
+ * @param itemId The BGG item ID that failed to parse (may be null if unknown).
+ * @param field The name of the field that failed to parse.
+ * @param message A human-readable message describing the parsing error.
+ */
 class GameParseException(val itemId: String?, val field: String, message: String) :
     Exception(message)
