@@ -1,4 +1,4 @@
-/** Documentation was written with the help of ChatGPT */
+// Documentation was written with the help of ChatGPT
 package com.github.meeplemeet.ui.discussions
 
 import android.Manifest
@@ -92,21 +92,43 @@ object DiscussionTestTags {
   fun discussionInfo(name: String) = "DiscussionInfo/$name"
 }
 
-/** Constants for the Discussion screen. */
-private object DiscussionConstants {
-  const val TIME_FORMAT = "HH:mm"
-  const val YOU_SENDER_NAME = "You"
-}
-
 /**
- * Root screen for a single discussion.
+ * Root screen for a single discussion with messaging, photos, and polls.
  *
- * @param account Current logged-in user.
- * @param discussion Discussion to display.
- * @param viewModel discussion source of truth.
- * @param onBack Navigation – upward finish.
- * @param onOpenDiscussionInfo Opens details bottom-sheet.
- * @param onCreateSessionClick Opens / creates a game session when the user is admin or participant.
+ * Displays a full-featured discussion interface with:
+ * - **Message list**: Scrollable LazyColumn showing all messages (text, photo, poll)
+ * - **Text input**: Bottom text field with send button
+ * - **Photo attachments**: Camera and gallery integration via attachment menu (NEW)
+ * - **Polls**: Create and vote on polls inline
+ * - **Real-time updates**: Messages update automatically via StateFlow
+ * - **Unread tracking**: Automatically marks messages as read when viewing
+ *
+ * ## Photo Features (NEW)
+ * - Attachment button in bottom bar opens popup menu
+ * - Camera option: Captures photo with device camera (requires CAMERA permission)
+ * - Gallery option: Picks existing photo from device storage
+ * - Photos are cached, uploaded to Firebase Storage, and sent as messages
+ * - Photo messages display with inline image preview and fullscreen viewer on click
+ * - Optional text caption can accompany photo
+ *
+ * ## Message Types
+ * 1. **Text**: Standard chat bubbles with timestamp
+ * 2. **Photo**: Image preview + optional caption with fullscreen zoom on tap (NEW)
+ * 3. **Poll**: Interactive voting UI with progress bars and vote counts
+ *
+ * ## Permissions
+ * - **CAMERA**: Required for camera capture (requested at runtime)
+ * - **Storage**: Gallery access uses scoped storage (no permission needed on Android 10+)
+ *
+ * @param account Current logged-in user account.
+ * @param discussion The discussion to display and interact with.
+ * @param viewModel ViewModel managing discussion state and operations (provides messagesFlow).
+ * @param onBack Navigation callback to exit the screen.
+ * @param onOpenDiscussionInfo Callback to open discussion details/info bottom sheet.
+ * @param onCreateSessionClick Callback to create/join gaming session for this discussion.
+ * @see DiscussionViewModel.sendMessageWithPhoto for photo upload logic
+ * @see DiscussionViewModel.messagesFlow for real-time message updates
+ * @see ImageFileUtils for photo caching utilities
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -210,19 +232,10 @@ fun DiscussionScreen(
                             Modifier.fillMaxSize()
                                 .testTag(DiscussionTestTags.discussionInfo(discussion.name))
                                 .clickable { onOpenDiscussionInfo(discussion) }) {
-                          Box(
-                              modifier =
-                                  Modifier.size(Dimensions.ButtonSize.medium)
-                                      .clip(CircleShape)
-                                      .background(AppColors.neutral, CircleShape)) {
-                                if (discussion.profilePictureUrl != null) {
-                                  AsyncImage(
-                                      model = discussion.profilePictureUrl,
-                                      contentDescription = "Discussion Profile Picture",
-                                      modifier = Modifier.fillMaxSize(),
-                                      contentScale = ContentScale.Crop)
-                                }
-                              }
+                          ProfilePicture(
+                              profilePictureUrl = discussion.profilePictureUrl,
+                              size = Dimensions.ButtonSize.medium,
+                              backgroundColor = AppColors.neutral)
                           Spacer(Modifier.width(Dimensions.Spacing.large))
                           Text(
                               text = discussionName,
@@ -268,7 +281,7 @@ fun DiscussionScreen(
                   val isMine = message.senderId == account.uid
                   val sender =
                       if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
-                      else DiscussionConstants.YOU_SENDER_NAME
+                      else DiscussionCommons.YOU_SENDER_NAME
 
                   val showDateHeader =
                       shouldShowDateHeader(
@@ -550,7 +563,7 @@ fun PollBubble(
     onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit,
     showProfilePicture: Boolean = true
 ) {
-  val isMine = authorName == DiscussionConstants.YOU_SENDER_NAME
+  val isMine = authorName == DiscussionCommons.YOU_SENDER_NAME
   val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
   val counts = poll.getVoteCountsByOption()
   val total = poll.getTotalVotes()
@@ -562,11 +575,10 @@ fun PollBubble(
         // Profile picture for received messages (on the left)
         if (!isMine) {
           if (showProfilePicture) {
-            Box(
-                modifier =
-                    Modifier.size(Dimensions.AvatarSize.small)
-                        .clip(CircleShape)
-                        .background(AppColors.neutral, CircleShape))
+            ProfilePicture(
+                profilePictureUrl = null,
+                size = Dimensions.AvatarSize.small,
+                backgroundColor = AppColors.neutral)
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
           }
@@ -742,8 +754,7 @@ fun PollBubble(
                   Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     Text(
                         text =
-                            DateFormat.format(DiscussionConstants.TIME_FORMAT, createdAt)
-                                .toString(),
+                            DateFormat.format(DiscussionCommons.TIME_FORMAT, createdAt).toString(),
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = Dimensions.TextSize.tiny,
                         color = MessagingColors.metadataText)
@@ -756,11 +767,10 @@ fun PollBubble(
         if (isMine) {
           Spacer(Modifier.width(Dimensions.Spacing.small))
           if (showProfilePicture) {
-            Box(
-                modifier =
-                    Modifier.size(Dimensions.AvatarSize.small)
-                        .clip(CircleShape)
-                        .background(AppColors.focus, CircleShape))
+            ProfilePicture(
+                profilePictureUrl = null,
+                size = Dimensions.AvatarSize.small,
+                backgroundColor = AppColors.focus)
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
           }
@@ -786,11 +796,10 @@ private fun PhotoBubble(
       verticalAlignment = Alignment.Bottom) {
         if (!isMine) {
           if (showProfilePicture) {
-            Box(
-                modifier =
-                    Modifier.size(Dimensions.AvatarSize.small)
-                        .clip(CircleShape)
-                        .background(AppColors.neutral, CircleShape))
+            ProfilePicture(
+                profilePictureUrl = null,
+                size = Dimensions.AvatarSize.small,
+                backgroundColor = AppColors.neutral)
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
           }
@@ -854,7 +863,7 @@ private fun PhotoBubble(
                   Text(
                       text =
                           DateFormat.format(
-                                  DiscussionConstants.TIME_FORMAT, message.createdAt.toDate())
+                                  DiscussionCommons.TIME_FORMAT, message.createdAt.toDate())
                               .toString(),
                       style = MaterialTheme.typography.labelSmall,
                       fontSize = Dimensions.TextSize.tiny,
@@ -866,11 +875,10 @@ private fun PhotoBubble(
         if (isMine) {
           Spacer(Modifier.width(Dimensions.Spacing.small))
           if (showProfilePicture) {
-            Box(
-                modifier =
-                    Modifier.size(Dimensions.AvatarSize.small)
-                        .clip(CircleShape)
-                        .background(AppColors.focus, CircleShape))
+            ProfilePicture(
+                profilePictureUrl = null,
+                size = Dimensions.AvatarSize.small,
+                backgroundColor = AppColors.focus)
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
           }
@@ -918,7 +926,7 @@ fun FullscreenImageDialog(
   val currentSenderName =
       remember(currentPhotoMessage, userCache) {
         currentPhotoMessage?.let { msg ->
-          if (msg.senderId == currentUserId) DiscussionConstants.YOU_SENDER_NAME
+          if (msg.senderId == currentUserId) DiscussionCommons.YOU_SENDER_NAME
           else userCache[msg.senderId]?.name ?: "Unknown"
         } ?: senderName
       }
@@ -1046,11 +1054,10 @@ private fun ChatBubble(
         // Profile picture for received messages (on the left)
         if (!isMine) {
           if (showProfilePicture) {
-            Box(
-                modifier =
-                    Modifier.size(Dimensions.AvatarSize.small)
-                        .clip(CircleShape)
-                        .background(AppColors.neutral, CircleShape))
+            ProfilePicture(
+                profilePictureUrl = null,
+                size = Dimensions.AvatarSize.small,
+                backgroundColor = AppColors.neutral)
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
           }
@@ -1105,7 +1112,7 @@ private fun ChatBubble(
                       Text(
                           text =
                               DateFormat.format(
-                                      DiscussionConstants.TIME_FORMAT, message.createdAt.toDate())
+                                      DiscussionCommons.TIME_FORMAT, message.createdAt.toDate())
                                   .toString(),
                           style = MaterialTheme.typography.labelSmall,
                           fontSize = Dimensions.TextSize.tiny,
@@ -1118,11 +1125,10 @@ private fun ChatBubble(
         if (isMine) {
           Spacer(Modifier.width(Dimensions.Spacing.small))
           if (showProfilePicture) {
-            Box(
-                modifier =
-                    Modifier.size(Dimensions.AvatarSize.small)
-                        .clip(CircleShape)
-                        .background(AppColors.focus, CircleShape))
+            ProfilePicture(
+                profilePictureUrl = null,
+                size = Dimensions.AvatarSize.small,
+                backgroundColor = AppColors.focus)
           } else {
             Spacer(Modifier.width(Dimensions.AvatarSize.small))
           }
@@ -1323,31 +1329,4 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
       },
       shape = RoundedCornerShape(Dimensions.CornerRadius.large),
       modifier = Modifier.testTag(DiscussionTestTags.DIALOG_ROOT))
-}
-
-/** Formats a date as “Today”, “Yesterday” or “MMM dd, yyyy”. */
-fun formatDateBubble(date: Date): String {
-  val today = Calendar.getInstance()
-  val cal = Calendar.getInstance().apply { time = date }
-
-  return when {
-    isSameDay(cal, today) -> "Today"
-    isSameDay(cal, Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }) -> "Yesterday"
-    else -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(date)
-  }
-}
-
-/** Returns true if [current] and [previous] are on different calendar days. */
-fun shouldShowDateHeader(current: Date, previous: Date?): Boolean {
-  if (previous == null) return true
-  val calCurrent = Calendar.getInstance().apply { time = current }
-  val calPrev = Calendar.getInstance().apply { time = previous }
-  return !(calCurrent.get(Calendar.YEAR) == calPrev.get(Calendar.YEAR) &&
-      calCurrent.get(Calendar.DAY_OF_YEAR) == calPrev.get(Calendar.DAY_OF_YEAR))
-}
-
-/** Returns true if two [Calendar] instances represent the same day. */
-fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
-  return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-      cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }

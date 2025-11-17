@@ -26,8 +26,39 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 /**
- * Repository for managing image storage and retrieval. Handles image encoding to WebP format,
- * caching, and Firebase Storage operations.
+ * Repository for managing image storage and retrieval across the application.
+ *
+ * Handles all image operations including encoding to WebP format, local caching, and Firebase
+ * Storage uploads/downloads. Supports images for:
+ * - Account profile pictures
+ * - Discussion profile pictures (NEW)
+ * - Discussion message photo attachments (NEW)
+ * - Shop photos
+ * - Space renter photos
+ *
+ * ## Image Processing
+ * - All images are automatically converted to WebP format for optimal compression
+ * - Default settings: 800px max dimension, 40% quality (configurable per-image)
+ * - Images are downscaled if they exceed the maximum dimension
+ *
+ * ## Caching Strategy
+ * - Two-tier caching: local disk cache (app cache dir) + Firebase Storage
+ * - Local cache is checked first; on miss, downloads from Firebase Storage
+ * - Downloaded images are automatically cached locally for future use
+ * - StorageManager API used on Android O+ to intelligently manage cache space
+ *
+ * ## Storage Paths
+ * - Account profiles: `accounts/{accountId}/profile.webp`
+ * - Discussion profiles: `discussions/{discussionId}/profile.webp`
+ * - Discussion messages: `discussions/{discussionId}/messages/{UUID}.webp`
+ * - Shop photos: `shops/{shopId}/{UUID}.webp`
+ * - Space renter photos: `spaceRenters/{spaceRenterId}/{UUID}.webp`
+ *
+ * ## Thread Safety
+ * All operations use coroutines with configurable dispatcher (defaults to Dispatchers.IO). Multiple
+ * image operations (save/load/delete) are performed in parallel when possible.
+ *
+ * @property dispatcher Coroutine dispatcher for I/O operations (defaults to Dispatchers.IO)
  */
 class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
   private val storage = FirebaseProvider.storage
@@ -134,14 +165,24 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   }
 
   /**
-   * Saves multiple discussion photos in parallel to Firebase Storage and local cache.
+   * Saves a discussion profile picture to Firebase Storage and local cache.
+   *
+   * Discussion profile pictures are stored at `discussions/{discussionId}/profile.webp` in Firebase
+   * Storage. This operation requires admin privileges in the discussion (enforced by caller).
+   *
+   * ## Usage
+   * Typically called by [DiscussionDetailsViewModel.setDiscussionProfilePicture], which handles
+   * permission checks and updates the discussion document.
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
-   * @return List of public download URLs in the same order as inputPaths
+   * @param inputPath Absolute path to the source image file (from gallery or camera)
+   * @return The public HTTPS download URL of the saved profile picture
    * @throws ImageProcessingException if image encoding fails
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
+   * @see DiscussionDetailsViewModel.setDiscussionProfilePicture for high-level API
+   * @see loadDiscussionProfilePicture to retrieve the profile picture
    */
   suspend fun saveDiscussionProfilePicture(
       context: Context,
@@ -152,11 +193,16 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   /**
    * Loads the discussion profile picture from cache or Firebase Storage.
    *
+   * Checks local cache first; on cache miss, downloads from Firebase Storage and caches locally.
+   * The image is returned as a byte array in WebP format.
+   *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
-   * @return The image as a byte array
+   * @return The image as a byte array in WebP format
    * @throws DiskStorageException if disk read fails
-   * @throws RemoteStorageException if Firebase Storage download fails
+   * @throws RemoteStorageException if Firebase Storage download fails or profile picture doesn't
+   *   exist
+   * @see saveDiscussionProfilePicture to upload a profile picture
    */
   suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray =
       loadImage(context, discussionProfilePath(discussionId))
@@ -164,13 +210,31 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   /**
    * Saves discussion message photos to Firebase Storage under unique names and returns their URLs.
    *
+   * Each photo is uploaded to `discussions/{discussionId}/messages/{UUID}.webp` with a randomly
+   * generated UUID to prevent collisions. Multiple photos are processed in parallel for optimal
+   * performance.
+   *
+   * ## Usage Flow
+   * 1. User selects photo from gallery or captures with camera
+   * 2. [ImageFileUtils] caches the image to app cache directory
+   * 3. This method uploads the cached file to Firebase Storage
+   * 4. Returns download URLs to be stored in Message.photoUrl field
+   * 5. [DiscussionRepository.sendPhotoMessageToDiscussion] creates the message with photoUrl
+   *
+   * ## Storage Organization
+   * Photos are organized under the discussion's messages directory, separate from the discussion
+   * profile picture. Each photo gets a unique filename to support multiple message attachments.
+   *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
-   * @param inputPaths Variable number of absolute paths to source image files
-   * @return List of public download URLs in the same order as inputPaths
-   * @throws ImageProcessingException if image encoding fails
+   * @param inputPaths Variable number of absolute paths to source image files (from cache)
+   * @return List of public HTTPS download URLs in the same order as inputPaths
+   * @throws ImageProcessingException if image encoding fails for any photo
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
+   * @see DiscussionViewModel.sendMessageWithPhoto for high-level API
+   * @see deleteDiscussionPhotoMessages to delete message photos
+   * @see ImageFileUtils.cacheUriToFile for caching gallery selections
    */
   suspend fun saveDiscussionPhotoMessages(
       context: Context,
@@ -179,12 +243,29 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   ): List<String> = saveImages(context, { discussionMessagePath(discussionId) }, *inputPaths)
 
   /**
-   * Deletes all discussion message photos from cache and Firebase Storage.
+   * Deletes discussion message photos from cache and Firebase Storage.
+   *
+   * Can delete specific photos by providing storage paths, or delete all message photos for a
+   * discussion if no paths are specified. Paths can be either storage paths or full download URLs
+   * (automatically normalized).
+   *
+   * ## Deletion Modes
+   * - **Specific photos**: Pass one or more storagePaths to delete individual message photos
+   * - **All photos**: Pass no storagePaths (empty vararg) to delete entire messages directory
+   *
+   * ## Path Normalization
+   * Accepts both formats:
+   * - Storage path: `discussions/{discussionId}/messages/{UUID}.webp`
+   * - Download URL:
+   *   `https://firebasestorage.googleapis.com/.../o/discussions%2F{id}%2Fmessages%2F{UUID}.webp?...`
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
+   * @param storagePaths Variable number of storage paths or download URLs to delete. If empty,
+   *   deletes all message photos for the discussion.
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
+   * @see saveDiscussionPhotoMessages to upload message photos
    */
   suspend fun deleteDiscussionPhotoMessages(
       context: Context,
@@ -201,14 +282,24 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   }
 
   /**
-   * Loads multiple discussion photos in parallel from cache or Firebase Storage.
+   * Loads multiple discussion message photos in parallel from cache or Firebase Storage.
+   *
+   * Efficiently loads multiple photos concurrently. Checks local cache first for each photo; on
+   * cache misses, downloads from Firebase Storage and caches locally. Photos are returned in sorted
+   * order by filename.
+   *
+   * ## Note on Naming
+   * This method assumes numbered filenames (0.webp, 1.webp, etc.), but discussion message photos
+   * use UUID-based naming. This method may not work as expected for discussion message photos in
+   * production. Consider loading photos by URL from Message.photoUrl field instead.
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
-   * @param count Number of images to load (loads 0.webp, 1.webp, ..., (count-1).webp)
-   * @return List of images as byte arrays in index order
+   * @param count Number of images to load from the messages directory
+   * @return List of images as byte arrays in filename sort order (0.webp, 1.webp, ...)
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
+   * @see saveDiscussionPhotoMessages which uses UUID-based naming
    */
   suspend fun loadDiscussionPhotoMessages(
       context: Context,

@@ -38,13 +38,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -66,9 +64,7 @@ import kotlinx.coroutines.delay
 /* ================================================================
  * Variables
  * ================================================================ */
-const val MY_MSG_USERNAME = "You"
 const val DEFAULT_DISCUSSION_NAME = "Discussion"
-const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
 const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 
 private const val MAXLINE = 1
@@ -152,7 +148,8 @@ fun DiscussionsOverviewScreen(
                   val isMe = (senderId == account.uid)
                   val senderName by
                       produceState(
-                          key1 = senderId, initialValue = if (isMe) MY_MSG_USERNAME else null) {
+                          key1 = senderId,
+                          initialValue = if (isMe) DiscussionCommons.YOU_SENDER_NAME else null) {
                             if (senderId.isNotBlank() && !isMe) {
                               viewModel.getOtherAccount(senderId) { acc -> value = acc.name }
                             }
@@ -160,9 +157,9 @@ fun DiscussionsOverviewScreen(
 
                   val msgText = buildString {
                     if (preview.lastMessage.isBlank()) {
-                      append(NO_MESSAGES_DEFAULT_TEXT)
+                      append(DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT)
                     } else {
-                      if (isMe) append("$MY_MSG_USERNAME: ")
+                      if (isMe) append("${DiscussionCommons.YOU_SENDER_NAME}: ")
                       else if (!senderName.isNullOrBlank()) append("$senderName: ")
                       append(preview.lastMessage)
                     }
@@ -248,19 +245,10 @@ private fun DiscussionCard(
                     vertical = Dimensions.Spacing.large),
         verticalAlignment = Alignment.CenterVertically) {
           // Profile picture
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.extraLarge)
-                      .clip(CircleShape)
-                      .background(AppColors.neutral, CircleShape)) {
-                if (profilePictureUrl != null) {
-                  AsyncImage(
-                      model = profilePictureUrl,
-                      contentDescription = "Discussion Profile Picture",
-                      modifier = Modifier.fillMaxSize(),
-                      contentScale = ContentScale.Crop)
-                }
-              }
+          ProfilePicture(
+              profilePictureUrl = profilePictureUrl,
+              size = Dimensions.AvatarSize.extraLarge,
+              backgroundColor = AppColors.neutral)
 
           Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 

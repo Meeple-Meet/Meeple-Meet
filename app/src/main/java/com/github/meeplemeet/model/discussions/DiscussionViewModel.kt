@@ -17,10 +17,35 @@ import kotlinx.coroutines.launch
 const val SUGGESTIONS_LIMIT = 30
 
 /**
- * ViewModel exposing Firestore operations and real-time listeners as flows.
+ * ViewModel for managing discussion messaging and real-time updates.
  *
- * All one-shot database operations (CRUD) are suspending functions. Real-time updates from snapshot
- * listeners are exposed as [StateFlow] streams.
+ * Provides high-level APIs for messaging operations (text, photos, polls) and exposes real-time
+ * discussion and message data as StateFlows for UI consumption. All database operations are
+ * executed in the viewModelScope.
+ *
+ * ## Features
+ * - **Text messaging**: Send and read text messages
+ * - **Photo messaging**: Upload photos and send as message attachments (NEW)
+ * - **Poll management**: Create polls, vote, remove votes
+ * - **Real-time data**: StateFlow-based reactive streams for discussions and messages
+ * - **Unread tracking**: Automatic unread count management
+ *
+ * ## Photo Messaging Flow
+ * 1. User selects/captures photo → cached via [ImageFileUtils]
+ * 2. [sendMessageWithPhoto] uploads to Firebase Storage via [ImageRepository]
+ * 3. Creates message with photoUrl via [DiscussionRepository]
+ * 4. All participants' previews are updated with "📷 Photo" text
+ *
+ * ## StateFlow Management
+ * - Flows are cached per discussion ID to avoid duplicate listeners
+ * - Flows use WhileSubscribed sharing policy (stop when no collectors)
+ * - Initial values: null for discussions, empty list for messages
+ *
+ * @property discussionRepository Repository for discussion operations
+ * @property imageRepository Repository for photo upload/download operations
+ * @see DiscussionRepository for low-level database operations
+ * @see ImageRepository for photo storage operations
+ * @see DiscussionDetailsViewModel for discussion metadata management
  */
 class DiscussionViewModel(
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
@@ -40,13 +65,39 @@ class DiscussionViewModel(
   }
 
   /**
-   * Upload a local image and send it as a photo message.
+   * Upload a photo and send it as a message attachment to the discussion.
+   *
+   * This method coordinates the entire photo messaging flow:
+   * 1. Validates the local photo path
+   * 2. Marks discussion as read for the sender
+   * 3. Uploads photo to Firebase Storage (WebP format, 800px max, 40% quality)
+   * 4. Creates message with photoUrl and optional caption
+   * 5. Updates all participants' previews with "📷 Photo" text
+   *
+   * The operation is executed asynchronously in viewModelScope. Failures during upload or message
+   * creation will throw exceptions that should be caught by the caller.
+   *
+   * ## Typical Usage Flow
+   *
+   * ```kotlin
+   * // After user selects photo
+   * val cachedPath = ImageFileUtils.cacheUriToFile(context, photoUri)
+   * viewModel.sendMessageWithPhoto(discussion, account, "Check this out!", context, cachedPath)
+   * // Clean up cache after
+   * File(cachedPath).delete()
+   * ```
    *
    * @param discussion The discussion to send the message to.
    * @param sender The account sending the message.
-   * @param content Optional text to accompany the photo.
-   * @param context Android context for storage/cache access.
-   * @param localPath Absolute path to the local image file.
+   * @param content Optional caption/description for the photo. Can be empty string.
+   * @param context Android context for accessing storage and cache.
+   * @param localPath Absolute file path to the local image (typically in app cache directory).
+   * @throws IllegalArgumentException if localPath is blank
+   * @throws IllegalStateException if photo upload fails to return a download URL
+   * @see ImageFileUtils.cacheUriToFile for preparing gallery photos
+   * @see ImageFileUtils.saveBitmapToCache for preparing camera photos
+   * @see ImageRepository.saveDiscussionPhotoMessages for photo upload
+   * @see DiscussionRepository.sendPhotoMessageToDiscussion for message creation
    */
   fun sendMessageWithPhoto(
       discussion: Discussion,
@@ -151,7 +202,7 @@ class DiscussionViewModel(
       optionIndex: Int
   ) = viewModelScope.launch { removeVoteFromPoll(discussionId, messageId, voter, optionIndex) }
 
-  /** Holds a [StateFlow] of discussion documents keyed by discussion ID. */
+  // Holds a [StateFlow] of discussion documents keyed by discussion ID.
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
 
   /**
@@ -172,13 +223,37 @@ class DiscussionViewModel(
     }
   }
 
-  /** Holds a [StateFlow] of messages keyed by discussion ID. */
+  // Holds a [StateFlow] of messages keyed by discussion ID.
   private val messagesFlows = mutableMapOf<String, StateFlow<List<Message>>>()
 
   /**
    * Real-time flow of messages in a discussion.
    *
-   * Emits a new list of messages on every snapshot change.
+   * Returns a StateFlow that emits the complete list of messages whenever the messages
+   * subcollection changes. Messages are ordered by creation time (oldest first). The flow is shared
+   * across all collectors for the same discussion ID.
+   *
+   * ## Flow Characteristics
+   * - **Sharing**: WhileSubscribed with 0ms timeout (stops when no collectors)
+   * - **Initial value**: Empty list
+   * - **Updates**: Full message list on any change (add, update, delete)
+   * - **Caching**: One flow instance per discussion ID
+   *
+   * ## Usage in Composables
+   *
+   * ```kotlin
+   * val messages by viewModel.messagesFlow(discussionId).collectAsState()
+   * LazyColumn {
+   *   items(messages) { message ->
+   *     MessageBubble(message)
+   *   }
+   * }
+   * ```
+   *
+   * @param discussionId The discussion UID to listen to. Returns empty flow if blank.
+   * @return StateFlow emitting lists of messages ordered by createdAt.
+   * @see discussionFlow for discussion metadata updates
+   * @see DiscussionRepository.listenMessages for underlying listener
    */
   fun messagesFlow(discussionId: String): StateFlow<List<Message>> {
     if (discussionId.isBlank()) return MutableStateFlow(emptyList())

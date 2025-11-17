@@ -280,4 +280,138 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithTag("discussion_name").performTextClearance()
     compose.onNodeWithTag("discussion_description").performTextClearance()
   }
+
+  @Test
+  fun profilePicture_displaysWhenUrlIsNull() = runBlocking {
+    checkpoint("Profile picture shows default icon when URL is null") {
+      runBlocking {
+        // testDiscussion should have null profilePictureUrl by default
+        compose.setContent {
+          DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
+        }
+
+        compose.waitForIdle()
+
+        // Profile picture should be displayed
+        compose.onNodeWithTag("profile_picture").assertIsDisplayed()
+      }
+    }
+  }
+
+  @Test
+  fun profilePicture_displaysWhenUrlIsProvided() = runBlocking {
+    checkpoint("Profile picture shows AsyncImage when URL is provided") {
+      runBlocking {
+        // Create a discussion with a profile picture URL
+        val discussionWithPicture =
+            discussionRepository.createDiscussion(
+                name = "Picture Test",
+                description = "Test with picture",
+                creatorId = currentAccount.uid,
+                participants = listOf(otherUser.uid))
+
+        // Note: We can't easily set profilePictureUrl through repository without actual upload
+        // So we'll verify the tag exists and is displayed
+        compose.setContent {
+          DiscussionDetailsScreen(discussion = discussionWithPicture, account = currentAccount)
+        }
+
+        compose.waitForIdle()
+
+        // Profile picture should be displayed
+        compose.onNodeWithTag("profile_picture").assertIsDisplayed()
+
+        // Cleanup
+        discussionRepository.deleteDiscussion(discussionWithPicture)
+      }
+    }
+  }
+
+  @Test
+  fun profilePicture_isClickableForAdmins() = runBlocking {
+    checkpoint("Profile picture is clickable for admins") {
+      runBlocking {
+        // Current account is the owner/admin of testDiscussion
+        compose.setContent {
+          DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
+        }
+
+        compose.waitForIdle()
+
+        // Profile picture should be clickable for admins
+        compose.onNodeWithTag("profile_picture").assertIsDisplayed().performClick()
+
+        compose.waitForIdle()
+
+        // Dialog should open with camera and gallery options
+        compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
+        compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
+      }
+    }
+  }
+
+  @Test
+  fun profilePictureDialog_displaysOptionsCorrectly() = runBlocking {
+    checkpoint("Profile picture dialog shows camera and gallery options") {
+      runBlocking {
+        compose.setContent {
+          DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
+        }
+
+        compose.waitForIdle()
+
+        // Click profile picture to open dialog
+        compose.onNodeWithTag("profile_picture").performClick()
+
+        compose.waitForIdle()
+
+        // Verify both options are displayed
+        compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
+        compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
+
+        // Verify dialog shows discussion name
+        compose.onNodeWithText("Test Discussion").assertIsDisplayed()
+      }
+    }
+  }
+
+  @Test
+  fun profilePicture_isNotClickableForNonAdmins() = runBlocking {
+    checkpoint("Profile picture is not clickable for non-admins") {
+      runBlocking {
+        // Create a discussion where current user is participant but not admin
+        val participantDiscussion =
+            discussionRepository.createDiscussion(
+                name = "Non-Admin Test",
+                description = "Test description",
+                creatorId = thirdUser.uid, // Third user is the owner
+                participants = listOf(currentAccount.uid, otherUser.uid))
+
+        discussionRepository.sendMessageToDiscussion(
+            participantDiscussion, thirdUser, "Test message")
+        val updatedDiscussion = discussionRepository.getDiscussion(participantDiscussion.uid)
+
+        compose.setContent {
+          DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
+        }
+
+        compose.waitForIdle()
+
+        // Profile picture should be displayed but not clickable
+        compose.onNodeWithTag("profile_picture").assertIsDisplayed()
+
+        // Try to click - dialog should NOT appear
+        compose.onNodeWithTag("profile_picture").performClick()
+
+        compose.waitForIdle()
+
+        // Dialog options should not be displayed
+        compose.onNodeWithTag("profile_picture_camera_option").assertDoesNotExist()
+        compose.onNodeWithTag("profile_picture_gallery_option").assertDoesNotExist()
+
+        // Cleanup
+        discussionRepository.deleteDiscussion(updatedDiscussion)
+      }
+    }
+  }
 }

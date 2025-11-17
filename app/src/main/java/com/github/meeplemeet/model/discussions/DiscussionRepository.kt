@@ -15,18 +15,61 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Repository wrapping Firestore CRUD operations and snapshot listeners.
+ * Repository for managing discussion data in Firestore.
  *
- * Provides suspend functions for one-shot reads/writes and Flow-based listeners for real-time
- * updates.
+ * Provides comprehensive CRUD operations, real-time listeners, and specialized functionality for
+ * discussions including messaging, polls, photo attachments, and participant management.
  *
- * Messages are now stored in a subcollection called "messages" under each discussion document.
+ * ## Architecture
+ * - **Main documents**: Stored at `discussions/{discussionId}` in Firestore
+ * - **Messages subcollection**: Each discussion has a `messages` subcollection at
+ *   `discussions/{discussionId}/messages/{messageId}` for scalability and efficient real-time
+ *   updates
+ * - **Previews**: Lightweight discussion metadata stored in each account document at
+ *   `accounts/{accountId}/previews/{discussionId}`
+ *
+ * ## Features
+ * - **Basic CRUD**: Create, read, update, delete discussions
+ * - **Participant management**: Add/remove participants and admins
+ * - **Messaging**: Send text messages, photo messages, and poll messages
+ * - **Photos**: Profile pictures and message photo attachments (integrated with [ImageRepository])
+ * - **Polls**: Create polls, vote, track results
+ * - **Real-time updates**: Flow-based listeners for discussions and messages
+ * - **Unread tracking**: Automatic unread count management in discussion previews
+ *
+ * ## Message Subcollection Benefits
+ * - Scalable: Doesn't load all messages when fetching discussion metadata
+ * - Efficient: Real-time listeners only stream new messages
+ * - Flexible: Messages can be queried, paginated, and filtered independently
+ *
+ * ## Preview Updates
+ * All messaging operations (text, photo, poll) automatically update discussion previews for all
+ * participants, including:
+ * - Last message content (with special formatting for photos "📷 Photo" and polls "📊 Poll: ...")
+ * - Last message sender and timestamp
+ * - Unread count (incremented for all participants except sender)
+ *
+ * @property accountRepository Reference to AccountRepository for preview management
+ * @see Discussion for discussion data structure
+ * @see Message for message data structure
+ * @see Poll for poll functionality
+ * @see ImageRepository for photo upload/download operations
  */
 class DiscussionRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
     FirestoreRepository("discussions") {
   private val accounts = accountRepository.collection
 
-  /** Get the messages subcollection for a specific discussion. */
+  /**
+   * Get the messages subcollection reference for a specific discussion.
+   *
+   * Messages are stored in a subcollection rather than as an array field to enable:
+   * - Scalable storage (no document size limits)
+   * - Efficient queries and pagination
+   * - Real-time streaming of new messages only
+   *
+   * @param discussionId The discussion UID.
+   * @return CollectionReference to `discussions/{discussionId}/messages`
+   */
   private fun messagesCollection(discussionId: String) =
       collection.document(discussionId).collection("messages")
 
@@ -77,7 +120,29 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     collection.document(id).update(Discussion::description.name, description).await()
   }
 
-  /** Update a discussion's profile picture URL. */
+  /**
+   * Update a discussion's profile picture URL.
+   *
+   * This method updates the `profilePictureUrl` field in the discussion document. The actual photo
+   * upload to Firebase Storage should be done via [ImageRepository.saveDiscussionProfilePicture]
+   * before calling this method.
+   *
+   * ## Typical Usage Flow
+   * 1. User selects/captures photo → cached via [ImageFileUtils]
+   * 2. Upload to Storage → [ImageRepository.saveDiscussionProfilePicture] returns URL
+   * 3. Update discussion → this method saves URL to discussion document
+   * 4. UI displays photo using the URL
+   *
+   * ## Permission Requirements
+   * Caller should verify user is an admin before calling this method.
+   *
+   * @param id The discussion UID.
+   * @param profilePictureUrl HTTPS URL from Firebase Storage pointing to the uploaded profile
+   *   picture.
+   * @see ImageRepository.saveDiscussionProfilePicture for uploading photos
+   * @see DiscussionDetailsViewModel.setDiscussionProfilePicture for high-level API with permission
+   *   checks
+   */
   suspend fun setDiscussionProfilePictureUrl(id: String, profilePictureUrl: String) {
     collection.document(id).update(Discussion::profilePictureUrl.name, profilePictureUrl).await()
   }
@@ -236,7 +301,26 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Append a text message to the discussion and update unread counts in all participants' previews.
+   * Send a text message to the discussion and update all participants' previews.
+   *
+   * Creates a new message document in the `messages` subcollection and atomically updates all
+   * participants' discussion previews in a single batch operation.
+   *
+   * ## Preview Updates
+   * For each participant:
+   * - Sets `lastMessage` to the text content
+   * - Sets `lastMessageSender` to sender's UID
+   * - Sets `lastMessageAt` to current timestamp
+   * - Increments `unreadCount` by 1 (except for sender, who gets 0)
+   *
+   * ## Batch Operation
+   * Uses Firestore batch writes to ensure atomicity - either all writes succeed or all fail.
+   *
+   * @param discussion The discussion to send the message to.
+   * @param sender The account sending the message.
+   * @param content The text content of the message.
+   * @see sendPhotoMessageToDiscussion for messages with photo attachments
+   * @see createPoll for creating poll messages
    */
   suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
     val timestamp = Timestamp.now()
@@ -266,13 +350,30 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Send a message with a photo to the discussion.
+   * Send a message with a photo attachment to the discussion.
+   *
+   * Creates a new message document with a `photoUrl` field and updates all participants' previews
+   * with special "📷 Photo" formatting.
+   *
+   * ## Usage Flow
+   * 1. User selects/captures photo
+   * 2. Photo is cached via [ImageFileUtils.cacheUriToFile]
+   * 3. Photo is uploaded via [ImageRepository.saveDiscussionPhotoMessages]
+   * 4. This method is called with the returned download URL
+   * 5. Message is created and previews are updated
+   *
+   * ## Preview Formatting
+   * The preview text shown in discussion lists will be "📷 Photo" (or "📷 {first 5 chars}" if
+   * content is provided).
    *
    * @param discussion The discussion to send the message to.
    * @param sender The account sending the message.
-   * @param content Text content of the message.
-   * @param photoUrl URL of the photo to attach.
-   * @return The ID of the created message.
+   * @param content Optional caption/description for the photo. Can be empty string.
+   * @param photoUrl HTTPS URL from Firebase Storage pointing to the uploaded photo.
+   * @return The message document ID (UID) of the created message.
+   * @see ImageRepository.saveDiscussionPhotoMessages for uploading photos
+   * @see DiscussionViewModel.sendMessageWithPhoto for high-level API
+   * @see Message.photoUrl for photo URL storage
    */
   suspend fun sendPhotoMessageToDiscussion(
       discussion: Discussion,
@@ -287,8 +388,22 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Append a message (regular, poll, or photo) to the discussion and update previews. This overload
-   * accepts a MessageNoUid object to create the message.
+   * Internal method to send a message to the discussion with intelligent preview formatting.
+   *
+   * This private overload handles all message types (text, photo, poll) and formats the preview
+   * text appropriately:
+   * - **Text messages**: Shows full content
+   * - **Photo messages**: Shows "📷 Photo" prefix
+   * - **Poll messages**: Shows "📊 Poll: {question}" format
+   *
+   * Used internally by:
+   * - [sendMessageToDiscussion] for text messages
+   * - [sendPhotoMessageToDiscussion] for photo messages
+   * - [createPoll] for poll messages
+   *
+   * @param discussion The discussion to send the message to.
+   * @param messageNoUid The message data without UID (UID is generated by Firestore).
+   * @return The message document ID (UID) of the created message.
    */
   private suspend fun sendMessageToDiscussion(
       discussion: Discussion,
@@ -360,8 +475,18 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   /**
    * Retrieve all messages for a discussion, ordered by creation time.
    *
+   * Fetches all message documents from the `messages` subcollection in a single query. Messages are
+   * automatically ordered by `createdAt` timestamp (oldest first).
+   *
+   * ## Performance Considerations
+   * - Loads ALL messages for the discussion (no pagination)
+   * - For discussions with many messages, consider implementing pagination
+   * - Use [listenMessages] for real-time updates instead of polling this method
+   *
    * @param discussionId The discussion UID.
-   * @return List of messages ordered by createdAt timestamp.
+   * @return List of messages ordered by createdAt timestamp (ascending).
+   * @see getMessage to fetch a single message by ID
+   * @see listenMessages for real-time message updates via Flow
    */
   suspend fun getMessages(discussionId: String): List<Message> {
     val snapshot = messagesCollection(discussionId).orderBy("createdAt").get().await()
@@ -373,9 +498,14 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   /**
    * Retrieve a specific message by ID.
    *
+   * Fetches a single message document from the messages subcollection. Useful for operations that
+   * need current message state, such as poll voting.
+   *
    * @param discussionId The discussion UID.
-   * @param messageId The message UID.
-   * @return The message if found.
+   * @param messageId The message UID (document ID in messages subcollection).
+   * @return The message if found, null if the message doesn't exist.
+   * @see getMessages to fetch all messages for a discussion
+   * @see voteOnPoll which uses this to get current poll state before voting
    */
   suspend fun getMessage(discussionId: String, messageId: String): Message? {
     val snapshot = messagesCollection(discussionId).document(messageId).get().await()
@@ -383,9 +513,30 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Listen for changes to messages in a discussion.
+   * Listen for real-time changes to messages in a discussion.
    *
-   * Emits a new list of messages every time the subcollection updates.
+   * Returns a Flow that emits the complete list of messages whenever the messages subcollection
+   * changes (new message added, message updated, etc.). Messages are ordered by creation time.
+   *
+   * ## Flow Behavior
+   * - Initial emission contains all existing messages
+   * - Subsequent emissions contain updated full message list when any change occurs
+   * - Flow completes when listener is removed (via awaitClose)
+   * - Errors cause the Flow to close with an exception
+   *
+   * ## Usage Example
+   *
+   * ```kotlin
+   * discussionRepository.listenMessages(discussionId)
+   *   .collect { messages ->
+   *     // Update UI with new message list
+   *   }
+   * ```
+   *
+   * @param discussionId The discussion UID.
+   * @return Flow emitting lists of messages ordered by createdAt timestamp.
+   * @see getMessages for one-time message fetch
+   * @see listenDiscussion for real-time discussion metadata updates
    */
   fun listenMessages(discussionId: String): Flow<List<Message>> = callbackFlow {
     val reg =

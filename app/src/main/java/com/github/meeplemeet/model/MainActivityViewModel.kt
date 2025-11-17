@@ -41,7 +41,7 @@ class MainActivityViewModel(
     super.signOut()
   }
 
-  /** Holds cached [StateFlow]s of accounts keyed by account ID to avoid duplicate listeners. */
+  // Holds cached [StateFlow]s of accounts keyed by account ID to avoid duplicate listeners.
   private val accountFlows = mutableMapOf<String, StateFlow<Account?>>()
 
   /**
@@ -52,7 +52,8 @@ class MainActivityViewModel(
    * discussion previews.
    *
    * @param accountId The ID of the account to observe
-   * @return A StateFlow that emits the account or null if the account doesn't exist or ID is blank
+   * @return A [StateFlow] that emits the account or null if the account doesn't exist or ID is
+   *   blank
    */
   fun accountFlow(accountId: String): StateFlow<Account?> {
     if (accountId.isBlank()) return MutableStateFlow(null)
@@ -66,9 +67,7 @@ class MainActivityViewModel(
     }
   }
 
-  /**
-   * Holds cached [StateFlow]s of discussions keyed by discussion ID to avoid duplicate listeners.
-   */
+  // Holds cached [StateFlow]s of discussions keyed by discussion ID to avoid duplicate listeners.
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
 
   /**
@@ -78,8 +77,8 @@ class MainActivityViewModel(
    * flow emits updated discussion data whenever changes occur in Firestore.
    *
    * @param discussionId The ID of the discussion to observe
-   * @return A StateFlow that emits the discussion or null if the discussion doesn't exist or ID is
-   *   blank
+   * @return A [StateFlow] that emits the discussion or null if the discussion doesn't exist or ID
+   *   is blank
    */
   fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
     if (discussionId.isBlank()) return MutableStateFlow(null)

@@ -81,12 +81,49 @@ private const val TEXT_CLOSE = "Close"
 private const val TEXT_DELETE_CONFIRM = "Delete"
 
 /**
- * Displays the discussion infos screen, allowing users to view and edit discussion details, manage
- * members, and perform actions such as deleting or leaving the discussion.
+ * Displays the discussion details/settings screen for managing discussion metadata and
+ * participants.
  *
- * @param viewModel The FirestoreViewModel for data operations.
- * @param discussion The discussion to manage.
+ * Provides comprehensive discussion management UI with:
+ * - **Profile picture**: Display and edit discussion profile picture (admin only) (NEW)
+ * - **Discussion info**: View/edit name, description, creation date
+ * - **Participant management**: Add members, remove members, promote/demote admins
+ * - **Participant search**: Real-time search with autocomplete dropdown
+ * - **Permission controls**: Different UI based on admin/participant role
+ * - **Actions**: Leave discussion or delete discussion (admin only)
+ *
+ * ## Profile Picture Features (NEW)
+ * - Circular profile picture displayed at top of screen
+ * - Camera icon overlay button (visible to admins only)
+ * - Click camera icon → menu appears with Camera/Gallery options
+ * - Camera option: Capture new photo (requires CAMERA permission)
+ * - Gallery option: Select existing photo from device
+ * - Photo is uploaded to Firebase Storage and discussion is updated
+ * - Profile picture loads via Coil library from Firebase Storage URL
+ *
+ * ## Permission Model
+ * - **Admins**: Can edit name/description, manage profile picture, add/remove members, manage admin
+ *   roles, delete discussion
+ * - **Participants**: Can view info, add members (if allowed), leave discussion
+ * - **Creator**: Original creator, shown with "Creator" badge, always an admin
+ *
+ * ## Photo Upload Flow
+ * 1. Admin clicks camera icon on profile picture
+ * 2. Selects Camera or Gallery from menu
+ * 3. Photo is cached via [ImageFileUtils]
+ * 4. [DiscussionDetailsViewModel.setDiscussionProfilePicture] uploads and updates discussion
+ * 5. UI refreshes automatically via discussionFlow
+ *
+ * @param account Current logged-in user account.
+ * @param discussion The discussion to display and manage.
  * @param modifier Modifier for styling this composable.
+ * @param viewModel ViewModel for discussion management operations.
+ * @param onBack Navigation callback to exit the screen.
+ * @param onLeave Callback invoked after user leaves the discussion.
+ * @param onDelete Callback invoked after discussion is deleted.
+ * @see DiscussionDetailsViewModel.setDiscussionProfilePicture for profile picture management
+ * @see ImageFileUtils for photo caching
+ * @see Discussion.profilePictureUrl for storage location
  */
 @Composable
 fun DiscussionDetailsScreen(
