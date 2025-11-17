@@ -19,6 +19,21 @@ interface GameRepository {
   suspend fun getGameById(gameID: String): Game
 
   /**
+   * Retrieves multiple [Game] objects by their unique identifiers.
+   *
+   * This method allows batch fetching of games by their IDs. The number of IDs provided must not
+   * exceed 20. If more than 20 IDs are passed, implementations should throw an
+   * [IllegalArgumentException]. If some of the provided IDs do not correspond to existing games,
+   * they are simply omitted from the result list.
+   *
+   * @param gameIDs the unique IDs of the games to retrieve (max 20).
+   * @return a [List] of [Game] objects corresponding to the provided IDs. The list may contain
+   *   fewer items than requested if some IDs are invalid or not found.
+   * @throws IllegalArgumentException if more than 20 IDs are provided.
+   */
+  suspend fun getGamesById(vararg gameIDs: String): List<Game>
+
+  /**
    * Searches for games whose names contain the specified [query].
    *
    * This method performs a substring search on the game names, allowing the caller to choose

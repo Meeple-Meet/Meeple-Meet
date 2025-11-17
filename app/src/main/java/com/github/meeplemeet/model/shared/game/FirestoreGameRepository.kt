@@ -3,6 +3,7 @@ package com.github.meeplemeet.model.shared.game
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.GameNotFoundException
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -24,6 +25,34 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
     val snapshot = games.document(gameID).get().await()
     val game = snapshot.toObject(GameNoUid::class.java)
     return game?.let { fromNoUid(gameID, it) } ?: throw GameNotFoundException()
+  }
+
+  /**
+   * Retrieves multiple [Game] objects by their unique identifiers.
+   *
+   * This method allows batch fetching of games by their document IDs. The number of IDs provided
+   * must not exceed 20. If more than 20 IDs are passed, an [IllegalArgumentException] is thrown. If
+   * some of the provided IDs do not correspond to existing documents, they are simply omitted from
+   * the result list.
+   *
+   * @param gameIDs the unique IDs of the games to retrieve (maximum 20).
+   * @return a [List] of [Game] objects corresponding to the provided IDs. The list may contain
+   *   fewer items than requested if some IDs are invalid or not found.
+   * @throws IllegalArgumentException if more than 20 IDs are provided.
+   */
+  override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
+    if (gameIDs.isEmpty()) return emptyList()
+    require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
+
+    val chunks = gameIDs.toList().chunked(10)
+    val results = mutableListOf<Game>()
+
+    for (chunk in chunks) {
+      val snapshot = games.whereIn(FieldPath.documentId(), chunk).get().await()
+      results.addAll(mapSnapshotToGames(snapshot.documents))
+    }
+
+    return results
   }
 
   /**

@@ -68,6 +68,48 @@ class BggGameRepository(
         }
       }
 
+  override suspend fun getGamesById(vararg gameIDs: String): List<Game> =
+      withContext(Dispatchers.IO) {
+        if (gameIDs.isEmpty()) return@withContext emptyList()
+        require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
+
+        val ids = gameIDs.joinToString(",")
+        val url =
+            baseUrl
+                .newBuilder()
+                .addPathSegment("thing")
+                .addQueryParameter("id", ids)
+                .addQueryParameter("type", "boardgame")
+                .addQueryParameter("stats", "1")
+                .build()
+
+        val builder = Request.Builder().url(url)
+
+        if (!authorizationToken.isNullOrBlank()) {
+          builder.header("Authorization", "Bearer $authorizationToken")
+        }
+
+        builder.header("User-Agent", USER_AGENT)
+
+        val request = builder.build()
+
+        try {
+          val response = client.newCall(request).execute()
+          response.use {
+            if (!response.isSuccessful) {
+              throw GameSearchException("BGG thing request failed: ${response.code}")
+            }
+
+            val body = response.body?.string().orEmpty()
+            val doc = parseXml(body)
+            val games = parseThings(doc)
+            return@withContext games
+          }
+        } catch (e: IOException) {
+          throw GameSearchException("Failed to fetch games by id: ${e.message}")
+        }
+      }
+
   override suspend fun searchGamesByNameContains(
       query: String,
       maxResults: Int,
@@ -124,6 +166,10 @@ class BggGameRepository(
   }
 
   private fun parseThing(doc: Document): Game? {
+    throw NotImplementedError("parseThing() is not implemented yet")
+  }
+
+  private fun parseThings(doc: Document): List<Game> {
     throw NotImplementedError("parseThing() is not implemented yet")
   }
 
