@@ -3,6 +3,7 @@
 
 package com.github.meeplemeet.ui.shops
 
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -15,11 +16,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,16 +42,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.game.Game
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
+import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
-import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.TopBarWithDivider
-import com.github.meeplemeet.ui.components.humanize
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
-import java.util.Calendar
 import kotlinx.coroutines.launch
 
 /** Object containing test tags used in the Shop screen UI for UI testing purposes. */
@@ -69,9 +64,6 @@ object ShopTestTags {
   const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
   const val SHOP_EDIT_BUTTON = "EDIT_SHOP_BUTTON"
 
-  // Availability section tags
-  const val SHOP_DAY_PREFIX = "SHOP_DAY_"
-
   // Game list tags
   const val SHOP_GAME_PREFIX = "SHOP_GAME_"
   const val SHOP_GAME_PAGER = "SHOP_GAME_PAGER"
@@ -81,10 +73,7 @@ object ShopTestTags {
   const val SHOP_GAME_STOCK_PREFIX = "SHOP_GAME_STOCK_"
 }
 
-private const val CLOSED_MSG = "Closed"
 private const val GAME_SECTION_TITLE = "Discover Games"
-private const val ALERTDIALOG_CONFIRM_BUTTON_TEXT = "Close"
-
 private const val GAMES_PER_COLUMN = 4
 private const val GAMES_PER_ROW = 2
 private const val GAMES_PER_PAGE = GAMES_PER_COLUMN * GAMES_PER_ROW
@@ -105,7 +94,7 @@ private const val NOT_SHOWING_STOCK_MIN_VALUE = 0
 
 private const val GAME_IMG_RELATIVE_WIDTH = 0.85f
 private const val GAME_IMG_DEFAULT_ASPECT_RATIO = 0.75f
-private const val MAX_STOCK_SHOWNED = 99
+const val MAX_STOCK_SHOWED = 99
 
 /**
  * Composable that displays the Shop screen, including the top bar and shop details.
@@ -174,7 +163,7 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
       contentPadding = PaddingValues(bottom = Dimensions.Spacing.xxLarge)) {
 
-        /* TODO: Add here shop images composable (caroussel) when done */
+        /* TODO: Add here shop images composable (pager) when done */
 
         item { ContactSection(shop) }
 
@@ -285,150 +274,18 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
       }
 }
 
-// -------------------- AVAILABILITY SECTION --------------------
-
-@Composable
-fun AvailabilitySection(
-    openingHours: List<OpeningHours>,
-    dayTagPrefix: String = ShopTestTags.SHOP_DAY_PREFIX
-) {
-  val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-  val todayIndex = todayCalendarValue - 1
-
-  val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
-  val todayLines: List<String> =
-      todayEntry?.let { humanize(it.hours).split("\n") } ?: listOf(CLOSED_MSG)
-
-  var showFullWeek by remember { mutableStateOf(false) }
-
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
-      modifier = Modifier.fillMaxWidth()) {
-
-        // Header
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-          Text(
-              text = "Availability",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.SemiBold)
-
-          Spacer(modifier = Modifier.weight(1f))
-
-          IconButton(
-              onClick = { showFullWeek = true },
-              modifier = Modifier.testTag("${dayTagPrefix}NAVIGATE")) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.NavigateNext,
-                    contentDescription = "Show full week opening hours")
-              }
-        }
-
-        // Today line(s)
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimensions.Spacing.small)
-                    .testTag("${dayTagPrefix}${todayIndex}_HOURS"),
-            verticalAlignment = Alignment.Top) {
-
-              // Left label
-              Text(
-                  text = "Today:",
-                  style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.padding(end = Dimensions.Spacing.medium))
-
-              // Right column of time slots
-              Column(
-                  modifier = Modifier.weight(1f),
-                  horizontalAlignment = Alignment.End,
-                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                    todayLines.forEach { line ->
-                      Text(
-                          text = line,
-                          style = MaterialTheme.typography.bodyMedium,
-                          textAlign = TextAlign.End)
-                    }
-                  }
-            }
-      }
-
-  if (showFullWeek) {
-    WeeklyAvailabilityDialog(
-        openingHours = openingHours,
-        currentDayIndex = todayIndex,
-        dayTagPrefix = dayTagPrefix,
-        onDismiss = { showFullWeek = false })
-  }
-}
-
-@Composable
-private fun WeeklyAvailabilityDialog(
-    openingHours: List<OpeningHours>,
-    currentDayIndex: Int,
-    dayTagPrefix: String,
-    onDismiss: () -> Unit
-) {
-  val dayNames = remember { ShopFormUi.dayNames }
-  val scrollState = rememberScrollState()
-
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      containerColor = MaterialTheme.colorScheme.background,
-      modifier = Modifier.fillMaxWidth(),
-      confirmButton = { TextButton(onClick = onDismiss) { Text(ALERTDIALOG_CONFIRM_BUTTON_TEXT) } },
-      text = {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .heightIn(max = Dimensions.ContainerSize.alertDialogHeight)
-                    .verticalScroll(scrollState)) {
-              Column(modifier = Modifier.fillMaxWidth()) {
-                openingHours
-                    .sortedBy { it.day }
-                    .forEach { entry ->
-                      val day = entry.day
-                      val isToday = day == currentDayIndex
-                      val dayName = dayNames.getOrNull(day) ?: "Day ${day + 1}"
-                      val lines = humanize(entry.hours).split("\n")
-
-                      Row(
-                          modifier =
-                              Modifier.fillMaxWidth()
-                                  .padding(vertical = Dimensions.Spacing.small)
-                                  .testTag("${dayTagPrefix}${day}"),
-                          verticalAlignment = Alignment.Top) {
-
-                            // Left: day name
-                            Text(
-                                text = dayName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(end = Dimensions.Spacing.medium))
-
-                            // Right: all time slots
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.End,
-                                verticalArrangement =
-                                    Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                                  lines.forEach { line ->
-                                    Text(
-                                        text = line,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight =
-                                            if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                        textAlign = TextAlign.End)
-                                  }
-                                }
-                          }
-                    }
-              }
-            }
-      })
-}
-
 // -------------------- GAME ITEM --------------------
 
+/**
+ * A composable function that displays a game item as an image card with an optional stock badge
+ *
+ * @param game The [Game] object whose image and name are displayed
+ * @param count The stock quantity for the game. When greater than zero, a stock badge is shown
+ * @param modifier The [Modifier] to be applied to the root container of the game item
+ * @param clickable A boolean indicating whether the game card is clickable
+ * @param onClick A callback function that is invoked when the game card is clicked
+ * @param imageHeight An optional fixed height for the image area
+ */
 @Composable
 fun GameItemImage(
     game: Game,
@@ -486,7 +343,7 @@ fun GameItemImage(
             }
 
         if (count > NOT_SHOWING_STOCK_MIN_VALUE) {
-          val label = if (count > MAX_STOCK_SHOWNED) "$MAX_STOCK_SHOWNED+" else count.toString()
+          val label = if (count > MAX_STOCK_SHOWED) "$MAX_STOCK_SHOWED+" else count.toString()
 
           Box(
               modifier =
@@ -506,6 +363,17 @@ fun GameItemImage(
       }
 }
 
+/**
+ * A composable function that displays a paged grid section of game image items with an optional
+ * title and page indicators
+ *
+ * @param games The list of pairs of [Game] and stock count to display in the grid
+ * @param modifier The [Modifier] to be applied to the section container
+ * @param clickableGames A boolean indicating whether individual game cards are clickable
+ * @param title The title text displayed above the grid (for example, "Discover Games")
+ * @param onClick A callback function that is invoked when a game card is clicked
+ */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GameImageListSection(

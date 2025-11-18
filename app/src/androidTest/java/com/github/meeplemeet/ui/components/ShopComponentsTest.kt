@@ -19,6 +19,7 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import io.mockk.*
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Ignore
 import org.junit.Rule
@@ -305,7 +306,7 @@ class ShopComponentsTest {
     assert(create == 1)
   }
 
-  /** 4) GameStockDialog - Rewritten for new API */
+  /** 4) GameStockDialog */
   @Ignore
   @Test
   fun gameStockDialog_search_filter_duplicate_quantity_singleComposition() {
@@ -660,5 +661,93 @@ class ShopComponentsTest {
     compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}").assertDoesNotExist()
     compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
     compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
+  }
+
+  /** 7) AvailabilitySection */
+  @Test
+  fun availabilitySection_shopDetails_showsTodayAndOpensWeeklyDialog() {
+    // Build a full week of opening hours (same interval for simplicity)
+    val week: List<OpeningHours> =
+        (0..6).map { day ->
+          OpeningHours(
+              day = day,
+              hours =
+                  listOf(
+                      TimeSlot(
+                          open = "09:00",
+                          close = "12:00"))) // humanize() will render "9:00 AM - 12:00 PM"
+        }
+
+    // Compute "today" index exactly like AvailabilitySection does
+    val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    val todayIndex = todayCalendarValue - 1
+
+    // Expected "today" lines as rendered by humanize()
+    val todayLines = humanize(week.first { it.day == todayIndex }.hours).split("\n")
+
+    setContentThemed {
+      AvailabilitySection(
+          openingHours = week, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+    }
+
+    // Header title
+    compose.onText("Availability").assertExists().assertIsDisplayed()
+
+    // "Today:" label
+    compose.onText("Today:").assertExists().assertIsDisplayed()
+
+    // Today row tag should exist
+    val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
+    compose.onTag(todayTag).assertExists().assertIsDisplayed()
+
+    // All humanized lines for today should be visible somewhere
+    todayLines.forEach { line -> compose.onText(line).assertExists() }
+
+    // Open the weekly dialog via the navigate icon
+    val navigateTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE"
+    compose.onTag(navigateTag).assertExists().performClick()
+
+    // Weekly dialog appears – confirm button with "Close" is visible
+    compose
+        .onText(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+        .assertExists()
+        .assertIsDisplayed()
+
+    // All 7 day rows should be present in the dialog
+    (0..6).forEach { day ->
+      val dayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}$day"
+      compose.onTag(dayTag).assertExists()
+    }
+
+    // Close the dialog
+    compose
+        .onText(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+        .performClick()
+  }
+
+  @Test
+  fun availabilitySection_shopDetails_missingToday_showsClosed() {
+    // Compute "today" index like AvailabilitySection does
+    val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    val todayIndex = todayCalendarValue - 1
+
+    // Build week WITHOUT an OpeningHours entry for today's index
+    val weekWithoutToday: List<OpeningHours> =
+        (0..6)
+            .filter { it != todayIndex }
+            .map { day ->
+              OpeningHours(day = day, hours = listOf(TimeSlot(open = "09:00", close = "12:00")))
+            }
+
+    setContentThemed {
+      AvailabilitySection(
+          openingHours = weekWithoutToday, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+    }
+
+    // "Today:" label still shown
+    compose.onText("Today:").assertExists().assertIsDisplayed()
+
+    // Fallback text should be "Closed"
+    compose.onText(ShopUiDefaults.StringsMagicNumbers.CLOSED).assertExists().assertIsDisplayed()
   }
 }

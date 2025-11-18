@@ -14,10 +14,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -49,6 +52,7 @@ import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Locale
 
 /* =============================================================================
@@ -147,6 +151,9 @@ object ShopComponentsTestTags {
   const val SHOP_GAME_MINUS_BUTTON = "shop_game_minus_button"
   const val SHOP_GAME_QTY_INPUT = "shop_game_qty_input"
   const val SHOP_GAME_PLUS_BUTTON = "shop_game_plus_button"
+
+  // Availability section tags
+  const val SHOP_DAY_PREFIX = "SHOP_DAY_"
 }
 
 /* =============================================================================
@@ -212,6 +219,9 @@ object ShopUiDefaults {
     // Game stock dialog
     const val GAME_DIALOG_TITLE = "Add game in stock"
     const val DUPLICATE_GAME = "This game is already in stock."
+
+    // Availability
+    const val ALERTDIALOG_CONFIRM_BUTTON_TEXT = "Close"
   }
 
   object RangesMagicNumbers {
@@ -1298,4 +1308,166 @@ fun EditableGameItem(
                   }
             }
       }
+}
+
+// -------------------- AVAILABILITY SECTION --------------------
+
+/**
+ * A composable function that displays the availability section for a shop, showing today's opening
+ * hours and providing access to the full weekly schedule
+ *
+ * @param openingHours The list of [OpeningHours] entries for the shop, using 0-based day indices
+ * @param dayTagPrefix The prefix used for test tags associated with day rows and navigation
+ */
+@Composable
+fun AvailabilitySection(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX
+) {
+  val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+  val todayIndex = todayCalendarValue - 1
+
+  val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
+  val todayLines: List<String> =
+      todayEntry?.let { humanize(it.hours).split("\n") }
+          ?: listOf(ShopUiDefaults.StringsMagicNumbers.CLOSED)
+
+  var showFullWeek by remember { mutableStateOf(false) }
+
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
+      modifier = Modifier.fillMaxWidth()) {
+
+        // Header
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          Text(
+              text = "Availability",
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.SemiBold)
+
+          Spacer(modifier = Modifier.weight(1f))
+
+          IconButton(
+              onClick = { showFullWeek = true },
+              modifier = Modifier.testTag("${dayTagPrefix}NAVIGATE")) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                    contentDescription = "Show full week opening hours")
+              }
+        }
+
+        // Today line(s)
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = Dimensions.Spacing.small)
+                    .testTag("${dayTagPrefix}${todayIndex}_HOURS"),
+            verticalAlignment = Alignment.Top) {
+
+              // Left label
+              Text(
+                  text = "Today:",
+                  style = MaterialTheme.typography.bodyMedium,
+                  modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+              // Right column of time slots
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.End,
+                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                    todayLines.forEach { line ->
+                      Text(
+                          text = line,
+                          style = MaterialTheme.typography.bodyMedium,
+                          textAlign = TextAlign.End)
+                    }
+                  }
+            }
+      }
+
+  if (showFullWeek) {
+    WeeklyAvailabilityDialog(
+        openingHours = openingHours,
+        currentDayIndex = todayIndex,
+        dayTagPrefix = dayTagPrefix,
+        onDismiss = { showFullWeek = false })
+  }
+}
+
+/**
+ * A composable function that displays a dialog with the full weekly opening hours for a shop
+ *
+ * @param openingHours The list of [OpeningHours] entries to display
+ * @param currentDayIndex The index of the current day (0 = Sunday, 1 = Monday, etc.)
+ * @param dayTagPrefix The prefix used for test tags associated with each day row in the dialog
+ * @param onDismiss A callback function that is invoked when the dialog is dismissed
+ */
+@Composable
+private fun WeeklyAvailabilityDialog(
+    openingHours: List<OpeningHours>,
+    currentDayIndex: Int,
+    dayTagPrefix: String,
+    onDismiss: () -> Unit
+) {
+  val dayNames = remember { ShopFormUi.dayNames }
+  val scrollState = rememberScrollState()
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      containerColor = MaterialTheme.colorScheme.background,
+      modifier = Modifier.fillMaxWidth(),
+      confirmButton = {
+        TextButton(onClick = onDismiss) {
+          Text(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+        }
+      },
+      text = {
+        Box(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(max = Dimensions.ContainerSize.alertDialogHeight)
+                    .verticalScroll(scrollState)) {
+              Column(modifier = Modifier.fillMaxWidth()) {
+                openingHours
+                    .sortedBy { it.day }
+                    .forEach { entry ->
+                      val day = entry.day
+                      val isToday = day == currentDayIndex
+                      val dayName = dayNames.getOrNull(day) ?: "Day ${day + 1}"
+                      val lines = humanize(entry.hours).split("\n")
+
+                      Row(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .padding(vertical = Dimensions.Spacing.small)
+                                  .testTag("${dayTagPrefix}${day}"),
+                          verticalAlignment = Alignment.Top) {
+
+                            // Left: day name
+                            Text(
+                                text = dayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+                            // Right: all time slots
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement =
+                                    Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                                  lines.forEach { line ->
+                                    Text(
+                                        text = line,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight =
+                                            if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                        textAlign = TextAlign.End)
+                                  }
+                                }
+                          }
+                    }
+              }
+            }
+      })
 }

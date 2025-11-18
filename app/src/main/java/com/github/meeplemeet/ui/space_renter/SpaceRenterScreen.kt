@@ -28,8 +28,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
+import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.SpacesList
-import com.github.meeplemeet.ui.shops.AvailabilitySection
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 
