@@ -182,7 +182,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
     // --- Info Checks ---
     composeTestRule.onNodeWithText(dummyShop.name).assertExists()
 
-    // FIX: Check children of the Column for the text
+    // Check children of the Column for the text
     composeTestRule
         .onNodeWithTag(ShopTestTags.SHOP_PHONE_TEXT)
         .onChildren()
@@ -214,7 +214,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
       assert(fakeClipboard.copiedText == expectedText)
     }
 
-    // --- Availability Checks (FIXED) ---
+    // --- Availability Checks ---
     // 1. Check that TODAY is displayed
     val todayIndex = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
     composeTestRule
@@ -267,7 +267,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
         .onNodeWithTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game0.uid}", useUnmergedTree = true)
         .assertTextEquals(game0.name)
 
-    // Stock Check (FIXED: Check children for text)
+    // Stock Check (Check children for text)
     composeTestRule
         .onNodeWithTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game0.uid}", useUnmergedTree = true)
         .assertIsDisplayed()
