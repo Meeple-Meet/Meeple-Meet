@@ -1368,20 +1368,19 @@ fun AvailabilitySection(
               Text(
                   text = "Today:",
                   style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+              )
 
-              // Right column of time slots
-              Column(
-                  modifier = Modifier.weight(1f),
-                  horizontalAlignment = Alignment.End,
-                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                    todayLines.forEach { line ->
-                      Text(
-                          text = line,
-                          style = MaterialTheme.typography.bodyMedium,
-                          textAlign = TextAlign.End)
-                    }
-                  }
+              Spacer(Modifier.width(Dimensions.Spacing.medium))
+
+              // Opening hours, aligned with the first one
+              Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                todayLines.forEach { line ->
+                  Text(
+                      text = line,
+                      style = MaterialTheme.typography.bodyMedium,
+                  )
+                }
+              }
             }
       }
 
@@ -1459,7 +1458,7 @@ private fun WeeklyAvailabilityDialog(
                                   lines.forEach { line ->
                                     Text(
                                         text = line,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodySmall,
                                         fontWeight =
                                             if (isToday) FontWeight.Bold else FontWeight.Normal,
                                         textAlign = TextAlign.End)
