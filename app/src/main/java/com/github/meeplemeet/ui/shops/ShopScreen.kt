@@ -383,7 +383,7 @@ fun GameImageListSection(
     title: String,
     onClick: (Game) -> Unit = {},
 ) {
-  val clampedGames = remember(games) { games.take(MAX_GAMES) }
+  val clampedGames = remember(games) { games.shuffled().take(MAX_GAMES) }
   if (clampedGames.isEmpty()) return
 
   val pages = remember(clampedGames) { clampedGames.chunked(GAMES_PER_PAGE).take(MAX_PAGES) }
