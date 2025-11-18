@@ -2,35 +2,58 @@
 package com.github.meeplemeet.ui.shops
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
-import com.github.meeplemeet.ui.components.GameListSection
+import com.github.meeplemeet.ui.components.ShopComponentsTestTags
+import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.TopBarWithDivider
+import com.github.meeplemeet.ui.components.humanize
 import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Dimensions
-import com.google.firebase.Timestamp
-import java.text.DateFormatSymbols
 import java.util.Calendar
+import kotlinx.coroutines.launch
 
 /** Object containing test tags used in the Shop screen UI for UI testing purposes. */
 object ShopTestTags {
@@ -53,12 +76,29 @@ object ShopTestTags {
 }
 
 private const val CLOSED_MSG = "Closed"
-private const val PHONE_LINE_TEXT = "- Phone:"
-private const val EMAIL_LINE_TEXT = "- Email:"
-private const val ADDRESS_LINE_TEXT = "- Address:"
-private const val WEBSITE_LINE_TEXT = "- Website:"
+private const val GAME_SECTION_TITLE = "Discover Games"
 
-private val horizontalPadding = Dimensions.ComponentWidth.spaceLabelWidth
+private const val GAMES_PER_COLUMN = 4
+private const val GAMES_PER_ROW = 2
+private const val GAMES_PER_PAGE = GAMES_PER_COLUMN * GAMES_PER_ROW
+private const val MAX_PAGES = 6
+private const val MAX_GAMES = GAMES_PER_PAGE * MAX_PAGES
+private const val MINIMAL_PAGE_COUNT = 1
+
+private const val IMAGE_HEIGHT_CORRECTION = 3.1f
+private val GAME_NAME_AREA_HEIGHT = 46.dp
+
+private val PAGER_UNSELECTED_BUBBLE_SIZE = 8.dp
+private val PAGER_SELECTED_BUBBLE_SIZE = 10.dp
+
+private val STOCK_BUBBLE_SIZE = 32.dp
+private val STOCK_BUBBLE_TOP_PADDING = (STOCK_BUBBLE_SIZE / 2)
+private const val GAME_NAME_MAX_LINES = 2
+private const val NOT_SHOWING_STOCK_MIN_VALUE = 0
+
+private const val GAME_IMG_RELATIVE_WIDTH = 0.85f
+private const val GAME_IMG_DEFAULT_ASPECT_RATIO = 0.75f
+private const val MAX_STOCK_SHOWNED = 99
 
 /**
  * Composable that displays the Shop screen, including the top bar and shop details.
@@ -85,7 +125,7 @@ fun ShopScreen(
   Scaffold(
       topBar = {
         TopBarWithDivider(
-            text = shopState?.name ?: "Shop",
+            text = "Shop",
             onReturn = { onBack() },
             trailingIcons = {
               // Show edit button only if current account is the shop owner
@@ -122,19 +162,25 @@ fun ShopScreen(
  */
 @Composable
 fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
-  Column(
-      modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
-        ContactSection(shop)
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
-        AvailabilitySection(shop.openingHours)
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding))
-        GameListSection(
-            games = shop.gameCollection,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge),
-            hasDeleteButton = false,
-            title = "Games:")
+  LazyColumn(
+      modifier = modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
+      contentPadding = PaddingValues(bottom = Dimensions.Spacing.xxLarge)) {
+
+        /* TODO: Add here shop images composable (caroussel) when done */
+
+        item { ContactSection(shop) }
+
+        item { AvailabilitySection(shop.openingHours) }
+
+        item {
+          GameImageListSection(
+              games = shop.gameCollection,
+              modifier = Modifier.fillMaxWidth(),
+              clickableGames = true,
+              title = GAME_SECTION_TITLE,
+          )
+        }
       }
 }
 
@@ -149,37 +195,42 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
 fun ContactSection(shop: Shop) {
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
+      modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Contact:",
+            text = shop.name,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
-            textDecoration = TextDecoration.Underline)
+        )
 
-        // Display phone contact row
-        ContactRow(
-            Icons.Default.Phone,
-            "$PHONE_LINE_TEXT ${shop.phone}",
-            ShopTestTags.SHOP_PHONE_TEXT,
-            ShopTestTags.SHOP_PHONE_BUTTON)
-        // Display email contact row
-        ContactRow(
-            Icons.Default.Email,
-            "$EMAIL_LINE_TEXT ${shop.email}",
-            ShopTestTags.SHOP_EMAIL_TEXT,
-            ShopTestTags.SHOP_EMAIL_BUTTON)
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            "$ADDRESS_LINE_TEXT ${shop.address.name}",
+            shop.address.name,
             ShopTestTags.SHOP_ADDRESS_TEXT,
             ShopTestTags.SHOP_ADDRESS_BUTTON)
-        // Display website contact row
+        // Display email contact row
         ContactRow(
-            Icons.Default.Language,
-            "$WEBSITE_LINE_TEXT ${shop.website}",
-            ShopTestTags.SHOP_WEBSITE_TEXT,
-            ShopTestTags.SHOP_WEBSITE_BUTTON)
+            Icons.Default.Email,
+            shop.email,
+            ShopTestTags.SHOP_EMAIL_TEXT,
+            ShopTestTags.SHOP_EMAIL_BUTTON)
+
+        // Display phone contact row
+        if (shop.phone.isNotEmpty()) {
+          ContactRow(
+              Icons.Default.Phone,
+              shop.phone,
+              ShopTestTags.SHOP_PHONE_TEXT,
+              ShopTestTags.SHOP_PHONE_BUTTON)
+        }
+        // Display website contact row
+        if (shop.website.isNotEmpty()) {
+          ContactRow(
+              Icons.Default.Language,
+              shop.website,
+              ShopTestTags.SHOP_WEBSITE_TEXT,
+              ShopTestTags.SHOP_WEBSITE_BUTTON)
+        }
       }
 }
 
@@ -196,142 +247,369 @@ fun ContactSection(shop: Shop) {
 fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
   val clipboardManager: ClipboardManager = LocalClipboardManager.current
   val context = LocalContext.current
+
+  // Split text into "first line" and "rest"
+  val lines = text.split('\n')
+  val firstLine = lines.firstOrNull().orEmpty()
+  val restLines = lines.drop(n = 1)
+
   Row(
-      verticalAlignment = Alignment.CenterVertically,
+      verticalAlignment = Alignment.Top,
       horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
-        Text(
-            text,
-            style =
-                LocalTextStyle.current.copy(
-                    textIndent = TextIndent(restLine = Dimensions.TextIndent.listIndent)),
-            modifier = Modifier.weight(1f).testTag(textTag))
         IconButton(
             onClick = {
-              // Copy the contact text to the clipboard and show a toast confirmation
               clipboardManager.setText(AnnotatedString(text))
               Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             },
-            content = { Icon(icon, contentDescription = null, tint = AppColors.neutral) },
-            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag))
-      }
-}
-
-// -------------------- AVAILABILITY SECTION --------------------
-
-/**
- * Composable that displays the shop's opening hours for each day of the week.
- *
- * @param openingHours List of OpeningHours representing the shop's weekly schedule.
- * @param dayTagPrefix Optional prefix for day test tags. Defaults to SHOP_DAY_ prefix.
- */
-@Composable
-fun AvailabilitySection(
-    openingHours: List<OpeningHours>,
-    dayTagPrefix: String = ShopTestTags.SHOP_DAY_PREFIX
-) {
-  val daysOfWeek = remember { DateFormatSymbols().weekdays }
-  val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxxLarge)) {
-        Text(
-            text = "Availability:",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            textDecoration = TextDecoration.Underline)
-
-        // Loop through each day's opening hours
-        openingHours.forEach { entry ->
-          // Get the day name from the weekdays array (offset by 1 because weekdays start at 1)
-          val dayName = daysOfWeek.getOrNull(entry.day + 1) ?: "Unknown"
-          // Check if this day is the current day to highlight it
-          val isToday = (entry.day + 1) == currentDay
-
-          if (entry.hours.isEmpty()) {
-            // No opening hours means the shop is closed on this day
-            Row(
-                modifier = Modifier.fillMaxWidth().testTag("${dayTagPrefix}${entry.day}"),
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                  Text(
-                      dayName,
-                      fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier = Modifier.weight(1f))
-                  Text(
-                      CLOSED_MSG,
-                      fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                      modifier = Modifier.testTag("${dayTagPrefix}${entry.day}_HOURS"))
-                }
-          } else {
-            // Display each time interval for the day
-            entry.hours.forEachIndexed { idx, (start, end) ->
-              Column {
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth().testTag("${dayTagPrefix}${entry.day}_HOURS_${idx}"),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                      if (idx == 0) {
-                        // Show the day name only on the first interval row
-                        Text(
-                            dayName,
-                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.weight(1f).testTag("${dayTagPrefix}${entry.day}"))
-                      } else {
-                        // Empty space for subsequent interval rows to align with day name column
-                        Text("", modifier = Modifier.weight(1f))
-                      }
-                      // Format the time interval or show "Closed" if times are null
-                      val timeText =
-                          if (start != null && end != null) "$start - $end" else CLOSED_MSG
-                      Text(
-                          timeText,
-                          fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
-                    }
-                if (isToday && idx == 0) {
-                  val closed =
-                      Timestamp.now() < stringToTimestamp(start!!)!! ||
-                          Timestamp.now() > stringToTimestamp(end!!)!!
-                  Text(
-                      "Currently ${if (closed) CLOSED_MSG else "Open"}",
-                      fontWeight = FontWeight.Bold,
-                      color = if (closed) AppColors.negative else AppColors.affirmative,
-                      modifier =
-                          Modifier.padding(top = Dimensions.Spacing.extraSmall)
-                              .align(Alignment.End))
-                }
-              }
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
+              Icon(icon, contentDescription = null, tint = AppColors.neutral)
             }
+
+        Column(modifier = Modifier.weight(1f).testTag(textTag)) {
+          // First line on the same row as the icon
+          Text(text = firstLine, style = LocalTextStyle.current)
+
+          // Remaining lines displayed below
+          if (restLines.isNotEmpty()) {
+            Text(text = restLines.joinToString("\n"), style = LocalTextStyle.current)
           }
         }
       }
 }
 
-/**
- * Converts a time string in "HH:mm" format to a Firebase Timestamp.
- *
- * @param timeString The time string to convert (e.g., "09:30").
- * @return A Firebase Timestamp representing the time on the current date, or null if parsing fails.
- */
-fun stringToTimestamp(timeString: String): Timestamp? {
-  return try {
-    val parts = timeString.split(":")
-    if (parts.size != 2) return null
+// -------------------- AVAILABILITY SECTION --------------------
 
-    val hour = parts[0].toIntOrNull() ?: return null
-    val minute = parts[1].toIntOrNull() ?: return null
+@Composable
+fun AvailabilitySection(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopTestTags.SHOP_DAY_PREFIX
+) {
+  val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+  val todayIndex = todayCalendarValue - 1
 
-    if (hour !in 0..23 || minute !in 0..59) return null
+  val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
+  val todayLines: List<String> =
+      todayEntry?.let { humanize(it.hours).split("\n") } ?: listOf(CLOSED_MSG)
 
-    val calendar =
-        Calendar.getInstance().apply {
-          set(Calendar.HOUR_OF_DAY, hour)
-          set(Calendar.MINUTE, minute)
-          set(Calendar.SECOND, 0)
-          set(Calendar.MILLISECOND, 0)
+  var showFullWeek by remember { mutableStateOf(false) }
+
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
+      modifier = Modifier.fillMaxWidth()) {
+
+        // Header
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          Text(
+              text = "Availability",
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.SemiBold)
+
+          Spacer(modifier = Modifier.weight(1f))
+
+          IconButton(
+              onClick = { showFullWeek = true },
+              modifier = Modifier.testTag("${dayTagPrefix}NAVIGATE")) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                    contentDescription = "Show full week opening hours")
+              }
         }
 
-    Timestamp(calendar.time)
-  } catch (e: Exception) {
-    null
+        // Today line(s)
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = Dimensions.Spacing.small)
+                    .testTag("${dayTagPrefix}${todayIndex}_HOURS"),
+            verticalAlignment = Alignment.Top) {
+
+              // Left label
+              Text(
+                  text = "Today:",
+                  style = MaterialTheme.typography.bodyMedium,
+                  modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+              // Right column of time slots
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.End,
+                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                    todayLines.forEach { line ->
+                      Text(
+                          text = line,
+                          style = MaterialTheme.typography.bodyMedium,
+                          textAlign = TextAlign.End)
+                    }
+                  }
+            }
+      }
+
+  if (showFullWeek) {
+    WeeklyAvailabilityDialog(
+        openingHours = openingHours,
+        currentDayIndex = todayIndex,
+        dayTagPrefix = dayTagPrefix,
+        onDismiss = { showFullWeek = false })
+  }
+}
+
+@Composable
+private fun WeeklyAvailabilityDialog(
+    openingHours: List<OpeningHours>,
+    currentDayIndex: Int,
+    dayTagPrefix: String,
+    onDismiss: () -> Unit
+) {
+  val dayNames = remember { ShopFormUi.dayNames }
+  val scrollState = rememberScrollState()
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      containerColor = MaterialTheme.colorScheme.background,
+      modifier = Modifier.fillMaxWidth(),
+      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+      text = {
+        Box(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp).verticalScroll(scrollState)) {
+          Column(modifier = Modifier.fillMaxWidth()) {
+            openingHours
+                .sortedBy { it.day }
+                .forEach { entry ->
+                  val day = entry.day
+                  val isToday = day == currentDayIndex
+                  val dayName = dayNames.getOrNull(day) ?: "Day ${day + 1}"
+                  val lines = humanize(entry.hours).split("\n")
+
+                  Row(
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(vertical = Dimensions.Spacing.small)
+                              .testTag("${dayTagPrefix}${day}"),
+                      verticalAlignment = Alignment.Top) {
+
+                        // Left: day name
+                        Text(
+                            text = dayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+                        // Right: all time slots
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement =
+                                Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                              lines.forEach { line ->
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight =
+                                        if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                    textAlign = TextAlign.End)
+                              }
+                            }
+                      }
+                }
+          }
+        }
+      })
+}
+
+// -------------------- GAME ITEM --------------------
+
+@Composable
+fun GameItemImage(
+    game: Game,
+    count: Int,
+    modifier: Modifier = Modifier,
+    clickable: Boolean = true,
+    imageHeight: Dp? = null,
+    onClick: (Game) -> Unit = {},
+) {
+  val cardShape = MaterialTheme.shapes.medium
+
+  Box(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = STOCK_BUBBLE_TOP_PADDING)
+                    .clip(cardShape)
+                    .background(MaterialTheme.colorScheme.background)
+                    .clickable(enabled = clickable) { onClick(game) }
+                    .padding(Dimensions.Padding.small),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+
+              /* TODO: erase AsyncImage background */
+              AsyncImage(
+                  model = game.imageURL,
+                  contentDescription = game.name,
+                  contentScale = ContentScale.Crop,
+                  modifier =
+                      Modifier.fillMaxWidth(GAME_IMG_RELATIVE_WIDTH)
+                          .clip(cardShape)
+                          .background(MaterialTheme.colorScheme.surfaceVariant)
+                          .let { base ->
+                            if (imageHeight != null) {
+                              base.height(imageHeight)
+                            } else {
+                              base.aspectRatio(GAME_IMG_DEFAULT_ASPECT_RATIO)
+                            }
+                          })
+
+              Spacer(Modifier.height(Dimensions.Spacing.small))
+
+              Text(
+                  text = game.name,
+                  style = MaterialTheme.typography.bodySmall,
+                  textAlign = TextAlign.Center,
+                  maxLines = GAME_NAME_MAX_LINES,
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.fillMaxWidth())
+            }
+
+        if (count > NOT_SHOWING_STOCK_MIN_VALUE) {
+          val label = if (count > MAX_STOCK_SHOWNED) "$MAX_STOCK_SHOWNED+" else count.toString()
+
+          Box(
+              modifier =
+                  Modifier.size(STOCK_BUBBLE_SIZE)
+                      .align(Alignment.TopStart)
+                      .offset(x = Dimensions.Padding.small, y = Dimensions.Padding.small)
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.primary),
+              contentAlignment = Alignment.Center) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimary)
+              }
+        }
+      }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun GameImageListSection(
+    games: List<Pair<Game, Int>>,
+    modifier: Modifier = Modifier,
+    clickableGames: Boolean = false,
+    title: String,
+    onClick: (Game) -> Unit = {},
+) {
+  val clampedGames = remember(games) { games.take(MAX_GAMES) }
+  if (clampedGames.isEmpty()) return
+
+  val pages = remember(clampedGames) { clampedGames.chunked(GAMES_PER_PAGE).take(MAX_PAGES) }
+  val pageCount = pages.size
+
+  val pagerState = rememberPagerState(pageCount = { pageCount })
+  val scope = rememberCoroutineScope()
+
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
+      modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+          val gridWidth = maxWidth
+          val imageHeight = gridWidth / IMAGE_HEIGHT_CORRECTION
+          val textAreaHeight = GAME_NAME_AREA_HEIGHT
+          val rowHeight = imageHeight + textAreaHeight
+          val gridHeight = rowHeight * GAMES_PER_COLUMN
+
+          HorizontalPager(
+              state = pagerState, modifier = Modifier.fillMaxWidth().height(gridHeight)) { pageIndex
+                ->
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(GAMES_PER_ROW),
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+                    userScrollEnabled = false,
+                    modifier = Modifier.fillMaxSize()) {
+                      items(pages[pageIndex], key = { it.first.uid }) { (game, count) ->
+                        GameItemImage(
+                            game = game,
+                            count = count,
+                            clickable = clickableGames,
+                            onClick = onClick,
+                            imageHeight = imageHeight,
+                            modifier = Modifier.height(rowHeight),
+                        )
+                      }
+                    }
+              }
+        }
+
+        if (pageCount > MINIMAL_PAGE_COUNT) {
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.medium),
+              horizontalArrangement = Arrangement.Center) {
+                repeat(pageCount) { index ->
+                  val selected = (index == pagerState.currentPage)
+                  Box(
+                      modifier =
+                          Modifier.padding(horizontal = Dimensions.Padding.small)
+                              .size(
+                                  if (selected) PAGER_SELECTED_BUBBLE_SIZE
+                                  else PAGER_UNSELECTED_BUBBLE_SIZE)
+                              .clip(CircleShape)
+                              .background(
+                                  if (selected) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.outline)
+                              .clickable { scope.launch { pagerState.animateScrollToPage(index) } })
+                }
+              }
+        }
+      }
+}
+
+// -------------------- PREVIEWS --------------------
+@Preview(showBackground = true, showSystemUi = false, name = "GameImageListSection")
+@Composable
+fun GameImageListSectionPreview() {
+  val sampleGames =
+      listOf(
+              "Root",
+              "Blood on the Clocktower",
+              "Gloomhaven",
+              "Root",
+              "Spirit Island",
+              "Royg",
+              "Avalon",
+              "Root",
+              "Brass: Birmingham",
+              "Root")
+          .mapIndexed { index, name ->
+            Game(
+                uid = index.toString(),
+                name = name,
+                description = "",
+                imageURL = "https://example.com/$name.jpg",
+                minPlayers = 2,
+                maxPlayers = 4,
+                recommendedPlayers = 4,
+                averagePlayTime = 60,
+                genres = emptyList(),
+            ) to 44
+          }
+
+  AppTheme {
+    Surface(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        color = MaterialTheme.colorScheme.background) {
+          GameImageListSection(
+              games = sampleGames,
+              clickableGames = false,
+              title = "Discover Games",
+          )
+        }
   }
 }

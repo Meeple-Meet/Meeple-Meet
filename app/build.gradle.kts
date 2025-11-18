@@ -213,6 +213,7 @@ dependencies {
   debugImplementation(libs.androidx.ui.test.manifest)
   implementation(libs.material)
   implementation(libs.androidx.material.icons.extended)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
   // Navigation
   implementation(libs.androidx.navigation.compose)

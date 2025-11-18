@@ -37,7 +37,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -1110,13 +1109,13 @@ fun GameListSection(
 ) {
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge)) {
+      modifier = modifier.fillMaxWidth()) {
         if (title != null) {
           Text(
               title,
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.SemiBold,
-              textDecoration = TextDecoration.Underline)
+          )
         }
 
         LazyColumn(
