@@ -125,12 +125,42 @@ class DiscussionViewModel(
     if (preview.unreadCount == 0) return
 
     viewModelScope.launch {
-      // Get the latest messages to find the last one
-      val messages = discussionRepository.getMessages(discussion.uid)
-      if (messages.isEmpty()) return@launch
+      // Get the latest message
+      val lastMessage = discussionRepository.getLastMessage(discussion.uid) ?: return@launch
 
-      discussionRepository.readDiscussionMessages(account.uid, discussion.uid, messages.last())
+      discussionRepository.readDiscussionMessages(account.uid, discussion.uid, lastMessage)
     }
+  }
+
+  /**
+   * Load older messages for pagination.
+   *
+   * Fetches messages that were created before the given timestamp. Useful for implementing "load
+   * more" functionality when the user scrolls to the top of the message list.
+   *
+   * ## Typical Usage Flow
+   *
+   * ```kotlin
+   * val currentMessages = messagesFlow(discussionId).value
+   * val oldestMessage = currentMessages.firstOrNull()
+   * if (oldestMessage != null) {
+   *   val olderMessages = viewModel.loadOlderMessages(discussionId, oldestMessage.createdAt)
+   *   // Prepend olderMessages to your state
+   * }
+   * ```
+   *
+   * @param discussionId The discussion UID.
+   * @param beforeTimestamp Load messages created before this timestamp.
+   * @param limit Maximum number of messages to fetch (default: 50).
+   * @return List of older messages ordered by createdAt timestamp (oldest first).
+   * @see messagesFlow for real-time message updates
+   */
+  suspend fun loadOlderMessages(
+      discussionId: String,
+      beforeTimestamp: com.google.firebase.Timestamp,
+      limit: Int = 50
+  ): List<Message> {
+    return discussionRepository.getMessagesBeforeTimestamp(discussionId, beforeTimestamp, limit)
   }
 
   // ---------- Poll Methods ----------

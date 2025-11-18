@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 private const val PHOTO_MESSAGE_PREVIEW = "📷 Photo"
+private const val FIELD_CREATED_AT = "createdAt"
 
 /**
  * Repository for managing discussion data in Firestore.
@@ -168,8 +169,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
         .await()
 
     // Get the last message to populate the preview
-    val messages = getMessages(discussion.uid)
-    val lastMessage = messages.lastOrNull()
+    val lastMessage = getLastMessage(discussion.uid)
 
     accounts
         .document(userId)
@@ -226,8 +226,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
         .await()
 
     // Get the last message to populate the preview
-    val messages = getMessages(discussion.uid)
-    val lastMessage = messages.lastOrNull()
+    val lastMessage = getLastMessage(discussion.uid)
 
     val batch = db.batch()
     userIds.forEach { id ->
@@ -474,24 +473,112 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Retrieve all messages for a discussion, ordered by creation time.
+   * Retrieve messages for a discussion, ordered by creation time (newest first).
    *
-   * Fetches all message documents from the `messages` subcollection in a single query. Messages are
-   * automatically ordered by `createdAt` timestamp (oldest first).
+   * Fetches message documents from the `messages` subcollection with optional limit for pagination.
+   * By default, returns the most recent 50 messages. Messages are returned in chronological order
+   * (oldest first) for display purposes.
+   *
+   * ## Pagination Strategy
+   * - Queries messages in descending order (newest first)
+   * - Applies limit to get most recent N messages
+   * - Reverses results to return oldest-to-newest for display
+   * - Use [getMessagesBeforeTimestamp] to load older messages when user scrolls up
    *
    * ## Performance Considerations
-   * - Loads ALL messages for the discussion (no pagination)
-   * - For discussions with many messages, consider implementing pagination
+   * - Default limit prevents loading all messages at once
    * - Use [listenMessages] for real-time updates instead of polling this method
    *
    * @param discussionId The discussion UID.
-   * @return List of messages ordered by createdAt timestamp (ascending).
+   * @param limit Maximum number of messages to fetch (default: 50).
+   * @return List of messages ordered by createdAt timestamp (oldest first, limited to most recent).
+   * @see getMessagesBeforeTimestamp to fetch older messages for pagination
    * @see getMessage to fetch a single message by ID
    * @see listenMessages for real-time message updates via Flow
    */
-  suspend fun getMessages(discussionId: String): List<Message> {
-    val snapshot = messagesCollection(discussionId).orderBy("createdAt").get().await()
-    return snapshot.documents.mapNotNull { doc ->
+  suspend fun getMessages(discussionId: String, limit: Int = 50): List<Message> {
+    val snapshot =
+        messagesCollection(discussionId)
+            .orderBy(FIELD_CREATED_AT, com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+    return snapshot.documents
+        .mapNotNull { doc -> doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) } }
+        .reversed() // Reverse to get oldest-to-newest for display
+  }
+
+  /**
+   * Retrieve older messages before a specific timestamp for pagination.
+   *
+   * Fetches messages that were created before the given timestamp, useful for implementing "load
+   * more" functionality when the user scrolls to the top of the message list.
+   *
+   * ## Typical Usage Flow
+   * 1. Initial load: `getMessages(discussionId)` fetches most recent 50 messages
+   * 2. User scrolls to top: Get oldest message's timestamp
+   * 3. Load more: `getMessagesBeforeTimestamp(discussionId, oldestTimestamp, 50)`
+   * 4. Prepend results to existing messages
+   *
+   * ## Example
+   *
+   * ```kotlin
+   * val initialMessages = getMessages(discussionId)
+   * val oldestTimestamp = initialMessages.firstOrNull()?.createdAt
+   * if (oldestTimestamp != null) {
+   *   val olderMessages = getMessagesBeforeTimestamp(discussionId, oldestTimestamp, 50)
+   *   val allMessages = olderMessages + initialMessages
+   * }
+   * ```
+   *
+   * @param discussionId The discussion UID.
+   * @param beforeTimestamp Fetch messages created before this timestamp.
+   * @param limit Maximum number of messages to fetch (default: 50).
+   * @return List of messages ordered by createdAt timestamp (oldest first), created before the
+   *   given timestamp.
+   * @see getMessages for initial message load
+   */
+  suspend fun getMessagesBeforeTimestamp(
+      discussionId: String,
+      beforeTimestamp: Timestamp,
+      limit: Int = 50
+  ): List<Message> {
+    val snapshot =
+        messagesCollection(discussionId)
+            .orderBy(FIELD_CREATED_AT, com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .whereLessThan(FIELD_CREATED_AT, beforeTimestamp)
+            .limit(limit.toLong())
+            .get()
+            .await()
+    return snapshot.documents
+        .mapNotNull { doc -> doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) } }
+        .reversed() // Reverse to get oldest-to-newest for display
+  }
+
+  /**
+   * Retrieve the most recent message in a discussion.
+   *
+   * Efficiently fetches only the last message by ordering by creation time descending and limiting
+   * to 1 result. This is much more efficient than calling `getMessages().lastOrNull()`.
+   *
+   * ## Use Cases
+   * - Populating discussion previews when adding new participants
+   * - Marking messages as read (need last message timestamp)
+   * - Checking if discussion has any messages
+   *
+   * @param discussionId The discussion UID.
+   * @return The most recent message if any exist, null if discussion has no messages.
+   * @see getMessages to fetch multiple recent messages
+   * @see getMessage to fetch a specific message by ID
+   */
+  suspend fun getLastMessage(discussionId: String): Message? {
+    val snapshot =
+        messagesCollection(discussionId)
+            .orderBy(FIELD_CREATED_AT, com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+    return snapshot.documents.firstOrNull()?.let { doc ->
       doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) }
     }
   }
@@ -541,7 +628,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    */
   fun listenMessages(discussionId: String): Flow<List<Message>> = callbackFlow {
     val reg =
-        messagesCollection(discussionId).orderBy("createdAt").addSnapshotListener { snap, e ->
+        messagesCollection(discussionId).orderBy(FIELD_CREATED_AT).addSnapshotListener { snap, e ->
           if (e != null) {
             close(e)
             return@addSnapshotListener
