@@ -128,7 +128,6 @@ class CreateSessionScreenTest {
             uid = discussionId,
             name = "Board Night",
             description = "",
-            messages = emptyList(),
             participants = listOf(me.uid, alex.uid, dany.uid),
             admins = listOf(me.uid),
             creatorId = me.uid)

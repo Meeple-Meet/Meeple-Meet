@@ -225,4 +225,71 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
     // Cleanup
     discussionRepository.deleteDiscussion(d4)
   }
+
+  @Test
+  fun overview_displaysProfilePictureInDiscussionCard() = runBlocking {
+    checkpoint("Discussion card displays profile picture") {
+      runBlocking {
+        // Create the screen with existing discussions
+        compose.setContent {
+          AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+        }
+
+        compose.waitForIdle()
+
+        // Discussion cards should be displayed
+        // The ProfilePicture composable is used in DiscussionCard
+        // We verify that the discussions are displayed, which includes their profile pictures
+        compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+        compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+
+        // Note: We can't directly test the ProfilePicture composable rendering
+        // but we verify the cards render without crashing with the new profilePictureUrl parameter
+      }
+    }
+  }
+
+  @Test
+  fun overview_handlesNullProfilePictureUrl() = runBlocking {
+    checkpoint("Discussion card handles null profile picture URL") {
+      runBlocking {
+        // All test discussions have null profilePictureUrl by default
+        compose.setContent {
+          AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+        }
+
+        compose.waitForIdle()
+
+        // Verify discussions are displayed with default profile picture behavior
+        compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+        compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+        compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
+
+        // All cards should render successfully even with null profilePictureUrl
+      }
+    }
+  }
+
+  @Test
+  fun overview_usesDiscussionCommonsConstants() = runBlocking {
+    checkpoint("Overview uses DiscussionCommons constants") {
+      runBlocking {
+        // The changes replaced local constants with DiscussionCommons constants
+        // Verify "You" prefix for own messages
+        compose.setContent {
+          AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+        }
+
+        compose.waitForIdle()
+
+        // Should show "You: Bring snacks" using DiscussionCommons.YOU_SENDER_NAME
+        compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
+
+        // Verify "(No messages yet)" text for discussion without messages uses
+        // DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT
+        compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
+        compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
+      }
+    }
+  }
 }

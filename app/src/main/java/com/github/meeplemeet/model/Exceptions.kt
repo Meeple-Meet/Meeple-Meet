@@ -49,6 +49,18 @@ class GameNotFoundException(message: String = DEFAULT_MESSAGE) : Exception(messa
  */
 class LocationSearchException(message: String) : Exception(message)
 
+/** Exception thrown when disk operations fail (e.g., full disk, permission issues) */
+class DiskStorageException(message: String, cause: Throwable? = null) :
+    java.io.IOException(message, cause)
+
+/** Exception thrown when Firebase Storage operations fail */
+class RemoteStorageException(message: String, cause: Throwable? = null) :
+    java.io.IOException(message, cause)
+
+/** Exception thrown when image encoding/decoding fails */
+class ImageProcessingException(message: String, cause: Throwable? = null) :
+    Exception(message, cause)
+
 /**
  * Exception thrown when a BGG API request or search fails.
  *
