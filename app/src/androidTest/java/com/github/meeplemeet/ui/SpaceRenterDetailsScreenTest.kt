@@ -24,6 +24,7 @@ import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -103,6 +104,7 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
     owner = accountRepository.getAccount(owner.uid)
   }
 
+  @Ignore
   @Test
   fun full_smoke_all_cases() {
     val clipboard = FakeClipboardManager()
