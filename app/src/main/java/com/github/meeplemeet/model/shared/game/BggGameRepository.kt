@@ -292,16 +292,16 @@ class BggGameRepository(
 
             val minPlayers =
                 item
-                    .getChild("minPlayers")
+                    .getChild("minplayers")
                     ?.getAttributeValue("value")
                     ?.toIntOrNull()
-                    .orThrow("minPlayers", rawId)
+                    .orThrow("minplayers", rawId)
             val maxPlayers =
                 item
-                    .getChild("maxPlayers")
+                    .getChild("maxplayers")
                     ?.getAttributeValue("value")
                     ?.toIntOrNull()
-                    .orThrow("maxPlayers", rawId)
+                    .orThrow("maxplayers", rawId)
 
             val pollSummary =
                 item.getChildren("poll-summary").firstOrNull {
