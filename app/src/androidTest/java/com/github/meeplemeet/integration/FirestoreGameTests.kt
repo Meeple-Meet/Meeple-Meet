@@ -23,9 +23,9 @@ class FirestoreGameTests : FirestoreTests() {
       existing.documents.forEach { it.reference.delete().await() }
 
       // Insert baseline games used by multiple tests
-      addGameDoc("g_catan", "Catan", genres = listOf(1, 2))
-      addGameDoc("g_carcassonne", "Carcassonne", genres = listOf(2))
-      addGameDoc("g_chess", "Chess", genres = listOf(3))
+      addGameDoc("g_catan", "Catan", genres = listOf("1", "2"))
+      addGameDoc("g_carcassonne", "Carcassonne", genres = listOf("2"))
+      addGameDoc("g_chess", "Chess", genres = listOf("3"))
     }
   }
 
@@ -39,12 +39,13 @@ class FirestoreGameTests : FirestoreTests() {
     }
   }
 
-  private fun addGameDoc(id: String, name: String, genres: List<Int> = emptyList()) = runBlocking {
-    db.collection(GAMES_COLLECTION_PATH)
-        .document(id)
-        .set(GameNoUid(name = name, genres = genres))
-        .await()
-  }
+  private fun addGameDoc(id: String, name: String, genres: List<String> = emptyList()) =
+      runBlocking {
+        db.collection(GAMES_COLLECTION_PATH)
+            .document(id)
+            .set(GameNoUid(name = name, genres = genres))
+            .await()
+      }
 
   @Test
   fun getGameById_returns_expected_game() = runTest {

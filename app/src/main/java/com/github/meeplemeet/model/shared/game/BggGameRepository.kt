@@ -271,21 +271,11 @@ class BggGameRepository(
                     ?.getChildren("result")
                     ?.firstOrNull { it.getAttributeValue("name") == "bestwith" }
                     ?.getAttributeValue("value")
-                    ?.toIntOrNull()
-                    .orThrow("recommendedPlayers", rawId)
+                    ?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() }
 
             val playingTime =
-                item
-                    .getChild("playingtime")
-                    ?.getAttributeValue("value")
-                    ?.toIntOrNull()
-                    .orThrow("playingTime", rawId)
-            val minAge =
-                item
-                    .getChild("minage")
-                    ?.getAttributeValue("value")
-                    ?.toIntOrNull()
-                    .orThrow("minAge", rawId)
+                item.getChild("playingtime")?.getAttributeValue("value")?.toIntOrNull()
+            val minAge = item.getChild("minage")?.getAttributeValue("value")?.toIntOrNull()
 
             val genres =
                 item

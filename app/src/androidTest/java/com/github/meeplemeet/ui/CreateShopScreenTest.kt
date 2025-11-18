@@ -459,13 +459,13 @@ class CreateShopScreenTest {
     lateinit var stage: MutableIntState
 
     // Shared fixtures
-    val g1 = Game("g1", "Catan", "Trade routes", "", 3, 4, null, 60, emptyList())
-    val g2 = Game("g2", "Azul", "Tiles", "", 2, 4, null, 30, emptyList())
+    val g1 = Game("g1", "Catan", "Trade routes", "", 3, 4, null, 60, null, emptyList())
+    val g2 = Game("g2", "Azul", "Tiles", "", 2, 4, null, 30, null, emptyList())
     val suggestions = listOf(g1, g2)
 
     val many =
         (1..20).map { idx ->
-          val g = Game("g$idx", "Game $idx", "", "", 2, 4, null, 30, emptyList())
+          val g = Game("g$idx", "Game $idx", "", "", 2, 4, null, 30, null, emptyList())
           g to 1
         }
 

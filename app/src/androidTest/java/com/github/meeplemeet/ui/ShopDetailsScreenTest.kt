@@ -82,6 +82,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
                   maxPlayers = 4,
                   recommendedPlayers = null,
                   averagePlayTime = null,
+                  minAge = null,
                   genres = emptyList()),
               2),
           Pair(
@@ -94,6 +95,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
                   maxPlayers = 4,
                   recommendedPlayers = null,
                   averagePlayTime = null,
+                  minAge = null,
                   genres = emptyList()),
               1))
 

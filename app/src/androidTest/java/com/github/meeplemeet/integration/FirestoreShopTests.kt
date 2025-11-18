@@ -56,7 +56,7 @@ class FirestoreShopTests : FirestoreTests() {
                   imageURL = "https://example.com/catan.jpg",
                   minPlayers = 3,
                   maxPlayers = 4,
-                  genres = listOf(1, 2)))
+                  genres = listOf("1", "2")))
           .await()
 
       db.collection(GAMES_COLLECTION_PATH)
@@ -68,7 +68,7 @@ class FirestoreShopTests : FirestoreTests() {
                   imageURL = "https://example.com/chess.jpg",
                   minPlayers = 2,
                   maxPlayers = 2,
-                  genres = listOf(3)))
+                  genres = listOf("3")))
           .await()
 
       testGame1 = gameRepository.getGameById("g_catan")
