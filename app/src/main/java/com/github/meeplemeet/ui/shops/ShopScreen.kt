@@ -1,4 +1,6 @@
 // AI was used to help comment this screen
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.github.meeplemeet.ui.shops
 
 import android.widget.Toast
@@ -24,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipboardManager
@@ -73,10 +76,16 @@ object ShopTestTags {
 
   // Game list tags
   const val SHOP_GAME_PREFIX = "SHOP_GAME_"
+  const val SHOP_GAME_PAGER = "SHOP_GAME_PAGER"
+  const val SHOP_GAME_PAGER_INDICATOR_PREFIX = "SHOP_GAME_PAGER_INDICATOR_"
+
+  const val SHOP_GAME_NAME_PREFIX = "SHOP_GAME_NAME_"
+  const val SHOP_GAME_STOCK_PREFIX = "SHOP_GAME_STOCK_"
 }
 
 private const val CLOSED_MSG = "Closed"
 private const val GAME_SECTION_TITLE = "Discover Games"
+private const val ALERTDIALOG_CONFIRM_BUTTON_TEXT = "Close"
 
 private const val GAMES_PER_COLUMN = 4
 private const val GAMES_PER_ROW = 2
@@ -368,51 +377,55 @@ private fun WeeklyAvailabilityDialog(
       onDismissRequest = onDismiss,
       containerColor = MaterialTheme.colorScheme.background,
       modifier = Modifier.fillMaxWidth(),
-      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+      confirmButton = { TextButton(onClick = onDismiss) { Text(ALERTDIALOG_CONFIRM_BUTTON_TEXT) } },
       text = {
-        Box(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp).verticalScroll(scrollState)) {
-          Column(modifier = Modifier.fillMaxWidth()) {
-            openingHours
-                .sortedBy { it.day }
-                .forEach { entry ->
-                  val day = entry.day
-                  val isToday = day == currentDayIndex
-                  val dayName = dayNames.getOrNull(day) ?: "Day ${day + 1}"
-                  val lines = humanize(entry.hours).split("\n")
+        Box(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(max = Dimensions.ContainerSize.alertDialogHeight)
+                    .verticalScroll(scrollState)) {
+              Column(modifier = Modifier.fillMaxWidth()) {
+                openingHours
+                    .sortedBy { it.day }
+                    .forEach { entry ->
+                      val day = entry.day
+                      val isToday = day == currentDayIndex
+                      val dayName = dayNames.getOrNull(day) ?: "Day ${day + 1}"
+                      val lines = humanize(entry.hours).split("\n")
 
-                  Row(
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .padding(vertical = Dimensions.Spacing.small)
-                              .testTag("${dayTagPrefix}${day}"),
-                      verticalAlignment = Alignment.Top) {
+                      Row(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .padding(vertical = Dimensions.Spacing.small)
+                                  .testTag("${dayTagPrefix}${day}"),
+                          verticalAlignment = Alignment.Top) {
 
-                        // Left: day name
-                        Text(
-                            text = dayName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+                            // Left: day name
+                            Text(
+                                text = dayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(end = Dimensions.Spacing.medium))
 
-                        // Right: all time slots
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement =
-                                Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                              lines.forEach { line ->
-                                Text(
-                                    text = line,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight =
-                                        if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                    textAlign = TextAlign.End)
-                              }
-                            }
-                      }
-                }
-          }
-        }
+                            // Right: all time slots
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement =
+                                    Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                                  lines.forEach { line ->
+                                    Text(
+                                        text = line,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight =
+                                            if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                        textAlign = TextAlign.End)
+                                  }
+                                }
+                          }
+                    }
+              }
+            }
       })
 }
 
@@ -424,10 +437,9 @@ fun GameItemImage(
     count: Int,
     modifier: Modifier = Modifier,
     clickable: Boolean = true,
-    imageHeight: Dp? = null,
     onClick: (Game) -> Unit = {},
+    imageHeight: Dp? = null,
 ) {
-  val cardShape = MaterialTheme.shapes.medium
 
   Box(
       modifier =
@@ -438,28 +450,29 @@ fun GameItemImage(
             modifier =
                 Modifier.fillMaxWidth()
                     .padding(top = STOCK_BUBBLE_TOP_PADDING)
-                    .clip(cardShape)
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.background)
                     .clickable(enabled = clickable) { onClick(game) }
                     .padding(Dimensions.Padding.small),
             horizontalAlignment = Alignment.CenterHorizontally) {
-
-              /* TODO: erase AsyncImage background */
-              AsyncImage(
-                  model = game.imageURL,
-                  contentDescription = game.name,
-                  contentScale = ContentScale.Crop,
+              Box(
                   modifier =
                       Modifier.fillMaxWidth(GAME_IMG_RELATIVE_WIDTH)
-                          .clip(cardShape)
-                          .background(MaterialTheme.colorScheme.surfaceVariant)
+                          .shadow(
+                              Dimensions.Elevation.high, MaterialTheme.shapes.medium, clip = true)
+                          .clip(MaterialTheme.shapes.medium)
+                          .background(MaterialTheme.colorScheme.background)
                           .let { base ->
-                            if (imageHeight != null) {
-                              base.height(imageHeight)
-                            } else {
-                              base.aspectRatio(GAME_IMG_DEFAULT_ASPECT_RATIO)
-                            }
-                          })
+                            if (imageHeight != null) base.height(imageHeight)
+                            else base.aspectRatio(GAME_IMG_DEFAULT_ASPECT_RATIO)
+                          }) {
+                    AsyncImage(
+                        model = game.imageURL,
+                        contentDescription = game.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                  }
 
               Spacer(Modifier.height(Dimensions.Spacing.small))
 
@@ -469,7 +482,9 @@ fun GameItemImage(
                   textAlign = TextAlign.Center,
                   maxLines = GAME_NAME_MAX_LINES,
                   overflow = TextOverflow.Ellipsis,
-                  modifier = Modifier.fillMaxWidth())
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}"))
             }
 
         if (count > NOT_SHOWING_STOCK_MIN_VALUE) {
@@ -481,7 +496,8 @@ fun GameItemImage(
                       .align(Alignment.TopStart)
                       .offset(x = Dimensions.Padding.small, y = Dimensions.Padding.small)
                       .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.primary),
+                      .background(MaterialTheme.colorScheme.primary)
+                      .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
               contentAlignment = Alignment.Center) {
                 Text(
                     text = label,
@@ -527,8 +543,11 @@ fun GameImageListSection(
           val gridHeight = rowHeight * GAMES_PER_COLUMN
 
           HorizontalPager(
-              state = pagerState, modifier = Modifier.fillMaxWidth().height(gridHeight)) { pageIndex
-                ->
+              state = pagerState,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .height(gridHeight)
+                      .testTag(ShopTestTags.SHOP_GAME_PAGER)) { pageIndex ->
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(GAMES_PER_ROW),
                     horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
@@ -561,6 +580,7 @@ fun GameImageListSection(
                                   if (selected) PAGER_SELECTED_BUBBLE_SIZE
                                   else PAGER_UNSELECTED_BUBBLE_SIZE)
                               .clip(CircleShape)
+                              .testTag("${ShopTestTags.SHOP_GAME_PAGER_INDICATOR_PREFIX}$index")
                               .background(
                                   if (selected) MaterialTheme.colorScheme.primary
                                   else MaterialTheme.colorScheme.outline)
@@ -569,47 +589,4 @@ fun GameImageListSection(
               }
         }
       }
-}
-
-// -------------------- PREVIEWS --------------------
-@Preview(showBackground = true, showSystemUi = false, name = "GameImageListSection")
-@Composable
-fun GameImageListSectionPreview() {
-  val sampleGames =
-      listOf(
-              "Root",
-              "Blood on the Clocktower",
-              "Gloomhaven",
-              "Root",
-              "Spirit Island",
-              "Royg",
-              "Avalon",
-              "Root",
-              "Brass: Birmingham",
-              "Root")
-          .mapIndexed { index, name ->
-            Game(
-                uid = index.toString(),
-                name = name,
-                description = "",
-                imageURL = "https://example.com/$name.jpg",
-                minPlayers = 2,
-                maxPlayers = 4,
-                recommendedPlayers = 4,
-                averagePlayTime = 60,
-                genres = emptyList(),
-            ) to 44
-          }
-
-  AppTheme {
-    Surface(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        color = MaterialTheme.colorScheme.background) {
-          GameImageListSection(
-              games = sampleGames,
-              clickableGames = false,
-              title = "Discover Games",
-          )
-        }
-  }
 }
