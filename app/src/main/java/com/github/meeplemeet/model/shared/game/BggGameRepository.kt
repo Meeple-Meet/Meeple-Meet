@@ -281,7 +281,6 @@ class BggGameRepository(
 
           try {
             val thumbnail = item.getChildText("thumbnail").orThrow("thumbnail", rawId)
-            val image = item.getChildText("image").orThrow("image", rawId)
 
             val name =
                 item
