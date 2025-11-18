@@ -61,14 +61,6 @@ object SpaceRenterTestTags {
 }
 
 object SpaceRenterUi {
-  fun phoneContactRow(phoneNumber: String) = "- Phone: $phoneNumber"
-
-  fun emailContactRow(email: String) = "$email"
-
-  fun addressContactRow(address: String) = "- Address: $address"
-
-  fun websiteContactRow(website: String) = "- Website: $website"
-
   val HORIZONTAL_PADDING: Dp = 100.dp
   val ROW_WIDTH: Dp = 48.dp
 }
@@ -80,6 +72,7 @@ object SpaceRenterUi {
  * @param account The current user account.
  * @param viewModel The ViewModel providing space renter data.
  * @param onBack Callback invoked when the back button is pressed.
+ * @param onReserve Callback invoked when the reserve button from the bottom bar is pressed.
  * @param onEdit Callback invoked when the edit button is pressed.
  */
 @Composable
@@ -120,7 +113,7 @@ fun SpaceRenterScreen(
             onApprove = onReserve)
       },
   ) { innerPadding ->
-    // Show space renter details if loaded, otherwise show a loading indicator
+    // Only show the actual screen if space renter data is available
     spaceState?.let { space ->
       SpaceRenterDetails(
           spaceRenter = space,
@@ -128,6 +121,7 @@ fun SpaceRenterScreen(
           onSelect = { selectedIndex = it },
           modifier = Modifier.padding(innerPadding).fillMaxSize())
     }
+        // Show a loading indicator, awaiting data to be fetched
         ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
@@ -138,7 +132,9 @@ fun SpaceRenterScreen(
  * Composable that displays detailed information about a space renter, including contact info,
  * availability, and game list.
  *
- * @param spaceRenter The space renter data to display.
+ * @param spaceRenter The space renter's data to display.
+ * @param onSelect Callback invoked upon interaction (press) with a space (selection/unselection)
+ * @param selectedIndex Index of the selected card, null if none is selected.
  * @param modifier Modifier to be applied to the layout.
  */
 @Composable
@@ -190,14 +186,17 @@ fun ContactSection(spaceRenter: SpaceRenter) {
             humanReadableAddress(spaceRenter.address.name),
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT)
 
+        // Display phone contact row if provided
         if (spaceRenter.phone.isNotBlank()) {
           ContactRow(
               Icons.Default.Phone, spaceRenter.phone, SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT)
         }
 
+        // Display email contact row
         ContactRow(
             Icons.Default.Email, spaceRenter.email, SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT)
 
+        // Display website contact row if provided
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
               Icons.Default.Language,
@@ -213,14 +212,13 @@ fun ContactSection(spaceRenter: SpaceRenter) {
  *
  * @param icon The icon to display for the contact method.
  * @param text The contact text to display and copy.
- * @param textTag The test tag for the text element.
- * @param buttonTag The test tag for the copy button.
+ * @param testTag The test tag for the text element.
  */
 @Composable
 fun ContactRow(
     icon: ImageVector,
     text: String,
-    textTag: String,
+    testTag: String,
 ) {
   val clipboard = LocalClipboardManager.current
   val context = LocalContext.current
@@ -243,7 +241,7 @@ fun ContactRow(
 
         Text(
             text,
-            modifier = Modifier.weight(1f).testTag(textTag),
+            modifier = Modifier.weight(1f).testTag(testTag),
             maxLines = 2,
             style = MaterialTheme.typography.bodyMedium,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -306,6 +304,14 @@ private fun humanReadableAddress(address: String): String {
   if (address.length <= limit) return address else return address.take(limit - 3) + "..."
 }
 
+/**
+ * Composable that displays a section of available spaces in a horizontal pager format.
+ *
+ * @param spaces Carousel displaying a list of spaces to display.
+ * @param selectedIndex The index of the currently selected space, null if none is selected.
+ * @param onSelect Callback invoked upon selection/unselection of a space (click actions).
+ * @param modifier Modifier(s) to be applied to the layout.
+ */
 @Composable
 fun SpacesSection(
     spaces: List<Space>,
@@ -341,12 +347,11 @@ fun SpacesSection(
 
         // Pager
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
+          val start = page * spacesPerPage
+          val end = minOf(start + spacesPerPage, spaces.size)
           Column(
               modifier = Modifier.fillMaxWidth(),
               verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val start = page * spacesPerPage
-                val end = minOf(start + spacesPerPage, spaces.size)
-
                 for (i in start until end) {
                   SpaceCard(
                       space = spaces[i],
@@ -375,6 +380,14 @@ fun SpacesSection(
       }
 }
 
+/**
+ * Composable that displays a card representing a space with its details.
+ *
+ * @param space The space with data (seats and price) to display.
+ * @param index The index of the space in the list.
+ * @param isSelected Whether the card is currently selected.
+ * @param onClick Callback invoked when the card is clicked.
+ */
 @Composable
 private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: () -> Unit) {
   val shape = RoundedCornerShape(12.dp)
@@ -408,6 +421,13 @@ private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: ()
       }
 }
 
+/**
+ * Composable that displays a chip showing the price range of spaces, going from minimum to maximum
+ * (with an icon to pretty-fy)
+ *
+ * @param minPrice The minimum price of the spaces.
+ * @param maxPrice The maximum price of the spaces.
+ */
 @Composable
 private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
   Row(
@@ -427,42 +447,12 @@ private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
       }
 }
 
-// TODO: remove me once the real photo carousel is implemented
-@Composable
-private fun TemporaryPhotoCarousel() {
-  val pageCount = 4
-  val pagerState = rememberPagerState(pageCount = { pageCount })
-
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(180.dp)
-              .padding(Dimensions.Padding.large)
-              .clip(RoundedCornerShape(16.dp))
-              .background(Color(0xFF757575)) // grey placeholder
-      ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()) { /* empty for now – just grey */}
-
-        // Dots inside the image
-        Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.Center) {
-              repeat(pageCount) { index ->
-                val active = pagerState.currentPage == index
-                Box(
-                    modifier =
-                        Modifier.padding(4.dp)
-                            .size(if (active) 9.dp else 7.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (active) AppColors.textIcons else AppColors.textIconsFade))
-              }
-            }
-      }
-}
-
+/**
+ * Composable that displays a row showing today's availability and opens a bottom popup with full
+ * availability when clicked.
+ *
+ * @param openingHours List of opening hours for each day of the week.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
@@ -471,7 +461,6 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
   val today = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
   val todayHours = openingHours.firstOrNull { it.day == today }
 
-  // Build "Today: 7:30AM - 8:00PM"
   val todayText =
       when {
         todayHours == null || todayHours.hours.isEmpty() -> "Closed"
@@ -512,6 +501,14 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
   }
 }
 
+/**
+ * Composable that displays a reservation bar as the bottom of the screen. If no space is selected,
+ * prompts the user to select one.
+ *
+ * @param selectedSpace The currently selected space, or null if none is selected.
+ * @param selectedIndex The index of the selected space, or null if none is selected.
+ * @param onApprove Callback invoked when the approve button is pressed.
+ */
 @Composable
 fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> Unit) {
   Box(
@@ -567,5 +564,41 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
                     }
               }
         }
+      }
+}
+
+// TODO: remove me once the real photo carousel is implemented
+@Composable
+private fun TemporaryPhotoCarousel() {
+  val pageCount = 4
+  val pagerState = rememberPagerState(pageCount = { pageCount })
+
+  Box(
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(180.dp)
+              .padding(Dimensions.Padding.large)
+              .clip(RoundedCornerShape(16.dp))
+              .background(Color(0xFF757575)) // grey placeholder
+      ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()) { /* empty for now – just grey */}
+
+        // Dots inside the image
+        Row(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.Center) {
+              repeat(pageCount) { index ->
+                val active = pagerState.currentPage == index
+                Box(
+                    modifier =
+                        Modifier.padding(4.dp)
+                            .size(if (active) 9.dp else 7.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (active) AppColors.textIcons else AppColors.textIconsFade))
+              }
+            }
       }
 }
