@@ -25,6 +25,16 @@ import org.jdom2.input.SAXBuilder
 data class GameFetchResult(val games: List<Game>, val errors: List<GameParseException>)
 
 /**
+ * Represents a minimal search result for a board game from BGG.
+ *
+ * Contains only the ID and the name of the game, suitable for autocomplete or search ranking.
+ *
+ * @property id The BGG ID of the game.
+ * @property name The name of the game.
+ */
+data class GameSearchResult(val id: String, val name: String)
+
+/**
  * Repository implementation for fetching BoardGameGeek (BGG) games.
  *
  * This repository uses the BGG XML API v2 to fetch game details by ID or to search games by name.
@@ -81,12 +91,41 @@ class BggGameRepository(
    *
    * @param gameIDs One or more BGG game IDs.
    * @return A list of successfully parsed [Game] objects.
+   * @throws IllegalArgumentException If more than 20 IDs are provided.
    * @throws GameSearchException If all requested games fail to fetch or parse.
    */
   @Deprecated("Use getGamesByIdWithErrors() for partial results and parse errors")
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
     val result = getGamesByIdWithErrors(*gameIDs)
     return result.games
+  }
+
+  /**
+   * Search for games whose names contain the specified query string.
+   *
+   * **Deprecated:** Use [searchGamesByName] to get search results without fetching full game
+   * details.
+   *
+   * @param query The string to search for in game names.
+   * @param maxResults Maximum number of results to return.
+   * @param ignoreCase Whether to ignore case when matching names.
+   * @return A list of [Game] objects whose names contain the specified substring.
+   * @throws IllegalArgumentException If [maxResults] > 20.
+   * @throws GameSearchException If the search request fails.
+   */
+  override suspend fun searchGamesByNameContains(
+      query: String,
+      maxResults: Int,
+      ignoreCase: Boolean
+  ): List<Game> {
+    require(maxResults <= 20) { "A maximum of 20 games can be returned" }
+
+    val searchResult = searchGamesByName(query, maxResults, ignoreCase)
+    val ids = searchResult.map { it.id }
+    val gamesResult = getGamesByIdWithErrors(*ids.toTypedArray())
+
+    val gamesById = gamesResult.games.associateBy { it.uid }
+    return searchResult.mapNotNull { gamesById[it.id] }
   }
 
   /**
@@ -99,6 +138,7 @@ class BggGameRepository(
    * @param gameIDs One or more BGG game IDs (maximum 20 per request).
    * @return A [GameFetchResult] containing successfully parsed games and a list of
    *   [GameParseException] for failed items.
+   * @throws IllegalArgumentException If more than 20 IDs are provided.
    * @throws GameSearchException If all games fail to fetch or parse.
    */
   suspend fun getGamesByIdWithErrors(vararg gameIDs: String): GameFetchResult =
@@ -164,17 +204,20 @@ class BggGameRepository(
   /**
    * Search for board games whose name contains the given query string.
    *
+   * Unlike [searchGamesByNameContains], this method is optimized, and only return gameId and name.
+   * The caller can then fetch the game he consider as result of the search.
+   *
    * @param query The string to search for in game names.
    * @param maxResults Maximum number of results to return.
    * @param ignoreCase Whether the search should ignore case.
    * @return A list of [Game] objects matching the search.
    * @throws GameSearchException If the search request fails.
    */
-  override suspend fun searchGamesByNameContains(
+  suspend fun searchGamesByName(
       query: String,
       maxResults: Int,
       ignoreCase: Boolean
-  ): List<Game> =
+  ): List<GameSearchResult> =
       withContext(Dispatchers.IO) {
         val url =
             baseUrl
@@ -182,7 +225,6 @@ class BggGameRepository(
                 .addPathSegment("search")
                 .addQueryParameter("query", query)
                 .addQueryParameter("type", "boardgame")
-                .addQueryParameter("exact", "1")
                 .build()
 
         val builder = Request.Builder().url(url)
@@ -199,16 +241,16 @@ class BggGameRepository(
           val response = client.newCall(request).execute()
           response.use {
             if (!response.isSuccessful) {
-              throw GameSearchException("BGG thing request failed: ${response.code}")
+              throw GameSearchException("BGG search request failed: ${response.code}")
             }
 
             val body = response.body?.string().orEmpty()
             val doc = SAXBuilder().build(StringReader(body))
-            val results = parseSearchResults(doc)
+            val rawResults = parseSearchResults(doc)
 
-            return@withContext results
-                .filter { it.name.contains(query, ignoreCase) }
-                .take(maxResults)
+            val ranked = rankSearchResults(rawResults, query, ignoreCase)
+
+            return@withContext ranked.take(maxResults)
           }
         } catch (e: IOException) {
           throw GameSearchException("Failed to search games: ${e.message}")
@@ -325,7 +367,89 @@ class BggGameRepository(
    * @return A list of [Game] objects from the search results.
    * @throws NotImplementedError Currently not implemented.
    */
-  private fun parseSearchResults(doc: Document): List<Game> {
-    throw NotImplementedError("parseSearchResult() is not implemented yet")
+  private fun parseSearchResults(doc: Document): List<GameSearchResult> {
+    val root = doc.rootElement
+    val items = root.getChildren("item")
+
+    return items.mapNotNull { item ->
+      val id = item.getAttributeValue("id") ?: return@mapNotNull null
+
+      val nameElement =
+          item.getChild("name").takeIf { it.getAttributeValue("type") == "primary" }
+              ?: return@mapNotNull null
+
+      val name = nameElement.getAttributeValue("value") ?: return@mapNotNull null
+
+      GameSearchResult(id = id, name = name)
+    }
+  }
+
+  // ----------------------------
+  // Game search ranking helpers
+  // ----------------------------
+
+  /**
+   * Rank and sort search results based on their relevance to the query.
+   *
+   * Ranking order:
+   * 1. Exact name match first
+   * 2. Partial name match (substring) — earlier occurrence preferred
+   * 3. Fallback by Levenshtein distance (edit distance)
+   *
+   * @param results List of [GameSearchResult] to rank.
+   * @param query The search query string.
+   * @param ignoreCase Whether to ignore case when comparing names.
+   * @return A list of [GameSearchResult] sorted by relevance.
+   */
+  private fun rankSearchResults(
+      results: List<GameSearchResult>,
+      query: String,
+      ignoreCase: Boolean
+  ): List<GameSearchResult> {
+    val q = if (ignoreCase) query.lowercase() else query
+
+    return results.sortedWith(
+        compareBy<GameSearchResult> {
+              // 1. Exact match first
+              val n = if (ignoreCase) it.name.lowercase() else it.name
+              if (n == q) 0 else 1
+            }
+            .thenBy {
+              // 2. Contains match (smaller index = better)
+              val n = if (ignoreCase) it.name.lowercase() else it.name
+              val idx = n.indexOf(q)
+              if (idx >= 0) idx else Int.MAX_VALUE
+            }
+            .thenBy {
+              // 3. Levenshtein distance fallback
+              levenshtein((if (ignoreCase) it.name.lowercase() else it.name), q)
+            })
+  }
+
+  /**
+   * Compute the Levenshtein distance (edit distance) between two strings.
+   *
+   * Used as a fallback ranking metric for search results to measure similarity.
+   *
+   * @param a First string.
+   * @param b Second string.
+   * @return The number of single-character edits (insertions, deletions, substitutions) needed to
+   *   transform [a] into [b].
+   */
+  private fun levenshtein(a: String, b: String): Int {
+    val dp = Array(a.length + 1) { IntArray(b.length + 1) }
+    for (i in 0..a.length) dp[i][0] = i
+    for (j in 0..b.length) dp[0][j] = j
+
+    for (i in 1..a.length) {
+      for (j in 1..b.length) {
+        dp[i][j] =
+            minOf(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+      }
+    }
+    return dp[a.length][b.length]
   }
 }
