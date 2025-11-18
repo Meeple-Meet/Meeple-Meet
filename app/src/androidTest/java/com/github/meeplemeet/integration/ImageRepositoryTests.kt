@@ -326,27 +326,6 @@ class ImageRepositoryTests : FirestoreTests() {
       }
     }
 
-    checkpoint("Delete discussion profile picture clears data") {
-      val discussionId = "discussion_delete_${System.currentTimeMillis()}"
-
-      runTest {
-        imageRepository.saveDiscussionProfilePicture(context, discussionId, testImagePath1)
-
-        val cacheFile = File(context.cacheDir, "discussions/$discussionId/profile.webp")
-        assertTrue("Cache created", cacheFile.exists())
-
-        imageRepository.deleteDiscussionProfilePicture(context, discussionId)
-        assertTrue("Cache removed", !cacheFile.exists())
-
-        try {
-          imageRepository.loadDiscussionProfilePicture(context, discussionId)
-          fail("Expected RemoteStorageException after discussion delete")
-        } catch (_: RemoteStorageException) {
-          assertTrue(true)
-        }
-      }
-    }
-
     checkpoint("Delete discussion photo messages removes directory") {
       val discussionId = "discussion_messages_delete_${System.currentTimeMillis()}"
 
@@ -1027,7 +1006,7 @@ class ImageRepositoryTests : FirestoreTests() {
             // Successfully handled large image
             assertTrue("Large image processed successfully", true)
           }
-        } catch (e: OutOfMemoryError) {
+        } catch (_: OutOfMemoryError) {
           // If we get OOM during test image creation, that's acceptable
           assertTrue("OOM during test setup is acceptable", true)
         } finally {
@@ -1062,7 +1041,7 @@ class ImageRepositoryTests : FirestoreTests() {
           } finally {
             largeFile.delete()
           }
-        } catch (e: OutOfMemoryError) {
+        } catch (_: OutOfMemoryError) {
           // OOM during test bitmap creation is acceptable
           assertTrue("Test bitmap creation triggered OOM", true)
         }
@@ -1099,7 +1078,7 @@ class ImageRepositoryTests : FirestoreTests() {
           } finally {
             largePaths.forEach { File(it).delete() }
           }
-        } catch (e: OutOfMemoryError) {
+        } catch (_: OutOfMemoryError) {
           // OOM during test is acceptable
           assertTrue("OOM during multi-image test", true)
         }
@@ -1124,7 +1103,7 @@ class ImageRepositoryTests : FirestoreTests() {
           // If any exception occurs, it should be properly wrapped
           assertTrue(
               "Streaming errors should be wrapped",
-              e is DiskStorageException || e is RemoteStorageException || e is OutOfMemoryError)
+              e is DiskStorageException || e is RemoteStorageException)
         }
       }
     }

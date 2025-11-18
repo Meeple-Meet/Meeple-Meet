@@ -109,7 +109,8 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         checkpoint("Discussion title displayed") {
           composeTestRule.onNodeWithText(testDiscussion.name).assertExists()
         }
-        testDiscussion.messages.forEach { msg ->
+        val messages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
+        messages.forEach { msg ->
           checkpoint("Message '${msg.content}' displayed") {
             composeTestRule.onNodeWithText(msg.content).assertExists()
           }
@@ -318,12 +319,157 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             "Poll smoke: ${report.size - failed.size}/${report.size} OK" +
                 (if (failed.isNotEmpty()) " → $failed" else ""))
       }
+
+  @Test
+  fun photoBubble_opensFullscreenDialog() =
+      testScope.runTest(timeout = 10.seconds) {
+        val photoDiscussion = runBlocking {
+          discussionRepository.createDiscussion(
+              name = "Photos",
+              description = "",
+              creatorId = currentUser.uid,
+              participants = listOf(otherUser.uid))
+        }
+
+        try {
+          val caption = "Look at this!"
+          runBlocking {
+            discussionRepository.sendPhotoMessageToDiscussion(
+                photoDiscussion, currentUser, caption, "https://example.com/pic1.jpg")
+          }
+          val refreshed = discussionRepository.getDiscussion(photoDiscussion.uid)
+
+          composeTestRule.setContent {
+            AppTheme(themeMode = ThemeMode.LIGHT) {
+              DiscussionScreen(
+                  viewModel = viewModel,
+                  discussion = refreshed,
+                  account = currentUser,
+                  onBack = { backPressed = true })
+            }
+          }
+
+          composeTestRule.waitUntil(5_000) {
+            composeTestRule
+                .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+          }
+
+          checkpoint("Photo bubble displayed") {
+            composeTestRule
+                .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
+                .assertCountEquals(1)
+          }
+          checkpoint("Photo caption displayed") {
+            composeTestRule.onNodeWithText(caption, useUnmergedTree = true).assertExists()
+          }
+
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)[0]
+              .performClick()
+
+          checkpoint("Fullscreen dialog shows thumbnail bar") {
+            composeTestRule
+                .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
+                .assertCountEquals(1)
+          }
+          checkpoint("Dialog can be dismissed") {
+            val backs =
+                composeTestRule.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
+            val lastBack = backs[backs.fetchSemanticsNodes().lastIndex]
+            lastBack.performClick()
+            composeTestRule.waitUntil(3_000) {
+              composeTestRule
+                  .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isEmpty()
+            }
+          }
+        } finally {
+          runBlocking { discussionRepository.deleteDiscussion(photoDiscussion) }
+        }
+      }
+
+  @Test
+  fun fullscreenImageDialog_switchesBetweenPhotos() =
+      testScope.runTest(timeout = 10.seconds) {
+        val photoDiscussion = runBlocking {
+          discussionRepository.createDiscussion(
+              name = "Gallery",
+              description = "",
+              creatorId = currentUser.uid,
+              participants = listOf(otherUser.uid))
+        }
+
+        try {
+          runBlocking {
+            discussionRepository.sendPhotoMessageToDiscussion(
+                photoDiscussion, currentUser, "First photo", "https://example.com/picA.jpg")
+            discussionRepository.sendPhotoMessageToDiscussion(
+                photoDiscussion, otherUser, "Second photo", "https://example.com/picB.jpg")
+          }
+          val refreshed = discussionRepository.getDiscussion(photoDiscussion.uid)
+
+          composeTestRule.setContent {
+            AppTheme(themeMode = ThemeMode.LIGHT) {
+              DiscussionScreen(
+                  viewModel = viewModel,
+                  discussion = refreshed,
+                  account = currentUser,
+                  onBack = { backPressed = true })
+            }
+          }
+
+          composeTestRule.waitUntil(5_000) {
+            composeTestRule
+                .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .size >= 2
+          }
+
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)[0]
+              .performClick()
+
+          checkpoint("Thumbnail bar shows two photos") {
+            composeTestRule
+                .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
+                .assertCountEquals(2)
+          }
+          checkpoint("Initial dialog shows current user") {
+            composeTestRule.onNodeWithText("You", useUnmergedTree = true).assertExists()
+          }
+
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)[1]
+              .performClick()
+
+          checkpoint("Switching thumbnails updates sender name") {
+            composeTestRule.waitUntil(3_000) {
+              composeTestRule
+                  .onAllNodesWithText("You", useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isEmpty()
+            }
+          }
+
+          val backs =
+              composeTestRule.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
+          val lastBack = backs[backs.fetchSemanticsNodes().lastIndex]
+          lastBack.performClick()
+        } finally {
+          runBlocking { discussionRepository.deleteDiscussion(photoDiscussion) }
+        }
+      }
   /* waits until the discussion contains a message with a poll */
   private suspend fun awaitPollMessage(discussion: Discussion, minCount: Int = 1): Discussion {
     var disc = discussion
-    while (disc.messages.count { it.poll != null } < minCount) {
+    var messages = discussionRepository.getMessages(discussion.uid)
+    while (messages.count { it.poll != null } < minCount) {
       kotlinx.coroutines.delay(200)
       disc = discussionRepository.getDiscussion(discussion.uid)
+      messages = discussionRepository.getMessages(discussion.uid)
     }
     return disc
   }

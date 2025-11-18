@@ -64,9 +64,7 @@ import kotlinx.coroutines.delay
 /* ================================================================
  * Variables
  * ================================================================ */
-const val MY_MSG_USERNAME = "You"
 const val DEFAULT_DISCUSSION_NAME = "Discussion"
-const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
 const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 
 private const val MAXLINE = 1
@@ -150,7 +148,8 @@ fun DiscussionsOverviewScreen(
                   val isMe = (senderId == account.uid)
                   val senderName by
                       produceState(
-                          key1 = senderId, initialValue = if (isMe) MY_MSG_USERNAME else null) {
+                          key1 = senderId,
+                          initialValue = if (isMe) DiscussionCommons.YOU_SENDER_NAME else null) {
                             if (senderId.isNotBlank() && !isMe) {
                               viewModel.getOtherAccount(senderId) { acc -> value = acc.name }
                             }
@@ -158,9 +157,9 @@ fun DiscussionsOverviewScreen(
 
                   val msgText = buildString {
                     if (preview.lastMessage.isBlank()) {
-                      append(NO_MESSAGES_DEFAULT_TEXT)
+                      append(DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT)
                     } else {
-                      if (isMe) append("$MY_MSG_USERNAME: ")
+                      if (isMe) append("${DiscussionCommons.YOU_SENDER_NAME}: ")
                       else if (!senderName.isNullOrBlank()) append("$senderName: ")
                       append(preview.lastMessage)
                     }
@@ -171,6 +170,7 @@ fun DiscussionsOverviewScreen(
                       lastMsg = msgText,
                       lastMsgDate = preview.lastMessageAt,
                       unreadMsgCount = preview.unreadCount,
+                      profilePictureUrl = discussion?.profilePictureUrl,
                       modifier =
                           Modifier.fillMaxWidth()
                               .testTag(DiscussionTestTags.discussionInfo(discussionName)),
@@ -219,6 +219,7 @@ private fun EmptyDiscussionsListText() {
  * @param discussionName Discussion name
  * @param lastMsg Last message text
  * @param unreadMsgCount Number of unseen messages in this discussion
+ * @param profilePictureUrl Optional URL to the discussion's profile picture
  * @param modifier Optional [Modifier] for this composable
  * @param onClick Function to operate when clicked
  */
@@ -230,6 +231,7 @@ private fun DiscussionCard(
     lastMsg: String = "Hello world",
     lastMsgDate: Timestamp = Timestamp.now(),
     unreadMsgCount: Int = 1,
+    profilePictureUrl: String? = null,
     onClick: () -> Unit = {}
 ) {
   Column(modifier = modifier) {
@@ -243,11 +245,10 @@ private fun DiscussionCard(
                     vertical = Dimensions.Spacing.large),
         verticalAlignment = Alignment.CenterVertically) {
           // Profile picture
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.extraLarge)
-                      .clip(CircleShape)
-                      .background(AppColors.neutral, CircleShape))
+          ProfilePicture(
+              profilePictureUrl = profilePictureUrl,
+              size = Dimensions.AvatarSize.extraLarge,
+              backgroundColor = AppColors.neutral)
 
           Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
 

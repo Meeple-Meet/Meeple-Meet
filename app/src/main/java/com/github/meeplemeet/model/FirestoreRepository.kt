@@ -11,9 +11,9 @@ import com.google.firebase.firestore.FirebaseFirestore
  * This class provides common functionality for repositories that interact with Firestore, including
  * access to a specific collection and UUID generation for new documents.
  *
- * @property collectionName The name of the Firestore collection this repository manages
- * @property db The FirebaseFirestore instance to use. Defaults to the shared instance from
- *   FirebaseProvider
+ * @property collectionName Name of the Firestore collection this repository manages.
+ * @property db FirebaseFirestore instance to use. Defaults to the shared instance from
+ *   [FirebaseProvider].
  */
 open class FirestoreRepository(
     val collectionName: String,
@@ -23,7 +23,7 @@ open class FirestoreRepository(
     require(collectionName.isNotBlank())
   }
 
-  /** The Firestore collection reference for this repository */
+  // The Firestore collection reference for this repository
   val collection = db.collection(collectionName)
 
   /**

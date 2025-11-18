@@ -3,7 +3,6 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
@@ -46,7 +45,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(testAccount1.uid, discussion.creatorId)
     assertTrue(discussion.participants.contains(testAccount1.uid))
     assertTrue(discussion.admins.contains(testAccount1.uid))
-    assertTrue(discussion.messages.isEmpty())
+
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertTrue(messages.isEmpty())
 
     val account = accountRepository.getAccount(testAccount1.uid)
     assertNotNull(account.previews[discussion.uid])
@@ -210,10 +211,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
     discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Hello World")
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertEquals(1, updated.messages.size)
-    assertEquals("Hello World", updated.messages[0].content)
-    assertEquals(testAccount1.uid, updated.messages[0].senderId)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertEquals(1, messages.size)
+    assertEquals("Hello World", messages[0].content)
+    assertEquals(testAccount1.uid, messages[0].senderId)
   }
 
   @Test
@@ -273,8 +274,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
     discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
     discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Hello")
 
-    val message = Message(testAccount2.uid, "Read")
-    discussionRepository.readDiscussionMessages(testAccount2.uid, discussion.uid, message)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val lastMessage = messages.last()
+    discussionRepository.readDiscussionMessages(testAccount2.uid, discussion.uid, lastMessage)
 
     val updated = accountRepository.getAccount(testAccount2.uid)
     val preview = updated.previews[discussion.uid]
@@ -319,9 +321,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = options,
         allowMultipleVotes = false)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertEquals(1, updated.messages.size)
-    val pollMessage = updated.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertEquals(1, messages.size)
+    val pollMessage = messages[0]
     assertNotNull(pollMessage.poll)
     assertEquals(question, pollMessage.poll?.question)
     assertEquals(options, pollMessage.poll?.options)
@@ -340,8 +342,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertTrue(updated.messages[0].poll?.allowMultipleVotes ?: false)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertTrue(messages[0].poll?.allowMultipleVotes ?: false)
   }
 
   @Test
@@ -356,12 +358,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = false)
 
-    val updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    val message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val message = messages[0]
+    discussionRepository.voteOnPoll(discussion.uid, message.uid, testAccount2.uid, 1)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     assertEquals(1, poll?.votes?.size)
     assertEquals(listOf(1), poll?.votes?.get(testAccount2.uid))
@@ -379,15 +381,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    var messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 2)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     assertEquals(1, poll?.votes?.size)
     assertEquals(2, poll?.votes?.get(testAccount2.uid)?.size)
@@ -407,15 +407,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 2)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     assertEquals(listOf(2), poll?.votes?.get(testAccount2.uid))
   }
@@ -433,18 +431,14 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 1)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount3.uid, 0)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     assertEquals(3, poll?.votes?.size)
     assertEquals(listOf(0), poll?.votes?.get(testAccount1.uid))
@@ -463,9 +457,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    val updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    val message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 5)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 5)
   }
 
   @Test
@@ -480,22 +474,16 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 1)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 1)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 2)
 
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 1)
+    discussionRepository.removeVoteFromPoll(discussion.uid, messageId, testAccount2.uid, 1)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     val userVotes = poll?.votes?.get(testAccount2.uid)
     assertEquals(2, userVotes?.size)
@@ -516,16 +504,14 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 0)
 
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    discussionRepository.removeVoteFromPoll(discussion.uid, messageId, testAccount2.uid, 0)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
 
     assertNotNull(poll)
     assertTrue(poll?.votes?.isEmpty() ?: false)
@@ -543,9 +529,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B"),
         allowMultipleVotes = false)
 
-    val updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    val message = updatedDiscussion.messages[0]
-    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.removeVoteFromPoll(discussion.uid, messageId, testAccount2.uid, 0)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -559,12 +545,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = true)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.removeVoteFromPoll(updatedDiscussion, message, testAccount2.uid, 2)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 0)
+    discussionRepository.removeVoteFromPoll(discussion.uid, messageId, testAccount2.uid, 2)
   }
 
   @Test
@@ -580,18 +564,14 @@ class FirestoreRepositoryTests : FirestoreTests() {
         options = listOf("A", "B", "C"),
         allowMultipleVotes = false)
 
-    var updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    var message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount1.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount2.uid, 0)
-    updatedDiscussion = discussionRepository.getDiscussion(discussion.uid)
-    message = updatedDiscussion.messages[0]
-    discussionRepository.voteOnPoll(updatedDiscussion, message, testAccount3.uid, 1)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount2.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount3.uid, 1)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     val voteCounts = poll?.getVoteCountsByOption()
     assertEquals(2, voteCounts?.get(0))
@@ -608,10 +588,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
     discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val regularMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val regularMessage = messages[0]
 
-    discussionRepository.voteOnPoll(d1, regularMessage, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, regularMessage.uid, testAccount1.uid, 0)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -620,10 +600,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessage = messages[0]
 
-    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, -1)
+    discussionRepository.voteOnPoll(discussion.uid, pollMessage.uid, testAccount1.uid, -1)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -632,10 +612,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val pollMessage = messages[0]
 
-    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 5)
+    discussionRepository.voteOnPoll(discussion.uid, pollMessage.uid, testAccount1.uid, 5)
   }
 
   @Test
@@ -644,16 +624,16 @@ class FirestoreRepositoryTests : FirestoreTests() {
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
 
     // Vote on same option twice
-    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    discussionRepository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 0) // Same option again
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(
+        discussion.uid, messageId, testAccount1.uid, 0) // Same option again
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
     // Should only have one vote for option 0
     assertEquals(listOf(0), poll!!.votes[testAccount1.uid])
@@ -664,10 +644,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
     discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Regular message")
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val regularMessage = d1.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val regularMessage = messages[0]
 
-    discussionRepository.removeVoteFromPoll(d1, regularMessage, testAccount1.uid, 0)
+    discussionRepository.removeVoteFromPoll(discussion.uid, regularMessage.uid, testAccount1.uid, 0)
   }
 
   // Poll Helper Methods Tests
@@ -679,14 +659,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
-    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
-    val d2 = discussionRepository.getDiscussion(discussion.uid)
-    discussionRepository.voteOnPoll(d2, d2.messages[0], testAccount1.uid, 2)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount1.uid, 0)
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount1.uid, 2)
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
 
     val user1Votes = poll!!.getUserVotes(testAccount1.uid)
@@ -706,12 +685,12 @@ class FirestoreRepositoryTests : FirestoreTests() {
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 
-    val d1 = discussionRepository.getDiscussion(discussion.uid)
-    val pollMessage = d1.messages[0]
-    discussionRepository.voteOnPoll(d1, pollMessage, testAccount1.uid, 0)
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val messageId = messages[0].uid
+    discussionRepository.voteOnPoll(discussion.uid, messageId, testAccount1.uid, 0)
 
-    val final = discussionRepository.getDiscussion(discussion.uid)
-    val poll = final.messages[0].poll
+    val updatedMessages = discussionRepository.getMessages(discussion.uid)
+    val poll = updatedMessages[0].poll
     assertNotNull(poll)
 
     assertTrue(poll!!.hasUserVoted(testAccount1.uid))
@@ -728,9 +707,9 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
     discussionRepository.createPoll(discussion, testAccount1.uid, question, options, false)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    assertEquals(1, updated.messages.size)
-    val message = updated.messages[0]
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertEquals(1, messages.size)
+    val message = messages[0]
     assertNotNull(message.poll)
     assertEquals(question, message.poll?.question)
     // Content should be set to question
@@ -744,8 +723,8 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
     discussionRepository.createPoll(discussion, testAccount1.uid, "Pick one", options, false)
 
-    val updated = discussionRepository.getDiscussion(discussion.uid)
-    val poll = updated.messages[0].poll
+    val messages = discussionRepository.getMessages(discussion.uid)
+    val poll = messages[0].poll
     assertNotNull(poll)
     assertEquals(20, poll!!.options.size)
   }

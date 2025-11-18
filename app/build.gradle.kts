@@ -224,6 +224,7 @@ dependencies {
   implementation(libs.maps.compose)
   implementation(libs.maps.compose.utils)
   implementation(libs.play.services.auth)
+  implementation(libs.coil.compose)
 
   // Firebase
   implementation(libs.firebase.database.ktx)

@@ -165,11 +165,27 @@ object Dimensions {
     const val topBarDivider: Float = 0.7f
   }
 
+  // Multipliers
+  object Multipliers {
+    const val double: Int = 2
+    const val quadruple: Int = 4
+  }
+
+  // Weight constants for Modifier.weight()
+  object Weight {
+    const val full: Float = 1f
+  }
+
   // Alpha values
   object Alpha {
     const val full: Float = 1f
     const val editingBorder: Float = 1f
     const val readonlyBorder: Float = 0.3f
+    const val dialogIconTranslucent: Float = 0.7f
+    const val dialogOverlayDark: Float = 0.9f
+    const val dialogOverlayTransparent: Float = 0.0f
+    const val dialogButtonTranslucent: Float = 0.2f
+    const val dialogTextSemiTransparent: Float = 0.8f
   }
 
   // Rotation angles
