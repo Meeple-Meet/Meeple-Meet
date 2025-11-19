@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -1591,11 +1592,6 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
   val clipboardManager: ClipboardManager = LocalClipboardManager.current
   val context = LocalContext.current
 
-  // Split text into "first line" and "rest"
-  val lines = text.split('\n')
-  val firstLine = lines.firstOrNull().orEmpty()
-  val restLines = lines.drop(n = 1)
-
   Row(
       verticalAlignment = Alignment.Top,
       horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
@@ -1609,14 +1605,11 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
               Icon(icon, contentDescription = null, tint = AppColors.neutral)
             }
 
-        Column(modifier = Modifier.weight(1f).testTag(textTag)) {
-          // First line on the same row as the icon
-          Text(text = firstLine, style = LocalTextStyle.current)
-
-          // Remaining lines displayed below
-          if (restLines.isNotEmpty()) {
-            Text(text = restLines.joinToString("\n"), style = LocalTextStyle.current)
-          }
-        }
+        Text(
+            text = text,
+            style = LocalTextStyle.current,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).testTag(textTag))
       }
 }

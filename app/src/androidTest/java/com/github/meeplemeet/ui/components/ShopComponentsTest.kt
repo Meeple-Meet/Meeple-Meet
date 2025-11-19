@@ -3,6 +3,8 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
@@ -12,6 +14,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -25,6 +29,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -75,6 +80,16 @@ class ShopComponentsTest : FirestoreTests() {
     val game1 = Game("1", "Catan", "", "", 3, 4, null, 60, emptyList())
     val game2 = Game("2", "Carcassonne", "", "", 2, 5, null, 35, emptyList())
     val game3 = Game("3", "Azul", "", "", 2, 4, null, 30, emptyList())
+  }
+
+  private class FakeClipboardManager : ClipboardManager {
+    var copiedText: AnnotatedString? = null
+
+    override fun getText(): AnnotatedString? = copiedText
+
+    override fun setText(annotatedString: AnnotatedString) {
+      copiedText = annotatedString
+    }
   }
 
   /** 1) Lightweight stateless composables */
@@ -726,45 +741,102 @@ class ShopComponentsTest : FirestoreTests() {
         (0..6).map { day ->
           OpeningHours(
               day = day,
-              hours =
-                  listOf(
-                      TimeSlot(
-                          open = "09:00",
-                          close = "12:00"))) // humanize() will render "9:00 AM - 12:00 PM"
+              hours = listOf(TimeSlot(open = "09:00", close = "12:00")),
+          )
         }
 
     val todayLines = humanize(week.first { it.day == todayIndex }.hours).split("\n")
 
-    checkpoint("AvailabilitySection shows today and opens weekly dialog") {
-      setContentThemed {
-        AvailabilitySection(
-            openingHours = week, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+    // Week WITHOUT an entry for today's index
+    val weekWithoutToday: List<OpeningHours> =
+        (0..6)
+            .filter { it != todayIndex }
+            .map { day ->
+              OpeningHours(
+                  day = day,
+                  hours = listOf(TimeSlot(open = "09:00", close = "12:00")),
+              )
+            }
+
+    lateinit var stage: MutableIntState
+
+    setContentThemed {
+      val s = remember { mutableIntStateOf(0) }
+      stage = s
+      when (s.intValue) {
+        // 0: full week with today
+        0 ->
+            AvailabilitySection(
+                openingHours = week, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+        // 1: week without today's entry
+        1 ->
+            AvailabilitySection(
+                openingHours = weekWithoutToday,
+                dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
       }
+    }
 
-      compose.onText("Availability").assertExists().assertIsDisplayed()
-      compose.onText("Today:").assertExists().assertIsDisplayed()
+    checkpoint("AvailabilitySection shows today and opens weekly dialog") {
+      compose.runOnUiThread { stage.intValue = 0 }
+      compose.waitForIdle()
 
+      // Header title
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // "Today:" label
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // Today row tag
       val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
       compose.onTag(todayTag).assertExists().assertIsDisplayed()
 
+      // All humanized lines for today visible
       todayLines.forEach { line -> compose.onText(line).assertExists() }
 
+      // Open weekly dialog via header row
       val navigateTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE"
       compose.onTag(navigateTag).assertExists().performClick()
 
+      // Bottom sheet confirm button ("Close")
       compose
           .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
           .assertExists()
           .assertIsDisplayed()
 
+      // All 7 day rows present
       (0..6).forEach { day ->
         val dayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}$day"
         compose.onTag(dayTag).assertExists()
       }
 
+      // Close the dialog
       compose
           .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
           .performClick()
+    }
+
+    checkpoint("AvailabilitySection without today's entry shows 'Closed'") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+
+      // "Today:" label still shown
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // Today row tag still exists
+      val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
+      compose.onTag(todayTag).assertExists().assertIsDisplayed()
+
+      // Fallback text should be "Closed"
+      compose.onText(ShopUiDefaults.StringsMagicNumbers.CLOSED).assertExists().assertIsDisplayed()
     }
   }
 
@@ -777,25 +849,101 @@ class ShopComponentsTest : FirestoreTests() {
     val phone = "123-456-7890"
     val website = "www.meeplemeet.com"
 
-    checkpoint("ContactSection renders name and all non-empty contact fields") {
-      setContentThemed {
-        ContactSection(
-            name = name,
-            address = address,
-            email = email,
-            phone = phone,
-            website = website,
-        )
+    val multiLineText = "Line 1\nLine 2"
+    val fakeClipboard = FakeClipboardManager()
+    lateinit var stage: MutableIntState
+
+    setContentThemed {
+      val s = remember { mutableIntStateOf(0) }
+      stage = s
+      when (s.intValue) {
+        // 0: full ContactSection with all fields
+        0 ->
+            ContactSection(
+                name = name,
+                address = address,
+                email = email,
+                phone = phone,
+                website = website,
+            )
+
+        // 1: ContactSection with empty optional phone & website
+        1 ->
+            ContactSection(
+                name = name,
+                address = address,
+                email = email,
+                phone = "",
+                website = "",
+            )
+
+        // 2: raw ContactRow with multiline text + fake clipboard
+        2 ->
+            androidx.compose.runtime.CompositionLocalProvider(
+                LocalClipboardManager provides fakeClipboard) {
+                  ContactRow(
+                      icon = Icons.Filled.Phone,
+                      text = multiLineText,
+                      textTag = ShopComponentsTestTags.SHOP_PHONE_TEXT,
+                      buttonTag = ShopComponentsTestTags.SHOP_PHONE_BUTTON,
+                  )
+                }
       }
+    }
+
+    checkpoint("ContactSection renders name and all non-empty contact fields") {
+      compose.runOnUiThread { stage.intValue = 0 }
+      compose.waitForIdle()
 
       // Name as section title
       compose.onText(name).assertExists().assertIsDisplayed()
 
-      // Check that each value appears somewhere; this is robust and matches UI behaviour
-      compose.onText(address).assertExists()
-      compose.onText(email).assertExists()
-      compose.onText(phone).assertExists()
-      compose.onText(website).assertExists()
+      // Tags are now directly on the Text nodes, so assert text on the tagged node
+      compose
+          .onTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT)
+          .assertExists()
+          .assert(hasText(address))
+
+      compose.onTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT).assertExists().assert(hasText(email))
+
+      compose.onTag(ShopComponentsTestTags.SHOP_PHONE_TEXT).assertExists().assert(hasText(phone))
+
+      compose
+          .onTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT)
+          .assertExists()
+          .assert(hasText(website))
+    }
+
+    checkpoint("ContactSection hides empty optional phone and website") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+
+      compose
+          .onAllNodesWithTag(ShopComponentsTestTags.SHOP_PHONE_TEXT, useUnmergedTree = true)
+          .assertCountEquals(0)
+      compose
+          .onAllNodesWithTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT, useUnmergedTree = true)
+          .assertCountEquals(0)
+
+      // Required fields still present
+      compose.onTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT).assertExists()
+      compose.onTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT).assertExists()
+    }
+
+    checkpoint("ContactRow ellipsizes visually and copies full text to clipboard") {
+      compose.runOnUiThread { stage.intValue = 2 }
+      compose.waitForIdle()
+
+      // Single Text node with the full multi-line string ("Line 1\nLine 2")
+      compose
+          .onTag(ShopComponentsTestTags.SHOP_PHONE_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+          .assertTextEquals(multiLineText)
+
+      // Copy via button uses the full text, not a truncated part
+      compose.onTag(ShopComponentsTestTags.SHOP_PHONE_BUTTON).performClick()
+      assert(fakeClipboard.copiedText?.text == multiLineText)
     }
   }
 }
