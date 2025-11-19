@@ -1,0 +1,136 @@
+package com.github.meeplemeet.ui
+
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
+import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
+import com.github.meeplemeet.model.shared.game.GameNoUid
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.navigation.NavigationActions
+import com.github.meeplemeet.ui.sessions.NO_SESSIONS_DEFAULT_TEXT
+import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
+import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
+import com.google.firebase.Timestamp
+import io.mockk.mockk
+import java.util.UUID
+import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
+import org.junit.*
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class SessionsOverviewScreenTest : FirestoreTests() {
+
+  @get:Rule(order = 0) val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.rule()
+
+  fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+
+  private lateinit var nav: NavigationActions
+  private lateinit var viewModel: SessionOverviewViewModel
+  private lateinit var account: Account
+  private lateinit var capturedDiscussionId: String
+
+  private val testLocation = Location(46.5197, 6.5665, "EPFL")
+  private val testGameId = "g_test_chess"
+
+  /* ---------- helpers ---------- */
+  private fun sessionCard(discussionId: String) = compose.onNodeWithTag("sessionCard_$discussionId")
+
+  private fun emptyText() = compose.onNodeWithText(NO_SESSIONS_DEFAULT_TEXT)
+
+  @Before
+  fun setup() = runBlocking {
+    nav = mockk(relaxed = true)
+    viewModel = SessionOverviewViewModel()
+
+    val uid = "uid_" + UUID.randomUUID().toString().take(8)
+    account = accountRepository.createAccount(uid, "Tester", "test@x.com", null)
+
+    // seed minimal game
+    db.collection(GAMES_COLLECTION_PATH).document(testGameId).set(GameNoUid(name = "Chess")).await()
+
+    capturedDiscussionId = ""
+
+    compose.setContent {
+      AppTheme(ThemeMode.DARK) {
+        SessionsOverviewScreen(
+            viewModel = viewModel,
+            navigation = nav,
+            account = account,
+            onSelectSession = { session -> capturedDiscussionId = session })
+      }
+    }
+  }
+
+  @Test
+  fun full_smoke_all_cases() = runBlocking {
+
+    /* 1. empty state ---------------------------------------------------- */
+    checkpoint("Initial empty state") { emptyText().assertIsDisplayed() }
+
+    /* 2. create session -> card appears --------------------------------- */
+    checkpoint("Create session – card appears") {
+      runBlocking {
+        val discussion =
+            discussionRepository.createDiscussion("Game Night", "Let's play", account.uid)
+        val game = gameRepository.getGameById(testGameId)
+        sessionRepository.createSession(
+            discussion.uid, "Chess Night", game.uid, Timestamp.now(), testLocation, account.uid)
+        delay(100) // snapshot
+        emptyText().assertDoesNotExist()
+        sessionCard(discussion.uid).assertIsDisplayed()
+      }
+    }
+
+    /* 3. tap card -> correct id passed to callback ----------------------- */
+    checkpoint("Tap card – correct discussion id emitted") {
+      runBlocking {
+        val discussion =
+            discussionRepository.createDiscussion("Navigate Me", "Tap test", account.uid)
+        val game = gameRepository.getGameById(testGameId)
+        sessionRepository.createSession(
+            discussion.uid, "Tap Night", game.uid, Timestamp.now(), testLocation, account.uid)
+        delay(100)
+        sessionCard(discussion.uid).performClick()
+        assertEquals(discussion.uid, capturedDiscussionId)
+      }
+    }
+
+    /* 4. delete session -> card disappears ------------------------------- */
+    checkpoint("Delete session – card disappears") {
+      runBlocking {
+        val discussion =
+            discussionRepository.createDiscussion("Delete Me", "Will vanish", account.uid)
+        val game = gameRepository.getGameById(testGameId)
+        sessionRepository.createSession(
+            discussion.uid, "Vanish Night", game.uid, Timestamp.now(), testLocation, account.uid)
+        delay(100)
+        sessionCard(discussion.uid).assertIsDisplayed()
+
+        sessionRepository.deleteSession(discussion.uid)
+        delay(100)
+        sessionCard(discussion.uid).assertDoesNotExist()
+      }
+    }
+
+    /* 5. toggle history -> WIP shown ------------------------------------ */
+    checkpoint("Toggle History – WIP placeholder") {
+      compose.onNodeWithText("History").performClick()
+      compose.onNodeWithText("WIP").assertIsDisplayed()
+    }
+  }
+
+  @After
+  fun tearDown(): Unit = runBlocking {
+    // clean-up game seed
+    db.collection(GAMES_COLLECTION_PATH).document(testGameId).delete().await()
+  }
+}

@@ -123,8 +123,7 @@ fun SessionsOverviewScreen(
                       SessionCard(
                           session = session,
                           viewModel = viewModel,
-                          modifier =
-                              Modifier.fillMaxWidth().testTag("sessionCard_${session.hashCode()}"),
+                          modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
                           onClick = { onSelectSession(id) })
                     }
                   }
@@ -340,4 +339,4 @@ private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory
 /* ========================================== */
 
 /* ============================================================================================= */
-private const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
+const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
