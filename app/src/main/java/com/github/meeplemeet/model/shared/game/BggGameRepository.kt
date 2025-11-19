@@ -6,6 +6,8 @@ import com.github.meeplemeet.model.GameSearchException
 import java.io.IOException
 import java.io.StringReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
@@ -48,7 +50,11 @@ data class GameSearchResult(val id: String, val name: String)
 class BggGameRepository(
     private val client: OkHttpClient = HttpClientProvider.client,
     private val baseUrl: HttpUrl = DEFAULT_URL,
-    private val authorizationToken: String? = null
+    private val authorizationToken: String? = null,
+    private val maxCachedGames: Int = DEFAULT_MAX_GAMES,
+    private val maxCachedSearches: Int = DEFAULT_MAX_SEARCHES,
+    private val gamesTtlMs: Long = DEFAULT_GAMES_TTL,
+    private val searchesTtlMs: Long = DEFAULT_SEARCHES_TTL
 ) : GameRepository {
 
   /**
@@ -70,7 +76,43 @@ class BggGameRepository(
             .host("boardgamegeek.com")
             .addPathSegment("xmlapi2")
             .build()
+
+    /** Default caches size and ttl */
+    private const val DEFAULT_MAX_GAMES = 1000
+    private const val DEFAULT_MAX_SEARCHES = 100
+    private const val DEFAULT_GAMES_TTL = 24 * 60 * 60 * 1000L
+    private const val DEFAULT_SEARCHES_TTL = 24 * 60 * 60 * 1000L
   }
+
+  // ------------ Caches & synchronization ------------
+
+  /** Small cache entry with timestamp */
+  private data class CacheEntry<T>(
+      val value: T,
+      val createdAtMs: Long = System.currentTimeMillis()
+  )
+
+  // LRU cache for games (id -> CacheEntry<Game>)
+  private val gamesCache =
+      object : LinkedHashMap<String, CacheEntry<Game>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CacheEntry<Game>>?) =
+            size > maxCachedGames
+      }
+  private val gamesCacheMutex = Mutex()
+
+  // LRU cache for search queries (query -> CacheEntry<List<GameSearchResult>>)
+  private val searchCache =
+      object : LinkedHashMap<String, CacheEntry<List<GameSearchResult>>>(16, 0.75f, true) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<String, CacheEntry<List<GameSearchResult>>>?
+        ) = size > maxCachedSearches
+      }
+  private val searchCacheMutex = Mutex()
+
+  private fun <T> isExpired(entry: CacheEntry<T>, ttlMs: Long) =
+      (System.currentTimeMillis() - entry.createdAtMs) > ttlMs
+
+  // ------------------ public API ------------------
 
   /**
    * Fetch a single game by its BGG ID.
@@ -146,7 +188,27 @@ class BggGameRepository(
         if (gameIDs.isEmpty()) return@withContext GameFetchResult(emptyList(), emptyList())
         require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
 
-        val ids = gameIDs.joinToString(",")
+        // Check game cache first
+        val cached = mutableMapOf<String, Game>()
+        val missing = mutableListOf<String>()
+        gamesCacheMutex.withLock {
+          for (id in gameIDs) {
+            val entry = gamesCache[id]
+            if (entry != null && !isExpired(entry, gamesTtlMs)) {
+              cached[id] = entry.value
+            } else {
+              missing += id
+            }
+          }
+        }
+
+        if (missing.isEmpty()) {
+          val orderedGames = gameIDs.mapNotNull { cached[it] }
+          return@withContext GameFetchResult(orderedGames, emptyList())
+        }
+
+        // Fetch missing ids
+        val ids = missing.joinToString(",")
         val url =
             baseUrl
                 .newBuilder()
@@ -175,10 +237,21 @@ class BggGameRepository(
 
             val body = response.body?.string().orEmpty()
             val doc = SAXBuilder().build(StringReader(body))
-            val (games, parseErrors) = parseThings(doc)
+            val (fetchedGames, parseErrors) = parseThings(doc)
+
+            // Store fetched games in game cache
+            gamesCacheMutex.withLock {
+              for (game in fetchedGames) {
+                gamesCache[game.uid] = CacheEntry(game)
+              }
+            }
+
+            // Reorder games
+            val fetchedById = fetchedGames.associateBy { it.uid }
+            val orderedGames = gameIDs.mapNotNull { id -> cached[id] ?: fetchedById[id] }
 
             // Everything fail (or single ID fail)
-            if (games.isEmpty() && parseErrors.isNotEmpty()) {
+            if (orderedGames.isEmpty() && parseErrors.isNotEmpty()) {
               val message =
                   if (gameIDs.size == 1) {
                     "Failed to parse the game with id '${gameIDs[0]}'. Error: ${parseErrors.first().message}"
@@ -188,7 +261,7 @@ class BggGameRepository(
               throw GameSearchException(message)
             }
 
-            return@withContext GameFetchResult(games, parseErrors)
+            return@withContext GameFetchResult(orderedGames, parseErrors)
           }
         } catch (e: IOException) {
           val message =
@@ -219,6 +292,14 @@ class BggGameRepository(
       ignoreCase: Boolean
   ): List<GameSearchResult> =
       withContext(Dispatchers.IO) {
+        // Check search cache first
+        searchCacheMutex.withLock {
+          searchCache[query]?.let {
+            if (!isExpired(it, searchesTtlMs)) return@withContext it.value.take(maxResults)
+            else searchCache.remove(query)
+          }
+        }
+
         val url =
             baseUrl
                 .newBuilder()
@@ -248,9 +329,12 @@ class BggGameRepository(
             val doc = SAXBuilder().build(StringReader(body))
             val rawResults = parseSearchResults(doc)
 
-            val ranked = rankSearchResults(rawResults, query, ignoreCase)
+            val ranked = rankSearchResults(rawResults, query, ignoreCase).take(maxResults)
 
-            return@withContext ranked.take(maxResults)
+            // Store query result in search cache
+            searchCacheMutex.withLock { searchCache[query] = CacheEntry(ranked) }
+
+            return@withContext ranked
           }
         } catch (e: IOException) {
           throw GameSearchException("Failed to search games: ${e.message}")
