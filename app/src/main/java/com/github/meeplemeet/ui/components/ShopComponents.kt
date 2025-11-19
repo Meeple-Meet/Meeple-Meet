@@ -393,6 +393,16 @@ private fun initialIntervals(
               }
     }
 
+/**
+ * Splits the time slots in several lines of text
+ *
+ * @param slots The list of time slots
+ * @return A list of time slots splitted in several lines of text
+ */
+private fun splittedHumanize(slots: List<TimeSlot>): List<String> {
+  return humanize(slots).split("\n")
+}
+
 /* =============================================================================
  * Components
  * ============================================================================= */
@@ -1336,7 +1346,7 @@ fun AvailabilitySection(
 
   val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
   val todayLines: List<String> =
-      todayEntry?.let { humanize(it.hours).split("\n") }
+      todayEntry?.let { splittedHumanize(it.hours) }
           ?: listOf(ShopUiDefaults.StringsMagicNumbers.CLOSED)
 
   var showFullWeek by remember { mutableStateOf(false) }
@@ -1441,7 +1451,7 @@ private fun WeeklyAvailabilityDialog(
                   val dayName =
                       ShopFormUi.dayNames.getOrNull(day)
                           ?: "${ShopUiDefaults.StringsMagicNumbers.DAY_TEXT} ${day + 1}"
-                  val lines = humanize(entry.hours).split("\n")
+                  val lines = splittedHumanize(entry.hours)
 
                   Row(
                       modifier =
