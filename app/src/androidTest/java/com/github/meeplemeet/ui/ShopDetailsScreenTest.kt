@@ -1,19 +1,22 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.filter
-import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
@@ -21,6 +24,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.shops.ShopTestTags
@@ -29,41 +33,30 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Calendar
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
-  var copiedText: String? = null
-
-  override fun getText(): AnnotatedString? {
-    return copiedText?.let { AnnotatedString(it) }
-  }
-
-  override fun setText(annotatedString: AnnotatedString) {
-    copiedText = annotatedString.text
-  }
-}
-
 class ShopDetailsScreenTest : FirestoreTests() {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: ShopViewModel
-  private lateinit var games: List<Game>
   private lateinit var dummyShop: Shop
   private lateinit var shop: Shop
   private lateinit var currentUser: Account
   private lateinit var owner: Account
 
-  val address = Location(latitude = 0.0, longitude = 0.0, name = "123 Meeple St, Boardgame City")
+  private val address =
+      Location(latitude = 0.0, longitude = 0.0, name = "123 Meeple St, Boardgame City")
 
-  val dummyOpeningHours =
+  private val dummyOpeningHours =
       listOf(
           OpeningHours(
               day = 0, hours = listOf(TimeSlot("09:00", "18:00"), TimeSlot("19:00", "21:00"))),
@@ -74,69 +67,76 @@ class ShopDetailsScreenTest : FirestoreTests() {
           OpeningHours(day = 5, hours = listOf(TimeSlot("10:00", "16:00"))),
           OpeningHours(day = 6, hours = emptyList()))
 
-  private var dummyGames =
-      listOf(
-          Pair(
-              Game(
-                  uid = "g1",
-                  name = "Catan",
-                  imageURL = "test",
-                  description = "this game is cool",
-                  minPlayers = 1,
-                  maxPlayers = 4,
-                  recommendedPlayers = null,
-                  averagePlayTime = null,
-                  genres = emptyList()),
-              2),
-          Pair(
-              Game(
-                  uid = "g2",
-                  name = "Carcassone",
-                  imageURL = "test",
-                  description = "this game is cool",
-                  minPlayers = 1,
-                  maxPlayers = 4,
-                  recommendedPlayers = null,
-                  averagePlayTime = null,
-                  genres = emptyList()),
-              1))
+  private lateinit var dummyGames: List<Pair<Game, Int>>
 
-  fun seedGamesForTest(db: FirebaseFirestore) = runBlocking {
-    val g1 =
-        mapOf(
-            "name" to "Catan",
-            "imageURL" to "https://example.com/catan.png",
-            "description" to "this game is cool",
-            "minPlayers" to 1,
-            "maxPlayers" to 4,
-            "recommendedPlayers" to null,
-            "averagePlayTime" to null,
-            "genres" to emptyList<Int>())
-    val g2 =
-        mapOf(
-            "name" to "Chess",
-            "imageURL" to "https://example.com/chess.png",
-            "description" to "mind game",
-            "minPlayers" to 2,
-            "maxPlayers" to 2,
-            "recommendedPlayers" to null,
-            "averagePlayTime" to null,
-            "genres" to emptyList<Int>())
-    db.collection("games").document("g1").set(g1).await()
-    db.collection("games").document("g2").set(g2).await()
+  // --- helpers for reading text from semantics ---
+
+  /** Returns all text strings currently present in the semantics tree. */
+  private fun allTextsOnScreen(): List<String> {
+    val matcher = SemanticsMatcher("any") { true }
+    val nodes = compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes()
+
+    return nodes.flatMap { node ->
+      val texts = node.config.getOrNull(SemanticsProperties.Text) ?: emptyList()
+      texts.map { it.text }
+    }
+  }
+
+  /** True if there's any semantics node whose text equals [text]. */
+  private fun hasTextAnywhere(text: String): Boolean {
+    return compose
+        .onAllNodes(hasText(text), useUnmergedTree = true)
+        .fetchSemanticsNodes()
+        .isNotEmpty()
+  }
+
+  /** Names of games currently visible on screen (based on "Game Name X" texts). */
+  private fun currentGameNames(): Set<String> {
+    return allTextsOnScreen().filter { it.startsWith("Game Name ") }.toSet()
+  }
+
+  // Helper to seed Firestore
+  private fun seedGamesForTest(db: FirebaseFirestore, games: List<Game>) = runBlocking {
+    games.forEach { game ->
+      val data =
+          mapOf(
+              "name" to game.name,
+              "imageURL" to game.imageURL,
+              "description" to game.description,
+              "minPlayers" to game.minPlayers,
+              "maxPlayers" to game.maxPlayers)
+      db.collection("games").document(game.uid).set(data).await()
+    }
   }
 
   @Before
   fun setup() {
     val testDb = FirebaseFirestore.getInstance()
 
-    // seed documents
-    seedGamesForTest(testDb)
+    // Generate 20 games
+    val gamesList =
+        List(20) { i ->
+          Game(
+              uid = "g$i",
+              name = "Game Name $i",
+              imageURL = "https://example.com/game$i.png",
+              description = "Description $i",
+              minPlayers = 2,
+              maxPlayers = 4,
+              recommendedPlayers = 4,
+              averagePlayTime = 60,
+              genres = emptyList())
+        }
+
+    seedGamesForTest(testDb, gamesList)
 
     vm = ShopViewModel()
 
-    games = runBlocking { gameRepository.getGames(2) }
-    dummyGames = listOf(Pair(games[0], 2), Pair(games[1], 1))
+    dummyGames =
+        gamesList.mapIndexed { index, game ->
+          val stock = if (index == 0) 100 else 5
+          game to stock
+        }
 
     currentUser = runBlocking {
       accountRepository.createAccount(
@@ -147,11 +147,12 @@ class ShopDetailsScreenTest : FirestoreTests() {
     }
     owner = runBlocking {
       accountRepository.createAccount(
-          userHandle = "testuser_${System.currentTimeMillis()}",
+          userHandle = "owner_${System.currentTimeMillis()}",
           name = "Owner",
           email = "Owner@test.com",
           photoUrl = null)
     }
+
     dummyShop =
         Shop(
             id = "1",
@@ -175,6 +176,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
           openingHours = dummyShop.openingHours,
           gameCollection = dummyShop.gameCollection)
     }
+
     shop = runBlocking { shopRepository.getShop(shop.id) }
     currentUser = runBlocking { accountRepository.getAccount(currentUser.uid) }
     owner = runBlocking { accountRepository.getAccount(owner.uid) }
@@ -182,103 +184,129 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
   @OptIn(ExperimentalTestApi::class)
   @Test
-  fun all_shop_details_screen_tests() {
-    val fakeClipboard = FakeClipboardManager()
-    var edit = false
-
-    composeTestRule.setContent {
-      CompositionLocalProvider(LocalClipboardManager provides fakeClipboard) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          ShopScreen(
-              shopId = shop.id,
-              account = owner,
-              onBack = {},
-              onEdit = { edit = true },
-              viewModel = vm)
-        }
+  fun shopScreen_smoke_currentUser_contactAvailabilityGames() {
+    compose.setContent {
+      AppTheme(themeMode = ThemeMode.DARK) {
+        ShopScreen(
+            shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
       }
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
+    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
 
-    checkpoint("test_shopScreenDisplaysCorrectly") {
-      // Verify shop name is displayed
-      composeTestRule.onNodeWithText(dummyShop.name).assertExists()
+    /* 1  shop + contact section is mounted ----------------------------------------- */
+    checkpoint("Shop header & contact section visible") {
+      compose.onNodeWithText(dummyShop.name).assertExists()
 
-      // Verify contact info is displayed using tags
-      composeTestRule
-          .onNodeWithTag(ShopTestTags.SHOP_PHONE_TEXT)
-          .assertExists()
-          .assertTextEquals("- Phone: ${dummyShop.phone}")
-      composeTestRule
-          .onNodeWithTag(ShopTestTags.SHOP_EMAIL_TEXT)
-          .assertExists()
-          .assertTextEquals("- Email: ${dummyShop.email}")
-      composeTestRule
-          .onNodeWithTag(ShopTestTags.SHOP_WEBSITE_TEXT)
-          .assertExists()
-          .assertTextEquals("- Website: ${dummyShop.website}")
-      composeTestRule
-          .onNodeWithTag(ShopTestTags.SHOP_ADDRESS_TEXT)
-          .assertExists()
-          .assertTextEquals("- Address: ${dummyShop.address.name}")
-
-      // Verify that clicking the icon buttons copies content to clipboard
-      val contactItems =
-          listOf(
-              ShopTestTags.SHOP_PHONE_BUTTON to "- Phone: ${dummyShop.phone}",
-              ShopTestTags.SHOP_EMAIL_BUTTON to "- Email: ${dummyShop.email}",
-              ShopTestTags.SHOP_ADDRESS_BUTTON to "- Address: ${dummyShop.address.name}",
-              ShopTestTags.SHOP_WEBSITE_BUTTON to "- Website: ${dummyShop.website}")
-
-      contactItems.forEach { (buttonTag, expectedText) ->
-        composeTestRule.onNodeWithTag(buttonTag).performClick()
-        assert(fakeClipboard.copiedText == expectedText) {
-          "Clipboard content for $buttonTag does not match: ${fakeClipboard.copiedText}"
-        }
-      }
-
-      // Verify availability (opening hours) for each day
-      dummyOpeningHours.forEach { openingHours ->
-        val dayTag = "${ShopTestTags.SHOP_DAY_PREFIX}${openingHours.day}"
-        composeTestRule.onNodeWithTag(dayTag).assertExists()
-
-        if (openingHours.hours.isEmpty()) {
-          // Closed day
-          composeTestRule.onNodeWithTag("${dayTag}_HOURS").assertExists().assertTextEquals("Closed")
-        } else {
-          // For each available time slot
-          openingHours.hours.forEachIndexed { idx, slot ->
-            val hoursTag = "${dayTag}_HOURS_${idx}"
-            composeTestRule
-                .onNodeWithTag(hoursTag)
-                .assertExists()
-                .onChildren()
-                .filter(hasText("${slot.open} - ${slot.close}"))
-                .assertCountEquals(1)
-          }
-        }
-      }
-      // Verify game list is displayed by tag using SHOP_GAME_PREFIX
-      dummyShop.gameCollection.forEach { (game, quantity) ->
-        val gameTag = "${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}"
-
-        // Find a node that has the test tag and contains the game name anywhere in its subtree
-        composeTestRule.onNode(hasTestTag(gameTag) and hasText(game.name)).assertExists()
-
-        // Verify the count text somewhere under the same tagged node
-        composeTestRule.onNode(hasTestTag(gameTag) and hasText(quantity.toString())).assertExists()
-      }
-
-      // Verify back button and perform click
-      composeTestRule.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertExists().performClick()
+      // Just check that the contact rows are present; detailed behaviour is tested in
+      // ShopComponentsTest.
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_PHONE_TEXT).assertExists()
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT).assertExists()
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT).assertExists()
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT).assertExists()
     }
 
-    checkpoint("test_shopScreenEditButtonVisibleForOwner") {
-      // Verify edit button exists for owner
-      composeTestRule.onNodeWithTag(ShopTestTags.SHOP_EDIT_BUTTON).assertExists().performClick()
-      assert(edit)
+    /* 2  availability section integration ------------------------------------------ */
+    checkpoint("Availability section visible and weekly dialog can be opened") {
+      val todayIndex = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
+
+      // Availability header
+      compose.onNodeWithText("Availability").assertExists()
+
+      // Today row exists (component-level formatting is covered in ShopComponentsTest)
+      compose
+          .onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS")
+          .assertExists()
+
+      // Open weekly dialog via navigate icon
+      compose
+          .onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE")
+          .assertExists()
+          .performClick()
+      compose.waitForIdle()
+
+      // Bottom sheet shows the Close button from the component
+      compose.onNodeWithText("Close").assertExists().performClick()
+    }
+
+    /* 3  pagination between pages --------------------------------------------------- */
+    checkpoint("Pager pagination shows different games on different pages") {
+      // Swipe specifically on the HorizontalPager, not the whole root
+      val pagerNode = compose.onNodeWithTag(ShopTestTags.SHOP_GAME_PAGER)
+      pagerNode.assertExists()
+
+      val page0Names = currentGameNames()
+      assert(page0Names.isNotEmpty()) { "Expected some games on first page" }
+
+      // Go to next page
+      pagerNode.performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+
+      val page1Names = currentGameNames()
+      assert(page1Names.isNotEmpty()) { "Expected some games on second page" }
+
+      // With 20 games and 8 per page, the sets of names should differ between pages
+      assert(page0Names != page1Names) {
+        "Expected different games on different pages, but got same sets: $page0Names"
+      }
+    }
+
+    /* 4  back button ---------------------------------------------------------------- */
+    checkpoint("Back button exists and is clickable") {
+      compose
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+    }
+  }
+
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun shopScreen_editButton_onlyForOwner() {
+    var editCalled = false
+    lateinit var switchToOwner: () -> Unit
+
+    compose.setContent {
+      AppTheme(themeMode = ThemeMode.DARK) {
+        val ownerState = remember { mutableStateOf(false) }
+        switchToOwner = { ownerState.value = true }
+
+        val account = if (ownerState.value) owner else currentUser
+
+        ShopScreen(
+            shopId = shop.id,
+            account = account,
+            onBack = {},
+            onEdit = { editCalled = true },
+            viewModel = vm)
+      }
+    }
+
+    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
+
+    /* 1  non-owner: no edit button -------------------------------------------------- */
+    checkpoint("Edit button hidden for non-owner") {
+      compose
+          .onAllNodesWithTag(ShopTestTags.SHOP_EDIT_BUTTON, useUnmergedTree = true)
+          .assertCountEquals(0)
+    }
+
+    compose.runOnUiThread { switchToOwner() }
+    compose.waitForIdle()
+
+    /* 2  owner: edit button visible & clickable ------------------------------------- */
+    checkpoint("Edit button visible and clickable for owner") {
+      compose
+          .onNodeWithTag(ShopTestTags.SHOP_EDIT_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .assertIsDisplayed()
+          .assertHasClickAction()
+          .performClick()
+
+      // onEdit should have been invoked
+      assert(editCalled)
     }
   }
 }
