@@ -29,6 +29,9 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -1394,13 +1398,14 @@ fun AvailabilitySection(
 }
 
 /**
- * A composable function that displays a dialog with the full weekly opening hours for a shop
+ * A composable function that displays a bottom sheet with the full weekly opening hours for a shop
  *
  * @param openingHours The list of [OpeningHours] entries to display
  * @param currentDayIndex The index of the current day (0 = Sunday, 1 = Monday, etc.)
  * @param dayTagPrefix The prefix used for test tags associated with each day row in the dialog
  * @param onDismiss A callback function that is invoked when the dialog is dismissed
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WeeklyAvailabilityDialog(
     openingHours: List<OpeningHours>,
@@ -1408,65 +1413,78 @@ private fun WeeklyAvailabilityDialog(
     dayTagPrefix: String,
     onDismiss: () -> Unit
 ) {
-  val dayNames = remember { ShopFormUi.dayNames }
   val scrollState = rememberScrollState()
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  AlertDialog(
+  ModalBottomSheet(
       onDismissRequest = onDismiss,
+      sheetState = sheetState,
       containerColor = MaterialTheme.colorScheme.background,
-      modifier = Modifier.fillMaxWidth(),
-      confirmButton = {
-        TextButton(onClick = onDismiss) {
-          Text(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+  ) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(max = Dimensions.ContainerSize.alertDialogHeight)
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.medium)
+                .verticalScroll(scrollState)) {
+          Column(modifier = Modifier.fillMaxWidth()) {
+            openingHours
+                .sortedBy { it.day }
+                .forEach { entry ->
+                  val day = entry.day
+                  val isToday = day == currentDayIndex
+                  val dayName = ShopFormUi.dayNames.getOrNull(day) ?: "Day ${day + 1}"
+                  val lines = humanize(entry.hours).split("\n")
+
+                  Row(
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(vertical = Dimensions.Spacing.small)
+                              .testTag("${dayTagPrefix}${day}"),
+                      verticalAlignment = Alignment.Top) {
+
+                        // Left: day name
+                        Text(
+                            text = dayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            fontStyle = FontStyle.Normal,
+                            modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+                        // Right: all time slots
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement =
+                                Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                              lines.forEach { line ->
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight =
+                                        if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                    fontStyle = FontStyle.Normal,
+                                    textAlign = TextAlign.End)
+                              }
+                            }
+                      }
+                }
+
+            Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            bottom = Dimensions.Spacing.medium, end = Dimensions.Spacing.medium),
+                horizontalArrangement = Arrangement.End) {
+                  TextButton(onClick = onDismiss) {
+                    Text(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+                  }
+                }
+          }
         }
-      },
-      text = {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .heightIn(max = Dimensions.ContainerSize.alertDialogHeight)
-                    .verticalScroll(scrollState)) {
-              Column(modifier = Modifier.fillMaxWidth()) {
-                openingHours
-                    .sortedBy { it.day }
-                    .forEach { entry ->
-                      val day = entry.day
-                      val isToday = day == currentDayIndex
-                      val dayName = dayNames.getOrNull(day) ?: "Day ${day + 1}"
-                      val lines = humanize(entry.hours).split("\n")
-
-                      Row(
-                          modifier =
-                              Modifier.fillMaxWidth()
-                                  .padding(vertical = Dimensions.Spacing.small)
-                                  .testTag("${dayTagPrefix}${day}"),
-                          verticalAlignment = Alignment.Top) {
-
-                            // Left: day name
-                            Text(
-                                text = dayName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(end = Dimensions.Spacing.medium))
-
-                            // Right: all time slots
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.End,
-                                verticalArrangement =
-                                    Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                                  lines.forEach { line ->
-                                    Text(
-                                        text = line,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight =
-                                            if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                        textAlign = TextAlign.End)
-                                  }
-                                }
-                          }
-                    }
-              }
-            }
-      })
+  }
 }
