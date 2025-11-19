@@ -127,55 +127,43 @@ class BggGameRepository(
   }
 
   /**
-   * Fetch multiple games by their BGG IDs.
+   * Deprecated and unsupported.
    *
-   * **Deprecated:** Use [getGamesByIdWithErrors] to get partial results and parse errors.
+   * This wrapper was previously returning only successfully parsed games. It is now intentionally
+   * unsupported — use [getGamesByIdWithErrors] to fetch games and inspect parse errors.
    *
-   * @param gameIDs One or more BGG game IDs.
-   * @return A list of successfully parsed [Game] objects.
-   * @throws IllegalArgumentException If more than 20 IDs are provided.
-   * @throws GameSearchException If all requested games fail to fetch or parse.
+   * @throws UnsupportedOperationException always
    */
-  @Deprecated("Use getGamesByIdWithErrors() for partial results and parse errors")
+  @Deprecated("Unsupported: use getGamesByIdWithErrors(...) instead")
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
-    val result = getGamesByIdWithErrors(*gameIDs)
-    return result.games
+    throw UnsupportedOperationException(
+        "getGamesById(vararg) is deprecated and unsupported. Use getGamesByIdWithErrors(...) instead.")
   }
 
   /**
    * Search for games whose names contain the specified query string.
    *
-   * **Deprecated:** Use [searchGamesByName] to get search results without fetching full game
-   * details.
+   * This method is deprecated and intentionally unsupported. Use [searchGamesByName] which returns
+   * lightweight search results (id + name).
    *
-   * @param query The string to search for in game names.
-   * @param maxResults Maximum number of results to return.
-   * @param ignoreCase Whether to ignore case when matching names.
-   * @return A list of [Game] objects whose names contain the specified substring.
-   * @throws IllegalArgumentException If [maxResults] > 20.
-   * @throws GameSearchException If the search request fails.
+   * @throws UnsupportedOperationException always
    */
+  @Deprecated("Unsupported: use searchGamesByName(...) instead")
   override suspend fun searchGamesByNameContains(
       query: String,
       maxResults: Int,
       ignoreCase: Boolean
   ): List<Game> {
-    require(maxResults <= 20) { "A maximum of 20 games can be returned" }
-
-    val searchResult = searchGamesByName(query, maxResults, ignoreCase)
-    val ids = searchResult.map { it.id }
-    val gamesResult = getGamesByIdWithErrors(*ids.toTypedArray())
-
-    val gamesById = gamesResult.games.associateBy { it.uid }
-    return searchResult.mapNotNull { gamesById[it.id] }
+    throw UnsupportedOperationException(
+        "searchGamesByNameContains(...) is deprecated and unsupported. Use searchGamesByName(...) and then fetch full games if needed.")
   }
 
   /**
    * Fetch multiple games by their BGG IDs, returning both successfully parsed games and any parsing
    * errors.
    *
-   * Unlike [getGamesById], this method does not discard parsing errors. The caller can inspect
-   * which games were successfully parsed and which failed.
+   * This method does not discard parsing errors. The caller can inspect which games were
+   * successfully parsed and which failed.
    *
    * @param gameIDs One or more BGG game IDs (maximum 20 per request).
    * @return A [GameFetchResult] containing successfully parsed games and a list of
@@ -277,8 +265,8 @@ class BggGameRepository(
   /**
    * Search for board games whose name contains the given query string.
    *
-   * Unlike [searchGamesByNameContains], this method is optimized, and only return gameId and name.
-   * The caller can then fetch the game he consider as result of the search.
+   * This method only return gameId and name. The caller can then fetch the game he consider as
+   * result of the search.
    *
    * @param query The string to search for in game names.
    * @param maxResults Maximum number of results to return.

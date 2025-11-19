@@ -6,7 +6,6 @@ import com.github.meeplemeet.model.GameSearchException
 import com.github.meeplemeet.model.shared.game.BggGameRepository
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
@@ -401,81 +400,19 @@ class BggGameRepositoryTest {
     assertEquals("Valid Game", results[0].name)
   }
 
-  // ==================== getGamesById (deprecated) Tests ====================
-
+  // ==================== Deprecated (unsupported) methods tests ====================
   @Test
-  fun getGamesByIdReturnsOnlySuccessfulGames() = runTest {
-    val mockResponse =
-        MockResponse()
-            .setResponseCode(200)
-            .setBody(
-                """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
-          <item type="boardgame" id="181">
-            <thumbnail>https://example.com/risk.jpg</thumbnail>
-            <name type="primary" value="Risk" />
-            <description>War game</description>
-            <minplayers value="2" />
-            <maxplayers value="6" />
-            <playingtime value="120" />
-            <minage value="10" />
-          </item>
-          <item type="boardgame" id="13">
-            <thumbnail>https://example.com/catan.jpg</thumbnail>
-            <name type="primary" value="CATAN" />
-            <description>Resource management</description>
-            <minplayers value="3" />
-            <maxplayers value="4" />
-            <playingtime value="90" />
-            <minage value="10" />
-          </item>
-        </items>
-      """
-                    .trimIndent())
-
-    mockWebServer.enqueue(mockResponse)
-
-    @Suppress("DEPRECATION") val games = repository.getGamesById("181", "13")
-
-    assertEquals(2, games.size)
-    assertEquals("Risk", games[0].name)
-    assertEquals("CATAN", games[1].name)
+  fun deprecatedGetGamesByIdThrowsUnsupported() = runTest {
+    @Suppress("DEPRECATION")
+    assertFailsWith<UnsupportedOperationException> { repository.getGamesById("181", "13") }
   }
 
   @Test
-  fun getGamesByIdIgnoresParseErrors() = runTest {
-    val mockResponse =
-        MockResponse()
-            .setResponseCode(200)
-            .setBody(
-                """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
-          <item type="boardgame" id="181">
-            <thumbnail>https://example.com/risk.jpg</thumbnail>
-            <name type="primary" value="Risk" />
-            <description>War game</description>
-            <minplayers value="2" />
-            <maxplayers value="6" />
-            <playingtime value="120" />
-            <minage value="10" />
-          </item>
-          <item type="boardgame" id="999">
-            <thumbnail>https://example.com/broken.jpg</thumbnail>
-            <name type="primary" value="Broken Game" />
-          </item>
-        </items>
-      """
-                    .trimIndent())
-
-    mockWebServer.enqueue(mockResponse)
-
-    @Suppress("DEPRECATION") val games = repository.getGamesById("181", "999")
-
-    // Should only return the valid game, silently ignoring the broken one
-    assertEquals(1, games.size)
-    assertEquals("Risk", games[0].name)
+  fun deprecatedSearchGamesByNameContainsThrowsUnsupported() = runTest {
+    @Suppress("DEPRECATION")
+    assertFailsWith<UnsupportedOperationException> {
+      repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
+    }
   }
 
   // ==================== Search Ranking Tests ====================
@@ -784,64 +721,6 @@ class BggGameRepositoryTest {
 
     assertEquals(1, results.size)
     assertEquals("Valid Game", results[0].name)
-  }
-
-  // ==================== searchGamesByNameContains Tests ====================
-
-  @Test
-  fun searchGamesByNameContainsReturnsFullGameObjects() = runTest {
-    val searchResponse =
-        MockResponse()
-            .setResponseCode(200)
-            .setBody(
-                """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <items total="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
-          <item type="boardgame" id="181">
-            <name type="primary" value="Risk" />
-          </item>
-        </items>
-      """
-                    .trimIndent())
-
-    val thingResponse =
-        MockResponse()
-            .setResponseCode(200)
-            .setBody(
-                """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
-          <item type="boardgame" id="181">
-            <thumbnail>https://example.com/risk.jpg</thumbnail>
-            <name type="primary" value="Risk" />
-            <description>War game</description>
-            <minplayers value="2" />
-            <maxplayers value="6" />
-            <playingtime value="120" />
-            <minage value="10" />
-          </item>
-        </items>
-      """
-                    .trimIndent())
-
-    mockWebServer.enqueue(searchResponse)
-    mockWebServer.enqueue(thingResponse)
-
-    val games = repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
-
-    assertEquals(1, games.size)
-    assertEquals("Risk", games[0].name)
-    assertNotNull(games[0].description)
-  }
-
-  @Test
-  fun searchGamesByNameContainsThrowsOnTooManyResults() = runTest {
-    val exception =
-        assertFailsWith<IllegalArgumentException> {
-          repository.searchGamesByNameContains("game", 21, ignoreCase = true)
-        }
-
-    assertTrue(exception.message!!.contains("maximum of 20"))
   }
 
   // ==================== Edge Cases & Error Handling ====================
