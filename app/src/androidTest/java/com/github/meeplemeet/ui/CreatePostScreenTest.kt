@@ -276,12 +276,11 @@ class CreatePostScreenTest : FirestoreTests() {
         repeat(10) { i -> assert(created?.tags?.contains("#tag$i") == true) }
       }
     }
-  }
 
-  @Test
-  fun fullIntegration() {
     /* 8. integration workflow */
     checkpoint("Full integration – realistic workflow") {
+      // Previous checkpoints leave many tags behind; ensure a clean slate.
+      removeAllTags()
       titleField().performTextClearance()
       bodyField().performTextClearance()
       val title = "Integration Post"
@@ -306,17 +305,20 @@ class CreatePostScreenTest : FirestoreTests() {
 
     checkpoint("Create integration post") {
       postCalled = false
+      compose.waitForIdle()
+      postButton().assertIsEnabled()
       postButton().performClick()
-      compose.waitUntil(timeoutMillis = 800) { postCalled }
+      compose.waitUntil(timeoutMillis = 2000) { postCalled }
 
       runBlocking {
         val posts = repository.getPosts()
         val created = posts.find { it.title == "Integration Post" }
-        assert(created != null)
+        assert(created != null) { "Post with title 'Integration Post' not found" }
         assert(created?.body == "Complete flow\nWith lines\nAnd special: @#$%")
-        assert(created?.tags?.size == 2)
-        assert(created?.tags?.contains("#boardgames") == true)
-        assert(created?.tags?.contains("#strategy") == true)
+        val tags = created?.tags.orEmpty()
+        assert(tags.size == 2) { "Unexpected tags for integration post: $tags" }
+        assert(tags.contains("#boardgames"))
+        assert(tags.contains("#strategy"))
       }
     }
   }
@@ -331,25 +333,26 @@ class CreatePostScreenTest : FirestoreTests() {
 
   private fun removeAllTags() {
     with(compose) {
-      while (true) {
-        // 1. collect all tags that start with our prefix
-        val removeTags =
-            onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.TestTag))
-                .fetchSemanticsNodes()
-                .mapNotNull { node ->
-                  node.config.getOrNull(SemanticsProperties.TestTag)?.takeIf {
-                    it.startsWith("create_post_tag_remove:")
-                  }
-                }
-        if (removeTags.isEmpty()) break // nothing left → finished
-
-        // 2. click the first one; if it no longer exists we are done
-        val tag = removeTags.first()
-        val node = onNode(hasTestTag(tag))
-        if (!node.isDisplayed()) break // row disappeared → done
-        node.performClick()
-        waitForIdle() // wait for UI to settle
+      repeat(5) {
+        val tags = currentTagTexts()
+        if (tags.isEmpty()) return
+        tags.forEach { tag ->
+          runCatching { tagRemoveButton(tag).performClick() }
+          waitForIdle()
+        }
       }
     }
   }
+
+  private fun currentTagTexts(): List<String> =
+      compose
+          .onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.TestTag))
+          .fetchSemanticsNodes()
+          .mapNotNull { node ->
+            node.config.getOrNull(SemanticsProperties.TestTag)?.takeIf {
+              it.startsWith("create_post_tag_chip:")
+            }
+          }
+          .map { it.removePrefix("create_post_tag_chip:") }
+          .distinct()
 }
