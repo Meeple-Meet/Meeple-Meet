@@ -35,7 +35,8 @@ data class Shop(
     val website: String,
     val address: Location,
     val openingHours: List<OpeningHours>,
-    val gameCollection: List<Pair<Game, Int>>
+    val gameCollection: List<Pair<Game, Int>>,
+    val photoCollectionUrl: List<String> = emptyList()
 )
 
 /**
@@ -49,6 +50,7 @@ data class Shop(
  * @property address The physical location of the shop.
  * @property openingHours The shop's opening hours as a list of time pairs (start time, end time).
  * @property gameCollection The collection of games available at the shop with their quantities.
+ * @property photoCollectionUrl The collection of photo URLs for the shop.
  *   Each pair contains a game UID and its count.
  */
 @Serializable
@@ -60,7 +62,8 @@ data class ShopNoUid(
     val website: String = "",
     val address: Location = Location(),
     val openingHours: List<OpeningHours> = emptyList(),
-    val gameCollection: List<GameItem> = emptyList()
+    val gameCollection: List<GameItem> = emptyList(),
+    val photoCollectionUrl: List<String> = emptyList()
 )
 
 /**
@@ -79,7 +82,8 @@ fun toNoUid(shop: Shop): ShopNoUid =
         shop.website,
         shop.address,
         shop.openingHours,
-        shop.gameCollection.map { (game, count) -> GameItem(game.uid, count) })
+        shop.gameCollection.map { (game, count) -> GameItem(game.uid, count) },
+        shop.photoCollectionUrl)
 
 /**
  * Converts a ShopNoUid and game collection to a Shop. Reconstructs Game objects from the provided
@@ -105,4 +109,5 @@ fun fromNoUid(
         shopNoUid.website,
         shopNoUid.address,
         shopNoUid.openingHours,
-        collection)
+        collection,
+        shopNoUid.photoCollectionUrl)
