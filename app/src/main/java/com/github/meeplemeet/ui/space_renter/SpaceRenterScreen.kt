@@ -1,7 +1,6 @@
 // AI was used to help comment this screen
 package com.github.meeplemeet.ui.space_renter
 
-import android.icu.util.Calendar
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -39,10 +38,12 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
+import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.shops.AvailabilitySection
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import java.util.Calendar
 import kotlin.math.ceil
 
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
@@ -197,7 +198,10 @@ fun SpaceRenterDetails(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         TemporaryPhotoCarousel()
         ContactSection(spaceRenter)
-        AvailabilityRowPopup(openingHours = spaceRenter.openingHours)
+        AvailabilitySection(
+            openingHours = spaceRenter.openingHours,
+            dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX,
+            addPadding = true)
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
@@ -267,7 +271,8 @@ fun ContactSection(spaceRenter: SpaceRenter) {
  *
  * @param icon The icon to display for the contact method.
  * @param text The contact text to display and copy.
- * @param testTag The test tag for the text element.
+ * @param textTag The test tag for the text element.
+ * @param buttonTag The test tag for the copy button.
  */
 @Composable
 fun ContactRow(

@@ -109,7 +109,9 @@ fun ShopScreen(
     onBack: () -> Unit = {},
     onEdit: (Shop?) -> Unit = {},
 ) {
+  // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
+  // Trigger loading of shop data when shopId changes
   LaunchedEffect(shopId) { viewModel.getShop(shopId) }
 
   var popupGame by remember { mutableStateOf<Game?>(null) }
@@ -193,7 +195,8 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
       contentPadding = PaddingValues(bottom = Dimensions.Spacing.xxLarge)) {
 
-        // Contact info
+        /* TODO: Add here shop images composable (pager) when done */
+
         item {
           ContactSection(
               name = shop.name,
@@ -203,8 +206,10 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -
               website = shop.website)
         }
 
-        // Opening hours
-        item { AvailabilitySection(shop.openingHours) }
+        item {
+          AvailabilitySection(
+              shop.openingHours, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+        }
 
         // Game list
         item {

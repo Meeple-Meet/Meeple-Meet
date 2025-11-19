@@ -33,7 +33,6 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.FirebaseFirestore
-import java.util.Calendar
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Before
@@ -95,6 +94,8 @@ class ShopDetailsScreenTest : FirestoreTests() {
     return allTextsOnScreen().filter { it.startsWith("Game Name ") }.toSet()
   }
 
+  private fun availabilityHeader() = compose.onNodeWithTag("AVAILABILITY_HEADER")
+
   // Helper to seed Firestore
   private fun seedGamesForTest(db: FirebaseFirestore, games: List<Game>) = runBlocking {
     games.forEach { game ->
@@ -125,7 +126,6 @@ class ShopDetailsScreenTest : FirestoreTests() {
               maxPlayers = 4,
               recommendedPlayers = 4,
               averagePlayTime = 60,
-              minAge = null,
               genres = emptyList())
         }
 
@@ -210,24 +210,18 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
     /* 2  availability section integration ------------------------------------------ */
     checkpoint("Availability section visible and weekly dialog can be opened") {
-      val todayIndex = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
+      availabilityHeader().assertExists()
 
-      // Availability header
-      compose.onNodeWithText("Availability").assertExists()
+      availabilityHeader().performClick()
 
       // Today row exists (component-level formatting is covered in ShopComponentsTest)
-      compose
-          .onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS")
-          .assertExists()
-
-      // Open weekly dialog via navigate icon
-      compose
-          .onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE")
-          .assertExists()
-          .performClick()
-      compose.waitForIdle()
+      dummyOpeningHours.forEach { entry ->
+        val tag = ShopComponentsTestTags.SHOP_DAY_PREFIX + entry.day
+        checkpoint("Availability day exists: $tag") { compose.onNodeWithTag(tag).assertExists() }
+      }
 
       // Bottom sheet shows the Close button from the component
+      compose.waitForIdle()
       compose.onNodeWithText("Close").assertExists().performClick()
     }
 

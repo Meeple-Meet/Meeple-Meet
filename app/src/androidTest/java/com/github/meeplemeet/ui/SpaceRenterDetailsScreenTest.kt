@@ -190,6 +190,13 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
     Espresso.pressBack()
 
+    checkpoint("Availability popup dismissed") {
+      availabilityHeader().performClick()
+      compose.onNodeWithText("Close").assertExists().performClick()
+    }
+
+    /* Spaces section */
+
     compose.onRoot().performTouchInput { swipeUp() }
     compose.waitForIdle()
 

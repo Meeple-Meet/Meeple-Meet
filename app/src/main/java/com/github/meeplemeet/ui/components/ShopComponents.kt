@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
@@ -62,6 +63,8 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
+import com.github.meeplemeet.ui.space_renter.SpaceRenterUi
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalTime
@@ -140,6 +143,7 @@ object ShopComponentsTestTags {
   // Search field internals
   const val GAME_SEARCH_FIELD = "shop_game_search_field"
   const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
+  const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
   const val GAME_SEARCH_MENU = "shop_game_search_menu"
   const val GAME_SEARCH_ITEM = "shop_game_search_item"
 
@@ -1349,88 +1353,6 @@ fun EditableGameItem(
 // -------------------- AVAILABILITY SECTION --------------------
 
 /**
- * A composable function that displays the availability section for a shop, showing today's opening
- * hours and providing access to the full weekly schedule
- *
- * @param openingHours The list of [OpeningHours] entries for the shop, using 0-based day indices
- * @param dayTagPrefix The prefix used for test tags associated with day rows and navigation
- */
-@Composable
-fun AvailabilitySection(
-    openingHours: List<OpeningHours>,
-    dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX
-) {
-  val todayCalendarValue = Calendar.getInstance()[Calendar.DAY_OF_WEEK]
-  val todayIndex = todayCalendarValue - 1
-
-  val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
-  val todayLines: List<String> =
-      todayEntry?.let { splittedHumanize(it.hours) }
-          ?: listOf(ShopUiDefaults.StringsMagicNumbers.CLOSED)
-
-  var showFullWeek by remember { mutableStateOf(false) }
-
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
-      modifier = Modifier.fillMaxWidth()) {
-
-        // Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clickable { showFullWeek = true }
-                    .testTag("${dayTagPrefix}NAVIGATE")) {
-              Text(
-                  text = ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.SemiBold)
-
-              Spacer(modifier = Modifier.weight(1f))
-
-              Icon(
-                  imageVector = Icons.AutoMirrored.Filled.NavigateNext,
-                  contentDescription = "Show full week opening hours")
-            }
-
-        // Today line(s)
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimensions.Spacing.small)
-                    .testTag("${dayTagPrefix}${todayIndex}_HOURS"),
-            verticalAlignment = Alignment.Top) {
-
-              // Left label
-              Text(
-                  text = ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT,
-                  style = MaterialTheme.typography.bodyMedium,
-              )
-
-              Spacer(Modifier.width(Dimensions.Spacing.medium))
-
-              // Opening hours, aligned with the first one
-              Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                todayLines.forEach { line ->
-                  Text(
-                      text = line,
-                      style = MaterialTheme.typography.bodyMedium,
-                  )
-                }
-              }
-            }
-      }
-
-  if (showFullWeek) {
-    WeeklyAvailabilityDialog(
-        openingHours = openingHours,
-        currentDayIndex = todayIndex,
-        dayTagPrefix = dayTagPrefix,
-        onDismiss = { showFullWeek = false })
-  }
-}
-
-/**
  * A composable function that displays a bottom sheet with the full weekly opening hours for a shop
  *
  * @param openingHours The list of [OpeningHours] entries to display
@@ -1440,7 +1362,7 @@ fun AvailabilitySection(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WeeklyAvailabilityDialog(
+fun WeeklyAvailabilityDialog(
     openingHours: List<OpeningHours>,
     currentDayIndex: Int,
     dayTagPrefix: String,
@@ -1521,6 +1443,67 @@ private fun WeeklyAvailabilityDialog(
                 }
           }
         }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AvailabilitySection(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX,
+    addPadding: Boolean = false
+) {
+  var showSheet by remember { mutableStateOf(false) }
+
+  val today = Calendar.getInstance()[Calendar.DAY_OF_WEEK] - 1
+  val todayHours = openingHours.firstOrNull { it.day == today }
+
+  val todayText =
+      when {
+        todayHours == null || todayHours.hours.isEmpty() -> SpaceRenterUi.Misc.NO_TIME
+        todayHours.hours.size == 1 -> {
+          val (start, end) = todayHours.hours.first()
+          SpaceRenterUi.AvailabilitySection.timeRange(start, end)
+        }
+        else ->
+            todayHours.hours.joinToString(" ") { (start, end) ->
+              SpaceRenterUi.AvailabilitySection.timeRange(start, end)
+            }
+      }
+
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clickable { showSheet = true }
+                    .testTag(SpaceRenterTestTags.AVAILABILITY_HEADER)
+                    .padding(vertical = Dimensions.Padding.medium),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              Column {
+                Text(
+                    text = SpaceRenterUi.AvailabilitySection.TITLE,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = SpaceRenterUi.AvailabilitySection.todayDate(todayText),
+                    modifier = Modifier.testTag(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT),
+                    style = MaterialTheme.typography.bodyMedium)
+              }
+
+              Icon(
+                  Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
+            }
+      }
+  if (showSheet) {
+    WeeklyAvailabilityDialog(
+        openingHours = openingHours,
+        currentDayIndex = today,
+        dayTagPrefix = dayTagPrefix,
+        onDismiss = { showSheet = false })
   }
 }
 
