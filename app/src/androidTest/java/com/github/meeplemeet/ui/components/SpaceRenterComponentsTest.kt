@@ -217,7 +217,8 @@ class SpaceRenterComponentsTest : FirestoreTests() {
                 website = "",
                 address = Location(name = ""),
                 openingHours = emptyList(),
-                spaces = emptyList()))
+                spaces = emptyList(),
+                photoCollectionUrl = emptyList()))
       }
 
       SpaceRenterRequiredInfoSection(

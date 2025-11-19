@@ -67,7 +67,8 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
               address = testLocation,
               openingHours = testOpeningHours,
               spaces = listOf(Space(seats = 10, costPerHour = 15.0)),
-              id = "renter1")
+              id = "renter1",
+              photoCollectionUrl = emptyList())
       val noUid = com.github.meeplemeet.model.space_renter.toNoUid(renter)
       db.collection("space_renters").document(renter.id).set(noUid).await()
       renter = spaceRenterRepository.getSpaceRenter(renter.id)
