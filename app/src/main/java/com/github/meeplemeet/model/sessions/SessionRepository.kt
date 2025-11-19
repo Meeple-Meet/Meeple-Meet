@@ -8,6 +8,9 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.snapshots
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -117,4 +120,32 @@ class SessionRepository(
 
     return allIds
   }
+
+  /**
+   * Retrieves the single [Session] embedded in the discussion document identified by
+   * [discussionId].
+   *
+   * @param discussionId Firestore document id of the parent discussion.
+   * @return The embedded session, or `null` if the document does not exist or contains no session.
+   */
+  suspend fun getSession(discussionId: String): Session? {
+    val snap = discussions.document(discussionId).get().await()
+    if (!snap.exists()) return null
+    return snap.toObject(DiscussionNoUid::class.java)?.session
+  }
+
+  /**
+   * Real-time stream of discussion **document ids** whose embedded session contains the given user
+   * in its participant list.
+   *
+   * The flow emits a new list on every relevant create / update / delete event in Firestore, making
+   * it suitable for observing a live session list.
+   *
+   * @param userId UID of the participant to filter for.
+   * @return Cold [Flow] that delivers a list of discussion document ids.
+   */
+  fun getSessionIdsForUserFlow(userId: String): Flow<List<String>> =
+      discussions.whereArrayContains("session.participants", userId).snapshots().map { snap ->
+        snap.documents.map { it.id }
+      }
 }

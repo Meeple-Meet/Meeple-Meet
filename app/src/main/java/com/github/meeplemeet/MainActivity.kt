@@ -323,7 +323,15 @@ fun MeepleMeetApp(
       }
     }
 
-    composable(MeepleMeetScreen.SessionsOverview.name) { SessionsOverviewScreen(navigationActions) }
+    composable(MeepleMeetScreen.SessionsOverview.name) {
+      SessionsOverviewScreen(
+          navigation = navigationActions,
+          account = account,
+          onSelectSession = {
+            discussionId = it
+            navigationActions.navigateTo(MeepleMeetScreen.Session)
+          })
+    }
 
     composable(MeepleMeetScreen.PostsOverview.name) {
       PostsOverviewScreen(
