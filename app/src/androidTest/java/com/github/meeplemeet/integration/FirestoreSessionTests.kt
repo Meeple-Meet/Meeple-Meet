@@ -724,6 +724,7 @@ class FirestoreSessionTests : FirestoreTests() {
             maxPlayers = 4,
             recommendedPlayers = null,
             averagePlayTime = null,
+            minAge = null,
             genres = emptyList())
 
     viewModel.setGame(account1, baseDiscussion, game)
@@ -745,6 +746,7 @@ class FirestoreSessionTests : FirestoreTests() {
             maxPlayers = 4,
             recommendedPlayers = null,
             averagePlayTime = null,
+            minAge = null,
             genres = emptyList())
 
     viewModel.setGame(account3, baseDiscussion, game)

@@ -728,7 +728,8 @@ class SessionComponentsTest : FirestoreTests() {
             minPlayers = 2,
             maxPlayers = 5,
             recommendedPlayers = 4,
-            averagePlayTime = 45)
+            averagePlayTime = 45,
+            minAge = 10)
 
     set { SessionGameSearchBar(account, discussion, createSessionViewModel, initial = initialGame) }
 

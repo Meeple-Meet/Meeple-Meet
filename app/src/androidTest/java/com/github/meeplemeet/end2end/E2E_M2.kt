@@ -594,7 +594,7 @@ class E2E_M2 : FirestoreTests() {
                   maxPlayers = 4,
                   recommendedPlayers = 4,
                   averagePlayTime = 90,
-                  genres = listOf(1, 2)))
+                  genres = listOf("1", "2")))
           .await()
 
       db.collection(gamesPath)
@@ -608,7 +608,7 @@ class E2E_M2 : FirestoreTests() {
                   maxPlayers = 5,
                   recommendedPlayers = 4,
                   averagePlayTime = 60,
-                  genres = listOf(1)))
+                  genres = listOf("1")))
           .await()
     }
 

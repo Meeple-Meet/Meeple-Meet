@@ -141,7 +141,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
                   maxPlayers = 4,
                   recommendedPlayers = 4,
                   averagePlayTime = 90,
-                  genres = listOf(1, 2)))
+                  genres = listOf("1", "2")))
           .await()
 
       db.collection(GAMES_COLLECTION_PATH)
@@ -155,7 +155,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
                   maxPlayers = 5,
                   recommendedPlayers = 4,
                   averagePlayTime = 60,
-                  genres = listOf(1)))
+                  genres = listOf("1")))
           .await()
 
       testGame1 = gameRepository.getGameById("g_catan")
@@ -569,7 +569,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
                     maxPlayers = 4,
                     recommendedPlayers = 4,
                     averagePlayTime = 45,
-                    genres = listOf(3)))
+                    genres = listOf("3")))
             .await()
       }
 

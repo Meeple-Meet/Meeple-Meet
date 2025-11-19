@@ -24,9 +24,9 @@ class FirestoreGameTests : FirestoreTests() {
   fun setup() {
     runBlocking {
       // Insert baseline games used by multiple tests
-      addGameDoc("g_catan", "Catan", genres = listOf(1, 2))
-      addGameDoc("g_carcassonne", "Carcassonne", genres = listOf(2))
-      addGameDoc("g_chess", "Chess", genres = listOf(3))
+      addGameDoc("g_catan", "Catan", genres = listOf("1", "2"))
+      addGameDoc("g_carcassonne", "Carcassonne", genres = listOf("2"))
+      addGameDoc("g_chess", "Chess", genres = listOf("3"))
     }
   }
 
@@ -40,32 +40,30 @@ class FirestoreGameTests : FirestoreTests() {
     }
   }
 
-  private fun addGameDoc(id: String, name: String, genres: List<Int> = emptyList()) = runBlocking {
-    db.collection(GAMES_COLLECTION_PATH)
-        .document(id)
-        .set(GameNoUid(name = name, genres = genres))
-        .await()
-  }
+  private fun addGameDoc(id: String, name: String, genres: List<String> = emptyList()) =
+      runBlocking {
+        db.collection(GAMES_COLLECTION_PATH)
+            .document(id)
+            .set(GameNoUid(name = name, genres = genres))
+            .await()
+      }
 
   @Test
-  fun smoke_getGames_and_getById() = runTest {
-    checkpoint("getGames returns up to maxResults") {
+  fun smoke_getGamesById_and_getGameById() = runTest {
+    checkpoint("getGamesById returns multiple games") {
       runBlocking {
-        for (i in 1..5) {
-          addGameDoc("g_extra_$i", "ExtraGame$i", genres = listOf(1))
-        }
-        val results = gameRepository.getGames(maxResults = 3)
-        assertEquals(3, results.size)
+        val results = gameRepository.getGamesById("g_catan", "g_carcassonne")
+        val names = results.map { it.name }
+        assertTrue(names.contains("Catan"))
+        assertTrue(names.contains("Carcassonne"))
+        assertFalse(names.contains("Chess"))
       }
     }
 
-    checkpoint("getGames returns all baseline games") {
+    checkpoint("getGamesById returns empty list when ids missing") {
       runBlocking {
-        val results = gameRepository.getGames(maxResults = 10)
-        assertTrue(results.size >= 3)
-        assertTrue(results.any { it.name == "Catan" })
-        assertTrue(results.any { it.name == "Carcassonne" })
-        assertTrue(results.any { it.name == "Chess" })
+        val results = gameRepository.getGamesById("nonexistent1", "nonexistent2")
+        assertTrue(results.isEmpty())
       }
     }
 
@@ -81,54 +79,10 @@ class FirestoreGameTests : FirestoreTests() {
   @Test(expected = GameNotFoundException::class)
   fun getGameById_throws_when_missing() = runTest { gameRepository.getGameById("non-existent-id") }
 
-  @Test
-  fun smoke_getGamesByGenre() = runTest {
-    checkpoint("getGamesByGenre returns only games containing genre") {
-      runBlocking {
-        val results = gameRepository.getGamesByGenre(2, maxResults = 10)
-        val names = results.map { it.name }
-        assertTrue(names.contains("Catan"))
-        assertTrue(names.contains("Carcassonne"))
-        assertFalse(names.contains("Chess"))
-      }
-    }
-
-    checkpoint("getGamesByGenre respects maxResults") {
-      runBlocking {
-        for (i in 1..5) {
-          addGameDoc("g_gen_99_$i", "Genre99Game$i", genres = listOf(99))
-        }
-        val results = gameRepository.getGamesByGenre(99, maxResults = 2)
-        assertEquals(2, results.size)
-        assertTrue(results.all { 99 in it.genres })
-      }
-    }
-
-    checkpoint("getGamesByGenres returns only games containing all genres") {
-      runBlocking {
-        addGameDoc("g_complex", "ComplexGame", genres = listOf(1, 2, 3))
-        addGameDoc("g_partial", "PartialGame", genres = listOf(1, 2))
-        addGameDoc("g_other", "OtherGame", genres = listOf(2, 3))
-        val results = gameRepository.getGamesByGenres(listOf(1, 2), maxResults = 10)
-        val names = results.map { it.name }
-        assertTrue(names.contains("ComplexGame"))
-        assertTrue(names.contains("PartialGame"))
-        assertFalse(names.contains("OtherGame"))
-      }
-    }
-
-    checkpoint("getGamesByGenres respects maxResults and intersection") {
-      runBlocking {
-        addGameDoc("g_both_1", "BothOne", genres = listOf(10, 20))
-        addGameDoc("g_both_2", "BothTwo", genres = listOf(10, 20))
-        addGameDoc("g_both_3", "BothThree", genres = listOf(10, 20))
-        addGameDoc("g_partial", "Only10", genres = listOf(10))
-        addGameDoc("g_other", "Only20", genres = listOf(20))
-        val results = gameRepository.getGamesByGenres(listOf(10, 20), maxResults = 2)
-        assertEquals(2, results.size)
-        assertTrue(results.all { game -> listOf(10, 20).all { it in game.genres } })
-      }
-    }
+  @Test(expected = IllegalArgumentException::class)
+  fun getGamesById_throws_when_more_than_20_ids() = runTest {
+    val ids = (1..21).map { "id_$it" }.toTypedArray()
+    gameRepository.getGamesById(*ids)
   }
 
   @Test

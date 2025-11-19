@@ -37,14 +37,9 @@ class CountingGameRepository : GameRepository {
     return emptyList()
   }
 
-  override suspend fun getGames(maxResults: Int): List<Game> = error("Unused")
-
   override suspend fun getGameById(gameID: String): Game = error("Unused")
 
-  override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> = error("Unused")
-
-  override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int): List<Game> =
-      error("Unused")
+  override suspend fun getGamesById(vararg gameIDs: String): List<Game> = error("Unused")
 }
 
 class CountingLocationRepository : LocationRepository {
@@ -86,7 +81,7 @@ class ShopSearchViewModelTest : FirestoreTests() {
       owner = accountRepository.createAccount("owner", "Owner", "owner@shop.com", null)
       intruder = accountRepository.createAccount("intruder", "Intruder", "intruder@shop.com", null)
 
-      game = Game("g1", "Catan", "Catan game", "url.com", 2, 8, null, null, emptyList())
+      game = Game("g1", "Catan", "Catan game", "url.com", 2, 8, null, null, null, emptyList())
       location = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
 
       val openingHours =

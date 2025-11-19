@@ -11,8 +11,9 @@ import kotlinx.serialization.Serializable
  * @property imageURL URL of the game's image.
  * @property minPlayers Minimum number of players required to play the game.
  * @property maxPlayers Maximum number of players that can play the game.
- * @property recommendedPlayers Recommended number of players for optimal gameplay (optional).
- * @property averagePlayTime Average playtime of the game in minutes (optional).
+ * @property recommendedPlayers Recommended number of players for optimal gameplay.
+ * @property averagePlayTime Average playtime of the game in minutes.
+ * @property minAge Minimum recommended age to play the game.
  * @property genres List of genre IDs associated with the game (optional).
  */
 data class Game(
@@ -24,7 +25,8 @@ data class Game(
     val maxPlayers: Int,
     val recommendedPlayers: Int?,
     val averagePlayTime: Int?,
-    val genres: List<Int> = emptyList()
+    val minAge: Int?,
+    val genres: List<String> = emptyList()
 )
 
 /**
@@ -41,7 +43,8 @@ data class GameNoUid(
     val maxPlayers: Int = 0,
     val recommendedPlayers: Int? = null,
     val averagePlayTime: Int? = null,
-    val genres: List<Int> = emptyList()
+    val minAge: Int? = null,
+    val genres: List<String> = emptyList()
 )
 
 /**
@@ -61,4 +64,5 @@ fun fromNoUid(id: String, gameNoUid: GameNoUid): Game =
         gameNoUid.maxPlayers,
         gameNoUid.recommendedPlayers,
         gameNoUid.averagePlayTime,
+        gameNoUid.minAge,
         gameNoUid.genres)

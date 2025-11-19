@@ -3,6 +3,7 @@ package com.github.meeplemeet.model.shared.game
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.GameNotFoundException
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -19,12 +20,6 @@ const val GAMES_COLLECTION_PATH = "games"
 class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : GameRepository {
   private val games = db.collection(GAMES_COLLECTION_PATH)
 
-  /** Retrieves all games (within [maxResults]) from Firestore. */
-  override suspend fun getGames(maxResults: Int): List<Game> {
-    val snapshot = games.limit(maxResults.toLong()).get().await()
-    return mapSnapshotToGames(snapshot.documents)
-  }
-
   /** Retrieves a single game by its Firestore document ID. */
   override suspend fun getGameById(gameID: String): Game {
     val snapshot = games.document(gameID).get().await()
@@ -33,32 +28,31 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
   }
 
   /**
-   * Retrieves all games (within [maxResults]) that include a given genre ID.
+   * Retrieves multiple [Game] objects by their unique identifiers.
    *
-   * This uses Firestore's `array-contains` query operator.
-   */
-  override suspend fun getGamesByGenre(genreID: Int, maxResults: Int): List<Game> {
-    val query = games.whereArrayContains("genres", genreID).limit(maxResults.toLong()).get().await()
-    return mapSnapshotToGames(query.documents)
-  }
-
-  /**
-   * Retrieves all games (within [maxResults]) that include **all** of the specified genre IDs.
+   * This method allows batch fetching of games by their document IDs. The number of IDs provided
+   * must not exceed 20. If more than 20 IDs are passed, an [IllegalArgumentException] is thrown. If
+   * some of the provided IDs do not correspond to existing documents, they are simply omitted from
+   * the result list.
    *
-   * Since Firestore doesn't support multiple `array-contains` filters simultaneously, this method
-   * performs the intersection manually on the client side.
+   * @param gameIDs the unique IDs of the games to retrieve (maximum 20).
+   * @return a [List] of [Game] objects corresponding to the provided IDs. The list may contain
+   *   fewer items than requested if some IDs are invalid or not found.
+   * @throws IllegalArgumentException if more than 20 IDs are provided.
    */
-  override suspend fun getGamesByGenres(genreIDs: List<Int>, maxResults: Int): List<Game> {
-    if (genreIDs.isEmpty()) return emptyList()
+  override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
+    if (gameIDs.isEmpty()) return emptyList()
+    require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
 
-    // Fetch all games that match at least one of the genres (no multiple array-contains allowed on
-    // Firestore)
-    val firstGenre = genreIDs.first()
-    val initialQuery = games.whereArrayContains("genres", firstGenre).get().await()
-    val initialGames = mapSnapshotToGames(initialQuery.documents)
+    val chunks = gameIDs.toList().chunked(10)
+    val results = mutableListOf<Game>()
 
-    // Filter locally to include only games that have all the specified genres
-    return initialGames.filter { game -> genreIDs.all { it in game.genres } }.take(maxResults)
+    for (chunk in chunks) {
+      val snapshot = games.whereIn(FieldPath.documentId(), chunk).get().await()
+      results.addAll(mapSnapshotToGames(snapshot.documents))
+    }
+
+    return results
   }
 
   /**

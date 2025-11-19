@@ -205,6 +205,14 @@ jobs:
           path: app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
 
+      - name: Upload unit test jacoco exec
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-exec
+          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
+          if-no-files-found: warn
+
   android-tests:
     name: Android Instrumentation Tests
     needs: [format-check, magic-number-check, repeated-strings-check]
@@ -418,6 +426,12 @@ jobs:
         with:
           name: unit-test-results
           path: app/build/test-results/testDebugUnitTest/
+
+      - name: Download unit test exec
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-exec
+          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/
 
       - name: Download android test coverage
         uses: actions/download-artifact@v4

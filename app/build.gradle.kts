@@ -213,7 +213,6 @@ dependencies {
   debugImplementation(libs.androidx.ui.test.manifest)
   implementation(libs.material)
   implementation(libs.androidx.material.icons.extended)
-    implementation(libs.coil.compose)
 
   // Navigation
   implementation(libs.androidx.navigation.compose)
@@ -242,6 +241,7 @@ dependencies {
 
   // Networking with OkHttp
   implementation(libs.okhttp)
+  implementation(libs.jdom2)
 
   // Testing Unit
   testImplementation(libs.junit)
