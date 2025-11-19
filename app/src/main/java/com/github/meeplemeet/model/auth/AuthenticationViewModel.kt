@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.auth
+// Github copilot was used for this file
 
 import android.app.Activity
 import android.content.Context
@@ -33,12 +34,14 @@ import kotlinx.coroutines.launch
  *   the UI when authentication operations fail.
  * @property signedOut True if a sign-out operation has just completed. Used to reset UI state after
  *   logout.
+ * @property isEmailVerified True if the current user's email is verified, false otherwise.
  */
 data class AuthUIState(
     val isLoading: Boolean = false,
     val account: Account? = null,
     val errorMsg: String? = null,
-    val signedOut: Boolean = false
+    val signedOut: Boolean = false,
+    val isEmailVerified: Boolean = false
 )
 
 open class AuthenticationViewModel(
@@ -209,6 +212,27 @@ open class AuthenticationViewModel(
         _uiState.update {
           it.copy(isLoading = false, errorMsg = msg, signedOut = true, account = null)
         }
+      }
+    }
+  }
+
+  /**
+   * Checks if the current user's email is verified.
+   *
+   * This method reloads the user's Firebase authentication state and updates the
+   * Account.isEmailVerified flag inside AuthUIState.account.
+   */
+  suspend fun checkEmailVerified(): Result<Boolean> {
+    return repository.isEmailVerified().onSuccess { isVerified ->
+      _uiState.update { it.copy(isEmailVerified = isVerified) }
+    }
+  }
+
+  /** Convenience wrapper to check email verification from composables. */
+  fun refreshEmailVerificationStatus() {
+    viewModelScope.launch {
+      checkEmailVerified().onFailure { error ->
+        _uiState.update { it.copy(errorMsg = error.localizedMessage) }
       }
     }
   }
