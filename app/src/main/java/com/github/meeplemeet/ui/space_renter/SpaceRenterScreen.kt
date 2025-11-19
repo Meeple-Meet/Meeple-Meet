@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -63,6 +64,46 @@ object SpaceRenterTestTags {
 object SpaceRenterUi {
   val HORIZONTAL_PADDING: Dp = 100.dp
   val ROW_WIDTH: Dp = 48.dp
+
+  object IconDescriptions {
+    const val BACK_BUTTON = "Back Button"
+    const val EDIT_BUTTON = "Edit Space Renter"
+  }
+
+  object BottomBar {
+    const val INFO = "Click on a space to setup a reservation!"
+    const val APPROVE = "Approve"
+    const val SHAPE_PER = 60
+
+    fun selectSpace(selectedIndex: Int?) = "Space N°${(selectedIndex ?: 0) + 1}"
+
+    fun spaceDetails(seats: Int, costPerHour: Double) = "${seats} seats - ${costPerHour}$"
+  }
+
+  object Misc {
+    const val TOAST_SUCCESS = "Copied to clipboard"
+    const val NO_TIME = "Closed"
+    const val TITLE = "Details"
+  }
+
+  object SpaceSection {
+    const val TITLE = "Available Spaces"
+    val CARD_HEIGHT: Dp = 72.dp
+
+    fun setSpaceNumber(index: Int) = "Space N°${index + 1}"
+
+    fun setSpaceCapacity(seats: Int) = "Capacity: $seats seats"
+
+    fun setSpacePrice(costPerHour: Double) = "$costPerHour\$ per hour"
+  }
+
+  object AvailabilitySection {
+    const val TITLE = "Availability"
+
+    fun todayDate(todayText: String) = "Today: $todayText"
+
+    fun timeRange(start: String?, end: String?) = "$start - $end"
+  }
 }
 
 /**
@@ -93,7 +134,7 @@ fun SpaceRenterScreen(
   Scaffold(
       topBar = {
         TopBarAndDivider(
-            text = "Details",
+            text = SpaceRenterUi.Misc.TITLE,
             onReturn = { onBack() },
             trailingIcons = {
               // Edit button should only show if current account is the space renter owner
@@ -101,7 +142,9 @@ fun SpaceRenterScreen(
                 IconButton(
                     onClick = { onEdit(spaceState) },
                     modifier = Modifier.testTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)) {
-                      Icon(Icons.Default.Edit, contentDescription = "Edit")
+                      Icon(
+                          Icons.Default.Edit,
+                          contentDescription = SpaceRenterUi.IconDescriptions.EDIT_BUTTON)
                     }
               }
             })
@@ -183,7 +226,7 @@ fun ContactSection(spaceRenter: SpaceRenter) {
         // Display address contact row
         ContactRow(
             Icons.Default.Place,
-            humanReadableAddress(spaceRenter.address.name),
+            spaceRenter.address.name,
             SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT)
 
         // Display phone contact row if provided
@@ -228,21 +271,21 @@ fun ContactRow(
           Modifier.fillMaxWidth()
               .clickable {
                 clipboard.setText(AnnotatedString(text))
-                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, SpaceRenterUi.Misc.TOAST_SUCCESS, Toast.LENGTH_SHORT).show()
               }
-              .padding(vertical = 6.dp),
+              .padding(vertical = Dimensions.Padding.medium),
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
         Icon(
             icon,
             contentDescription = null,
             tint = AppColors.neutral,
-            modifier = Modifier.size(20.dp))
+            modifier = Modifier.size(Dimensions.IconSize.standard))
 
         Text(
             text,
-            modifier = Modifier.weight(1f).testTag(testTag),
-            maxLines = 2,
+            modifier = Modifier.weight(Dimensions.Weight.full).testTag(testTag),
+            maxLines = 1,
             style = MaterialTheme.typography.bodyMedium,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
       }
@@ -269,7 +312,9 @@ fun TopBarAndDivider(
           modifier = Modifier.align(Alignment.CenterStart).width(SpaceRenterUi.ROW_WIDTH),
           verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onReturn) {
-              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              Icon(
+                  Icons.AutoMirrored.Filled.ArrowBack,
+                  contentDescription = SpaceRenterUi.IconDescriptions.BACK_BUTTON)
             }
           }
 
@@ -298,12 +343,6 @@ fun TopBarAndDivider(
   }
 }
 
-// todo: Implement a better version of this
-private fun humanReadableAddress(address: String): String {
-  val limit = 30
-  if (address.length <= limit) return address else return address.take(limit - 3) + "..."
-}
-
 /**
  * Composable that displays a section of available spaces in a horizontal pager format.
  *
@@ -330,7 +369,7 @@ fun SpacesSection(
 
   Column(
       modifier = modifier.fillMaxWidth(), // Matches Figma spacing
-      verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
 
         // Header row
         Row(
@@ -338,7 +377,7 @@ fun SpacesSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
               Text(
-                  "Available spaces",
+                  text = SpaceRenterUi.AvailabilitySection.TITLE,
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.SemiBold)
 
@@ -346,21 +385,30 @@ fun SpacesSection(
             }
 
         // Pager
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
-          val start = page * spacesPerPage
-          val end = minOf(start + spacesPerPage, spaces.size)
-          Column(
-              modifier = Modifier.fillMaxWidth(),
-              verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                for (i in start until end) {
-                  SpaceCard(
-                      space = spaces[i],
-                      index = i,
-                      isSelected = selectedIndex == i,
-                      onClick = { onSelect(if (selectedIndex == i) null else i) })
-                }
-              }
-        }
+        HorizontalPager(
+            verticalAlignment = Alignment.Top,
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth()) { page ->
+              val start = page * spacesPerPage
+              val end = minOf(start + spacesPerPage, spaces.size)
+              val missing = spacesPerPage - (end - start)
+              Column(
+                  modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
+                    for (i in start until end) {
+                      SpaceCard(
+                          space = spaces[i],
+                          index = i,
+                          isSelected = selectedIndex == i,
+                          onClick = { onSelect(if (selectedIndex == i) null else i) })
+                    }
+                    // Code needed to fix scrolling issues, otherwise UI looks weird when going from
+                    // tab to tab with less than 3 items
+                    repeat(missing) {
+                      Spacer(Modifier.height(SpaceRenterUi.SpaceSection.CARD_HEIGHT).fillMaxWidth())
+                    }
+                  }
+            }
 
         // Pager dots
         if (pageCount > 1) {
@@ -369,8 +417,10 @@ fun SpacesSection(
               val active = pagerState.currentPage == index
               Box(
                   modifier =
-                      Modifier.padding(4.dp)
-                          .size(if (active) 9.dp else 7.dp)
+                      Modifier.padding(Dimensions.Padding.small)
+                          .size(
+                              if (active) Dimensions.Padding.extraMedium
+                              else Dimensions.Padding.medium)
                           .background(
                               color = if (active) AppColors.textIcons else AppColors.textIconsFade,
                               shape = CircleShape))
@@ -390,31 +440,37 @@ fun SpacesSection(
  */
 @Composable
 private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: () -> Unit) {
-  val shape = RoundedCornerShape(12.dp)
+  val shape = RoundedCornerShape(Dimensions.Spacing.large)
 
   Surface(
-      modifier = Modifier.fillMaxWidth().clickable { onClick() }.height(72.dp),
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable { onClick() }
+              .height(SpaceRenterUi.SpaceSection.CARD_HEIGHT),
       shape = shape,
       color = AppColors.secondary,
-      border = if (isSelected) BorderStroke(2.dp, AppColors.neutral) else null) {
+      border =
+          if (isSelected) BorderStroke(Dimensions.DividerThickness.medium, AppColors.neutral)
+          else null) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
               Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    "Space N°${index + 1}",
+                    text = SpaceRenterUi.SpaceSection.setSpaceNumber(index),
                     style = MaterialTheme.typography.titleMedium,
                     color = AppColors.textIcons,
                     fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Capacity: ${space.seats} seats",
+                    text = SpaceRenterUi.SpaceSection.setSpaceCapacity(space.seats),
                     color = AppColors.textIcons,
                     style = MaterialTheme.typography.labelSmall)
               }
 
               Text(
-                  "${space.costPerHour}\$ per hour",
+                  text = SpaceRenterUi.SpaceSection.setSpacePrice(space.costPerHour),
+                  color = AppColors.textIcons,
                   style = MaterialTheme.typography.bodySmall,
                   textAlign = TextAlign.End)
             }
@@ -463,12 +519,15 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
 
   val todayText =
       when {
-        todayHours == null || todayHours.hours.isEmpty() -> "Closed"
+        todayHours == null || todayHours.hours.isEmpty() -> SpaceRenterUi.Misc.NO_TIME
         todayHours.hours.size == 1 -> {
           val (start, end) = todayHours.hours.first()
-          "$start - $end"
+          SpaceRenterUi.AvailabilitySection.timeRange(start, end)
         }
-        else -> todayHours.hours.joinToString(" ") { (start, end) -> "$start - $end" }
+        else ->
+            todayHours.hours.joinToString(" ") { (start, end) ->
+              SpaceRenterUi.AvailabilitySection.timeRange(start, end)
+            }
       }
 
   Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
@@ -476,15 +535,17 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
         modifier =
             Modifier.fillMaxWidth()
                 .clickable { showSheet = true }
-                .padding(vertical = Dimensions.Spacing.medium),
+                .padding(vertical = Dimensions.Padding.medium),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
           Column {
             Text(
-                "Availability",
+                text = SpaceRenterUi.AvailabilitySection.TITLE,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold)
-            Text("Today: $todayText", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                SpaceRenterUi.AvailabilitySection.todayDate(todayText),
+                style = MaterialTheme.typography.bodyMedium)
           }
 
           Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
@@ -496,7 +557,7 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
       AvailabilitySection(
           openingHours = openingHours, dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
 
-      Spacer(Modifier.height(20.dp))
+      Spacer(Modifier.height(Dimensions.Spacing.xLarge))
     }
   }
 }
@@ -515,51 +576,68 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
       modifier =
           Modifier.fillMaxWidth()
               .background(Color.Transparent)
-              .padding(horizontal = 16.dp, vertical = 12.dp),
+              .padding(
+                  horizontal = Dimensions.Padding.extraLarge, vertical = Dimensions.Padding.large),
       contentAlignment = Alignment.BottomCenter) {
         if (selectedSpace == null) {
 
           Surface(
-              shape = RoundedCornerShape(60), color = AppColors.secondary, shadowElevation = 8.dp) {
-                Surface(shape = RoundedCornerShape(60), color = AppColors.affirmative) {
-                  Text(
-                      "Click on a space to setup a reservation!",
-                      modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp))
-                }
+              shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
+              color = AppColors.secondary,
+              shadowElevation = Dimensions.Elevation.extraHigh) {
+                Surface(
+                    shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
+                    color = AppColors.affirmative) {
+                      Text(
+                          text = SpaceRenterUi.BottomBar.INFO,
+                          modifier =
+                              Modifier.padding(
+                                  horizontal = Dimensions.Padding.xLarge,
+                                  vertical = Dimensions.Padding.large))
+                    }
               }
         } else {
 
           Surface(
-              shape = RoundedCornerShape(60), color = AppColors.secondary, shadowElevation = 4.dp) {
+              shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
+              color = AppColors.secondary,
+              shadowElevation = Dimensions.Elevation.high) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
+                    modifier = Modifier.padding(horizontal = Dimensions.Padding.extraLarge),
                     verticalAlignment = Alignment.CenterVertically) {
                       Box(
                           modifier =
-                              Modifier.background(Color.Transparent, RoundedCornerShape(50))
-                                  .padding(horizontal = 16.dp, vertical = 10.dp)) {
+                              Modifier.background(
+                                      Color.Transparent,
+                                      RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER))
+                                  .padding(
+                                      horizontal = Dimensions.Padding.extraLarge,
+                                      vertical = Dimensions.Padding.extraMedium)) {
                             Column {
                               Text(
-                                  "Space N°${(selectedIndex ?: 0) + 1}",
+                                  text = SpaceRenterUi.BottomBar.selectSpace(selectedIndex),
                                   fontWeight = FontWeight.SemiBold)
-                              Text("${selectedSpace.seats} seats - ${selectedSpace.costPerHour}$")
+                              Text(
+                                  text =
+                                      SpaceRenterUi.BottomBar.spaceDetails(
+                                          selectedSpace.seats, selectedSpace.costPerHour))
                             }
                           }
 
-                      Spacer(Modifier.width(12.dp))
+                      Spacer(Modifier.width(Dimensions.Spacing.large))
 
                       Button(
                           onClick = onApprove,
-                          shape = RoundedCornerShape(50),
+                          shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
                           colors =
                               ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-                          modifier = Modifier.height(56.dp)) {
+                          modifier = Modifier.height(Dimensions.ButtonSize.medium)) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(text = "Approve")
+                                modifier = Modifier.size(Dimensions.IconSize.small))
+                            Spacer(Modifier.width(Dimensions.Spacing.medium))
+                            Text(text = SpaceRenterUi.BottomBar.APPROVE)
                           }
                     }
               }
