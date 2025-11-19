@@ -89,7 +89,7 @@ class BggGameRepositoryTest {
 
     val exception = assertFailsWith<GameSearchException> { repository.getGameById("181") }
 
-    assertTrue(exception.message!!.contains("BGG thing request failed"))
+    assertTrue(exception.message!!.contains("BGG game request failed"))
   }
 
   @Test

@@ -206,51 +206,33 @@ class BggGameRepository(
                 .addQueryParameter("stats", "1")
                 .build()
 
-        val builder = Request.Builder().url(url)
-
-        if (!authorizationToken.isNullOrBlank()) {
-          builder.header("Authorization", "Bearer $authorizationToken")
-        }
-
-        builder.header("User-Agent", USER_AGENT)
-
-        val request = builder.build()
-
         try {
-          val response = client.newCall(request).execute()
-          response.use {
-            if (!response.isSuccessful) {
-              throw GameSearchException("BGG thing request failed: ${response.code}")
+          val doc = fetchDocument(url, "game")
+          val (fetchedGames, parseErrors) = parseThings(doc)
+
+          // Store fetched games in game cache
+          gamesCacheMutex.withLock {
+            for (game in fetchedGames) {
+              gamesCache[game.uid] = CacheEntry(game)
             }
-
-            val body = response.body?.string().orEmpty()
-            val doc = SAXBuilder().build(StringReader(body))
-            val (fetchedGames, parseErrors) = parseThings(doc)
-
-            // Store fetched games in game cache
-            gamesCacheMutex.withLock {
-              for (game in fetchedGames) {
-                gamesCache[game.uid] = CacheEntry(game)
-              }
-            }
-
-            // Reorder games
-            val fetchedById = fetchedGames.associateBy { it.uid }
-            val orderedGames = gameIDs.mapNotNull { id -> cached[id] ?: fetchedById[id] }
-
-            // Everything fail (or single ID fail)
-            if (orderedGames.isEmpty() && parseErrors.isNotEmpty()) {
-              val message =
-                  if (gameIDs.size == 1) {
-                    "Failed to parse the game with id '${gameIDs[0]}'. Error: ${parseErrors.first().message}"
-                  } else {
-                    "Failed to parse any game data. Errors: ${parseErrors.joinToString { it.message.toString() }}"
-                  }
-              throw GameSearchException(message)
-            }
-
-            return@withContext GameFetchResult(orderedGames, parseErrors)
           }
+
+          // Reorder games
+          val fetchedById = fetchedGames.associateBy { it.uid }
+          val orderedGames = gameIDs.mapNotNull { id -> cached[id] ?: fetchedById[id] }
+
+          // Everything fail (or single ID fail)
+          if (orderedGames.isEmpty() && parseErrors.isNotEmpty()) {
+            val message =
+                if (gameIDs.size == 1) {
+                  "Failed to parse the game with id '${gameIDs[0]}'. Error: ${parseErrors.first().message}"
+                } else {
+                  "Failed to parse any game data. Errors: ${parseErrors.joinToString { it.message.toString() }}"
+                }
+            throw GameSearchException(message)
+          }
+
+          return@withContext GameFetchResult(orderedGames, parseErrors)
         } catch (e: IOException) {
           val message =
               if (gameIDs.size == 1) {
@@ -296,38 +278,74 @@ class BggGameRepository(
                 .addQueryParameter("type", "boardgame")
                 .build()
 
-        val builder = Request.Builder().url(url)
-
-        if (!authorizationToken.isNullOrBlank()) {
-          builder.header("Authorization", "Bearer $authorizationToken")
-        }
-
-        builder.header("User-Agent", USER_AGENT)
-
-        val request = builder.build()
-
         try {
-          val response = client.newCall(request).execute()
-          response.use {
-            if (!response.isSuccessful) {
-              throw GameSearchException("BGG search request failed: ${response.code}")
-            }
+          val doc = fetchDocument(url, "search")
+          val rawResults = parseSearchResults(doc)
 
-            val body = response.body?.string().orEmpty()
-            val doc = SAXBuilder().build(StringReader(body))
-            val rawResults = parseSearchResults(doc)
+          val ranked = rankSearchResults(rawResults, query, ignoreCase).take(maxResults)
 
-            val ranked = rankSearchResults(rawResults, query, ignoreCase).take(maxResults)
+          // Store query result in search cache
+          searchCacheMutex.withLock { searchCache[query] = CacheEntry(ranked) }
 
-            // Store query result in search cache
-            searchCacheMutex.withLock { searchCache[query] = CacheEntry(ranked) }
-
-            return@withContext ranked
-          }
+          return@withContext ranked
         } catch (e: IOException) {
           throw GameSearchException("Failed to search games: ${e.message}")
         }
       }
+
+  // ----------------------------
+  // HTTP request helpers
+  // ----------------------------
+
+  /**
+   * Builds an OkHttp [Request] for the given [url], applying the user-agent and optional
+   * authorization token header.
+   *
+   * This helper centralizes header configuration to avoid duplication.
+   *
+   * @param url The target endpoint.
+   * @return A configured [Request] ready to be executed.
+   */
+  private fun buildRequest(url: HttpUrl): Request {
+    val builder = Request.Builder().url(url)
+
+    if (!authorizationToken.isNullOrBlank()) {
+      builder.header("Authorization", "Bearer $authorizationToken")
+    }
+
+    builder.header("User-Agent", USER_AGENT)
+
+    return builder.build()
+  }
+
+  /**
+   * Executes an HTTP request on the given [url] and parses the XML response body into a JDOM
+   * [Document].
+   *
+   * This helper:
+   * - Executes the network call.
+   * - Throws a [GameSearchException] if the HTTP code is not successful.
+   * - Lets [IOException] bubble up so callers can generate contextual error messages.
+   *
+   * @param url The endpoint to request.
+   * @param opName A short operation name used to format error messages consistently.
+   * @return The parsed XML [Document].
+   * @throws GameSearchException If the HTTP response code is not successful.
+   * @throws IOException If the underlying network call fails.
+   */
+  private fun fetchDocument(url: HttpUrl, opName: String): Document {
+    val request = buildRequest(url)
+
+    val response = client.newCall(request).execute()
+    response.use {
+      if (!response.isSuccessful) {
+        throw GameSearchException("BGG $opName request failed: ${response.code}")
+      }
+
+      val body = response.body?.string().orEmpty()
+      return SAXBuilder().build(StringReader(body))
+    }
+  }
 
   // ----------------------------
   // XML parsing helpers
