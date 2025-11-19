@@ -205,7 +205,7 @@ fun SpaceRenterDetails(
           modifier.verticalScroll(rememberScrollState()).padding(bottom = Dimensions.Padding.large),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         if (spaceRenter.photoCollectionUrl.isNotEmpty()) {
-          ImageCarousel(photoCollectionUrl = spaceRenter.photoCollectionUrl)
+          ImageCarousel(photoCollectionUrl = spaceRenter.photoCollectionUrl, editable = false)
         }
         Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
         ContactSection(spaceRenter)

@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -26,6 +27,7 @@ import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GameStockPicker
+import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
 import com.github.meeplemeet.ui.components.RequiredInfoSection
 import com.github.meeplemeet.ui.components.ShopFormTestTags
@@ -127,7 +129,7 @@ fun ShopDetailsScreen(
       shop = shop,
       onBack = onBack,
       onSaved = onSaved,
-      onSave = { loadedShop, requester, name, email, phone, website, address, week, stock ->
+      onSave = { loadedShop, requester, name, email, phone, website, address, week, stock, photoCollectionUrl ->
         try {
           viewModel.updateShop(
               shop = loadedShop,
@@ -139,7 +141,8 @@ fun ShopDetailsScreen(
               website = website,
               address = address,
               openingHours = week,
-              gameCollection = stock)
+              gameCollection = stock,
+              photoCollectionUrl = photoCollectionUrl)
           null
         } catch (e: IllegalArgumentException) {
           e.message ?: EditShopUi.Strings.ERROR_VALIDATION
@@ -155,7 +158,8 @@ fun ShopDetailsScreen(
       onSetGameQuery = viewModel::setGameQuery,
       onSetGame = viewModel::setGame,
       viewModel = viewModel,
-      owner = owner)
+      owner = owner,
+      )
 }
 
 /* ================================================================================================
@@ -192,7 +196,8 @@ fun EditShopContent(
             website: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> String?,
+            stock: List<Pair<Game, Int>>,
+            photoCollectionUrl: List<String>) -> String?,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     gameQuery: String,
@@ -208,6 +213,9 @@ fun EditShopContent(
   val scope = rememberCoroutineScope()
 
   // Initialize state with loaded shop data or default values
+    var photoCollectionUrl by rememberSaveable(shop) {
+    mutableStateOf(shop?.photoCollectionUrl ?: emptyList())
+    }
   var shopName by rememberSaveable(shop) { mutableStateOf(shop?.name ?: "") }
   var email by rememberSaveable(shop) { mutableStateOf(shop?.email ?: "") }
   var addressText by rememberSaveable(shop) { mutableStateOf(shop?.address?.name ?: "") }
@@ -271,7 +279,7 @@ fun EditShopContent(
             onPrimary = {
               if (shop != null) {
                 val addr = locationUi.selectedLocation ?: Location()
-                val err = onSave(shop, shop.owner, shopName, email, phone, link, addr, week, stock)
+                val err = onSave(shop, shop.owner, shopName, email, phone, link, addr, week, stock, photoCollectionUrl)
                 if (err == null) onSaved() else scope.launch { snackbarHost.showSnackbar(err) }
               }
             },
@@ -280,11 +288,32 @@ fun EditShopContent(
       },
       modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
         LazyColumn(
-            modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
+            modifier = Modifier
+                .padding(padding)
+                .testTag(EditShopScreenTestTags.LIST),
             contentPadding =
                 PaddingValues(
                     horizontal = EditShopUi.Dimensions.contentHPadding,
                     vertical = EditShopUi.Dimensions.contentVPadding)) {
+            item {
+                ImageCarousel(
+                    photoCollectionUrl = photoCollectionUrl,
+                    maxNumberOfImages = maxNumberOfImages,
+                    onAdd = { path, index ->
+                        photoCollectionUrl = if (index < photoCollectionUrl.size &&
+                            photoCollectionUrl[index].isNotEmpty()) {
+                            photoCollectionUrl.mapIndexed { i, old ->
+                                if (i == index) path else old
+                            }
+                        } else {
+                            photoCollectionUrl + path
+                        }
+                    },
+                    onRemove = { url ->
+                        photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                    },
+                    editable = true)
+            }
               item {
                 CollapsibleSection(
                     title = EditShopUi.Strings.SECTION_REQUIRED,
@@ -309,7 +338,8 @@ fun EditShopContent(
 
               item {
                 Spacer(
-                    Modifier.height(EditShopUi.Dimensions.sectionSpace)
+                    Modifier
+                        .height(EditShopUi.Dimensions.sectionSpace)
                         .testTag(EditShopScreenTestTags.SPACER_AFTER_REQUIRED))
               }
 
@@ -330,7 +360,8 @@ fun EditShopContent(
 
               item {
                 Spacer(
-                    Modifier.height(EditShopUi.Dimensions.sectionSpace)
+                    Modifier
+                        .height(EditShopUi.Dimensions.sectionSpace)
                         .testTag(EditShopScreenTestTags.SPACER_AFTER_AVAILABILITY))
               }
 
@@ -370,7 +401,8 @@ fun EditShopContent(
 
               item {
                 Spacer(
-                    Modifier.height(EditShopUi.Dimensions.bottomSpacer)
+                    Modifier
+                        .height(EditShopUi.Dimensions.bottomSpacer)
                         .testTag(EditShopScreenTestTags.BOTTOM_SPACER))
               }
             }
