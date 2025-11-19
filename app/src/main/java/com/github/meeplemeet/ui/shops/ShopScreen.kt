@@ -73,28 +73,36 @@ object ShopTestTags {
   const val SHOP_GAME_STOCK_PREFIX = "SHOP_GAME_STOCK_"
 }
 
-private const val GAME_SECTION_TITLE = "Discover Games"
-private const val GAMES_PER_COLUMN = 4
-private const val GAMES_PER_ROW = 2
-private const val GAMES_PER_PAGE = GAMES_PER_COLUMN * GAMES_PER_ROW
-private const val MAX_PAGES = 6
-private const val MAX_GAMES = GAMES_PER_PAGE * MAX_PAGES
-private const val MINIMAL_PAGE_COUNT = 1
+object ShopScreenDefaults {
 
-private const val IMAGE_HEIGHT_CORRECTION = 3.1f
-private val GAME_NAME_AREA_HEIGHT = 46.dp
+  object Game {
+    const val GAME_SECTION_TITLE = "Discover Games"
+    val GAME_NAME_AREA_HEIGHT = 46.dp
+    const val GAME_NAME_MAX_LINES = 2
+    const val GAME_IMG_RELATIVE_WIDTH = 0.85f
+    const val GAME_IMG_DEFAULT_ASPECT_RATIO = 0.75f
+  }
 
-private val PAGER_UNSELECTED_BUBBLE_SIZE = 8.dp
-private val PAGER_SELECTED_BUBBLE_SIZE = 10.dp
+  object Pager {
+    const val MINIMAL_PAGE_COUNT = 1
+    const val GAMES_PER_COLUMN = 4
+    const val GAMES_PER_ROW = 2
+    const val GAMES_PER_PAGE = GAMES_PER_COLUMN * GAMES_PER_ROW
+    const val MAX_PAGES = 6
+    const val MAX_GAMES = GAMES_PER_PAGE * MAX_PAGES
+    const val IMAGE_HEIGHT_CORRECTION = 3.1f
+    val PAGER_UNSELECTED_BUBBLE_SIZE = 8.dp
+    val PAGER_SELECTED_BUBBLE_SIZE = 10.dp
+  }
 
-private val STOCK_BUBBLE_SIZE = 32.dp
-private val STOCK_BUBBLE_TOP_PADDING = (STOCK_BUBBLE_SIZE / 2)
-private const val GAME_NAME_MAX_LINES = 2
-private const val NOT_SHOWING_STOCK_MIN_VALUE = 0
+  object Stock {
+    val STOCK_BUBBLE_SIZE = 32.dp
+    val STOCK_BUBBLE_TOP_PADDING = (STOCK_BUBBLE_SIZE / 2)
 
-private const val GAME_IMG_RELATIVE_WIDTH = 0.85f
-private const val GAME_IMG_DEFAULT_ASPECT_RATIO = 0.75f
-const val MAX_STOCK_SHOWED = 99
+    const val NOT_SHOWING_STOCK_MIN_VALUE = 0
+    const val MAX_STOCK_SHOWED = 99
+  }
+}
 
 /**
  * Composable that displays the Shop screen, including the top bar and shop details.
@@ -174,7 +182,7 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
               games = shop.gameCollection,
               modifier = Modifier.fillMaxWidth(),
               clickableGames = true,
-              title = GAME_SECTION_TITLE,
+              title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
           )
         }
       }
@@ -304,7 +312,7 @@ fun GameItemImage(
         Column(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(top = STOCK_BUBBLE_TOP_PADDING)
+                    .padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.background)
                     .clickable(enabled = clickable) { onClick(game) }
@@ -312,14 +320,16 @@ fun GameItemImage(
             horizontalAlignment = Alignment.CenterHorizontally) {
               Box(
                   modifier =
-                      Modifier.fillMaxWidth(GAME_IMG_RELATIVE_WIDTH)
+                      Modifier.fillMaxWidth(ShopScreenDefaults.Game.GAME_IMG_RELATIVE_WIDTH)
                           .shadow(
                               Dimensions.Elevation.high, MaterialTheme.shapes.medium, clip = true)
                           .clip(MaterialTheme.shapes.medium)
                           .background(MaterialTheme.colorScheme.background)
                           .let { base ->
                             if (imageHeight != null) base.height(imageHeight)
-                            else base.aspectRatio(GAME_IMG_DEFAULT_ASPECT_RATIO)
+                            else
+                                base.aspectRatio(
+                                    ShopScreenDefaults.Game.GAME_IMG_DEFAULT_ASPECT_RATIO)
                           }) {
                     AsyncImage(
                         model = game.imageURL,
@@ -335,19 +345,22 @@ fun GameItemImage(
                   text = game.name,
                   style = MaterialTheme.typography.bodySmall,
                   textAlign = TextAlign.Center,
-                  maxLines = GAME_NAME_MAX_LINES,
+                  maxLines = ShopScreenDefaults.Game.GAME_NAME_MAX_LINES,
                   overflow = TextOverflow.Ellipsis,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}"))
             }
 
-        if (count > NOT_SHOWING_STOCK_MIN_VALUE) {
-          val label = if (count > MAX_STOCK_SHOWED) "$MAX_STOCK_SHOWED+" else count.toString()
+        if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
+          val label =
+              if (count > ShopScreenDefaults.Stock.MAX_STOCK_SHOWED)
+                  "$ShopScreenDefaults.Pager.MAX_STOCK_SHOWED+"
+              else count.toString()
 
           Box(
               modifier =
-                  Modifier.size(STOCK_BUBBLE_SIZE)
+                  Modifier.size(ShopScreenDefaults.Stock.STOCK_BUBBLE_SIZE)
                       .align(Alignment.TopStart)
                       .offset(x = Dimensions.Padding.small, y = Dimensions.Padding.small)
                       .clip(CircleShape)
@@ -383,10 +396,15 @@ fun GameImageListSection(
     title: String,
     onClick: (Game) -> Unit = {},
 ) {
-  val clampedGames = remember(games) { games.shuffled().take(MAX_GAMES) }
+  val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
   if (clampedGames.isEmpty()) return
 
-  val pages = remember(clampedGames) { clampedGames.chunked(GAMES_PER_PAGE).take(MAX_PAGES) }
+  val pages =
+      remember(clampedGames) {
+        clampedGames
+            .chunked(ShopScreenDefaults.Pager.GAMES_PER_PAGE)
+            .take(ShopScreenDefaults.Pager.MAX_PAGES)
+      }
   val pageCount = pages.size
 
   val pagerState = rememberPagerState(pageCount = { pageCount })
@@ -403,10 +421,10 @@ fun GameImageListSection(
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
           val gridWidth = maxWidth
-          val imageHeight = gridWidth / IMAGE_HEIGHT_CORRECTION
-          val textAreaHeight = GAME_NAME_AREA_HEIGHT
+          val imageHeight = gridWidth / ShopScreenDefaults.Pager.IMAGE_HEIGHT_CORRECTION
+          val textAreaHeight = ShopScreenDefaults.Game.GAME_NAME_AREA_HEIGHT
           val rowHeight = imageHeight + textAreaHeight
-          val gridHeight = rowHeight * GAMES_PER_COLUMN
+          val gridHeight = rowHeight * ShopScreenDefaults.Pager.GAMES_PER_COLUMN
 
           HorizontalPager(
               state = pagerState,
@@ -415,7 +433,7 @@ fun GameImageListSection(
                       .height(gridHeight)
                       .testTag(ShopTestTags.SHOP_GAME_PAGER)) { pageIndex ->
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(GAMES_PER_ROW),
+                    columns = GridCells.Fixed(ShopScreenDefaults.Pager.GAMES_PER_ROW),
                     horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
                     userScrollEnabled = false,
                     modifier = Modifier.fillMaxSize()) {
@@ -433,7 +451,7 @@ fun GameImageListSection(
               }
         }
 
-        if (pageCount > MINIMAL_PAGE_COUNT) {
+        if (pageCount > ShopScreenDefaults.Pager.MINIMAL_PAGE_COUNT) {
           Row(
               modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.medium),
               horizontalArrangement = Arrangement.Center) {
@@ -443,8 +461,8 @@ fun GameImageListSection(
                       modifier =
                           Modifier.padding(horizontal = Dimensions.Padding.small)
                               .size(
-                                  if (selected) PAGER_SELECTED_BUBBLE_SIZE
-                                  else PAGER_UNSELECTED_BUBBLE_SIZE)
+                                  if (selected) ShopScreenDefaults.Pager.PAGER_SELECTED_BUBBLE_SIZE
+                                  else ShopScreenDefaults.Pager.PAGER_UNSELECTED_BUBBLE_SIZE)
                               .clip(CircleShape)
                               .testTag("${ShopTestTags.SHOP_GAME_PAGER_INDICATOR_PREFIX}$index")
                               .background(
