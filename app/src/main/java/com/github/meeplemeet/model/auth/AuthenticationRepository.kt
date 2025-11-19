@@ -42,6 +42,7 @@ class AuthenticationRepository(
     private const val INVALID_CREDENTIALS_MSG = "Invalid email or password"
     private const val INVALID_EMAIL_MSG = "Invalid email format"
     private const val TOO_MANY_REQUESTS_MSG = "Too many failed attempts. Please try again later."
+    private const val ERROR_NO_LOGGED_IN_USER = "No user is currently logged in."
     private const val EMAIL_VERIFICATION_FAILED_MSG =
         "Failed to send verification email. Please try again later."
     private const val DEFAULT_ERROR_MSG = "Unexpected error."
@@ -94,30 +95,46 @@ class AuthenticationRepository(
   /**
    * Checks if the current user's email is verified.
    *
-   * @return A [Result] indicating true if the email is verified, false otherwise.
+   * @return A [Result] containing true if the email is verified, false otherwise, or a failure with
+   *   a user-friendly error message when the status cannot be retrieved.
    */
   suspend fun isEmailVerified(): Result<Boolean> {
     return try {
       auth.currentUser?.reload()?.await()
       Result.success(auth.currentUser?.isEmailVerified ?: false)
     } catch (e: Exception) {
-      return Result.failure(IllegalStateException(EMAIL_VERIFICATION_FAILED_MSG))
+      Result.failure(IllegalStateException(EMAIL_VERIFICATION_FAILED_MSG, e))
     }
   }
 
   /**
-   * Sends a verification email to the user.
+   * Sends a verification email to the given Firebase user. This function is the function called
+   * during registration.
    *
-   * @param user The Firebase user to send the verification email to.
-   * @return A [Result] indicating success or failure.
+   * @param user The [FirebaseUser] to send the verification email to.
+   * @return A [Result] indicating success, or a failure with a user-friendly error message if the
+   *   email could not be sent.
    */
-  private suspend fun sendVerificationEmail(user: FirebaseUser): Result<Unit> {
+  private suspend fun sendVerificationEmailInternal(user: FirebaseUser): Result<Unit> {
     return try {
       user.sendEmailVerification().await()
       Result.success(Unit)
     } catch (e: Exception) {
-      return Result.failure(IllegalStateException(EMAIL_VERIFICATION_FAILED_MSG))
+      Result.failure(IllegalStateException(EMAIL_VERIFICATION_FAILED_MSG, e))
     }
+  }
+
+  /**
+   * Sends a verification email to the currently logged-in user.
+   *
+   * @return A [Result] indicating success, or a failure with a user-friendly error message if no
+   *   user is logged in or if the email sending fails.
+   */
+  suspend fun sendVerificationEmail(): Result<Unit> {
+    val currentUser =
+        auth.currentUser ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+
+    return sendVerificationEmailInternal(currentUser)
   }
 
   /**
@@ -138,7 +155,7 @@ class AuthenticationRepository(
                   IllegalStateException("Registration failed: $USER_INFO_ERROR_MSG"))
 
       // Send verification email
-      sendVerificationEmail(firebaseUser).onFailure {
+      sendVerificationEmailInternal(firebaseUser).onFailure {
         // If email sending fails, delete the user to maintain consistency
         try {
           firebaseUser.delete().await()

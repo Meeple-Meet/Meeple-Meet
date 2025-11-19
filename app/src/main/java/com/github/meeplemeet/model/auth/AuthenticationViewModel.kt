@@ -238,6 +238,20 @@ open class AuthenticationViewModel(
   }
 
   /**
+   * Sends a verification email to the current user.
+   *
+   * This method calls the repository to send a verification email. If it fails, the error message
+   * is updated in the UI state.
+   */
+  fun sendVerificationEmail() {
+    viewModelScope.launch {
+      repository.sendVerificationEmail().onFailure { error ->
+        _uiState.update { it.copy(errorMsg = error.localizedMessage) }
+      }
+    }
+  }
+
+  /**
    * Signs out the current user.
    *
    * This method calls the repository to sign out from Firebase Auth and updates the UI state to
