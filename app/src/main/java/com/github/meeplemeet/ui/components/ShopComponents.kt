@@ -1341,7 +1341,7 @@ fun AvailabilitySection(
     openingHours: List<OpeningHours>,
     dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX
 ) {
-  val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+  val todayCalendarValue = Calendar.getInstance()[Calendar.DAY_OF_WEEK]
   val todayIndex = todayCalendarValue - 1
 
   val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
