@@ -1,3 +1,4 @@
+/**Documentation was generated using ChatGPT.*/
 package com.github.meeplemeet.ui.sessions
 
 import androidx.compose.foundation.background
