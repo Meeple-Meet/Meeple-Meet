@@ -5,6 +5,7 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
@@ -16,10 +17,15 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FirestorePostTests : FirestoreTests() {
+  @get:Rule val ck = Checkpoint.rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+
   private lateinit var createVM: CreatePostViewModel
   private lateinit var postVM: PostViewModel
   private lateinit var overviewVM: PostOverviewViewModel
@@ -37,108 +43,104 @@ class FirestorePostTests : FirestoreTests() {
   }
 
   @Test
-  fun testCreatePost() = runTest {
-    val post =
-        postRepository.createPost(
-            "Test Title", "Test Content", testAccount1.uid, listOf("tag1", "tag2"))
+  fun smoke_createAndDeletePost() = runTest {
+    checkpoint("Create post with tags") {
+      runBlocking {
+        val post =
+            postRepository.createPost(
+                "Test Title", "Test Content", testAccount1.uid, listOf("tag1", "tag2"))
+        assertNotNull(post.id)
+        assertEquals("Test Title", post.title)
+        assertEquals("Test Content", post.body)
+        assertEquals(testAccount1.uid, post.authorId)
+        assertEquals(listOf("tag1", "tag2"), post.tags)
+        assertTrue(post.comments.isEmpty())
+      }
+    }
 
-    assertNotNull(post.id)
-    assertEquals("Test Title", post.title)
-    assertEquals("Test Content", post.body)
-    assertEquals(testAccount1.uid, post.authorId)
-    assertEquals(listOf("tag1", "tag2"), post.tags)
-    assertTrue(post.comments.isEmpty())
-  }
-
-  @Test
-  fun testCreatePostWithoutTags() = runTest {
-    val post = postRepository.createPost("No Tags", "Content", testAccount1.uid)
-
-    assertNotNull(post.id)
-    assertEquals("No Tags", post.title)
-    assertEquals("Content", post.body)
-    assertEquals(testAccount1.uid, post.authorId)
-    assertTrue(post.tags.isEmpty())
+    checkpoint("Create post without tags") {
+      runBlocking {
+        val post = postRepository.createPost("No Tags", "Content", testAccount1.uid)
+        assertNotNull(post.id)
+        assertEquals("No Tags", post.title)
+        assertEquals("Content", post.body)
+        assertEquals(testAccount1.uid, post.authorId)
+        assertTrue(post.tags.isEmpty())
+      }
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun testDeletePost() = runTest {
     val post = postRepository.createPost("To Delete", "Content", testAccount1.uid)
     postRepository.deletePost(post.id)
-
     runBlocking { postRepository.getPost(post.id) }
   }
 
   @Test
-  fun testAddTopLevelComment() = runTest {
-    val post = postRepository.createPost("Post with Comment", "Content", testAccount1.uid)
-    val commentId =
-        postRepository.addComment(post.id, "Top level comment", testAccount2.uid, post.id)
+  fun smoke_comments() = runTest {
+    checkpoint("Add top-level comment") {
+      runBlocking {
+        val post = postRepository.createPost("Post with Comment", "Content", testAccount1.uid)
+        val commentId =
+            postRepository.addComment(post.id, "Top level comment", testAccount2.uid, post.id)
+        assertNotNull(commentId)
+        val updatedPost = postRepository.getPost(post.id)
+        assertEquals(1, updatedPost.comments.size)
+        assertEquals("Top level comment", updatedPost.comments[0].text)
+        assertEquals(testAccount2.uid, updatedPost.comments[0].authorId)
+      }
+    }
 
-    assertNotNull(commentId)
+    checkpoint("Add reply to comment") {
+      runBlocking {
+        val post = postRepository.createPost("Post with Reply", "Content", testAccount1.uid)
+        val parentCommentId =
+            postRepository.addComment(post.id, "Parent comment", testAccount2.uid, post.id)
+        val replyId =
+            postRepository.addComment(
+                post.id, "Reply to comment", testAccount1.uid, parentCommentId)
+        assertNotNull(replyId)
+        delay(1000)
+        val updatedPost = postRepository.getPost(post.id)
+        assertEquals(1, updatedPost.comments.size)
+        val parentComment = updatedPost.comments[0]
+        assertEquals("Parent comment", parentComment.text)
+        assertEquals(1, parentComment.children.size)
+        assertEquals("Reply to comment", parentComment.children[0].text)
+        assertEquals(testAccount1.uid, parentComment.children[0].authorId)
+      }
+    }
 
-    // Verify comment was added by getting the post
-    val updatedPost = postRepository.getPost(post.id)
+    checkpoint("Remove comment") {
+      runBlocking {
+        val post = postRepository.createPost("Post", "Content", testAccount1.uid)
+        val commentId = postRepository.addComment(post.id, "To remove", testAccount2.uid, post.id)
+        postRepository.removeComment(post.id, commentId)
+        val updatedPost = postRepository.getPost(post.id)
+        assertTrue(updatedPost.comments[0].authorId.isEmpty())
+      }
+    }
 
-    assertEquals(1, updatedPost.comments.size)
-    assertEquals("Top level comment", updatedPost.comments[0].text)
-    assertEquals(testAccount2.uid, updatedPost.comments[0].authorId)
-  }
-
-  @Test
-  fun testAddReplyToComment() = runTest {
-    val post = postRepository.createPost("Post with Reply", "Content", testAccount1.uid)
-    val parentCommentId =
-        postRepository.addComment(post.id, "Parent comment", testAccount2.uid, post.id)
-    val replyId =
-        postRepository.addComment(post.id, "Reply to comment", testAccount1.uid, parentCommentId)
-
-    assertNotNull(replyId)
-
-    // Verify nested comment structure
-    val updatedPost = postRepository.getPost(post.id)
-    delay(1000)
-
-    assertEquals(1, updatedPost.comments.size)
-    val parentComment = updatedPost.comments[0]
-    assertEquals("Parent comment", parentComment.text)
-    assertEquals(1, parentComment.children.size)
-    assertEquals("Reply to comment", parentComment.children[0].text)
-    assertEquals(testAccount1.uid, parentComment.children[0].authorId)
-  }
-
-  @Test
-  fun testRemoveComment() = runTest {
-    val post = postRepository.createPost("Post", "Content", testAccount1.uid)
-    val commentId = postRepository.addComment(post.id, "To remove", testAccount2.uid, post.id)
-
-    postRepository.removeComment(post.id, commentId)
-
-    // Verify comment was removed
-    val updatedPost = postRepository.getPost(post.id)
-    assertTrue(updatedPost.comments[0].authorId.isEmpty())
-  }
-
-  @Test
-  fun testRemoveCommentWithReplies() = runTest {
-    val post = postRepository.createPost("Post", "Content", testAccount1.uid)
-    val parentCommentId = postRepository.addComment(post.id, "Parent", testAccount2.uid, post.id)
-    postRepository.addComment(post.id, "Reply 1", testAccount1.uid, parentCommentId)
-    postRepository.addComment(post.id, "Reply 2", testAccount2.uid, parentCommentId)
-    val withComments = postRepository.getPost(post.id)
-
-    // Remove parent comment should also remove all replies
-    postRepository.removeComment(post.id, parentCommentId)
-
-    val updatedPost = postRepository.getPost(post.id)
-    assertEquals(withComments.comments.size, updatedPost.comments.size)
-    assertNotEquals(withComments.comments[0], updatedPost.comments[0])
+    checkpoint("Remove comment with replies") {
+      runBlocking {
+        val post = postRepository.createPost("Post", "Content", testAccount1.uid)
+        val parentCommentId =
+            postRepository.addComment(post.id, "Parent", testAccount2.uid, post.id)
+        postRepository.addComment(post.id, "Reply 1", testAccount1.uid, parentCommentId)
+        postRepository.addComment(post.id, "Reply 2", testAccount2.uid, parentCommentId)
+        val withComments = postRepository.getPost(post.id)
+        postRepository.removeComment(post.id, parentCommentId)
+        val updatedPost = postRepository.getPost(post.id)
+        assertEquals(withComments.comments.size, updatedPost.comments.size)
+        assertNotEquals(withComments.comments[0], updatedPost.comments[0])
+      }
+    }
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun testRemoveNonExistentComment() = runTest {
     val post = postRepository.createPost("Post", "Content", testAccount1.uid)
-
     runBlocking { postRepository.removeComment(post.id, "nonexistent") }
   }
 
@@ -182,12 +184,12 @@ class FirestorePostTests : FirestoreTests() {
   }
 
   @Test(expected = IllegalArgumentException::class)
-  fun testCreatePostViewModelWithBlankTitle() {
+  fun testCreatePostViewModelWithBlankTitle() = runBlocking {
     createVM.createPost("", "Content", testAccount1)
   }
 
   @Test(expected = IllegalArgumentException::class)
-  fun testCreatePostViewModelWithBlankBody() {
+  fun testCreatePostViewModelWithBlankBody() = runBlocking {
     createVM.createPost("Title", "", testAccount1)
   }
 

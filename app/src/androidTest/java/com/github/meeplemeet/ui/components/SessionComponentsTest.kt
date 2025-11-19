@@ -31,6 +31,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import java.time.LocalDate
 import java.time.LocalTime
@@ -44,10 +45,15 @@ import org.junit.runner.RunWith
 class SessionComponentsTest : FirestoreTests() {
 
   @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private var oldLocale: Locale? = null
 
   private lateinit var createSessionViewModel: CreateSessionViewModel
+  private val contentState = mutableStateOf<@Composable () -> Unit>({})
+  private var renderToken by mutableStateOf(0)
 
   @Before
   fun forceStableLocale() {
@@ -64,7 +70,11 @@ class SessionComponentsTest : FirestoreTests() {
   }
 
   private fun set(content: @Composable () -> Unit) {
-    composeRule.setContent { AppTheme { content() } }
+    composeRule.runOnIdle {
+      contentState.value = content
+      renderToken++
+    }
+    composeRule.waitForIdle()
   }
 
   private fun hasTextDifferentFrom(oldText: String) =
@@ -75,6 +85,57 @@ class SessionComponentsTest : FirestoreTests() {
   /* ====================== SECTION / LABELS / TEXTFIELDS ====================== */
 
   @Test
+  fun all_tests() {
+    composeRule.setContent {
+      val token = renderToken
+      AppTheme { key(token) { contentState.value() } }
+    }
+
+    checkpoint("labeledTextField_independence_placeholder_roundtrip_and_multi_callbacks") {
+      labeledTextField_independence_placeholder_roundtrip_and_multi_callbacks()
+    }
+    checkpoint("section_and_all_labeled_textfield_paths_in_one") {
+      section_and_all_labeled_textfield_paths_in_one()
+    }
+    checkpoint("iconTextField_all_paths_and_countBubble_in_one") {
+      iconTextField_all_paths_and_countBubble_in_one()
+    }
+    checkpoint("participantChip_all_paths_in_one") { participantChip_all_paths_in_one() }
+    checkpoint("twoPerRowGrid_odd_then_even_recompose_and_rowsModifier_seen") {
+      twoPerRowGrid_odd_then_even_recompose_and_rowsModifier_seen()
+    }
+    checkpoint("datePicker_displays_and_opens_dialog") { datePicker_displays_and_opens_dialog() }
+    checkpoint("timePicker_displays_and_opens_dialog") { timePicker_displays_and_opens_dialog() }
+    checkpoint("datePicker_dialog_cancel_and_confirm") { datePicker_dialog_cancel_and_confirm() }
+    checkpoint("discretePillSlider_renders_with_default_and_custom_colors") {
+      discretePillSlider_renders_with_default_and_custom_colors()
+    }
+    checkpoint("topBarWithDivider_displays_title_and_back_button") {
+      topBarWithDivider_displays_title_and_back_button()
+    }
+    checkpoint("topBarWithDivider_displays_with_trailing_icons") {
+      topBarWithDivider_displays_with_trailing_icons()
+    }
+    checkpoint("sessionGameSearchBar_renders_with_default_test_tags") {
+      sessionGameSearchBar_renders_with_default_test_tags()
+    }
+    checkpoint("sessionGameSearchBar_displays_initial_game") {
+      sessionGameSearchBar_displays_initial_game()
+    }
+    checkpoint("sessionGameSearchBar_allows_custom_test_tags") {
+      sessionGameSearchBar_allows_custom_test_tags()
+    }
+    checkpoint("sessionLocationSearchBar_renders_with_default_test_tags") {
+      sessionLocationSearchBar_renders_with_default_test_tags()
+    }
+    checkpoint("sessionLocationSearchBar_displays_initial_location") {
+      sessionLocationSearchBar_displays_initial_location()
+    }
+    checkpoint("sessionLocationSearchBar_allows_custom_test_tags") {
+      sessionLocationSearchBar_allows_custom_test_tags()
+    }
+  }
+
   fun labeledTextField_independence_placeholder_roundtrip_and_multi_callbacks() {
     var a by mutableStateOf("")
     var b by mutableStateOf("")
@@ -123,7 +184,6 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.runOnIdle { assert(last == "Arcs" || last.isEmpty()) }
   }
 
-  @Test
   fun section_and_all_labeled_textfield_paths_in_one() {
     var styledValue by mutableStateOf("")
     var dynamicLabel by mutableStateOf("Game Label")
@@ -209,7 +269,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== ICON TEXTFIELDS + COUNT BUBBLE ====================== */
 
-  @Test
   fun iconTextField_all_paths_and_countBubble_in_one() {
     var calls = 0
     var recorded = ""
@@ -303,7 +362,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== PARTICIPANT CHIP ====================== */
 
-  @Test
   fun participantChip_all_paths_in_one() {
     var addCount = 0
     var removeCount = 0
@@ -402,7 +460,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== TWO-PER-ROW GRID ====================== */
 
-  @Test
   fun twoPerRowGrid_odd_then_even_recompose_and_rowsModifier_seen() {
     var data by mutableStateOf(listOf("Azul", "Brass", "Catan"))
     set {
@@ -429,7 +486,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== DATE & TIME PICKERS ====================== */
 
-  @Test
   fun datePicker_displays_and_opens_dialog() {
     val zone = ZoneId.of("UTC")
     val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -473,7 +529,6 @@ class SessionComponentsTest : FirestoreTests() {
         .assertTextEquals("")
   }
 
-  @Test
   fun timePicker_displays_and_opens_dialog() {
     var time by mutableStateOf<LocalTime?>(null)
     set {
@@ -506,7 +561,6 @@ class SessionComponentsTest : FirestoreTests() {
         .performClick()
   }
 
-  @Test
   fun datePicker_dialog_cancel_and_confirm() {
     val zone = ZoneId.of("UTC")
     val initial = LocalDate.of(2025, 3, 15)
@@ -547,7 +601,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== DISCRETE PILL SLIDER ====================== */
 
-  @Test
   fun discretePillSlider_renders_with_default_and_custom_colors() {
     val range = 1f..10f
     val values = 3f..7f
@@ -584,7 +637,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== TOP BAR WITH DIVIDER ====================== */
 
-  @Test
   fun topBarWithDivider_displays_title_and_back_button() {
     var backPressed = false
 
@@ -600,7 +652,6 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.runOnIdle { assert(backPressed) }
   }
 
-  @Test
   fun topBarWithDivider_displays_with_trailing_icons() {
     var iconClicked = false
 
@@ -626,7 +677,6 @@ class SessionComponentsTest : FirestoreTests() {
 
   /* ====================== SEARCH BAR WRAPPERS ====================== */
 
-  @Test
   fun sessionGameSearchBar_renders_with_default_test_tags() {
     val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
     val discussion =
@@ -658,7 +708,6 @@ class SessionComponentsTest : FirestoreTests() {
     }
   }
 
-  @Test
   fun sessionGameSearchBar_displays_initial_game() {
     val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
     val discussion =
@@ -687,7 +736,6 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithText("Ticket to Ride").assertExists()
   }
 
-  @Test
   fun sessionGameSearchBar_allows_custom_test_tags() {
     val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
     val discussion =
@@ -712,7 +760,6 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithTag("custom_game_input").assertExists()
   }
 
-  @Test
   fun sessionLocationSearchBar_renders_with_default_test_tags() {
     val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
     val discussion =
@@ -744,7 +791,6 @@ class SessionComponentsTest : FirestoreTests() {
     }
   }
 
-  @Test
   fun sessionLocationSearchBar_displays_initial_location() {
     val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
     val initialLocation =
@@ -772,7 +818,6 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithText("Rolex Learning Center").assertExists()
   }
 
-  @Test
   fun sessionLocationSearchBar_allows_custom_test_tags() {
     val account = Account(uid = "user1", handle = "player1", name = "Player One", email = "p1@test")
     val discussion =

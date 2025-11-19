@@ -2,8 +2,7 @@
 // and user combinations instructions. Improvements were then added by hand.
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -23,6 +22,7 @@ import com.github.meeplemeet.ui.posts.COMMENT_TEXT_ZONE_PLACEHOLDER
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.Checkpoint
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import org.junit.Before
@@ -32,6 +32,9 @@ import org.junit.Test
 class PostScreenTest {
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* Canonical accounts for examples */
   private val marco =
@@ -124,54 +127,56 @@ class PostScreenTest {
   }
 
   @Test
-  fun loading_then_content_and_topbar_back_navigation() {
+  fun all_post_screen_tests() {
     var backCount = 0
-    setContent(postId = "p_nonexistent", onBack = { backCount++ })
+    val postIdState = mutableStateOf("p_nonexistent")
 
-    findNodeByTag(PostTags.SCREEN).assertExists()
-    findNodeByTag(PostTags.LOADING_BOX).assertExists()
-    findNodeByTag(PostTags.LOADING_SPINNER).assertExists()
-
-    findNodeByTag(PostTags.TOP_BAR).assertExists()
-    findNodeByTag(PostTags.TOP_BAR_DIVIDER).assertExists()
-    findNodeByTag(PostTags.TOP_TITLE).assertExists()
-    findNodeByTag(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
-    compose.waitForIdle()
-    assert(backCount == 1)
-  }
-
-  @Test
-  fun topbar_back_default_onBack_no_crash() {
     compose.setContent {
       AppTheme {
         PostScreen(
             account = marco,
-            postId = "p_test",
+            postId = postIdState.value,
             postViewModel = postVM,
-            accountViewModel = accountVM)
+            accountViewModel = accountVM,
+            onBack = { backCount++ })
       }
     }
-    compose.waitForIdle()
 
-    findNodeByTag(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
-    compose.waitForIdle()
-  }
+    checkpoint("loading_then_content_and_topbar_back_navigation") {
+      findNodeByTag(PostTags.SCREEN).assertExists()
+      findNodeByTag(PostTags.LOADING_BOX).assertExists()
+      findNodeByTag(PostTags.LOADING_SPINNER).assertExists()
 
-  @Test
-  fun composer_bar_exists_and_interactions() {
-    setContent(postId = "p_test")
-    compose.waitForIdle()
+      findNodeByTag(PostTags.TOP_BAR).assertExists()
+      findNodeByTag(PostTags.TOP_BAR_DIVIDER).assertExists()
+      findNodeByTag(PostTags.TOP_TITLE).assertExists()
+      findNodeByTag(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
+      compose.waitForIdle()
+      assert(backCount == 1)
+    }
 
-    findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
-    findNodeByText().assertExists()
-    findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
-    findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("   test   ")
-    findNodeByTag(PostTags.COMPOSER_ATTACH).assertExists().performClick()
-  }
+    checkpoint("topbar_back_default_onBack_no_crash") {
+      // Test back button again - it should work multiple times
+      findNodeByTag(PostTags.NAV_BACK_BTN).assertHasClickAction().performClick()
+      compose.waitForIdle()
+      assert(backCount == 2)
+    }
 
-  @Test
-  fun tags_display_correctly() {
-    setContent(postId = "p_tags")
-    compose.waitForIdle()
+    checkpoint("composer_bar_exists_and_interactions") {
+      // Switch to a different post ID
+      postIdState.value = "p_test"
+      compose.waitForIdle()
+
+      findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
+      findNodeByText().assertExists()
+      findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("Hello Root!")
+      findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement("   test   ")
+      findNodeByTag(PostTags.COMPOSER_ATTACH).assertExists().performClick()
+    }
+
+    checkpoint("tags_display_correctly") {
+      postIdState.value = "p_tags"
+      compose.waitForIdle()
+    }
   }
 }

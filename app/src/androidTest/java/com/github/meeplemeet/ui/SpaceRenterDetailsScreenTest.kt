@@ -104,14 +104,19 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun full_smoke_all_cases() {
+  fun all_space_renter_details_tests() {
     val clipboard = FakeClipboardManager()
+    var fired = false
 
     compose.setContent {
       CompositionLocalProvider(LocalClipboardManager provides clipboard) {
         AppTheme(themeMode = theme) {
           SpaceRenterScreen(
-              spaceId = renter.id, account = currentUser, viewModel = vm, onBack = {}, onEdit = {})
+              spaceId = renter.id,
+              account = owner,
+              viewModel = vm,
+              onBack = {},
+              onEdit = { fired = true })
         }
       }
     }
@@ -154,24 +159,14 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
       val row = spaceRow(i)
       checkpoint("Space row exists: $row") { compose.onNodeWithTag(row).assertExists() }
     }
-  }
 
-  @Test
-  fun edit_button_visible_for_owner() {
-    var fired = false
-
-    compose.setContent {
-      SpaceRenterScreen(
-          spaceId = renter.id, account = owner, viewModel = vm, onEdit = { fired = true })
+    checkpoint("edit_button_visible_for_owner") {
+      compose
+          .onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)
+          .assertExists()
+          .performClick()
+      assert(fired)
     }
-
-    compose.waitUntil(timeoutMillis = 5000) { vm.spaceRenter.value != null }
-
-    compose
-        .onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)
-        .assertExists()
-        .performClick()
-    assert(fired)
   }
 
   /* ------ helper ------ */
