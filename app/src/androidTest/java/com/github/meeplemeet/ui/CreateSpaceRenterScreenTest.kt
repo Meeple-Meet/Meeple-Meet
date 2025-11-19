@@ -14,6 +14,7 @@ import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -26,6 +27,9 @@ class CreateSpaceRenterScreenTest : FirestoreTests() {
   /* ───────────────────────────────── RULES ───────────────────────────────── */
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* ────────────────────────────── FIXTURES / FX ──────────────────────────── */
 
@@ -122,9 +126,8 @@ class CreateSpaceRenterScreenTest : FirestoreTests() {
 
   /* ────────────────────────────── TESTS ────────────────────────────── */
 
-  /** Keep this as a general interaction smoke test */
   @Test
-  fun interaction_smoke() {
+  fun all_tests() {
     var backCalled = false
     val vm = CreateSpaceRenterViewModel()
 
@@ -135,101 +138,89 @@ class CreateSpaceRenterScreenTest : FirestoreTests() {
       }
     }
 
-    // Top & list exist
-    compose.onTag(CreateSpaceRenterScreenTestTags.SCAFFOLD).assertExists()
-    compose.onTag(CreateSpaceRenterScreenTestTags.TOPBAR).assertExists()
-    compose.onTag(CreateSpaceRenterScreenTestTags.TITLE).assertExists()
-    compose.onTag(CreateSpaceRenterScreenTestTags.LIST).assertExists()
+    checkpoint("interaction_smoke") {
+      // Top & list exist
+      compose.onTag(CreateSpaceRenterScreenTestTags.SCAFFOLD).assertExists()
+      compose.onTag(CreateSpaceRenterScreenTestTags.TOPBAR).assertExists()
+      compose.onTag(CreateSpaceRenterScreenTestTags.TITLE).assertExists()
+      compose.onTag(CreateSpaceRenterScreenTestTags.LIST).assertExists()
 
-    // Fill text fields
-    fillRequiredTextFields()
+      // Fill text fields
+      fillRequiredTextFields()
 
-    // Set hours and add a space
-    setAnyOpeningHoursViaDialog()
-    addSpace()
-    compose.onTag(spaceRowTag(0)).assertExists()
+      // Set hours and add a space
+      setAnyOpeningHoursViaDialog()
+      addSpace()
+      compose.onTag(spaceRowTag(0)).assertExists()
 
-    // Seats clamping
-    compose.onTag(seatsFieldTag(0)).performTextClearance()
-    compose.onTag(seatsFieldTag(0)).performTextInput("0")
-    compose.onTag(priceFieldTag(0)).performClick()
-    compose.waitForIdle()
-    compose.onTag(seatsFieldTag(0)).assertTextEquals("1")
+      // Seats clamping
+      compose.onTag(seatsFieldTag(0)).performTextClearance()
+      compose.onTag(seatsFieldTag(0)).performTextInput("0")
+      compose.onTag(priceFieldTag(0)).performClick()
+      compose.waitForIdle()
+      compose.onTag(seatsFieldTag(0)).assertTextEquals("1")
 
-    // Price normalization
-    compose.onTag(priceFieldTag(0)).performTextClearance()
-    compose.onTag(priceFieldTag(0)).performTextInput("-1")
-    compose.onTag(seatsFieldTag(0)).performClick()
-    compose.waitForIdle()
-    compose.onTag(priceFieldTag(0)).assertTextEquals("1")
+      // Price normalization
+      compose.onTag(priceFieldTag(0)).performTextClearance()
+      compose.onTag(priceFieldTag(0)).performTextInput("-1")
+      compose.onTag(seatsFieldTag(0)).performClick()
+      compose.waitForIdle()
+      compose.onTag(priceFieldTag(0)).assertTextEquals("1")
 
-    // Discard
-    compose.onTag(ShopComponentsTestTags.ACTION_DISCARD).performClick()
-    assertTrue(backCalled)
-  }
-
-  /** Spaces section behaviors */
-  @Test
-  fun spacesSection_add_edit_delete_and_input_normalization() {
-    compose.setContent {
-      AppTheme {
-        CreateSpaceRenterScreen(
-            owner = owner, onBack = {}, onCreated = {}, viewModel = CreateSpaceRenterViewModel())
-      }
+      // Discard
+      compose.onTag(ShopComponentsTestTags.ACTION_DISCARD).performClick()
+      assertTrue(backCalled)
     }
 
-    // Empty indicator
-    ensureSectionExpanded(CreateSpaceRenterScreenTestTags.SECTION_SPACES)
-    compose.onTag(SpaceRenterComponentsTestTags.SPACES_EMPTY_TEXT).assertExists()
+    checkpoint("spacesSection_add_edit_delete_and_input_normalization") {
+      // Clear the form by clicking discard if needed
+      // Spaces section tests continue with the same composition
 
-    // Add first space
-    addSpace()
-    compose.onTag(spaceRowTag(0)).assertExists()
-    compose.onTag(SpaceRenterComponentsTestTags.SPACES_EMPTY_TEXT).assertDoesNotExist()
+      // Empty indicator should now be shown after discard cleared the form
+      ensureSectionExpanded(CreateSpaceRenterScreenTestTags.SECTION_SPACES)
+      compose.onTag(SpaceRenterComponentsTestTags.SPACES_EMPTY_TEXT).assertExists()
 
-    // Edit seats & price — decimals normalize to single '.' and digits
-    compose.onTag(seatsFieldTag(0)).performTextClearance()
-    compose.onTag(seatsFieldTag(0)).performTextInput("10")
-    compose.onTag(priceFieldTag(0)).performClick()
-    compose.waitForIdle()
-    compose.onTag(seatsFieldTag(0)).assertTextEquals("10")
+      // Add first space
+      addSpace()
+      compose.onTag(spaceRowTag(0)).assertExists()
+      compose.onTag(SpaceRenterComponentsTestTags.SPACES_EMPTY_TEXT).assertDoesNotExist()
 
-    compose.onTag(priceFieldTag(0)).performTextClearance()
-    compose.onTag(priceFieldTag(0)).performTextInput("10,5a.9")
-    compose.onTag(seatsFieldTag(0)).performClick()
-    compose.waitForIdle()
-    compose.onTag(priceFieldTag(0)).assertTextEquals("10.59")
+      // Edit seats & price — decimals normalize to single '.' and digits
+      compose.onTag(seatsFieldTag(0)).performTextClearance()
+      compose.onTag(seatsFieldTag(0)).performTextInput("10")
+      compose.onTag(priceFieldTag(0)).performClick()
+      compose.waitForIdle()
+      compose.onTag(seatsFieldTag(0)).assertTextEquals("10")
 
-    // Negative ignored -> remains non-negative
-    compose.onTag(priceFieldTag(0)).performTextClearance()
-    compose.onTag(priceFieldTag(0)).performTextInput("-2")
-    compose.onTag(seatsFieldTag(0)).performClick()
-    compose.waitForIdle()
-    compose.onTag(priceFieldTag(0)).assertTextEquals("2")
+      compose.onTag(priceFieldTag(0)).performTextClearance()
+      compose.onTag(priceFieldTag(0)).performTextInput("10,5a.9")
+      compose.onTag(seatsFieldTag(0)).performClick()
+      compose.waitForIdle()
+      compose.onTag(priceFieldTag(0)).assertTextEquals("10.59")
 
-    // Add second space
-    addSpace()
-    compose.onTag(spaceRowTag(1)).assertExists()
+      // Negative ignored -> remains non-negative
+      compose.onTag(priceFieldTag(0)).performTextClearance()
+      compose.onTag(priceFieldTag(0)).performTextInput("-2")
+      compose.onTag(seatsFieldTag(0)).performClick()
+      compose.waitForIdle()
+      compose.onTag(priceFieldTag(0)).assertTextEquals("2")
 
-    // Delete second row
-    compose.onTag(deleteButtonTag(1)).assertExists().performClick()
-    compose.waitForIdle()
-    compose.onTag(spaceRowTag(1)).assertDoesNotExist()
-    compose.onTag(spaceRowTag(0)).assertExists()
-  }
+      // Add second space
+      addSpace()
+      compose.onTag(spaceRowTag(1)).assertExists()
 
-  /* ─────────────────────────────── SMOKE ─────────────────────────────────── */
-
-  @Test
-  fun screen_smoke_renders_topbar_and_list() {
-    compose.setContent {
-      AppTheme {
-        CreateSpaceRenterScreen(
-            owner = owner, onBack = {}, onCreated = {}, viewModel = CreateSpaceRenterViewModel())
-      }
+      // Delete second row
+      compose.onTag(deleteButtonTag(1)).assertExists().performClick()
+      compose.waitForIdle()
+      compose.onTag(spaceRowTag(1)).assertDoesNotExist()
+      compose.onTag(spaceRowTag(0)).assertExists()
     }
-    compose.onTag(CreateSpaceRenterScreenTestTags.TOPBAR).assertExists()
-    compose.onTag(CreateSpaceRenterScreenTestTags.TITLE).assertExists()
-    compose.onTag(CreateSpaceRenterScreenTestTags.LIST).assertExists()
+
+    checkpoint("screen_smoke_renders_topbar_and_list") {
+      // Already verified in interaction_smoke checkpoint above
+      compose.onTag(CreateSpaceRenterScreenTestTags.TOPBAR).assertExists()
+      compose.onTag(CreateSpaceRenterScreenTestTags.TITLE).assertExists()
+      compose.onTag(CreateSpaceRenterScreenTestTags.LIST).assertExists()
+    }
   }
 }

@@ -8,19 +8,15 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import io.mockk.*
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,6 +25,11 @@ import org.junit.runner.RunWith
 class ShopComponentsTest {
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+  private val contentState = mutableStateOf<@Composable () -> Unit>({})
+  private var renderToken by mutableStateOf(0)
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* ---------- Helpers ---------- */
   private fun ComposeTestRule.onTag(tag: String) = onNodeWithTag(tag, useUnmergedTree = true)
@@ -37,8 +38,13 @@ class ShopComponentsTest {
 
   private fun ComposeTestRule.onText(text: String) = onNodeWithText(text, useUnmergedTree = true)
 
-  private fun setContentThemed(content: @Composable () -> Unit) =
-      compose.setContent { AppTheme(themeMode = ThemeMode.LIGHT) { content() } }
+  private fun setContentThemed(content: @Composable () -> Unit) {
+    compose.runOnIdle {
+      contentState.value = content
+      renderToken++
+    }
+    compose.waitForIdle()
+  }
 
   private fun LocalTime.fmt12(): String = DateTimeFormatter.ofPattern("h:mm a").format(this)
 
@@ -54,6 +60,27 @@ class ShopComponentsTest {
 
   /** 1) Lightweight stateless composables */
   @Test
+  fun all_tests() {
+    compose.setContent {
+      val token = renderToken
+      AppTheme(themeMode = ThemeMode.LIGHT) { key(token) { contentState.value() } }
+    }
+
+    checkpoint("basicComponents_render_and_interact_fast") {
+      basicComponents_render_and_interact_fast()
+    }
+    checkpoint("openingHoursDialog_coreFlows_singleComposition") {
+      openingHoursDialog_coreFlows_singleComposition()
+    }
+    checkpoint("actionBar_enabled_then_disabled_singleComposition") {
+      actionBar_enabled_then_disabled_singleComposition()
+    }
+    checkpoint("gameItem_renders_badge_click_and_delete") {
+      gameItem_renders_badge_click_and_delete()
+    }
+    checkpoint("gameListSection_combined_behaviors") { gameListSection_combined_behaviors() }
+  }
+
   fun basicComponents_render_and_interact_fast() {
     var clicks = 0
     var edits = 0
@@ -162,7 +189,6 @@ class ShopComponentsTest {
   }
 
   /** 2) OpeningHoursDialog */
-  @Test
   fun openingHoursDialog_coreFlows_singleComposition() {
     var sorted: List<Pair<LocalTime, LocalTime>> = emptyList()
     var saved = false
@@ -280,7 +306,6 @@ class ShopComponentsTest {
   }
 
   /** 3) ActionBar */
-  @Test
   fun actionBar_enabled_then_disabled_singleComposition() {
     var discard = 0
     var create = 0
@@ -305,203 +330,7 @@ class ShopComponentsTest {
     assert(create == 1)
   }
 
-  /** 4) GameStockDialog - Rewritten for new API */
-  @Ignore
-  @Test
-  fun gameStockDialog_search_filter_duplicate_quantity_singleComposition() {
-    val owner = Account(uid = "owner1", handle = "owner", name = "Owner", email = "owner@test")
-    val shop = null // Can be null for testing
-    var qty by mutableIntStateOf(2)
-    lateinit var stage: MutableIntState
-
-    // Create mutable state flows for each stage
-    val gameUIStateFlow0 =
-        MutableStateFlow(
-            GameUIState(
-                gameQuery = "",
-                gameSuggestions = listOf(Fx.game1, Fx.game2, Fx.game3),
-                fetchedGame = null,
-                gameSearchError = null))
-    val gameUIStateFlow1 =
-        MutableStateFlow(
-            GameUIState(
-                gameQuery = "",
-                gameSuggestions = listOf(Fx.game1, Fx.game3),
-                fetchedGame = null,
-                gameSearchError = null))
-    val gameUIStateFlow2 =
-        MutableStateFlow(
-            GameUIState(
-                gameQuery = "Az",
-                gameSuggestions = emptyList(),
-                fetchedGame = null,
-                gameSearchError = null))
-    val gameUIStateFlow3 =
-        MutableStateFlow(
-            GameUIState(
-                gameQuery = "Catan",
-                gameSuggestions = emptyList(),
-                fetchedGame = Fx.game1,
-                gameSearchError = null))
-    val gameUIStateFlow4 =
-        MutableStateFlow(
-            GameUIState(
-                gameQuery = "",
-                gameSuggestions = emptyList(),
-                fetchedGame = Fx.game1,
-                gameSearchError = null))
-
-    val mockViewModel0 = mockk<ShopSearchViewModel>(relaxed = true)
-    every { mockViewModel0.gameUIState } returns gameUIStateFlow0
-
-    val mockViewModel1 = mockk<ShopSearchViewModel>(relaxed = true)
-    every { mockViewModel1.gameUIState } returns gameUIStateFlow1
-
-    val mockViewModel2 = mockk<ShopSearchViewModel>(relaxed = true)
-    every { mockViewModel2.gameUIState } returns gameUIStateFlow2
-
-    val mockViewModel3 = mockk<ShopSearchViewModel>(relaxed = true)
-    every { mockViewModel3.gameUIState } returns gameUIStateFlow3
-
-    val mockViewModel4 = mockk<ShopSearchViewModel>(relaxed = true)
-    every { mockViewModel4.gameUIState } returns gameUIStateFlow4
-
-    setContentThemed {
-      val s = remember { mutableIntStateOf(0) }
-      stage = s
-      when (s.intValue) {
-        // 0: Filtering hides existing
-        0 -> {
-          val gameState by gameUIStateFlow0.collectAsState()
-          GameStockDialog(
-              owner = owner,
-              shop = shop,
-              viewModel = mockViewModel0,
-              gameUIState = gameState,
-              onQueryChange = { gameUIStateFlow0.value = gameState.copy(gameQuery = it) },
-              quantity = 2,
-              onQuantityChange = {},
-              existingIds = setOf("2"),
-              onDismiss = {},
-              onSave = {})
-        }
-
-        // 1: Search -> pick -> save enabled
-        1 -> {
-          val gameState by gameUIStateFlow1.collectAsState()
-          GameStockDialog(
-              owner = owner,
-              shop = shop,
-              viewModel = mockViewModel1,
-              gameUIState = gameState,
-              onQueryChange = { gameUIStateFlow1.value = gameState.copy(gameQuery = it) },
-              quantity = 2,
-              onQuantityChange = {},
-              existingIds = emptySet(),
-              onDismiss = {},
-              onSave = {})
-        }
-
-        // 2: Loading then clear
-        2 -> {
-          val gameState by gameUIStateFlow2.collectAsState()
-          GameStockDialog(
-              owner = owner,
-              shop = shop,
-              viewModel = mockViewModel2,
-              gameUIState = gameState,
-              onQueryChange = { gameUIStateFlow2.value = gameState.copy(gameQuery = it) },
-              quantity = 2,
-              onQuantityChange = {},
-              existingIds = emptySet(),
-              onDismiss = {},
-              onSave = {})
-        }
-
-        // 3: Duplicate disables save
-        3 -> {
-          val gameState by gameUIStateFlow3.collectAsState()
-          GameStockDialog(
-              owner = owner,
-              shop = shop,
-              viewModel = mockViewModel3,
-              gameUIState = gameState,
-              onQueryChange = {},
-              quantity = 2,
-              onQuantityChange = {},
-              existingIds = setOf(Fx.game1.uid),
-              onDismiss = {},
-              onSave = {})
-        }
-
-        // 4: Quantity slider & zero disables save
-        4 -> {
-          val gameState by gameUIStateFlow4.collectAsState()
-          GameStockDialog(
-              owner = owner,
-              shop = shop,
-              viewModel = mockViewModel4,
-              gameUIState = gameState,
-              onQueryChange = {},
-              quantity = qty,
-              onQuantityChange = { qty = it },
-              existingIds = emptySet(),
-              onDismiss = {},
-              onSave = {})
-        }
-      }
-    }
-
-    // 0: Filtering hides existing - game2 (id="2") should be filtered out
-    compose.onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD).performClick().performTextInput("a")
-    compose.onTag(ShopComponentsTestTags.GAME_SEARCH_MENU).assertExists().assertIsDisplayed()
-    compose.onText("Carcassonne").assertDoesNotExist() // This is game2, should be filtered
-    compose.onText("Catan").assertExists()
-    compose.onText("Azul").assertExists()
-
-    // 1: Search -> pick -> save enabled
-    compose.runOnUiThread { stage.intValue = 1 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD).performClick().performTextInput("a")
-    compose.onTag(ShopComponentsTestTags.GAME_SEARCH_MENU).assertExists()
-    compose.onTag("${ShopComponentsTestTags.GAME_SEARCH_ITEM}:0").performClick()
-    compose.runOnUiThread {
-      gameUIStateFlow1.value = gameUIStateFlow1.value.copy(fetchedGame = Fx.game1)
-    }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsEnabled()
-
-    // 2: Loading then clear
-    compose.runOnUiThread { stage.intValue = 2 }
-    compose.waitForIdle()
-    // Simulate loading state
-    compose.runOnUiThread { gameUIStateFlow2.value = gameUIStateFlow2.value.copy(gameQuery = "Az") }
-    compose.waitForIdle()
-    // Note: Loading indicator may not be present in new API without explicit loading state
-    // Clear button should appear when there's a query
-    compose.onTag(ShopComponentsTestTags.GAME_SEARCH_CLEAR).assertExists().performClick()
-    compose.runOnUiThread { gameUIStateFlow2.value = gameUIStateFlow2.value.copy(gameQuery = "") }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD).assertTextEquals("")
-
-    // 3: Duplicate disables save
-    compose.runOnUiThread { stage.intValue = 3 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.GAME_DIALOG_HELPER).assertExists().assertIsDisplayed()
-    compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsNotEnabled()
-
-    // 4: Quantity slider & zero disables save
-    compose.runOnUiThread { stage.intValue = 4 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTextInput("10")
-    compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).assertTextEquals("102")
-    compose.runOnUiThread { qty = 0 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsNotEnabled()
-  }
-
   /** 5) GameItem */
-  @Test
   fun gameItem_renders_badge_click_and_delete() {
     var clicked = 0
     var deleted: Game? = null
@@ -546,7 +375,6 @@ class ShopComponentsTest {
   }
 
   /** 6) GameListSection */
-  @Test
   fun gameListSection_combined_behaviors() {
     val removed = mutableListOf<String>()
     val clicks = mutableListOf<String>()

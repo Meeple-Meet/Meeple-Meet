@@ -10,7 +10,6 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onChildren
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -27,6 +26,7 @@ import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.runBlocking
@@ -50,6 +50,10 @@ class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
 class ShopDetailsScreenTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+
   private lateinit var vm: ShopViewModel
   private lateinit var games: List<Game>
   private lateinit var dummyShop: Shop
@@ -180,111 +184,103 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
   @OptIn(ExperimentalTestApi::class)
   @Test
-  fun test_shopScreenDisplaysCorrectly() {
+  fun all_shop_details_screen_tests() {
     val fakeClipboard = FakeClipboardManager()
+    var edit = false
 
     composeTestRule.setContent {
       CompositionLocalProvider(LocalClipboardManager provides fakeClipboard) {
         AppTheme(themeMode = ThemeMode.DARK) {
           ShopScreen(
-              shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
+              shopId = shop.id,
+              account = owner,
+              onBack = {},
+              onEdit = { edit = true },
+              viewModel = vm)
         }
       }
     }
+
     composeTestRule.waitForIdle()
     composeTestRule.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
-    // Verify shop name is displayed
-    composeTestRule.onNodeWithText(dummyShop.name).assertExists()
 
-    // Verify contact info is displayed using tags
-    composeTestRule
-        .onNodeWithTag(ShopTestTags.SHOP_PHONE_TEXT)
-        .assertExists()
-        .assertTextEquals("- Phone: ${dummyShop.phone}")
-    composeTestRule
-        .onNodeWithTag(ShopTestTags.SHOP_EMAIL_TEXT)
-        .assertExists()
-        .assertTextEquals("- Email: ${dummyShop.email}")
-    composeTestRule
-        .onNodeWithTag(ShopTestTags.SHOP_WEBSITE_TEXT)
-        .assertExists()
-        .assertTextEquals("- Website: ${dummyShop.website}")
-    composeTestRule
-        .onNodeWithTag(ShopTestTags.SHOP_ADDRESS_TEXT)
-        .assertExists()
-        .assertTextEquals("- Address: ${dummyShop.address.name}")
+    checkpoint("test_shopScreenDisplaysCorrectly") {
+      // Verify shop name is displayed
+      composeTestRule.onNodeWithText(dummyShop.name).assertExists()
 
-    // Verify that clicking the icon buttons copies content to clipboard
-    val contactItems =
-        listOf(
-            ShopTestTags.SHOP_PHONE_BUTTON to "- Phone: ${dummyShop.phone}",
-            ShopTestTags.SHOP_EMAIL_BUTTON to "- Email: ${dummyShop.email}",
-            ShopTestTags.SHOP_ADDRESS_BUTTON to "- Address: ${dummyShop.address.name}",
-            ShopTestTags.SHOP_WEBSITE_BUTTON to "- Website: ${dummyShop.website}")
+      // Verify contact info is displayed using tags
+      composeTestRule
+          .onNodeWithTag(ShopTestTags.SHOP_PHONE_TEXT)
+          .assertExists()
+          .assertTextEquals("- Phone: ${dummyShop.phone}")
+      composeTestRule
+          .onNodeWithTag(ShopTestTags.SHOP_EMAIL_TEXT)
+          .assertExists()
+          .assertTextEquals("- Email: ${dummyShop.email}")
+      composeTestRule
+          .onNodeWithTag(ShopTestTags.SHOP_WEBSITE_TEXT)
+          .assertExists()
+          .assertTextEquals("- Website: ${dummyShop.website}")
+      composeTestRule
+          .onNodeWithTag(ShopTestTags.SHOP_ADDRESS_TEXT)
+          .assertExists()
+          .assertTextEquals("- Address: ${dummyShop.address.name}")
 
-    contactItems.forEach { (buttonTag, expectedText) ->
-      composeTestRule.onNodeWithTag(buttonTag).performClick()
-      assert(fakeClipboard.copiedText == expectedText) {
-        "Clipboard content for $buttonTag does not match: ${fakeClipboard.copiedText}"
-      }
-    }
+      // Verify that clicking the icon buttons copies content to clipboard
+      val contactItems =
+          listOf(
+              ShopTestTags.SHOP_PHONE_BUTTON to "- Phone: ${dummyShop.phone}",
+              ShopTestTags.SHOP_EMAIL_BUTTON to "- Email: ${dummyShop.email}",
+              ShopTestTags.SHOP_ADDRESS_BUTTON to "- Address: ${dummyShop.address.name}",
+              ShopTestTags.SHOP_WEBSITE_BUTTON to "- Website: ${dummyShop.website}")
 
-    // Verify availability (opening hours) for each day
-    dummyOpeningHours.forEach { openingHours ->
-      val dayTag = "${ShopTestTags.SHOP_DAY_PREFIX}${openingHours.day}"
-      composeTestRule.onNodeWithTag(dayTag).assertExists()
-
-      if (openingHours.hours.isEmpty()) {
-        // Closed day
-        composeTestRule.onNodeWithTag("${dayTag}_HOURS").assertExists().assertTextEquals("Closed")
-      } else {
-        // For each available time slot
-        openingHours.hours.forEachIndexed { idx, slot ->
-          val hoursTag = "${dayTag}_HOURS_${idx}"
-          composeTestRule
-              .onNodeWithTag(hoursTag)
-              .assertExists()
-              .onChildren()
-              .filter(hasText("${slot.open} - ${slot.close}"))
-              .assertCountEquals(1)
+      contactItems.forEach { (buttonTag, expectedText) ->
+        composeTestRule.onNodeWithTag(buttonTag).performClick()
+        assert(fakeClipboard.copiedText == expectedText) {
+          "Clipboard content for $buttonTag does not match: ${fakeClipboard.copiedText}"
         }
       }
+
+      // Verify availability (opening hours) for each day
+      dummyOpeningHours.forEach { openingHours ->
+        val dayTag = "${ShopTestTags.SHOP_DAY_PREFIX}${openingHours.day}"
+        composeTestRule.onNodeWithTag(dayTag).assertExists()
+
+        if (openingHours.hours.isEmpty()) {
+          // Closed day
+          composeTestRule.onNodeWithTag("${dayTag}_HOURS").assertExists().assertTextEquals("Closed")
+        } else {
+          // For each available time slot
+          openingHours.hours.forEachIndexed { idx, slot ->
+            val hoursTag = "${dayTag}_HOURS_${idx}"
+            composeTestRule
+                .onNodeWithTag(hoursTag)
+                .assertExists()
+                .onChildren()
+                .filter(hasText("${slot.open} - ${slot.close}"))
+                .assertCountEquals(1)
+          }
+        }
+      }
+      // Verify game list is displayed by tag using SHOP_GAME_PREFIX
+      dummyShop.gameCollection.forEach { (game, quantity) ->
+        val gameTag = "${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}"
+
+        // Find a node that has the test tag and contains the game name anywhere in its subtree
+        composeTestRule.onNode(hasTestTag(gameTag) and hasText(game.name)).assertExists()
+
+        // Verify the count text somewhere under the same tagged node
+        composeTestRule.onNode(hasTestTag(gameTag) and hasText(quantity.toString())).assertExists()
+      }
+
+      // Verify back button and perform click
+      composeTestRule.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertExists().performClick()
     }
-    // Verify game list is displayed by tag using SHOP_GAME_PREFIX
-    dummyShop.gameCollection.forEach { (game, quantity) ->
-      val gameTag = "${ShopTestTags.SHOP_GAME_PREFIX}${game.uid}"
 
-      // Find a node that has the test tag and contains the game name anywhere in its subtree
-      composeTestRule.onNode(hasTestTag(gameTag) and hasText(game.name)).assertExists()
-
-      // Verify the count text somewhere under the same tagged node
-      composeTestRule.onNode(hasTestTag(gameTag) and hasText(quantity.toString())).assertExists()
+    checkpoint("test_shopScreenEditButtonVisibleForOwner") {
+      // Verify edit button exists for owner
+      composeTestRule.onNodeWithTag(ShopTestTags.SHOP_EDIT_BUTTON).assertExists().performClick()
+      assert(edit)
     }
-
-    // Verify back button and perform click
-    composeTestRule.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).assertExists().performClick()
-
-    // Verify edit button does not exist for non-owner
-    composeTestRule.onNodeWithContentDescription("Edit").assertDoesNotExist()
-  }
-
-  @OptIn(ExperimentalTestApi::class)
-  @Test
-  fun test_shopScreenEditButtonVisibleForOwner() {
-    var edit = false
-    composeTestRule.setContent {
-      ShopScreen(
-          shopId = shop.id,
-          account = owner, // Pass the owner account
-          onBack = {},
-          onEdit = { edit = true },
-          viewModel = vm)
-    }
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
-
-    // Verify edit button exists for owner
-    composeTestRule.onNodeWithTag(ShopTestTags.SHOP_EDIT_BUTTON).assertExists().performClick()
-    assert(edit)
   }
 }

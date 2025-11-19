@@ -16,6 +16,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
@@ -749,7 +750,7 @@ class FirestoreShopTests : FirestoreTests() {
         gameCollection = listOf(testGame1 to 10))
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify shop was created by fetching it
     val shops = shopRepository.getShops(10u)
@@ -786,7 +787,7 @@ class FirestoreShopTests : FirestoreTests() {
         email = "test@test.com")
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify shop was created
     val shops = shopRepository.getShops(10u)
@@ -837,7 +838,7 @@ class FirestoreShopTests : FirestoreTests() {
     shopViewModel.getShop(shop.id)
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify the StateFlow was updated
     val loadedShop = shopViewModel.shop.value
@@ -867,7 +868,7 @@ class FirestoreShopTests : FirestoreTests() {
     shopViewModel.getShop(shop.id)
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(200)
 
     // Verify the StateFlow was updated
     val loadedShop = shopViewModel.shop.value
@@ -900,13 +901,13 @@ class FirestoreShopTests : FirestoreTests() {
 
     // Load first shop
     shopViewModel.getShop(shop1.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     assertEquals("First Shop", shopViewModel.shop.value?.name)
 
     // Load second shop
     shopViewModel.getShop(shop2.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     assertEquals("Second Shop", shopViewModel.shop.value?.name)
   }
@@ -924,7 +925,7 @@ class FirestoreShopTests : FirestoreTests() {
 
     // Load the shop through ViewModel
     shopViewModel.getShop(shop.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify game collection is loaded correctly
     val loadedShop = shopViewModel.shop.value
@@ -954,7 +955,7 @@ class FirestoreShopTests : FirestoreTests() {
 
     // Load the shop through ViewModel
     shopViewModel.getShop(shop.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify owner data is loaded correctly
     val loadedShop = shopViewModel.shop.value
@@ -1083,7 +1084,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.updateShop(shop, testAccount1, name = "New Name")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals("New Name", updated.name)
@@ -1100,7 +1101,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.updateShop(shop, testAccount1, phone = "+41 99 999 9999")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals("+41 99 999 9999", updated.phone)
@@ -1117,7 +1118,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.updateShop(shop, testAccount1, email = "new@shop.com")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals("new@shop.com", updated.email)
@@ -1134,7 +1135,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.updateShop(shop, testAccount1, website = "https://new.com")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals("https://new.com", updated.website)
@@ -1150,7 +1151,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.updateShop(shop, testAccount1, address = testLocation2)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals(testLocation2, updated.address)
@@ -1176,7 +1177,7 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("11:00", "18:00"))))
 
     editShopViewModel.updateShop(shop, testAccount1, openingHours = newOpeningHours)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals(7, updated.openingHours.size)
@@ -1195,7 +1196,7 @@ class FirestoreShopTests : FirestoreTests() {
 
     val newGameCollection = listOf(testGame2 to 10, testGame1 to 3)
     editShopViewModel.updateShop(shop, testAccount1, gameCollection = newGameCollection)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals(2, updated.gameCollection.size)
@@ -1234,7 +1235,7 @@ class FirestoreShopTests : FirestoreTests() {
         website = "https://new.com",
         address = testLocation2,
         openingHours = newOpeningHours)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals("New Shop", updated.name)
@@ -1255,7 +1256,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.deleteShop(shop, testAccount1)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify shop is deleted
     try {
@@ -1281,7 +1282,7 @@ class FirestoreShopTests : FirestoreTests() {
 
     // Update only the phone
     editShopViewModel.updateShop(shop, testAccount1, phone = "+41 99 999 9999")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     // Phone should be updated

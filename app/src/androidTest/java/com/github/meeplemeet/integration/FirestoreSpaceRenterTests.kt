@@ -15,6 +15,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
@@ -691,7 +692,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
         spaces = listOf(testSpace1))
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify space renter was created by fetching it
     val spaceRenters = spaceRenterRepository.getSpaceRenters(10u)
@@ -727,7 +728,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
         openingHours = fullWeekHours)
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify space renter was created
     val spaceRenters = spaceRenterRepository.getSpaceRenters(10u)
@@ -778,7 +779,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify the StateFlow was updated
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -808,7 +809,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
 
     // Give it time to complete the async operation
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify the StateFlow was updated
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -841,13 +842,13 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Load first space renter
     spaceRenterViewModel.getSpaceRenter(spaceRenter1.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     assertEquals("First Space Renter", spaceRenterViewModel.spaceRenter.value?.name)
 
     // Load second space renter
     spaceRenterViewModel.getSpaceRenter(spaceRenter2.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     assertEquals("Second Space Renter", spaceRenterViewModel.spaceRenter.value?.name)
   }
@@ -865,7 +866,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Load the space renter through ViewModel
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify spaces are loaded correctly
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -890,7 +891,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Load the space renter through ViewModel
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify owner data is loaded correctly
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -1021,7 +1022,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, name = "New Name")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals("New Name", updated.name)
@@ -1038,7 +1039,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, phone = "+41 99 999 9999")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals("+41 99 999 9999", updated.phone)
@@ -1056,7 +1057,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     editSpaceRenterViewModel.updateSpaceRenter(
         spaceRenter, testAccount1, email = "new@spacerenter.com")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals("new@spacerenter.com", updated.email)
@@ -1074,7 +1075,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     editSpaceRenterViewModel.updateSpaceRenter(
         spaceRenter, testAccount1, website = "https://new.com")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals("https://new.com", updated.website)
@@ -1090,7 +1091,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, address = testLocation2)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals(testLocation2, updated.address)
@@ -1117,7 +1118,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     editSpaceRenterViewModel.updateSpaceRenter(
         spaceRenter, testAccount1, openingHours = newOpeningHours)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals(7, updated.openingHours.size)
@@ -1136,7 +1137,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     val newSpaces = listOf(testSpace2, Space(seats = 15, costPerHour = 30.0))
     editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, spaces = newSpaces)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals(2, updated.spaces.size)
@@ -1177,7 +1178,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
         website = "https://new.com",
         address = testLocation2,
         openingHours = newOpeningHours)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals("New Space Renter", updated.name)
@@ -1198,7 +1199,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editSpaceRenterViewModel.deleteSpaceRenter(spaceRenter, testAccount1)
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     // Verify space renter is deleted
     try {
@@ -1224,7 +1225,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Update only the phone
     editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, phone = "+41 99 999 9999")
-    kotlinx.coroutines.delay(1000)
+    delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     // Phone should be updated
