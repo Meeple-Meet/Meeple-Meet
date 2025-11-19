@@ -93,6 +93,8 @@ fun ProfileScreen(
                     Text(text = "@${account.handle}", style = MaterialTheme.typography.bodySmall)
 
                     Text(text = "Is email verified : ", style = MaterialTheme.typography.bodyMedium)
+
+                    // This is a placeholder for email verification status
                     if (!uiState.isEmailVerified) {
                       Button(onClick = { viewModel.sendVerificationEmail() }) {
                         Text("Resend verification email")

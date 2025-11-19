@@ -35,13 +35,17 @@ import kotlinx.coroutines.launch
  * @property signedOut True if a sign-out operation has just completed. Used to reset UI state after
  *   logout.
  * @property isEmailVerified True if the current user's email is verified, false otherwise.
+ * @property lastVerificationEmailSentAtMillis Timestamp of the last time a verification email was
+ *   successfully sent, in milliseconds since epoch. Used to enforce cooldown between email
+ *   requests.
  */
 data class AuthUIState(
     val isLoading: Boolean = false,
     val account: Account? = null,
     val errorMsg: String? = null,
     val signedOut: Boolean = false,
-    val isEmailVerified: Boolean = false
+    val isEmailVerified: Boolean = false,
+    val lastVerificationEmailSentAtMillis: Long? = null
 )
 
 open class AuthenticationViewModel(
@@ -240,14 +244,34 @@ open class AuthenticationViewModel(
   /**
    * Sends a verification email to the current user.
    *
-   * This method calls the repository to send a verification email. If it fails, the error message
-   * is updated in the UI state.
+   * This method enforces a 1-minute cooldown between emails and calls the repository to send a
+   * verification email. If it fails, the error message is updated in the UI state.
    */
   fun sendVerificationEmail() {
-    viewModelScope.launch {
-      repository.sendVerificationEmail().onFailure { error ->
-        _uiState.update { it.copy(errorMsg = error.localizedMessage) }
+    val now = System.currentTimeMillis()
+    val lastSent = _uiState.value.lastVerificationEmailSentAtMillis
+
+    // Enforce a 1-minute (60,000 ms) cooldown between verification emails
+    if (lastSent != null && now - lastSent < 60_000) {
+      _uiState.update {
+        it.copy(
+            errorMsg =
+                "You can only request a new verification email once per minute. Please wait a moment and try again.")
       }
+      return
+    }
+
+    viewModelScope.launch {
+      repository
+          .sendVerificationEmail()
+          .onSuccess {
+            // Update the timestamp on successful send
+            _uiState.update {
+              it.copy(
+                  lastVerificationEmailSentAtMillis = System.currentTimeMillis(), errorMsg = null)
+            }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
     }
   }
 
