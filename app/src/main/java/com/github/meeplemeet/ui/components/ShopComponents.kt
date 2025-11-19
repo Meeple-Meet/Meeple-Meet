@@ -1483,7 +1483,7 @@ private fun WeeklyAvailabilityDialog(
                         // Left: day name
                         Text(
                             text = dayName,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                             fontStyle = FontStyle.Normal,
                             modifier = Modifier.padding(end = Dimensions.Spacing.medium))
@@ -1497,9 +1497,9 @@ private fun WeeklyAvailabilityDialog(
                               lines.forEach { line ->
                                 Text(
                                     text = line,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight =
-                                        if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                        if (isToday) FontWeight.SemiBold else FontWeight.Normal,
                                     fontStyle = FontStyle.Normal,
                                     textAlign = TextAlign.End)
                               }
