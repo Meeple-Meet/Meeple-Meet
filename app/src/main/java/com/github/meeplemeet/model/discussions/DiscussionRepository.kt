@@ -14,17 +14,67 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-private const val ERROR_NO_POLL = "Message does not contain a poll"
+private const val PHOTO_MESSAGE_PREVIEW = "📷 Photo"
+private const val FIELD_CREATED_AT = "createdAt"
 
 /**
- * Repository wrapping Firestore CRUD operations and snapshot listeners.
+ * Repository for managing discussion data in Firestore.
  *
- * Provides suspend functions for one-shot reads/writes and Flow-based listeners for real-time
- * updates.
+ * Provides comprehensive CRUD operations, real-time listeners, and specialized functionality for
+ * discussions including messaging, polls, photo attachments, and participant management.
+ *
+ * ## Architecture
+ * - **Main documents**: Stored at `discussions/{discussionId}` in Firestore
+ * - **Messages subcollection**: Each discussion has a `messages` subcollection at
+ *   `discussions/{discussionId}/messages/{messageId}` for scalability and efficient real-time
+ *   updates
+ * - **Previews**: Lightweight discussion metadata stored in each account document at
+ *   `accounts/{accountId}/previews/{discussionId}`
+ *
+ * ## Features
+ * - **Basic CRUD**: Create, read, update, delete discussions
+ * - **Participant management**: Add/remove participants and admins
+ * - **Messaging**: Send text messages, photo messages, and poll messages
+ * - **Photos**: Profile pictures and message photo attachments (integrated with [ImageRepository])
+ * - **Polls**: Create polls, vote, track results
+ * - **Real-time updates**: Flow-based listeners for discussions and messages
+ * - **Unread tracking**: Automatic unread count management in discussion previews
+ *
+ * ## Message Subcollection Benefits
+ * - Scalable: Doesn't load all messages when fetching discussion metadata
+ * - Efficient: Real-time listeners only stream new messages
+ * - Flexible: Messages can be queried, paginated, and filtered independently
+ *
+ * ## Preview Updates
+ * All messaging operations (text, photo, poll) automatically update discussion previews for all
+ * participants, including:
+ * - Last message content (with special formatting for photos and polls "📊 Poll: ...")
+ * - Last message sender and timestamp
+ * - Unread count (incremented for all participants except sender)
+ *
+ * @property accountRepository Reference to AccountRepository for preview management
+ * @see Discussion for discussion data structure
+ * @see Message for message data structure
+ * @see Poll for poll functionality
+ * @see ImageRepository for photo upload/download operations
  */
 class DiscussionRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
     FirestoreRepository("discussions") {
   private val accounts = accountRepository.collection
+
+  /**
+   * Get the messages subcollection reference for a specific discussion.
+   *
+   * Messages are stored in a subcollection rather than as an array field to enable:
+   * - Scalable storage (no document size limits)
+   * - Efficient queries and pagination
+   * - Real-time streaming of new messages only
+   *
+   * @param discussionId The discussion UID.
+   * @return CollectionReference to `discussions/{discussionId}/messages`
+   */
+  private fun messagesCollection(discussionId: String) =
+      collection.document(discussionId).collection("messages")
 
   /** Create a new discussion and store an empty preview for the creator. */
   suspend fun createDiscussion(
@@ -39,7 +89,6 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
             creatorId,
             name,
             description,
-            emptyList(),
             participants + creatorId,
             listOf(creatorId),
             Timestamp.now(),
@@ -74,6 +123,33 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     collection.document(id).update(Discussion::description.name, description).await()
   }
 
+  /**
+   * Update a discussion's profile picture URL.
+   *
+   * This method updates the `profilePictureUrl` field in the discussion document. The actual photo
+   * upload to Firebase Storage should be done via [ImageRepository.saveDiscussionProfilePicture]
+   * before calling this method.
+   *
+   * ## Typical Usage Flow
+   * 1. User selects/captures photo → cached via [ImageFileUtils]
+   * 2. Upload to Storage → [ImageRepository.saveDiscussionProfilePicture] returns URL
+   * 3. Update discussion → this method saves URL to discussion document
+   * 4. UI displays photo using the URL
+   *
+   * ## Permission Requirements
+   * Caller should verify user is an admin before calling this method.
+   *
+   * @param id The discussion UID.
+   * @param profilePictureUrl HTTPS URL from Firebase Storage pointing to the uploaded profile
+   *   picture.
+   * @see ImageRepository.saveDiscussionProfilePicture for uploading photos
+   * @see DiscussionDetailsViewModel.setDiscussionProfilePicture for high-level API with permission
+   *   checks
+   */
+  suspend fun setDiscussionProfilePictureUrl(id: String, profilePictureUrl: String) {
+    collection.document(id).update(Discussion::profilePictureUrl.name, profilePictureUrl).await()
+  }
+
   /** Delete a discussion document. */
   suspend fun deleteDiscussion(discussion: Discussion) {
     val batch = db.batch()
@@ -91,11 +167,15 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(userId))
         .await()
+
+    // Get the last message to populate the preview
+    val lastMessage = getLastMessage(discussion.uid)
+
     accounts
         .document(userId)
         .collection(Account::previews.name)
         .document(discussion.uid)
-        .set(toPreview(discussion))
+        .set(toPreview(discussion, lastMessage))
         .await()
   }
 
@@ -144,10 +224,14 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
         .document(discussion.uid)
         .update(Discussion::participants.name, FieldValue.arrayUnion(*userIds.toTypedArray()))
         .await()
+
+    // Get the last message to populate the preview
+    val lastMessage = getLastMessage(discussion.uid)
+
     val batch = db.batch()
     userIds.forEach { id ->
       val ref = accounts.document(id).collection(Account::previews.name).document(discussion.uid)
-      batch.set(ref, toPreview(discussion))
+      batch.set(ref, toPreview(discussion, lastMessage))
     }
     batch.commit().await()
   }
@@ -218,18 +302,35 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Append a new message to the discussion and update unread counts in all participants' previews.
-   * Handles both regular messages and poll messages.
+   * Send a text message to the discussion and update all participants' previews.
+   *
+   * Creates a new message document in the `messages` subcollection and atomically updates all
+   * participants' discussion previews in a single batch operation.
+   *
+   * ## Preview Updates
+   * For each participant:
+   * - Sets `lastMessage` to the text content
+   * - Sets `lastMessageSender` to sender's UID
+   * - Sets `lastMessageAt` to current timestamp
+   * - Increments `unreadCount` by 1 (except for sender, who gets 0)
+   *
+   * ## Batch Operation
+   * Uses Firestore batch writes to ensure atomicity - either all writes succeed or all fail.
+   *
+   * @param discussion The discussion to send the message to.
+   * @param sender The account sending the message.
+   * @param content The text content of the message.
+   * @see sendPhotoMessageToDiscussion for messages with photo attachments
+   * @see createPoll for creating poll messages
    */
   suspend fun sendMessageToDiscussion(discussion: Discussion, sender: Account, content: String) {
-    val message = Message(sender.uid, content)
+    val timestamp = Timestamp.now()
+    val messageNoUid = MessageNoUid(sender.uid, content, timestamp)
     val batch = FirebaseFirestore.getInstance().batch()
 
-    // Append message
-    batch.update(
-        collection.document(discussion.uid),
-        Discussion::messages.name,
-        FieldValue.arrayUnion(message))
+    // Add message to subcollection
+    val messageRef = messagesCollection(discussion.uid).document()
+    batch.set(messageRef, messageNoUid)
 
     // Update previews for all participants
     discussion.participants.forEach { userId ->
@@ -239,9 +340,9 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       batch.set(
           ref,
           mapOf(
-              "lastMessage" to message.content,
-              "lastMessageSender" to message.senderId,
-              "lastMessageAt" to message.createdAt,
+              "lastMessage" to content,
+              "lastMessageSender" to sender.uid,
+              "lastMessageAt" to timestamp,
               "unreadCount" to unreadCountValue),
           SetOptions.merge())
     }
@@ -250,43 +351,96 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
   }
 
   /**
-   * Append a message (regular or poll) to the discussion and update previews. This overload accepts
-   * a pre-constructed Message object.
+   * Send a message with a photo attachment to the discussion.
+   *
+   * Creates a new message document with a `photoUrl` field and updates all participants' previews
+   * with special photo formatting.
+   *
+   * ## Usage Flow
+   * 1. User selects/captures photo
+   * 2. Photo is cached via [ImageFileUtils.cacheUriToFile]
+   * 3. Photo is uploaded via [ImageRepository.saveDiscussionPhotoMessages]
+   * 4. This method is called with the returned download URL
+   * 5. Message is created and previews are updated
+   *
+   * ## Preview Formatting
+   * The preview text shown in discussion lists will use a photo icon prefix.
+   *
+   * @param discussion The discussion to send the message to.
+   * @param sender The account sending the message.
+   * @param content Optional caption/description for the photo. Can be empty string.
+   * @param photoUrl HTTPS URL from Firebase Storage pointing to the uploaded photo.
+   * @return The message document ID (UID) of the created message.
+   * @see ImageRepository.saveDiscussionPhotoMessages for uploading photos
+   * @see DiscussionViewModel.sendMessageWithPhoto for high-level API
+   * @see Message.photoUrl for photo URL storage
    */
-  private suspend fun sendMessageToDiscussion(discussion: Discussion, message: Message) {
+  suspend fun sendPhotoMessageToDiscussion(
+      discussion: Discussion,
+      sender: Account,
+      content: String,
+      photoUrl: String
+  ): String {
+    val timestamp = Timestamp.now()
+    val messageNoUid =
+        MessageNoUid(sender.uid, content, timestamp, poll = null, photoUrl = photoUrl)
+    return sendMessageToDiscussion(discussion, messageNoUid)
+  }
+
+  /**
+   * Internal method to send a message to the discussion with intelligent preview formatting.
+   *
+   * This private overload handles all message types (text, photo, poll) and formats the preview
+   * text appropriately:
+   * - **Text messages**: Shows full content
+   * - **Photo messages**: Shows photo icon prefix
+   * - **Poll messages**: Shows "📊 Poll: {question}" format
+   *
+   * Used internally by:
+   * - [sendMessageToDiscussion] for text messages
+   * - [sendPhotoMessageToDiscussion] for photo messages
+   * - [createPoll] for poll messages
+   *
+   * @param discussion The discussion to send the message to.
+   * @param messageNoUid The message data without UID (UID is generated by Firestore).
+   * @return The message document ID (UID) of the created message.
+   */
+  private suspend fun sendMessageToDiscussion(
+      discussion: Discussion,
+      messageNoUid: MessageNoUid
+  ): String {
     val batch = FirebaseFirestore.getInstance().batch()
 
-    // Append message
-    batch.update(
-        collection.document(discussion.uid),
-        Discussion::messages.name,
-        FieldValue.arrayUnion(message))
+    // Add message to subcollection
+    val messageRef = messagesCollection(discussion.uid).document()
+    batch.set(messageRef, messageNoUid)
 
     // Update previews for all participants
     discussion.participants.forEach { userId ->
       val ref =
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
-      val unreadCountValue = if (userId == message.senderId) 0 else FieldValue.increment(1)
+      val unreadCountValue = if (userId == messageNoUid.senderId) 0 else FieldValue.increment(1)
 
-      // Use poll-specific preview text if message contains a poll
+      // Determine preview text based on message type
       val previewText =
-          if (message.poll != null) {
-            "Poll: ${message.poll.question}"
-          } else {
-            message.content
+          when {
+            messageNoUid.poll != null -> "Poll: ${messageNoUid.poll.question}"
+            messageNoUid.photoUrl != null -> PHOTO_MESSAGE_PREVIEW
+            else -> messageNoUid.content
           }
 
       batch.set(
           ref,
           mapOf(
               "lastMessage" to previewText,
-              "lastMessageSender" to message.senderId,
-              "lastMessageAt" to message.createdAt,
+              "lastMessageSender" to messageNoUid.senderId,
+              "lastMessageAt" to messageNoUid.createdAt,
               "unreadCount" to unreadCountValue),
           SetOptions.merge())
     }
 
     batch.commit().await()
+    return messageRef.id
   }
 
   /** Reset unread count for a given discussion for this account. */
@@ -318,6 +472,178 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     awaitClose { reg.remove() }
   }
 
+  /**
+   * Retrieve messages for a discussion, ordered by creation time (newest first).
+   *
+   * Fetches message documents from the `messages` subcollection with optional limit for pagination.
+   * By default, returns the most recent 50 messages. Messages are returned in chronological order
+   * (oldest first) for display purposes.
+   *
+   * ## Pagination Strategy
+   * - Queries messages in descending order (newest first)
+   * - Applies limit to get most recent N messages
+   * - Reverses results to return oldest-to-newest for display
+   * - Use [getMessagesBeforeTimestamp] to load older messages when user scrolls up
+   *
+   * ## Performance Considerations
+   * - Default limit prevents loading all messages at once
+   * - Use [listenMessages] for real-time updates instead of polling this method
+   *
+   * @param discussionId The discussion UID.
+   * @param limit Maximum number of messages to fetch (default: 50).
+   * @return List of messages ordered by createdAt timestamp (oldest first, limited to most recent).
+   * @see getMessagesBeforeTimestamp to fetch older messages for pagination
+   * @see getMessage to fetch a single message by ID
+   * @see listenMessages for real-time message updates via Flow
+   */
+  suspend fun getMessages(discussionId: String, limit: Int = 50): List<Message> {
+    val snapshot =
+        messagesCollection(discussionId)
+            .orderBy(FIELD_CREATED_AT, com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+    return snapshot.documents
+        .mapNotNull { doc -> doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) } }
+        .reversed() // Reverse to get oldest-to-newest for display
+  }
+
+  /**
+   * Retrieve older messages before a specific timestamp for pagination.
+   *
+   * Fetches messages that were created before the given timestamp, useful for implementing "load
+   * more" functionality when the user scrolls to the top of the message list.
+   *
+   * ## Typical Usage Flow
+   * 1. Initial load: `getMessages(discussionId)` fetches most recent 50 messages
+   * 2. User scrolls to top: Get oldest message's timestamp
+   * 3. Load more: `getMessagesBeforeTimestamp(discussionId, oldestTimestamp, 50)`
+   * 4. Prepend results to existing messages
+   *
+   * ## Example
+   *
+   * ```kotlin
+   * val initialMessages = getMessages(discussionId)
+   * val oldestTimestamp = initialMessages.firstOrNull()?.createdAt
+   * if (oldestTimestamp != null) {
+   *   val olderMessages = getMessagesBeforeTimestamp(discussionId, oldestTimestamp, 50)
+   *   val allMessages = olderMessages + initialMessages
+   * }
+   * ```
+   *
+   * @param discussionId The discussion UID.
+   * @param beforeTimestamp Fetch messages created before this timestamp.
+   * @param limit Maximum number of messages to fetch (default: 50).
+   * @return List of messages ordered by createdAt timestamp (oldest first), created before the
+   *   given timestamp.
+   * @see getMessages for initial message load
+   */
+  suspend fun getMessagesBeforeTimestamp(
+      discussionId: String,
+      beforeTimestamp: Timestamp,
+      limit: Int = 50
+  ): List<Message> {
+    val snapshot =
+        messagesCollection(discussionId)
+            .orderBy(FIELD_CREATED_AT, com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .whereLessThan(FIELD_CREATED_AT, beforeTimestamp)
+            .limit(limit.toLong())
+            .get()
+            .await()
+    return snapshot.documents
+        .mapNotNull { doc -> doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) } }
+        .reversed() // Reverse to get oldest-to-newest for display
+  }
+
+  /**
+   * Retrieve the most recent message in a discussion.
+   *
+   * Efficiently fetches only the last message by ordering by creation time descending and limiting
+   * to 1 result. This is much more efficient than calling `getMessages().lastOrNull()`.
+   *
+   * ## Use Cases
+   * - Populating discussion previews when adding new participants
+   * - Marking messages as read (need last message timestamp)
+   * - Checking if discussion has any messages
+   *
+   * @param discussionId The discussion UID.
+   * @return The most recent message if any exist, null if discussion has no messages.
+   * @see getMessages to fetch multiple recent messages
+   * @see getMessage to fetch a specific message by ID
+   */
+  suspend fun getLastMessage(discussionId: String): Message? {
+    val snapshot =
+        messagesCollection(discussionId)
+            .orderBy(FIELD_CREATED_AT, com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+    return snapshot.documents.firstOrNull()?.let { doc ->
+      doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) }
+    }
+  }
+
+  /**
+   * Retrieve a specific message by ID.
+   *
+   * Fetches a single message document from the messages subcollection. Useful for operations that
+   * need current message state, such as poll voting.
+   *
+   * @param discussionId The discussion UID.
+   * @param messageId The message UID (document ID in messages subcollection).
+   * @return The message if found, null if the message doesn't exist.
+   * @see getMessages to fetch all messages for a discussion
+   * @see voteOnPoll which uses this to get current poll state before voting
+   */
+  suspend fun getMessage(discussionId: String, messageId: String): Message? {
+    val snapshot = messagesCollection(discussionId).document(messageId).get().await()
+    return snapshot.toObject(MessageNoUid::class.java)?.let { fromNoUid(snapshot.id, it) }
+  }
+
+  /**
+   * Listen for real-time changes to messages in a discussion.
+   *
+   * Returns a Flow that emits the complete list of messages whenever the messages subcollection
+   * changes (new message added, message updated, etc.). Messages are ordered by creation time.
+   *
+   * ## Flow Behavior
+   * - Initial emission contains all existing messages
+   * - Subsequent emissions contain updated full message list when any change occurs
+   * - Flow completes when listener is removed (via awaitClose)
+   * - Errors cause the Flow to close with an exception
+   *
+   * ## Usage Example
+   *
+   * ```kotlin
+   * discussionRepository.listenMessages(discussionId)
+   *   .collect { messages ->
+   *     // Update UI with new message list
+   *   }
+   * ```
+   *
+   * @param discussionId The discussion UID.
+   * @return Flow emitting lists of messages ordered by createdAt timestamp.
+   * @see getMessages for one-time message fetch
+   * @see listenDiscussion for real-time discussion metadata updates
+   */
+  fun listenMessages(discussionId: String): Flow<List<Message>> = callbackFlow {
+    val reg =
+        messagesCollection(discussionId).orderBy(FIELD_CREATED_AT).addSnapshotListener { snap, e ->
+          if (e != null) {
+            close(e)
+            return@addSnapshotListener
+          }
+          if (snap != null) {
+            val messages =
+                snap.documents.mapNotNull { doc ->
+                  doc.toObject(MessageNoUid::class.java)?.let { fromNoUid(doc.id, it) }
+                }
+            trySend(messages)
+          }
+        }
+    awaitClose { reg.remove() }
+  }
+
   // ============================================================================
   // Poll Methods
   // ============================================================================
@@ -330,7 +656,7 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
    * @param question The poll question.
    * @param options List of options users can vote for.
    * @param allowMultipleVotes Whether users can vote multiple times.
-   * @return The created poll message.
+   * @return The created poll message with its UID.
    */
   suspend fun createPoll(
       discussion: Discussion,
@@ -346,40 +672,39 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
             votes = emptyMap(),
             allowMultipleVotes = allowMultipleVotes)
 
-    val message =
-        Message(senderId = creatorId, content = question, createdAt = Timestamp.now(), poll = poll)
+    val timestamp = Timestamp.now()
+    val messageNoUid =
+        MessageNoUid(senderId = creatorId, content = question, createdAt = timestamp, poll = poll)
 
-    sendMessageToDiscussion(discussion, message)
+    val messageId = sendMessageToDiscussion(discussion, messageNoUid)
 
-    return message
+    return Message(messageId, creatorId, question, timestamp, poll)
   }
 
   /**
    * Vote on a poll option.
    *
-   * @param discussion The discussion containing the poll.
-   * @param pollMessage The message containing the poll.
+   * @param discussionId The discussion UID containing the poll.
+   * @param messageId The message UID containing the poll.
    * @param userId The user's UID.
    * @param optionIndex The index of the option to vote for.
    */
   suspend fun voteOnPoll(
-      discussion: Discussion,
-      pollMessage: Message,
+      discussionId: String,
+      messageId: String,
       userId: String,
       optionIndex: Int
   ) {
-    val poll = pollMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
+    // Get the current message
+    val currentMessage =
+        getMessage(discussionId, messageId) ?: throw IllegalArgumentException("Message not found")
 
-    if (optionIndex !in poll.options.indices) throw IllegalArgumentException("Invalid option index")
+    val currentPoll =
+        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
 
-    // Find the message index in the discussion
-    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessage.createdAt }
-    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found in discussion")
-
-    // Get the latest discussion state
-    val latestDiscussion = getDiscussion(discussion.uid)
-    val currentMessage = latestDiscussion.messages[messageIndex]
-    val currentPoll = currentMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
+    if (optionIndex !in currentPoll.options.indices) {
+      throw IllegalArgumentException("Invalid option index")
+    }
 
     // Calculate updated votes
     val updatedVotes = currentPoll.votes.toMutableMap()
@@ -396,39 +721,32 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       updatedVotes[userId] = listOf(optionIndex)
     }
 
-    // Update the message with new poll data
+    // Update the message document with new poll data
     val updatedPoll = currentPoll.copy(votes = updatedVotes)
-    val updatedMessage = currentMessage.copy(poll = updatedPoll)
-    val updatedMessages = latestDiscussion.messages.toMutableList()
-    updatedMessages[messageIndex] = updatedMessage
-
-    // Update the entire messages array
-    collection.document(discussion.uid).update(Discussion::messages.name, updatedMessages).await()
+    messagesCollection(discussionId).document(messageId).update("poll", updatedPoll).await()
   }
 
   /**
    * Remove a user's vote for a specific poll option. Called when user clicks an option they
    * previously selected to deselect it.
    *
-   * @param discussion The discussion containing the poll.
-   * @param pollMessage The message containing the poll.
+   * @param discussionId The discussion UID containing the poll.
+   * @param messageId The message UID containing the poll.
    * @param userId The user's UID.
    * @param optionIndex The specific option index to remove.
    */
   suspend fun removeVoteFromPoll(
-      discussion: Discussion,
-      pollMessage: Message,
+      discussionId: String,
+      messageId: String,
       userId: String,
       optionIndex: Int
   ) {
-    // Find the message index in the discussion
-    val messageIndex = discussion.messages.indexOfFirst { it.createdAt == pollMessage.createdAt }
-    if (messageIndex == -1) throw IllegalArgumentException("Poll message not found in discussion")
+    // Get the current message
+    val currentMessage =
+        getMessage(discussionId, messageId) ?: throw IllegalArgumentException("Message not found")
 
-    // Get the latest discussion state
-    val latestDiscussion = getDiscussion(discussion.uid)
-    val currentMessage = latestDiscussion.messages[messageIndex]
-    val currentPoll = currentMessage.poll ?: throw IllegalArgumentException(ERROR_NO_POLL)
+    val currentPoll =
+        currentMessage.poll ?: throw IllegalArgumentException("Message does not contain a poll")
 
     // Check if user has voted
     val currentVotes = currentPoll.votes[userId]
@@ -453,13 +771,8 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
       updatedVotes[userId] = updatedUserVotes
     }
 
-    // Update the message with new poll data
+    // Update the message document with new poll data
     val updatedPoll = currentPoll.copy(votes = updatedVotes)
-    val updatedMessage = currentMessage.copy(poll = updatedPoll)
-    val updatedMessages = latestDiscussion.messages.toMutableList()
-    updatedMessages[messageIndex] = updatedMessage
-
-    // Update the entire messages array
-    collection.document(discussion.uid).update(Discussion::messages.name, updatedMessages).await()
+    messagesCollection(discussionId).document(messageId).update("poll", updatedPoll).await()
   }
 }

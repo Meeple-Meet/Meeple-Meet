@@ -1,11 +1,13 @@
 // Docs generated with Claude Code.
 package com.github.meeplemeet.model.discussions
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
+import com.github.meeplemeet.model.images.ImageRepository
 import kotlinx.coroutines.launch
 
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
@@ -18,9 +20,11 @@ private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform t
  * account management functionality.
  *
  * @property repository Repository for discussion operations
+ * @property imageRepository Repository for image operations
  */
 class DiscussionDetailsViewModel(
-    private val repository: DiscussionRepository = RepositoryProvider.discussions
+    private val repository: DiscussionRepository = RepositoryProvider.discussions,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : CreateAccountViewModel() {
   /**
    * Checks if an account has admin privileges for a discussion.
@@ -167,5 +171,60 @@ class DiscussionDetailsViewModel(
         throw PermissionDeniedException("Cannot demote the owner of this discussion")
 
     viewModelScope.launch { repository.removeAdminFromDiscussion(discussion, admin.uid) }
+  }
+
+  /**
+   * Upload and set a discussion profile picture (admin only).
+   *
+   * This method coordinates the profile picture update flow:
+   * 1. Verifies the requester is an admin (throws PermissionDeniedException if not)
+   * 2. Uploads photo to Firebase Storage at `discussions/{discussionId}/profile.webp`
+   * 3. Updates discussion document with the download URL
+   *
+   * The photo is automatically processed (WebP conversion, 800px max dimension, 40% quality) by
+   * [ImageRepository]. The operation is executed asynchronously in viewModelScope.
+   *
+   * ## Permission Model
+   * Only discussion admins can set the profile picture. This method performs the permission check
+   * before any operations. Non-admins will receive PermissionDeniedException.
+   *
+   * ## Typical Usage Flow
+   *
+   * ```kotlin
+   * // After user selects photo
+   * val cachedPath = ImageFileUtils.cacheUriToFile(context, photoUri)
+   * try {
+   *   viewModel.setDiscussionProfilePicture(discussion, account, context, cachedPath)
+   *   // Success - UI will update via discussionFlow
+   * } catch (e: PermissionDeniedException) {
+   *   // Show error: "Only admins can change profile picture"
+   * }
+   * File(cachedPath).delete() // Clean up
+   * ```
+   *
+   * @param discussion The discussion to update.
+   * @param changeRequester The account requesting the change (must be admin).
+   * @param context Android context for accessing storage and cache.
+   * @param localPath Absolute file path to the local image (typically in app cache directory).
+   * @throws PermissionDeniedException if changeRequester is not in discussion.admins list.
+   * @see ImageFileUtils.cacheUriToFile for preparing gallery photos
+   * @see ImageRepository.saveDiscussionProfilePicture for photo upload
+   * @see DiscussionRepository.setDiscussionProfilePictureUrl for URL update
+   * @see isAdmin for permission check logic
+   */
+  fun setDiscussionProfilePicture(
+      discussion: Discussion,
+      changeRequester: Account,
+      context: Context,
+      localPath: String
+  ) {
+    if (!isAdmin(changeRequester, discussion))
+        throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
+
+    viewModelScope.launch {
+      val downloadUrl =
+          imageRepository.saveDiscussionProfilePicture(context, discussion.uid, localPath)
+      repository.setDiscussionProfilePictureUrl(discussion.uid, downloadUrl)
+    }
   }
 }

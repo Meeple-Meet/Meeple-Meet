@@ -375,11 +375,10 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.onNodeWithText("Name 1", useUnmergedTree = true).performClick()
 
     // Make other users vote on the poll through repository
-    val discussionWithPoll = runBlocking {
-      discussionRepository.getDiscussion(latestDiscussion.uid)
+    val pollMessage = runBlocking {
+      val messages = discussionRepository.getMessages(latestDiscussion.uid)
+      messages.last { it.poll != null }
     }
-
-    val pollMessage = discussionWithPoll.messages.last { it.poll != null }
 
     runBlocking {
       // Get account IDs from handles
@@ -391,13 +390,13 @@ class E2E_M2 : FirestoreTests() {
           handlesRepository.collection.document(eveHandle).get().await().getString("accountId")!!
 
       // Each user votes for a different option
-      discussionRepository.voteOnPoll(discussionWithPoll, pollMessage, aliceUid, 0) // Name 1
+      discussionRepository.voteOnPoll(latestDiscussion.uid, pollMessage.uid, aliceUid, 0) // Name 1
       composeTestRule.waitForIdle()
 
-      discussionRepository.voteOnPoll(discussionWithPoll, pollMessage, bobUid, 2) // Name 3
+      discussionRepository.voteOnPoll(latestDiscussion.uid, pollMessage.uid, bobUid, 2) // Name 3
       composeTestRule.waitForIdle()
 
-      discussionRepository.voteOnPoll(discussionWithPoll, pollMessage, eveUid, 1) // Name 2
+      discussionRepository.voteOnPoll(latestDiscussion.uid, pollMessage.uid, eveUid, 1) // Name 2
       composeTestRule.waitForIdle()
     }
 
@@ -467,7 +466,7 @@ class E2E_M2 : FirestoreTests() {
         .performTextInput("EPFL")
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 150_000) {
+    composeTestRule.waitUntil(timeoutMillis = 10_000) {
       try {
         composeTestRule.onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0").isDisplayed()
       } catch (_: Exception) {
@@ -783,9 +782,7 @@ class E2E_M2 : FirestoreTests() {
     // Increase quantity to 3
     repeat(2) {
       composeTestRule
-          .onNodeWithTag(
-              com.github.meeplemeet.ui.components.ShopComponentsTestTags.QTY_PLUS_BUTTON,
-              useUnmergedTree = true)
+          .onNodeWithTag(ShopComponentsTestTags.QTY_PLUS_BUTTON, useUnmergedTree = true)
           .assertExists()
           .performClick()
       composeTestRule.waitForIdle()
@@ -793,17 +790,13 @@ class E2E_M2 : FirestoreTests() {
 
     // Click save and wait for dialog to dismiss
     composeTestRule
-        .onNodeWithTag(
-            com.github.meeplemeet.ui.components.ShopComponentsTestTags.GAME_DIALOG_SAVE,
-            useUnmergedTree = true)
+        .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
         .assertExists()
         .performClick()
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       try {
         composeTestRule
-            .onAllNodesWithTag(
-                com.github.meeplemeet.ui.components.ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER,
-                useUnmergedTree = true)
+            .onAllNodesWithTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
             .fetchSemanticsNodes()
             .isEmpty()
       } catch (_: Throwable) {
