@@ -96,6 +96,8 @@ class CreateShopScreenTest {
 
   /** Flip Sunday to “Open 24 hours” via the dialog and assert the 1st row value. */
   private fun setAnyOpeningHoursViaDialog() {
+    scrollListToTag(
+        CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     ensureSectionExpanded(CreateShopScreenTestTags.SECTION_AVAILABILITY)
 
     compose.onTags(ShopComponentsTestTags.DAY_ROW_EDIT).assertCountEquals(7)[0].performClick()

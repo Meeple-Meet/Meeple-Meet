@@ -486,6 +486,8 @@ class E2E_M2 : FirestoreTests() {
     val availabilityContentTag =
         CreateShopScreenTestTags.SECTION_AVAILABILITY +
             CreateShopScreenTestTags.SECTION_CONTENT_SUFFIX
+    scrollListToTag(
+        CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
 
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       composeTestRule
