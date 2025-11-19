@@ -12,22 +12,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +40,8 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.ui.components.PhotoDialogBottomBar
+import com.github.meeplemeet.ui.components.PhotoDialogTopBar
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -893,106 +891,14 @@ fun ProfilePictureDialog(
                       tint = Color.White.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
                 }
           }
-
-          // Top bar overlay
-          Box(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .statusBarsPadding()
-                      .background(
-                          Brush.verticalGradient(
-                              listOf(
-                                  Color.Black.copy(alpha = Dimensions.Alpha.dialogOverlayDark),
-                                  Color.Black.copy(
-                                      alpha = Dimensions.Alpha.dialogOverlayTransparent))))
-                      .align(Alignment.TopCenter)) {
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                horizontal = Dimensions.Padding.extraLarge,
-                                vertical = Dimensions.Spacing.medium),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                      IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White)
-                      }
-
-                      Text(
-                          text = discussionName,
-                          color = Color.White,
-                          style = MaterialTheme.typography.titleMedium,
-                          modifier =
-                              Modifier.weight(Dimensions.Weight.full)
-                                  .padding(horizontal = Dimensions.Spacing.large)
-                                  .testTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE),
-                          textAlign = TextAlign.Center)
-
-                      // Empty space to balance the back button
-                      Spacer(modifier = Modifier.width(Dimensions.IconSize.extraLarge))
-                    }
-              }
-
+          // Top action bar
+          PhotoDialogTopBar(
+              Modifier.align(Alignment.TopCenter), text = discussionName, onDismiss = onDismiss)
           // Bottom action bar
-          Box(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .navigationBarsPadding()
-                      .background(
-                          Brush.verticalGradient(
-                              listOf(
-                                  Color.Black.copy(alpha = 0.0f), Color.Black.copy(alpha = 0.9f))))
-                      .align(Alignment.BottomCenter)) {
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                horizontal = Dimensions.Padding.extraLarge,
-                                vertical = Dimensions.Spacing.extraLarge),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            Dimensions.Spacing.large, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically) {
-                      // Camera button
-                      Button(
-                          onClick = onTakePhoto,
-                          colors =
-                              ButtonDefaults.buttonColors(
-                                  containerColor = Color.White.copy(alpha = 0.2f),
-                                  contentColor = Color.White),
-                          modifier =
-                              Modifier.weight(1f)
-                                  .testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoCamera,
-                                contentDescription = "Take Photo",
-                                modifier = Modifier.size(Dimensions.IconSize.large))
-                            Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                            Text("Camera", style = MaterialTheme.typography.bodyLarge)
-                          }
-
-                      // Gallery button
-                      Button(
-                          onClick = onChooseFromGallery,
-                          colors =
-                              ButtonDefaults.buttonColors(
-                                  containerColor = Color.White.copy(alpha = 0.2f),
-                                  contentColor = Color.White),
-                          modifier =
-                              Modifier.weight(1f)
-                                  .testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
-                            Icon(
-                                imageVector = Icons.Default.Image,
-                                contentDescription = "Choose from Gallery",
-                                modifier = Modifier.size(Dimensions.IconSize.large))
-                            Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                            Text("Gallery", style = MaterialTheme.typography.bodyLarge)
-                          }
-                    }
-              }
+          PhotoDialogBottomBar(
+              Modifier.align(Alignment.BottomCenter),
+              onTakePhoto = onTakePhoto,
+              onChooseFromGallery = onChooseFromGallery)
         }
       }
 }
