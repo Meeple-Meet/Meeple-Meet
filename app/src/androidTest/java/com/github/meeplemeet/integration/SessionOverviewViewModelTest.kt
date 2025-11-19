@@ -34,7 +34,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     account =
         accountRepository.createAccount(
             "sessionTestUser", "Session Tester", "session@test.com", photoUrl = null)
-    addGameDoc("g_chess", "Chess", genres = listOf(1, 2))
+    addGameDoc("g_chess", "Chess", genres = listOf("1", "2"))
     existingGameId = "g_chess"
   }
 
@@ -92,10 +92,11 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     assertNull(name)
   }
 
-  private fun addGameDoc(id: String, name: String, genres: List<Int> = emptyList()) = runBlocking {
-    db.collection(GAMES_COLLECTION_PATH)
-        .document(id)
-        .set(GameNoUid(name = name, genres = genres))
-        .await()
-  }
+  private fun addGameDoc(id: String, name: String, genres: List<String> = emptyList()) =
+      runBlocking {
+        db.collection(GAMES_COLLECTION_PATH)
+            .document(id)
+            .set(GameNoUid(name = name, genres = genres))
+            .await()
+      }
 }
