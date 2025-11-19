@@ -40,6 +40,8 @@ class SpaceRenterRepository(
    *   time).
    * @param spaces The collection of rentable spaces with their details (optional, defaults to
    *   empty).
+   * @param photoCollectionUrl The collection of photo URLs for the space renter (optional, defaults
+   *   to empty).
    * @return The created SpaceRenter with a generated unique ID.
    */
   suspend fun createSpaceRenter(
@@ -50,10 +52,21 @@ class SpaceRenterRepository(
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
-      spaces: List<Space> = emptyList()
+      spaces: List<Space> = emptyList(),
+      photoCollectionUrl: List<String> = emptyList()
   ): SpaceRenter {
     val spaceRenter =
-        SpaceRenter(newUUID(), owner, name, phone, email, website, address, openingHours, spaces)
+        SpaceRenter(
+            newUUID(),
+            owner,
+            name,
+            phone,
+            email,
+            website,
+            address,
+            openingHours,
+            spaces,
+            photoCollectionUrl)
     collection.document(spaceRenter.id).set(toNoUid(spaceRenter)).await()
 
     geoPinRepository.upsertGeoPin(ref = spaceRenter.id, type = PinType.SPACE, location = address)
@@ -141,6 +154,7 @@ class SpaceRenterRepository(
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
       spaces: List<Space>? = null,
+      photoCollectionUrl: List<String>? = null
   ) {
     val updates = mutableMapOf<String, Any>()
 
@@ -152,6 +166,9 @@ class SpaceRenterRepository(
     address?.let { updates[SpaceRenterNoUid::address.name] = address }
     openingHours?.let { updates[SpaceRenterNoUid::openingHours.name] = openingHours }
     spaces?.let { updates[SpaceRenterNoUid::spaces.name] = spaces }
+    photoCollectionUrl?.let {
+      updates[SpaceRenterNoUid::photoCollectionUrl.name] = photoCollectionUrl
+    }
 
     if (updates.isEmpty())
         throw IllegalArgumentException("At least one field must be provided for update")

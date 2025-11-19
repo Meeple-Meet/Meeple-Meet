@@ -203,7 +203,8 @@ internal fun AddSpaceRenterContent(
           website = link,
           address = locationUi.selectedLocation ?: Location(),
           openingHours = week,
-          spaces = spaces)
+          spaces = spaces,
+          photoCollectionUrl = emptyList())
 
   Scaffold(
       topBar = {
