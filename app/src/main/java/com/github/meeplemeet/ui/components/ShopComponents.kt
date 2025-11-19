@@ -1356,22 +1356,23 @@ fun AvailabilitySection(
       modifier = Modifier.fillMaxWidth()) {
 
         // Header
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-          Text(
-              text = ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT,
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.SemiBold)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clickable { showFullWeek = true }
+                    .testTag("${dayTagPrefix}NAVIGATE")) {
+              Text(
+                  text = ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT,
+                  style = MaterialTheme.typography.titleLarge,
+                  fontWeight = FontWeight.SemiBold)
 
-          Spacer(modifier = Modifier.weight(1f))
+              Spacer(modifier = Modifier.weight(1f))
 
-          IconButton(
-              onClick = { showFullWeek = true },
-              modifier = Modifier.testTag("${dayTagPrefix}NAVIGATE")) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.NavigateNext,
-                    contentDescription = "Show full week opening hours")
-              }
-        }
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                  contentDescription = "Show full week opening hours")
+            }
 
         // Today line(s)
         Row(
