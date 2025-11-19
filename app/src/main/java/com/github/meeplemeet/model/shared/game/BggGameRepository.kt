@@ -5,6 +5,7 @@ import com.github.meeplemeet.model.GameParseException
 import com.github.meeplemeet.model.GameSearchException
 import java.io.IOException
 import java.io.StringReader
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,6 +52,7 @@ class BggGameRepository(
     private val client: OkHttpClient = HttpClientProvider.client,
     private val baseUrl: HttpUrl = DEFAULT_URL,
     private val authorizationToken: String? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val maxCachedGames: Int = DEFAULT_MAX_GAMES,
     private val maxCachedSearches: Int = DEFAULT_MAX_SEARCHES,
     private val gamesTtlMs: Long = DEFAULT_GAMES_TTL,
@@ -172,7 +174,7 @@ class BggGameRepository(
    * @throws GameSearchException If all games fail to fetch or parse.
    */
   suspend fun getGamesByIdWithErrors(vararg gameIDs: String): GameFetchResult =
-      withContext(Dispatchers.IO) {
+      withContext(ioDispatcher) {
         if (gameIDs.isEmpty()) return@withContext GameFetchResult(emptyList(), emptyList())
         require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
 
@@ -261,7 +263,7 @@ class BggGameRepository(
       maxResults: Int,
       ignoreCase: Boolean
   ): List<GameSearchResult> =
-      withContext(Dispatchers.IO) {
+      withContext(ioDispatcher) {
         // Check search cache first
         searchCacheMutex.withLock {
           searchCache[query]?.let {
@@ -360,7 +362,7 @@ class BggGameRepository(
    */
   private fun parseThings(doc: Document): Pair<List<Game>, List<GameParseException>> {
     val root = doc.rootElement
-    val items = root.getChildren("item")
+    val items = root.getChildren("item").toList()
 
     val errors = mutableListOf<GameParseException>()
 
@@ -458,7 +460,7 @@ class BggGameRepository(
    */
   private fun parseSearchResults(doc: Document): List<GameSearchResult> {
     val root = doc.rootElement
-    val items = root.getChildren("item")
+    val items = root.getChildren("item").toList()
 
     return items.mapNotNull { item ->
       val id = item.getAttributeValue("id") ?: return@mapNotNull null
