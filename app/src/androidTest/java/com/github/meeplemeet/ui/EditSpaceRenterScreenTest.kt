@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -16,6 +17,7 @@ import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -27,6 +29,11 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class EditSpaceRenterScreenTest : FirestoreTests() {
+
+  @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var vm: EditSpaceRenterViewModel
   private lateinit var renter: SpaceRenter
@@ -67,8 +74,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
     }
   }
 
-  @get:Rule val compose = createComposeRule()
-
   private fun ComposeTestRule.onTag(tag: String) = onNodeWithTag(tag, useUnmergedTree = true)
 
   private fun ComposeTestRule.onTags(tag: String) = onAllNodesWithTag(tag, useUnmergedTree = true)
@@ -107,54 +112,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
 
   private fun deleteButtonTag(index: Int) = spaceRowTag(index) + "_delete"
 
-  @Test
-  fun screen_prefills_data_and_allows_editing() {
-    var backCalled = false
-
-    compose.setContent {
-      AppTheme {
-        EditSpaceRenterScreen(
-            spaceRenter = renter,
-            owner = owner,
-            onBack = { backCalled = true },
-            onUpdated = {},
-            viewModel = vm)
-      }
-    }
-
-    // Top & list exist
-    compose.onTag(EditSpaceRenterScreenTestTags.SCAFFOLD).assertExists()
-    compose.onTag(EditSpaceRenterScreenTestTags.TOPBAR).assertExists()
-    compose.onTag(EditSpaceRenterScreenTestTags.TITLE).assertExists()
-    compose.onTag(EditSpaceRenterScreenTestTags.LIST).assertExists()
-
-    // Check that initial fields are prefilled
-    ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
-    compose.onNodeWithText(renter.name).assertExists()
-    compose.onNodeWithText(renter.email).assertExists()
-    compose.onNodeWithText(renter.phone).assertExists()
-    compose.onNodeWithText(renter.website).assertExists()
-
-    // Check that spaces are prefilled
-    ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_SPACES)
-    compose.onTag(spaceRowTag(0)).assertExists()
-    compose.onTag(seatsFieldTag(0)).assertTextEquals("10")
-    compose.onTag(priceFieldTag(0)).assertTextEquals("15")
-
-    // Edit space values
-    compose.onTag(seatsFieldTag(0)).performTextClearance()
-    compose.onTag(seatsFieldTag(0)).performTextInput("12")
-    compose.onTag(priceFieldTag(0)).performTextClearance()
-    compose.onTag(priceFieldTag(0)).performTextInput("18.5")
-    compose.waitForIdle()
-    compose.onTag(seatsFieldTag(0)).assertTextEquals("12")
-    compose.onTag(priceFieldTag(0)).assertTextEquals("18.5")
-
-    // Discard updates
-    compose.onTag(EditSpaceRenterScreenTestTags.NAV_BACK).performClick()
-    assertTrue(backCalled)
-  }
-
   /** Returns the LabeledField INPUT inside the given wrapper (FIELD_* tag). */
   private fun inputIn(wrapperTag: String) =
       compose.onNode(
@@ -163,7 +120,8 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
           useUnmergedTree = true)
 
   @Test
-  fun screen_saves_on_update() {
+  fun all_edit_space_renter_tests() {
+    var backCalled = false
     var updatedCalled = false
 
     // Make the renter valid by putting one non-empty OpeningHours entry (one TimeSlot).
@@ -180,30 +138,72 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
                   else oh
                 })
 
+    val currentRenterState = mutableStateOf(renter)
+
     compose.setContent {
       AppTheme {
         EditSpaceRenterScreen(
-            spaceRenter = validRenter,
+            spaceRenter = currentRenterState.value,
             owner = owner,
-            onBack = {},
+            onBack = { backCalled = true },
             onUpdated = { updatedCalled = true },
-        )
+            viewModel = vm)
       }
     }
 
-    // Make a change to enable the save button
-    ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
+    checkpoint("screen_prefills_data_and_allows_editing") {
+      // Top & list exist
+      compose.onTag(EditSpaceRenterScreenTestTags.SCAFFOLD).assertExists()
+      compose.onTag(EditSpaceRenterScreenTestTags.TOPBAR).assertExists()
+      compose.onTag(EditSpaceRenterScreenTestTags.TITLE).assertExists()
+      compose.onTag(EditSpaceRenterScreenTestTags.LIST).assertExists()
 
-    val nameEditable = inputIn(ShopFormTestTags.FIELD_SHOP)
-    nameEditable.assertExists()
-    nameEditable.performTextClearance()
-    nameEditable.performTextInput("Updated Space Name")
-    compose.waitForIdle()
+      // Check that initial fields are prefilled
+      ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
+      compose.onNodeWithText(renter.name).assertExists()
+      compose.onNodeWithText(renter.email).assertExists()
+      compose.onNodeWithText(renter.phone).assertExists()
+      compose.onNodeWithText(renter.website).assertExists()
 
-    // Save updates
-    compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
-    compose.waitForIdle()
+      // Check that spaces are prefilled
+      ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_SPACES)
+      compose.onTag(spaceRowTag(0)).assertExists()
+      compose.onTag(seatsFieldTag(0)).assertTextEquals("10")
+      compose.onTag(priceFieldTag(0)).assertTextEquals("15")
 
-    assertTrue(updatedCalled)
+      // Edit space values
+      compose.onTag(seatsFieldTag(0)).performTextClearance()
+      compose.onTag(seatsFieldTag(0)).performTextInput("12")
+      compose.onTag(priceFieldTag(0)).performTextClearance()
+      compose.onTag(priceFieldTag(0)).performTextInput("18.5")
+      compose.waitForIdle()
+      compose.onTag(seatsFieldTag(0)).assertTextEquals("12")
+      compose.onTag(priceFieldTag(0)).assertTextEquals("18.5")
+
+      // Discard updates
+      compose.onTag(EditSpaceRenterScreenTestTags.NAV_BACK).performClick()
+      assertTrue(backCalled)
+    }
+
+    checkpoint("screen_saves_on_update") {
+      // Switch to valid renter for save test
+      currentRenterState.value = validRenter
+      compose.waitForIdle()
+
+      // Make a change to enable the save button
+      ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
+
+      val nameEditable = inputIn(ShopFormTestTags.FIELD_SHOP)
+      nameEditable.assertExists()
+      nameEditable.performTextClearance()
+      nameEditable.performTextInput("Updated Space Name")
+      compose.waitForIdle()
+
+      // Save updates
+      compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+      compose.waitForIdle()
+
+      assertTrue(updatedCalled)
+    }
   }
 }

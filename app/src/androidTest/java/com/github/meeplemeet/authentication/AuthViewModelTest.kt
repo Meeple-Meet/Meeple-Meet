@@ -97,7 +97,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun clearErrorMsg_sets_errorMsg_to_null() = runBlocking {
     // First trigger an error
     signInViewModel.loginWithEmail("invalid-email", "password")
-    delay(2000) // Wait for operation to complete
+    delay(100) // Wait for operation to complete
 
     // Verify error exists
     assertNotNull(signInViewModel.uiState.value.errorMsg)
@@ -113,7 +113,7 @@ class AuthViewModelTest : FirestoreTests() {
   @Test
   fun registerWithEmail_success_updates_account() = runBlocking {
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
 
     val state = signUpViewModel.uiState.value
     assertNotNull("Account should be created", state.account)
@@ -127,7 +127,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun registerWithEmail_failure_updates_errorMsg() = runBlocking {
     // Try to register with invalid email
     signUpViewModel.registerWithEmail("invalid-email", testPassword)
-    delay(2000)
+    delay(100)
 
     val state = signUpViewModel.uiState.value
     assertEquals("Account should be null", null, state.account)
@@ -140,7 +140,7 @@ class AuthViewModelTest : FirestoreTests() {
     // Start registration
     signUpViewModel.registerWithEmail(testEmail, testPassword)
 
-    delay(2000)
+    delay(100)
 
     // After completion, loading should be false
     assertEquals(
@@ -156,7 +156,7 @@ class AuthViewModelTest : FirestoreTests() {
     val secondEmail = "second_${UUID.randomUUID()}@example.com"
     signUpViewModel.registerWithEmail(secondEmail, testPassword)
 
-    delay(2000)
+    delay(100)
 
     // Should only have registered the first email
     val account = signUpViewModel.uiState.value.account
@@ -170,7 +170,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun loginWithEmail_success_updates_account() = runBlocking {
     // First register a user
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
     assertTrue("Registration should succeed", signUpViewModel.uiState.value.account != null)
 
     // Sign out
@@ -178,7 +178,7 @@ class AuthViewModelTest : FirestoreTests() {
 
     // Now login
     signInViewModel.loginWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
 
     val state = signInViewModel.uiState.value
     assertNotNull("Account should be retrieved", state.account)
@@ -191,7 +191,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun loginWithEmail_failure_updates_errorMsg() = runBlocking {
     // Try to login with non-existent user
     signInViewModel.loginWithEmail(testEmail, "wrongpassword")
-    delay(2000)
+    delay(100)
 
     val state = signInViewModel.uiState.value
     assertEquals("Account should be null", null, state.account)
@@ -203,12 +203,12 @@ class AuthViewModelTest : FirestoreTests() {
   fun loginWithEmail_sets_isLoading_true_then_false() = runBlocking {
     // Register first
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
     auth.signOut()
 
     // Now login
     signInViewModel.loginWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
 
     // After completion, loading should be false
     assertEquals(
@@ -223,7 +223,7 @@ class AuthViewModelTest : FirestoreTests() {
     // Immediately try another login before first completes
     signInViewModel.loginWithEmail("other@example.com", "otherpassword")
 
-    delay(2000)
+    delay(100)
 
     // Should only have attempted the first login
     // (Both will fail, but only first should have been attempted)
@@ -236,12 +236,12 @@ class AuthViewModelTest : FirestoreTests() {
   fun logout_success_updates_signedOut() = runBlocking {
     // First register and login a user
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
     assertNotNull("User should be registered", signUpViewModel.uiState.value.account)
 
     // Now logout
     signUpViewModel.signOut()
-    delay(2000)
+    delay(100)
 
     val state = signUpViewModel.uiState.value
     assertEquals("Should be signed out", true, state.signedOut)
@@ -257,7 +257,7 @@ class AuthViewModelTest : FirestoreTests() {
 
     // Try to logout
     signInViewModel.signOut()
-    delay(2000)
+    delay(100)
 
     val state = signInViewModel.uiState.value
     assertEquals("Should be signed out", true, state.signedOut)
@@ -270,7 +270,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun clearErrorMsg_after_error_clears_only_errorMsg() = runBlocking {
     // Trigger an error
     signInViewModel.loginWithEmail("invalid-email", testPassword)
-    delay(2000)
+    delay(100)
 
     assertNotNull("Error should be present", signInViewModel.uiState.value.errorMsg)
 
@@ -288,7 +288,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun registerWithEmail_duplicate_email_shows_error() = runBlocking {
     // First registration
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
     assertTrue("First registration should succeed", signUpViewModel.uiState.value.account != null)
 
     // Sign out
@@ -297,7 +297,7 @@ class AuthViewModelTest : FirestoreTests() {
     // Try to register again with same email
     val newSignUpViewModel = SignUpViewModel()
     newSignUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
 
     val state = newSignUpViewModel.uiState.value
     assertEquals("Account should be null", null, state.account)
@@ -313,7 +313,7 @@ class AuthViewModelTest : FirestoreTests() {
   @Test
   fun registerWithEmail_weak_password_shows_error() = runBlocking {
     signUpViewModel.registerWithEmail(testEmail, "123")
-    delay(2000)
+    delay(100)
 
     val state = signUpViewModel.uiState.value
     assertEquals("Account should be null", null, state.account)
@@ -325,7 +325,7 @@ class AuthViewModelTest : FirestoreTests() {
   @Test
   fun registerWithEmail_empty_password_shows_error() = runBlocking {
     signUpViewModel.registerWithEmail(testEmail, "")
-    delay(2000)
+    delay(100)
 
     val state = signUpViewModel.uiState.value
     assertEquals("Account should be null", null, state.account)
@@ -338,7 +338,7 @@ class AuthViewModelTest : FirestoreTests() {
   fun loginWithEmail_wrong_password_shows_error() = runBlocking {
     // Register first
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
     assertTrue("Registration should succeed", signUpViewModel.uiState.value.account != null)
 
     // Sign out
@@ -346,7 +346,7 @@ class AuthViewModelTest : FirestoreTests() {
 
     // Try to login with wrong password
     signInViewModel.loginWithEmail(testEmail, "wrongpassword")
-    delay(2000)
+    delay(100)
 
     val state = signInViewModel.uiState.value
     assertEquals("Account should be null", null, state.account)
@@ -360,7 +360,7 @@ class AuthViewModelTest : FirestoreTests() {
     var callbackExecuted = false
 
     signUpViewModel.registerWithEmail(testEmail, testPassword) { callbackExecuted = true }
-    delay(2000)
+    delay(100)
 
     assertTrue("Callback should be executed on success", callbackExecuted)
     assertNotNull("Account should be created", signUpViewModel.uiState.value.account)
@@ -370,13 +370,13 @@ class AuthViewModelTest : FirestoreTests() {
   fun loginWithEmail_callback_is_executed_on_success() = runBlocking {
     // Register first
     signUpViewModel.registerWithEmail(testEmail, testPassword)
-    delay(2000)
+    delay(100)
     auth.signOut()
 
     var callbackExecuted = false
 
     signInViewModel.loginWithEmail(testEmail, testPassword) { callbackExecuted = true }
-    delay(2000)
+    delay(100)
 
     assertTrue("Callback should be executed on success", callbackExecuted)
     assertNotNull("Account should be retrieved", signInViewModel.uiState.value.account)

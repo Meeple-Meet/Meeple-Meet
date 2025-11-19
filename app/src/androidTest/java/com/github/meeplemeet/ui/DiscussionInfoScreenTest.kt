@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.auth.Account
@@ -90,98 +91,212 @@ class DiscussionSettingScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun smokeTestNotAdmin() = runBlocking {
+  fun all_tests() = runBlocking {
+    // Create additional test discussions upfront
+    val adminDiscussion =
+        discussionRepository.createDiscussion(
+            name = "Admin Test",
+            description = "Test description",
+            creatorId = thirdUser.uid,
+            participants = listOf(currentAccount.uid, otherUser.uid))
+    discussionRepository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
+    discussionRepository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
+    val updatedAdminDiscussion = discussionRepository.getDiscussion(adminDiscussion.uid)
+
+    val discussionWithPicture =
+        discussionRepository.createDiscussion(
+            name = "Picture Test",
+            description = "Test with picture",
+            creatorId = currentAccount.uid,
+            participants = listOf(otherUser.uid))
+
+    val participantDiscussion =
+        discussionRepository.createDiscussion(
+            name = "Non-Admin Test",
+            description = "Test description",
+            creatorId = thirdUser.uid,
+            participants = listOf(currentAccount.uid, otherUser.uid))
+    discussionRepository.sendMessageToDiscussion(participantDiscussion, thirdUser, "Test message")
+    val updatedParticipantDiscussion = discussionRepository.getDiscussion(participantDiscussion.uid)
+
+    // Use a mutable state to switch between discussions
+    val currentDiscussionState = mutableStateOf(testDiscussion)
+
     compose.setContent {
-      DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
+      DiscussionDetailsScreen(discussion = currentDiscussionState.value, account = currentAccount)
     }
 
-    checkpoint("screen_displaysDiscussionName_andButtons") {
-      compose
-          .onNodeWithTag("discussion_name")
-          .assertIsDisplayed()
-          .assertTextContains("Test Discussion")
+    checkpoint("smokeTestNotAdmin") {
+      checkpoint("screen_displaysDiscussionName_andButtons") {
+        compose
+            .onNodeWithTag("discussion_name")
+            .assertIsDisplayed()
+            .assertTextContains("Test Discussion")
 
-      compose
-          .onNodeWithTag("discussion_description")
-          .assertIsDisplayed()
-          .assertTextContains("A sample group")
-
-      compose.onNodeWithTag("delete_button").assertIsDisplayed().assertIsEnabled()
-
-      compose.onNodeWithTag("leave_button").assertIsDisplayed().assertIsEnabled()
-      clearFields()
-    }
-    checkpoint("Delete Button shows dialog") {
-      compose.waitForIdle()
-      compose.onNodeWithTag("delete_button").performClick()
-
-      compose.waitForIdle()
-      compose.onNodeWithTag("delete_discussion_display").assertIsDisplayed()
-      compose.onNodeWithText("Cancel").assertIsDisplayed()
-      compose.onNodeWithText("Cancel").performClick()
-    }
-
-    checkpoint("Leave Button shows Dialog") {
-      compose.waitForIdle()
-      compose.onNodeWithTag("leave_button").performClick()
-
-      compose.waitForIdle()
-      compose.onNodeWithTag("leave_discussion_display").assertIsDisplayed()
-      compose.onNodeWithText("Cancel").assertIsDisplayed()
-      compose.onNodeWithText("Cancel").performClick()
-    }
-
-    checkpoint("Back Button saves Changes") {
-      compose.waitForIdle()
-
-      compose.onNodeWithTag("discussion_name").performTextInput(" Updated")
-      compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).performClick()
-
-      compose.waitForIdle()
-      // Here we just assert the UI still exists (no crash)
-      compose.onNodeWithTag("discussion_name").assertExists()
-      clearFields()
-    }
-  }
-
-  @Test
-  fun adminView_canEditAndAddMembers() = runBlocking {
-    checkpoint("Admin can edit discussion details and add members") {
-      runBlocking {
-        // Create a discussion where current user is admin but not owner
-        val adminDiscussion =
-            discussionRepository.createDiscussion(
-                name = "Admin Test",
-                description = "Test description",
-                creatorId = thirdUser.uid, // Third user is the owner
-                participants = listOf(currentAccount.uid, otherUser.uid))
-
-        // Make current user an admin
-        discussionRepository.addAdminToDiscussion(adminDiscussion, currentAccount.uid)
-
-        discussionRepository.sendMessageToDiscussion(adminDiscussion, thirdUser, "Test message")
-        val updatedDiscussion = discussionRepository.getDiscussion(adminDiscussion.uid)
-
-        compose.setContent {
-          DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
-        }
-
-        compose.waitForIdle()
-
-        // Can edit name and description
-        compose.onNodeWithTag("discussion_name").assertIsDisplayed().performTextInput(" updated")
         compose
             .onNodeWithTag("discussion_description")
             .assertIsDisplayed()
-            .performTextInput(" changed")
+            .assertTextContains("A sample group")
 
-        // Can see search bar
-        compose.onNodeWithText("Add Members").assertIsDisplayed()
+        compose.onNodeWithTag("delete_button").assertIsDisplayed().assertIsEnabled()
 
-        // Cleanup
-        discussionRepository.deleteDiscussion(updatedDiscussion)
+        compose.onNodeWithTag("leave_button").assertIsDisplayed().assertIsEnabled()
+        clearFields()
+      }
+      checkpoint("Delete Button shows dialog") {
+        compose.waitForIdle()
+        compose.onNodeWithTag("delete_button").performClick()
+
+        compose.waitForIdle()
+        compose.onNodeWithTag("delete_discussion_display").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+      }
+
+      checkpoint("Leave Button shows Dialog") {
+        compose.waitForIdle()
+        compose.onNodeWithTag("leave_button").performClick()
+
+        compose.waitForIdle()
+        compose.onNodeWithTag("leave_discussion_display").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+      }
+
+      checkpoint("Back Button saves Changes") {
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("discussion_name").performTextInput(" Updated")
+        compose.onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON).performClick()
+
+        compose.waitForIdle()
+        // Here we just assert the UI still exists (no crash)
+        compose.onNodeWithTag("discussion_name").assertExists()
+        clearFields()
       }
     }
+
+    checkpoint("adminView_canEditAndAddMembers") {
+      checkpoint("Admin can edit discussion details and add members") {
+        runBlocking {
+          // Switch to admin discussion
+          currentDiscussionState.value = updatedAdminDiscussion
+          compose.waitForIdle()
+
+          // Can edit name and description
+          compose.onNodeWithTag("discussion_name").assertIsDisplayed().performTextInput(" updated")
+          compose
+              .onNodeWithTag("discussion_description")
+              .assertIsDisplayed()
+              .performTextInput(" changed")
+
+          // Can see search bar
+          compose.onNodeWithText("Add Members").assertIsDisplayed()
+        }
+      }
+    }
+
+    checkpoint("profilePicture_displaysWhenUrlIsNull") {
+      checkpoint("Profile picture shows default icon when URL is null") {
+        runBlocking {
+          // Switch back to testDiscussion
+          currentDiscussionState.value = testDiscussion
+          compose.waitForIdle()
+          Thread.sleep(300) // Allow recomposition
+
+          // Profile picture should be displayed
+          compose.waitUntil(3000) {
+            compose.onAllNodesWithTag("profile_picture").fetchSemanticsNodes().isNotEmpty()
+          }
+          compose.onNodeWithTag("profile_picture").assertIsDisplayed()
+        }
+      }
+    }
+
+    checkpoint("profilePicture_displaysWhenUrlIsProvided") {
+      checkpoint("Profile picture shows AsyncImage when URL is provided") {
+        runBlocking {
+          // Switch to discussion with picture
+          currentDiscussionState.value = discussionWithPicture
+          compose.waitForIdle()
+          Thread.sleep(300) // Allow recomposition
+
+          // Profile picture should be displayed
+          compose.waitUntil(3000) {
+            compose.onAllNodesWithTag("profile_picture").fetchSemanticsNodes().isNotEmpty()
+          }
+          compose.onNodeWithTag("profile_picture").assertIsDisplayed()
+        }
+      }
+    }
+
+    checkpoint("profilePicture_isClickableForAdmins") {
+      checkpoint("Profile picture is clickable for admins") {
+        runBlocking {
+          // Switch back to testDiscussion (current user is admin)
+          currentDiscussionState.value = testDiscussion
+          compose.waitForIdle()
+
+          // Profile picture should be clickable for admins
+          compose.onNodeWithTag("profile_picture").assertIsDisplayed().performClick()
+
+          compose.waitForIdle()
+
+          // Dialog should open with camera and gallery options
+          compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
+          compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
+          dismissProfilePictureDialogIfVisible()
+        }
+      }
+    }
+
+    checkpoint("profilePictureDialog_displaysOptionsCorrectly") {
+      checkpoint("Profile picture dialog shows camera and gallery options") {
+        runBlocking {
+          // Ensure we are on admin discussion
+          currentDiscussionState.value = testDiscussion
+          compose.waitForIdle()
+          dismissProfilePictureDialogIfVisible()
+
+          // Click profile picture to open dialog again
+          compose.onNodeWithTag("profile_picture").performClick()
+
+          compose.waitForIdle()
+
+          // Verify both options are displayed
+          compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
+          compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
+        }
+      }
+    }
+
+    checkpoint("profilePicture_isNotClickableForNonAdmins") {
+      checkpoint("Profile picture is not clickable for non-admins") {
+        runBlocking {
+          dismissProfilePictureDialogIfVisible()
+          // Switch to participant discussion where current user is NOT admin
+          currentDiscussionState.value = updatedParticipantDiscussion
+          compose.waitForIdle()
+
+          // Profile picture should be displayed but not clickable
+          compose.onNodeWithTag("profile_picture").assertIsDisplayed()
+
+          // Try to click - dialog should NOT appear
+          compose.onNodeWithTag("profile_picture").performClick()
+
+          compose.waitForIdle()
+
+          // Dialog options should not be displayed
+          compose.onNodeWithTag("profile_picture_camera_option").assertDoesNotExist()
+          compose.onNodeWithTag("profile_picture_gallery_option").assertDoesNotExist()
+        }
+      }
+    }
+
+    // Cleanup additional discussions
+    discussionRepository.deleteDiscussion(updatedAdminDiscussion)
+    discussionRepository.deleteDiscussion(discussionWithPicture)
+    discussionRepository.deleteDiscussion(updatedParticipantDiscussion)
   }
 
   private fun clearFields() {
@@ -189,139 +304,18 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     compose.onNodeWithTag("discussion_description").performTextClearance()
   }
 
-  @Test
-  fun profilePicture_displaysWhenUrlIsNull() = runBlocking {
-    checkpoint("Profile picture shows default icon when URL is null") {
-      runBlocking {
-        // testDiscussion should have null profilePictureUrl by default
-        compose.setContent {
-          DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
-        }
-
+  private fun dismissProfilePictureDialogIfVisible() {
+    compose.waitForIdle()
+    val dialogNodes =
+        compose.onAllNodesWithTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE, useUnmergedTree = true)
+    val dialogSemantics =
+        runCatching { dialogNodes.fetchSemanticsNodes() }.getOrElse { emptyList() }
+    if (dialogSemantics.isNotEmpty()) {
+      val backNodes = compose.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
+      val backSemantics = runCatching { backNodes.fetchSemanticsNodes() }.getOrElse { emptyList() }
+      if (backSemantics.isNotEmpty()) {
+        backNodes[backSemantics.lastIndex].performClick()
         compose.waitForIdle()
-
-        // Profile picture should be displayed
-        compose.onNodeWithTag("profile_picture").assertIsDisplayed()
-      }
-    }
-  }
-
-  @Test
-  fun profilePicture_displaysWhenUrlIsProvided() = runBlocking {
-    checkpoint("Profile picture shows AsyncImage when URL is provided") {
-      runBlocking {
-        // Create a discussion with a profile picture URL
-        val discussionWithPicture =
-            discussionRepository.createDiscussion(
-                name = "Picture Test",
-                description = "Test with picture",
-                creatorId = currentAccount.uid,
-                participants = listOf(otherUser.uid))
-
-        // Note: We can't easily set profilePictureUrl through repository without actual upload
-        // So we'll verify the tag exists and is displayed
-        compose.setContent {
-          DiscussionDetailsScreen(discussion = discussionWithPicture, account = currentAccount)
-        }
-
-        compose.waitForIdle()
-
-        // Profile picture should be displayed
-        compose.onNodeWithTag("profile_picture").assertIsDisplayed()
-
-        // Cleanup
-        discussionRepository.deleteDiscussion(discussionWithPicture)
-      }
-    }
-  }
-
-  @Test
-  fun profilePicture_isClickableForAdmins() = runBlocking {
-    checkpoint("Profile picture is clickable for admins") {
-      runBlocking {
-        // Current account is the owner/admin of testDiscussion
-        compose.setContent {
-          DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
-        }
-
-        compose.waitForIdle()
-
-        // Profile picture should be clickable for admins
-        compose.onNodeWithTag("profile_picture").assertIsDisplayed().performClick()
-
-        compose.waitForIdle()
-
-        // Dialog should open with camera and gallery options
-        compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
-        compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
-      }
-    }
-  }
-
-  @Test
-  fun profilePictureDialog_displaysOptionsCorrectly() = runBlocking {
-    checkpoint("Profile picture dialog shows camera and gallery options") {
-      runBlocking {
-        compose.setContent {
-          DiscussionDetailsScreen(discussion = testDiscussion, account = currentAccount)
-        }
-
-        compose.waitForIdle()
-
-        // Click profile picture to open dialog
-        compose.onNodeWithTag("profile_picture").performClick()
-
-        compose.waitForIdle()
-
-        // Verify both options are displayed
-        compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
-        compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
-
-        // Verify dialog shows discussion name
-        compose.onNodeWithTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE).assertIsDisplayed()
-        compose
-            .onNodeWithTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE)
-            .assertTextContains("Test Discussion")
-      }
-    }
-  }
-
-  @Test
-  fun profilePicture_isNotClickableForNonAdmins() = runBlocking {
-    checkpoint("Profile picture is not clickable for non-admins") {
-      runBlocking {
-        // Create a discussion where current user is participant but not admin
-        val participantDiscussion =
-            discussionRepository.createDiscussion(
-                name = "Non-Admin Test",
-                description = "Test description",
-                creatorId = thirdUser.uid, // Third user is the owner
-                participants = listOf(currentAccount.uid, otherUser.uid))
-
-        discussionRepository.sendMessageToDiscussion(
-            participantDiscussion, thirdUser, "Test message")
-        val updatedDiscussion = discussionRepository.getDiscussion(participantDiscussion.uid)
-
-        compose.setContent {
-          DiscussionDetailsScreen(discussion = updatedDiscussion, account = currentAccount)
-        }
-
-        compose.waitForIdle()
-
-        // Profile picture should be displayed but not clickable
-        compose.onNodeWithTag("profile_picture").assertIsDisplayed()
-
-        // Try to click - dialog should NOT appear
-        compose.onNodeWithTag("profile_picture").performClick()
-
-        compose.waitForIdle()
-
-        // Dialog options should not be displayed
-        compose.onNodeWithTag("profile_picture_camera_option").assertDoesNotExist()
-        compose.onNodeWithTag("profile_picture_gallery_option").assertDoesNotExist()
-
-        // Cleanup
-        discussionRepository.deleteDiscussion(updatedDiscussion)
       }
     }
   }

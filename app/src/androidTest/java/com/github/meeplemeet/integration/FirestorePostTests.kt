@@ -184,12 +184,12 @@ class FirestorePostTests : FirestoreTests() {
   }
 
   @Test(expected = IllegalArgumentException::class)
-  fun testCreatePostViewModelWithBlankTitle() {
+  fun testCreatePostViewModelWithBlankTitle() = runBlocking {
     createVM.createPost("", "Content", testAccount1)
   }
 
   @Test(expected = IllegalArgumentException::class)
-  fun testCreatePostViewModelWithBlankBody() {
+  fun testCreatePostViewModelWithBlankBody() = runBlocking {
     createVM.createPost("Title", "", testAccount1)
   }
 

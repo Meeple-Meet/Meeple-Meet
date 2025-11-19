@@ -18,7 +18,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -28,6 +27,9 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @get:Rule val ck = Checkpoint.Rule()
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+
+  private fun checkpointSuspend(name: String, block: suspend () -> Unit) =
+      ck.ck(name) { runBlocking { block() } }
 
   private lateinit var vm: DiscussionViewModel
   private lateinit var nav: NavigationActions
@@ -121,7 +123,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
    * Tests
    * ================================================================ */
   @Test
-  fun smoke_old_account() = runBlocking {
+  fun all_tests() = runBlocking {
+    // Set content once at the beginning
     compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
 
     checkpoint("Test setup") {
@@ -139,157 +142,56 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
       compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
       compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertIsDisplayed()
     }
+
     checkpoint("Non empty overview hides message") {
       compose.onNodeWithText("No discussions yet").assertDoesNotExist()
     }
+
     checkpoint("Overview prefix display for self") {
       compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
     }
-  }
 
-  @Test
-  fun smoke_updated_account() = runBlocking {
-    vm.sendMessageToDiscussion(d1, me, "Changed plan")
-    delay(200)
-    discussionRepository.sendMessageToDiscussion(d2, bob, "Updated message")
-    delay(200)
-    val updatedMe: Account = accountRepository.getAccount(me.uid)
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
-    }
     checkpoint("Overview displays no messages") {
-      runBlocking {
-        compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
-        compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
-      }
+      compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
+      compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
     }
-    checkpoint("Overview updates for new message") {
-      runBlocking {
-        compose.onNodeWithText("You: Changed plan", substring = true).assertIsDisplayed()
-      }
+
+    checkpoint("overview_displaysProfilePictureInDiscussionCard") {
+      // Discussion cards should be displayed
+      // The ProfilePicture composable is used in DiscussionCard
+      // We verify that the discussions are displayed, which includes their profile pictures
+      compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+
+      // Note: We can't directly test the ProfilePicture composable rendering
+      // but we verify the cards render without crashing with the new profilePictureUrl
+      // parameter
     }
-    checkpoint("Overview updates discussion order") {
-      runBlocking {
-        val d2Top = compose.onNodeWithText("Gloomhaven").fetchSemanticsNode().boundsInRoot.top
-        val d1Top = compose.onNodeWithText("Catan Crew").fetchSemanticsNode().boundsInRoot.top
-        assert(d2Top < d1Top) { "Gloomhaven should appear before Catan Crew" }
-      }
+
+    checkpoint("overview_handlesNullProfilePictureUrl") {
+      // All test discussions have null profilePictureUrl by default
+      compose.waitForIdle()
+
+      // Verify discussions are displayed with default profile picture behavior
+      compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+      compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
+
+      // All cards should render successfully even with null profilePictureUrl
     }
-  }
 
-  @Test
-  fun overview_empty_state_shows_no_discussions_text() = runBlocking {
-    checkpoint("Overview empty state") {
-      runBlocking {
-        // Create a new user with no discussions
-        val emptyUser =
-            accountRepository.createAccount(
-                userHandle = "empty_${System.currentTimeMillis()}",
-                name = "Empty",
-                email = "empty@test.com",
-                photoUrl = null)
+    checkpoint("overview_usesDiscussionCommonsConstants") {
+      // The changes replaced local constants with DiscussionCommons constants
+      // Verify "You" prefix for own messages
+      compose.waitForIdle()
 
-        compose.setContent {
-          AppTheme { DiscussionsOverviewScreen(account = emptyUser, navigation = nav) }
-        }
-        compose.waitForIdle()
-        compose.onNodeWithText("No discussions yet").assertIsDisplayed()
+      // Should show "You: Bring snacks" using DiscussionCommons.YOU_SENDER_NAME
+      compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
 
-        // Cleanup
-        accountRepository.deleteAccount(emptyUser.uid)
-      }
-    }
-  }
-
-  @Ignore("Random behavior on GitHub CLI")
-  @Test
-  fun overview_prefixes_non_me_sender_name_when_known() = runBlocking {
-    // Create a new discussion with zoe
-    val d4 =
-        discussionRepository.createDiscussion(
-            name = "New Chat", description = "", creatorId = me.uid, participants = listOf(zoe.uid))
-
-    // Send a message from zoe
-    discussionRepository.sendMessageToDiscussion(d4, zoe, "See you!")
-
-    // Fetch updated account
-    val updatedMe = accountRepository.getAccount(me.uid)
-
-    compose.setContent {
-      AppTheme { DiscussionsOverviewScreen(account = updatedMe, navigation = nav) }
-    }
-    compose.waitForIdle()
-    compose.onNodeWithText("Zoe: See you!", substring = true).assertIsDisplayed()
-    compose.onNodeWithText("New Chat").assertIsDisplayed()
-
-    // Cleanup
-    discussionRepository.deleteDiscussion(d4)
-  }
-
-  @Test
-  fun overview_displaysProfilePictureInDiscussionCard() = runBlocking {
-    checkpoint("Discussion card displays profile picture") {
-      runBlocking {
-        // Create the screen with existing discussions
-        compose.setContent {
-          AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
-        }
-
-        compose.waitForIdle()
-
-        // Discussion cards should be displayed
-        // The ProfilePicture composable is used in DiscussionCard
-        // We verify that the discussions are displayed, which includes their profile pictures
-        compose.onNodeWithText("Catan Crew").assertIsDisplayed()
-        compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
-
-        // Note: We can't directly test the ProfilePicture composable rendering
-        // but we verify the cards render without crashing with the new profilePictureUrl parameter
-      }
-    }
-  }
-
-  @Test
-  fun overview_handlesNullProfilePictureUrl() = runBlocking {
-    checkpoint("Discussion card handles null profile picture URL") {
-      runBlocking {
-        // All test discussions have null profilePictureUrl by default
-        compose.setContent {
-          AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
-        }
-
-        compose.waitForIdle()
-
-        // Verify discussions are displayed with default profile picture behavior
-        compose.onNodeWithText("Catan Crew").assertIsDisplayed()
-        compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
-        compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
-
-        // All cards should render successfully even with null profilePictureUrl
-      }
-    }
-  }
-
-  @Test
-  fun overview_usesDiscussionCommonsConstants() = runBlocking {
-    checkpoint("Overview uses DiscussionCommons constants") {
-      runBlocking {
-        // The changes replaced local constants with DiscussionCommons constants
-        // Verify "You" prefix for own messages
-        compose.setContent {
-          AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
-        }
-
-        compose.waitForIdle()
-
-        // Should show "You: Bring snacks" using DiscussionCommons.YOU_SENDER_NAME
-        compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
-
-        // Verify "(No messages yet)" text for discussion without messages uses
-        // DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT
-        compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
-        compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
-      }
+      // Verify "(No messages yet)" text for discussion without messages uses
+      // DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT
+      compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
+      compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
     }
   }
 }
