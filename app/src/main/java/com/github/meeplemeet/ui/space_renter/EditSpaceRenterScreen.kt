@@ -111,7 +111,8 @@ fun EditSpaceRenterScreen(
             website = updated.website,
             address = updated.address,
             openingHours = updated.openingHours,
-            spaces = updated.spaces)
+            spaces = updated.spaces,
+            photoCollectionUrl = updated.photoCollectionUrl)
       },
       locationUi = locationUi,
       viewModel = viewModel)
@@ -199,7 +200,8 @@ internal fun EditSpaceRenterContent(
           website = link,
           address = locationUi.selectedLocation ?: initialRenter.address,
           openingHours = week,
-          spaces = spaces)
+          spaces = spaces,
+          photoCollectionUrl = photoCollectionUrl)
 
   // Adds a new default space to the list and expands the section.
   fun addSpace() {
@@ -262,7 +264,7 @@ internal fun EditSpaceRenterContent(
               item {
                 ImageCarousel(
                     photoCollectionUrl = photoCollectionUrl,
-                    maxNumberOfImages = initialRenter.spaces.size + 2,
+                    maxNumberOfImages = spaces.size + 2,
                     onAdd = { path, index ->
                       if (index < photoCollectionUrl.size &&
                           photoCollectionUrl[index].isNotEmpty()) {
@@ -276,7 +278,8 @@ internal fun EditSpaceRenterContent(
                     },
                     onRemove = { url ->
                       photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                    })
+                    },
+                    editable = true)
               }
               // Required Info
               item {

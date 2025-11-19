@@ -98,7 +98,9 @@ fun CreateSpaceRenterScreen(
             website = renter.website,
             address = renter.address,
             openingHours = renter.openingHours,
-            spaces = renter.spaces)
+            spaces = renter.spaces,
+        photoCollectionUrl = renter.photoCollectionUrl
+        )
       },
       locationUi = locationUi,
       viewModel = viewModel)
@@ -120,6 +122,7 @@ internal fun AddSpaceRenterContent(
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
+    var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
   var name by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -252,6 +255,26 @@ internal fun AddSpaceRenterContent(
                 PaddingValues(
                     horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
                     vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
+            item {
+                ImageCarousel(
+                    photoCollectionUrl = photoCollectionUrl,
+                    maxNumberOfImages = spaces.size + 2,
+                    onAdd = { path, index ->
+                        if (index < photoCollectionUrl.size &&
+                            photoCollectionUrl[index].isNotEmpty()) {
+                            photoCollectionUrl =
+                                photoCollectionUrl.mapIndexed { i, old ->
+                                    if (i == index) path else old
+                                }
+                        } else {
+                            photoCollectionUrl = photoCollectionUrl + path
+                        }
+                    },
+                    onRemove = { url ->
+                        photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                    },
+                    editable = true)
+            }
               // Required info
               item {
                 CollapsibleSection(

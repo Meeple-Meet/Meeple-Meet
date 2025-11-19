@@ -2,6 +2,7 @@
 
 package com.github.meeplemeet.model.space_renter
 
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
@@ -49,7 +50,8 @@ class CreateSpaceRenterViewModel(
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
-      spaces: List<Space> = emptyList()
+      spaces: List<Space> = emptyList(),
+      photoCollectionUrl: List<String> = emptyList(),
   ) {
     if (name.isBlank()) throw IllegalArgumentException("SpaceRenter name cannot be blank")
 
@@ -61,7 +63,7 @@ class CreateSpaceRenterViewModel(
 
     viewModelScope.launch {
       repository.createSpaceRenter(
-          owner, name, phone, email, website, address, openingHours, spaces)
+          owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
     }
   }
 }
