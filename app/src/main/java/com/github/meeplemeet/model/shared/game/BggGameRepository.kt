@@ -40,7 +40,7 @@ data class GameSearchResult(val id: String, val name: String)
  * Repository implementation for fetching BoardGameGeek (BGG) games.
  *
  * This repository uses the BGG XML API v2 to fetch game details by ID or to search games by name.
- * It uses [OkHttpClient] to perform HTTP requests and [JDOM2] to parse XML responses.
+ * It uses [OkHttpClient] to perform HTTP requests and [org.jdom2] to parse XML responses.
  *
  * @property client The HTTP client used to make requests. Defaults to [HttpClientProvider.client].
  * @property baseUrl The base URL for the BGG XML API. Defaults to

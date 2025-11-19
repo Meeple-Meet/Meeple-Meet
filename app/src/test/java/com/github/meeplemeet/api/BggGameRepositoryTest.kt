@@ -907,4 +907,260 @@ class BggGameRepositoryTest {
     val request = mockWebServer.takeRequest()
     assertTrue(request.headers["User-Agent"]!!.contains("MeepleMeet"))
   }
+
+  // ==================== Cache tests ====================
+
+  @Test
+  fun searchCacheHitAvoidsSecondHttpCall() = runTest {
+    val mockResponse =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items total="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="900">
+            <name type="primary" value="Cached Search Game" />
+          </item>
+        </items>
+      """
+                    .trimIndent())
+
+    mockWebServer.enqueue(mockResponse)
+
+    // first call should hit network
+    val first = repository.searchGamesByName("cached", 10, ignoreCase = true)
+    // second call should be served from cache -> no new server request
+    val second = repository.searchGamesByName("cached", 10, ignoreCase = true)
+
+    assertEquals(1, mockWebServer.requestCount, "Search should hit network only once due to cache")
+    assertEquals(first, second)
+  }
+
+  @Test
+  fun searchCacheExpiresAfterTtl() = runTest {
+    // repo with very short TTL for searches
+    val client = OkHttpClient()
+    val baseUrl = mockWebServer.url("/xmlapi2")
+    val shortTtlRepo = BggGameRepository(client, baseUrl, null, searchesTtlMs = 10L)
+
+    val mockResponse1 =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items total="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="901">
+            <name type="primary" value="Expiring Game" />
+          </item>
+        </items>
+      """
+                    .trimIndent())
+    val mockResponse2 = mockResponse1.clone()
+
+    mockWebServer.enqueue(mockResponse1)
+    val r1 = shortTtlRepo.searchGamesByName("exp", 10, ignoreCase = true)
+    assertEquals(1, mockWebServer.requestCount)
+
+    // wait for TTL to pass (small real sleep)
+    Thread.sleep(20)
+
+    mockWebServer.enqueue(mockResponse2)
+    val r2 = shortTtlRepo.searchGamesByName("exp", 10, ignoreCase = true)
+
+    assertEquals(2, mockWebServer.requestCount, "Search should re-query after TTL expiry")
+    assertEquals(r1, r2)
+  }
+
+  @Test
+  fun gamesCacheFullHitDoesNotCallNetworkAgain() = runTest {
+    val mockResponse =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="1001">
+            <thumbnail>https://example.com/1001.jpg</thumbnail>
+            <name type="primary" value="Cached Game One" />
+            <description>desc</description>
+            <minplayers value="1" />
+            <maxplayers value="4" />
+          </item>
+        </items>
+      """
+                    .trimIndent())
+
+    mockWebServer.enqueue(mockResponse)
+
+    // First fetch -> network
+    val res1 = repository.getGamesByIdWithErrors("1001")
+    assertEquals(1, mockWebServer.requestCount)
+    assertEquals(1, res1.games.size)
+    // Second fetch -> must be served from cache
+    val res2 = repository.getGamesByIdWithErrors("1001")
+    assertEquals(1, mockWebServer.requestCount, "Second fetch must not trigger network (cached)")
+    assertEquals(res1.games[0].uid, res2.games[0].uid)
+  }
+
+  @Test
+  fun gamesCachePartialFetchOnlyMissingIds() = runTest {
+    // first: fetch id "2001" to populate cache
+    val response2001 =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="2001">
+            <thumbnail>https://example.com/2001.jpg</thumbnail>
+            <name type="primary" value="Game2001" />
+            <description>d</description>
+            <minplayers value="2" />
+            <maxplayers value="5" />
+          </item>
+        </items>
+      """
+                    .trimIndent())
+    mockWebServer.enqueue(response2001)
+    repository.getGamesByIdWithErrors("2001")
+    assertEquals(1, mockWebServer.requestCount)
+
+    // now ask for ("2001","2002") -> repository should only request missing "2002"
+    val response2002 =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="2002">
+            <thumbnail>https://example.com/2002.jpg</thumbnail>
+            <name type="primary" value="Game2002" />
+            <description>d2</description>
+            <minplayers value="1" />
+            <maxplayers value="3" />
+          </item>
+        </items>
+      """
+                    .trimIndent())
+    mockWebServer.enqueue(response2002)
+
+    val combined = repository.getGamesByIdWithErrors("2001", "2002")
+    // total requests should be 2 (one for initial 2001, one for the missing 2002)
+    assertEquals(2, mockWebServer.requestCount)
+    // Ensure ordering matches requested IDs
+    assertEquals(listOf("2001", "2002"), combined.games.map { it.uid })
+  }
+
+  @Test
+  fun getGamesByIdWithErrorsRespectsRequestedOrderEvenIfResponseDifferentOrder() = runTest {
+    // server returns B then A (reverse), client asked for A,B -> result must be [A,B]
+    val responseReversed =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="B">
+            <thumbnail>https://example.com/b.jpg</thumbnail>
+            <name type="primary" value="GameB" />
+            <description>B</description>
+            <minplayers value="1" />
+            <maxplayers value="2" />
+          </item>
+          <item type="boardgame" id="A">
+            <thumbnail>https://example.com/a.jpg</thumbnail>
+            <name type="primary" value="GameA" />
+            <description>A</description>
+            <minplayers value="1" />
+            <maxplayers value="2" />
+          </item>
+        </items>
+      """
+                    .trimIndent())
+    mockWebServer.enqueue(responseReversed)
+
+    val res = repository.getGamesByIdWithErrors("A", "B")
+    assertEquals(listOf("A", "B"), res.games.map { it.uid })
+  }
+
+  @Test
+  fun gamesCacheLruEvictionWorks() = runTest {
+    // repo with maxCachedGames = 2
+    val client = OkHttpClient()
+    val baseUrl = mockWebServer.url("/xmlapi2")
+    val smallCacheRepo = BggGameRepository(client, baseUrl, null, maxCachedGames = 2)
+
+    // enqueue 1,2,3, then 1 again
+    fun thingBody(id: String) =
+        """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+        <item type="boardgame" id="$id">
+          <thumbnail>https://example.com/$id.jpg</thumbnail>
+          <name type="primary" value="G$id" />
+          <description>d$id</description>
+          <minplayers value="1" />
+          <maxplayers value="4" />
+        </item>
+      </items>
+    """
+            .trimIndent()
+
+    mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(thingBody("1")))
+    smallCacheRepo.getGamesByIdWithErrors("1")
+    assertEquals(1, mockWebServer.requestCount)
+
+    mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(thingBody("2")))
+    smallCacheRepo.getGamesByIdWithErrors("2")
+    assertEquals(2, mockWebServer.requestCount)
+
+    // now cache contains [1,2] (1 is LRU-oldest)
+    mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(thingBody("3")))
+    smallCacheRepo.getGamesByIdWithErrors("3")
+    assertEquals(3, mockWebServer.requestCount)
+
+    // id "1" should have been evicted. fetching it triggers a network call again
+    mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(thingBody("1")))
+    smallCacheRepo.getGamesByIdWithErrors("1")
+    assertEquals(4, mockWebServer.requestCount)
+  }
+
+  @Test
+  fun gamesCacheExpiresAfterTtl() = runTest {
+    val client = OkHttpClient()
+    val baseUrl = mockWebServer.url("/xmlapi2")
+    val shortTtlRepo = BggGameRepository(client, baseUrl, null, gamesTtlMs = 10L)
+
+    val body =
+        """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+        <item type="boardgame" id="3001">
+          <thumbnail>https://example.com/3001.jpg</thumbnail>
+          <name type="primary" value="G3001" />
+          <description>d</description>
+          <minplayers value="1" />
+          <maxplayers value="2" />
+        </item>
+      </items>
+    """
+            .trimIndent()
+
+    mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(body))
+    shortTtlRepo.getGamesByIdWithErrors("3001")
+    assertEquals(1, mockWebServer.requestCount)
+
+    // let TTL expire
+    Thread.sleep(20)
+
+    mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(body))
+    shortTtlRepo.getGamesByIdWithErrors("3001")
+    assertEquals(2, mockWebServer.requestCount, "Cache entry expired; network should be hit again")
+  }
 }
