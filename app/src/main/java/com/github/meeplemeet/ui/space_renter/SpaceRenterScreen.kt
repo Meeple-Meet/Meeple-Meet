@@ -37,6 +37,9 @@ import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.components.TimeUi
 import com.github.meeplemeet.ui.components.tryParseTime
+import com.github.meeplemeet.ui.components.ImageCarousel
+import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.SpacesList
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.ceil
@@ -44,6 +47,14 @@ import kotlin.math.ceil
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
 object SpaceRenterTestTags {
   // Contact section tags
+  const val SPACE_RENTER_PHONE_TEXT = "SPACE_RENTER_PHONE_TEXT"
+  const val SPACE_RENTER_PHONE_BUTTON = "SPACE_RENTER_PHONE_BUTTON"
+  const val SPACE_RENTER_EMAIL_TEXT = "SPACE_RENTER_EMAIL_TEXT"
+  const val SPACE_RENTER_EMAIL_BUTTON = "SPACE_RENTER_EMAIL_BUTTON"
+  const val SPACE_RENTER_ADDRESS_TEXT = "SPACE_RENTER_ADDRESS_TEXT"
+  const val SPACE_RENTER_ADDRESS_BUTTON = "SPACE_RENTER_ADDRESS_BUTTON"
+  const val SPACE_RENTER_WEBSITE_TEXT = "SPACE_RENTER_WEBSITE_TEXT"
+  const val SPACE_RENTER_WEBSITE_BUTTON = "SPACE_RENTER_WEBSITE_BUTTON"
   const val SPACE_RENTER_EDIT_BUTTON = "EDIT_SPACE_BUTTON"
 
   // Availability section tags
@@ -193,20 +204,18 @@ fun SpaceRenterDetails(
       modifier =
           modifier.verticalScroll(rememberScrollState()).padding(bottom = Dimensions.Padding.large),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
-        TemporaryPhotoCarousel()
-        ContactSection(
-            name = spaceRenter.name,
-            address = spaceRenter.address.name,
-            phone = spaceRenter.phone,
-            email = spaceRenter.email,
-            website = spaceRenter.website,
-            addPadding = true)
-
-        AvailabilitySectionWithChevron(
-            openingHours = spaceRenter.openingHours,
-            dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX,
-            addPadding = true)
-
+        if (spaceRenter.photoCollectionUrl.isNotEmpty()) {
+          ImageCarousel(photoCollectionUrl = spaceRenter.photoCollectionUrl)
+        }
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+        ContactSection(spaceRenter)
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
+        AvailabilitySection(spaceRenter.openingHours, SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = SpaceRenterUi.HORIZONTAL_PADDING))
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {

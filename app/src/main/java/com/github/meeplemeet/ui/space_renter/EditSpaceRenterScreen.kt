@@ -149,6 +149,7 @@ internal fun EditSpaceRenterContent(
   val scope = rememberCoroutineScope()
 
   var name by rememberSaveable { mutableStateOf(initialRenter.name) }
+  var photoCollectionUrl by remember { mutableStateOf(initialRenter.photoCollectionUrl) }
   var email by rememberSaveable { mutableStateOf(initialRenter.email) }
   var phone by rememberSaveable { mutableStateOf(initialRenter.phone) }
   var link by rememberSaveable { mutableStateOf(initialRenter.website) }
@@ -258,6 +259,25 @@ internal fun EditSpaceRenterContent(
                 PaddingValues(
                     horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
                     vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
+              item {
+                ImageCarousel(
+                    photoCollectionUrl = photoCollectionUrl,
+                    maxNumberOfImages = initialRenter.spaces.size + 2,
+                    onAdd = { path, index ->
+                      if (index < photoCollectionUrl.size &&
+                          photoCollectionUrl[index].isNotEmpty()) {
+                        photoCollectionUrl =
+                            photoCollectionUrl.mapIndexed { i, old ->
+                              if (i == index) path else old
+                            }
+                      } else {
+                        photoCollectionUrl = photoCollectionUrl + path
+                      }
+                    },
+                    onRemove = { url ->
+                      photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                    })
+              }
               // Required Info
               item {
                 CollapsibleSection(
