@@ -8,6 +8,7 @@ package com.github.meeplemeet.ui.components
 import android.app.TimePickerDialog
 import android.content.Context
 import android.text.format.DateFormat
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Edit
@@ -37,9 +42,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -130,7 +139,6 @@ object ShopComponentsTestTags {
   // Search field internals
   const val GAME_SEARCH_FIELD = "shop_game_search_field"
   const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
-  const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
   const val GAME_SEARCH_MENU = "shop_game_search_menu"
   const val GAME_SEARCH_ITEM = "shop_game_search_item"
 
@@ -158,6 +166,16 @@ object ShopComponentsTestTags {
 
   // Availability section tags
   const val SHOP_DAY_PREFIX = "SHOP_DAY_"
+
+  // Contact section tags
+  const val SHOP_PHONE_TEXT = "SHOP_PHONE_TEXT"
+  const val SHOP_PHONE_BUTTON = "SHOP_PHONE_BUTTON"
+  const val SHOP_EMAIL_TEXT = "SHOP_EMAIL_TEXT"
+  const val SHOP_EMAIL_BUTTON = "SHOP_EMAIL_BUTTON"
+  const val SHOP_ADDRESS_TEXT = "SHOP_ADDRESS_TEXT"
+  const val SHOP_ADDRESS_BUTTON = "SHOP_ADDRESS_BUTTON"
+  const val SHOP_WEBSITE_TEXT = "SHOP_WEBSITE_TEXT"
+  const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
 }
 
 /* =============================================================================
@@ -1503,4 +1521,102 @@ private fun WeeklyAvailabilityDialog(
           }
         }
   }
+}
+
+// -------------------- CONTACT SECTION --------------------
+
+/**
+ * Composable that displays the contact information section
+ *
+ * @param name name to display
+ * @param address location text
+ * @param email email to display
+ * @param phone phone number to display
+ * @param website website link to display
+ */
+@Composable
+fun ContactSection(name: String, address: String, email: String, phone: String, website: String) {
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        // Display address contact row
+        ContactRow(
+            Icons.Default.Place,
+            address,
+            ShopComponentsTestTags.SHOP_ADDRESS_TEXT,
+            ShopComponentsTestTags.SHOP_ADDRESS_BUTTON)
+        // Display email contact row
+        ContactRow(
+            Icons.Default.Email,
+            email,
+            ShopComponentsTestTags.SHOP_EMAIL_TEXT,
+            ShopComponentsTestTags.SHOP_EMAIL_BUTTON)
+
+        // Display phone contact row
+        if (phone.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Phone,
+              phone,
+              ShopComponentsTestTags.SHOP_PHONE_TEXT,
+              ShopComponentsTestTags.SHOP_PHONE_BUTTON)
+        }
+        // Display website contact row
+        if (website.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Language,
+              website,
+              ShopComponentsTestTags.SHOP_WEBSITE_TEXT,
+              ShopComponentsTestTags.SHOP_WEBSITE_BUTTON)
+        }
+      }
+}
+
+/**
+ * Composable that displays a single row of contact information with an icon, text, and a button to
+ * copy the text to the clipboard.
+ *
+ * @param icon The icon to display for the contact method.
+ * @param text The contact text to display and copy.
+ * @param textTag The test tag for the text element.
+ * @param buttonTag The test tag for the copy button.
+ */
+@Composable
+fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
+  val clipboardManager: ClipboardManager = LocalClipboardManager.current
+  val context = LocalContext.current
+
+  // Split text into "first line" and "rest"
+  val lines = text.split('\n')
+  val firstLine = lines.firstOrNull().orEmpty()
+  val restLines = lines.drop(n = 1)
+
+  Row(
+      verticalAlignment = Alignment.Top,
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
+        IconButton(
+            onClick = {
+              clipboardManager.setText(AnnotatedString(text))
+              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
+              Icon(icon, contentDescription = null, tint = AppColors.neutral)
+            }
+
+        Column(modifier = Modifier.weight(1f).testTag(textTag)) {
+          // First line on the same row as the icon
+          Text(text = firstLine, style = LocalTextStyle.current)
+
+          // Remaining lines displayed below
+          if (restLines.isNotEmpty()) {
+            Text(text = restLines.joinToString("\n"), style = LocalTextStyle.current)
+          }
+        }
+      }
 }

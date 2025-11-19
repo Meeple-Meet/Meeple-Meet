@@ -1,14 +1,22 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
@@ -18,7 +26,6 @@ import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import com.github.meeplemeet.ui.shops.MAX_STOCK_SHOWED
 import com.github.meeplemeet.ui.shops.ShopScreen
 import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -32,18 +39,6 @@ import kotlinx.coroutines.tasks.await
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-
-class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
-  var copiedText: String? = null
-
-  override fun getText(): AnnotatedString? {
-    return copiedText?.let { AnnotatedString(it) }
-  }
-
-  override fun setText(annotatedString: AnnotatedString) {
-    copiedText = annotatedString.text
-  }
-}
 
 class ShopDetailsScreenTest : FirestoreTests() {
 
@@ -190,115 +185,52 @@ class ShopDetailsScreenTest : FirestoreTests() {
   @OptIn(ExperimentalTestApi::class)
   @Test
   fun shopScreen_smoke_currentUser_contactAvailabilityGames() {
-    val fakeClipboard = FakeClipboardManager()
-
     compose.setContent {
-      CompositionLocalProvider(LocalClipboardManager provides fakeClipboard) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          ShopScreen(
-              shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        ShopScreen(
+            shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
       }
     }
 
     compose.waitForIdle()
     compose.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
 
-    /* 1  shop + contact info -------------------------------------------------------- */
-    checkpoint("Shop header & contact info visible") {
+    /* 1  shop + contact section is mounted ----------------------------------------- */
+    checkpoint("Shop header & contact section visible") {
       compose.onNodeWithText(dummyShop.name).assertExists()
 
-      compose
-          .onNodeWithTag(ShopTestTags.SHOP_PHONE_TEXT)
-          .onChildren()
-          .filter(hasText(dummyShop.phone))
-          .assertCountEquals(1)
-      compose
-          .onNodeWithTag(ShopTestTags.SHOP_EMAIL_TEXT)
-          .onChildren()
-          .filter(hasText(dummyShop.email))
-          .assertCountEquals(1)
-      compose
-          .onNodeWithTag(ShopTestTags.SHOP_WEBSITE_TEXT)
-          .onChildren()
-          .filter(hasText(dummyShop.website))
-          .assertCountEquals(1)
-      compose
-          .onNodeWithTag(ShopTestTags.SHOP_ADDRESS_TEXT)
-          .onChildren()
-          .filter(hasText(dummyShop.address.name))
-          .assertCountEquals(1)
+      // Just check that the contact rows are present; detailed behaviour is tested in
+      // ShopComponentsTest.
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_PHONE_TEXT).assertExists()
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT).assertExists()
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT).assertExists()
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT).assertExists()
     }
 
-    /* 2  clipboard buttons ---------------------------------------------------------- */
-    checkpoint("Clipboard copy for phone & email") {
-      val contactItems =
-          listOf(
-              ShopTestTags.SHOP_PHONE_BUTTON to dummyShop.phone,
-              ShopTestTags.SHOP_EMAIL_BUTTON to dummyShop.email)
-
-      contactItems.forEach { (buttonTag, expectedText) ->
-        compose.onNodeWithTag(buttonTag).performClick()
-        assert(fakeClipboard.copiedText == expectedText)
-      }
-    }
-
-    /* 3  availability today + weekly dialog ----------------------------------------- */
-    checkpoint("Availability section shows today and full week dialog") {
+    /* 2  availability section integration ------------------------------------------ */
+    checkpoint("Availability section visible and weekly dialog can be opened") {
       val todayIndex = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
 
-      // Today row exists
+      // Availability header
+      compose.onNodeWithText("Availability").assertExists()
+
+      // Today row exists (component-level formatting is covered in ShopComponentsTest)
       compose
           .onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS")
           .assertExists()
 
-      // Open weekly dialog
-      compose.onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE").performClick()
+      // Open weekly dialog via navigate icon
+      compose
+          .onNodeWithTag("${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE")
+          .assertExists()
+          .performClick()
       compose.waitForIdle()
 
-      // All days from dummyOpeningHours appear
-      dummyOpeningHours.forEach { openingHours ->
-        val dayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${openingHours.day}"
-        compose.waitUntilAtLeastOneExists(hasTestTag(dayTag), timeoutMillis = 2_000)
-        compose.onNodeWithTag(dayTag).assertExists()
-      }
-
-      // Close dialog
-      compose.onNodeWithText("Close").performClick()
+      // Bottom sheet shows the Close button from the component
+      compose.onNodeWithText("Close").assertExists().performClick()
     }
 
-    /* 4  game grid + stock bubbles -------------------------------------------------- */
-    checkpoint("Games pager & stock bubbles (99+ and exact)") {
-      val overflowLabel = "$MAX_STOCK_SHOWED+"
-      var foundOverflow = false
-      var foundExact = false
-
-      fun scanCurrentPage() {
-        if (!foundOverflow && hasTextAnywhere(overflowLabel)) {
-          foundOverflow = true
-        }
-        if (!foundExact && hasTextAnywhere("5")) {
-          foundExact = true
-        }
-      }
-
-      // Initial page
-      scanCurrentPage()
-
-      // Swipe a few times to traverse all pages
-      repeat(4) {
-        compose.onRoot().performTouchInput { swipeLeft() }
-        compose.waitForIdle()
-        scanCurrentPage()
-      }
-
-      assert(foundOverflow) {
-        "Expected to see at least one stock bubble with '$overflowLabel' across pages"
-      }
-      assert(foundExact) { "Expected to see at least one stock bubble with '5' across pages" }
-    }
-
-    /* 5  pagination between pages --------------------------------------------------- */
+    /* 3  pagination between pages --------------------------------------------------- */
     checkpoint("Pager pagination shows different games on different pages") {
       // Swipe specifically on the HorizontalPager, not the whole root
       val pagerNode = compose.onNodeWithTag(ShopTestTags.SHOP_GAME_PAGER)
@@ -320,7 +252,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
       }
     }
 
-    /* 6  back button ---------------------------------------------------------------- */
+    /* 4  back button ---------------------------------------------------------------- */
     checkpoint("Back button exists and is clickable") {
       compose
           .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)

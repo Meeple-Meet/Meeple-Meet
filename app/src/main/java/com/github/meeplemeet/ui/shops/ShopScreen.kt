@@ -4,7 +4,6 @@
 package com.github.meeplemeet.ui.shops
 
 import android.annotation.SuppressLint
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,13 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,23 +39,15 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.TopBarWithDivider
-import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 /** Object containing test tags used in the Shop screen UI for UI testing purposes. */
 object ShopTestTags {
-  // Contact section tags
-  const val SHOP_PHONE_TEXT = "SHOP_PHONE_TEXT"
-  const val SHOP_PHONE_BUTTON = "SHOP_PHONE_BUTTON"
-  const val SHOP_EMAIL_TEXT = "SHOP_EMAIL_TEXT"
-  const val SHOP_EMAIL_BUTTON = "SHOP_EMAIL_BUTTON"
-  const val SHOP_ADDRESS_TEXT = "SHOP_ADDRESS_TEXT"
-  const val SHOP_ADDRESS_BUTTON = "SHOP_ADDRESS_BUTTON"
-  const val SHOP_WEBSITE_TEXT = "SHOP_WEBSITE_TEXT"
-  const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
+
   const val SHOP_EDIT_BUTTON = "EDIT_SHOP_BUTTON"
 
   // Game list tags
@@ -173,7 +159,14 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
 
         /* TODO: Add here shop images composable (pager) when done */
 
-        item { ContactSection(shop) }
+        item {
+          ContactSection(
+              name = shop.name,
+              address = shop.address.name,
+              email = shop.email,
+              phone = shop.email,
+              website = shop.website)
+        }
 
         item { AvailabilitySection(shop.openingHours) }
 
@@ -184,100 +177,6 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
               clickableGames = true,
               title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
           )
-        }
-      }
-}
-
-// -------------------- CONTACT SECTION --------------------
-
-/**
- * Composable that displays the contact information section of the shop.
- *
- * @param shop The shop whose contact information is displayed.
- */
-@Composable
-fun ContactSection(shop: Shop) {
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = shop.name,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        // Display address contact row
-        ContactRow(
-            Icons.Default.Place,
-            shop.address.name,
-            ShopTestTags.SHOP_ADDRESS_TEXT,
-            ShopTestTags.SHOP_ADDRESS_BUTTON)
-        // Display email contact row
-        ContactRow(
-            Icons.Default.Email,
-            shop.email,
-            ShopTestTags.SHOP_EMAIL_TEXT,
-            ShopTestTags.SHOP_EMAIL_BUTTON)
-
-        // Display phone contact row
-        if (shop.phone.isNotEmpty()) {
-          ContactRow(
-              Icons.Default.Phone,
-              shop.phone,
-              ShopTestTags.SHOP_PHONE_TEXT,
-              ShopTestTags.SHOP_PHONE_BUTTON)
-        }
-        // Display website contact row
-        if (shop.website.isNotEmpty()) {
-          ContactRow(
-              Icons.Default.Language,
-              shop.website,
-              ShopTestTags.SHOP_WEBSITE_TEXT,
-              ShopTestTags.SHOP_WEBSITE_BUTTON)
-        }
-      }
-}
-
-/**
- * Composable that displays a single row of contact information with an icon, text, and a button to
- * copy the text to the clipboard.
- *
- * @param icon The icon to display for the contact method.
- * @param text The contact text to display and copy.
- * @param textTag The test tag for the text element.
- * @param buttonTag The test tag for the copy button.
- */
-@Composable
-fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
-  val clipboardManager: ClipboardManager = LocalClipboardManager.current
-  val context = LocalContext.current
-
-  // Split text into "first line" and "rest"
-  val lines = text.split('\n')
-  val firstLine = lines.firstOrNull().orEmpty()
-  val restLines = lines.drop(n = 1)
-
-  Row(
-      verticalAlignment = Alignment.Top,
-      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
-        IconButton(
-            onClick = {
-              clipboardManager.setText(AnnotatedString(text))
-              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-            },
-            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
-              Icon(icon, contentDescription = null, tint = AppColors.neutral)
-            }
-
-        Column(modifier = Modifier.weight(1f).testTag(textTag)) {
-          // First line on the same row as the icon
-          Text(text = firstLine, style = LocalTextStyle.current)
-
-          // Remaining lines displayed below
-          if (restLines.isNotEmpty()) {
-            Text(text = restLines.joinToString("\n"), style = LocalTextStyle.current)
-          }
         }
       }
 }

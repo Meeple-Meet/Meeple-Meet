@@ -4,9 +4,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.text.AnnotatedString
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -64,6 +66,18 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
   private fun dayTag(day: Int) = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX + day
 
   private fun spaceRow(i: Int) = SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + i
+
+  private class FakeClipboardManager : ClipboardManager {
+    var copiedText: String? = null
+
+    override fun getText(): AnnotatedString? {
+      return copiedText?.let { AnnotatedString(it) }
+    }
+
+    override fun setText(annotatedString: AnnotatedString) {
+      copiedText = annotatedString.text
+    }
+  }
 
   /* -------------------------------- */
 
