@@ -226,6 +226,9 @@ object ShopUiDefaults {
 
     // Availability
     const val ALERTDIALOG_CONFIRM_BUTTON_TEXT = "Close"
+    const val TODAY_TEXT = "Today:"
+    const val AVAILABILITY_SECTION_TEXT = "Availability"
+    const val DAY_TEXT = "Day"
   }
 
   object RangesMagicNumbers {
@@ -1345,7 +1348,7 @@ fun AvailabilitySection(
         // Header
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
           Text(
-              text = "Availability",
+              text = ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT,
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.SemiBold)
 
@@ -1370,7 +1373,7 @@ fun AvailabilitySection(
 
               // Left label
               Text(
-                  text = "Today:",
+                  text = ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT,
                   style = MaterialTheme.typography.bodyMedium,
               )
 
@@ -1435,7 +1438,9 @@ private fun WeeklyAvailabilityDialog(
                 .forEach { entry ->
                   val day = entry.day
                   val isToday = day == currentDayIndex
-                  val dayName = ShopFormUi.dayNames.getOrNull(day) ?: "Day ${day + 1}"
+                  val dayName =
+                      ShopFormUi.dayNames.getOrNull(day)
+                          ?: "${ShopUiDefaults.StringsMagicNumbers.DAY_TEXT} ${day + 1}"
                   val lines = humanize(entry.hours).split("\n")
 
                   Row(
