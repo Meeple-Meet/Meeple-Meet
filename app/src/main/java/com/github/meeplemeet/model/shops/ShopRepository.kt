@@ -174,7 +174,7 @@ class ShopRepository(
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
       gameCollection: List<Pair<Game, Int>>? = null,
-      photoCollectionUrl: List<String>? = emptyList()
+      photoCollectionUrl: List<String>? = null
   ) {
     val updates = mutableMapOf<String, Any>()
 
