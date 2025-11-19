@@ -28,6 +28,7 @@ import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags as Tags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,12 +40,22 @@ import org.junit.runner.RunWith
 class SpaceRenterComponentsTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
+  @get:Rule val ck = Checkpoint.Rule()
+  private val contentState = mutableStateOf<@Composable () -> Unit>({})
+  private var renderToken by mutableStateOf(0)
+
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* ---------- Helpers ---------- */
   private fun ComposeTestRule.onTag(tag: String) = onNodeWithTag(tag, useUnmergedTree = true)
 
-  private fun setContentThemed(content: @Composable () -> Unit) =
-      compose.setContent { AppTheme(themeMode = ThemeMode.LIGHT) { content() } }
+  private fun setContentThemed(content: @Composable () -> Unit) {
+    compose.runOnIdle {
+      contentState.value = content
+      renderToken++
+    }
+    compose.waitForIdle()
+  }
 
   private fun spaceRowTag(index: Int) = Tags.SPACE_ROW_PREFIX + index
 
@@ -68,6 +79,24 @@ class SpaceRenterComponentsTest : FirestoreTests() {
    * 1) SpacesHeaderRow
    * ======================================================================= */
   @Test
+  fun all_tests() {
+    compose.setContent {
+      val token = renderToken
+      AppTheme(themeMode = ThemeMode.LIGHT) { key(token) { contentState.value() } }
+    }
+
+    checkpoint("spacesHeaderRow_renders_titles") { spacesHeaderRow_renders_titles() }
+    checkpoint("spaceRow_editMode_toggles_delete_and_numeric_filters_apply") {
+      spaceRow_editMode_toggles_delete_and_numeric_filters_apply()
+    }
+    checkpoint("spacesList_empty_then_populated_callbacks_fire") {
+      spacesList_empty_then_populated_callbacks_fire()
+    }
+    checkpoint("requiredInfoSection_fields_and_email_validation_and_location_bar") {
+      requiredInfoSection_fields_and_email_validation_and_location_bar()
+    }
+  }
+
   fun spacesHeaderRow_renders_titles() {
     val places = "Places"
     val price = "Price"
@@ -82,7 +111,6 @@ class SpaceRenterComponentsTest : FirestoreTests() {
   /* =======================================================================
    * 2) SpaceRow
    * ======================================================================= */
-  @Test
   fun spaceRow_editMode_toggles_delete_and_numeric_filters_apply() {
     var updated: Space? = null
     var deleted = 0
@@ -127,7 +155,6 @@ class SpaceRenterComponentsTest : FirestoreTests() {
   /* =======================================================================
    * 3) SpacesList
    * ======================================================================= */
-  @Test
   fun spacesList_empty_then_populated_callbacks_fire() {
     val changes = mutableListOf<Pair<Int, Space>>()
     val deletions = mutableListOf<Int>()
@@ -173,7 +200,6 @@ class SpaceRenterComponentsTest : FirestoreTests() {
   /* =======================================================================
    * 4) SpaceRenterRequiredInfoSection
    * ======================================================================= */
-  @Test
   fun requiredInfoSection_fields_and_email_validation_and_location_bar() {
     val owner = previewOwner()
     val vm = SpaceRenterSearchViewModel()
