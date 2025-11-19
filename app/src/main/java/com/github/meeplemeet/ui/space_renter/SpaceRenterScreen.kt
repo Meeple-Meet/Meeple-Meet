@@ -39,6 +39,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
+import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.shops.AvailabilitySection
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -59,6 +60,9 @@ object SpaceRenterTestTags {
 
   // Availability section tags
   const val SPACE_RENTER_DAY_PREFIX = "SPACE_RENTER_DAY_"
+  const val RESERVE_NO_SELECTION = "RESERVATION_NO_SELECTION"
+  const val RESERVE_WITH_SELECTION = "RESERVATION_WITH_SELECTION"
+  const val AVAILABILITY_HEADER = "AVAILABILITY_HEADER"
 }
 
 object SpaceRenterUi {
@@ -219,32 +223,40 @@ fun ContactSection(spaceRenter: SpaceRenter) {
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
         Text(
-            spaceRenter.name,
+            text = spaceRenter.name,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold)
 
         // Display address contact row
         ContactRow(
-            Icons.Default.Place,
-            spaceRenter.address.name,
-            SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT)
+            icon = Icons.Default.Place,
+            text = spaceRenter.address.name,
+            testTag = SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT,
+            buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
 
         // Display phone contact row if provided
         if (spaceRenter.phone.isNotBlank()) {
           ContactRow(
-              Icons.Default.Phone, spaceRenter.phone, SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT)
+              icon = Icons.Default.Phone,
+              text = spaceRenter.phone,
+              testTag = SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
+              buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
         }
 
         // Display email contact row
         ContactRow(
-            Icons.Default.Email, spaceRenter.email, SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT)
+            icon = Icons.Default.Email,
+            text = spaceRenter.email,
+            testTag = SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT,
+            buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
 
         // Display website contact row if provided
         if (spaceRenter.website.isNotBlank()) {
           ContactRow(
-              Icons.Default.Language,
-              spaceRenter.website,
-              SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT)
+              icon = Icons.Default.Language,
+              text = spaceRenter.website,
+              testTag = SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
+              buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
         }
       }
 }
@@ -262,6 +274,7 @@ fun ContactRow(
     icon: ImageVector,
     text: String,
     testTag: String,
+    buttonTestTag: String,
 ) {
   val clipboard = LocalClipboardManager.current
   val context = LocalContext.current
@@ -280,7 +293,7 @@ fun ContactRow(
             icon,
             contentDescription = null,
             tint = AppColors.neutral,
-            modifier = Modifier.size(Dimensions.IconSize.standard))
+            modifier = Modifier.size(Dimensions.IconSize.standard).testTag(buttonTestTag))
 
         Text(
             text,
@@ -453,7 +466,10 @@ private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: ()
           if (isSelected) BorderStroke(Dimensions.DividerThickness.medium, AppColors.neutral)
           else null) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(Dimensions.Padding.large)
+                    .testTag(SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + index),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
               Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -535,6 +551,7 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
         modifier =
             Modifier.fillMaxWidth()
                 .clickable { showSheet = true }
+                .testTag(SpaceRenterTestTags.AVAILABILITY_HEADER)
                 .padding(vertical = Dimensions.Padding.medium),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
@@ -554,9 +571,7 @@ fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
 
   if (showSheet) {
     ModalBottomSheet(onDismissRequest = { showSheet = false }, containerColor = AppColors.primary) {
-      AvailabilitySection(
-          openingHours = openingHours, dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
-
+      AvailabilitySection(openingHours, SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
       Spacer(Modifier.height(Dimensions.Spacing.xLarge))
     }
   }
@@ -582,6 +597,7 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
         if (selectedSpace == null) {
 
           Surface(
+              modifier = Modifier.testTag(SpaceRenterTestTags.RESERVE_NO_SELECTION),
               shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
               color = AppColors.secondary,
               shadowElevation = Dimensions.Elevation.extraHigh) {
@@ -599,6 +615,7 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
         } else {
 
           Surface(
+              Modifier.testTag(SpaceRenterTestTags.RESERVE_WITH_SELECTION),
               shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
               color = AppColors.secondary,
               shadowElevation = Dimensions.Elevation.high) {
