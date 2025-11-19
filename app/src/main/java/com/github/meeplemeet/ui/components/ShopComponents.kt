@@ -225,7 +225,7 @@ object ShopUiDefaults {
     const val DUPLICATE_GAME = "This game is already in stock."
 
     // Availability
-    const val ALERTDIALOG_CONFIRM_BUTTON_TEXT = "Close"
+    const val BOTTOM_SHEET_CONFIRM_BUTTON_TEXT = "Close"
     const val TODAY_TEXT = "Today:"
     const val AVAILABILITY_SECTION_TEXT = "Availability"
     const val DAY_TEXT = "Day"
@@ -1438,7 +1438,7 @@ private fun WeeklyAvailabilityDialog(
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .heightIn(max = Dimensions.ContainerSize.alertDialogHeight)
+                .heightIn(max = Dimensions.ContainerSize.bottomSheetHeight)
                 .padding(
                     horizontal = Dimensions.Padding.extraLarge,
                     vertical = Dimensions.Spacing.medium)
@@ -1497,7 +1497,7 @@ private fun WeeklyAvailabilityDialog(
                             bottom = Dimensions.Spacing.medium, end = Dimensions.Spacing.medium),
                 horizontalArrangement = Arrangement.End) {
                   TextButton(onClick = onDismiss) {
-                    Text(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+                    Text(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
                   }
                 }
           }

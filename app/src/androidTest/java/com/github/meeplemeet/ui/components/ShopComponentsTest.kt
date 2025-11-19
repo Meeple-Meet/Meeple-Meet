@@ -709,7 +709,7 @@ class ShopComponentsTest {
 
     // Weekly dialog appears – confirm button with "Close" is visible
     compose
-        .onText(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+        .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
         .assertExists()
         .assertIsDisplayed()
 
@@ -721,7 +721,7 @@ class ShopComponentsTest {
 
     // Close the dialog
     compose
-        .onText(ShopUiDefaults.StringsMagicNumbers.ALERTDIALOG_CONFIRM_BUTTON_TEXT)
+        .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
         .performClick()
   }
 

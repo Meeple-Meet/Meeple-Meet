@@ -128,7 +128,7 @@ object Dimensions {
   // List and container dimensions
   object ContainerSize {
     val maxListHeight: Dp = 600.dp
-    val alertDialogHeight: Dp = 400.dp
+    val bottomSheetHeight: Dp = 400.dp
     val bottomSpacer: Dp = 100.dp
     val timeFieldHeight: Dp = 56.dp
     val iconButtonTouch: Dp = 40.dp
