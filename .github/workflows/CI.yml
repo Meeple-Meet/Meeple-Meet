@@ -205,6 +205,14 @@ jobs:
           path: app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
 
+      - name: Upload unit test jacoco exec
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-exec
+          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
+          if-no-files-found: warn
+
   android-tests:
     name: Android Instrumentation Tests
     needs: [format-check, magic-number-check, repeated-strings-check]
@@ -419,6 +427,12 @@ jobs:
           name: unit-test-results
           path: app/build/test-results/testDebugUnitTest/
 
+      - name: Download unit test exec
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-exec
+          path: app/build/outputs/unit_test_code_coverage/debugUnitTest/
+
       - name: Download android test coverage
         uses: actions/download-artifact@v4
         with:
@@ -432,7 +446,22 @@ jobs:
           path: app/build/reports/
 
       - name: Generate coverage report
-        run: ./gradlew jacocoTestReport
+        run: |
+          echo "=== Exec files ==="
+          ls -la app/build/outputs/unit_test_code_coverage/debugUnitTest || true
+          echo "=== Android coverage.ec ==="
+          ls -la app/build/outputs/code_coverage/debugAndroidTest/connected/**/coverage.ec || true
+          echo "=== Jacoco report xml preview ==="
+          head -n 20 app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml || true
+          ./gradlew jacocoTestReport
+      
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport
+          if-no-files-found: error
 
       - name: Upload report to SonarCloud
         env:
