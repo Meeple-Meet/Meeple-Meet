@@ -62,6 +62,14 @@ class CreateShopViewModel(
         throw IllegalArgumentException("An address is required to create a shop")
 
     return shopRepo.createShop(
-        owner, name, phone, email, website, address, openingHours, gameCollection, photoCollectionUrl)
+        owner,
+        name,
+        phone,
+        email,
+        website,
+        address,
+        openingHours,
+        gameCollection,
+        photoCollectionUrl)
   }
 }

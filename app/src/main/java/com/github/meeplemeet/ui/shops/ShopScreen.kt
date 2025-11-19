@@ -113,7 +113,7 @@ fun ShopScreen(
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
-    val photoCollectionUrl: List<String> = shopState?.photoCollectionUrl ?: emptyList()
+  val photoCollectionUrl: List<String> = shopState?.photoCollectionUrl ?: emptyList()
   // Trigger loading of shop data when shopId changes
   LaunchedEffect(shopId) { viewModel.getShop(shopId) }
 

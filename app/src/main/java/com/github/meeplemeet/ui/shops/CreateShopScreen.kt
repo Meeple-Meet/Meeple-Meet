@@ -99,6 +99,7 @@ private object AddShopUi {
     const val ERROR_CREATE = "Failed to create shop"
   }
 }
+
 const val maxNumberOfImages = 10
 
 /* ================================================================================================
@@ -203,7 +204,7 @@ fun AddShopContent(
   val scope = rememberCoroutineScope()
 
   var shopName by rememberSaveable { mutableStateOf("") }
-    var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
+  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
   var email by rememberSaveable { mutableStateOf("") }
   var addressText by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -298,25 +299,26 @@ fun AddShopContent(
                 PaddingValues(
                     horizontal = AddShopUi.Dimensions.contentHPadding,
                     vertical = AddShopUi.Dimensions.contentVPadding)) {
-            item {
+              item {
                 ImageCarousel(
                     photoCollectionUrl = photoCollectionUrl,
                     maxNumberOfImages = maxNumberOfImages,
                     onAdd = { path, index ->
-                        photoCollectionUrl = if (index < photoCollectionUrl.size &&
-                            photoCollectionUrl[index].isNotEmpty()) {
+                      photoCollectionUrl =
+                          if (index < photoCollectionUrl.size &&
+                              photoCollectionUrl[index].isNotEmpty()) {
                             photoCollectionUrl.mapIndexed { i, old ->
-                                if (i == index) path else old
+                              if (i == index) path else old
                             }
-                        } else {
+                          } else {
                             photoCollectionUrl + path
-                        }
+                          }
                     },
                     onRemove = { url ->
-                        photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                      photoCollectionUrl = photoCollectionUrl.filter { it != url }
                     },
                     editable = true)
-            }
+              }
               item {
                 CollapsibleSection(
                     title = Strings.REQUIREMENTS_SECTION,

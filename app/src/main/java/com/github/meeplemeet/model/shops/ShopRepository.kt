@@ -55,7 +55,17 @@ class ShopRepository(
       photoCollectionUrl: List<String> = emptyList()
   ): Shop {
     val shop =
-        Shop(newUUID(), owner, name, phone, email, website, address, openingHours, gameCollection, photoCollectionUrl)
+        Shop(
+            newUUID(),
+            owner,
+            name,
+            phone,
+            email,
+            website,
+            address,
+            openingHours,
+            gameCollection,
+            photoCollectionUrl)
     collection.document(shop.id).set(toNoUid(shop)).await()
 
     geoPinRepository.upsertGeoPin(ref = shop.id, type = PinType.SHOP, location = address)
@@ -180,7 +190,6 @@ class ShopRepository(
           gameCollection.map { (game, count) -> GameItem(game.uid, count) }
     }
     photoCollectionUrl?.let { updates[ShopNoUid::photoCollectionUrl.name] = photoCollectionUrl }
-
 
     if (updates.isEmpty())
         throw IllegalArgumentException("At least one field must be provided for update")

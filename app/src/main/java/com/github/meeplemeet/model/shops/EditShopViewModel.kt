@@ -89,7 +89,16 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
 
     viewModelScope.launch {
       repository.updateShop(
-          shop.id, owner?.uid, name, phone, email, website, address, openingHours, gameCollection, photoCollectionUrl)
+          shop.id,
+          owner?.uid,
+          name,
+          phone,
+          email,
+          website,
+          address,
+          openingHours,
+          gameCollection,
+          photoCollectionUrl)
     }
   }
 

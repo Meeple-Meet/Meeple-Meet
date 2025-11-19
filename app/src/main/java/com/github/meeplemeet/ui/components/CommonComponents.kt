@@ -51,7 +51,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -62,6 +61,18 @@ import com.github.meeplemeet.ui.discussions.UITestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
+
+object CommonComponentsTestTags {
+  const val IMAGE_CAROUSEL = "ImageCarousel"
+  const val CAROUSEL_ADD_BUTTON = "CarouselAddButton"
+  const val CAROUSEL_IMAGE = "CarouselImage"
+  const val CAROUSEL_REMOVE_BUTTON = "CarouselRemoveButton"
+  const val DOT = "dot"
+  const val GALLERY_DIALOG_ROOT = "GalleryDialogRoot"
+  const val PHOTO_DIALOG_BACK_BUTTON = "PhotoDialogBackButton"
+  const val PHOTO_DIALOG_CAMERA_BUTTON = "PhotoDialogCameraButton"
+  const val PHOTO_DIALOG_GALLERY_BUTTON = "PhotoDialogGalleryButton"
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -127,114 +138,120 @@ fun ImageCarousel(
         }
       }
 
-  Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth().height(260.dp),
-        colors =
-            CardColors(
-                containerColor = AppColors.secondary,
-                contentColor = AppColors.textIcons,
-                disabledContentColor = AppColors.textIconsFade,
-                disabledContainerColor = AppColors.negative),
-        shape = MaterialTheme.shapes.medium) {
-          HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            if (editable &&
-                (photoCollectionUrl.isEmpty() || page == photoCollectionUrl.size) &&
-                canAddMoreImages) {
-              Box(
-                  modifier =
-                      Modifier.fillMaxSize().padding(Dimensions.Padding.giant).clickable {
-                        if (canAddMoreImages) showImageSourceMenu = true
-                      },
-                  contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.AddAPhoto,
-                        contentDescription = "Add Photo",
-                        modifier =
-                            Modifier.size(
-                                Dimensions.IconSize.massive.times(
-                                    Dimensions.Multipliers.quadruple)),
-                        tint = Color.Gray.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
-                  }
-            } else {
-              Box(modifier = Modifier.fillMaxSize()) {
-                AsyncImage(
-                    model = photoCollectionUrl[page],
-                    contentDescription = "Discussion Profile Picture",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().clickable {
-                        showImageSourceMenu = true
-                    })
-                if (page < photoCollectionUrl.size && editable) {
+  Column(
+      modifier = modifier.testTag(CommonComponentsTestTags.IMAGE_CAROUSEL),
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth().height(260.dp),
+            colors =
+                CardColors(
+                    containerColor = AppColors.secondary,
+                    contentColor = AppColors.textIcons,
+                    disabledContentColor = AppColors.textIconsFade,
+                    disabledContainerColor = AppColors.negative),
+            shape = MaterialTheme.shapes.medium) {
+              HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                if (editable &&
+                    (photoCollectionUrl.isEmpty() || page == photoCollectionUrl.size) &&
+                    canAddMoreImages) {
                   Box(
                       modifier =
-                          Modifier.align(Alignment.TopEnd)
-                              .padding(8.dp)
-                              .size(28.dp)
-                              .clip(CircleShape)
-                              .background(Color.Red)
-                              .clickable { onRemove(photoCollectionUrl[page]) },
+                          Modifier.fillMaxSize()
+                              .padding(Dimensions.Padding.giant)
+                              .testTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON)
+                              .clickable { if (canAddMoreImages) showImageSourceMenu = true },
                       contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "-",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            imageVector = Icons.Default.AddAPhoto,
+                            contentDescription = "Add Photo",
+                            modifier =
+                                Modifier.size(
+                                    Dimensions.IconSize.massive.times(
+                                        Dimensions.Multipliers.quadruple)),
+                            tint = Color.Gray.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
                       }
+                } else {
+                  Box(modifier = Modifier.fillMaxSize()) {
+                    AsyncImage(
+                        model = photoCollectionUrl[page],
+                        contentDescription = "Discussion Profile Picture",
+                        contentScale = ContentScale.Fit,
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .clickable { showImageSourceMenu = true }
+                                .testTag(CommonComponentsTestTags.CAROUSEL_IMAGE))
+                    if (page < photoCollectionUrl.size && editable) {
+                      Box(
+                          modifier =
+                              Modifier.align(Alignment.TopEnd)
+                                  .padding(8.dp)
+                                  .size(28.dp)
+                                  .clip(CircleShape)
+                                  .background(Color.Red)
+                                  .clickable { onRemove(photoCollectionUrl[page]) }
+                                  .testTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON),
+                          contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "-",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium)
+                          }
+                    }
+                  }
                 }
               }
             }
-          }
-        }
 
-    Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
-    // --- Dots Indicator
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically) {
-          if ((editable && (photoCollectionUrl.size + 1) > 1) ||
-              (!editable && photoCollectionUrl.size > 1)) {
-            repeat(if (editable) photoCollectionUrl.size + 1 else photoCollectionUrl.size) { index ->
-              val selected = pagerState.currentPage == index
+        // --- Dots Indicator
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+              if ((editable && (photoCollectionUrl.size + 1) > 1) ||
+                  (!editable && photoCollectionUrl.size > 1)) {
+                repeat(if (editable) photoCollectionUrl.size + 1 else photoCollectionUrl.size) {
+                    index ->
+                  val selected = pagerState.currentPage == index
 
-              Box(
-                  modifier =
-                      Modifier.padding(4.dp)
-                          .size(if (selected) 10.dp else 8.dp)
-                          .clip(CircleShape)
-                          .background(
-                              if (selected) MaterialTheme.colorScheme.primary
-                              else MaterialTheme.colorScheme.surfaceVariant))
-            }
-          }
-        }
-    if (showImageSourceMenu) {
-      GalleryDialog(
-          pageNumber = pagerState.currentPage,
-          galleryPictureUrl = photoCollectionUrl,
-          onDismiss = { showImageSourceMenu = false },
-          onTakePhoto = {
-            if (editable) {
-              showImageSourceMenu = false
-              val permission = Manifest.permission.CAMERA
-              if (ContextCompat.checkSelfPermission(context, permission) ==
-                  PackageManager.PERMISSION_GRANTED) {
-                cameraLauncher.launch(null)
-              } else {
-                cameraPermissionLauncher.launch(permission)
+                  Box(
+                      modifier =
+                          Modifier.padding(4.dp)
+                              .size(if (selected) 10.dp else 8.dp)
+                              .clip(CircleShape)
+                              .background(
+                                  if (selected) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.surfaceVariant)
+                              .testTag(CommonComponentsTestTags.DOT))
+                }
               }
             }
-          },
-          onChooseFromGallery = {
-            if (editable) {
-              showImageSourceMenu = false
-              galleryLauncher.launch("image/*")
-            }
-          },
-          editable = editable
-      )
-    }
-  }
+        if (showImageSourceMenu) {
+          GalleryDialog(
+              pageNumber = pagerState.currentPage,
+              galleryPictureUrl = photoCollectionUrl,
+              onDismiss = { showImageSourceMenu = false },
+              onTakePhoto = {
+                if (editable) {
+                  showImageSourceMenu = false
+                  val permission = Manifest.permission.CAMERA
+                  if (ContextCompat.checkSelfPermission(context, permission) ==
+                      PackageManager.PERMISSION_GRANTED) {
+                    cameraLauncher.launch(null)
+                  } else {
+                    cameraPermissionLauncher.launch(permission)
+                  }
+                }
+              },
+              onChooseFromGallery = {
+                if (editable) {
+                  showImageSourceMenu = false
+                  galleryLauncher.launch("image/*")
+                }
+              },
+              editable = editable)
+        }
+      }
 }
 
 @Composable
@@ -261,12 +278,14 @@ fun PhotoDialogTopBar(
                         vertical = Dimensions.Spacing.medium),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
-              IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White)
-              }
+              IconButton(
+                  onClick = onDismiss,
+                  modifier = Modifier.testTag(CommonComponentsTestTags.PHOTO_DIALOG_BACK_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White)
+                  }
 
               Text(
                   text = text,
@@ -354,41 +373,46 @@ fun GalleryDialog(
       onDismissRequest = onDismiss,
       properties =
           DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-          // Image or default icon
-          if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
-            AsyncImage(
-                model = galleryPictureUrl[pageNumber],
-                contentDescription = "Discussion Profile Picture",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().clickable { onDismiss() })
-          } else {
-            Box(
-                modifier = Modifier.fillMaxSize().clickable { onDismiss() },
-                contentAlignment = Alignment.Center) {
-                  Icon(
-                      imageVector = Icons.Default.AddAPhoto,
-                      contentDescription = "Default Add Photo Icon",
-                      modifier =
-                          Modifier.size(
-                              Dimensions.IconSize.massive.times(Dimensions.Multipliers.quadruple)),
-                      tint = Color.White.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
-                }
-          }
-
-          PhotoDialogTopBar(
-              Modifier.align(Alignment.TopCenter),
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(Color.Black)
+                    .testTag(CommonComponentsTestTags.GALLERY_DIALOG_ROOT)) {
+              // Image or default icon
               if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
-                "Image ${pageNumber + 1} of ${galleryPictureUrl.size}"
+                AsyncImage(
+                    model = galleryPictureUrl[pageNumber],
+                    contentDescription = "Discussion Profile Picture",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().clickable { onDismiss() })
               } else {
-                "Add Photo"
-              },
-              onDismiss)
+                Box(
+                    modifier = Modifier.fillMaxSize().clickable { onDismiss() },
+                    contentAlignment = Alignment.Center) {
+                      Icon(
+                          imageVector = Icons.Default.AddAPhoto,
+                          contentDescription = "Default Add Photo Icon",
+                          modifier =
+                              Modifier.size(
+                                  Dimensions.IconSize.massive.times(
+                                      Dimensions.Multipliers.quadruple)),
+                          tint = Color.White.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
+                    }
+              }
 
-          if (editable) {
-            PhotoDialogBottomBar(
-                Modifier.align(Alignment.BottomCenter), onTakePhoto, onChooseFromGallery)
-          }
-        }
+              PhotoDialogTopBar(
+                  Modifier.align(Alignment.TopCenter),
+                  if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
+                    "Image ${pageNumber + 1} of ${galleryPictureUrl.size}"
+                  } else {
+                    "Add Photo"
+                  },
+                  onDismiss)
+
+              if (editable) {
+                PhotoDialogBottomBar(
+                    Modifier.align(Alignment.BottomCenter), onTakePhoto, onChooseFromGallery)
+              }
+            }
       }
 }

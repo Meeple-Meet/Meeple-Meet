@@ -50,8 +50,8 @@ data class Shop(
  * @property address The physical location of the shop.
  * @property openingHours The shop's opening hours as a list of time pairs (start time, end time).
  * @property gameCollection The collection of games available at the shop with their quantities.
- * @property photoCollectionUrl The collection of photo URLs for the shop.
- *   Each pair contains a game UID and its count.
+ * @property photoCollectionUrl The collection of photo URLs for the shop. Each pair contains a game
+ *   UID and its count.
  */
 @Serializable
 data class ShopNoUid(

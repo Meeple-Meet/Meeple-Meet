@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.space_renter
 
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
