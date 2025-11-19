@@ -8,36 +8,52 @@ package com.github.meeplemeet.ui.components
 import android.app.TimePickerDialog
 import android.content.Context
 import android.text.format.DateFormat
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -50,6 +66,7 @@ import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Locale
 
 /* =============================================================================
@@ -123,7 +140,6 @@ object ShopComponentsTestTags {
   // Search field internals
   const val GAME_SEARCH_FIELD = "shop_game_search_field"
   const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
-  const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
   const val GAME_SEARCH_MENU = "shop_game_search_menu"
   const val GAME_SEARCH_ITEM = "shop_game_search_item"
 
@@ -148,6 +164,19 @@ object ShopComponentsTestTags {
   const val SHOP_GAME_MINUS_BUTTON = "shop_game_minus_button"
   const val SHOP_GAME_QTY_INPUT = "shop_game_qty_input"
   const val SHOP_GAME_PLUS_BUTTON = "shop_game_plus_button"
+
+  // Availability section tags
+  const val SHOP_DAY_PREFIX = "SHOP_DAY_"
+
+  // Contact section tags
+  const val SHOP_PHONE_TEXT = "SHOP_PHONE_TEXT"
+  const val SHOP_PHONE_BUTTON = "SHOP_PHONE_BUTTON"
+  const val SHOP_EMAIL_TEXT = "SHOP_EMAIL_TEXT"
+  const val SHOP_EMAIL_BUTTON = "SHOP_EMAIL_BUTTON"
+  const val SHOP_ADDRESS_TEXT = "SHOP_ADDRESS_TEXT"
+  const val SHOP_ADDRESS_BUTTON = "SHOP_ADDRESS_BUTTON"
+  const val SHOP_WEBSITE_TEXT = "SHOP_WEBSITE_TEXT"
+  const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
 }
 
 /* =============================================================================
@@ -213,6 +242,12 @@ object ShopUiDefaults {
     // Game stock dialog
     const val GAME_DIALOG_TITLE = "Add game in stock"
     const val DUPLICATE_GAME = "This game is already in stock."
+
+    // Availability
+    const val BOTTOM_SHEET_CONFIRM_BUTTON_TEXT = "Close"
+    const val TODAY_TEXT = "Today:"
+    const val AVAILABILITY_SECTION_TEXT = "Availability"
+    const val DAY_TEXT = "Day"
   }
 
   object RangesMagicNumbers {
@@ -376,6 +411,16 @@ private fun initialIntervals(
                         ShopUiDefaults.TimeMagicNumbers.defaultEnd)
               }
     }
+
+/**
+ * Splits the time slots in several lines of text
+ *
+ * @param slots The list of time slots
+ * @return A list of time slots splitted in several lines of text
+ */
+private fun splittedHumanize(slots: List<TimeSlot>): List<String> {
+  return humanize(slots).split("\n")
+}
 
 /* =============================================================================
  * Components
@@ -1110,13 +1155,13 @@ fun GameListSection(
 ) {
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge)) {
+      modifier = modifier.fillMaxWidth()) {
         if (title != null) {
           Text(
               title,
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.SemiBold,
-              textDecoration = TextDecoration.Underline)
+          )
         }
 
         LazyColumn(
@@ -1298,5 +1343,273 @@ fun EditableGameItem(
                     Icon(Icons.Filled.Delete, contentDescription = "Delete game")
                   }
             }
+      }
+}
+
+// -------------------- AVAILABILITY SECTION --------------------
+
+/**
+ * A composable function that displays the availability section for a shop, showing today's opening
+ * hours and providing access to the full weekly schedule
+ *
+ * @param openingHours The list of [OpeningHours] entries for the shop, using 0-based day indices
+ * @param dayTagPrefix The prefix used for test tags associated with day rows and navigation
+ */
+@Composable
+fun AvailabilitySection(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX
+) {
+  val todayCalendarValue = Calendar.getInstance()[Calendar.DAY_OF_WEEK]
+  val todayIndex = todayCalendarValue - 1
+
+  val todayEntry = openingHours.firstOrNull { it.day == todayIndex }
+  val todayLines: List<String> =
+      todayEntry?.let { splittedHumanize(it.hours) }
+          ?: listOf(ShopUiDefaults.StringsMagicNumbers.CLOSED)
+
+  var showFullWeek by remember { mutableStateOf(false) }
+
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
+      modifier = Modifier.fillMaxWidth()) {
+
+        // Header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clickable { showFullWeek = true }
+                    .testTag("${dayTagPrefix}NAVIGATE")) {
+              Text(
+                  text = ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT,
+                  style = MaterialTheme.typography.titleLarge,
+                  fontWeight = FontWeight.SemiBold)
+
+              Spacer(modifier = Modifier.weight(1f))
+
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                  contentDescription = "Show full week opening hours")
+            }
+
+        // Today line(s)
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = Dimensions.Spacing.small)
+                    .testTag("${dayTagPrefix}${todayIndex}_HOURS"),
+            verticalAlignment = Alignment.Top) {
+
+              // Left label
+              Text(
+                  text = ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT,
+                  style = MaterialTheme.typography.bodyMedium,
+              )
+
+              Spacer(Modifier.width(Dimensions.Spacing.medium))
+
+              // Opening hours, aligned with the first one
+              Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                todayLines.forEach { line ->
+                  Text(
+                      text = line,
+                      style = MaterialTheme.typography.bodyMedium,
+                  )
+                }
+              }
+            }
+      }
+
+  if (showFullWeek) {
+    WeeklyAvailabilityDialog(
+        openingHours = openingHours,
+        currentDayIndex = todayIndex,
+        dayTagPrefix = dayTagPrefix,
+        onDismiss = { showFullWeek = false })
+  }
+}
+
+/**
+ * A composable function that displays a bottom sheet with the full weekly opening hours for a shop
+ *
+ * @param openingHours The list of [OpeningHours] entries to display
+ * @param currentDayIndex The index of the current day (0 = Sunday, 1 = Monday, etc.)
+ * @param dayTagPrefix The prefix used for test tags associated with each day row in the dialog
+ * @param onDismiss A callback function that is invoked when the dialog is dismissed
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WeeklyAvailabilityDialog(
+    openingHours: List<OpeningHours>,
+    currentDayIndex: Int,
+    dayTagPrefix: String,
+    onDismiss: () -> Unit
+) {
+  val scrollState = rememberScrollState()
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+  ModalBottomSheet(
+      onDismissRequest = onDismiss,
+      sheetState = sheetState,
+      containerColor = MaterialTheme.colorScheme.background,
+  ) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(max = Dimensions.ContainerSize.bottomSheetHeight)
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.medium)
+                .verticalScroll(scrollState)) {
+          Column(modifier = Modifier.fillMaxWidth()) {
+            openingHours
+                .sortedBy { it.day }
+                .forEach { entry ->
+                  val day = entry.day
+                  val isToday = day == currentDayIndex
+                  val dayName =
+                      ShopFormUi.dayNames.getOrNull(day)
+                          ?: "${ShopUiDefaults.StringsMagicNumbers.DAY_TEXT} ${day + 1}"
+                  val lines = splittedHumanize(entry.hours)
+
+                  Row(
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(vertical = Dimensions.Spacing.small)
+                              .testTag("${dayTagPrefix}${day}"),
+                      verticalAlignment = Alignment.Top) {
+
+                        // Left: day name
+                        Text(
+                            text = dayName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            fontStyle = FontStyle.Normal,
+                            modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+                        // Right: all time slots
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement =
+                                Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                              lines.forEach { line ->
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight =
+                                        if (isToday) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontStyle = FontStyle.Normal,
+                                    textAlign = TextAlign.End)
+                              }
+                            }
+                      }
+                }
+
+            Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            bottom = Dimensions.Spacing.medium, end = Dimensions.Spacing.medium),
+                horizontalArrangement = Arrangement.End) {
+                  TextButton(onClick = onDismiss) {
+                    Text(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
+                  }
+                }
+          }
+        }
+  }
+}
+
+// -------------------- CONTACT SECTION --------------------
+
+/**
+ * Composable that displays the contact information section
+ *
+ * @param name name to display
+ * @param address location text
+ * @param email email to display
+ * @param phone phone number to display
+ * @param website website link to display
+ */
+@Composable
+fun ContactSection(name: String, address: String, email: String, phone: String, website: String) {
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        // Display address contact row
+        ContactRow(
+            Icons.Default.Place,
+            address,
+            ShopComponentsTestTags.SHOP_ADDRESS_TEXT,
+            ShopComponentsTestTags.SHOP_ADDRESS_BUTTON)
+        // Display email contact row
+        ContactRow(
+            Icons.Default.Email,
+            email,
+            ShopComponentsTestTags.SHOP_EMAIL_TEXT,
+            ShopComponentsTestTags.SHOP_EMAIL_BUTTON)
+
+        // Display phone contact row
+        if (phone.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Phone,
+              phone,
+              ShopComponentsTestTags.SHOP_PHONE_TEXT,
+              ShopComponentsTestTags.SHOP_PHONE_BUTTON)
+        }
+        // Display website contact row
+        if (website.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Language,
+              website,
+              ShopComponentsTestTags.SHOP_WEBSITE_TEXT,
+              ShopComponentsTestTags.SHOP_WEBSITE_BUTTON)
+        }
+      }
+}
+
+/**
+ * Composable that displays a single row of contact information with an icon, text, and a button to
+ * copy the text to the clipboard.
+ *
+ * @param icon The icon to display for the contact method.
+ * @param text The contact text to display and copy.
+ * @param textTag The test tag for the text element.
+ * @param buttonTag The test tag for the copy button.
+ */
+@Composable
+fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
+  val clipboardManager: ClipboardManager = LocalClipboardManager.current
+  val context = LocalContext.current
+
+  Row(
+      verticalAlignment = Alignment.Top,
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
+        IconButton(
+            onClick = {
+              clipboardManager.setText(AnnotatedString(text))
+              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
+              Icon(icon, contentDescription = null, tint = AppColors.neutral)
+            }
+
+        Text(
+            text = text,
+            style = LocalTextStyle.current,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).testTag(textTag))
       }
 }

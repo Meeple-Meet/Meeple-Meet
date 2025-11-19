@@ -3,31 +3,60 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
-import io.mockk.*
+import com.github.meeplemeet.utils.FirestoreTests
+import io.mockk.every
+import io.mockk.mockk
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class ShopComponentsTest {
+class ShopComponentsTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
-  private val contentState = mutableStateOf<@Composable () -> Unit>({})
-  private var renderToken by mutableStateOf(0)
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
@@ -38,13 +67,8 @@ class ShopComponentsTest {
 
   private fun ComposeTestRule.onText(text: String) = onNodeWithText(text, useUnmergedTree = true)
 
-  private fun setContentThemed(content: @Composable () -> Unit) {
-    compose.runOnIdle {
-      contentState.value = content
-      renderToken++
-    }
-    compose.waitForIdle()
-  }
+  private fun setContentThemed(content: @Composable () -> Unit) =
+      compose.setContent { AppTheme(themeMode = ThemeMode.LIGHT) { content() } }
 
   private fun LocalTime.fmt12(): String = DateTimeFormatter.ofPattern("h:mm a").format(this)
 
@@ -58,29 +82,18 @@ class ShopComponentsTest {
     val game3 = Game("3", "Azul", "", "", 2, 4, null, 30, null, emptyList())
   }
 
-  /** 1) Lightweight stateless composables */
-  @Test
-  fun all_tests() {
-    compose.setContent {
-      val token = renderToken
-      AppTheme(themeMode = ThemeMode.LIGHT) { key(token) { contentState.value() } }
-    }
+  private class FakeClipboardManager : ClipboardManager {
+    var copiedText: AnnotatedString? = null
 
-    checkpoint("basicComponents_render_and_interact_fast") {
-      basicComponents_render_and_interact_fast()
+    override fun getText(): AnnotatedString? = copiedText
+
+    override fun setText(annotatedString: AnnotatedString) {
+      copiedText = annotatedString
     }
-    checkpoint("openingHoursDialog_coreFlows_singleComposition") {
-      openingHoursDialog_coreFlows_singleComposition()
-    }
-    checkpoint("actionBar_enabled_then_disabled_singleComposition") {
-      actionBar_enabled_then_disabled_singleComposition()
-    }
-    checkpoint("gameItem_renders_badge_click_and_delete") {
-      gameItem_renders_badge_click_and_delete()
-    }
-    checkpoint("gameListSection_combined_behaviors") { gameListSection_combined_behaviors() }
   }
 
+  /** 1) Lightweight stateless composables */
+  @Test
   fun basicComponents_render_and_interact_fast() {
     var clicks = 0
     var edits = 0
@@ -138,57 +151,64 @@ class ShopComponentsTest {
       }
     }
 
-    // Stage 0: SectionHeader
-    val title = ShopUiDefaults.StringsMagicNumbers.REQUIRED_INFO
-    compose.onTag(ShopComponentsTestTags.sectionHeader(title)).assertExists().assertIsDisplayed()
-    compose.onTag(ShopComponentsTestTags.SECTION_HEADER_LABEL).assert(hasText(title))
-    compose.onTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER).assertExists()
+    checkpoint("SectionHeader renders label and divider") {
+      val title = ShopUiDefaults.StringsMagicNumbers.REQUIRED_INFO
+      compose.onTag(ShopComponentsTestTags.sectionHeader(title)).assertExists().assertIsDisplayed()
+      compose.onTag(ShopComponentsTestTags.SECTION_HEADER_LABEL).assert(hasText(title))
+      compose.onTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER).assertExists()
+    }
 
-    // Stage 1: LabeledField
-    compose.runOnUiThread { stage.intValue = 1 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.LABELED_FIELD_INPUT).performTextInput("Meeple Market")
-    compose.onTag(ShopComponentsTestTags.LABELED_FIELD_INPUT).assertTextEquals("Meeple Market")
+    checkpoint("LabeledField accepts and displays text") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.LABELED_FIELD_INPUT).performTextInput("Meeple Market")
+      compose.onTag(ShopComponentsTestTags.LABELED_FIELD_INPUT).assertTextEquals("Meeple Market")
+    }
 
-    // Stage 2: TimeField
-    compose.runOnUiThread { stage.intValue = 2 }
-    compose.waitForIdle()
-    compose
-        .onTag(ShopComponentsTestTags.TIME_FIELD_LABEL)
-        .assert(hasText(ShopUiDefaults.StringsMagicNumbers.OPEN_TIME))
-    compose.onTag(ShopComponentsTestTags.TIME_FIELD_VALUE).assertTextEquals(Fx.t07_30.fmt12())
-    compose.onTag(ShopComponentsTestTags.TIME_FIELD_CARD).performClick()
-    assert(clicks == 1)
+    checkpoint("TimeField shows label, value and reacts to clicks") {
+      compose.runOnUiThread { stage.intValue = 2 }
+      compose.waitForIdle()
+      compose
+          .onTag(ShopComponentsTestTags.TIME_FIELD_LABEL)
+          .assert(hasText(ShopUiDefaults.StringsMagicNumbers.OPEN_TIME))
+      compose.onTag(ShopComponentsTestTags.TIME_FIELD_VALUE).assertTextEquals(Fx.t07_30.fmt12())
+      compose.onTag(ShopComponentsTestTags.TIME_FIELD_CARD).performClick()
+      assert(clicks == 1)
+    }
 
-    // Stage 3: DayRow
-    compose.runOnUiThread { stage.intValue = 3 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.dayRow("Tuesday")).performClick()
-    compose.onTag(ShopComponentsTestTags.DAY_ROW_EDIT).performClick()
-    assert(edits == 2)
+    checkpoint("DayRow forwards click and edit") {
+      compose.runOnUiThread { stage.intValue = 3 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.dayRow("Tuesday")).performClick()
+      compose.onTag(ShopComponentsTestTags.DAY_ROW_EDIT).performClick()
+      assert(edits == 2)
+    }
 
-    // Stage 4: HourRow
-    compose.runOnUiThread { stage.intValue = 4 }
-    compose.waitForIdle()
-    val values = compose.onTags(ShopComponentsTestTags.TIME_FIELD_VALUE)
-    values.assertCountEquals(2)
-    values[0].assertTextEquals(Fx.t07_30.fmt12())
-    values[1].assertTextEquals(Fx.t12_00.fmt12())
-    compose.onTag(ShopComponentsTestTags.HOUR_ROW_OPEN_FIELD).performClick()
-    compose.onTag(ShopComponentsTestTags.HOUR_ROW_CLOSE_FIELD).performClick()
-    compose.onTag(ShopComponentsTestTags.HOUR_ROW_REMOVE).performClick()
-    assert(clicks == 4)
+    checkpoint("HourRow shows both times and buttons trigger callbacks") {
+      compose.runOnUiThread { stage.intValue = 4 }
+      compose.waitForIdle()
+      val values = compose.onTags(ShopComponentsTestTags.TIME_FIELD_VALUE)
+      values.assertCountEquals(2)
+      values[0].assertTextEquals(Fx.t07_30.fmt12())
+      values[1].assertTextEquals(Fx.t12_00.fmt12())
+      compose.onTag(ShopComponentsTestTags.HOUR_ROW_OPEN_FIELD).performClick()
+      compose.onTag(ShopComponentsTestTags.HOUR_ROW_CLOSE_FIELD).performClick()
+      compose.onTag(ShopComponentsTestTags.HOUR_ROW_REMOVE).performClick()
+      assert(clicks == 4)
+    }
 
-    // Stage 5: DaysSelector
-    compose.runOnUiThread { stage.intValue = 5 }
-    compose.waitForIdle()
-    (0..6).forEach { idx -> compose.onTag(ShopComponentsTestTags.dayChip(idx)).assertExists() }
-    compose.onTag(ShopComponentsTestTags.dayChip(0)).performClick()
-    compose.onTag(ShopComponentsTestTags.dayChip(1)).performClick()
-    compose.onTag(ShopComponentsTestTags.dayChip(6)).performClick()
+    checkpoint("DaysSelector renders 7 chips and toggles selection") {
+      compose.runOnUiThread { stage.intValue = 5 }
+      compose.waitForIdle()
+      (0..6).forEach { idx -> compose.onTag(ShopComponentsTestTags.dayChip(idx)).assertExists() }
+      compose.onTag(ShopComponentsTestTags.dayChip(0)).performClick()
+      compose.onTag(ShopComponentsTestTags.dayChip(1)).performClick()
+      compose.onTag(ShopComponentsTestTags.dayChip(6)).performClick()
+    }
   }
 
   /** 2) OpeningHoursDialog */
+  @Test
   fun openingHoursDialog_coreFlows_singleComposition() {
     var sorted: List<Pair<LocalTime, LocalTime>> = emptyList()
     var saved = false
@@ -257,55 +277,62 @@ class ShopComponentsTest {
       }
     }
 
-    // 0: Open24 – no intervals
-    compose.onTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX).assertIsOn()
-    compose.onTag(ShopComponentsTestTags.DIALOG_INTERVALS).assertDoesNotExist()
-    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+    checkpoint("Open24 preset hides intervals and saves as open24") {
+      compose.onTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX).assertIsOn()
+      compose.onTag(ShopComponentsTestTags.DIALOG_INTERVALS).assertDoesNotExist()
+      compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+    }
 
-    // 1: Closed toggle hides intervals
-    compose.runOnUiThread { stage.intValue = 1 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.DIALOG_INTERVALS).assertExists()
-    compose.onTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX).performClick()
-    compose.onTag(ShopComponentsTestTags.DIALOG_INTERVALS).assertDoesNotExist()
-    compose.onTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX).assertIsOff()
+    checkpoint("Closed toggle hides intervals and turns off open24") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.DIALOG_INTERVALS).assertExists()
+      compose.onTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX).performClick()
+      compose.onTag(ShopComponentsTestTags.DIALOG_INTERVALS).assertDoesNotExist()
+      compose.onTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX).assertIsOff()
+    }
 
-    // 2: Sorting on save
-    compose.runOnUiThread { stage.intValue = 2 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
-    assert(sorted.map { it.first } == listOf(LocalTime.of(7, 30), LocalTime.of(14, 0)))
+    checkpoint("Intervals are sorted on save") {
+      compose.runOnUiThread { stage.intValue = 2 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+      assert(sorted.map { it.first } == listOf(LocalTime.of(7, 30), LocalTime.of(14, 0)))
+    }
 
-    // 3: Overlap -> error; remove -> save OK
-    compose.runOnUiThread { stage.intValue = 3 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.hourRow(0)).assertExists()
-    compose.onTag(ShopComponentsTestTags.DIALOG_ADD_HOURS).performClick()
-    compose.onTag(ShopComponentsTestTags.hourRow(1)).assertExists()
-    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
-    compose.onTag(ShopComponentsTestTags.DIALOG_ERROR).assertExists().assertIsDisplayed()
-    assert(!saved)
-    compose.onTags(ShopComponentsTestTags.HOUR_ROW_REMOVE).assertCountEquals(2)[1].performClick()
-    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
-    assert(saved && savedIntervals.isNotEmpty())
+    checkpoint("Overlapping intervals show error; removing extra interval allows save") {
+      compose.runOnUiThread { stage.intValue = 3 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.hourRow(0)).assertExists()
+      compose.onTag(ShopComponentsTestTags.DIALOG_ADD_HOURS).performClick()
+      compose.onTag(ShopComponentsTestTags.hourRow(1)).assertExists()
+      compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+      compose.onTag(ShopComponentsTestTags.DIALOG_ERROR).assertExists().assertIsDisplayed()
+      assert(!saved)
+      compose.onTags(ShopComponentsTestTags.HOUR_ROW_REMOVE).assertCountEquals(2)[1].performClick()
+      compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+      assert(saved && savedIntervals.isNotEmpty())
+    }
 
-    // 4: Multi-select days
-    compose.runOnUiThread { stage.intValue = 4 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.dayChip(2)).performClick()
-    compose.onTag(ShopComponentsTestTags.dayChip(5)).performClick()
-    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
-    assert(savedDays.containsAll(listOf(1, 2, 5)))
+    checkpoint("Multi-select days propagates all selected indices") {
+      compose.runOnUiThread { stage.intValue = 4 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.dayChip(2)).performClick()
+      compose.onTag(ShopComponentsTestTags.dayChip(5)).performClick()
+      compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+      assert(savedDays.containsAll(listOf(1, 2, 5)))
+    }
 
-    // 5: Provided overlapping hours -> blocked
-    compose.runOnUiThread { stage.intValue = 5 }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
-    compose.onTag(ShopComponentsTestTags.DIALOG_ERROR).assertExists().assertIsDisplayed()
-    assert(!savedFlag)
+    checkpoint("Provided overlapping hours are rejected on save") {
+      compose.runOnUiThread { stage.intValue = 5 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).performClick()
+      compose.onTag(ShopComponentsTestTags.DIALOG_ERROR).assertExists().assertIsDisplayed()
+      assert(!savedFlag)
+    }
   }
 
   /** 3) ActionBar */
+  @Test
   fun actionBar_enabled_then_disabled_singleComposition() {
     var discard = 0
     var create = 0
@@ -317,20 +344,222 @@ class ShopComponentsTest {
       ActionBar(onDiscard = { discard++ }, onPrimary = { create++ }, enabled = isEnabled.value)
     }
 
-    // enabled
-    compose.onTag(ShopComponentsTestTags.ACTION_BAR).assertExists()
-    compose.onTag(ShopComponentsTestTags.ACTION_DISCARD).performClick()
-    compose.onTag(ShopComponentsTestTags.ACTION_CREATE).performClick()
-    assert(discard == 1 && create == 1)
+    checkpoint("Enabled state allows clicks on both buttons") {
+      compose.onTag(ShopComponentsTestTags.ACTION_BAR).assertExists()
+      compose.onTag(ShopComponentsTestTags.ACTION_DISCARD).performClick()
+      compose.onTag(ShopComponentsTestTags.ACTION_CREATE).performClick()
+      assert(discard == 1 && create == 1)
+    }
 
-    // disabled
-    compose.runOnUiThread { enabledState.value = false }
-    compose.waitForIdle()
-    compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsNotEnabled().performClick()
-    assert(create == 1)
+    checkpoint("Disabled state prevents primary button click") {
+      compose.runOnUiThread { enabledState.value = false }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsNotEnabled().performClick()
+      assert(create == 1)
+    }
+  }
+
+  /** 4) GameStockDialog */
+  @Ignore
+  @Test
+  fun gameStockDialog_search_filter_duplicate_quantity_singleComposition() {
+    val owner = Account(uid = "owner1", handle = "owner", name = "Owner", email = "owner@test")
+    val shop = null // Can be null for testing
+    var qty by mutableIntStateOf(2)
+    lateinit var stage: MutableIntState
+
+    // Create mutable state flows for each stage
+    val gameUIStateFlow0 =
+        MutableStateFlow(
+            GameUIState(
+                gameQuery = "",
+                gameSuggestions = listOf(Fx.game1, Fx.game2, Fx.game3),
+                fetchedGame = null,
+                gameSearchError = null))
+    val gameUIStateFlow1 =
+        MutableStateFlow(
+            GameUIState(
+                gameQuery = "",
+                gameSuggestions = listOf(Fx.game1, Fx.game3),
+                fetchedGame = null,
+                gameSearchError = null))
+    val gameUIStateFlow2 =
+        MutableStateFlow(
+            GameUIState(
+                gameQuery = "Az",
+                gameSuggestions = emptyList(),
+                fetchedGame = null,
+                gameSearchError = null))
+    val gameUIStateFlow3 =
+        MutableStateFlow(
+            GameUIState(
+                gameQuery = "Catan",
+                gameSuggestions = emptyList(),
+                fetchedGame = Fx.game1,
+                gameSearchError = null))
+    val gameUIStateFlow4 =
+        MutableStateFlow(
+            GameUIState(
+                gameQuery = "",
+                gameSuggestions = emptyList(),
+                fetchedGame = Fx.game1,
+                gameSearchError = null))
+
+    val mockViewModel0 = mockk<ShopSearchViewModel>(relaxed = true)
+    every { mockViewModel0.gameUIState } returns gameUIStateFlow0
+
+    val mockViewModel1 = mockk<ShopSearchViewModel>(relaxed = true)
+    every { mockViewModel1.gameUIState } returns gameUIStateFlow1
+
+    val mockViewModel2 = mockk<ShopSearchViewModel>(relaxed = true)
+    every { mockViewModel2.gameUIState } returns gameUIStateFlow2
+
+    val mockViewModel3 = mockk<ShopSearchViewModel>(relaxed = true)
+    every { mockViewModel3.gameUIState } returns gameUIStateFlow3
+
+    val mockViewModel4 = mockk<ShopSearchViewModel>(relaxed = true)
+    every { mockViewModel4.gameUIState } returns gameUIStateFlow4
+
+    setContentThemed {
+      val s = remember { mutableIntStateOf(0) }
+      stage = s
+      when (s.intValue) {
+        // 0: Filtering hides existing
+        0 -> {
+          val gameState by gameUIStateFlow0.collectAsState()
+          GameStockDialog(
+              owner = owner,
+              shop = shop,
+              viewModel = mockViewModel0,
+              gameUIState = gameState,
+              onQueryChange = { gameUIStateFlow0.value = gameState.copy(gameQuery = it) },
+              quantity = 2,
+              onQuantityChange = {},
+              existingIds = setOf("2"),
+              onDismiss = {},
+              onSave = {})
+        }
+
+        // 1: Search -> pick -> save enabled
+        1 -> {
+          val gameState by gameUIStateFlow1.collectAsState()
+          GameStockDialog(
+              owner = owner,
+              shop = shop,
+              viewModel = mockViewModel1,
+              gameUIState = gameState,
+              onQueryChange = { gameUIStateFlow1.value = gameState.copy(gameQuery = it) },
+              quantity = 2,
+              onQuantityChange = {},
+              existingIds = emptySet(),
+              onDismiss = {},
+              onSave = {})
+        }
+
+        // 2: Loading then clear
+        2 -> {
+          val gameState by gameUIStateFlow2.collectAsState()
+          GameStockDialog(
+              owner = owner,
+              shop = shop,
+              viewModel = mockViewModel2,
+              gameUIState = gameState,
+              onQueryChange = { gameUIStateFlow2.value = gameState.copy(gameQuery = it) },
+              quantity = 2,
+              onQuantityChange = {},
+              existingIds = emptySet(),
+              onDismiss = {},
+              onSave = {})
+        }
+
+        // 3: Duplicate disables save
+        3 -> {
+          val gameState by gameUIStateFlow3.collectAsState()
+          GameStockDialog(
+              owner = owner,
+              shop = shop,
+              viewModel = mockViewModel3,
+              gameUIState = gameState,
+              onQueryChange = {},
+              quantity = 2,
+              onQuantityChange = {},
+              existingIds = setOf(Fx.game1.uid),
+              onDismiss = {},
+              onSave = {})
+        }
+
+        // 4: Quantity slider & zero disables save
+        4 -> {
+          val gameState by gameUIStateFlow4.collectAsState()
+          GameStockDialog(
+              owner = owner,
+              shop = shop,
+              viewModel = mockViewModel4,
+              gameUIState = gameState,
+              onQueryChange = {},
+              quantity = qty,
+              onQuantityChange = { qty = it },
+              existingIds = emptySet(),
+              onDismiss = {},
+              onSave = {})
+        }
+      }
+    }
+
+    checkpoint("Filtering hides existing game2 but keeps others") {
+      compose.onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD).performClick().performTextInput("a")
+      compose.onTag(ShopComponentsTestTags.GAME_SEARCH_MENU).assertExists().assertIsDisplayed()
+      compose.onText("Carcassonne").assertDoesNotExist() // This is game2, should be filtered
+      compose.onText("Catan").assertExists()
+      compose.onText("Azul").assertExists()
+    }
+
+    checkpoint("Selecting a suggestion enables save") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD).performClick().performTextInput("a")
+      compose.onTag(ShopComponentsTestTags.GAME_SEARCH_MENU).assertExists()
+      compose.onTag("${ShopComponentsTestTags.GAME_SEARCH_ITEM}:0").performClick()
+      compose.runOnUiThread {
+        gameUIStateFlow1.value = gameUIStateFlow1.value.copy(fetchedGame = Fx.game1)
+      }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsEnabled()
+    }
+
+    checkpoint("Clear button clears query text") {
+      compose.runOnUiThread { stage.intValue = 2 }
+      compose.waitForIdle()
+      compose.runOnUiThread {
+        gameUIStateFlow2.value = gameUIStateFlow2.value.copy(gameQuery = "Az")
+      }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.GAME_SEARCH_CLEAR).assertExists().performClick()
+      compose.runOnUiThread { gameUIStateFlow2.value = gameUIStateFlow2.value.copy(gameQuery = "") }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD).assertTextEquals("")
+    }
+
+    checkpoint("Duplicate selection shows helper and disables save") {
+      compose.runOnUiThread { stage.intValue = 3 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.GAME_DIALOG_HELPER).assertExists().assertIsDisplayed()
+      compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsNotEnabled()
+    }
+
+    checkpoint("Quantity zero disables save") {
+      compose.runOnUiThread { stage.intValue = 4 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTextInput("10")
+      compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).assertTextEquals("102")
+      compose.runOnUiThread { qty = 0 }
+      compose.waitForIdle()
+      compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsNotEnabled()
+    }
   }
 
   /** 5) GameItem */
+  @Test
   fun gameItem_renders_badge_click_and_delete() {
     var clicked = 0
     var deleted: Game? = null
@@ -354,27 +583,29 @@ class ShopComponentsTest {
       }
     }
 
-    // First card exists; no "0" badge text drawn anywhere
-    compose
-        .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}")
-        .assertExists()
-        .assertIsDisplayed()
-    compose.onText("0").assertDoesNotExist()
+    checkpoint("GameItem without count does not show 0 badge") {
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}")
+          .assertExists()
+          .assertIsDisplayed()
+      compose.onText("0").assertDoesNotExist()
+    }
 
-    // Second card exists; has "1" badge text and is clickable
-    val g2Tag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}"
-    compose.onTag(g2Tag).assertExists().assertIsDisplayed().performClick()
-    assert(clicked == 1)
+    checkpoint("GameItem with count is clickable and delete works") {
+      val g2Tag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}"
+      compose.onTag(g2Tag).assertExists().assertIsDisplayed().performClick()
+      assert(clicked == 1)
 
-    // Delete bubble present and works
-    compose
-        .onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game2.uid}")
-        .assertExists()
-        .performClick()
-    assert(deleted?.uid == Fx.game2.uid)
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game2.uid}")
+          .assertExists()
+          .performClick()
+      assert(deleted?.uid == Fx.game2.uid)
+    }
   }
 
   /** 6) GameListSection */
+  @Test
   fun gameListSection_combined_behaviors() {
     val removed = mutableListOf<String>()
     val clicks = mutableListOf<String>()
@@ -388,12 +619,12 @@ class ShopComponentsTest {
       val s = remember { mutableIntStateOf(0) }
       stage = s
       when (s.intValue) {
-        // Stage 0: grid (two per row), no delete
+        // Stage 0: list, no delete
         0 ->
             GameListSection(
                 games = input, clickableGames = false, title = "Inventory", hasDeleteButton = false)
 
-        // Stage 1: list (one per row), delete buttons enabled
+        // Stage 1: list, delete buttons enabled
         // PARENT OWNS THE LIST and mutates it when onDelete fires
         1 -> {
           var source by remember { mutableStateOf(input) }
@@ -433,60 +664,286 @@ class ShopComponentsTest {
       }
     }
 
-    // ---------- Stage 0: grid (no delete) ----------
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
-    compose
-        .onAllNodesWithTag(ShopComponentsTestTags.SHOP_GAME_DELETE, useUnmergedTree = true)
-        .assertCountEquals(0)
+    checkpoint("List mode shows all games without delete buttons") {
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
+      compose
+          .onAllNodesWithTag(ShopComponentsTestTags.SHOP_GAME_DELETE, useUnmergedTree = true)
+          .assertCountEquals(0)
+    }
 
-    // ---------- Stage 1: list (with delete) ----------
-    compose.runOnUiThread { stage.intValue = 1 }
-    compose.waitForIdle()
+    checkpoint("List mode with delete bubbles removes on click") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
 
-    // Delete bubbles present
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game2.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game3.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game2.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game3.uid}").assertExists()
 
-    // Delete Fx.game2 -> parent removes -> node disappears + bubbled id recorded
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game2.uid}").performClick()
-    compose.waitForIdle()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}").assertDoesNotExist()
-    assert(removed.contains(Fx.game2.uid))
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${Fx.game2.uid}").performClick()
+      compose.waitForIdle()
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}")
+          .assertDoesNotExist()
+      assert(removed.contains(Fx.game2.uid))
+    }
 
-    // ---------- Stage 2: clickable cards ----------
-    compose.runOnUiThread { stage.intValue = 2 }
-    compose.waitForIdle()
+    checkpoint("Clickable cards propagate clicks in onClick callback") {
+      compose.runOnUiThread { stage.intValue = 2 }
+      compose.waitForIdle()
 
-    compose
-        .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}")
-        .assertExists()
-        .performClick()
-    compose
-        .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}")
-        .assertExists()
-        .performClick()
-    assert(clicks == listOf(Fx.game1.uid, Fx.game3.uid))
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}")
+          .assertExists()
+          .performClick()
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}")
+          .assertExists()
+          .performClick()
+      assert(clicks == listOf(Fx.game1.uid, Fx.game3.uid))
+    }
 
-    // ---------- Stage 3: parent resync ----------
-    compose.runOnUiThread { stage.intValue = 3 }
-    compose.waitForIdle()
+    checkpoint("Parent-driven resync replaces list content") {
+      compose.runOnUiThread { stage.intValue = 3 }
+      compose.waitForIdle()
 
-    // All four present initially
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
+      // All four present initially
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
 
-    // Parent drops two items -> resync
-    compose.runOnUiThread { setter(listOf(Fx.game1 to 1, g4 to 1)) }
-    compose.waitForIdle()
+      // Parent drops two items -> resync
+      compose.runOnUiThread { setter(listOf(Fx.game1 to 1, g4 to 1)) }
+      compose.waitForIdle()
 
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}").assertDoesNotExist()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}").assertDoesNotExist()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
-    compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game2.uid}")
+          .assertDoesNotExist()
+      compose
+          .onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game3.uid}")
+          .assertDoesNotExist()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${Fx.game1.uid}").assertExists()
+      compose.onTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${g4.uid}").assertExists()
+    }
+  }
+
+  /** 7) AvailabilitySection */
+  @Test
+  fun availabilitySection_shopDetails_behaviours_todayAndMissingToday() {
+    // Compute "today" index exactly like AvailabilitySection does
+    val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    val todayIndex = todayCalendarValue - 1
+
+    // Full week of opening hours with same interval
+    val week: List<OpeningHours> =
+        (0..6).map { day ->
+          OpeningHours(
+              day = day,
+              hours = listOf(TimeSlot(open = "09:00", close = "12:00")),
+          )
+        }
+
+    val todayLines = humanize(week.first { it.day == todayIndex }.hours).split("\n")
+
+    // Week WITHOUT an entry for today's index
+    val weekWithoutToday: List<OpeningHours> =
+        (0..6)
+            .filter { it != todayIndex }
+            .map { day ->
+              OpeningHours(
+                  day = day,
+                  hours = listOf(TimeSlot(open = "09:00", close = "12:00")),
+              )
+            }
+
+    lateinit var stage: MutableIntState
+
+    setContentThemed {
+      val s = remember { mutableIntStateOf(0) }
+      stage = s
+      when (s.intValue) {
+        // 0: full week with today
+        0 ->
+            AvailabilitySection(
+                openingHours = week, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+        // 1: week without today's entry
+        1 ->
+            AvailabilitySection(
+                openingHours = weekWithoutToday,
+                dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+      }
+    }
+
+    checkpoint("AvailabilitySection shows today and opens weekly dialog") {
+      compose.runOnUiThread { stage.intValue = 0 }
+      compose.waitForIdle()
+
+      // Header title
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // "Today:" label
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // Today row tag
+      val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
+      compose.onTag(todayTag).assertExists().assertIsDisplayed()
+
+      // All humanized lines for today visible
+      todayLines.forEach { line -> compose.onText(line).assertExists() }
+
+      // Open weekly dialog via header row
+      val navigateTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE"
+      compose.onTag(navigateTag).assertExists().performClick()
+
+      // Bottom sheet confirm button ("Close")
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // All 7 day rows present
+      (0..6).forEach { day ->
+        val dayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}$day"
+        compose.onTag(dayTag).assertExists()
+      }
+
+      // Close the dialog
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
+          .performClick()
+    }
+
+    checkpoint("AvailabilitySection without today's entry shows 'Closed'") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+
+      // "Today:" label still shown
+      compose
+          .onText(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+
+      // Today row tag still exists
+      val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
+      compose.onTag(todayTag).assertExists().assertIsDisplayed()
+
+      // Fallback text should be "Closed"
+      compose.onText(ShopUiDefaults.StringsMagicNumbers.CLOSED).assertExists().assertIsDisplayed()
+    }
+  }
+
+  /** 8) ContactSection & ContactRow */
+  @Test
+  fun contactSection_and_contactRow_behaviour() {
+    val name = "Meeple Meet"
+    val address = "123 Meeple St, Boardgame City"
+    val email = "info@meeplehaven.com"
+    val phone = "123-456-7890"
+    val website = "www.meeplemeet.com"
+
+    val multiLineText = "Line 1\nLine 2"
+    val fakeClipboard = FakeClipboardManager()
+    lateinit var stage: MutableIntState
+
+    setContentThemed {
+      val s = remember { mutableIntStateOf(0) }
+      stage = s
+      when (s.intValue) {
+        // 0: full ContactSection with all fields
+        0 ->
+            ContactSection(
+                name = name,
+                address = address,
+                email = email,
+                phone = phone,
+                website = website,
+            )
+
+        // 1: ContactSection with empty optional phone & website
+        1 ->
+            ContactSection(
+                name = name,
+                address = address,
+                email = email,
+                phone = "",
+                website = "",
+            )
+
+        // 2: raw ContactRow with multiline text + fake clipboard
+        2 ->
+            androidx.compose.runtime.CompositionLocalProvider(
+                LocalClipboardManager provides fakeClipboard) {
+                  ContactRow(
+                      icon = Icons.Filled.Phone,
+                      text = multiLineText,
+                      textTag = ShopComponentsTestTags.SHOP_PHONE_TEXT,
+                      buttonTag = ShopComponentsTestTags.SHOP_PHONE_BUTTON,
+                  )
+                }
+      }
+    }
+
+    checkpoint("ContactSection renders name and all non-empty contact fields") {
+      compose.runOnUiThread { stage.intValue = 0 }
+      compose.waitForIdle()
+
+      // Name as section title
+      compose.onText(name).assertExists().assertIsDisplayed()
+
+      // Tags are now directly on the Text nodes, so assert text on the tagged node
+      compose
+          .onTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT)
+          .assertExists()
+          .assert(hasText(address))
+
+      compose.onTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT).assertExists().assert(hasText(email))
+
+      compose.onTag(ShopComponentsTestTags.SHOP_PHONE_TEXT).assertExists().assert(hasText(phone))
+
+      compose
+          .onTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT)
+          .assertExists()
+          .assert(hasText(website))
+    }
+
+    checkpoint("ContactSection hides empty optional phone and website") {
+      compose.runOnUiThread { stage.intValue = 1 }
+      compose.waitForIdle()
+
+      compose
+          .onAllNodesWithTag(ShopComponentsTestTags.SHOP_PHONE_TEXT, useUnmergedTree = true)
+          .assertCountEquals(0)
+      compose
+          .onAllNodesWithTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT, useUnmergedTree = true)
+          .assertCountEquals(0)
+
+      // Required fields still present
+      compose.onTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT).assertExists()
+      compose.onTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT).assertExists()
+    }
+
+    checkpoint("ContactRow ellipsizes visually and copies full text to clipboard") {
+      compose.runOnUiThread { stage.intValue = 2 }
+      compose.waitForIdle()
+
+      // Single Text node with the full multi-line string ("Line 1\nLine 2")
+      compose
+          .onTag(ShopComponentsTestTags.SHOP_PHONE_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
+          .assertTextEquals(multiLineText)
+
+      // Copy via button uses the full text, not a truncated part
+      compose.onTag(ShopComponentsTestTags.SHOP_PHONE_BUTTON).performClick()
+      assert(fakeClipboard.copiedText?.text == multiLineText)
+    }
   }
 }
