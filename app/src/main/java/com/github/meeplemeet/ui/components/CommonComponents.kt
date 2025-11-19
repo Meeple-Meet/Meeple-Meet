@@ -69,11 +69,12 @@ fun ImageCarousel(
     modifier: Modifier = Modifier,
     maxNumberOfImages: Int = 10,
     photoCollectionUrl: List<String>,
+    editable: Boolean = true,
     onAdd: suspend (String, Int) -> Unit = { _, _ -> },
     onRemove: (String) -> Unit = {}
 ) {
   // --- Setup ---
-  val canAddMoreImages = photoCollectionUrl.size < maxNumberOfImages
+  val canAddMoreImages = editable && photoCollectionUrl.size < maxNumberOfImages
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
 
@@ -137,7 +138,8 @@ fun ImageCarousel(
                 disabledContainerColor = AppColors.negative),
         shape = MaterialTheme.shapes.medium) {
           HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            if ((photoCollectionUrl.isEmpty() || page == photoCollectionUrl.size) &&
+            if (editable &&
+                (photoCollectionUrl.isEmpty() || page == photoCollectionUrl.size) &&
                 canAddMoreImages) {
               Box(
                   modifier =
@@ -160,8 +162,10 @@ fun ImageCarousel(
                     model = photoCollectionUrl[page],
                     contentDescription = "Discussion Profile Picture",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().clickable { showImageSourceMenu = true })
-                if (page < photoCollectionUrl.size) {
+                    modifier = Modifier.fillMaxSize().clickable {
+                        showImageSourceMenu = true
+                    })
+                if (page < photoCollectionUrl.size && editable) {
                   Box(
                       modifier =
                           Modifier.align(Alignment.TopEnd)
@@ -188,8 +192,9 @@ fun ImageCarousel(
     Row(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically) {
-          if (photoCollectionUrl.isNotEmpty()) {
-            repeat(photoCollectionUrl.size + 1) { index ->
+          if ((editable && (photoCollectionUrl.size + 1) > 1) ||
+              (!editable && photoCollectionUrl.size > 1)) {
+            repeat(if (editable) photoCollectionUrl.size + 1 else photoCollectionUrl.size) { index ->
               val selected = pagerState.currentPage == index
 
               Box(
@@ -209,19 +214,25 @@ fun ImageCarousel(
           galleryPictureUrl = photoCollectionUrl,
           onDismiss = { showImageSourceMenu = false },
           onTakePhoto = {
-            showImageSourceMenu = false
-            val permission = Manifest.permission.CAMERA
-            if (ContextCompat.checkSelfPermission(context, permission) ==
-                PackageManager.PERMISSION_GRANTED) {
-              cameraLauncher.launch(null)
-            } else {
-              cameraPermissionLauncher.launch(permission)
+            if (editable) {
+              showImageSourceMenu = false
+              val permission = Manifest.permission.CAMERA
+              if (ContextCompat.checkSelfPermission(context, permission) ==
+                  PackageManager.PERMISSION_GRANTED) {
+                cameraLauncher.launch(null)
+              } else {
+                cameraPermissionLauncher.launch(permission)
+              }
             }
           },
           onChooseFromGallery = {
-            showImageSourceMenu = false
-            galleryLauncher.launch("image/*")
-          })
+            if (editable) {
+              showImageSourceMenu = false
+              galleryLauncher.launch("image/*")
+            }
+          },
+          editable = editable
+      )
     }
   }
 }
@@ -336,7 +347,8 @@ fun GalleryDialog(
     galleryPictureUrl: List<String>?,
     onDismiss: () -> Unit,
     onTakePhoto: () -> Unit,
-    onChooseFromGallery: () -> Unit
+    onChooseFromGallery: () -> Unit,
+    editable: Boolean = true
 ) {
   Dialog(
       onDismissRequest = onDismiss,
@@ -373,25 +385,10 @@ fun GalleryDialog(
               },
               onDismiss)
 
-          PhotoDialogBottomBar(
-              Modifier.align(Alignment.BottomCenter), onTakePhoto, onChooseFromGallery)
+          if (editable) {
+            PhotoDialogBottomBar(
+                Modifier.align(Alignment.BottomCenter), onTakePhoto, onChooseFromGallery)
+          }
         }
       }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun M3ImageCarouselPreview() {
-  ImageCarousel(photoCollectionUrl = listOf(), modifier = Modifier.fillMaxWidth().padding(16.dp))
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GalleryDialogPreview() {
-  GalleryDialog(
-      pageNumber = 0,
-      galleryPictureUrl = listOf("https://via.placeholder.com/300"),
-      onDismiss = {},
-      onTakePhoto = {},
-      onChooseFromGallery = {})
 }
