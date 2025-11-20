@@ -198,10 +198,12 @@ fun SpaceRenterDetails(
             email = spaceRenter.email,
             website = spaceRenter.website,
             addPadding = true)
+
         AvailabilitySectionWithChevron(
             openingHours = spaceRenter.openingHours,
             dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX,
             addPadding = true)
+
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
@@ -213,14 +215,6 @@ fun SpaceRenterDetails(
             }
       }
 }
-
-// -------------------- CONTACT SECTION --------------------
-
-/**
- * Composable that displays the contact information section of the space renter.
- *
- * @param spaceRenter The space renter whose contact information is displayed.
- */
 
 /**
  * Composable that replaces material3's TopBarWithDivider The main difference is the text is now
@@ -299,7 +293,7 @@ fun SpacesSection(
   val maxPrice = spaces.maxOf { it.costPerHour }
 
   Column(
-      modifier = modifier.fillMaxWidth(), // Matches Figma spacing
+      modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
 
         // Header row
@@ -326,7 +320,7 @@ fun SpacesSection(
               Column(
                   modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
-                    for (i in start until end) {
+                    (start until end).forEach { i ->
                       SpaceCard(
                           space = spaces[i],
                           index = i,
@@ -429,14 +423,16 @@ private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
             color = Color.Transparent,
             modifier = Modifier.size(Dimensions.Spacing.xxLarge)) {
               Icon(
-                  Icons.Default.Info,
+                  imageVector = Icons.Default.Money,
                   contentDescription = null,
                   tint = AppColors.textIcons,
-                  modifier = Modifier.padding(Dimensions.Padding.small))
+                  modifier =
+                      Modifier.padding(Dimensions.Padding.small)
+                          .size(Dimensions.IconSize.extraLarge))
             }
 
         Text(
-            if (minPrice == maxPrice) "${minPrice}\$" else "${minPrice}-${maxPrice}\$",
+            if (minPrice == maxPrice) "${minPrice}\$" else "${minPrice} - ${maxPrice}\$",
             style = MaterialTheme.typography.bodyMedium)
       }
 }
