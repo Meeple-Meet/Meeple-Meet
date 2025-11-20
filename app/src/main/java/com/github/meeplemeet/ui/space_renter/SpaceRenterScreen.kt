@@ -32,7 +32,6 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
-import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
 import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
@@ -43,14 +42,6 @@ import kotlin.math.ceil
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
 object SpaceRenterTestTags {
   // Contact section tags
-  const val SPACE_RENTER_PHONE_TEXT = "SPACE_RENTER_PHONE_TEXT"
-  const val SPACE_RENTER_PHONE_BUTTON = "SPACE_RENTER_PHONE_BUTTON"
-  const val SPACE_RENTER_EMAIL_TEXT = "SPACE_RENTER_EMAIL_TEXT"
-  const val SPACE_RENTER_EMAIL_BUTTON = "SPACE_RENTER_EMAIL_BUTTON"
-  const val SPACE_RENTER_ADDRESS_TEXT = "SPACE_RENTER_ADDRESS_TEXT"
-  const val SPACE_RENTER_ADDRESS_BUTTON = "SPACE_RENTER_ADDRESS_BUTTON"
-  const val SPACE_RENTER_WEBSITE_TEXT = "SPACE_RENTER_WEBSITE_TEXT"
-  const val SPACE_RENTER_WEBSITE_BUTTON = "SPACE_RENTER_WEBSITE_BUTTON"
   const val SPACE_RENTER_EDIT_BUTTON = "EDIT_SPACE_BUTTON"
 
   // Availability section tags
@@ -80,7 +71,6 @@ object SpaceRenterUi {
   }
 
   object Misc {
-    const val TOAST_SUCCESS = "Copied to clipboard"
     const val NO_TIME = "Closed"
     const val TITLE = "Details"
   }
@@ -88,6 +78,7 @@ object SpaceRenterUi {
   object SpaceSection {
     const val TITLE = "Available Spaces"
     val CARD_HEIGHT: Dp = 72.dp
+    val SPACES_PER_PAGE = 3
 
     fun setSpaceNumber(index: Int) = "Space N°${index + 1}"
 
@@ -285,8 +276,7 @@ fun SpacesSection(
 ) {
   if (spaces.isEmpty()) return
 
-  val spacesPerPage = 3
-  val pageCount = ceil(spaces.size / spacesPerPage.toFloat()).toInt()
+  val pageCount = ceil(spaces.size / SpaceRenterUi.SpaceSection.SPACES_PER_PAGE.toFloat()).toInt()
   val pagerState = rememberPagerState(pageCount = { pageCount })
 
   val minPrice = spaces.minOf { it.costPerHour }
@@ -302,7 +292,7 @@ fun SpacesSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
               Text(
-                  text = SpaceRenterUi.AvailabilitySection.TITLE,
+                  text = SpaceRenterUi.SpaceSection.TITLE,
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.SemiBold)
 
@@ -314,9 +304,9 @@ fun SpacesSection(
             verticalAlignment = Alignment.Top,
             state = pagerState,
             modifier = Modifier.fillMaxWidth()) { page ->
-              val start = page * spacesPerPage
-              val end = minOf(start + spacesPerPage, spaces.size)
-              val missing = spacesPerPage - (end - start)
+              val start = page * SpaceRenterUi.SpaceSection.SPACES_PER_PAGE
+              val end = minOf(start + SpaceRenterUi.SpaceSection.SPACES_PER_PAGE, spaces.size)
+              val missing = SpaceRenterUi.SpaceSection.SPACES_PER_PAGE - (end - start)
               Column(
                   modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
