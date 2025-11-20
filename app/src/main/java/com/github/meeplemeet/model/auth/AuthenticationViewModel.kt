@@ -224,23 +224,19 @@ open class AuthenticationViewModel(
   }
 
   /**
-   * Checks if the current user's email is verified.
+   * Refreshes the user's email verification status.
    *
-   * This method reloads the user's Firebase authentication state and updates the
-   * Account.isEmailVerified flag inside AuthUIState.account.
+   * This function is safe to call from the UI and does not return a value, as all updates are
+   * propagated via [_uiState].
    */
-  suspend fun checkEmailVerified(): Result<Boolean> {
-    return repository.isEmailVerified().onSuccess { isVerified ->
-      _uiState.update { it.copy(isEmailVerified = isVerified) }
-    }
-  }
-
-  /** Convenience wrapper to check email verification from composables. */
   fun refreshEmailVerificationStatus() {
     viewModelScope.launch {
-      checkEmailVerified().onFailure { error ->
-        _uiState.update { it.copy(errorMsg = error.localizedMessage) }
-      }
+      val result = repository.isEmailVerified()
+      result
+          .onSuccess { isVerified ->
+            _uiState.update { it.copy(isEmailVerified = isVerified, errorMsg = null) }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
     }
   }
 
