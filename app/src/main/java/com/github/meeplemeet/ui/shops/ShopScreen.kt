@@ -7,6 +7,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,6 +41,7 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.ContactSection
+import com.github.meeplemeet.ui.components.GameDetailsCard
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -107,40 +109,74 @@ fun ShopScreen(
     onBack: () -> Unit = {},
     onEdit: (Shop?) -> Unit = {},
 ) {
-  // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
-  // Trigger loading of shop data when shopId changes
   LaunchedEffect(shopId) { viewModel.getShop(shopId) }
 
-  Scaffold(
-      topBar = {
-        TopBarWithDivider(
-            text = "Shop",
-            onReturn = { onBack() },
-            trailingIcons = {
-              // Show edit button only if current account is the shop owner
-              if (account.uid == (shopState?.owner?.uid)) {
-                IconButton(
-                    onClick = { onEdit(shopState) },
-                    modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
-                      Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
+  var popupGame by remember { mutableStateOf<Game?>(null) }
+
+  Box(modifier = Modifier.fillMaxSize()) {
+
+    // ────────────────────────────────────────────
+    // SCAFFOLD WITH TOPBAR & MAIN CONTENT
+    // ────────────────────────────────────────────
+    Scaffold(
+        topBar = {
+          TopBarWithDivider(
+              text = "Shop",
+              onReturn = { if (popupGame == null) onBack() },
+              trailingIcons = {
+                if (account.uid == shopState?.owner?.uid) {
+                  IconButton(
+                      onClick = { if (popupGame == null) onEdit(shopState) },
+                      modifier = Modifier.testTag(ShopTestTags.SHOP_EDIT_BUTTON)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                      }
+                }
+              })
+        }) { innerPadding ->
+          shopState?.let { shop ->
+            ShopDetails(
+                shop = shop,
+                modifier =
+                    Modifier.padding(innerPadding)
+                        .padding(Dimensions.Padding.extraLarge)
+                        .fillMaxSize(),
+                onGameClick = { game -> popupGame = game },
+            )
+          }
+              ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
               }
-            })
-      }) { innerPadding ->
-        // Show shop details if loaded, otherwise show a loading indicator
-        shopState?.let { shop ->
-          ShopDetails(
-              shop = shop,
-              modifier =
-                  Modifier.padding(innerPadding)
-                      .padding(Dimensions.Padding.extraLarge)
-                      .fillMaxSize())
         }
-            ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-              CircularProgressIndicator()
-            }
+
+    // ────────────────────────────────────────────
+    // SCRIM BLOCKING ALL TOUCHES WHEN POPUP OPEN
+    // ────────────────────────────────────────────
+    if (popupGame != null) {
+      Box(
+          modifier =
+              Modifier.fillMaxSize()
+                  .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f))
+                  .clickable(
+                      enabled = true,
+                      indication = null,
+                      interactionSource =
+                          remember { MutableInteractionSource() }) {} // block everything behind
+          )
+    }
+
+    // ────────────────────────────────────────────
+    // CENTERED POPUP WITH BORDER
+    // ────────────────────────────────────────────
+    popupGame?.let { game ->
+      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        GameDetailsCard(
+            game = game,
+            onClose = { popupGame = null },
+            modifier = Modifier.wrapContentSize().padding(Dimensions.Padding.extraLarge))
       }
+    }
+  }
 }
 
 /**
@@ -151,14 +187,13 @@ fun ShopScreen(
  * @param modifier Modifier to be applied to the layout.
  */
 @Composable
-fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
+fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -> Unit) {
   LazyColumn(
       modifier = modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
       contentPadding = PaddingValues(bottom = Dimensions.Spacing.xxLarge)) {
 
-        /* TODO: Add here shop images composable (pager) when done */
-
+        // Contact info
         item {
           ContactSection(
               name = shop.name,
@@ -168,15 +203,17 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
               website = shop.website)
         }
 
+        // Opening hours
         item { AvailabilitySection(shop.openingHours) }
 
+        // Game list
         item {
           GameImageListSection(
               games = shop.gameCollection,
               modifier = Modifier.fillMaxWidth(),
               clickableGames = true,
               title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
-          )
+              onClick = onGameClick)
         }
       }
 }
