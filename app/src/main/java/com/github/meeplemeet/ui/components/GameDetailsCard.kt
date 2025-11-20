@@ -1,6 +1,7 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -35,69 +36,87 @@ import com.github.meeplemeet.ui.theme.MessagingColors
 
 @Composable
 fun GameDetailsCard(game: Game, modifier: Modifier = Modifier, onClose: () -> Unit = {}) {
-  Column(modifier = modifier.fillMaxWidth()) {
-    Image(
-        painter = rememberAsyncImagePainter(game.imageURL),
-        contentDescription = game.name,
-        modifier =
-            Modifier.fillMaxWidth().height(180.dp).padding(0.dp).clip(RoundedCornerShape(12.dp)),
-        contentScale = ContentScale.Crop)
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
-      Spacer(modifier = Modifier.height(16.dp))
+    Box(modifier = Modifier.background(color = AppColors.primary)) {
+        Column(modifier = modifier.fillMaxWidth()) {
+            Image(
+                painter = rememberAsyncImagePainter(game.imageURL),
+                contentDescription = game.name,
+                modifier =
+                    Modifier.fillMaxWidth().height(180.dp).padding(0.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-      Box(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-      ) {
-        Text(
-            text = game.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Center))
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                ) {
+                    Text(
+                        text = game.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
 
-        IconButton(onClick = { onClose() }, modifier = Modifier.align(Alignment.CenterEnd)) {
-          Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    IconButton(
+                        onClick = { onClose() },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(0.7F).align(Alignment.CenterHorizontally),
+                    thickness = 1.dp,
+                    color = AppColors.divider
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    InfoChip(
+                        text = "${game.minPlayers}-${game.maxPlayers} Players",
+                        Icons.Default.People
+                    )
+                    game.averagePlayTime?.let {
+                        InfoChip(
+                            "$it min",
+                            iconVector = Icons.Default.AccessTime
+                        )
+                    }
+                    game.minAge?.let { InfoChip("Age: $it+") }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (game.genres.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        game.genres.forEach { genre ->
+                            AssistChip(
+                                colors =
+                                    AssistChipDefaults.assistChipColors(
+                                        containerColor = MessagingColors.redditBlueBg,
+                                        labelColor = MessagingColors.redditBlue,
+                                    ),
+                                border = null,
+                                onClick = {},
+                                label = { Text(text = "#$genre") })
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                GameDescription(game.description)
+            }
         }
-      }
-
-      Spacer(modifier = Modifier.height(8.dp))
-      HorizontalDivider(
-          modifier = Modifier.fillMaxWidth(0.7F).align(Alignment.CenterHorizontally),
-          thickness = 1.dp,
-          color = AppColors.divider)
-      Spacer(modifier = Modifier.height(8.dp))
-
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceEvenly,
-          verticalAlignment = Alignment.CenterVertically) {
-            InfoChip(text = "${game.minPlayers}-${game.maxPlayers} Players", Icons.Default.People)
-            game.averagePlayTime?.let { InfoChip("$it min", iconVector = Icons.Default.AccessTime) }
-            game.minAge?.let { InfoChip("Age: $it+") }
-          }
-
-      Spacer(modifier = Modifier.height(12.dp))
-
-      if (game.genres.isNotEmpty()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          game.genres.forEach { genre ->
-            AssistChip(
-                colors =
-                    AssistChipDefaults.assistChipColors(
-                        containerColor = MessagingColors.redditBlueBg,
-                        labelColor = MessagingColors.redditBlue,
-                    ),
-                border = null,
-                onClick = {},
-                label = { Text(text = "#$genre") })
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      GameDescription(game.description)
     }
-  }
 }
 
 @Composable
@@ -138,6 +157,7 @@ fun GameDescription(description: String) {
     }
   }
 }
+
 
 @Composable
 fun InfoChip(text: String, iconVector: ImageVector? = null) {
