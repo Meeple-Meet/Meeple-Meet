@@ -77,7 +77,7 @@ private const val LABEL_DISCARD = "Discard"
 private const val LABEL_EDIT_TITLE = "Edit Title"
 private const val LABEL_DATE = "Date"
 private const val LABEL_TIME = "Time"
-private const val LABEL_UNKNOWN_GAME = "Unknown game"
+const val LABEL_UNKNOWN_GAME = "Unknown game"
 private const val LABEL_PARTICIPANTS = "Participants"
 
 /* =======================================================================

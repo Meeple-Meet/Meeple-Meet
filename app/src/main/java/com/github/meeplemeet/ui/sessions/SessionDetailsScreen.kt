@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionViewModel
@@ -172,7 +173,7 @@ fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
 fun SessionDetailsScreen(
     account: Account,
     discussion: Discussion,
-    viewModel: SessionViewModel = viewModel(),
+    viewModel: SessionViewModel = viewModel(key = discussion.uid),
     initial: SessionForm = SessionForm(),
     onBack: () -> Unit = {},
 ) {
@@ -198,21 +199,20 @@ fun SessionDetailsScreen(
   // This LaunchedEffect block updates the form state when the session changes.
   // It fetches participant accounts and updates the UI fields accordingly.
   // If the game info is missing, it triggers a fetch for the proposed game.
-  LaunchedEffect(session.gameId) {
+  LaunchedEffect(discussion.uid) {
     val (date, time) = timestampToLocal(session.date)
 
-    viewModel.getAccounts(session.participants) { accounts ->
-      form =
-          form.copy(
-              title = session.name,
-              date = date,
-              time = time,
-              proposedGameString = session.gameId,
-              participants = accounts,
-              locationText = session.location.name)
+    val accounts = RepositoryProvider.accounts.getAccounts(session.participants)
+    form =
+        form.copy(
+            title = session.name,
+            date = date,
+            time = time,
+            proposedGameString = session.gameId,
+            participants = accounts,
+            locationText = session.location.name)
 
-      if (form.proposedGameString.isNotBlank()) viewModel.getGameFromId(form.proposedGameString)
-    }
+    if (form.proposedGameString.isNotBlank()) viewModel.getGameFromId(form.proposedGameString)
 
     if (session.gameId.isNotBlank() && game == null) viewModel.getGameFromId(session.gameId)
   }

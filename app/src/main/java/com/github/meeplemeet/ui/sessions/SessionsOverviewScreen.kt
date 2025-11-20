@@ -1,38 +1,343 @@
+/** Documentation was generated using ChatGPT. */
 package com.github.meeplemeet.ui.sessions
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.sessions.Session
+import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.MessagingColors
+import java.text.SimpleDateFormat
+import java.util.Locale
 
+/**
+ * Main screen that lists gaming sessions for the logged-in user.
+ * - Collects a real-time list of sessions via [SessionOverviewViewModel.sessionMapFlow].
+ * - Offers a toggle between “Next sessions” (chronological list) and “History” (WIP placeholder).
+ * - Emits [onSelectSession] when the user taps a card.
+ *
+ * @param viewModel Source of truth for sessions – injected by default.
+ * @param navigation Global navigator supplied by the caller.
+ * @param account Currently signed-in user; UID is used to load personal sessions.
+ * @param onSelectSession Callback that receives the [Session] the user tapped.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionsOverviewScreen(navigation: NavigationActions) {
+fun SessionsOverviewScreen(
+    viewModel: SessionOverviewViewModel = viewModel(),
+    navigation: NavigationActions,
+    account: Account?,
+    onSelectSession: (String) -> Unit = {}
+) {
+  val sessionMap by
+      viewModel.sessionMapFlow(account?.uid ?: "").collectAsState(initial = emptyMap())
+
+  /* --------------  NEW: toggle state  -------------- */
+  var showHistory by remember { mutableStateOf(false) }
+
   Scaffold(
       topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  text = MeepleMeetScreen.SessionsOverview.title,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onPrimary,
-                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-            })
+        Column(Modifier.fillMaxWidth()) {
+          /* 1. original top-bar (kept) */
+          CenterAlignedTopAppBar(
+              title = {
+                Text(
+                    text = MeepleMeetScreen.SessionsOverview.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+              })
+
+          SessionToggle( // <-- use the same variable
+              showHistory = showHistory,
+              onNext = { showHistory = false },
+              onHistory = { showHistory = true })
+        }
       },
       bottomBar = {
         BottomNavigationMenu(
             currentScreen = MeepleMeetScreen.SessionsOverview,
-            onTabSelected = { screen -> navigation.navigateTo(screen) })
+            onTabSelected = { navigation.navigateTo(it) })
       }) { innerPadding ->
-        Text("WIP", modifier = Modifier.padding(innerPadding))
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+          when {
+            showHistory -> {
+              /* ----------------  HISTORY (WIP)  ---------------- */
+              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "WIP",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AppColors.textIconsFade)
+              }
+            }
+            sessionMap.isEmpty() -> EmptySessionsListText()
+            else -> {
+              /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
+              LazyColumn(
+                  modifier = Modifier.fillMaxSize(),
+                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
+                    items(sessionMap.entries.toList(), key = { it.key }) { (id, session) ->
+                      SessionCard(
+                          session = session,
+                          viewModel = viewModel,
+                          modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
+                          onClick = { onSelectSession(id) })
+                    }
+                  }
+            }
+          }
+        }
       }
 }
+
+/** Displays a centred label when the user has no upcoming sessions. */
+@Composable
+private fun EmptySessionsListText() {
+  Box(
+      modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge),
+      contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.Article,
+                  contentDescription = null,
+                  modifier = Modifier.size(Dimensions.IconSize.giant),
+                  tint = MessagingColors.secondaryText)
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+              Text(
+                  text = NO_SESSIONS_DEFAULT_TEXT,
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontSize = Dimensions.TextSize.title,
+                  color = MessagingColors.secondaryText)
+            }
+      }
+}
+
+/**
+ * Visual representation of a single session (Reddit-style card).
+ *
+ * Layout (top → bottom):
+ * - Session title
+ * - Game name (resolved asynchronously)
+ * - Participants: “Alice, Bob and 3 more” (resolved asynchronously)
+ * - Location • date
+ *
+ * @param session Domain object to render.
+ * @param viewModel Used to resolve participant names and game title.
+ * @param modifier Optional [Modifier].
+ * @param onClick Invoked when the card is tapped.
+ */
+@Composable
+private fun SessionCard(
+    session: Session,
+    viewModel: SessionOverviewViewModel,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+  val date =
+      remember(session.date) {
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
+      }
+
+  /* ---------  resolve names via the callback  --------- */
+  val names = remember { mutableStateListOf<String>() }
+
+  LaunchedEffect(session.participants) {
+    names.clear()
+    session.participants.forEach { id ->
+      if (id.isBlank()) {
+        names += "Unknown"
+      } else {
+        viewModel.getOtherAccount(id) { acc ->
+          names += acc.name // re-composition happens on each addition
+        }
+      }
+    }
+  }
+  /* ----------------------------------------------------- */
+
+  val participantText =
+      when {
+        names.size < session.participants.size -> "Loading…"
+        names.isEmpty() -> "No participants"
+        names.size == 1 -> names.first()
+        names.size == 2 -> names.joinToString(", ")
+        else -> {
+          val firstTwo = names.take(2).joinToString(", ")
+          "$firstTwo and ${names.size - 2} more"
+        }
+      }
+
+  /* ----------  UI identical to before  ---------- */
+  Column(modifier = modifier) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clickable(onClick = onClick)
+                .background(AppColors.primary)
+                .padding(
+                    horizontal = Dimensions.Spacing.large, vertical = Dimensions.Spacing.large),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
+          Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                Text(
+                    text = session.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = Dimensions.TextSize.largeHeading,
+                    fontWeight = FontWeight.Medium,
+                    color = AppColors.textIcons,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
+                val gameName by
+                    produceState(
+                        key1 = session.gameId,
+                        initialValue = session.gameId // fallback: show id while loading
+                        ) {
+                          val name =
+                              if (session.gameId == LABEL_UNKNOWN_GAME) null
+                              else viewModel.getGameNameByGameId(session.gameId)
+                          value = name ?: "No game selected" // suspend call
+                    }
+                Text(
+                    text = gameName,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = Dimensions.TextSize.subtitle,
+                    color = AppColors.textIcons,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+
+                Text(
+                    text = participantText,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = Dimensions.TextSize.body,
+                    color = AppColors.textIconsFade,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                      Icon(imageVector = Icons.Default.Place, contentDescription = null)
+                      Text(
+                          text = session.location.name,
+                          style = MaterialTheme.typography.bodySmall,
+                          fontSize = Dimensions.TextSize.small,
+                          color = AppColors.textIconsFade,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis,
+                          modifier = Modifier.weight(1f, fill = false))
+                      Text(
+                          text = "•",
+                          fontSize = Dimensions.TextSize.small,
+                          color = AppColors.textIconsFade)
+                      Text(
+                          text = date,
+                          style = MaterialTheme.typography.bodySmall,
+                          fontSize = Dimensions.TextSize.small,
+                          color = AppColors.textIconsFade)
+                    }
+              }
+        }
+
+    HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
+  }
+}
+
+/**
+ * Two-state toggle bar placed directly under the top app bar.
+ *
+ * The bar is split exactly 50/50:
+ * - Left half → “Next sessions”
+ * - Right half → “History”
+ *
+ * The active half uses [AppColors.primary] background and contrasting text.
+ *
+ * @param showHistory Which half is currently active.
+ * @param onNext Called when the left (Next) half is clicked.
+ * @param onHistory Called when the right (History) half is clicked.
+ */
+@Composable
+private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory: Boolean) {
+  Row(modifier = Modifier.fillMaxWidth().height(Dimensions.Spacing.xxxLarge)) {
+    /* ----  LEFT HALF – Next Sessions  ---- */
+    Box(
+        modifier =
+            Modifier.weight(1f)
+                .fillMaxHeight()
+                .background(if (!showHistory) AppColors.primary else AppColors.divider)
+                .clickable { onNext() },
+        contentAlignment = Alignment.Center) {
+          Text(
+              text = "Next sessions",
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Normal,
+              color = if (!showHistory) AppColors.textIcons else AppColors.textIconsFade)
+        }
+
+    /* ----  RIGHT HALF – History  ---- */
+    Box(
+        modifier =
+            Modifier.weight(1f)
+                .fillMaxHeight()
+                .background(if (showHistory) AppColors.primary else AppColors.divider)
+                .clickable { onHistory() },
+        contentAlignment = Alignment.Center) {
+          Text(
+              text = "History",
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Normal,
+              color = if (showHistory) AppColors.textIcons else AppColors.textIconsFade)
+        }
+  }
+  HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
+}
+/* ========================================== */
+
+/* ============================================================================================= */
+const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
