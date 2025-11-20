@@ -153,7 +153,7 @@ fun ShopScreen(
  */
 @Composable
 fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
-    var popupGame by remember { mutableStateOf<Game?>(null) }
+  var popupGame by remember { mutableStateOf<Game?>(null) }
   LazyColumn(
       modifier = modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
@@ -178,18 +178,10 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
               modifier = Modifier.fillMaxWidth(),
               clickableGames = true,
               title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
-              onClick = { game ->
-                  popupGame = game
-              }
-          )
+              onClick = { game -> popupGame = game })
         }
       }
-    popupGame?.let { game ->
-        GameDetailsCard(
-            game = game,
-            onClose = { popupGame = null }
-        )
-    }
+  popupGame?.let { game -> GameDetailsCard(game = game, onClose = { popupGame = null }) }
 }
 
 // -------------------- GAME ITEM --------------------
