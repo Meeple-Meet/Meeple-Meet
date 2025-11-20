@@ -247,7 +247,7 @@ fun PostScreen(
       bottomBar = {
         ComposerBar(
             value = topComment,
-            onValueChange = { topComment = it },
+            onValueChange = { if (it.length <= 2048) topComment = it },
             onAttach = { /* TODO attachments */},
             sendEnabled = !isSending && topComment.isNotBlank() && post != null,
             onSend = {
@@ -672,7 +672,13 @@ private fun ThreadCard(
           Column(
               modifier =
                   Modifier.testTag(PostTags.threadCard(root.id))
-                      .padding(Dimensions.Padding.large)) {
+                      .padding(
+                          top = Dimensions.Padding.large,
+                          start = Dimensions.Padding.large,
+                          end = Dimensions.Padding.large,
+                          bottom =
+                              if (root.children.isNotEmpty()) Dimensions.Padding.small
+                              else Dimensions.Padding.large)) {
                 CommentItem(
                     comment = root,
                     author = resolveUser(root.authorId),
@@ -837,7 +843,7 @@ private fun ThreadGutter(
   Box(
       modifier =
           modifier
-              .width(ThreadStyle.Step * depth)
+              .width(ThreadStyle.Step)
               .padding(vertical = ThreadStyle.VerticalInset)
               .drawBehind {
                 val x = size.width - stepPx / 2f
@@ -945,12 +951,9 @@ private fun CommentItem(
 
     // "See replies" button when there are replies
     if (hasReplies) {
-      Spacer(Modifier.height(Dimensions.Spacing.medium))
+      Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
       TextButton(
           onClick = { onCardClick?.invoke() },
-          contentPadding =
-              PaddingValues(
-                  horizontal = Dimensions.Spacing.none, vertical = Dimensions.Spacing.small),
           modifier = Modifier.padding(start = Dimensions.Spacing.none)) {
             Icon(
                 imageVector =
@@ -970,14 +973,14 @@ private fun CommentItem(
 
     // Reply field
     if (replying) {
-      Spacer(Modifier.height(Dimensions.Spacing.medium))
+      Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
       Row(
           modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
             OutlinedTextField(
                 value = replyText,
-                onValueChange = { replyText = it },
+                onValueChange = { if (it.length <= 2048) replyText = it },
                 modifier =
                     Modifier.weight(1f)
                         .semantics { contentDescription = "Reply input" }
