@@ -254,7 +254,7 @@ fun GameItemImage(
         if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
           val label =
               if (count > ShopScreenDefaults.Stock.MAX_STOCK_SHOWED)
-                  "$ShopScreenDefaults.Pager.MAX_STOCK_SHOWED+"
+                  "${ShopScreenDefaults.Stock.MAX_STOCK_SHOWED}+"
               else count.toString()
 
           Box(
