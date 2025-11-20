@@ -39,6 +39,8 @@ import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
+import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -196,8 +198,14 @@ fun SpaceRenterDetails(
           modifier.verticalScroll(rememberScrollState()).padding(bottom = Dimensions.Padding.large),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
         TemporaryPhotoCarousel()
-        ContactSection(spaceRenter)
-        AvailabilitySection(
+        ContactSection(
+            name = spaceRenter.name,
+            address = spaceRenter.address.name,
+            phone = spaceRenter.phone,
+            email = spaceRenter.email,
+            website = spaceRenter.website,
+            addPadding = true)
+      AvailabilitySectionWithChevron(
             openingHours = spaceRenter.openingHours,
             dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX,
             addPadding = true)
@@ -220,93 +228,6 @@ fun SpaceRenterDetails(
  *
  * @param spaceRenter The space renter whose contact information is displayed.
  */
-@Composable
-fun ContactSection(spaceRenter: SpaceRenter) {
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
-        Text(
-            text = spaceRenter.name,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold)
-
-        // Display address contact row
-        ContactRow(
-            icon = Icons.Default.Place,
-            text = spaceRenter.address.name,
-            testTag = SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT,
-            buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
-
-        // Display phone contact row if provided
-        if (spaceRenter.phone.isNotBlank()) {
-          ContactRow(
-              icon = Icons.Default.Phone,
-              text = spaceRenter.phone,
-              testTag = SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT,
-              buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
-        }
-
-        // Display email contact row
-        ContactRow(
-            icon = Icons.Default.Email,
-            text = spaceRenter.email,
-            testTag = SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT,
-            buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
-
-        // Display website contact row if provided
-        if (spaceRenter.website.isNotBlank()) {
-          ContactRow(
-              icon = Icons.Default.Language,
-              text = spaceRenter.website,
-              testTag = SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT,
-              buttonTestTag = SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
-        }
-      }
-}
-
-/**
- * Composable displaying a row of contact info. This includes an clickable icon, and information
- * about the spaceRenter The clickable icons currently only copy the text to the clipboard.
- *
- * @param icon The icon to display for the contact method.
- * @param text The contact text to display and copy.
- * @param textTag The test tag for the text element.
- * @param buttonTag The test tag for the copy button.
- */
-@Composable
-fun ContactRow(
-    icon: ImageVector,
-    text: String,
-    testTag: String,
-    buttonTestTag: String,
-) {
-  val clipboard = LocalClipboardManager.current
-  val context = LocalContext.current
-
-  Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .clickable {
-                clipboard.setText(AnnotatedString(text))
-                Toast.makeText(context, SpaceRenterUi.Misc.TOAST_SUCCESS, Toast.LENGTH_SHORT).show()
-              }
-              .padding(vertical = Dimensions.Padding.medium),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = AppColors.neutral,
-            modifier = Modifier.size(Dimensions.IconSize.standard).testTag(buttonTestTag))
-
-        Text(
-            text,
-            modifier = Modifier.weight(Dimensions.Weight.full).testTag(testTag),
-            maxLines = 1,
-            style = MaterialTheme.typography.bodyMedium,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-      }
-}
 
 /**
  * Composable that replaces material3's TopBarWithDivider The main difference is the text is now
@@ -439,7 +360,7 @@ fun SpacesSection(
                               if (active) Dimensions.Padding.extraMedium
                               else Dimensions.Padding.medium)
                           .background(
-                              color = if (active) AppColors.textIcons else AppColors.textIconsFade,
+                              color = if (active) AppColors.focus else AppColors.textIconsFade,
                               shape = CircleShape))
             }
           }
@@ -524,64 +445,6 @@ private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
             if (minPrice == maxPrice) "${minPrice}\$" else "${minPrice}-${maxPrice}\$",
             style = MaterialTheme.typography.bodyMedium)
       }
-}
-
-/**
- * Composable that displays a row showing today's availability and opens a bottom popup with full
- * availability when clicked.
- *
- * @param openingHours List of opening hours for each day of the week.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AvailabilityRowPopup(openingHours: List<OpeningHours>) {
-  var showSheet by remember { mutableStateOf(false) }
-
-  val today = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
-  val todayHours = openingHours.firstOrNull { it.day == today }
-
-  val todayText =
-      when {
-        todayHours == null || todayHours.hours.isEmpty() -> SpaceRenterUi.Misc.NO_TIME
-        todayHours.hours.size == 1 -> {
-          val (start, end) = todayHours.hours.first()
-          SpaceRenterUi.AvailabilitySection.timeRange(start, end)
-        }
-        else ->
-            todayHours.hours.joinToString(" ") { (start, end) ->
-              SpaceRenterUi.AvailabilitySection.timeRange(start, end)
-            }
-      }
-
-  Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.xxLarge)) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .clickable { showSheet = true }
-                .testTag(SpaceRenterTestTags.AVAILABILITY_HEADER)
-                .padding(vertical = Dimensions.Padding.medium),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-          Column {
-            Text(
-                text = SpaceRenterUi.AvailabilitySection.TITLE,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold)
-            Text(
-                SpaceRenterUi.AvailabilitySection.todayDate(todayText),
-                style = MaterialTheme.typography.bodyMedium)
-          }
-
-          Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
-        }
-  }
-
-  if (showSheet) {
-    ModalBottomSheet(onDismissRequest = { showSheet = false }, containerColor = AppColors.primary) {
-      AvailabilitySection(openingHours, SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX)
-      Spacer(Modifier.height(Dimensions.Spacing.xLarge))
-    }
-  }
 }
 
 /**

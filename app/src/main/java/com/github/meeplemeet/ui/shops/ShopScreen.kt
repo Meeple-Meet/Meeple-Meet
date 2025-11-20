@@ -40,6 +40,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
 import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.GameDetailsCard
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
@@ -207,7 +208,7 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -
         }
 
         item {
-          AvailabilitySection(
+          AvailabilitySectionWithChevron(
               shop.openingHours, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
         }
 

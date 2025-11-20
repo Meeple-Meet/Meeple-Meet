@@ -17,6 +17,7 @@ import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
+import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
@@ -45,28 +46,28 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
   /* ------- semantic helpers ------- */
   private fun phoneText() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_PHONE_TEXT, useUnmergedTree = true)
 
   private fun emailText() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT, useUnmergedTree = true)
 
   private fun addressText() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT, useUnmergedTree = true)
 
   private fun websiteText() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT, useUnmergedTree = true)
 
   private fun phoneBtn() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_PHONE_BUTTON, useUnmergedTree = true)
 
   private fun emailBtn() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_EMAIL_BUTTON, useUnmergedTree = true)
 
   private fun addressBtn() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_ADDRESS_BUTTON, useUnmergedTree = true)
 
   private fun websiteBtn() =
-      compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON, useUnmergedTree = true)
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_WEBSITE_BUTTON, useUnmergedTree = true)
 
   private fun spaceRow(i: Int) =
       compose.onNodeWithTag(

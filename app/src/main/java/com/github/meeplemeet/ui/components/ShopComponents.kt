@@ -1447,7 +1447,7 @@ fun WeeklyAvailabilityDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AvailabilitySection(
+fun AvailabilitySectionWithChevron(
     openingHours: List<OpeningHours>,
     dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX,
     addPadding: Boolean = false
@@ -1518,10 +1518,19 @@ fun AvailabilitySection(
  * @param website website link to display
  */
 @Composable
-fun ContactSection(name: String, address: String, email: String, phone: String, website: String) {
+fun ContactSection(
+    name: String,
+    address: String,
+    email: String,
+    phone: String,
+    website: String,
+    addPadding: Boolean = false
+) {
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth()) {
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
         Text(
             text = name,
             style = MaterialTheme.typography.titleLarge,
