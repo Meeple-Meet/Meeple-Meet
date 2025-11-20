@@ -1,8 +1,10 @@
 package com.github.meeplemeet.authentication
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.auth.SignInViewModel
 import com.github.meeplemeet.model.auth.SignUpViewModel
+import com.github.meeplemeet.model.auth.coolDownErrMessage
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
 import kotlinx.coroutines.Dispatchers
@@ -80,6 +82,27 @@ class AuthViewModelTest : FirestoreTests() {
     } catch (_: Exception) {
       // Ignore cleanup errors - they shouldn't fail the test
     }
+  }
+
+  @Test
+  fun buttonSendsTheVerificationEmailAndCoolsDown() = runBlocking {
+    val authViewModel = AuthenticationViewModel()
+
+    signUpViewModel.registerWithEmail(testEmail, testPassword)
+    delay(500)
+
+    val currentUser = auth.currentUser
+    assertNotNull("User should be logged in after registration", currentUser)
+
+    // First attempt to send verification email
+    authViewModel.sendVerificationEmail()
+    delay(500)
+    assertNull(authViewModel.uiState.value.errorMsg)
+
+    // Immediately try to send again - should be rate limited
+    authViewModel.sendVerificationEmail()
+    delay(500)
+    assertEquals(coolDownErrMessage, authViewModel.uiState.value.errorMsg)
   }
 
   //// Tests for initial state ////
