@@ -1,7 +1,6 @@
 // AI was used to help comment this screen
 package com.github.meeplemeet.ui.space_renter
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,11 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -34,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
@@ -44,7 +38,6 @@ import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
-import java.util.Calendar
 import kotlin.math.ceil
 
 /** Object containing test tags used in the Space Renter screen UI for UI testing purposes. */
@@ -205,7 +198,7 @@ fun SpaceRenterDetails(
             email = spaceRenter.email,
             website = spaceRenter.website,
             addPadding = true)
-      AvailabilitySectionWithChevron(
+        AvailabilitySectionWithChevron(
             openingHours = spaceRenter.openingHours,
             dayTagPrefix = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX,
             addPadding = true)
@@ -385,6 +378,7 @@ private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: ()
           Modifier.fillMaxWidth()
               .clickable { onClick() }
               .height(SpaceRenterUi.SpaceSection.CARD_HEIGHT),
+      shadowElevation = Dimensions.Elevation.medium,
       shape = shape,
       color = AppColors.secondary,
       border =
@@ -460,9 +454,10 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
   Box(
       modifier =
           Modifier.fillMaxWidth()
+              .wrapContentHeight()
               .background(Color.Transparent)
-              .padding(
-                  horizontal = Dimensions.Padding.extraLarge, vertical = Dimensions.Padding.large),
+              .padding(horizontal = Dimensions.Padding.extraLarge)
+              .padding(end = Dimensions.Padding.large),
       contentAlignment = Alignment.BottomCenter) {
         if (selectedSpace == null) {
 
@@ -499,7 +494,7 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
                                       RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER))
                                   .padding(
                                       horizontal = Dimensions.Padding.extraLarge,
-                                      vertical = Dimensions.Padding.extraMedium)) {
+                                      vertical = Dimensions.Padding.medium)) {
                             Column {
                               Text(
                                   text = SpaceRenterUi.BottomBar.selectSpace(selectedIndex),
