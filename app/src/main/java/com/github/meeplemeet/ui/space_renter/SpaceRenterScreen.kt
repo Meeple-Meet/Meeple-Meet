@@ -320,7 +320,10 @@ fun SpacesSection(
               val end = minOf(start + SpaceRenterUi.SpaceSection.SPACES_PER_PAGE, spaces.size)
               val missing = SpaceRenterUi.SpaceSection.SPACES_PER_PAGE - (end - start)
               Column(
-                  modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = Dimensions.Spacing.medium),
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .fillMaxHeight()
+                          .padding(horizontal = Dimensions.Spacing.medium),
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
                     (start until end).forEach { i ->
                       SpaceCard(
