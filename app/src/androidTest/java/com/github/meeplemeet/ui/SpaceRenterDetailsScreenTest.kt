@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.AnnotatedString
+import androidx.test.espresso.Espresso
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -16,17 +17,16 @@ import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
+import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
-import com.github.meeplemeet.ui.space_renter.SpaceRenterUi
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -45,45 +45,45 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
   private var theme by mutableStateOf(ThemeMode.LIGHT)
 
   /* ------- semantic helpers ------- */
-  private fun title() = compose.onNodeWithText(renter.name)
+  private fun phoneText() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_PHONE_TEXT, useUnmergedTree = true)
 
-  private fun phoneText() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_PHONE_TEXT)
+  private fun emailText() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_EMAIL_TEXT, useUnmergedTree = true)
 
-  private fun emailText() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EMAIL_TEXT)
+  private fun addressText() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_ADDRESS_TEXT, useUnmergedTree = true)
 
-  private fun addressText() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_ADDRESS_TEXT)
+  private fun websiteText() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_WEBSITE_TEXT, useUnmergedTree = true)
 
-  private fun websiteText() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_WEBSITE_TEXT)
+  private fun phoneBtn() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_PHONE_BUTTON, useUnmergedTree = true)
 
-  private fun phoneBtn() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_PHONE_BUTTON)
+  private fun emailBtn() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_EMAIL_BUTTON, useUnmergedTree = true)
 
-  private fun emailBtn() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EMAIL_BUTTON)
+  private fun addressBtn() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_ADDRESS_BUTTON, useUnmergedTree = true)
 
-  private fun addressBtn() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_ADDRESS_BUTTON)
+  private fun websiteBtn() =
+      compose.onNodeWithTag(ShopComponentsTestTags.SHOP_WEBSITE_BUTTON, useUnmergedTree = true)
 
-  private fun websiteBtn() = compose.onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_WEBSITE_BUTTON)
+  private fun spaceRow(i: Int) =
+      compose.onNodeWithTag(
+          SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + i, useUnmergedTree = true)
 
-  private fun dayTag(day: Int) = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX + day
+  private fun availabilityHeader() = compose.onNodeWithTag("AVAILABILITY_HEADER")
 
-  private fun spaceRow(i: Int) = SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + i
+  private fun reservationNoSelection() = compose.onNodeWithTag("RESERVATION_NO_SELECTION")
 
-  private class FakeClipboardManager : ClipboardManager {
-    var copiedText: String? = null
-
-    override fun getText(): AnnotatedString? {
-      return copiedText?.let { AnnotatedString(it) }
-    }
-
-    override fun setText(annotatedString: AnnotatedString) {
-      copiedText = annotatedString.text
-    }
-  }
+  private fun reservationSelected() = compose.onNodeWithTag("RESERVATION_WITH_SELECTION")
 
   /* -------------------------------- */
 
-  val address = Location(0.0, 0.0, "123 Meeple St, Boardgame City")
+  private val address = Location(0.0, 0.0, "123 Meeple St, Boardgame City")
 
-  val dummyOpeningHours =
+  private val dummyOpeningHours =
       listOf(
           OpeningHours(0, listOf(TimeSlot("09:00", "18:00"), TimeSlot("19:00", "21:00"))),
           OpeningHours(1, listOf(TimeSlot("09:00", "18:00"))),
@@ -93,7 +93,15 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
           OpeningHours(5, listOf(TimeSlot("10:00", "16:00"))),
           OpeningHours(6, emptyList()))
 
-  private val dummySpaces = listOf(Space(4, 10.0), Space(8, 20.0))
+  private val dummySpaces =
+      listOf(
+          Space(4, 10.0),
+          Space(8, 20.0),
+          Space(1, 50.0),
+          Space(1, 0.0),
+          Space(3, 2.0),
+          Space(5, 21.0),
+          Space(6, 15.0))
 
   @Before
   fun setup() = runBlocking {
@@ -118,7 +126,18 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
     owner = accountRepository.getAccount(owner.uid)
   }
 
-  @Ignore
+  class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
+    var copiedText: String? = null
+
+    override fun getText(): AnnotatedString? {
+      return copiedText?.let { AnnotatedString(it) }
+    }
+
+    override fun setText(text: androidx.compose.ui.text.AnnotatedString) {
+      copiedText = text.text
+    }
+  }
+
   @Test
   fun all_space_renter_details_tests() {
     val clipboard = FakeClipboardManager()
@@ -139,43 +158,114 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
     compose.waitUntil(timeoutMillis = 5000) { vm.spaceRenter.value != null }
 
-    checkpoint("Title visible") { title().assertExists() }
+    checkpoint("Title visible") { compose.onNodeWithText(renter.name).assertExists() }
 
-    checkpoint("Phone text") {
-      phoneText().assertTextEquals(SpaceRenterUi.phoneContactRow(renter.phone))
-    }
-    checkpoint("Email text") {
-      emailText().assertTextEquals(SpaceRenterUi.emailContactRow(renter.email))
-    }
-    checkpoint("Address text") {
-      addressText().assertTextEquals("- Address: ${renter.address.name}")
-    }
-    checkpoint("Website text") {
-      websiteText().assertTextEquals(SpaceRenterUi.websiteContactRow(renter.website))
-    }
+    /* CONTACT SECTION */
+    checkpoint("Phone text") { phoneText().assertTextEquals(renter.phone) }
+    checkpoint("Email text") { emailText().assertTextEquals(renter.email) }
+    checkpoint("Address text") { addressText().assertTextEquals(renter.address.name) }
+    checkpoint("Website text") { websiteText().assertTextEquals(renter.website) }
 
     listOf(
-            phoneBtn() to SpaceRenterUi.phoneContactRow(renter.phone),
-            emailBtn() to SpaceRenterUi.emailContactRow(renter.email),
-            addressBtn() to SpaceRenterUi.addressContactRow(renter.address.name),
-            websiteBtn() to SpaceRenterUi.websiteContactRow(renter.website))
+            phoneBtn() to renter.phone,
+            emailBtn() to renter.email,
+            addressBtn() to renter.address.name,
+            websiteBtn() to renter.website)
         .forEach { (btn, expected) ->
-          checkpoint("Copy via $btn") {
+          checkpoint("Copy via ${btn.fetchSemanticsNode().config}") {
             btn.performClick()
             assert(clipboard.copiedText == expected)
           }
         }
 
+    /* AVAILABILITY SECTION POPUP */
+
+    checkpoint("Availability header exists") { availabilityHeader().assertExists() }
+
+    availabilityHeader().performClick()
+
     dummyOpeningHours.forEach { entry ->
-      val tag = dayTag(entry.day)
-      checkpoint("Day label exists: $tag") { compose.onNodeWithTag(tag).assertExists() }
+      val tag = SpaceRenterTestTags.SPACE_RENTER_DAY_PREFIX + entry.day
+      checkpoint("Availability day exists: $tag") { compose.onNodeWithTag(tag).assertExists() }
     }
 
-    dummySpaces.forEachIndexed { i, sp ->
-      val row = spaceRow(i)
-      checkpoint("Space row exists: $row") { compose.onNodeWithTag(row).assertExists() }
+    Espresso.pressBack()
+
+    checkpoint("Availability popup dismissed") {
+      availabilityHeader().performClick()
+      compose.onNodeWithText("Close").assertExists().performClick()
     }
 
+    /* Spaces section */
+
+    compose.onRoot().performTouchInput { swipeUp() }
+    compose.waitForIdle()
+
+    var currentPageStart = 0
+
+    dummySpaces.forEachIndexed { index, _ ->
+      val i = index + 1
+
+      // If the index is not on the current page, swipe to the next one
+      if (index < currentPageStart || index >= currentPageStart + 3) {
+        // Swipe from any visible space on the current page
+        spaceRow(currentPageStart).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        currentPageStart += 3
+      }
+
+      checkpoint("Space row exists: $i") { spaceRow(index).assertExists() }
+    }
+
+    currentPageStart = (dummySpaces.size / 3) * 3
+    if (currentPageStart >= dummySpaces.size) currentPageStart -= 3
+
+    // Loop backward: last index → 0
+    for (index in dummySpaces.indices.reversed()) {
+
+      // If the index is not in the current visible page, swipe back (right)
+      if (index < currentPageStart || index >= currentPageStart + 3) {
+
+        // Swipe from any visible row on the current page (use the start index)
+        spaceRow(currentPageStart).performTouchInput { swipeRight() }
+        compose.waitForIdle()
+
+        currentPageStart -= 3
+        if (currentPageStart < 0) currentPageStart = 0
+      }
+
+      val i = index + 1
+      checkpoint("Space row exists (reverse): $i") { spaceRow(index).assertExists() }
+    }
+
+    /* RESERVATION BAR — NO SELECTION */
+    checkpoint("Reservation bar shows 'select a space' state") {
+      reservationNoSelection().assertExists()
+    }
+
+    /* SELECT FIRST SPACE */
+    spaceRow(0).performClick()
+
+    checkpoint("Reservation bar shows selected state") { reservationSelected().assertExists() }
+  }
+
+  @Test
+  fun edit_button_visible_for_owner() {
+    var fired = false
+
+    compose.setContent {
+      SpaceRenterScreen(
+          spaceId = renter.id, account = owner, viewModel = vm, onEdit = { fired = true })
+    }
+
+    compose.waitUntil(timeoutMillis = 5000) { vm.spaceRenter.value != null }
+
+    compose
+        .onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)
+        .assertExists()
+        .performClick()
+
+    assert(fired)
     checkpoint("edit_button_visible_for_owner") {
       compose
           .onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)

@@ -25,7 +25,7 @@ data class Game(
     val maxPlayers: Int,
     val recommendedPlayers: Int?,
     val averagePlayTime: Int?,
-    val minAge: Int?,
+    val minAge: Int? = 0,
     val genres: List<String> = emptyList()
 )
 

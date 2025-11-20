@@ -37,6 +37,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -46,6 +47,7 @@ import io.mockk.mockk
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
+import kotlin.text.get
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Ignore
 import org.junit.Rule
@@ -77,9 +79,9 @@ class ShopComponentsTest : FirestoreTests() {
     val t12_00 = LocalTime.of(12, 0)!!
     val openingDefault = OpeningHours(0, listOf(TimeSlot("07:30", "12:00")))
     val openingOpen24 = OpeningHours(0, listOf(TimeSlot("00:00", "23:59")))
-    val game1 = Game("1", "Catan", "", "", 3, 4, null, 60, null, emptyList())
-    val game2 = Game("2", "Carcassonne", "", "", 2, 5, null, 35, null, emptyList())
-    val game3 = Game("3", "Azul", "", "", 2, 4, null, 30, null, emptyList())
+    val game1 = Game("1", "Catan", "", "", 3, 4, null, 60, genres = emptyList())
+    val game2 = Game("2", "Carcassonne", "", "", 2, 5, null, 35, genres = emptyList())
+    val game3 = Game("3", "Azul", "", "", 2, 4, null, 30, genres = emptyList())
   }
 
   private class FakeClipboardManager : ClipboardManager {
@@ -360,7 +362,7 @@ class ShopComponentsTest : FirestoreTests() {
   }
 
   /** 4) GameStockDialog */
-  @Ignore
+  @Ignore("Test uses mocking and is a mess")
   @Test
   fun gameStockDialog_search_filter_duplicate_quantity_singleComposition() {
     val owner = Account(uid = "owner1", handle = "owner", name = "Owner", email = "owner@test")
@@ -612,7 +614,7 @@ class ShopComponentsTest : FirestoreTests() {
     lateinit var stage: MutableIntState
     lateinit var setter: (List<Pair<Game, Int>>) -> Unit
 
-    val g4 = Game("4", "7 Wonders", "", "", 3, 7, null, 45, null, emptyList())
+    val g4 = Game("4", "7 Wonders", "", "", 3, 7, null, 45, genres = emptyList())
     val input = listOf(Fx.game1 to 1, Fx.game2 to 2, Fx.game3 to 3, g4 to 4)
 
     setContentThemed {
@@ -732,111 +734,66 @@ class ShopComponentsTest : FirestoreTests() {
   /** 7) AvailabilitySection */
   @Test
   fun availabilitySection_shopDetails_behaviours_todayAndMissingToday() {
-    // Compute "today" index exactly like AvailabilitySection does
-    val todayCalendarValue = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-    val todayIndex = todayCalendarValue - 1
+    val today = Calendar.getInstance()[Calendar.DAY_OF_WEEK] - 1
 
-    // Full week of opening hours with same interval
+    // Full week with a single simple interval
     val week: List<OpeningHours> =
-        (0..6).map { day ->
-          OpeningHours(
-              day = day,
-              hours = listOf(TimeSlot(open = "09:00", close = "12:00")),
-          )
+        (0..6).map { d ->
+          OpeningHours(day = d, hours = listOf(TimeSlot(open = "09:00", close = "17:00")))
         }
 
-    val todayLines = humanize(week.first { it.day == todayIndex }.hours).split("\n")
+    val weekWithoutToday: List<OpeningHours> = week.filter { it.day != today }
 
-    // Week WITHOUT an entry for today's index
-    val weekWithoutToday: List<OpeningHours> =
-        (0..6)
-            .filter { it != todayIndex }
-            .map { day ->
-              OpeningHours(
-                  day = day,
-                  hours = listOf(TimeSlot(open = "09:00", close = "12:00")),
-              )
-            }
+    // Backing state for the composable - only call setContent once
+    val openingState = mutableStateOf(week)
 
-    lateinit var stage: MutableIntState
+    setContentThemed { AvailabilitySectionWithChevron(openingHours = openingState.value) }
 
-    setContentThemed {
-      val s = remember { mutableIntStateOf(0) }
-      stage = s
-      when (s.intValue) {
-        // 0: full week with today
-        0 ->
-            AvailabilitySection(
-                openingHours = week, dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
-        // 1: week without today's entry
-        1 ->
-            AvailabilitySection(
-                openingHours = weekWithoutToday,
-                dayTagPrefix = ShopComponentsTestTags.SHOP_DAY_PREFIX)
+    val prefix = ShopComponentsTestTags.SHOP_DAY_PREFIX
+
+    // Open sheet and wait until at least one day row is mounted inside the sheet
+    compose.onNodeWithTag(SpaceRenterTestTags.AVAILABILITY_HEADER).assertExists().performClick()
+    compose.waitForIdle()
+    val anotherDay = if (today == 0) 1 else 0
+    compose.waitUntil(timeoutMillis = 5_000) {
+      runCatching {
+            compose.onNodeWithTag("${prefix}${anotherDay}", useUnmergedTree = true).assertExists()
+            true
+          }
+          .isSuccess
+    }
+
+    // Assert all expected day rows exist for the full week
+    week.forEach { entry ->
+      val tag = "${prefix}${entry.day}"
+      checkpoint("Availability day exists: $tag") {
+        compose.onNodeWithTag(tag, useUnmergedTree = true).assertExists()
       }
     }
 
-    checkpoint("AvailabilitySection shows today and opens weekly dialog") {
-      compose.runOnUiThread { stage.intValue = 0 }
-      compose.waitForIdle()
+    // Close sheet (button text is "Close" per strings)
+    compose
+        .onNodeWithText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
+        .performClick()
+    compose.waitForIdle()
 
-      // Header title
-      compose
-          .onText(ShopUiDefaults.StringsMagicNumbers.AVAILABILITY_SECTION_TEXT)
-          .assertExists()
-          .assertIsDisplayed()
+    // Update the backing state on the UI thread to remove today's entry (no second setContent)
+    compose.runOnIdle { openingState.value = weekWithoutToday }
 
-      // "Today:" label
-      compose
-          .onText(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT)
-          .assertExists()
-          .assertIsDisplayed()
-
-      // Today row tag
-      val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
-      compose.onTag(todayTag).assertExists().assertIsDisplayed()
-
-      // All humanized lines for today visible
-      todayLines.forEach { line -> compose.onText(line).assertExists() }
-
-      // Open weekly dialog via header row
-      val navigateTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}NAVIGATE"
-      compose.onTag(navigateTag).assertExists().performClick()
-
-      // Bottom sheet confirm button ("Close")
-      compose
-          .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
-          .assertExists()
-          .assertIsDisplayed()
-
-      // All 7 day rows present
-      (0..6).forEach { day ->
-        val dayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}$day"
-        compose.onTag(dayTag).assertExists()
-      }
-
-      // Close the dialog
-      compose
-          .onText(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
-          .performClick()
+    // Re-open sheet and wait until it is mounted again
+    compose.onNodeWithTag(SpaceRenterTestTags.AVAILABILITY_HEADER).performClick()
+    compose.waitForIdle()
+    compose.waitUntil(timeoutMillis = 5_000) {
+      runCatching {
+            compose.onNodeWithTag("${prefix}${anotherDay}", useUnmergedTree = true).assertExists()
+            true
+          }
+          .isSuccess
     }
 
-    checkpoint("AvailabilitySection without today's entry shows 'Closed'") {
-      compose.runOnUiThread { stage.intValue = 1 }
-      compose.waitForIdle()
-
-      // "Today:" label still shown
-      compose
-          .onText(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT)
-          .assertExists()
-          .assertIsDisplayed()
-
-      // Today row tag still exists
-      val todayTag = "${ShopComponentsTestTags.SHOP_DAY_PREFIX}${todayIndex}_HOURS"
-      compose.onTag(todayTag).assertExists().assertIsDisplayed()
-
-      // Fallback text should be "Closed"
-      compose.onText(ShopUiDefaults.StringsMagicNumbers.CLOSED).assertExists().assertIsDisplayed()
+    // Assert today row does not exist
+    checkpoint("Today missing when not provided") {
+      compose.onNodeWithTag("${prefix}${today}", useUnmergedTree = true).assertDoesNotExist()
     }
   }
 
