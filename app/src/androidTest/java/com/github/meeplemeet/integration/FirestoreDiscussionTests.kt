@@ -200,7 +200,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   fun canDeleteDiscussion() = runTest {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
-    discussionRepository.deleteDiscussion(discussion)
+    discussionRepository.deleteDiscussion(context, discussion)
     discussionRepository.getDiscussion(discussion.uid)
   }
 

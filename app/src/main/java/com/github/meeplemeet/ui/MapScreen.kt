@@ -370,7 +370,8 @@ fun MapScreen(
                       .padding(innerPadding)
                       .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
-              properties = MapProperties(mapStyleOptions = mapStyleOptions)) {
+              properties =
+                  MapProperties(mapStyleOptions = mapStyleOptions, isMyLocationEnabled = true)) {
                 val pinPriority = listOf(PinType.SESSION, PinType.SHOP, PinType.SPACE)
 
                 val uniquePins =

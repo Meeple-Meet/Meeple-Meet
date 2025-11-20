@@ -68,6 +68,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
 
+const val MAX_MESSAGE_LENGTH: Int = 4096
+const val CHAR_COUNTER_THRESHOLD: Int = 100
+const val CHAR_COUNTER_WARNING_THRESHOLD: Int = 20
+
 /** Test-tag constants for the Discussion screen and its poll sub-components. */
 object DiscussionTestTags {
   const val INPUT_FIELD = "Input Field"
@@ -76,6 +80,7 @@ object DiscussionTestTags {
   const val ATTACHMENT_POLL_OPTION = "attachment_poll_option"
   const val ATTACHMENT_CAMERA_OPTION = "attachment_camera_option"
   const val ATTACHMENT_GALLERY_OPTION = "attachment_gallery_option"
+  const val CHAR_COUNTER = "discussion_char_counter"
 
   const val DIALOG_ROOT = "poll_dialog_root"
   const val QUESTION_FIELD = "poll_question_field"
@@ -90,6 +95,34 @@ object DiscussionTestTags {
   fun pollPercent(msgIndex: Int, optIndex: Int) = "poll_msg${msgIndex}_opt${optIndex}_percent"
 
   fun discussionInfo(name: String) = "DiscussionInfo/$name"
+}
+
+/**
+ * Character counter that appears when approaching the character limit.
+ *
+ * @param currentLength Current text length.
+ * @param maxLength Maximum allowed length.
+ * @param testTag Test tag for the counter.
+ */
+@Composable
+fun CharacterCounter(currentLength: Int, maxLength: Int, testTag: String) {
+  val remainingChars = maxLength - currentLength
+  val showCounter = currentLength > maxLength - CHAR_COUNTER_THRESHOLD
+
+  if (showCounter) {
+    Text(
+        text = remainingChars.toString(),
+        style = MaterialTheme.typography.labelSmall,
+        fontSize = Dimensions.TextSize.small,
+        fontWeight = FontWeight.Medium,
+        color =
+            when {
+              remainingChars < 0 -> MaterialTheme.colorScheme.error
+              remainingChars < CHAR_COUNTER_WARNING_THRESHOLD -> AppColors.warning
+              else -> MessagingColors.metadataText
+            },
+        modifier = Modifier.padding(start = Dimensions.Spacing.small).testTag(testTag))
+  }
 }
 
 /**
@@ -358,6 +391,7 @@ fun DiscussionScreen(
                           Row(
                               modifier =
                                   Modifier.weight(1f)
+                                      .wrapContentHeight()
                                       .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
                                       .background(MessagingColors.inputBackground)
                                       .padding(
@@ -487,13 +521,19 @@ fun DiscussionScreen(
 
                                 BasicTextField(
                                     value = messageText,
-                                    onValueChange = { if (it.length <= 4096) messageText = it },
+                                    onValueChange = {
+                                      if (it.length <= MAX_MESSAGE_LENGTH) messageText = it
+                                    },
                                     modifier =
-                                        Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
+                                        Modifier.weight(1f)
+                                            .wrapContentHeight()
+                                            .testTag(DiscussionTestTags.INPUT_FIELD),
                                     textStyle =
                                         MaterialTheme.typography.bodyMedium.copy(
                                             fontSize = Dimensions.TextSize.body,
                                             color = MessagingColors.primaryText),
+                                    minLines = 1,
+                                    maxLines = 5,
                                     decorationBox = { inner ->
                                       if (messageText.isEmpty())
                                           Text(
@@ -503,6 +543,10 @@ fun DiscussionScreen(
                                               color = MessagingColors.metadataText)
                                       inner()
                                     })
+                                CharacterCounter(
+                                    currentLength = messageText.length,
+                                    maxLength = MAX_MESSAGE_LENGTH,
+                                    testTag = DiscussionTestTags.CHAR_COUNTER)
                               }
 
                           FloatingActionButton(

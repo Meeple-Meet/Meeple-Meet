@@ -38,4 +38,6 @@ object AppColors {
 
   val textIconsFade: Color
     @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+  val warning: Color = Color(0xFFD32F2F)
 }

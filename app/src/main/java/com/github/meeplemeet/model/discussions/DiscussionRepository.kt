@@ -1,10 +1,12 @@
 package com.github.meeplemeet.model.discussions
 
+import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.images.ImageRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -58,8 +60,10 @@ private const val FIELD_CREATED_AT = "createdAt"
  * @see Poll for poll functionality
  * @see ImageRepository for photo upload/download operations
  */
-class DiscussionRepository(accountRepository: AccountRepository = RepositoryProvider.accounts) :
-    FirestoreRepository("discussions") {
+class DiscussionRepository(
+    accountRepository: AccountRepository = RepositoryProvider.accounts,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
+) : FirestoreRepository("discussions") {
   private val accounts = accountRepository.collection
 
   /**
@@ -150,8 +154,27 @@ class DiscussionRepository(accountRepository: AccountRepository = RepositoryProv
     collection.document(id).update(Discussion::profilePictureUrl.name, profilePictureUrl).await()
   }
 
-  /** Delete a discussion document. */
-  suspend fun deleteDiscussion(discussion: Discussion) {
+  /**
+   * Delete a discussion document and all associated images.
+   *
+   * Deletes:
+   * - The discussion document from Firestore
+   * - All discussion previews from participants' accounts
+   * - Discussion profile picture from Firebase Storage
+   * - All message photo attachments from Firebase Storage
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussion The discussion to delete
+   */
+  suspend fun deleteDiscussion(context: Context, discussion: Discussion) {
+    // Delete images first (profile picture and all message photos)
+    try {
+      imageRepository.deleteDiscussionPhotoMessages(context, discussion.uid)
+    } catch (_: Exception) {
+      // Error happens only in extremely niche cases
+    }
+
+    // Delete Firestore documents
     val batch = db.batch()
     batch.delete(collection.document(discussion.uid))
     discussion.participants.forEach { id ->

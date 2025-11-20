@@ -136,7 +136,6 @@ private const val PLACEHOLDER_SEARCH = "Search"
 private const val PLACEHOLDER_LOCATION = "Location"
 private const val TEXT_LOADING = "Loading..."
 private const val SESSION_DETAILS_TITLE = "Session Details"
-private const val TEXT_NEW_SESSION = "New Session"
 
 /* =======================================================================
  * Helpers
@@ -248,7 +247,7 @@ fun SessionDetailsScreen(
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .background(AppColors.secondary)
+                    .background(AppColors.primary)
                     .padding(
                         horizontal = Dimensions.Spacing.xxxLarge,
                         vertical = Dimensions.Padding.extraMedium),

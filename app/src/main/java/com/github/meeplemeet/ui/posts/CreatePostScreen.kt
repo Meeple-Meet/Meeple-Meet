@@ -239,7 +239,7 @@ fun CreatePostScreen(
               // Body field
               OutlinedTextField(
                   value = body,
-                  onValueChange = { body = it },
+                  onValueChange = { if (it.length < 8192) body = it },
                   label = { Text("Body") },
                   placeholder = { Text(BODY_FIELD_PLACEHOLDER) },
                   modifier =

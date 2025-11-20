@@ -154,7 +154,7 @@ fun DiscussionDetailsScreen(
   val uploadImage: suspend (String) -> Unit = { path ->
     try {
       viewModel.setDiscussionProfilePicture(discussion, account, context, path)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       // Handle error silently or show a snackbar
     }
   }
@@ -503,7 +503,7 @@ fun DiscussionDetailsScreen(
                             /** Only owner can delete */
                             onClick = {
                               coroutineScope.launch {
-                                viewModel.deleteDiscussion(d, account)
+                                viewModel.deleteDiscussion(context, d, account)
                                 onDelete()
                               }
                               showDeleteDialog = false

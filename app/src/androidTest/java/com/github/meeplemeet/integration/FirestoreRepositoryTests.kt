@@ -1,5 +1,6 @@
 package com.github.meeplemeet.integration
 
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.auth.Account
@@ -93,9 +94,10 @@ class FirestoreRepositoryTests : FirestoreTests() {
 
   @Test(expected = DiscussionNotFoundException::class)
   fun deleteDiscussionRemovesDiscussion() = runTest {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    discussionRepository.deleteDiscussion(discussion)
+    discussionRepository.deleteDiscussion(context, discussion)
     discussionRepository.getDiscussion(discussion.uid)
   }
 
