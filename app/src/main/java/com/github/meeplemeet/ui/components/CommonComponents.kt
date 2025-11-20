@@ -466,3 +466,33 @@ fun GalleryDialog(
             }
       }
 }
+/**
+ * Reusable helper that centralizes the ImageCarousel add/remove behavior used in both
+ * CreateSpaceRenter and EditSpaceRenter screens.
+ *
+ * Parameters:
+ * - photoCollectionUrl: current list of image URLs
+ * - spacesCount: number of spaces (used to compute maxNumberOfImages)
+ * - setPhotoCollectionUrl: setter to update the caller's state
+ */
+@Composable
+fun EditableImageCarousel(
+    photoCollectionUrl: List<String>,
+    spacesCount: Int,
+    setPhotoCollectionUrl: (List<String>) -> Unit
+) {
+  ImageCarousel(
+      photoCollectionUrl = photoCollectionUrl,
+      maxNumberOfImages = spacesCount + 2,
+      onAdd = { path, index ->
+        val newList =
+            if (index < photoCollectionUrl.size && photoCollectionUrl[index].isNotEmpty()) {
+              photoCollectionUrl.mapIndexed { i, old -> if (i == index) path else old }
+            } else {
+              photoCollectionUrl + path
+            }
+        setPhotoCollectionUrl(newList)
+      },
+      onRemove = { url -> setPhotoCollectionUrl(photoCollectionUrl.filter { it != url }) },
+      editable = true)
+}

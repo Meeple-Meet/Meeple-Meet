@@ -240,24 +240,10 @@ internal fun AddSpaceRenterContent(
                     horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
                     vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
               item {
-                ImageCarousel(
+                EditableImageCarousel(
                     photoCollectionUrl = photoCollectionUrl,
-                    maxNumberOfImages = spaces.size + 2,
-                    onAdd = { path, index ->
-                      if (index < photoCollectionUrl.size &&
-                          photoCollectionUrl[index].isNotEmpty()) {
-                        photoCollectionUrl =
-                            photoCollectionUrl.mapIndexed { i, old ->
-                              if (i == index) path else old
-                            }
-                      } else {
-                        photoCollectionUrl = photoCollectionUrl + path
-                      }
-                    },
-                    onRemove = { url ->
-                      photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                    },
-                    editable = true)
+                    spacesCount = spaces.size,
+                    setPhotoCollectionUrl = { photoCollectionUrl = it })
               }
               // Required info
               item {
