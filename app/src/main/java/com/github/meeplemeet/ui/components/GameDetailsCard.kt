@@ -31,6 +31,7 @@ import com.github.meeplemeet.ui.theme.MessagingColors
 private val CUSTOM_PADDING_START = 7.dp
 private val CUSTOM_PADDING_END = 13.dp
 private val CUSTOM_IMAGE_HEIGHT = 180.dp
+private val CUSTOM_COLLAPSED_HEIGHT = 300.dp
 
 /**
  * A detailed card displaying information about a [Game].
@@ -167,7 +168,7 @@ fun GameDescription(description: String) {
       Box(
           modifier =
               Modifier.fillMaxWidth()
-                  .heightIn(max = 300.dp) // You can adjust height
+                  .heightIn(max = CUSTOM_COLLAPSED_HEIGHT) // You can adjust height
                   .verticalScroll(rememberScrollState())) {
             Text(
                 text = description,
