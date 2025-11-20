@@ -39,6 +39,7 @@ import com.github.meeplemeet.ui.components.TimeUi
 import com.github.meeplemeet.ui.components.tryParseTime
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.AvailabilitySection
+import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.SpacesList
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
