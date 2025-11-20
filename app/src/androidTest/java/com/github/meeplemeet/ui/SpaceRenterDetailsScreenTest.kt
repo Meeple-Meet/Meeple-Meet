@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.espresso.Espresso
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.location.Location
@@ -135,6 +136,18 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
     renter = spaceRenterRepository.getSpaceRenter(created.id)
     currentUser = accountRepository.getAccount(currentUser.uid)
     owner = accountRepository.getAccount(owner.uid)
+  }
+
+  class FakeClipboardManager : androidx.compose.ui.platform.ClipboardManager {
+    var copiedText: String? = null
+
+    override fun getText(): AnnotatedString? {
+      return copiedText?.let { AnnotatedString(it) }
+    }
+
+    override fun setText(text: androidx.compose.ui.text.AnnotatedString) {
+      copiedText = text.text
+    }
   }
 
   @Test
