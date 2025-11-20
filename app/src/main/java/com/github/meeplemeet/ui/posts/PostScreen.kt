@@ -59,7 +59,7 @@ import com.github.meeplemeet.model.auth.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
-import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.discussions.CharacterCounter
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import com.google.firebase.Timestamp
@@ -360,9 +360,6 @@ private fun ComposerBar(
     sendEnabled: Boolean,
     onSend: () -> Unit
 ) {
-  val remainingChars = MAX_COMMENT_LENGTH - value.length
-  val showCounter = value.length > MAX_COMMENT_LENGTH - 100
-
   Surface(
       modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding(),
       color = MaterialTheme.colorScheme.surface,
@@ -422,23 +419,10 @@ private fun ComposerBar(
                                   color = MessagingColors.metadataText)
                           inner()
                         })
-                    // Character counter (shown when approaching limit)
-                    if (showCounter) {
-                      Text(
-                          text = remainingChars.toString(),
-                          style = MaterialTheme.typography.labelSmall,
-                          fontSize = Dimensions.TextSize.small,
-                          fontWeight = FontWeight.Medium,
-                          color =
-                              when {
-                                remainingChars < 0 -> MaterialTheme.colorScheme.error
-                                remainingChars < 20 -> AppColors.warning
-                                else -> MessagingColors.metadataText
-                              },
-                          modifier =
-                              Modifier.padding(start = Dimensions.Spacing.small)
-                                  .testTag(PostTags.COMPOSER_CHAR_COUNTER))
-                    }
+                    CharacterCounter(
+                        currentLength = value.length,
+                        maxLength = MAX_COMMENT_LENGTH,
+                        testTag = PostTags.COMPOSER_CHAR_COUNTER)
                   }
 
               FloatingActionButton(
