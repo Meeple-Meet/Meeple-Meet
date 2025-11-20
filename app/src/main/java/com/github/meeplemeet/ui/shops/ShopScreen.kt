@@ -40,6 +40,7 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.ContactSection
+import com.github.meeplemeet.ui.components.GameDetailsCard
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -152,6 +153,7 @@ fun ShopScreen(
  */
 @Composable
 fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
+    var popupGame by remember { mutableStateOf<Game?>(null) }
   LazyColumn(
       modifier = modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
@@ -176,9 +178,18 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier) {
               modifier = Modifier.fillMaxWidth(),
               clickableGames = true,
               title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
+              onClick = { game ->
+                  popupGame = game
+              }
           )
         }
       }
+    popupGame?.let { game ->
+        GameDetailsCard(
+            game = game,
+            onClose = { popupGame = null }
+        )
+    }
 }
 
 // -------------------- GAME ITEM --------------------
