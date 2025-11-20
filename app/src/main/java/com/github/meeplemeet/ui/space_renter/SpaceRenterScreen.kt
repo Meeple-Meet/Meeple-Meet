@@ -311,12 +311,17 @@ fun SpacesSection(
                   modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
                     (start until end).forEach { i ->
-                      val onSelectParam = if (selectedIndex == i) null else i
                       SpaceCard(
                           space = spaces[i],
                           index = i,
                           isSelected = selectedIndex == i,
-                          onClick = { onSelect(onSelectParam) })
+                          onClick = {
+                            onSelect(
+                                indexEquality(
+                                    curr = i,
+                                    target = selectedIndex,
+                                ))
+                          })
                     }
                     // Code needed to fix scrolling issues, otherwise UI looks weird when going from
                     // tab to tab with less than 3 items
@@ -328,21 +333,34 @@ fun SpacesSection(
 
         // Pager dots
         if (pageCount > 1) {
-          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            repeat(pageCount) { index ->
-              val active = pagerState.currentPage == index
-              val dimensionsActive =
-                  if (active) Dimensions.Padding.extraMedium else Dimensions.Padding.medium
-              val colorsActive = if (active) AppColors.focus else AppColors.textIconsFade
-              Box(
-                  modifier =
-                      Modifier.padding(Dimensions.Padding.small)
-                          .size(dimensionsActive)
-                          .background(color = colorsActive, shape = CircleShape))
-            }
-          }
+          PagerDots(pageCount = pageCount, currentPage = pagerState.currentPage)
         }
       }
+}
+
+private fun indexEquality(curr: Int, target: Int?): Int? {
+  return if (curr == target) null else curr
+}
+
+@Composable
+private fun PagerDots(
+    pageCount: Int,
+    currentPage: Int,
+    modifier: Modifier = Modifier,
+) {
+  Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+    repeat(pageCount) { index ->
+      val active = currentPage == index
+      val size = if (active) Dimensions.Padding.extraMedium else Dimensions.Padding.medium
+      val color = if (active) AppColors.focus else AppColors.textIconsFade
+
+      Box(
+          modifier =
+              Modifier.padding(Dimensions.Padding.small)
+                  .size(size)
+                  .background(color = color, shape = CircleShape))
+    }
+  }
 }
 
 /**
@@ -437,41 +455,49 @@ private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
  */
 @Composable
 fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> Unit) {
+  val barHeight = 58.dp
   Box(
       modifier =
           Modifier.fillMaxWidth()
               .wrapContentHeight()
               .background(Color.Transparent)
               .padding(horizontal = Dimensions.Padding.extraLarge)
-              .padding(end = Dimensions.Padding.large),
+              .padding(bottom = Dimensions.Padding.xxLarge),
       contentAlignment = Alignment.BottomCenter) {
         if (selectedSpace == null) {
 
           Surface(
-              modifier = Modifier.testTag(SpaceRenterTestTags.RESERVE_NO_SELECTION),
+              modifier =
+                  Modifier.testTag(SpaceRenterTestTags.RESERVE_NO_SELECTION).height(barHeight),
               shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
               color = AppColors.secondary,
               shadowElevation = Dimensions.Elevation.extraHigh) {
                 Surface(
+                    modifier = Modifier.align(Alignment.Center),
                     shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
                     color = AppColors.affirmative) {
-                      Text(
-                          text = SpaceRenterUi.BottomBar.INFO,
-                          modifier =
-                              Modifier.padding(
-                                  horizontal = Dimensions.Padding.xLarge,
-                                  vertical = Dimensions.Padding.large))
+                      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = SpaceRenterUi.BottomBar.INFO,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = Dimensions.Padding.xLarge,
+                                    vertical = Dimensions.Padding.large))
+                      }
                     }
               }
         } else {
 
           Surface(
-              Modifier.testTag(SpaceRenterTestTags.RESERVE_WITH_SELECTION),
+              modifier =
+                  Modifier.testTag(SpaceRenterTestTags.RESERVE_WITH_SELECTION).height(barHeight),
               shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
               color = AppColors.secondary,
               shadowElevation = Dimensions.Elevation.high) {
                 Row(
-                    modifier = Modifier.padding(horizontal = Dimensions.Padding.extraLarge),
+                    modifier = Modifier.padding(horizontal = Dimensions.Padding.xLarge),
                     verticalAlignment = Alignment.CenterVertically) {
                       Box(
                           modifier =
@@ -488,7 +514,8 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
                               Text(
                                   text =
                                       SpaceRenterUi.BottomBar.spaceDetails(
-                                          selectedSpace.seats, selectedSpace.costPerHour))
+                                          selectedSpace.seats, selectedSpace.costPerHour),
+                                  style = MaterialTheme.typography.labelSmall)
                             }
                           }
 
