@@ -3,11 +3,13 @@ package com.github.meeplemeet.ui.components
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,6 +142,8 @@ fun ImageCarousel(
       rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
           cameraLauncher.launch(null)
+        } else {
+          Log.w("ImageCarousel", "Camera permission denied")
         }
       }
 
@@ -402,6 +406,7 @@ fun PhotoDialogBottomBar(
  * @param onChooseFromGallery Callback for picking a photo from the gallery.
  * @param editable If true, shows the bottom bar for adding images.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GalleryDialog(
     pageNumber: Int,
@@ -411,6 +416,7 @@ fun GalleryDialog(
     onChooseFromGallery: () -> Unit,
     editable: Boolean = true
 ) {
+  val isRealImage = pageNumber in (galleryPictureUrl?.indices ?: IntRange.EMPTY)
   Dialog(
       onDismissRequest = onDismiss,
       properties =
@@ -421,12 +427,12 @@ fun GalleryDialog(
                     .background(AppColors.primary)
                     .testTag(CommonComponentsTestTags.GALLERY_DIALOG_ROOT)) {
               // Image or default icon
-              if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
+              if (isRealImage) {
                 AsyncImage(
-                    model = galleryPictureUrl[pageNumber],
+                    model = galleryPictureUrl!![pageNumber],
                     contentDescription = "Discussion Profile Picture",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().clickable { onDismiss() })
+                    modifier = Modifier.fillMaxSize().combinedClickable(onClick = { onDismiss() }))
               } else {
                 Box(
                     modifier = Modifier.fillMaxSize().clickable { onDismiss() },
@@ -446,8 +452,8 @@ fun GalleryDialog(
 
               PhotoDialogTopBar(
                   Modifier.align(Alignment.TopCenter),
-                  if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
-                    "Image ${pageNumber + 1} of ${galleryPictureUrl.size}"
+                  if (isRealImage) {
+                    "Image ${pageNumber + 1} of ${galleryPictureUrl?.size ?: 0}"
                   } else {
                     ADD_PICTURE
                   },
