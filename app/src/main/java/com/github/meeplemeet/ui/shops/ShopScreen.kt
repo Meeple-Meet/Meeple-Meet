@@ -173,7 +173,7 @@ fun ShopScreen(
         GameDetailsCard(
             game = game,
             onClose = { popupGame = null },
-            modifier = Modifier.wrapContentSize().padding(16.dp))
+            modifier = Modifier.wrapContentSize().padding(Dimensions.Padding.extraLarge))
       }
     }
   }
