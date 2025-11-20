@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.EditSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
@@ -60,6 +61,38 @@ object EditSpaceRenterUi {
     const val ERROR_VALIDATION = "Validation error"
     const val ERROR_UPDATE = "Failed to update space renter"
   }
+}
+
+data class SpaceRenterValidationState(
+    val hasOpeningHours: Boolean,
+    val hasAtLeastOneSpace: Boolean,
+    val allSpacesValid: Boolean,
+    val hasLocation: Boolean
+)
+
+@Composable
+fun rememberSpaceRenterValidationState(
+    week: List<OpeningHours>,
+    spaces: List<Space>,
+    locationUi: LocationUIState
+): SpaceRenterValidationState {
+  val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
+  val hasAtLeastOneSpace by remember(spaces) { derivedStateOf { spaces.isNotEmpty() } }
+  val allSpacesValid by
+      remember(spaces) {
+        derivedStateOf {
+          spaces.all {
+            it.seats >= AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE &&
+                it.costPerHour >= AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR
+          }
+        }
+      }
+  val hasLocation by
+      remember(locationUi.selectedLocation) {
+        derivedStateOf { locationUi.selectedLocation != null }
+      }
+  return SpaceRenterValidationState(
+      hasOpeningHours, hasAtLeastOneSpace, allSpacesValid, hasLocation)
 }
 
 /* ================================================================================================
@@ -161,34 +194,18 @@ internal fun EditSpaceRenterContent(
 
   var spaces by remember { mutableStateOf(initialRenter.spaces) }
   var spacesExpanded by rememberSaveable { mutableStateOf(false) }
-
-  val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
-  val hasAtLeastOneSpace by remember(spaces) { derivedStateOf { spaces.isNotEmpty() } }
-  val allSpacesValid by
-      remember(spaces) {
-        derivedStateOf {
-          spaces.all {
-            it.seats >= AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE &&
-                it.costPerHour >= AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR
-          }
-        }
-      }
-
-  val hasLocation by
-      remember(locationUi.selectedLocation) {
-        derivedStateOf { locationUi.selectedLocation != null }
-      }
+  val validation = rememberSpaceRenterValidationState(week, spaces, locationUi)
 
   // Determines whether all required fields are filled and valid.
   val isValid by
-      remember(name, email, hasLocation, hasOpeningHours, hasAtLeastOneSpace, allSpacesValid) {
+      remember(name, email, validation) {
         derivedStateOf {
           name.isNotBlank() &&
               isValidEmail(email) &&
-              hasLocation &&
-              hasOpeningHours &&
-              hasAtLeastOneSpace &&
-              allSpacesValid
+              validation.hasLocation &&
+              validation.hasOpeningHours &&
+              validation.hasAtLeastOneSpace &&
+              validation.allSpacesValid
         }
       }
 
