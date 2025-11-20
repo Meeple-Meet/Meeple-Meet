@@ -78,18 +78,6 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
   private fun reservationSelected() = compose.onNodeWithTag("RESERVATION_WITH_SELECTION")
 
-  private class FakeClipboardManager : ClipboardManager {
-    var copiedText: String? = null
-
-    override fun getText(): AnnotatedString? {
-      return copiedText?.let { AnnotatedString(it) }
-    }
-
-    override fun setText(annotatedString: AnnotatedString) {
-      copiedText = annotatedString.text
-    }
-  }
-
   /* -------------------------------- */
 
   private val address = Location(0.0, 0.0, "123 Meeple St, Boardgame City")

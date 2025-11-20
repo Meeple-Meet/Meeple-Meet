@@ -78,9 +78,9 @@ class ShopComponentsTest : FirestoreTests() {
     val t12_00 = LocalTime.of(12, 0)!!
     val openingDefault = OpeningHours(0, listOf(TimeSlot("07:30", "12:00")))
     val openingOpen24 = OpeningHours(0, listOf(TimeSlot("00:00", "23:59")))
-    val game1 = Game("1", "Catan", "", "", 3, 4, null, 60, emptyList())
-    val game2 = Game("2", "Carcassonne", "", "", 2, 5, null, 35, emptyList())
-    val game3 = Game("3", "Azul", "", "", 2, 4, null, 30, emptyList())
+    val game1 = Game("1", "Catan", "", "", 3, 4, null, 60, genres = emptyList())
+    val game2 = Game("2", "Carcassonne", "", "", 2, 5, null, 35, genres = emptyList())
+    val game3 = Game("3", "Azul", "", "", 2, 4, null, 30, genres = emptyList())
   }
 
   private class FakeClipboardManager : ClipboardManager {
@@ -612,7 +612,7 @@ class ShopComponentsTest : FirestoreTests() {
     lateinit var stage: MutableIntState
     lateinit var setter: (List<Pair<Game, Int>>) -> Unit
 
-    val g4 = Game("4", "7 Wonders", "", "", 3, 7, null, 45, emptyList())
+    val g4 = Game("4", "7 Wonders", "", "", 3, 7, null, 45, genres = emptyList())
     val input = listOf(Fx.game1 to 1, Fx.game2 to 2, Fx.game3 to 3, g4 to 4)
 
     setContentThemed {

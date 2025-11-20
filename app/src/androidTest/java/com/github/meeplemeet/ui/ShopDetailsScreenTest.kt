@@ -126,6 +126,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
               maxPlayers = 4,
               recommendedPlayers = 4,
               averagePlayTime = 60,
+              minAge = 6,
               genres = emptyList())
         }
 
