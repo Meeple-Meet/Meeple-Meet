@@ -171,7 +171,7 @@ class DiscussionRepository(
     try {
       imageRepository.deleteDiscussionPhotoMessages(context, discussion.uid)
     } catch (_: Exception) {
-      // Continue even if image deletion fails (images might not exist)
+      // Error happens only in extremely niche cases
     }
 
     // Delete Firestore documents

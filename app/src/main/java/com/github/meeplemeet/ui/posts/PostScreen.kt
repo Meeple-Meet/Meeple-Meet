@@ -59,6 +59,7 @@ import com.github.meeplemeet.model.auth.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import com.google.firebase.Timestamp
@@ -79,6 +80,7 @@ const val UNKNOWN_USER_PLACEHOLDER: String = "<Unknown User>"
 const val TIMESTAMP_COMMENT_FORMAT: String = "MMM d, yyyy · HH:mm"
 const val SEE_REPLIES_TEXT: String = "See replies"
 const val HIDE_REPLIES_TEXT: String = "Hide replies"
+const val MAX_COMMENT_LENGTH: Int = 2048
 
 /* ================================================================
  * Setups
@@ -106,6 +108,7 @@ object PostTags {
   const val COMPOSER_ATTACH = "post_composer_attach_btn"
   const val COMPOSER_INPUT = "post_composer_input"
   const val COMPOSER_SEND = "post_composer_send_btn"
+  const val COMPOSER_CHAR_COUNTER = "post_composer_char_counter"
 
   fun postCard(id: String) = "post_card:$id"
 
@@ -247,7 +250,7 @@ fun PostScreen(
       bottomBar = {
         ComposerBar(
             value = topComment,
-            onValueChange = { if (it.length <= 2048) topComment = it },
+            onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) topComment = it },
             onAttach = { /* TODO attachments */},
             sendEnabled = !isSending && topComment.isNotBlank() && post != null,
             onSend = {
@@ -357,6 +360,9 @@ private fun ComposerBar(
     sendEnabled: Boolean,
     onSend: () -> Unit
 ) {
+  val remainingChars = MAX_COMMENT_LENGTH - value.length
+  val showCounter = value.length > MAX_COMMENT_LENGTH - 100
+
   Surface(
       modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding(),
       color = MaterialTheme.colorScheme.surface,
@@ -373,6 +379,7 @@ private fun ComposerBar(
               Row(
                   modifier =
                       Modifier.weight(1f)
+                          .wrapContentHeight()
                           .clip(RoundedCornerShape(Dimensions.AvatarSize.tiny))
                           .background(MessagingColors.inputBackground)
                           .padding(
@@ -395,13 +402,15 @@ private fun ComposerBar(
                         onValueChange = onValueChange,
                         modifier =
                             Modifier.weight(1f)
+                                .wrapContentHeight()
                                 .semantics { contentDescription = "Comment input" }
                                 .testTag(PostTags.COMPOSER_INPUT),
                         textStyle =
                             MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = Dimensions.TextSize.body,
                                 color = MessagingColors.primaryText),
-                        singleLine = true,
+                        minLines = 1,
+                        maxLines = 5,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { if (sendEnabled) onSend() }),
                         decorationBox = { inner ->
@@ -413,6 +422,23 @@ private fun ComposerBar(
                                   color = MessagingColors.metadataText)
                           inner()
                         })
+                    // Character counter (shown when approaching limit)
+                    if (showCounter) {
+                      Text(
+                          text = remainingChars.toString(),
+                          style = MaterialTheme.typography.labelSmall,
+                          fontSize = Dimensions.TextSize.small,
+                          fontWeight = FontWeight.Medium,
+                          color =
+                              when {
+                                remainingChars < 0 -> MaterialTheme.colorScheme.error
+                                remainingChars < 20 -> AppColors.warning
+                                else -> MessagingColors.metadataText
+                              },
+                          modifier =
+                              Modifier.padding(start = Dimensions.Spacing.small)
+                                  .testTag(PostTags.COMPOSER_CHAR_COUNTER))
+                    }
                   }
 
               FloatingActionButton(
@@ -980,7 +1006,7 @@ private fun CommentItem(
           horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
             OutlinedTextField(
                 value = replyText,
-                onValueChange = { if (it.length <= 2048) replyText = it },
+                onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) replyText = it },
                 modifier =
                     Modifier.weight(1f)
                         .semantics { contentDescription = "Reply input" }

@@ -68,6 +68,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
 
+const val MAX_MESSAGE_LENGTH: Int = 4096
+
 /** Test-tag constants for the Discussion screen and its poll sub-components. */
 object DiscussionTestTags {
   const val INPUT_FIELD = "Input Field"
@@ -76,6 +78,7 @@ object DiscussionTestTags {
   const val ATTACHMENT_POLL_OPTION = "attachment_poll_option"
   const val ATTACHMENT_CAMERA_OPTION = "attachment_camera_option"
   const val ATTACHMENT_GALLERY_OPTION = "attachment_gallery_option"
+  const val CHAR_COUNTER = "discussion_char_counter"
 
   const val DIALOG_ROOT = "poll_dialog_root"
   const val QUESTION_FIELD = "poll_question_field"
@@ -343,6 +346,9 @@ fun DiscussionScreen(
               var showAttachmentMenu by remember { mutableStateOf(false) }
               var showPollDialog by remember { mutableStateOf(false) }
 
+              val remainingChars = MAX_MESSAGE_LENGTH - messageText.length
+              val showCounter = messageText.length > MAX_MESSAGE_LENGTH - 100
+
               Surface(
                   modifier = Modifier.fillMaxWidth(),
                   color = MaterialTheme.colorScheme.surface,
@@ -358,6 +364,7 @@ fun DiscussionScreen(
                           Row(
                               modifier =
                                   Modifier.weight(1f)
+                                      .wrapContentHeight()
                                       .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
                                       .background(MessagingColors.inputBackground)
                                       .padding(
@@ -487,13 +494,19 @@ fun DiscussionScreen(
 
                                 BasicTextField(
                                     value = messageText,
-                                    onValueChange = { if (it.length <= 4096) messageText = it },
+                                    onValueChange = {
+                                      if (it.length <= MAX_MESSAGE_LENGTH) messageText = it
+                                    },
                                     modifier =
-                                        Modifier.weight(1f).testTag(DiscussionTestTags.INPUT_FIELD),
+                                        Modifier.weight(1f)
+                                            .wrapContentHeight()
+                                            .testTag(DiscussionTestTags.INPUT_FIELD),
                                     textStyle =
                                         MaterialTheme.typography.bodyMedium.copy(
                                             fontSize = Dimensions.TextSize.body,
                                             color = MessagingColors.primaryText),
+                                    minLines = 1,
+                                    maxLines = 5,
                                     decorationBox = { inner ->
                                       if (messageText.isEmpty())
                                           Text(
@@ -503,6 +516,23 @@ fun DiscussionScreen(
                                               color = MessagingColors.metadataText)
                                       inner()
                                     })
+                                // Character counter (shown when approaching limit)
+                                if (showCounter) {
+                                  Text(
+                                      text = remainingChars.toString(),
+                                      style = MaterialTheme.typography.labelSmall,
+                                      fontSize = Dimensions.TextSize.small,
+                                      fontWeight = FontWeight.Medium,
+                                      color =
+                                          when {
+                                            remainingChars < 0 -> MaterialTheme.colorScheme.error
+                                            remainingChars < 20 -> AppColors.warning
+                                            else -> MessagingColors.metadataText
+                                          },
+                                      modifier =
+                                          Modifier.padding(start = Dimensions.Spacing.small)
+                                              .testTag(DiscussionTestTags.CHAR_COUNTER))
+                                }
                               }
 
                           FloatingActionButton(

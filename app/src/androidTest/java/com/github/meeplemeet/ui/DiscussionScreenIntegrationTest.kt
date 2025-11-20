@@ -24,7 +24,6 @@ import kotlin.random.Random
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import org.junit.*
 import org.junit.runner.RunWith
 
@@ -97,401 +96,440 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
   }
 
   @Test
-  fun all_tests() =
-      testScope.runTest {
-        // Create photo discussions upfront
-        val photoDiscussion =
-            discussionRepository.createDiscussion(
-                name = "Photos",
-                description = "",
-                creatorId = currentUser.uid,
-                participants = listOf(otherUser.uid))
-        discussionRepository.sendPhotoMessageToDiscussion(
-            photoDiscussion, currentUser, "Look at this!", "https://example.com/pic1.jpg")
-        val refreshedPhotoDiscussion = discussionRepository.getDiscussion(photoDiscussion.uid)
+  fun all_tests() = runBlocking {
+    // Create photo discussions upfront
+    val photoDiscussion =
+        discussionRepository.createDiscussion(
+            name = "Photos",
+            description = "",
+            creatorId = currentUser.uid,
+            participants = listOf(otherUser.uid))
+    discussionRepository.sendPhotoMessageToDiscussion(
+        photoDiscussion, currentUser, "Look at this!", "https://example.com/pic1.jpg")
+    val refreshedPhotoDiscussion = discussionRepository.getDiscussion(photoDiscussion.uid)
 
-        val galleryDiscussion =
-            discussionRepository.createDiscussion(
-                name = "Gallery",
-                description = "",
-                creatorId = currentUser.uid,
-                participants = listOf(otherUser.uid))
-        discussionRepository.sendPhotoMessageToDiscussion(
-            galleryDiscussion, currentUser, "First photo", "https://example.com/picA.jpg")
-        discussionRepository.sendPhotoMessageToDiscussion(
-            galleryDiscussion, otherUser, "Second photo", "https://example.com/picB.jpg")
-        val refreshedGalleryDiscussion = discussionRepository.getDiscussion(galleryDiscussion.uid)
+    val galleryDiscussion =
+        discussionRepository.createDiscussion(
+            name = "Gallery",
+            description = "",
+            creatorId = currentUser.uid,
+            participants = listOf(otherUser.uid))
+    discussionRepository.sendPhotoMessageToDiscussion(
+        galleryDiscussion, currentUser, "First photo", "https://example.com/picA.jpg")
+    discussionRepository.sendPhotoMessageToDiscussion(
+        galleryDiscussion, otherUser, "Second photo", "https://example.com/picB.jpg")
+    val refreshedGalleryDiscussion = discussionRepository.getDiscussion(galleryDiscussion.uid)
 
-        // Use mutable state to switch discussions
-        val currentDiscussionState = mutableStateOf(testDiscussion)
+    // Use mutable state to switch discussions
+    val currentDiscussionState = mutableStateOf(testDiscussion)
 
-        composeTestRule.setContent {
-          val discussionFlow = viewModel.discussionFlow(testDiscussion.uid)
-          val latestDiscussion by discussionFlow.collectAsState(initial = testDiscussion)
-          AppTheme(themeMode = ThemeMode.LIGHT) {
-            DiscussionScreen(
-                viewModel = viewModel,
-                discussion = currentDiscussionState.value,
-                account = currentUser,
-                onBack = { backPressed = true })
-          }
-        }
+    composeTestRule.setContent {
+      val discussionFlow = viewModel.discussionFlow(testDiscussion.uid)
+      val latestDiscussion by discussionFlow.collectAsState(initial = testDiscussion)
+      AppTheme(themeMode = ThemeMode.LIGHT) {
+        DiscussionScreen(
+            viewModel = viewModel,
+            discussion = currentDiscussionState.value,
+            account = currentUser,
+            onBack = { backPressed = true })
+      }
+    }
 
-        checkpoint("full_smoke_all_cases") {
+    checkpoint("full_smoke_all_cases") {
 
-          /* 1  title & messages shown ------------------------------------------------------ */
-          checkpoint("Discussion title displayed") {
-            composeTestRule.onNodeWithText(testDiscussion.name).assertExists()
-          }
-          val messages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
-          messages.forEach { msg ->
-            checkpoint("Message '${msg.content}' displayed") {
-              composeTestRule.onNodeWithText(msg.content).assertExists()
-            }
-          }
-
-          /* 2  send message ---------------------------------------------------------------- */
-          val sendField = composeTestRule.onNodeWithTag(DiscussionTestTags.INPUT_FIELD)
-          val sendBtn = composeTestRule.onNodeWithTag(DiscussionTestTags.SEND_BUTTON)
-
-          sendField.performTextInput("Hello!")
-          sendBtn.performClick()
-
-          checkpoint("Input field cleared after send") { sendField.assertTextContains("Message") }
-
-          /* 3  back button ----------------------------------------------------------------- */
-          composeTestRule
-              .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
-              .performClick()
-          checkpoint("Back navigation called") { backPressed }
-
-          /* ---------- one-line summary ---------------------------------------------------- */
-          val failed = report.filterValues { !it }.keys
-          println(
-              "Smoke: ${report.size - failed.size}/${report.size} OK" +
-                  (if (failed.isNotEmpty()) " → $failed" else ""))
-          assertTrue("Failures: $failed", failed.isEmpty())
-        }
-
-        checkpoint("poll_fullLifeCycle_smoke") {
-          // Switch back to test discussion for poll tests
-          currentDiscussionState.value = testDiscussion
-          composeTestRule.waitForIdle()
-          Thread.sleep(500) // Allow recomposition to complete
-
-          /* ------------------------------------------------------------------
-           * 1. open "create poll" dialog
-           * ------------------------------------------------------------------ */
-          checkpoint("Open attachment menu") {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON).assertExists()
-            composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON).performClick()
-            composeTestRule.waitForIdle()
-          }
-          checkpoint("Tap 'Create poll'") {
-            composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).assertExists()
-            composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).performClick()
-            composeTestRule.waitForIdle()
-          }
-          checkpoint("Poll dialog visible") {
-            composeTestRule.waitUntil(3000) {
-              composeTestRule
-                  .onAllNodesWithTag(DiscussionTestTags.DIALOG_ROOT)
-                  .fetchSemanticsNodes()
-                  .isNotEmpty()
-            }
-            composeTestRule.onNodeWithTag(DiscussionTestTags.DIALOG_ROOT).assertExists()
-          }
-
-          /* ------------------------------------------------------------------
-           * 2. fill question
-           * ------------------------------------------------------------------ */
-          checkpoint("Type question") {
-            composeTestRule
-                .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD)
-                .performTextInput("Best board game?")
-          }
-
-          /* ------------------------------------------------------------------
-           * 3. manipulate options (add / remove / rename)
-           * ------------------------------------------------------------------ */
-          fun optionFields() =
-              composeTestRule.onAllNodesWithTag(DiscussionTestTags.OPTION_TEXT_FIELD)
-
-          fun addOption() {
-            composeTestRule.onNodeWithTag(DiscussionTestTags.ADD_OPTION_BUTTON).performClick()
-          }
-          fun removeOption(index: Int) {
-            composeTestRule
-                .onAllNodesWithTag(DiscussionTestTags.REMOVE_OPTION_BUTTON)[index]
-                .performClick()
-          }
-
-          // start with two default fields
-          optionFields()[0].performTextInput("Chess")
-          optionFields()[1].performTextInput("Go")
-
-          addOption() // third field appears
-          optionFields()[2].performTextInput("X-Wing")
-
-          removeOption(1) // delete “Go”
-          optionFields().assertCountEquals(2) // only two left
-
-          // rename remaining
-          optionFields()[0].performTextClearance()
-          optionFields()[0].performTextInput("Terraforming Mars")
-          optionFields()[1].performTextClearance()
-          optionFields()[1].performTextInput("Gloomhaven")
-
-          /* ------------------------------------------------------------------
-           * 4. submit poll (single choice)
-           * ------------------------------------------------------------------ */
-          checkpoint("Submit poll") {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).assertExists()
-            composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).performClick()
-            composeTestRule.waitForIdle()
-          }
-          checkpoint("Dialog closed") {
-            composeTestRule.waitUntil(3000) {
-              composeTestRule
-                  .onAllNodesWithTag(DiscussionTestTags.DIALOG_ROOT)
-                  .fetchSemanticsNodes()
-                  .isEmpty()
-            }
-            composeTestRule.onNodeWithTag(DiscussionTestTags.DIALOG_ROOT).assertDoesNotExist()
-          }
-
-          /* ------------------------------------------------------------------
-           * 5. poll card rendered
-           * ------------------------------------------------------------------ */
-          checkpoint("Poll question rendered") {
-            composeTestRule.waitUntil(5000) {
-              composeTestRule
-                  .onAllNodesWithText("Best board game?")
-                  .fetchSemanticsNodes()
-                  .isNotEmpty()
-            }
-            composeTestRule.onNodeWithText("Best board game?").assertExists()
-          }
-          checkpoint("Option 1 rendered") {
-            composeTestRule.waitUntil(5000) {
-              composeTestRule
-                  .onAllNodesWithText("Terraforming Mars")
-                  .fetchSemanticsNodes()
-                  .isNotEmpty()
-            }
-            composeTestRule.onNodeWithText("Terraforming Mars").assertExists()
-          }
-          checkpoint("Option 2 rendered") {
-            composeTestRule.waitUntil(5000) {
-              composeTestRule.onAllNodesWithText("Gloomhaven").fetchSemanticsNodes().isNotEmpty()
-            }
-            composeTestRule.onNodeWithText("Gloomhaven").assertExists()
-          }
-          checkpoint("Wait until poll message exists in repo") {
-            runBlocking { testDiscussion = awaitPollMessage(testDiscussion, 1) }
-          }
-
-          /* ------------------------------------------------------------------
-           * 6. vote (single choice) – first option
-           *        msgIndex = last message = 2 (after 2 earlier messages + new poll)
-           * ------------------------------------------------------------------ */
-          val msgIndex = runBlocking {
-            pollMessageIndex(testDiscussion.uid, "Best board game?").also {
-              require(it >= 0) { "Poll message not found" }
-            }
-          }
-
-          checkpoint("Vote first option") {
-            composeTestRule
-                .onNodeWithTag(
-                    DiscussionTestTags.pollVoteButton(msgIndex, 0), useUnmergedTree = true)
-                .performClick()
-          }
-          checkpoint("First option 100 %") { waitUntilPercentIs(msgIndex, 0, "100%") }
-
-          /* ------------------------------------------------------------------
-           * 7. change vote – second option becomes 100 %
-           * ------------------------------------------------------------------ */
-          checkpoint("Change vote to second option") {
-            composeTestRule
-                .onNodeWithTag(
-                    DiscussionTestTags.pollVoteButton(msgIndex, 1), useUnmergedTree = true)
-                .performClick()
-          }
-          composeTestRule.waitForIdle()
-          checkpoint("First option 0 %") { waitUntilPercentIs(msgIndex, 0, "0%") }
-          checkpoint("Second option 100 %") { waitUntilPercentIs(msgIndex, 1, "100%") }
-
-          /* ------------------------------------------------------------------
-           * 8. create a second poll (multi-choice)
-           * ------------------------------------------------------------------ */
-          composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON).performClick()
-          composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).performClick()
-
-          composeTestRule
-              .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD)
-              .performTextInput("Pick snacks")
-          optionFields()[0].performTextInput("Popcorn")
-          optionFields()[1].performTextInput("Nachos")
-          addOption()
-          optionFields()[2].performTextInput("Soda")
-
-          composeTestRule
-              .onNodeWithTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX, useUnmergedTree = true)
-              .performClick()
-
-          composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).performClick()
-          checkpoint("Wait until poll message exists in repo") {
-            runBlocking { testDiscussion = awaitPollMessage(testDiscussion, 1) }
-          }
-
-          /* ------------------------------------------------------------------
-           * 9. multi-vote & percentages
-           *        new poll is at msgIndex 3
-           * ------------------------------------------------------------------ */
-          val multiMsgIndex = runBlocking {
-            pollMessageIndex(testDiscussion.uid, "Pick snacks").also {
-              require(it >= 0) { "Multi poll message not found" }
-            }
-          }
-
-          // select two options
-          composeTestRule
-              .onNodeWithTag(
-                  DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
-              .performClick()
-          composeTestRule
-              .onNodeWithTag(
-                  DiscussionTestTags.pollVoteButton(multiMsgIndex, 2), useUnmergedTree = true)
-              .performClick()
-
-          checkpoint("Popcorn 50 %") { waitUntilPercentIs(multiMsgIndex, 0, "50%") }
-          checkpoint("Soda 50 %") { waitUntilPercentIs(multiMsgIndex, 2, "50%") }
-
-          // deselect first
-          composeTestRule
-              .onNodeWithTag(
-                  DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
-              .performClick()
-          checkpoint("Popcorn 0 %") { waitUntilPercentIs(multiMsgIndex, 0, "0%") }
-          checkpoint("Soda now 100 %") { waitUntilPercentIs(multiMsgIndex, 2, "100%") }
-
-          /* ------------------------------------------------------------------
-           * 10. summary
-           * ------------------------------------------------------------------ */
-          val failed = report.filterValues { !it }.keys
-          println(
-              "Poll smoke: ${report.size - failed.size}/${report.size} OK" +
-                  (if (failed.isNotEmpty()) " → $failed" else ""))
-        }
-
-        checkpoint("photoBubble_opensFullscreenDialog") {
-          try {
-            val caption = "Look at this!"
-
-            // Switch to photo discussion
-            currentDiscussionState.value = refreshedPhotoDiscussion
-            composeTestRule.waitForIdle()
-
-            composeTestRule.waitUntil(5_000) {
-              composeTestRule
-                  .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
-                  .fetchSemanticsNodes()
-                  .isNotEmpty()
-            }
-
-            checkpoint("Photo bubble displayed") {
-              composeTestRule
-                  .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
-                  .assertCountEquals(1)
-            }
-            checkpoint("Photo caption displayed") {
-              composeTestRule.onNodeWithText(caption, useUnmergedTree = true).assertExists()
-            }
-
-            composeTestRule
-                .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)[0]
-                .performClick()
-
-            checkpoint("Fullscreen dialog shows thumbnail bar") {
-              composeTestRule
-                  .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
-                  .assertCountEquals(1)
-            }
-            checkpoint("Dialog can be dismissed") {
-              val backs =
-                  composeTestRule.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
-              val lastBack = backs[backs.fetchSemanticsNodes().lastIndex]
-              lastBack.performClick()
-              composeTestRule.waitUntil(3_000) {
-                composeTestRule
-                    .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
-                    .fetchSemanticsNodes()
-                    .isEmpty()
-              }
-            }
-          } finally {
-            // Photo discussion cleanup handled at end of test
-          }
-        }
-
-        checkpoint("fullscreenImageDialog_switchesBetweenPhotos") {
-          try {
-            // Switch to gallery discussion
-            currentDiscussionState.value = refreshedGalleryDiscussion
-            composeTestRule.waitForIdle()
-
-            composeTestRule.waitUntil(5_000) {
-              composeTestRule
-                  .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
-                  .fetchSemanticsNodes()
-                  .size >= 2
-            }
-
-            composeTestRule
-                .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)[0]
-                .performClick()
-
-            checkpoint("Thumbnail bar shows two photos") {
-              composeTestRule
-                  .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
-                  .assertCountEquals(2)
-            }
-            checkpoint("Initial dialog shows current user") {
-              composeTestRule.onNodeWithText("You", useUnmergedTree = true).assertExists()
-            }
-
-            composeTestRule
-                .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)[1]
-                .performClick()
-
-            checkpoint("Switching thumbnails updates sender name") {
-              composeTestRule.waitUntil(3_000) {
-                composeTestRule
-                    .onAllNodesWithText("You", useUnmergedTree = true)
-                    .fetchSemanticsNodes()
-                    .isEmpty()
-              }
-            }
-
-            val backs =
-                composeTestRule.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
-            val lastBack = backs[backs.fetchSemanticsNodes().lastIndex]
-            lastBack.performClick()
-          } finally {
-            // Gallery discussion cleanup handled at end of test
-          }
-        }
-
-        // Cleanup photo discussions
-        runBlocking {
-          val context = InstrumentationRegistry.getInstrumentation().targetContext
-          discussionRepository.deleteDiscussion(context, photoDiscussion)
-          discussionRepository.deleteDiscussion(context, galleryDiscussion)
+      /* 1  title & messages shown ------------------------------------------------------ */
+      checkpoint("Discussion title displayed") {
+        composeTestRule.onNodeWithText(testDiscussion.name).assertExists()
+      }
+      val messages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
+      messages.forEach { msg ->
+        checkpoint("Message '${msg.content}' displayed") {
+          composeTestRule.onNodeWithText(msg.content).assertExists()
         }
       }
+
+      /* 2  send message ---------------------------------------------------------------- */
+      val sendField = composeTestRule.onNodeWithTag(DiscussionTestTags.INPUT_FIELD)
+      val sendBtn = composeTestRule.onNodeWithTag(DiscussionTestTags.SEND_BUTTON)
+
+      sendField.performTextInput("Hello!")
+      sendBtn.performClick()
+
+      checkpoint("Input field cleared after send") { sendField.assertTextContains("Message") }
+
+      /* Character counter tests -------------------------------------------------------- */
+      checkpoint("character_counter_not_visible_initially") {
+        composeTestRule.onNodeWithTag(DiscussionTestTags.CHAR_COUNTER).assertDoesNotExist()
+      }
+
+      checkpoint("character_counter_appears_when_approaching_limit") {
+        // Type text to get close to limit (4096 - 100 = 3996 chars to trigger counter)
+        val longText = "a".repeat(4000)
+        sendField.performTextReplacement(longText)
+        composeTestRule.waitForIdle()
+
+        // Counter should now be visible
+        composeTestRule.onNodeWithTag(DiscussionTestTags.CHAR_COUNTER).assertExists()
+        // Should show remaining chars (4096 - 4000 = 96)
+        composeTestRule.onNodeWithText("96").assertExists()
+      }
+
+      checkpoint("character_counter_shows_warning_when_low") {
+        // Type text to leave less than 20 chars
+        val longText = "a".repeat(4078)
+        sendField.performTextReplacement(longText)
+        composeTestRule.waitForIdle()
+
+        // Counter should be visible showing 18 chars remaining
+        composeTestRule.onNodeWithTag(DiscussionTestTags.CHAR_COUNTER).assertExists()
+        composeTestRule.onNodeWithText("18").assertExists()
+      }
+
+      checkpoint("character_limit_enforced") {
+        // Type exactly 4096 characters
+        val maxText = "a".repeat(4096)
+        sendField.performTextReplacement(maxText)
+        composeTestRule.waitForIdle()
+
+        // Counter should show 0 chars remaining
+        composeTestRule.onNodeWithTag(DiscussionTestTags.CHAR_COUNTER).assertExists()
+        composeTestRule.onNodeWithText("0").assertExists()
+
+        // Verify we can't type more - input should be rejected
+        sendField.performTextInput("b")
+        composeTestRule.waitForIdle()
+
+        // Counter should still show 0 (input was rejected)
+        composeTestRule.onNodeWithText("0").assertExists()
+      }
+
+      // Clear the text field for subsequent tests
+      sendField.performTextReplacement("")
+      composeTestRule.waitForIdle()
+
+      /* 3  back button ----------------------------------------------------------------- */
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .performClick()
+      checkpoint("Back navigation called") { backPressed }
+
+      /* ---------- one-line summary ---------------------------------------------------- */
+      val failed = report.filterValues { !it }.keys
+      println(
+          "Smoke: ${report.size - failed.size}/${report.size} OK" +
+              (if (failed.isNotEmpty()) " → $failed" else ""))
+      assertTrue("Failures: $failed", failed.isEmpty())
+    }
+
+    checkpoint("poll_fullLifeCycle_smoke") {
+      // Switch back to test discussion for poll tests
+      currentDiscussionState.value = testDiscussion
+      composeTestRule.waitForIdle()
+      Thread.sleep(500) // Allow recomposition to complete
+
+      /* ------------------------------------------------------------------
+       * 1. open "create poll" dialog
+       * ------------------------------------------------------------------ */
+      checkpoint("Open attachment menu") {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON).assertExists()
+        composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON).performClick()
+        composeTestRule.waitForIdle()
+      }
+      checkpoint("Tap 'Create poll'") {
+        composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).assertExists()
+        composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).performClick()
+        composeTestRule.waitForIdle()
+      }
+      checkpoint("Poll dialog visible") {
+        composeTestRule.waitUntil(3000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.DIALOG_ROOT)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag(DiscussionTestTags.DIALOG_ROOT).assertExists()
+      }
+
+      /* ------------------------------------------------------------------
+       * 2. fill question
+       * ------------------------------------------------------------------ */
+      checkpoint("Type question") {
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD)
+            .performTextInput("Best board game?")
+      }
+
+      /* ------------------------------------------------------------------
+       * 3. manipulate options (add / remove / rename)
+       * ------------------------------------------------------------------ */
+      fun optionFields() = composeTestRule.onAllNodesWithTag(DiscussionTestTags.OPTION_TEXT_FIELD)
+
+      fun addOption() {
+        composeTestRule.onNodeWithTag(DiscussionTestTags.ADD_OPTION_BUTTON).performClick()
+      }
+      fun removeOption(index: Int) {
+        composeTestRule
+            .onAllNodesWithTag(DiscussionTestTags.REMOVE_OPTION_BUTTON)[index]
+            .performClick()
+      }
+
+      // start with two default fields
+      optionFields()[0].performTextInput("Chess")
+      optionFields()[1].performTextInput("Go")
+
+      addOption() // third field appears
+      optionFields()[2].performTextInput("X-Wing")
+
+      removeOption(1) // delete “Go”
+      optionFields().assertCountEquals(2) // only two left
+
+      // rename remaining
+      optionFields()[0].performTextClearance()
+      optionFields()[0].performTextInput("Terraforming Mars")
+      optionFields()[1].performTextClearance()
+      optionFields()[1].performTextInput("Gloomhaven")
+
+      /* ------------------------------------------------------------------
+       * 4. submit poll (single choice)
+       * ------------------------------------------------------------------ */
+      checkpoint("Submit poll") {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).assertExists()
+        composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).performClick()
+        composeTestRule.waitForIdle()
+      }
+      checkpoint("Dialog closed") {
+        composeTestRule.waitUntil(3000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.DIALOG_ROOT)
+              .fetchSemanticsNodes()
+              .isEmpty()
+        }
+        composeTestRule.onNodeWithTag(DiscussionTestTags.DIALOG_ROOT).assertDoesNotExist()
+      }
+
+      /* ------------------------------------------------------------------
+       * 5. poll card rendered
+       * ------------------------------------------------------------------ */
+      checkpoint("Poll question rendered") {
+        composeTestRule.waitUntil(5000) {
+          composeTestRule.onAllNodesWithText("Best board game?").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("Best board game?").assertExists()
+      }
+      checkpoint("Option 1 rendered") {
+        composeTestRule.waitUntil(5000) {
+          composeTestRule.onAllNodesWithText("Terraforming Mars").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("Terraforming Mars").assertExists()
+      }
+      checkpoint("Option 2 rendered") {
+        composeTestRule.waitUntil(5000) {
+          composeTestRule.onAllNodesWithText("Gloomhaven").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("Gloomhaven").assertExists()
+      }
+      checkpoint("Wait until poll message exists in repo") {
+        runBlocking { testDiscussion = awaitPollMessage(testDiscussion, 1) }
+      }
+
+      /* ------------------------------------------------------------------
+       * 6. vote (single choice) – first option
+       *        msgIndex = last message = 2 (after 2 earlier messages + new poll)
+       * ------------------------------------------------------------------ */
+      val msgIndex = runBlocking {
+        pollMessageIndex(testDiscussion.uid, "Best board game?").also {
+          require(it >= 0) { "Poll message not found" }
+        }
+      }
+
+      checkpoint("Vote first option") {
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.pollVoteButton(msgIndex, 0), useUnmergedTree = true)
+            .performClick()
+      }
+      checkpoint("First option 100 %") { waitUntilPercentIs(msgIndex, 0, "100%") }
+
+      /* ------------------------------------------------------------------
+       * 7. change vote – second option becomes 100 %
+       * ------------------------------------------------------------------ */
+      checkpoint("Change vote to second option") {
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.pollVoteButton(msgIndex, 1), useUnmergedTree = true)
+            .performClick()
+      }
+      composeTestRule.waitForIdle()
+      checkpoint("First option 0 %") { waitUntilPercentIs(msgIndex, 0, "0%") }
+      checkpoint("Second option 100 %") { waitUntilPercentIs(msgIndex, 1, "100%") }
+
+      /* ------------------------------------------------------------------
+       * 8. create a second poll (multi-choice)
+       * ------------------------------------------------------------------ */
+      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON).performClick()
+      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).performClick()
+
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD)
+          .performTextInput("Pick snacks")
+      optionFields()[0].performTextInput("Popcorn")
+      optionFields()[1].performTextInput("Nachos")
+      addOption()
+      optionFields()[2].performTextInput("Soda")
+
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX, useUnmergedTree = true)
+          .performClick()
+
+      composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).performClick()
+      checkpoint("Wait until poll message exists in repo") {
+        runBlocking { testDiscussion = awaitPollMessage(testDiscussion, 1) }
+      }
+
+      /* ------------------------------------------------------------------
+       * 9. multi-vote & percentages
+       *        new poll is at msgIndex 3
+       * ------------------------------------------------------------------ */
+      val multiMsgIndex = runBlocking {
+        pollMessageIndex(testDiscussion.uid, "Pick snacks").also {
+          require(it >= 0) { "Multi poll message not found" }
+        }
+      }
+
+      // select two options
+      composeTestRule
+          .onNodeWithTag(
+              DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
+          .performClick()
+      composeTestRule
+          .onNodeWithTag(
+              DiscussionTestTags.pollVoteButton(multiMsgIndex, 2), useUnmergedTree = true)
+          .performClick()
+
+      checkpoint("Popcorn 50 %") { waitUntilPercentIs(multiMsgIndex, 0, "50%") }
+      checkpoint("Soda 50 %") { waitUntilPercentIs(multiMsgIndex, 2, "50%") }
+
+      // deselect first
+      composeTestRule
+          .onNodeWithTag(
+              DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
+          .performClick()
+      checkpoint("Popcorn 0 %") { waitUntilPercentIs(multiMsgIndex, 0, "0%") }
+      checkpoint("Soda now 100 %") { waitUntilPercentIs(multiMsgIndex, 2, "100%") }
+
+      /* ------------------------------------------------------------------
+       * 10. summary
+       * ------------------------------------------------------------------ */
+      val failed = report.filterValues { !it }.keys
+      println(
+          "Poll smoke: ${report.size - failed.size}/${report.size} OK" +
+              (if (failed.isNotEmpty()) " → $failed" else ""))
+    }
+
+    checkpoint("photoBubble_opensFullscreenDialog") {
+      try {
+        val caption = "Look at this!"
+
+        // Switch to photo discussion
+        currentDiscussionState.value = refreshedPhotoDiscussion
+        composeTestRule.waitForIdle()
+
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        checkpoint("Photo bubble displayed") {
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
+              .assertCountEquals(1)
+        }
+        checkpoint("Photo caption displayed") {
+          composeTestRule.onNodeWithText(caption, useUnmergedTree = true).assertExists()
+        }
+
+        composeTestRule
+            .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)[0]
+            .performClick()
+
+        checkpoint("Fullscreen dialog shows thumbnail bar") {
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
+              .assertCountEquals(1)
+        }
+        checkpoint("Dialog can be dismissed") {
+          val backs =
+              composeTestRule.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
+          val lastBack = backs[backs.fetchSemanticsNodes().lastIndex]
+          lastBack.performClick()
+          composeTestRule.waitUntil(3_000) {
+            composeTestRule
+                .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isEmpty()
+          }
+        }
+      } finally {
+        // Photo discussion cleanup handled at end of test
+      }
+    }
+
+    checkpoint("fullscreenImageDialog_switchesBetweenPhotos") {
+      try {
+        // Switch to gallery discussion
+        currentDiscussionState.value = refreshedGalleryDiscussion
+        composeTestRule.waitForIdle()
+
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .size >= 2
+        }
+
+        composeTestRule
+            .onAllNodesWithContentDescription("Photo message", useUnmergedTree = true)[0]
+            .performClick()
+
+        checkpoint("Thumbnail bar shows two photos") {
+          composeTestRule
+              .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)
+              .assertCountEquals(2)
+        }
+        checkpoint("Initial dialog shows current user") {
+          composeTestRule.onNodeWithText("You", useUnmergedTree = true).assertExists()
+        }
+
+        composeTestRule
+            .onAllNodesWithContentDescription("Photo thumbnail", useUnmergedTree = true)[1]
+            .performClick()
+
+        checkpoint("Switching thumbnails updates sender name") {
+          composeTestRule.waitUntil(3_000) {
+            composeTestRule
+                .onAllNodesWithText("You", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isEmpty()
+          }
+        }
+
+        val backs = composeTestRule.onAllNodesWithContentDescription("Back", useUnmergedTree = true)
+        val lastBack = backs[backs.fetchSemanticsNodes().lastIndex]
+        lastBack.performClick()
+      } finally {
+        // Gallery discussion cleanup handled at end of test
+      }
+    }
+
+    // Cleanup photo discussions
+    runBlocking {
+      val context = InstrumentationRegistry.getInstrumentation().targetContext
+      discussionRepository.deleteDiscussion(context, photoDiscussion)
+      discussionRepository.deleteDiscussion(context, galleryDiscussion)
+    }
+  }
 
   /* waits until the discussion contains a message with a poll */
   private suspend fun awaitPollMessage(discussion: Discussion, minCount: Int = 1): Discussion {

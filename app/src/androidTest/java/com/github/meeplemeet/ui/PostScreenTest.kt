@@ -178,5 +178,54 @@ class PostScreenTest {
       postIdState.value = "p_tags"
       compose.waitForIdle()
     }
+
+    checkpoint("character_counter_not_visible_initially") {
+      postIdState.value = "p_test"
+      compose.waitForIdle()
+
+      // Counter should not be visible initially
+      findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertDoesNotExist()
+    }
+
+    checkpoint("character_counter_appears_when_approaching_limit") {
+      // Type text to get close to limit (2048 - 100 = 1948 chars to trigger counter)
+      val longText = "a".repeat(1950)
+      findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement(longText)
+      compose.waitForIdle()
+
+      // Counter should now be visible
+      findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertExists()
+      // Should show remaining chars (2048 - 1950 = 98)
+      compose.onNodeWithText("98").assertExists()
+    }
+
+    checkpoint("character_counter_shows_warning_when_low") {
+      // Type text to leave less than 20 chars
+      val longText = "a".repeat(2030)
+      findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement(longText)
+      compose.waitForIdle()
+
+      // Counter should be visible showing 18 chars remaining
+      findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertExists()
+      compose.onNodeWithText("18").assertExists()
+    }
+
+    checkpoint("character_limit_enforced") {
+      // Type exactly 2048 characters
+      val maxText = "a".repeat(2048)
+      findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement(maxText)
+      compose.waitForIdle()
+
+      // Counter should show 0 chars remaining
+      findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertExists()
+      compose.onNodeWithText("0").assertExists()
+
+      // Verify we can't type more - text input should still be exactly 2048 chars
+      findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("b")
+      compose.waitForIdle()
+
+      // Counter should still show 0 (input rejected)
+      compose.onNodeWithText("0").assertExists()
+    }
   }
 }
