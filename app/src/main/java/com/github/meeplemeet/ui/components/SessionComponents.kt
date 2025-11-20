@@ -926,6 +926,13 @@ private fun GameSearchBar(
 
   LaunchedEffect(initial) { if (initial?.name?.isNotBlank() == true) setGame(initial) }
 
+  // Sync text field with ViewModel's gameQuery when it changes (e.g., when game is fetched)
+  LaunchedEffect(results.gameQuery) {
+    if (results.gameQuery.isNotBlank() && text != results.gameQuery) {
+      text = results.gameQuery
+    }
+  }
+
   Column {
     ExposedDropdownMenuBox(
         expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
