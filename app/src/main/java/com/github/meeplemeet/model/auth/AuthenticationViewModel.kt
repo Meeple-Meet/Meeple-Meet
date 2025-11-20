@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.auth
+// Github copilot was used for this file
 
 import android.app.Activity
 import android.content.Context
@@ -33,13 +34,22 @@ import kotlinx.coroutines.launch
  *   the UI when authentication operations fail.
  * @property signedOut True if a sign-out operation has just completed. Used to reset UI state after
  *   logout.
+ * @property isEmailVerified True if the current user's email is verified, false otherwise.
+ * @property lastVerificationEmailSentAtMillis Timestamp of the last time a verification email was
+ *   successfully sent, in milliseconds since epoch. Used to enforce cooldown between email
+ *   requests.
  */
 data class AuthUIState(
     val isLoading: Boolean = false,
     val account: Account? = null,
     val errorMsg: String? = null,
-    val signedOut: Boolean = false
+    val signedOut: Boolean = false,
+    val isEmailVerified: Boolean = false,
+    val lastVerificationEmailSentAtMillis: Long? = null
 )
+
+const val coolDownErrMessage: String =
+    "You can only request a new verification email once per minute. Please wait a moment and try again."
 
 open class AuthenticationViewModel(
     protected val repository: AuthenticationRepository = RepositoryProvider.authentication,
@@ -210,6 +220,53 @@ open class AuthenticationViewModel(
           it.copy(isLoading = false, errorMsg = msg, signedOut = true, account = null)
         }
       }
+    }
+  }
+
+  /**
+   * Refreshes the user's email verification status.
+   *
+   * This function is safe to call from the UI and does not return a value, as all updates are
+   * propagated via [_uiState].
+   */
+  fun refreshEmailVerificationStatus() {
+    viewModelScope.launch {
+      val result = repository.isEmailVerified()
+      result
+          .onSuccess { isVerified ->
+            _uiState.update { it.copy(isEmailVerified = isVerified, errorMsg = null) }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
+    }
+  }
+
+  /**
+   * Sends a verification email to the current user.
+   *
+   * This method enforces a 1-minute cooldown between emails and calls the repository to send a
+   * verification email. If it fails, the error message is updated in the UI state.
+   */
+  fun sendVerificationEmail() {
+    val now = System.currentTimeMillis()
+    val lastSent = _uiState.value.lastVerificationEmailSentAtMillis
+
+    // Enforce a 1-minute (60,000 ms) cooldown between verification emails
+    if (lastSent != null && now - lastSent < 60_000) {
+      _uiState.update { it.copy(errorMsg = coolDownErrMessage) }
+      return
+    }
+
+    viewModelScope.launch {
+      repository
+          .sendVerificationEmail()
+          .onSuccess {
+            // Update the timestamp on successful send
+            _uiState.update {
+              it.copy(
+                  lastVerificationEmailSentAtMillis = System.currentTimeMillis(), errorMsg = null)
+            }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
     }
   }
 

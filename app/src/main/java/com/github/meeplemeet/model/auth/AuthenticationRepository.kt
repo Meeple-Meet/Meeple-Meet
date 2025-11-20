@@ -1,11 +1,13 @@
 package com.github.meeplemeet.model.auth
 
+// Github copilot was used for this file
 import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.tasks.await
 
 private const val OPERATION_LOGIN = "Login"
@@ -40,6 +42,9 @@ class AuthenticationRepository(
     private const val INVALID_CREDENTIALS_MSG = "Invalid email or password"
     private const val INVALID_EMAIL_MSG = "Invalid email format"
     private const val TOO_MANY_REQUESTS_MSG = "Too many failed attempts. Please try again later."
+    private const val ERROR_NO_LOGGED_IN_USER = "No user is currently logged in."
+    private const val EMAIL_VERIFICATION_FAILED_MSG =
+        "Failed to send verification email. Please try again later."
     private const val DEFAULT_ERROR_MSG = "Unexpected error."
     private const val USER_INFO_ERROR_MSG = "Could not retrieve user information"
   }
@@ -88,6 +93,51 @@ class AuthenticationRepository(
   }
 
   /**
+   * Checks if the current user's email is verified.
+   *
+   * @return A [Result] containing true if the email is verified, false otherwise, or a failure with
+   *   a user-friendly error message when the status cannot be retrieved.
+   */
+  suspend fun isEmailVerified(): Result<Boolean> {
+    return try {
+      auth.currentUser?.reload()?.await()
+      Result.success(auth.currentUser?.isEmailVerified ?: false)
+    } catch (e: Exception) {
+      Result.failure(IllegalStateException(EMAIL_VERIFICATION_FAILED_MSG, e))
+    }
+  }
+
+  /**
+   * Sends a verification email to the given Firebase user. This function is the function called
+   * during registration.
+   *
+   * @param user The [FirebaseUser] to send the verification email to.
+   * @return A [Result] indicating success, or a failure with a user-friendly error message if the
+   *   email could not be sent.
+   */
+  private suspend fun sendVerificationEmailInternal(user: FirebaseUser): Result<Unit> {
+    return try {
+      user.sendEmailVerification().await()
+      Result.success(Unit)
+    } catch (e: Exception) {
+      Result.failure(IllegalStateException(EMAIL_VERIFICATION_FAILED_MSG, e))
+    }
+  }
+
+  /**
+   * Sends a verification email to the currently logged-in user.
+   *
+   * @return A [Result] indicating success, or a failure with a user-friendly error message if no
+   *   user is logged in or if the email sending fails.
+   */
+  suspend fun sendVerificationEmail(): Result<Unit> {
+    val currentUser =
+        auth.currentUser ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+
+    return sendVerificationEmailInternal(currentUser)
+  }
+
+  /**
    * Registers a new user with email and password using Firebase Auth. Also creates a corresponding
    * account document in Firestore for the discussions/messaging system.
    *
@@ -103,6 +153,11 @@ class AuthenticationRepository(
           authResult.user
               ?: return Result.failure(
                   IllegalStateException("Registration failed: $USER_INFO_ERROR_MSG"))
+
+      // Send verification email
+      sendVerificationEmailInternal(firebaseUser).onFailure {
+        return Result.failure(Exception(EMAIL_VERIFICATION_FAILED_MSG))
+      }
 
       // Extract display name from email (part before @)
       // e.g., "john.doe@example.com" becomes "john.doe"

@@ -14,6 +14,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +57,10 @@ fun ProfileScreen(
     account: Account,
     onSignOut: () -> Unit
 ) {
+  val uiState by viewModel.uiState.collectAsState()
+  // Refresh email verification status when the profile is shown
+  LaunchedEffect(account.uid) { viewModel.refreshEmailVerificationStatus() }
+
   Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
@@ -84,6 +91,18 @@ fun ProfileScreen(
 
                     Text(text = "Handle", style = MaterialTheme.typography.bodyMedium)
                     Text(text = "@${account.handle}", style = MaterialTheme.typography.bodySmall)
+
+                    Text(text = "Is email verified : ", style = MaterialTheme.typography.bodyMedium)
+
+                    // This is a placeholder for email verification status
+                    if (!uiState.isEmailVerified) {
+                      Button(onClick = { viewModel.sendVerificationEmail() }) {
+                        Text("Resend verification email")
+                      }
+                    }
+                    Text(
+                        text = "${uiState.isEmailVerified}",
+                        style = MaterialTheme.typography.bodySmall)
 
                     Text(text = "Roles", style = MaterialTheme.typography.bodyMedium)
                     Text(
