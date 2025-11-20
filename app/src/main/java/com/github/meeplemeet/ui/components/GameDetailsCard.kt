@@ -37,6 +37,7 @@ import com.github.meeplemeet.ui.theme.MessagingColors
 private val CUSTOM_PADDING_START = 7.dp
 private val CUSTOM_PADDING_END = 13.dp
 private val CUSTOM_IMAGE_HEIGHT = 180.dp
+private val CUSTOM_COLLAPSED_DESCRIPTION_HEIGHT = 70.dp
 
 @Composable
 fun GameDetailsCard(game: Game, modifier: Modifier = Modifier, onClose: () -> Unit = {}) {
@@ -117,7 +118,7 @@ fun GameDetailsCard(game: Game, modifier: Modifier = Modifier, onClose: () -> Un
 fun GameDescription(description: String) {
   var expanded by remember { mutableStateOf(false) }
   var textHeight by remember { mutableStateOf(0) }
-  val collapsedHeight = 70.dp
+  val collapsedHeight = CUSTOM_COLLAPSED_DESCRIPTION_HEIGHT
 
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
