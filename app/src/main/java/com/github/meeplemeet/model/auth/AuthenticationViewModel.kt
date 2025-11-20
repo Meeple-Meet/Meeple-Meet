@@ -48,6 +48,9 @@ data class AuthUIState(
     val lastVerificationEmailSentAtMillis: Long? = null
 )
 
+const val coolDownErrMessage: String =
+    "You can only request a new verification email once per minute. Please wait a moment and try again."
+
 open class AuthenticationViewModel(
     protected val repository: AuthenticationRepository = RepositoryProvider.authentication,
 ) : ViewModel() {
@@ -253,11 +256,7 @@ open class AuthenticationViewModel(
 
     // Enforce a 1-minute (60,000 ms) cooldown between verification emails
     if (lastSent != null && now - lastSent < 60_000) {
-      _uiState.update {
-        it.copy(
-            errorMsg =
-                "You can only request a new verification email once per minute. Please wait a moment and try again.")
-      }
+      _uiState.update { it.copy(errorMsg = coolDownErrMessage) }
       return
     }
 
