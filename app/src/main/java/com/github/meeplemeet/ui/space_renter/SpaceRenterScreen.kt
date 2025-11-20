@@ -35,6 +35,8 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
 import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
+import com.github.meeplemeet.ui.components.TimeUi
+import com.github.meeplemeet.ui.components.tryParseTime
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.ceil
@@ -64,6 +66,7 @@ object SpaceRenterUi {
     const val INFO = "Click on a space to setup a reservation!"
     const val APPROVE = "Approve"
     const val SHAPE_PER = 60
+    val BAR_HEIGHT = 58.dp
 
     fun selectSpace(selectedIndex: Int?) = "Space N°${(selectedIndex ?: 0) + 1}"
 
@@ -92,7 +95,16 @@ object SpaceRenterUi {
 
     const val TODAY = "Today:"
 
-    fun timeRange(start: String?, end: String?) = "${start}AM - ${end}PM"
+    private fun formatTime(raw: String?): String {
+      val value = raw ?: return "-"
+      val parsed = value.tryParseTime()
+      return parsed?.format(TimeUi.fmt12()) ?: value
+    }
+
+    fun timeRange(start: String?, end: String?): String {
+      if (start == null && end == null) return SpaceRenterUi.Misc.NO_TIME
+      return "${formatTime(start)} - ${formatTime(end)}"
+    }
   }
 }
 
@@ -338,10 +350,24 @@ fun SpacesSection(
       }
 }
 
+/**
+ * Helper function to determine if the current index is equal to the target index.
+ *
+ * @param curr The current index.
+ * @param target The target index to compare against.
+ * @return Null if curr equals target, otherwise curr.
+ */
 private fun indexEquality(curr: Int, target: Int?): Int? {
   return if (curr == target) null else curr
 }
 
+/**
+ * Composable that displays pager dots indicating which page the user is currently viewing.
+ *
+ * @param pageCount The total number of pages.
+ * @param currentPage The index of the currently viewed page.
+ * @param modifier Modifier to be applied to the layout.
+ */
 @Composable
 private fun PagerDots(
     pageCount: Int,
@@ -455,7 +481,6 @@ private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
  */
 @Composable
 fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> Unit) {
-  val barHeight = 58.dp
   Box(
       modifier =
           Modifier.fillMaxWidth()
@@ -468,7 +493,8 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
 
           Surface(
               modifier =
-                  Modifier.testTag(SpaceRenterTestTags.RESERVE_NO_SELECTION).height(barHeight),
+                  Modifier.testTag(SpaceRenterTestTags.RESERVE_NO_SELECTION)
+                      .height(SpaceRenterUi.BottomBar.BAR_HEIGHT),
               shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
               color = AppColors.secondary,
               shadowElevation = Dimensions.Elevation.extraHigh) {
@@ -492,7 +518,8 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
 
           Surface(
               modifier =
-                  Modifier.testTag(SpaceRenterTestTags.RESERVE_WITH_SELECTION).height(barHeight),
+                  Modifier.testTag(SpaceRenterTestTags.RESERVE_WITH_SELECTION)
+                      .height(SpaceRenterUi.BottomBar.BAR_HEIGHT),
               shape = RoundedCornerShape(SpaceRenterUi.BottomBar.SHAPE_PER),
               color = AppColors.secondary,
               shadowElevation = Dimensions.Elevation.high) {
