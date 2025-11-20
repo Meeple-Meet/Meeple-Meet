@@ -41,6 +41,7 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
 import com.github.meeplemeet.ui.components.ContactSection
+import com.github.meeplemeet.ui.components.GameDetailsCard
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.TopBarWithDivider
@@ -111,7 +112,6 @@ fun ShopScreen(
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
-  val photoCollectionUrl: List<String> = shopState?.photoCollectionUrl ?: emptyList()
   // Trigger loading of shop data when shopId changes
   LaunchedEffect(shopId) { viewModel.getShop(shopId) }
 
@@ -190,7 +190,12 @@ fun ShopScreen(
  * @param modifier Modifier to be applied to the layout.
  */
 @Composable
-fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -> Unit, photoCollectionUrl: List<String>) {
+fun ShopDetails(
+    shop: Shop,
+    modifier: Modifier = Modifier,
+    onGameClick: (Game) -> Unit,
+    photoCollectionUrl: List<String> = shop.photoCollectionUrl
+) {
   LazyColumn(
       modifier = modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
@@ -199,7 +204,7 @@ fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -
           if (photoCollectionUrl.isNotEmpty()) {
             ImageCarousel(
                 photoCollectionUrl = photoCollectionUrl,
-                maxNumberOfImages = maxNumberOfImages,
+                maxNumberOfImages = shop.photoCollectionUrl.size,
                 onAdd = { _, _ -> },
                 onRemove = { _ -> },
                 editable = false)
