@@ -476,7 +476,7 @@ private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: ()
                     .testTag(SpaceRenterComponentsTestTags.SPACE_ROW_PREFIX + index),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
-              Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+              Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
                 Text(
                     text = SpaceRenterUi.SpaceSection.setSpaceNumber(index),
                     style = MaterialTheme.typography.titleMedium,
@@ -508,14 +508,17 @@ private fun SpaceCard(space: Space, index: Int, isSelected: Boolean, onClick: ()
 private fun PriceRangeChip(minPrice: Double, maxPrice: Double) {
   Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Surface(shape = CircleShape, color = Color.Transparent, modifier = Modifier.size(24.dp)) {
-          Icon(
-              Icons.Default.Info,
-              contentDescription = null,
-              tint = AppColors.textIcons,
-              modifier = Modifier.padding(4.dp))
-        }
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+        Surface(
+            shape = CircleShape,
+            color = Color.Transparent,
+            modifier = Modifier.size(Dimensions.Spacing.xxLarge)) {
+              Icon(
+                  Icons.Default.Info,
+                  contentDescription = null,
+                  tint = AppColors.textIcons,
+                  modifier = Modifier.padding(Dimensions.Padding.small))
+            }
 
         Text(
             if (minPrice == maxPrice) "${minPrice}\$" else "${minPrice}-${maxPrice}\$",
@@ -667,6 +670,12 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
 }
 
 // TODO: remove me once the real photo carousel is implemented
+object TempCarouselUI {
+  val HEIGHT = 180.dp
+  val ACTIVE_SIZE = 9.dp
+  val INACTIVE_SIZE = 7.dp
+}
+
 @Composable
 private fun TemporaryPhotoCarousel() {
   val pageCount = 4
@@ -675,9 +684,9 @@ private fun TemporaryPhotoCarousel() {
   Box(
       modifier =
           Modifier.fillMaxWidth()
-              .height(180.dp)
+              .height(TempCarouselUI.HEIGHT)
               .padding(Dimensions.Padding.large)
-              .clip(RoundedCornerShape(16.dp))
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
               .background(Color(0xFF757575)) // grey placeholder
       ) {
         HorizontalPager(
@@ -686,14 +695,17 @@ private fun TemporaryPhotoCarousel() {
 
         // Dots inside the image
         Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+            modifier =
+                Modifier.align(Alignment.BottomCenter).padding(bottom = Dimensions.Padding.large),
             horizontalArrangement = Arrangement.Center) {
               repeat(pageCount) { index ->
                 val active = pagerState.currentPage == index
                 Box(
                     modifier =
-                        Modifier.padding(4.dp)
-                            .size(if (active) 9.dp else 7.dp)
+                        Modifier.padding(Dimensions.Padding.small)
+                            .size(
+                                if (active) TempCarouselUI.ACTIVE_SIZE
+                                else TempCarouselUI.INACTIVE_SIZE)
                             .clip(CircleShape)
                             .background(
                                 if (active) AppColors.textIcons else AppColors.textIconsFade))
