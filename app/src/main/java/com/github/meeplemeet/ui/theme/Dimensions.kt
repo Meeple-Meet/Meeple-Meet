@@ -133,7 +133,6 @@ object Dimensions {
     val timeFieldHeight: Dp = 56.dp
     val iconButtonTouch: Dp = 40.dp
     val iconButtonSize: Dp = 48.dp
-    val bottomSheetHeight: Dp = 400.dp
   }
 
   // Badge dimensions
