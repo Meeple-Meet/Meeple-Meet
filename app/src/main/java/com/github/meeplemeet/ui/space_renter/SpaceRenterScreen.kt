@@ -19,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -34,9 +33,11 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
 import com.github.meeplemeet.ui.components.ContactSection
+import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.components.TimeUi
 import com.github.meeplemeet.ui.components.tryParseTime
+import com.github.meeplemeet.ui.shops.maxNumberOfImages
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.ceil
@@ -187,13 +188,22 @@ fun SpaceRenterDetails(
     spaceRenter: SpaceRenter,
     selectedIndex: Int?,
     onSelect: (Int?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    photoCollectionUrl: List<String> = spaceRenter.photoCollectionUrl,
 ) {
   Column(
       modifier =
           modifier.verticalScroll(rememberScrollState()).padding(bottom = Dimensions.Padding.large),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge)) {
-        TemporaryPhotoCarousel()
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.extraSmall))
+        if (photoCollectionUrl.isNotEmpty()) {
+          ImageCarousel(
+              photoCollectionUrl = photoCollectionUrl,
+              maxNumberOfImages = maxNumberOfImages,
+              onAdd = { _, _ -> },
+              onRemove = { _ -> },
+              editable = false)
+        }
         ContactSection(
             name = spaceRenter.name,
             address = spaceRenter.address.name,
@@ -567,50 +577,5 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
                     }
               }
         }
-      }
-}
-
-// TODO: remove me once the real photo carousel is implemented
-object TempCarouselUI {
-  val HEIGHT = 180.dp
-  val ACTIVE_SIZE = 9.dp
-  val INACTIVE_SIZE = 7.dp
-}
-
-@Composable
-private fun TemporaryPhotoCarousel() {
-  val pageCount = 4
-  val pagerState = rememberPagerState(pageCount = { pageCount })
-
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(TempCarouselUI.HEIGHT)
-              .padding(Dimensions.Padding.large)
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-              .background(Color(0xFF757575)) // grey placeholder
-      ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()) { /* empty for now – just grey */}
-
-        // Dots inside the image
-        Row(
-            modifier =
-                Modifier.align(Alignment.BottomCenter).padding(bottom = Dimensions.Padding.large),
-            horizontalArrangement = Arrangement.Center) {
-              repeat(pageCount) { index ->
-                val active = pagerState.currentPage == index
-                Box(
-                    modifier =
-                        Modifier.padding(Dimensions.Padding.small)
-                            .size(
-                                if (active) TempCarouselUI.ACTIVE_SIZE
-                                else TempCarouselUI.INACTIVE_SIZE)
-                            .clip(CircleShape)
-                            .background(
-                                if (active) AppColors.textIcons else AppColors.textIconsFade))
-              }
-            }
       }
 }

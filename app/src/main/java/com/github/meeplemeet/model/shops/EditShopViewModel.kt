@@ -72,6 +72,7 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
       gameCollection: List<Pair<Game, Int>>? = null,
+      photoCollectionUrl: List<String>? = emptyList()
   ) {
     if (shop.owner.uid != requester.uid)
         throw PermissionDeniedException("Only the shop's owner can edit his own shop")
@@ -88,7 +89,16 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
 
     viewModelScope.launch {
       repository.updateShop(
-          shop.id, owner?.uid, name, phone, email, website, address, openingHours, gameCollection)
+          shop.id,
+          owner?.uid,
+          name,
+          phone,
+          email,
+          website,
+          address,
+          openingHours,
+          gameCollection,
+          photoCollectionUrl)
     }
   }
 

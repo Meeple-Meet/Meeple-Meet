@@ -58,6 +58,7 @@ class EditSpaceRenterViewModel(
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
       spaces: List<Space>? = null,
+      photoCollectionUrl: List<String>? = null
   ) {
     if (spaceRenter.owner.uid != requester.uid)
         throw PermissionDeniedException(
@@ -76,7 +77,16 @@ class EditSpaceRenterViewModel(
 
     viewModelScope.launch {
       repository.updateSpaceRenter(
-          spaceRenter.id, owner?.uid, name, phone, email, website, address, openingHours, spaces)
+          spaceRenter.id,
+          owner?.uid,
+          name,
+          phone,
+          email,
+          website,
+          address,
+          openingHours,
+          spaces,
+          photoCollectionUrl)
     }
   }
 

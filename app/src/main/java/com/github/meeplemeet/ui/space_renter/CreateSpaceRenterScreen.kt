@@ -98,7 +98,8 @@ fun CreateSpaceRenterScreen(
             website = renter.website,
             address = renter.address,
             openingHours = renter.openingHours,
-            spaces = renter.spaces)
+            spaces = renter.spaces,
+            photoCollectionUrl = renter.photoCollectionUrl)
       },
       locationUi = locationUi,
       viewModel = viewModel)
@@ -120,6 +121,7 @@ internal fun AddSpaceRenterContent(
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
+  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
   var name by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -132,22 +134,7 @@ internal fun AddSpaceRenterContent(
   var spaces by remember { mutableStateOf(listOf<Space>()) }
   var spacesExpanded by rememberSaveable { mutableStateOf(false) }
 
-  val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
-  val hasAtLeastOneSpace by remember(spaces) { derivedStateOf { spaces.isNotEmpty() } }
-  val allSpacesValid by
-      remember(spaces) {
-        derivedStateOf {
-          spaces.all {
-            it.seats >= AddSpaceRenterUi.Numbers.MIN_SEATS_PER_SPACE &&
-                it.costPerHour >= AddSpaceRenterUi.Numbers.MIN_COST_PER_HOUR
-          }
-        }
-      }
-
-  val hasLocation by
-      remember(locationUi.selectedLocation) {
-        derivedStateOf { locationUi.selectedLocation != null }
-      }
+  val validation = rememberSpaceRenterValidationState(week, spaces, locationUi)
 
   LaunchedEffect(locationUi.locationQuery) {
     val sel = locationUi.selectedLocation
@@ -159,14 +146,14 @@ internal fun AddSpaceRenterContent(
   }
 
   val isValid by
-      remember(name, email, hasLocation, hasOpeningHours, hasAtLeastOneSpace, allSpacesValid) {
+      remember(name, email, validation) {
         derivedStateOf {
           name.isNotBlank() &&
               isValidEmail(email) &&
-              hasLocation &&
-              hasOpeningHours &&
-              hasAtLeastOneSpace &&
-              allSpacesValid
+              validation.hasLocation &&
+              validation.hasOpeningHours &&
+              validation.hasAtLeastOneSpace &&
+              validation.allSpacesValid
         }
       }
 
@@ -203,7 +190,8 @@ internal fun AddSpaceRenterContent(
           website = link,
           address = locationUi.selectedLocation ?: Location(),
           openingHours = week,
-          spaces = spaces)
+          spaces = spaces,
+          photoCollectionUrl = emptyList())
 
   Scaffold(
       topBar = {
@@ -251,6 +239,12 @@ internal fun AddSpaceRenterContent(
                 PaddingValues(
                     horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
                     vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
+              item {
+                EditableImageCarousel(
+                    photoCollectionUrl = photoCollectionUrl,
+                    spacesCount = spaces.size,
+                    setPhotoCollectionUrl = { photoCollectionUrl = it })
+              }
               // Required info
               item {
                 CollapsibleSection(

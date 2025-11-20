@@ -42,6 +42,7 @@ import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
 import com.github.meeplemeet.ui.components.ContactSection
 import com.github.meeplemeet.ui.components.GameDetailsCard
+import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -189,13 +190,26 @@ fun ShopScreen(
  * @param modifier Modifier to be applied to the layout.
  */
 @Composable
-fun ShopDetails(shop: Shop, modifier: Modifier = Modifier, onGameClick: (Game) -> Unit) {
+fun ShopDetails(
+    shop: Shop,
+    modifier: Modifier = Modifier,
+    onGameClick: (Game) -> Unit,
+    photoCollectionUrl: List<String> = shop.photoCollectionUrl
+) {
   LazyColumn(
       modifier = modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xxLarge),
       contentPadding = PaddingValues(bottom = Dimensions.Spacing.xxLarge)) {
-
-        /* TODO: Add here shop images composable (pager) when done */
+        item {
+          if (photoCollectionUrl.isNotEmpty()) {
+            ImageCarousel(
+                photoCollectionUrl = photoCollectionUrl,
+                maxNumberOfImages = shop.photoCollectionUrl.size,
+                onAdd = { _, _ -> },
+                onRemove = { _ -> },
+                editable = false)
+          }
+        }
 
         item {
           ContactSection(

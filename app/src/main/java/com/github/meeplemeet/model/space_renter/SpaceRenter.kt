@@ -38,7 +38,8 @@ data class SpaceRenter(
     val website: String,
     val address: Location,
     val openingHours: List<OpeningHours>,
-    val spaces: List<Space>
+    val spaces: List<Space>,
+    val photoCollectionUrl: List<String>
 )
 
 /**
@@ -65,7 +66,8 @@ data class SpaceRenterNoUid(
     val website: String = "",
     val address: Location = Location(),
     val openingHours: List<OpeningHours> = emptyList(),
-    val spaces: List<Space> = emptyList()
+    val spaces: List<Space> = emptyList(),
+    val photoCollectionUrl: List<String> = emptyList()
 )
 
 /**
@@ -105,4 +107,5 @@ fun fromNoUid(id: String, spaceRenterNoUid: SpaceRenterNoUid, owner: Account): S
         spaceRenterNoUid.website,
         spaceRenterNoUid.address,
         spaceRenterNoUid.openingHours,
-        spaceRenterNoUid.spaces)
+        spaceRenterNoUid.spaces,
+        spaceRenterNoUid.photoCollectionUrl)

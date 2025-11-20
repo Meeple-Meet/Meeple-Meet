@@ -37,6 +37,7 @@ class CreateShopViewModel(
    * @param openingHours The shop's opening hours, must include exactly 7 entries (one per day).
    * @param gameCollection The collection of games available at the shop with their quantities
    *   (optional, defaults to empty).
+   * @param photoCollectionUrl List of URLs for the shop's photos (optional, defaults to empty).
    * @return The created Shop object with its generated ID.
    * @throws IllegalArgumentException if the shop name is blank, if not exactly 7 opening hours
    *   entries are provided, or if the address is not valid.
@@ -49,7 +50,8 @@ class CreateShopViewModel(
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
-      gameCollection: List<Pair<Game, Int>> = emptyList()
+      gameCollection: List<Pair<Game, Int>> = emptyList(),
+      photoCollectionUrl: List<String> = emptyList()
   ): Shop {
     if (name.isBlank()) throw IllegalArgumentException("Shop name cannot be blank")
 
@@ -60,6 +62,14 @@ class CreateShopViewModel(
         throw IllegalArgumentException("An address is required to create a shop")
 
     return shopRepo.createShop(
-        owner, name, phone, email, website, address, openingHours, gameCollection)
+        owner,
+        name,
+        phone,
+        email,
+        website,
+        address,
+        openingHours,
+        gameCollection,
+        photoCollectionUrl)
   }
 }
