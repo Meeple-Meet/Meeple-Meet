@@ -62,6 +62,7 @@ import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
+// Contains test tag constants for common UI components.
 object CommonComponentsTestTags {
   const val IMAGE_CAROUSEL = "ImageCarousel"
   const val CAROUSEL_ADD_BUTTON = "CarouselAddButton"
@@ -74,6 +75,22 @@ object CommonComponentsTestTags {
   const val PHOTO_DIALOG_GALLERY_BUTTON = "PhotoDialogGalleryButton"
 }
 
+// The default size for the image carousel.
+val CAROUSEL_SIZE = 260.dp
+
+// The label for the "Add Picture" action.
+const val ADD_PICTURE = "Add Picture"
+
+/**
+ * Displays a horizontally scrollable image carousel with optional add/remove functionality.
+ *
+ * @param modifier Modifier to be applied to the carousel.
+ * @param maxNumberOfImages The maximum number of images that can be shown/added.
+ * @param photoCollectionUrl List of image URLs to display.
+ * @param editable If true, allows adding/removing images.
+ * @param onAdd Callback when a new image is added. Receives the image path and the insertion index.
+ * @param onRemove Callback when an image is removed. Receives the image path.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ImageCarousel(
@@ -142,7 +159,7 @@ fun ImageCarousel(
       modifier = modifier.testTag(CommonComponentsTestTags.IMAGE_CAROUSEL),
       horizontalAlignment = Alignment.CenterHorizontally) {
         ElevatedCard(
-            modifier = Modifier.fillMaxWidth().height(260.dp),
+            modifier = Modifier.fillMaxWidth().height(CAROUSEL_SIZE),
             colors =
                 CardColors(
                     containerColor = AppColors.secondary,
@@ -163,7 +180,7 @@ fun ImageCarousel(
                       contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.AddAPhoto,
-                            contentDescription = "Add Photo",
+                            contentDescription = ADD_PICTURE,
                             modifier =
                                 Modifier.size(
                                     Dimensions.IconSize.massive.times(
@@ -184,8 +201,8 @@ fun ImageCarousel(
                       Box(
                           modifier =
                               Modifier.align(Alignment.TopEnd)
-                                  .padding(8.dp)
-                                  .size(28.dp)
+                                  .padding(Dimensions.Padding.medium)
+                                  .size(Dimensions.IconSize.extraLarge)
                                   .clip(CircleShape)
                                   .background(Color.Red)
                                   .clickable { onRemove(photoCollectionUrl[page]) }
@@ -202,7 +219,7 @@ fun ImageCarousel(
               }
             }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Dimensions.Spacing.large))
 
         // --- Dots Indicator
         Row(
@@ -216,8 +233,10 @@ fun ImageCarousel(
 
                   Box(
                       modifier =
-                          Modifier.padding(4.dp)
-                              .size(if (selected) 10.dp else 8.dp)
+                          Modifier.padding(Dimensions.Padding.small)
+                              .size(
+                                  if (selected) Dimensions.Padding.extraMedium
+                                  else Dimensions.Padding.medium)
                               .clip(CircleShape)
                               .background(
                                   if (selected) MaterialTheme.colorScheme.primary
@@ -254,10 +273,17 @@ fun ImageCarousel(
       }
 }
 
+/**
+ * Top bar for the photo dialog, containing a dismiss button and title.
+ *
+ * @param modifier Modifier to be applied to the top bar.
+ * @param text Title text to display.
+ * @param onDismiss Callback when the dismiss button is pressed.
+ */
 @Composable
 fun PhotoDialogTopBar(
     modifier: Modifier = Modifier,
-    text: String = "Add Photo",
+    text: String = ADD_PICTURE,
     onDismiss: () -> Unit
 ) {
   Box(
@@ -302,6 +328,13 @@ fun PhotoDialogTopBar(
       }
 }
 
+/**
+ * Bottom bar for the photo dialog, with buttons to take a photo or choose from gallery.
+ *
+ * @param modifier Modifier to be applied to the bottom bar.
+ * @param onTakePhoto Callback when the "Camera" button is pressed.
+ * @param onChooseFromGallery Callback when the "Gallery" button is pressed.
+ */
 @Composable
 fun PhotoDialogBottomBar(
     modifier: Modifier = Modifier,
@@ -360,6 +393,16 @@ fun PhotoDialogBottomBar(
       }
 }
 
+/**
+ * Displays a full-screen dialog showing an image (or add photo icon) with top and bottom bars.
+ *
+ * @param pageNumber The index of the currently selected image.
+ * @param galleryPictureUrl List of image URLs to display.
+ * @param onDismiss Callback when the dialog is dismissed.
+ * @param onTakePhoto Callback for taking a new photo.
+ * @param onChooseFromGallery Callback for picking a photo from the gallery.
+ * @param editable If true, shows the bottom bar for adding images.
+ */
 @Composable
 fun GalleryDialog(
     pageNumber: Int,
@@ -405,7 +448,7 @@ fun GalleryDialog(
                   if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
                     "Image ${pageNumber + 1} of ${galleryPictureUrl.size}"
                   } else {
-                    "Add Photo"
+                    ADD_PICTURE
                   },
                   onDismiss)
 
