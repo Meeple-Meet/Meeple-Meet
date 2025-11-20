@@ -156,11 +156,7 @@ class AuthenticationRepository(
 
       // Send verification email
       sendVerificationEmailInternal(firebaseUser).onFailure {
-        // If email sending fails, delete the user to maintain consistency
-        try {
-          firebaseUser.delete().await()
-        } catch (_: Exception) {}
-        return Result.failure(it)
+        return Result.failure(Exception(EMAIL_VERIFICATION_FAILED_MSG))
       }
 
       // Extract display name from email (part before @)
