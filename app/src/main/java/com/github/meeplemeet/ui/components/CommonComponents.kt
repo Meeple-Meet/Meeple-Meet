@@ -47,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -148,7 +147,6 @@ fun ImageCarousel(
   val galleryLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-          coroutineScope
           coroutineScope.launch {
             val path = ImageFileUtils.cacheUriToFile(context, uri)
             uploadImage(path)
@@ -186,7 +184,9 @@ fun ImageCarousel(
                                 Modifier.size(
                                     Dimensions.IconSize.massive.times(
                                         Dimensions.Multipliers.quadruple)),
-                            tint = Color.Gray.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
+                            tint =
+                                AppColors.divider.copy(
+                                    alpha = Dimensions.Alpha.dialogIconTranslucent))
                       }
                 } else {
                   Box(modifier = Modifier.fillMaxSize()) {
@@ -205,13 +205,13 @@ fun ImageCarousel(
                                   .padding(Dimensions.Padding.medium)
                                   .size(Dimensions.IconSize.extraLarge)
                                   .clip(CircleShape)
-                                  .background(Color.Red)
+                                  .background(AppColors.negative)
                                   .clickable { onRemove(photoCollectionUrl[page]) }
                                   .testTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON),
                           contentAlignment = Alignment.Center) {
                             Text(
                                 text = "-",
-                                color = Color.White,
+                                color = AppColors.textIcons,
                                 style = MaterialTheme.typography.titleMedium)
                           }
                     }
@@ -295,8 +295,9 @@ fun PhotoDialogTopBar(
               .background(
                   Brush.verticalGradient(
                       listOf(
-                          Color.Black.copy(alpha = Dimensions.Alpha.dialogOverlayDark),
-                          Color.Black.copy(alpha = Dimensions.Alpha.dialogOverlayTransparent))))) {
+                          AppColors.primary.copy(alpha = Dimensions.Alpha.dialogOverlayDark),
+                          AppColors.primary.copy(
+                              alpha = Dimensions.Alpha.dialogOverlayTransparent))))) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
@@ -311,12 +312,12 @@ fun PhotoDialogTopBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White)
+                        tint = AppColors.textIcons)
                   }
 
               Text(
                   text = text,
-                  color = Color.White,
+                  color = AppColors.textIcons,
                   style = MaterialTheme.typography.titleMedium,
                   modifier =
                       Modifier.weight(Dimensions.Weight.full)
@@ -342,56 +343,53 @@ fun PhotoDialogBottomBar(
     onTakePhoto: () -> Unit,
     onChooseFromGallery: () -> Unit
 ) {
-  Box(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .navigationBarsPadding()
-              .background(
-                  Brush.verticalGradient(
-                      listOf(Color.Black.copy(alpha = 0.0f), Color.Black.copy(alpha = 0.9f))))) {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(
-                        horizontal = Dimensions.Padding.extraLarge,
-                        vertical = Dimensions.Spacing.extraLarge),
-            horizontalArrangement =
-                Arrangement.spacedBy(Dimensions.Spacing.large, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically) {
-              Button(
-                  onClick = onTakePhoto,
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = Color.White.copy(alpha = 0.2f),
-                          contentColor = Color.White),
-                  modifier =
-                      Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = "Take Photo",
-                        modifier = Modifier.size(Dimensions.IconSize.large))
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                    Text("Camera", style = MaterialTheme.typography.bodyLarge)
-                  }
+  Box(modifier = modifier.fillMaxWidth().navigationBarsPadding().background(AppColors.primary)) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.extraLarge),
+        horizontalArrangement =
+            Arrangement.spacedBy(Dimensions.Spacing.large, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically) {
+          Button(
+              onClick = onTakePhoto,
+              colors =
+                  ButtonDefaults.buttonColors(
+                      containerColor = AppColors.textIcons.copy(alpha = 0.2f),
+                      contentColor = AppColors.textIconsFade),
+              modifier = Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
+                Icon(
+                    imageVector = Icons.Default.PhotoCamera,
+                    contentDescription = "Take Photo",
+                    modifier = Modifier.size(Dimensions.IconSize.large))
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                Text(
+                    "Camera",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textIcons)
+              }
 
-              Button(
-                  onClick = onChooseFromGallery,
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = Color.White.copy(alpha = 0.2f),
-                          contentColor = Color.White),
-                  modifier =
-                      Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = "Choose from Gallery",
-                        modifier = Modifier.size(Dimensions.IconSize.large))
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                    Text("Gallery", style = MaterialTheme.typography.bodyLarge)
-                  }
-            }
-      }
+          Button(
+              onClick = onChooseFromGallery,
+              colors =
+                  ButtonDefaults.buttonColors(
+                      containerColor = AppColors.textIcons.copy(alpha = 0.2f),
+                      contentColor = AppColors.textIconsFade),
+              modifier = Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = "Choose from Gallery",
+                    modifier = Modifier.size(Dimensions.IconSize.large))
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                Text(
+                    "Gallery",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textIcons)
+              }
+        }
+  }
 }
 
 /**
@@ -420,7 +418,7 @@ fun GalleryDialog(
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .background(Color.Black)
+                    .background(AppColors.primary)
                     .testTag(CommonComponentsTestTags.GALLERY_DIALOG_ROOT)) {
               // Image or default icon
               if (!galleryPictureUrl.isNullOrEmpty() && pageNumber < galleryPictureUrl.size) {
@@ -440,7 +438,9 @@ fun GalleryDialog(
                               Modifier.size(
                                   Dimensions.IconSize.massive.times(
                                       Dimensions.Multipliers.quadruple)),
-                          tint = Color.White.copy(alpha = Dimensions.Alpha.dialogIconTranslucent))
+                          tint =
+                              AppColors.textIcons.copy(
+                                  alpha = Dimensions.Alpha.dialogIconTranslucent))
                     }
               }
 
