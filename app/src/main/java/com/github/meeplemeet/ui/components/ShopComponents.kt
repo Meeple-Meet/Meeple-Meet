@@ -1458,16 +1458,12 @@ fun AvailabilitySectionWithChevron(
   val todayHours = openingHours.firstOrNull { it.day == today }
 
   val todayText =
-      when {
-        todayHours == null || todayHours.hours.isEmpty() -> SpaceRenterUi.Misc.NO_TIME
-        todayHours.hours.size == 1 -> {
-          val (start, end) = todayHours.hours.first()
+      if (todayHours == null || todayHours.hours.isEmpty()) {
+        listOf(SpaceRenterUi.Misc.NO_TIME)
+      } else {
+        todayHours.hours.map { (start, end) ->
           SpaceRenterUi.AvailabilitySection.timeRange(start, end)
         }
-        else ->
-            todayHours.hours.joinToString(" ") { (start, end) ->
-              SpaceRenterUi.AvailabilitySection.timeRange(start, end)
-            }
       }
 
   Column(
@@ -1475,28 +1471,47 @@ fun AvailabilitySectionWithChevron(
           Modifier.fillMaxWidth()
               .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
         Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier.fillMaxWidth()
                     .clickable { showSheet = true }
                     .testTag(SpaceRenterTestTags.AVAILABILITY_HEADER)
-                    .padding(vertical = Dimensions.Padding.medium),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              Column {
+                    .padding(vertical = Dimensions.Padding.medium)) {
+              Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = SpaceRenterUi.AvailabilitySection.TITLE,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = SpaceRenterUi.AvailabilitySection.todayDate(todayText),
-                    modifier = Modifier.testTag(ShopUiDefaults.StringsMagicNumbers.TODAY_TEXT),
-                    style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(top = Dimensions.Padding.small)
+                            .testTag("${dayTagPrefix}${today}_HOURS"),
+                    verticalAlignment = Alignment.Top) {
+                      // Left label
+                      Text(
+                          text = SpaceRenterUi.AvailabilitySection.TODAY,
+                          style = MaterialTheme.typography.bodyMedium)
+
+                      Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
+
+                      // Right – multiline times stacked neatly
+                      Column(
+                          verticalArrangement =
+                              Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                            todayText.forEach { line ->
+                              Text(text = line, style = MaterialTheme.typography.bodyMedium)
+                            }
+                          }
+                    }
               }
 
               Icon(
                   Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
             }
       }
+
   if (showSheet) {
     WeeklyAvailabilityDialog(
         openingHours = openingHours,
@@ -1534,6 +1549,8 @@ fun ContactSection(
         Text(
             text = name,
             style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             fontWeight = FontWeight.SemiBold,
         )
 

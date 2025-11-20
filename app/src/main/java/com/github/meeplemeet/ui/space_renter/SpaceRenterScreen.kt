@@ -90,9 +90,9 @@ object SpaceRenterUi {
   object AvailabilitySection {
     const val TITLE = "Availability"
 
-    fun todayDate(todayText: String) = "Today: $todayText"
+    const val TODAY = "Today:"
 
-    fun timeRange(start: String?, end: String?) = "$start - $end"
+    fun timeRange(start: String?, end: String?) = "${start}AM - ${end}PM"
   }
 }
 
@@ -311,11 +311,12 @@ fun SpacesSection(
                   modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
                     (start until end).forEach { i ->
+                      val onSelectParam = if (selectedIndex == i) null else i
                       SpaceCard(
                           space = spaces[i],
                           index = i,
                           isSelected = selectedIndex == i,
-                          onClick = { onSelect(if (selectedIndex == i) null else i) })
+                          onClick = { onSelect(onSelectParam) })
                     }
                     // Code needed to fix scrolling issues, otherwise UI looks weird when going from
                     // tab to tab with less than 3 items
@@ -330,15 +331,14 @@ fun SpacesSection(
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             repeat(pageCount) { index ->
               val active = pagerState.currentPage == index
+              val dimensionsActive =
+                  if (active) Dimensions.Padding.extraMedium else Dimensions.Padding.medium
+              val colorsActive = if (active) AppColors.focus else AppColors.textIconsFade
               Box(
                   modifier =
                       Modifier.padding(Dimensions.Padding.small)
-                          .size(
-                              if (active) Dimensions.Padding.extraMedium
-                              else Dimensions.Padding.medium)
-                          .background(
-                              color = if (active) AppColors.focus else AppColors.textIconsFade,
-                              shape = CircleShape))
+                          .size(dimensionsActive)
+                          .background(color = colorsActive, shape = CircleShape))
             }
           }
         }
