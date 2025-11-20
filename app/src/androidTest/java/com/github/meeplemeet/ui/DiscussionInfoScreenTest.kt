@@ -3,6 +3,7 @@ package com.github.meeplemeet.ui
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
 import com.github.meeplemeet.model.discussions.Discussion
@@ -80,8 +81,9 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
   @After
   fun cleanup() = runBlocking {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
     try {
-      discussionRepository.deleteDiscussion(testDiscussion)
+      discussionRepository.deleteDiscussion(context, testDiscussion)
       accountRepository.deleteAccount(currentAccount.uid)
       accountRepository.deleteAccount(otherUser.uid)
       accountRepository.deleteAccount(thirdUser.uid)
@@ -294,9 +296,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
     }
 
     // Cleanup additional discussions
-    discussionRepository.deleteDiscussion(updatedAdminDiscussion)
-    discussionRepository.deleteDiscussion(discussionWithPicture)
-    discussionRepository.deleteDiscussion(updatedParticipantDiscussion)
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    discussionRepository.deleteDiscussion(context, updatedAdminDiscussion)
+    discussionRepository.deleteDiscussion(context, discussionWithPicture)
+    discussionRepository.deleteDiscussion(context, updatedParticipantDiscussion)
   }
 
   private fun clearFields() {

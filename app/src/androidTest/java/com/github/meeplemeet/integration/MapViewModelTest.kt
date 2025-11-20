@@ -1,5 +1,6 @@
 package com.github.meeplemeet.integration
 
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.map.MapUIState
 import com.github.meeplemeet.model.map.MapViewModel
@@ -181,7 +182,8 @@ class MapViewModelTest : FirestoreTests() {
     assertNull(sessionPin2)
 
     // cleanup
-    discussionRepository.deleteDiscussion(discussion)
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    discussionRepository.deleteDiscussion(context, discussion)
   }
 
   @Test
@@ -242,7 +244,8 @@ class MapViewModelTest : FirestoreTests() {
     shopRepository.deleteShop(shop.id)
     spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
     // cleanup discussion which contains the session link
-    discussionRepository.deleteDiscussion(discussion)
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    discussionRepository.deleteDiscussion(context, discussion)
   }
 
   @Test
@@ -466,7 +469,8 @@ class MapViewModelTest : FirestoreTests() {
     assertEquals(discussion.uid, updatedState.selectedGeoPin!!.uid)
 
     // cleanup
-    discussionRepository.deleteDiscussion(discussion)
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    discussionRepository.deleteDiscussion(context, discussion)
   }
 
   @Test

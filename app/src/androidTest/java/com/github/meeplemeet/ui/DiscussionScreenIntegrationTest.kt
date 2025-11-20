@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -88,8 +89,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
   @After
   fun teardown() = runBlocking {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
     // Clean up created data
-    discussionRepository.deleteDiscussion(testDiscussion)
+    discussionRepository.deleteDiscussion(context, testDiscussion)
     accountRepository.deleteAccount(currentUser.uid)
     accountRepository.deleteAccount(otherUser.uid)
   }
@@ -485,8 +487,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
         // Cleanup photo discussions
         runBlocking {
-          discussionRepository.deleteDiscussion(photoDiscussion)
-          discussionRepository.deleteDiscussion(galleryDiscussion)
+          val context = InstrumentationRegistry.getInstrumentation().targetContext
+          discussionRepository.deleteDiscussion(context, photoDiscussion)
+          discussionRepository.deleteDiscussion(context, galleryDiscussion)
         }
       }
 

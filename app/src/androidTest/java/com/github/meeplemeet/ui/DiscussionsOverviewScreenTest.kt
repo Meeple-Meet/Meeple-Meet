@@ -5,6 +5,7 @@ package com.github.meeplemeet.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -107,10 +108,11 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   @After
   fun cleanup() = runBlocking {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
     try {
-      discussionRepository.deleteDiscussion(d1)
-      discussionRepository.deleteDiscussion(d2)
-      discussionRepository.deleteDiscussion(d3)
+      discussionRepository.deleteDiscussion(context, d1)
+      discussionRepository.deleteDiscussion(context, d2)
+      discussionRepository.deleteDiscussion(context, d3)
       accountRepository.deleteAccount(me.uid)
       accountRepository.deleteAccount(bob.uid)
       accountRepository.deleteAccount(zoe.uid)

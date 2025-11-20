@@ -455,7 +455,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_DATE).assertExists()
 
         // cleanup via discussion delete (removes session index)
-        discussionRepository.deleteDiscussion(discussion)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        discussionRepository.deleteDiscussion(context, discussion)
       }
     }
 
@@ -765,7 +766,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         assertNotNull(sessionPin)
 
         // cleanup
-        discussionRepository.deleteDiscussion(discussion)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        discussionRepository.deleteDiscussion(context, discussion)
       }
     }
 

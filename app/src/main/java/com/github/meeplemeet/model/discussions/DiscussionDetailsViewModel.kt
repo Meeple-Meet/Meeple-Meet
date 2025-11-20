@@ -84,17 +84,20 @@ class DiscussionDetailsViewModel(
   /**
    * Deletes a discussion (creator-only operation).
    *
-   * Only the creator of the discussion can delete it, even if other users are admins.
+   * Only the creator of the discussion can delete it, even if other users are admins. This will
+   * also delete all associated images including the discussion profile picture and all message
+   * photo attachments.
    *
+   * @param context Android context for accessing cache directory
    * @param discussion The discussion to delete
    * @param changeRequester The account requesting the deletion
    * @throws PermissionDeniedException if the requester is not the creator
    */
-  fun deleteDiscussion(discussion: Discussion, changeRequester: Account) {
+  fun deleteDiscussion(context: Context, discussion: Discussion, changeRequester: Account) {
     if (discussion.creatorId != changeRequester.uid)
         throw PermissionDeniedException("Only discussion owner can perform this operation")
 
-    viewModelScope.launch { repository.deleteDiscussion(discussion) }
+    viewModelScope.launch { repository.deleteDiscussion(context, discussion) }
   }
 
   /**
