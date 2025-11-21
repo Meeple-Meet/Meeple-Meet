@@ -674,7 +674,6 @@ private fun PostHeader(post: Post, author: Account?) {
  * @param onDelete Lambda to invoke when deleting a comment.
  * @param onReplyingStateChanged Lambda to notify when reply field focus changes.
  * @param expandedStates Map storing the expanded state for all comments.
- * @param gutterColor The color of the gutter lines.
  */
 @Composable
 private fun ThreadCard(
@@ -684,8 +683,7 @@ private fun ThreadCard(
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
-    expandedStates: MutableMap<String, Boolean>,
-    gutterColor: Color = MessagingColors.redditOrange
+    expandedStates: MutableMap<String, Boolean>
 ) {
   val expanded = expandedStates[root.id] ?: false
 
@@ -731,7 +729,7 @@ private fun ThreadCard(
                             onReplyingStateChanged = onReplyingStateChanged,
                             expandedStates = expandedStates,
                             depth = 1,
-                            gutterColor = gutterColor)
+                            gutterColor = MessagingColors.redditOrange)
                       }
                     }
               }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -144,7 +143,6 @@ fun DiscussionDetailsScreen(
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
   val focusManager = LocalFocusManager.current
-  val listState = rememberLazyListState()
   val scrollState = rememberScrollState()
   var isInputFocused by remember { mutableStateOf(false) }
 
