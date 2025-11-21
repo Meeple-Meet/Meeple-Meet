@@ -68,7 +68,8 @@ class CreateSpaceRenterViewModel(
           repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
         } catch (e: Exception) {
           // Updating should not crash the app; log and continue.
-          Log.d("upload","Failed to update space renter ${created.id} with photo URLs: ${e.message}")
+          Log.d(
+              "upload", "Failed to update space renter ${created.id} with photo URLs: ${e.message}")
         }
       } catch (e: Exception) {
         // Catch any unexpected exception from repository.createSpaceRenter and fail gracefully.

@@ -224,8 +224,8 @@ internal fun AddSpaceRenterContent(
             onPrimary = {
               scope.launch {
                 try {
-                    onCreate(draftRenter)
-                    onCreated()
+                  onCreate(draftRenter)
+                  onCreated()
                 } catch (e: IllegalArgumentException) {
                   snackbarHost.showSnackbar(e.message ?: AddSpaceRenterUi.Strings.ERROR_VALIDATION)
                 } catch (_: Exception) {
@@ -246,9 +246,7 @@ internal fun AddSpaceRenterContent(
                 EditableImageCarousel(
                     photoCollectionUrl = photoCollectionUrl,
                     spacesCount = spaces.size,
-                    setPhotoCollectionUrl = {
-                      photoCollectionUrl = it
-                    })
+                    setPhotoCollectionUrl = { photoCollectionUrl = it })
               }
               // Required info
               item {
