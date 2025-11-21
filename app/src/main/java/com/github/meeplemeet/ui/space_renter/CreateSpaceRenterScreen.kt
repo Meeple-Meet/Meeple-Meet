@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -86,6 +87,7 @@ fun CreateSpaceRenterScreen(
     viewModel: CreateSpaceRenterViewModel = viewModel()
 ) {
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   AddSpaceRenterContent(
       owner = owner,
@@ -101,7 +103,8 @@ fun CreateSpaceRenterScreen(
             address = renter.address,
             openingHours = renter.openingHours,
             spaces = renter.spaces,
-            photoCollectionUrl = renter.photoCollectionUrl)
+            photoCollectionUrl = renter.photoCollectionUrl,
+            context = context)
       },
       locationUi = locationUi,
       viewModel = viewModel)
@@ -193,7 +196,7 @@ internal fun AddSpaceRenterContent(
           address = locationUi.selectedLocation ?: Location(),
           openingHours = week,
           spaces = spaces,
-          photoCollectionUrl = emptyList())
+          photoCollectionUrl = photoCollectionUrl)
 
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
