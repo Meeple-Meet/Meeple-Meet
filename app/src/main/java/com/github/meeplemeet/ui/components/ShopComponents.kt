@@ -62,6 +62,7 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
 import com.github.meeplemeet.ui.space_renter.SpaceRenterUi
 import com.github.meeplemeet.ui.theme.AppColors
@@ -480,7 +481,7 @@ fun LabeledField(
     minLines: Int = Dimensions.Numbers.singleLine,
 ) {
   Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
-    OutlinedTextField(
+    FocusableInputField(
         label = { Text(label) },
         value = value,
         onValueChange = onValueChange,
@@ -1011,7 +1012,7 @@ fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Mod
                 Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
               }
 
-          OutlinedTextField(
+          FocusableInputField(
               value = value.toString(),
               onValueChange = { newText ->
                 val newValue = newText.toIntOrNull() ?: 0
@@ -1315,7 +1316,7 @@ fun EditableGameItem(
                             Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
                           Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
                         }
-                    OutlinedTextField(
+                    FocusableInputField(
                         value = count.toString(),
                         onValueChange = { newText ->
                           val newValue = newText.toIntOrNull() ?: 0

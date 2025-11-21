@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +39,6 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
@@ -58,7 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,6 +72,8 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.CountBubble
 import com.github.meeplemeet.ui.components.DatePickerDockedField
 import com.github.meeplemeet.ui.components.DiscretePillSlider
@@ -181,6 +186,8 @@ fun SessionDetailsScreen(
   val locationUi by viewModel.locationUIState.collectAsState()
 
   val snackbar = remember { SnackbarHostState() }
+  val focusManager = LocalFocusManager.current
+  var isInputFocused by remember { mutableStateOf(false) }
 
   // Fetch game as soon as we know the proposed game.
   // This LaunchedEffect triggers whenever the session's gameId changes,
@@ -244,44 +251,49 @@ fun SessionDetailsScreen(
         SnackbarHost(snackbar, modifier = Modifier.testTag(SessionCreationTestTags.SNACKBAR_HOST))
       },
       bottomBar = {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(AppColors.primary)
-                    .padding(
-                        horizontal = Dimensions.Spacing.xxxLarge,
-                        vertical = Dimensions.Padding.extraMedium),
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-              OutlinedButton(
-                  onClick = {
-                    val updatedParticipants = form.participants.filterNot { it.uid == account.uid }
-                    discussion.let { disc ->
-                      if (updatedParticipants.isNotEmpty())
-                          viewModel.updateSession(
-                              requester = account,
-                              discussion = disc,
-                              newParticipantList = updatedParticipants)
-                      else viewModel.deleteSession(account, disc)
-                      onBack()
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .background(AppColors.primary)
+                      .padding(
+                          horizontal = Dimensions.Spacing.xxxLarge,
+                          vertical = Dimensions.Padding.extraMedium),
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+                OutlinedButton(
+                    onClick = {
+                      val updatedParticipants =
+                          form.participants.filterNot { it.uid == account.uid }
+                      discussion.let { disc ->
+                        if (updatedParticipants.isNotEmpty())
+                            viewModel.updateSession(
+                                requester = account,
+                                discussion = disc,
+                                newParticipantList = updatedParticipants)
+                        else viewModel.deleteSession(account, disc)
+                        onBack()
+                      }
+                    },
+                    shape = CircleShape,
+                    border = BorderStroke(Dimensions.DividerThickness.medium, AppColors.negative),
+                    modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                      Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                      Spacer(Modifier.width(Dimensions.Spacing.medium))
+                      Text(BUTTON_LEAVE, style = MaterialTheme.typography.bodyMedium)
                     }
-                  },
-                  shape = CircleShape,
-                  border = BorderStroke(Dimensions.DividerThickness.medium, AppColors.negative),
-                  modifier = Modifier.weight(1f).testTag(SessionTestTags.QUIT_BUTTON),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    Spacer(Modifier.width(Dimensions.Spacing.medium))
-                    Text(BUTTON_LEAVE, style = MaterialTheme.typography.bodyMedium)
-                  }
 
-              // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
-              DeleteSessionBTN(
-                  viewModel = viewModel,
-                  currentUser = account,
-                  discussion = discussion,
-                  userIsAdmin = isCurrUserAdmin,
-                  modifier = Modifier.weight(1f))
-            }
+                // "Delete" button is only visible for admins/owners (see DeleteSessionBTN).
+                DeleteSessionBTN(
+                    viewModel = viewModel,
+                    currentUser = account,
+                    discussion = discussion,
+                    userIsAdmin = isCurrUserAdmin,
+                    modifier = Modifier.weight(1f))
+              }
+        }
       }) { innerPadding ->
         Column(
             modifier =
@@ -291,7 +303,10 @@ fun SessionDetailsScreen(
                     .padding(innerPadding)
                     .padding(
                         horizontal = Dimensions.Spacing.extraLarge,
-                        vertical = Dimensions.Spacing.medium),
+                        vertical = Dimensions.Spacing.medium)
+                    .pointerInput(Unit) {
+                      detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
 
               // Organisation section (session info and controls)
@@ -305,7 +320,8 @@ fun SessionDetailsScreen(
                   gameUIState = gameUIState,
                   onValueChangeTitle = { form = form.copy(title = it) },
                   isCurrUserAdmin = isCurrUserAdmin,
-                  sessionViewModel = viewModel)
+                  sessionViewModel = viewModel,
+                  onFocusChanged = { isInputFocused = it })
 
               // Participants section (chips, add/remove)
               ParticipantsSection(
@@ -324,7 +340,8 @@ fun SessionDetailsScreen(
                         account, discussion, newParticipantList = form.participants)
                   },
                   discussion = discussion,
-                  viewModel = viewModel)
+                  viewModel = viewModel,
+                  onFocusChanged = { isInputFocused = it })
             }
       }
 }
@@ -343,7 +360,8 @@ fun ParticipantsSection(
     onRemoveParticipant: (Account) -> Unit,
     onAddParticipant: (Account) -> Unit,
     discussion: Discussion,
-    viewModel: SessionViewModel
+    viewModel: SessionViewModel,
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
   val participants = form.participants
   val currentCount = participants.size
@@ -419,7 +437,8 @@ fun ParticipantsSection(
         account = account,
         editable = editable,
         candidateMembers = candidateAccounts, // full discussion members as Accounts
-        modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
+        modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS),
+        onFocusChanged = onFocusChanged)
   }
 }
 
@@ -443,7 +462,8 @@ fun UserChipsGrid(
     account: Account,
     editable: Boolean = false,
     candidateMembers: List<Account> = emptyList(),
-    maxPlayers: Int = Int.MAX_VALUE
+    maxPlayers: Int = Int.MAX_VALUE,
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
   var showAddMenu by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
@@ -509,7 +529,7 @@ fun UserChipsGrid(
                       modifier = Modifier.background(AppColors.primary),
                   ) {
                     // Search (by handle only)
-                    OutlinedTextField(
+                    FocusableInputField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         placeholder = { Text(PLACEHOLDER_SEARCH, color = AppColors.textIconsFade) },
@@ -517,6 +537,7 @@ fun UserChipsGrid(
                         modifier =
                             Modifier.padding(horizontal = Dimensions.Spacing.large)
                                 .fillMaxWidth()
+                                .onFocusChanged { onFocusChanged(it.isFocused) }
                                 .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
 
                     Spacer(Modifier.height(Dimensions.Spacing.small))
@@ -610,7 +631,8 @@ fun OrganizationSection(
     discussion: Discussion,
     form: SessionForm,
     onFormChange: (SessionForm) -> Unit,
-    editable: Boolean = false
+    editable: Boolean = false,
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
   SectionCard(
       modifier = Modifier.clip(appShapes.extraLarge).background(AppColors.primary).fillMaxWidth()) {
@@ -618,44 +640,53 @@ fun OrganizationSection(
             text = form.title,
             editable = isCurrUserAdmin,
             onValueChange = { onValueChangeTitle(it) },
+            onFocusChanged = onFocusChanged,
             modifier =
                 Modifier.align(Alignment.CenterHorizontally)
                     .then(Modifier.testTag(SessionTestTags.TITLE)))
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
-        ProposedGameSection(
-            viewModel = sessionViewModel,
-            currentUser = account,
-            discussion = discussion,
-            editable = editable,
-            gameUIState = gameUIState)
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          ProposedGameSection(
+              viewModel = sessionViewModel,
+              currentUser = account,
+              discussion = discussion,
+              editable = editable,
+              gameUIState = gameUIState)
+        }
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
-        DatePickerDockedField(
-            value = form.date,
-            editable = editable,
-            onValueChange = { onFormChange(form.copy(date = it!!)) },
-        )
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          DatePickerDockedField(
+              value = form.date,
+              editable = editable,
+              onValueChange = { onFormChange(form.copy(date = it!!)) },
+          )
+        }
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time field using the new TimeField composable
-        TimeField(
-            value = form.time.toString(),
-            onValueChange = { onFormChange(form.copy(time = it)) },
-            editable = editable,
-            modifier = Modifier.fillMaxWidth())
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          TimeField(
+              value = form.time.toString(),
+              onValueChange = { onFormChange(form.copy(time = it)) },
+              editable = editable,
+              modifier = Modifier.fillMaxWidth())
+        }
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         if (editable) {
           // Admins and creators: interactive search field
-          SessionLocationSearchBar(
-              account,
-              discussion,
-              sessionViewModel,
-          )
+          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+            SessionLocationSearchBar(
+                account,
+                discussion,
+                sessionViewModel,
+            )
+          }
         } else {
           // Members: plain read-only text field
           IconTextField(
@@ -686,16 +717,17 @@ fun Title(
     text: String,
     editable: Boolean = false,
     onValueChange: (String) -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {},
     modifier: Modifier
 ) {
   if (editable) {
-    OutlinedTextField(
+    FocusableInputField(
         value = text,
         label = { Text(LABEL_TITLE, color = AppColors.textIconsFade) },
         onValueChange = onValueChange,
         textStyle = MaterialTheme.typography.bodyMedium,
         singleLine = true,
-        modifier = modifier.fillMaxWidth())
+        modifier = modifier.fillMaxWidth().onFocusChanged { onFocusChanged(it.isFocused) })
   } else {
     Text(
         text = text,

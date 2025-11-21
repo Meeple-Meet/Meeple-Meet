@@ -44,7 +44,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
@@ -84,6 +83,7 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -211,7 +211,7 @@ fun LabeledTextField(
         color = labelTextColor,
         modifier = Modifier.testTag(ComponentsTestTags.LABELED_LABEL))
     Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
-    OutlinedTextField(
+    FocusableInputField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
@@ -245,7 +245,7 @@ fun IconTextField(
     textStyle: TextStyle = MaterialTheme.typography.bodySmall,
     modifier: Modifier
 ) {
-  OutlinedTextField(
+  FocusableInputField(
       value = value,
       onValueChange = { if (editable) onValueChange(it) },
       modifier = modifier,
@@ -621,7 +621,7 @@ fun TimePickerField(
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: ""
 
-  OutlinedTextField(
+  FocusableInputField(
       value = text,
       onValueChange = { /* read-only; picker controls it */},
       label = { Text(label) },
@@ -825,7 +825,7 @@ private fun LocationSearchBar(
 
   ExposedDropdownMenuBox(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
-        OutlinedTextField(
+        FocusableInputField(
             value = text,
             onValueChange = {
               menuOpen = true
@@ -936,7 +936,7 @@ private fun GameSearchBar(
   Column {
     ExposedDropdownMenuBox(
         expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
-          OutlinedTextField(
+          FocusableInputField(
               value = text,
               onValueChange = {
                 menuOpen = true

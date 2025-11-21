@@ -24,6 +24,7 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.max
@@ -397,7 +398,7 @@ private fun SeatsField(
 ) {
   var seatsText by remember(seats) { mutableStateOf(max(1, seats).toString()) }
 
-  OutlinedTextField(
+  FocusableInputField(
       value = seatsText,
       enabled = isEditing,
       onValueChange = { raw ->
@@ -448,7 +449,7 @@ private fun PriceField(
         mutableStateOf(if (price == 0.0) "0" else price.toString().removeSuffix(".0"))
       }
 
-  OutlinedTextField(
+  FocusableInputField(
       value = priceText,
       enabled = isEditing,
       onValueChange = { raw ->

@@ -2,6 +2,7 @@ package com.github.meeplemeet.ui.posts
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +21,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -27,6 +30,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
+import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -96,6 +101,7 @@ fun CreatePostScreen(
   val snackbarHostState = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
+  var isInputFocused by remember { mutableStateOf(false) }
 
   /**
    * Normalizes a tag by trimming whitespace, removing leading hashes, and converting to lowercase
@@ -157,59 +163,63 @@ fun CreatePostScreen(
         }
       },
       bottomBar = {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(
-                        horizontal = CreatePostScreenUi.xxxLargePadding,
-                        vertical = Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
-            horizontalArrangement = Arrangement.spacedBy(CreatePostScreenUi.defaultSpacing)) {
-              OutlinedButton(
-                  onClick = onDiscard,
-                  modifier = Modifier.weight(1f).testTag(CreatePostTestTags.DISCARD_BUTTON),
-                  shape = CircleShape,
-                  border =
-                      BorderStroke(
-                          Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
-                  colors =
-                      ButtonDefaults.outlinedButtonColors(
-                          contentColor = MaterialTheme.colorScheme.error)) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
-                    Spacer(Modifier.width(CreatePostScreenUi.spacerWidth))
-                    Text("Discard", style = MaterialTheme.typography.titleMedium)
-                  }
-
-              // Post button
-              Button(
-                  onClick = {
-                    scope.launch {
-                      isPosting = true
-                      try {
-                        viewModel.createPost(
-                            title = title,
-                            body = body,
-                            author = account,
-                            tags = selectedTags.toList())
-                        onPost()
-                      } catch (e: Exception) {
-                        snackbarHostState.showSnackbar(e.message ?: "Failed to create post")
-                      } finally {
-                        isPosting = false
-                      }
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          horizontal = CreatePostScreenUi.xxxLargePadding,
+                          vertical =
+                              Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
+              horizontalArrangement = Arrangement.spacedBy(CreatePostScreenUi.defaultSpacing)) {
+                OutlinedButton(
+                    onClick = onDiscard,
+                    modifier = Modifier.weight(1f).testTag(CreatePostTestTags.DISCARD_BUTTON),
+                    shape = CircleShape,
+                    border =
+                        BorderStroke(
+                            Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error)) {
+                      Icon(Icons.Default.Delete, contentDescription = null)
+                      Spacer(Modifier.width(CreatePostScreenUi.spacerWidth))
+                      Text("Discard", style = MaterialTheme.typography.titleMedium)
                     }
-                  },
-                  enabled = title.isNotBlank() && body.isNotBlank() && !isPosting,
-                  modifier = Modifier.weight(1f).testTag(CreatePostTestTags.POST_BUTTON),
-                  shape = CircleShape,
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.secondary,
-                          contentColor = MaterialTheme.colorScheme.onBackground)) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Spacer(Modifier.width(CreatePostScreenUi.spacerWidth))
-                    Text("Post", style = MaterialTheme.typography.titleMedium)
-                  }
-            }
+
+                // Post button
+                Button(
+                    onClick = {
+                      scope.launch {
+                        isPosting = true
+                        try {
+                          viewModel.createPost(
+                              title = title,
+                              body = body,
+                              author = account,
+                              tags = selectedTags.toList())
+                          onPost()
+                        } catch (e: Exception) {
+                          snackbarHostState.showSnackbar(e.message ?: "Failed to create post")
+                        } finally {
+                          isPosting = false
+                        }
+                      }
+                    },
+                    enabled = title.isNotBlank() && body.isNotBlank() && !isPosting,
+                    modifier = Modifier.weight(1f).testTag(CreatePostTestTags.POST_BUTTON),
+                    shape = CircleShape,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onBackground)) {
+                      Icon(Icons.Default.Check, contentDescription = null)
+                      Spacer(Modifier.width(CreatePostScreenUi.spacerWidth))
+                      Text("Post", style = MaterialTheme.typography.titleMedium)
+                    }
+              }
+        }
       },
       snackbarHost = {
         SnackbarHost(
@@ -224,20 +234,24 @@ fun CreatePostScreen(
                     .padding(
                         horizontal = CreatePostScreenUi.extraLargePadding,
                         vertical = CreatePostScreenUi.extraLargePadding)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(CreatePostScreenUi.defaultSpacing)) {
 
               // Title field
-              OutlinedTextField(
+              FocusableInputField(
                   value = title,
                   onValueChange = { title = it },
                   label = { Text("Title") },
                   placeholder = { Text(TITLE_FIELD_PLACEHOLDER) },
                   singleLine = true,
-                  modifier = Modifier.fillMaxWidth().testTag(CreatePostTestTags.TITLE_FIELD))
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(CreatePostTestTags.TITLE_FIELD))
 
               // Body field
-              OutlinedTextField(
+              FocusableInputField(
                   value = body,
                   onValueChange = { if (it.length < 8192) body = it },
                   label = { Text("Body") },
@@ -245,6 +259,7 @@ fun CreatePostScreen(
                   modifier =
                       Modifier.fillMaxWidth()
                           .height(Dimensions.ContainerSize.bottomSpacer.times(2))
+                          .onFocusChanged { isInputFocused = it.isFocused }
                           .verticalScroll(bodyScroll)
                           .testTag(CreatePostTestTags.BODY_FIELD),
                   maxLines = Int.MAX_VALUE)
@@ -253,13 +268,16 @@ fun CreatePostScreen(
               LaunchedEffect(body) { bodyScroll.animateScrollTo(bodyScroll.maxValue) }
 
               // Tag input field
-              OutlinedTextField(
+              FocusableInputField(
                   value = tagInput,
                   onValueChange = { tagInput = it },
                   label = { Text("Add tags") },
                   placeholder = { Text("Add new tags here") },
                   singleLine = true,
-                  modifier = Modifier.fillMaxWidth().testTag(CreatePostTestTags.TAG_INPUT_FIELD),
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(CreatePostTestTags.TAG_INPUT_FIELD),
                   trailingIcon = {
                     IconButton(
                         onClick = { addTag() },
