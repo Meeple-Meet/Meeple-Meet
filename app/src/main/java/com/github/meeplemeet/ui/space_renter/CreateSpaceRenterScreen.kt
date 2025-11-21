@@ -20,6 +20,8 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.CreateSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
+import com.github.meeplemeet.ui.LocalFocusableFieldObserver
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
 import kotlinx.coroutines.launch
 
@@ -193,131 +195,150 @@ internal fun AddSpaceRenterContent(
           spaces = spaces,
           photoCollectionUrl = emptyList())
 
-  Scaffold(
-      topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  AddSpaceRenterUi.Strings.SCREEN_TITLE,
-                  modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.TITLE))
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = onBack,
-                  modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.NAV_BACK)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                  }
-            },
-            modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.TOPBAR))
-      },
-      snackbarHost = {
-        SnackbarHost(
-            snackbarHost,
-            modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.SNACKBAR_HOST))
-      },
-      bottomBar = {
-        ActionBar(
-            onDiscard = { discardAndBack() },
-            onPrimary = {
-              scope.launch {
-                try {
-                  onCreate(draftRenter)
-                  onCreated()
-                } catch (e: IllegalArgumentException) {
-                  snackbarHost.showSnackbar(e.message ?: AddSpaceRenterUi.Strings.ERROR_VALIDATION)
-                } catch (_: Exception) {
-                  snackbarHost.showSnackbar(AddSpaceRenterUi.Strings.ERROR_CREATE)
-                }
-              }
-            },
-            enabled = isValid)
-      },
-      modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.SCAFFOLD)) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).testTag(CreateSpaceRenterScreenTestTags.LIST),
-            contentPadding =
-                PaddingValues(
-                    horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
-                    vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
-              item {
-                EditableImageCarousel(
-                    photoCollectionUrl = photoCollectionUrl,
-                    spacesCount = spaces.size,
-                    setPhotoCollectionUrl = { photoCollectionUrl = it })
-              }
-              // Required info
-              item {
-                CollapsibleSection(
-                    title = AddSpaceRenterUi.Strings.REQUIREMENTS_SECTION,
-                    initiallyExpanded = true,
-                    content = {
-                      SpaceRenterRequiredInfoSection(
-                          spaceRenter = draftRenter,
-                          onSpaceName = { name = it },
-                          onEmail = { email = it },
-                          onPhone = { phone = it },
-                          onLink = { link = it },
-                          onPickLocation = { loc -> viewModel.setLocation(loc) },
-                          viewModel = viewModel,
-                          owner = owner)
-                    },
-                    testTag = CreateSpaceRenterScreenTestTags.SECTION_REQUIRED)
-              }
+  var isInputFocused by remember { mutableStateOf(false) }
+  var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
-              // Availability
-              item {
-                CollapsibleSection(
-                    title = AddSpaceRenterUi.Strings.SECTION_AVAILABILITY,
-                    initiallyExpanded = false,
-                    content = {
-                      AvailabilitySection(
-                          week = week,
-                          onEdit = { day ->
-                            editingDay = day
-                            showHoursDialog = true
-                          })
-                    },
-                    testTag = CreateSpaceRenterScreenTestTags.SECTION_AVAILABILITY)
-              }
+  CompositionLocalProvider(
+      LocalFocusableFieldObserver provides
+          { token, focused ->
+            focusedFieldTokens =
+                if (focused) focusedFieldTokens + token else focusedFieldTokens - token
+            isInputFocused = focusedFieldTokens.isNotEmpty()
+          }) {
+        Scaffold(
+            topBar = {
+              CenterAlignedTopAppBar(
+                  title = {
+                    Text(
+                        AddSpaceRenterUi.Strings.SCREEN_TITLE,
+                        modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.TITLE))
+                  },
+                  navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.NAV_BACK)) {
+                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                  },
+                  modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.TOPBAR))
+            },
+            snackbarHost = {
+              SnackbarHost(
+                  snackbarHost,
+                  modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.SNACKBAR_HOST))
+            },
+            bottomBar = {
+              val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+              if (!(shouldHide && isInputFocused))
+                  ActionBar(
+                      onDiscard = { discardAndBack() },
+                      onPrimary = {
+                        scope.launch {
+                          try {
+                            onCreate(draftRenter)
+                            onCreated()
+                          } catch (e: IllegalArgumentException) {
+                            snackbarHost.showSnackbar(
+                                e.message ?: AddSpaceRenterUi.Strings.ERROR_VALIDATION)
+                          } catch (_: Exception) {
+                            snackbarHost.showSnackbar(AddSpaceRenterUi.Strings.ERROR_CREATE)
+                          }
+                        }
+                      },
+                      enabled = isValid)
+            },
+            modifier = Modifier.testTag(CreateSpaceRenterScreenTestTags.SCAFFOLD)) { padding ->
+              LazyColumn(
+                  modifier =
+                      Modifier.padding(padding).testTag(CreateSpaceRenterScreenTestTags.LIST),
+                  contentPadding =
+                      PaddingValues(
+                          horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
+                          vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
+                    item {
+                      EditableImageCarousel(
+                          photoCollectionUrl = photoCollectionUrl,
+                          spacesCount = spaces.size,
+                          setPhotoCollectionUrl = { photoCollectionUrl = it })
+                    }
+                    // Required info
+                    item {
+                      CollapsibleSection(
+                          title = AddSpaceRenterUi.Strings.REQUIREMENTS_SECTION,
+                          initiallyExpanded = true,
+                          content = {
+                            SpaceRenterRequiredInfoSection(
+                                spaceRenter = draftRenter,
+                                onSpaceName = { name = it },
+                                onEmail = { email = it },
+                                onPhone = { phone = it },
+                                onLink = { link = it },
+                                onPickLocation = { loc -> viewModel.setLocation(loc) },
+                                viewModel = viewModel,
+                                owner = owner)
+                          },
+                          testTag = CreateSpaceRenterScreenTestTags.SECTION_REQUIRED)
+                    }
 
-              // Spaces
-              item {
-                CollapsibleSection(
-                    title = AddSpaceRenterUi.Strings.SECTION_SPACES,
-                    initiallyExpanded = false,
-                    expanded = spacesExpanded,
-                    onExpandedChange = { spacesExpanded = it },
-                    header = {
-                      TextButton(
-                          onClick = { addSpace() },
-                          modifier =
-                              Modifier.testTag(CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
-                            Text(
-                                AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                    // Availability
+                    item {
+                      CollapsibleSection(
+                          title = AddSpaceRenterUi.Strings.SECTION_AVAILABILITY,
+                          initiallyExpanded = false,
+                          content = {
+                            AvailabilitySection(
+                                week = week,
+                                onEdit = { day ->
+                                  editingDay = day
+                                  showHoursDialog = true
+                                })
+                          },
+                          testTag = CreateSpaceRenterScreenTestTags.SECTION_AVAILABILITY)
+                    }
+
+                    // Spaces
+                    item {
+                      CollapsibleSection(
+                          title = AddSpaceRenterUi.Strings.SECTION_SPACES,
+                          initiallyExpanded = false,
+                          expanded = spacesExpanded,
+                          onExpandedChange = { spacesExpanded = it },
+                          header = {
+                            TextButton(
+                                onClick = { addSpace() },
                                 modifier =
                                     Modifier.testTag(
-                                        CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
-                          }
-                    },
-                    content = {
-                      SpacesList(
-                          spaces = spaces,
-                          onChange = { idx, updated ->
-                            spaces = spaces.mapIndexed { i, sp -> if (i == idx) updated else sp }
+                                        CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
+                                  Icon(Icons.Filled.Add, contentDescription = null)
+                                  Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
+                                  Text(
+                                      AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                      modifier =
+                                          Modifier.testTag(
+                                              CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
+                                }
                           },
-                          onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } },
-                      )
-                    },
-                    testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
-              }
+                          content = {
+                            SpacesList(
+                                spaces = spaces,
+                                onChange = { idx, updated ->
+                                  spaces =
+                                      spaces.mapIndexed { i, sp -> if (i == idx) updated else sp }
+                                },
+                                onDelete = { idx ->
+                                  spaces = spaces.filterIndexed { i, _ -> i != idx }
+                                },
+                            )
+                          },
+                          testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
+                    }
 
-              item {
-                Spacer(
-                    Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)
-                        .testTag(CreateSpaceRenterScreenTestTags.BOTTOM_SPACER))
-              }
+                    item {
+                      Spacer(
+                          Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)
+                              .testTag(CreateSpaceRenterScreenTestTags.BOTTOM_SPACER))
+                    }
+                  }
             }
       }
 

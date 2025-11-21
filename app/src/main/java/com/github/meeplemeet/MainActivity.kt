@@ -2,6 +2,7 @@ package com.github.meeplemeet
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -69,6 +70,7 @@ import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.KeyboardUtils
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -158,10 +160,25 @@ const val LOADING_SCREEN_TAG = "Loading Screen"
  * Make sure you have an Android emulator running or a physical device connected.
  */
 class MainActivity : ComponentActivity() {
+
+  private val keyboardToggleListener =
+      object : KeyboardUtils.SoftKeyboardToggleListener {
+        override fun onToggleSoftKeyboard(isVisible: Boolean) {
+          Log.d("Keyboard", "keyboard visible: $isVisible")
+        }
+      }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     MapsInitializer.initialize(applicationContext)
     setContent { AppTheme { Surface(modifier = Modifier.fillMaxSize()) { MeepleMeetApp() } } }
+    KeyboardUtils.addKeyboardToggleListener(this, keyboardToggleListener)
+  }
+
+  override fun onDestroy() {
+    KeyboardUtils.removeKeyboardToggleListener(keyboardToggleListener)
+    KeyboardUtils.detach(this)
+    super.onDestroy()
   }
 }
 

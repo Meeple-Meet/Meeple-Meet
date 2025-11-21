@@ -3,6 +3,7 @@ package com.github.meeplemeet.ui.discussions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,12 +23,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.CreateDiscussionViewModel
+import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -81,6 +87,8 @@ fun CreateDiscussionScreen(
 
   var isCreating by remember { mutableStateOf(false) }
   var creationError by remember { mutableStateOf<String?>(null) }
+  var isInputFocused by remember { mutableStateOf(false) }
+  val focusManager = LocalFocusManager.current
 
   LaunchedEffect(searchQuery) {
     if (searchQuery.isBlank()) {
@@ -144,59 +152,68 @@ fun CreateDiscussionScreen(
         }
       },
       bottomBar = {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(
-                        horizontal = Dimensions.Padding.xxxLarge,
-                        vertical = Dimensions.Padding.xxLarge),
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-              OutlinedButton(
-                  onClick = onBack,
-                  modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
-                  shape = RoundedCornerShape(percent = 50),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                    Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                    Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
-                  }
-
-              Button(
-                  onClick = {
-                    scope.launch {
-                      try {
-                        isCreating = true
-                        val clean = selectedMembers.toList()
-                        require(clean.size == selectedMembers.size) {
-                          "Bug: null Account in selection"
-                        }
-                        viewModel.createDiscussion(
-                            title, description, account, *clean.toTypedArray())
-                        isCreating = false
-                        onCreate()
-                      } catch (_: Exception) {
-                        isCreating = false
-                        creationError = "Failed to create discussion"
-                      }
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          horizontal = Dimensions.Padding.xxxLarge,
+                          vertical = Dimensions.Padding.xxLarge),
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+                OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
+                    shape = RoundedCornerShape(percent = 50),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                      Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                      Text(text = "Discard", style = MaterialTheme.typography.bodySmall)
                     }
-                  },
-                  enabled = title.isNotBlank() && !isCreating,
-                  modifier =
-                      Modifier.weight(1f).testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON),
-                  shape = RoundedCornerShape(percent = 50),
-                  colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
-                    Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                    Text(text = "Create", style = MaterialTheme.typography.bodySmall)
-                  }
-            }
+
+                Button(
+                    onClick = {
+                      scope.launch {
+                        try {
+                          isCreating = true
+                          val clean = selectedMembers.toList()
+                          require(clean.size == selectedMembers.size) {
+                            "Bug: null Account in selection"
+                          }
+                          viewModel.createDiscussion(
+                              title, description, account, *clean.toTypedArray())
+                          isCreating = false
+                          onCreate()
+                        } catch (_: Exception) {
+                          isCreating = false
+                          creationError = "Failed to create discussion"
+                        }
+                      }
+                    },
+                    enabled = title.isNotBlank() && !isCreating,
+                    modifier =
+                        Modifier.weight(1f).testTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON),
+                    shape = RoundedCornerShape(percent = 50),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative)) {
+                      Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                      Text(text = "Create", style = MaterialTheme.typography.bodySmall)
+                    }
+              }
+        }
       }) { padding ->
         Column(
             modifier =
-                Modifier.padding(padding).padding(Dimensions.Padding.extraLarge).fillMaxSize(),
+                Modifier.padding(padding)
+                    .padding(Dimensions.Padding.extraLarge)
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                      detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
             verticalArrangement = Arrangement.Top) {
               /** Title input field */
-              OutlinedTextField(
+              FocusableInputField(
                   value = title,
                   colors =
                       TextFieldDefaults.colors()
@@ -212,12 +229,15 @@ fun CreateDiscussionScreen(
                   textStyle = MaterialTheme.typography.bodySmall,
                   onValueChange = { title = it },
                   label = { Text("Title") },
-                  modifier = Modifier.testTag(AddDiscussionTestTags.ADD_TITLE).fillMaxWidth())
+                  modifier =
+                      Modifier.onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(AddDiscussionTestTags.ADD_TITLE)
+                          .fillMaxWidth())
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
               /** Description input field */
-              OutlinedTextField(
+              FocusableInputField(
                   value = description,
                   colors =
                       TextFieldDefaults.colors()
@@ -234,7 +254,8 @@ fun CreateDiscussionScreen(
                   onValueChange = { description = it },
                   label = { Text("Description (optional)") },
                   modifier =
-                      Modifier.testTag(AddDiscussionTestTags.ADD_DESCRIPTION)
+                      Modifier.onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(AddDiscussionTestTags.ADD_DESCRIPTION)
                           .fillMaxWidth()
                           .height(
                               Dimensions.ContainerSize.timeFieldHeight
@@ -251,6 +272,7 @@ fun CreateDiscussionScreen(
                   isSearching = isSearching,
                   dropdownExpanded = dropdownExpanded,
                   onDismiss = { dropdownExpanded = false },
+                  onFocusChanged = { isInputFocused = it },
                   onSelect = { account ->
                     selectedMembers.add(account)
                     searchQuery = ""
@@ -325,6 +347,7 @@ fun CreateDiscussionScreen(
  * @param isSearching Whether a search is currently in progress
  * @param dropdownExpanded Whether the dropdown menu is expanded
  * @param onDismiss Lambda called to dismiss the dropdown
+ * @param onFocusChanged Lambda called when the focus state changes
  * @param onSelect Lambda called when an Account is selected from the dropdown
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -336,15 +359,17 @@ fun MemberSearchField(
     isSearching: Boolean,
     dropdownExpanded: Boolean,
     onDismiss: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     onSelect: (Account) -> Unit
 ) {
   ExposedDropdownMenuBox(expanded = dropdownExpanded, onExpandedChange = {}) {
-    OutlinedTextField(
+    FocusableInputField(
         value = searchQuery,
         onValueChange = { onQueryChange(it) },
         label = { Text("Add Members") },
         modifier =
-            Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
+            Modifier.onFocusChanged { onFocusChanged(it.isFocused) }
+                .menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                 .fillMaxWidth()
                 .testTag(AddDiscussionTestTags.ADD_MEMBERS),
         trailingIcon = {

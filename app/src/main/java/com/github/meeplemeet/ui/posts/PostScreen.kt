@@ -9,6 +9,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -40,8 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -59,6 +62,7 @@ import com.github.meeplemeet.model.auth.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.discussions.CharacterCounter
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
@@ -179,6 +183,7 @@ fun PostScreen(
 
   var topComment by rememberSaveable { mutableStateOf("") }
   var isSending by remember { mutableStateOf(false) }
+  var isReplyingToComment by remember { mutableStateOf(false) }
 
   // Track if post was ever loaded to distinguish between loading and deleted states
   var postEverLoaded by remember { mutableStateOf(false) }
@@ -248,27 +253,29 @@ fun PostScreen(
         }
       },
       bottomBar = {
-        ComposerBar(
-            value = topComment,
-            onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) topComment = it },
-            onAttach = { /* TODO attachments */},
-            sendEnabled = !isSending && topComment.isNotBlank() && post != null,
-            onSend = {
-              val p = post ?: return@ComposerBar
-              scope.launch {
-                isSending = true
-                try {
-                  viewModel.addComment(
-                      author = account, post = p, parentId = p.id, text = topComment.trim())
-                  topComment = ""
-                  focusManager.clearFocus(force = true)
-                } catch (_: Throwable) {
-                  snackbarHostState.showSnackbar(ERROR_NOT_SENT_COMMENT)
-                } finally {
-                  isSending = false
+        if (!isReplyingToComment) {
+          ComposerBar(
+              value = topComment,
+              onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) topComment = it },
+              onAttach = { /* TODO attachments */},
+              sendEnabled = !isSending && topComment.isNotBlank() && post != null,
+              onSend = {
+                val p = post ?: return@ComposerBar
+                scope.launch {
+                  isSending = true
+                  try {
+                    viewModel.addComment(
+                        author = account, post = p, parentId = p.id, text = topComment.trim())
+                    topComment = ""
+                    focusManager.clearFocus(force = true)
+                  } catch (_: Throwable) {
+                    snackbarHostState.showSnackbar(ERROR_NOT_SENT_COMMENT)
+                  } finally {
+                    isSending = false
+                  }
                 }
-              }
-            })
+              })
+        }
       }) { padding ->
         if (post == null) {
           Box(
@@ -301,6 +308,7 @@ fun PostScreen(
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_COMMENT) }
                 }
               },
+              onReplyingStateChanged = { _, isReplying -> isReplyingToComment = isReplying },
               resolveUser = { uid -> userCache[uid] },
               modifier = Modifier.padding(padding))
         }
@@ -449,6 +457,7 @@ private fun ComposerBar(
  * @param onDeletePost Lambda to invoke when deleting the post.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDeleteComment Lambda to invoke when deleting a comment.
+ * @param onReplyingStateChanged Lambda to notify when reply field focus changes.
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param modifier Modifier to be applied to the content.
  */
@@ -459,11 +468,13 @@ private fun PostContent(
     onDeletePost: () -> Unit,
     onReply: (parentId: String, text: String) -> Unit,
     onDeleteComment: (Comment) -> Unit,
+    onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     resolveUser: ResolveUser,
     modifier: Modifier = Modifier
 ) {
   val listState = rememberLazyListState()
   val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
+  val focusManager = LocalFocusManager.current
 
   LazyColumn(
       state = listState,
@@ -471,6 +482,7 @@ private fun PostContent(
           modifier
               .fillMaxSize()
               .background(MessagingColors.messagingBackground)
+              .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
               .testTag(PostTags.LIST),
       contentPadding = PaddingValues(vertical = Dimensions.Spacing.none),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
@@ -489,6 +501,7 @@ private fun PostContent(
               resolveUser = resolveUser,
               onReply = onReply,
               onDelete = onDeleteComment,
+              onReplyingStateChanged = onReplyingStateChanged,
               expandedStates = expandedStates)
         }
       }
@@ -659,6 +672,7 @@ private fun PostHeader(post: Post, author: Account?) {
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDelete Lambda to invoke when deleting a comment.
+ * @param onReplyingStateChanged Lambda to notify when reply field focus changes.
  * @param expandedStates Map storing the expanded state for all comments.
  * @param gutterColor The color of the gutter lines.
  */
@@ -669,6 +683,7 @@ private fun ThreadCard(
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
+    onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     expandedStates: MutableMap<String, Boolean>,
     gutterColor: Color = MessagingColors.redditOrange
 ) {
@@ -700,6 +715,7 @@ private fun ThreadCard(
                       expandedStates[root.id] = true
                     },
                     onDelete = { onDelete(root) },
+                    onReplyingStateChanged = onReplyingStateChanged,
                     onCardClick = { expandedStates[root.id] = !expanded })
 
                 AnimatedVisibility(
@@ -712,6 +728,7 @@ private fun ThreadCard(
                             resolveUser = resolveUser,
                             onReply = onReply,
                             onDelete = onDelete,
+                            onReplyingStateChanged = onReplyingStateChanged,
                             expandedStates = expandedStates,
                             depth = 1,
                             gutterColor = gutterColor)
@@ -732,6 +749,7 @@ private fun ThreadCard(
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param onReply Lambda to invoke when replying to a comment.
  * @param onDelete Lambda to invoke when deleting a comment.
+ * @param onReplyingStateChanged Lambda to notify when reply field focus changes.
  * @param expandedStates Map storing the expanded state for all comments.
  * @param depth The current depth in the comment tree.
  * @param gutterColor The color of the gutter lines.
@@ -743,6 +761,7 @@ private fun CommentsTree(
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
+    onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     expandedStates: MutableMap<String, Boolean>,
     depth: Int = 0,
     gutterColor: Color = MaterialTheme.colorScheme.outline
@@ -772,6 +791,7 @@ private fun CommentsTree(
                     expandedStates[c.id] = true
                   },
                   onDelete = { onDelete(c) },
+                  onReplyingStateChanged = onReplyingStateChanged,
                   onCardClick =
                       if (c.children.isNotEmpty()) {
                         { expandedStates[c.id] = !expanded }
@@ -786,6 +806,7 @@ private fun CommentsTree(
                           resolveUser = resolveUser,
                           onReply = onReply,
                           onDelete = onDelete,
+                          onReplyingStateChanged = onReplyingStateChanged,
                           expandedStates = expandedStates,
                           depth = depth + 1,
                           gutterColor = gutterColor)
@@ -809,6 +830,7 @@ private fun CommentsTree(
                 isExpanded = expanded,
                 onReply = { text -> onReply(c.id, text) },
                 onDelete = { onDelete(c) },
+                onReplyingStateChanged = onReplyingStateChanged,
                 onCardClick =
                     if (c.children.isNotEmpty()) {
                       { expandedStates[c.id] = !expanded }
@@ -822,6 +844,7 @@ private fun CommentsTree(
                         resolveUser = resolveUser,
                         onReply = onReply,
                         onDelete = onDelete,
+                        onReplyingStateChanged = onReplyingStateChanged,
                         expandedStates = expandedStates,
                         depth = 1,
                         gutterColor = gutterColor)
@@ -875,6 +898,7 @@ private fun ThreadGutter(
  * @param isExpanded Whether the replies are currently visible.
  * @param onReply Lambda to invoke when replying to the comment.
  * @param onDelete Lambda to invoke when deleting the comment.
+ * @param onReplyingStateChanged Lambda to notify when reply field focus changes.
  * @param onCardClick Optional lambda to invoke when the comment card is clicked.
  */
 @Composable
@@ -886,6 +910,7 @@ private fun CommentItem(
     isExpanded: Boolean = false,
     onReply: (String) -> Unit,
     onDelete: () -> Unit,
+    onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     onCardClick: (() -> Unit)? = null
 ) {
   var replying by rememberSaveable(comment.id) { mutableStateOf(false) }
@@ -988,11 +1013,14 @@ private fun CommentItem(
           modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-            OutlinedTextField(
+            FocusableInputField(
                 value = replyText,
                 onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) replyText = it },
                 modifier =
                     Modifier.weight(1f)
+                        .onFocusChanged { focusState ->
+                          onReplyingStateChanged(comment.id, focusState.isFocused)
+                        }
                         .semantics { contentDescription = "Reply input" }
                         .testTag(PostTags.commentReplyField(comment.id)),
                 placeholder = {
