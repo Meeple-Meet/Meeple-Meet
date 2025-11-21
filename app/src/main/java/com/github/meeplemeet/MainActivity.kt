@@ -69,6 +69,7 @@ import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.utils.KeyboardUtils
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -162,6 +163,11 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     MapsInitializer.initialize(applicationContext)
     setContent { AppTheme { Surface(modifier = Modifier.fillMaxSize()) { MeepleMeetApp() } } }
+  }
+
+  override fun onDestroy() {
+    KeyboardUtils.detach(this)
+    super.onDestroy()
   }
 }
 

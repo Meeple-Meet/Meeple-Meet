@@ -6,9 +6,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -20,7 +24,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -31,6 +37,7 @@ import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.SignUpViewModel
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -106,6 +113,8 @@ fun SignUpScreen(
   var confirmPasswordError by remember {
     mutableStateOf<String?>(null)
   } // Password confirmation validation errors
+
+  val focusManager = LocalFocusManager.current
 
   // Observe authentication state from the ViewModel
   val uiState by viewModel.uiState.collectAsState()
@@ -188,9 +197,14 @@ fun SignUpScreen(
         Column(
             modifier =
                 Modifier.fillMaxSize()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
                     .padding(paddingValues)
                     .padding(Dimensions.Padding.xxLarge)
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(MaterialTheme.colorScheme.background)
+                    .pointerInput(Unit) {
+                      detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween) {
               // Top spacing
@@ -226,7 +240,7 @@ fun SignUpScreen(
                           .testTag(NavigationTestTags.SCREEN_TITLE))
 
               // Email input field with validation
-              OutlinedTextField(
+              FocusableInputField(
                   leadingIcon = {
                     Icon(imageVector = Icons.Default.Email, contentDescription = null)
                   },
@@ -257,7 +271,7 @@ fun SignUpScreen(
               Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
               // Password input field with visibility toggle and validation
-              OutlinedTextField(
+              FocusableInputField(
                   leadingIcon = {
                     Icon(imageVector = Icons.Default.Lock, contentDescription = null)
                   },
@@ -313,7 +327,7 @@ fun SignUpScreen(
               // Password confirmation field with visibility toggle and validation
               // This ensures users enter their password correctly by requiring them to type it
               // twice
-              OutlinedTextField(
+              FocusableInputField(
                   leadingIcon = {
                     Icon(imageVector = Icons.Default.Lock, contentDescription = null)
                   },

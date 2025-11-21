@@ -1,5 +1,6 @@
 package com.github.meeplemeet.utils
 
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.AccountRepository
@@ -15,6 +16,7 @@ import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
@@ -128,6 +130,11 @@ open class FirestoreTests {
 
   @Before
   fun testsSetup() {
+    InstrumentationRegistry.getInstrumentation().runOnMainSync {
+      UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+      UiBehaviorConfig.clearFocusOnKeyboardHide = false
+    }
+
     db = FirebaseProvider.db
     auth = FirebaseProvider.auth
     storage = FirebaseProvider.storage

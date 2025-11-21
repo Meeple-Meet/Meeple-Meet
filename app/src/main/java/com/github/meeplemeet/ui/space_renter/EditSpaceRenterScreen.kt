@@ -19,6 +19,8 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.space_renter.EditSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
+import com.github.meeplemeet.ui.LocalFocusableFieldObserver
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
 import kotlinx.coroutines.launch
 
@@ -231,132 +233,150 @@ internal fun EditSpaceRenterContent(
   }
 
   // Scaffold structure for the screen including top bar, snackbar, and main content.
-  Scaffold(
-      topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  EditSpaceRenterUi.Strings.SCREEN_TITLE,
-                  modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TITLE))
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = onBack,
-                  modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.NAV_BACK)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                  }
-            },
-            modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TOPBAR))
-      },
-      snackbarHost = {
-        SnackbarHost(
-            snackbarHost, modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.SNACKBAR_HOST))
-      },
-      bottomBar = {
-        ActionBar(
-            onDiscard = onBack,
-            onPrimary = {
-              // Try to update the space renter and handle any validation or network errors.
-              scope.launch {
-                try {
-                  onUpdateSpaceRenter(draftRenter)
-                  onUpdated()
-                } catch (e: IllegalArgumentException) {
-                  snackbarHost.showSnackbar(e.message ?: EditSpaceRenterUi.Strings.ERROR_VALIDATION)
-                } catch (e: Exception) {
-                  snackbarHost.showSnackbar(EditSpaceRenterUi.Strings.ERROR_UPDATE)
-                }
-              }
-            },
-            enabled = isValid,
-            primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-      },
-      modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.SCAFFOLD)) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).testTag(EditSpaceRenterScreenTestTags.LIST),
-            contentPadding =
-                PaddingValues(
-                    horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
-                    vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
-              item {
-                EditableImageCarousel(
-                    photoCollectionUrl = photoCollectionUrl,
-                    spacesCount = spaces.size,
-                    setPhotoCollectionUrl = { photoCollectionUrl = it })
-              }
-              // Required Info
-              item {
-                CollapsibleSection(
-                    title = EditSpaceRenterUi.Strings.REQUIREMENTS_SECTION,
-                    initiallyExpanded = true,
-                    content = {
-                      SpaceRenterRequiredInfoSection(
-                          spaceRenter = draftRenter,
-                          onSpaceName = { name = it },
-                          onEmail = { email = it },
-                          onPhone = { phone = it },
-                          onLink = { link = it },
-                          onPickLocation = { loc -> viewModel.setLocation(loc) },
-                          viewModel = viewModel,
-                          owner = owner)
-                    },
-                    testTag = EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
-              }
+  var isInputFocused by remember { mutableStateOf(false) }
+  var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
-              // Availability
-              item {
-                CollapsibleSection(
-                    title = EditSpaceRenterUi.Strings.SECTION_AVAILABILITY,
-                    initiallyExpanded = false,
-                    content = {
-                      AvailabilitySection(
-                          week = week,
-                          onEdit = { day ->
-                            editingDay = day
-                            showHoursDialog = true
-                          })
-                    },
-                    testTag = EditSpaceRenterScreenTestTags.SECTION_AVAILABILITY)
-              }
+  CompositionLocalProvider(
+      LocalFocusableFieldObserver provides
+          { token, focused ->
+            focusedFieldTokens =
+                if (focused) focusedFieldTokens + token else focusedFieldTokens - token
+            isInputFocused = focusedFieldTokens.isNotEmpty()
+          }) {
+        Scaffold(
+            topBar = {
+              CenterAlignedTopAppBar(
+                  title = {
+                    Text(
+                        EditSpaceRenterUi.Strings.SCREEN_TITLE,
+                        modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TITLE))
+                  },
+                  navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.NAV_BACK)) {
+                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                  },
+                  modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TOPBAR))
+            },
+            snackbarHost = {
+              SnackbarHost(
+                  snackbarHost,
+                  modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.SNACKBAR_HOST))
+            },
+            bottomBar = {
+              val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+              if (!(shouldHide && isInputFocused))
+                  ActionBar(
+                      onDiscard = onBack,
+                      onPrimary = {
+                        scope.launch {
+                          try {
+                            onUpdateSpaceRenter(draftRenter)
+                            onUpdated()
+                          } catch (e: IllegalArgumentException) {
+                            snackbarHost.showSnackbar(
+                                e.message ?: EditSpaceRenterUi.Strings.ERROR_VALIDATION)
+                          } catch (e: Exception) {
+                            snackbarHost.showSnackbar(EditSpaceRenterUi.Strings.ERROR_UPDATE)
+                          }
+                        }
+                      },
+                      enabled = isValid,
+                      primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
+            },
+            modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.SCAFFOLD)) { padding ->
+              LazyColumn(
+                  modifier = Modifier.padding(padding).testTag(EditSpaceRenterScreenTestTags.LIST),
+                  contentPadding =
+                      PaddingValues(
+                          horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
+                          vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
+                    item {
+                      EditableImageCarousel(
+                          photoCollectionUrl = photoCollectionUrl,
+                          spacesCount = spaces.size,
+                          setPhotoCollectionUrl = { photoCollectionUrl = it })
+                    }
+                    // Required Info
+                    item {
+                      CollapsibleSection(
+                          title = EditSpaceRenterUi.Strings.REQUIREMENTS_SECTION,
+                          initiallyExpanded = true,
+                          content = {
+                            SpaceRenterRequiredInfoSection(
+                                spaceRenter = draftRenter,
+                                onSpaceName = { name = it },
+                                onEmail = { email = it },
+                                onPhone = { phone = it },
+                                onLink = { link = it },
+                                onPickLocation = { loc -> viewModel.setLocation(loc) },
+                                viewModel = viewModel,
+                                owner = owner)
+                          },
+                          testTag = EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
+                    }
 
-              // Spaces
-              item {
-                CollapsibleSection(
-                    title = EditSpaceRenterUi.Strings.SECTION_SPACES,
-                    initiallyExpanded = false,
-                    expanded = spacesExpanded,
-                    onExpandedChange = { spacesExpanded = it },
-                    header = {
-                      TextButton(
-                          onClick = { addSpace() },
-                          modifier =
-                              Modifier.testTag(EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
-                            Text(
-                                AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                    // Availability
+                    item {
+                      CollapsibleSection(
+                          title = EditSpaceRenterUi.Strings.SECTION_AVAILABILITY,
+                          initiallyExpanded = false,
+                          content = {
+                            AvailabilitySection(
+                                week = week,
+                                onEdit = { day ->
+                                  editingDay = day
+                                  showHoursDialog = true
+                                })
+                          },
+                          testTag = EditSpaceRenterScreenTestTags.SECTION_AVAILABILITY)
+                    }
+
+                    // Spaces
+                    item {
+                      CollapsibleSection(
+                          title = EditSpaceRenterUi.Strings.SECTION_SPACES,
+                          initiallyExpanded = false,
+                          expanded = spacesExpanded,
+                          onExpandedChange = { spacesExpanded = it },
+                          header = {
+                            TextButton(
+                                onClick = { addSpace() },
                                 modifier =
                                     Modifier.testTag(
-                                        EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
-                          }
-                    },
-                    content = {
-                      SpacesList(
-                          spaces = spaces,
-                          onChange = { idx, updated ->
-                            spaces = spaces.mapIndexed { i, sp -> if (i == idx) updated else sp }
+                                        EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
+                                  Icon(Icons.Filled.Add, contentDescription = null)
+                                  Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
+                                  Text(
+                                      AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                      modifier =
+                                          Modifier.testTag(
+                                              EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
+                                }
                           },
-                          onDelete = { idx -> spaces = spaces.filterIndexed { i, _ -> i != idx } },
-                      )
-                    },
-                    testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
-              }
+                          content = {
+                            SpacesList(
+                                spaces = spaces,
+                                onChange = { idx, updated ->
+                                  spaces =
+                                      spaces.mapIndexed { i, sp -> if (i == idx) updated else sp }
+                                },
+                                onDelete = { idx ->
+                                  spaces = spaces.filterIndexed { i, _ -> i != idx }
+                                },
+                            )
+                          },
+                          testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
+                    }
 
-              item {
-                Spacer(
-                    Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)
-                        .testTag(EditSpaceRenterScreenTestTags.BOTTOM_SPACER))
-              }
+                    item {
+                      Spacer(
+                          Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)
+                              .testTag(EditSpaceRenterScreenTestTags.BOTTOM_SPACER))
+                    }
+                  }
             }
       }
 

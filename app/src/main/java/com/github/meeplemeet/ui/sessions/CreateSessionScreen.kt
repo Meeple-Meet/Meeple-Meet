@@ -8,6 +8,7 @@ package com.github.meeplemeet.ui.sessions
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
@@ -29,6 +33,7 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -147,6 +152,8 @@ fun CreateSessionScreen(
 
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  val focusManager = LocalFocusManager.current
+  var isInputFocused by remember { mutableStateOf(false) }
   // Helper to show error messages in a snackbar
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
@@ -175,55 +182,58 @@ fun CreateSessionScreen(
         SnackbarHost(snackbar, modifier = Modifier.testTag(SessionCreationTestTags.SNACKBAR_HOST))
       },
       bottomBar = {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(
-                        horizontal = Dimensions.Padding.xxxLarge,
-                        vertical = Dimensions.Padding.xxLarge)
-                    .testTag(SessionCreationTestTags.BUTTON_ROW),
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-              // Whether form is ready for creation
-              val canCreate = form.title.isNotBlank() && form.date != null && form.time != null
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          horizontal = Dimensions.Padding.xxxLarge,
+                          vertical = Dimensions.Padding.xxLarge)
+                      .testTag(SessionCreationTestTags.BUTTON_ROW),
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+                // Whether form is ready for creation
+                val canCreate = form.title.isNotBlank() && form.date != null && form.time != null
 
-              // Reset form and go back on discard
-              DiscardButton(
-                  modifier = Modifier.weight(1f),
-                  onDiscard = {
-                    form = SessionForm(participants = listOf(account))
-                    onBack()
-                  })
+                // Reset form and go back on discard
+                DiscardButton(
+                    modifier = Modifier.weight(1f),
+                    onDiscard = {
+                      form = SessionForm(participants = listOf(account))
+                      onBack()
+                    })
 
-              // Create a new session if form is valid
-              CreateSessionButton(
-                  formToSubmit = form,
-                  enabled = canCreate,
-                  onCreate = {
-                    runCatching {
-                          val selectedGameId = viewModel.gameUIState.value.selectedGameUid
-                          viewModel.createSession(
-                              requester = account,
-                              discussion = discussion,
-                              name = form.title,
-                              gameId =
-                                  selectedGameId.ifBlank {
-                                    form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME }
-                                  },
-                              date = toTimestamp(form.date, form.time),
-                              location = locationUi.selectedLocation ?: Location(),
-                              *form.participants.toTypedArray())
-                        }
-                        .onFailure { e ->
-                          showError(e.message ?: "Failed to create session")
-                          return@CreateSessionButton
-                        }
+                // Create a new session if form is valid
+                CreateSessionButton(
+                    formToSubmit = form,
+                    enabled = canCreate,
+                    onCreate = {
+                      runCatching {
+                            val selectedGameId = viewModel.gameUIState.value.selectedGameUid
+                            viewModel.createSession(
+                                requester = account,
+                                discussion = discussion,
+                                name = form.title,
+                                gameId =
+                                    selectedGameId.ifBlank {
+                                      form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME }
+                                    },
+                                date = toTimestamp(form.date, form.time),
+                                location = locationUi.selectedLocation ?: Location(),
+                                *form.participants.toTypedArray())
+                          }
+                          .onFailure { e ->
+                            showError(e.message ?: "Failed to create session")
+                            return@CreateSessionButton
+                          }
 
-                    form = SessionForm(participants = listOf(account))
-                    onBack()
-                  },
-                  modifier = Modifier.weight(1f),
-              )
-            }
+                      form = SessionForm(participants = listOf(account))
+                      onBack()
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+              }
+        }
       }) { innerPadding ->
         Column(
             modifier =
@@ -233,6 +243,7 @@ fun CreateSessionScreen(
                     .padding(
                         horizontal = Dimensions.Padding.extraLarge,
                         vertical = Dimensions.Padding.medium)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .verticalScroll(rememberScrollState())
                     .testTag(SessionCreationTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
@@ -249,6 +260,7 @@ fun CreateSessionScreen(
                   time = form.time,
                   onDateChange = { form = form.copy(date = it) },
                   onTimeChange = { form = form.copy(time = it) },
+                  onFocusChanged = { isInputFocused = it },
                   modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
 
               // Participants section (player selection and slider)
@@ -365,6 +377,7 @@ fun OrganisationSection(
     onTitleChange: (String) -> Unit = {},
     onDateChange: (LocalDate?) -> Unit,
     onTimeChange: (LocalTime?) -> Unit,
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
   SectionCard(
       modifier
@@ -386,28 +399,39 @@ fun OrganisationSection(
             leadingIcon = {
               Icon(imageVector = Icons.Default.Edit, contentDescription = LABEL_EDIT_TITLE)
             },
-            modifier = Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
+            modifier =
+                Modifier.fillMaxWidth()
+                    .onFocusChanged { onFocusChanged(it.isFocused) }
+                    .testTag(SessionCreationTestTags.FORM_TITLE_FIELD))
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Game search section
-        SessionGameSearchBar(account, discussion, viewModel, gameUi.fetchedGame)
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          SessionGameSearchBar(account, discussion, viewModel, gameUi.fetchedGame)
+        }
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Date picker for session date
-        DatePickerDockedField(
-            value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          DatePickerDockedField(
+              value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
+        }
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time picker for session time
-        TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
+        }
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Location search field with suggestions
-        SessionLocationSearchBar(account, discussion, viewModel)
+        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          SessionLocationSearchBar(account, discussion, viewModel)
+        }
       }
 }
 

@@ -6,11 +6,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
@@ -24,9 +25,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,6 +44,8 @@ import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.PhotoDialogBottomBar
 import com.github.meeplemeet.ui.components.PhotoDialogTopBar
 import com.github.meeplemeet.ui.components.TopBarWithDivider
@@ -136,6 +142,9 @@ fun DiscussionDetailsScreen(
 ) {
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
+  val focusManager = LocalFocusManager.current
+  val scrollState = rememberScrollState()
+  var isInputFocused by remember { mutableStateOf(false) }
 
   /** --- Search state --- */
   var searchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -252,46 +261,58 @@ fun DiscussionDetailsScreen(
               })
         },
         bottomBar = {
-          Row(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(
-                          horizontal = Dimensions.Spacing.xxxLarge,
-                          vertical =
-                              Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
-              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-                /** The actual leave operation happens only after the confirmation dialog */
-                /** Leave button is always enabled */
-                OutlinedButton(
-                    onClick = { showLeaveDialog = true },
-                    enabled = true,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-                    modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                      Text(TEXT_LEAVE, color = AppColors.textIcons)
-                    }
+          val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+          if (!(shouldHide && isInputFocused)) {
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            start = Dimensions.Spacing.xxxLarge,
+                            end = Dimensions.Spacing.xxxLarge,
+                            bottom =
+                                Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+                  /** The actual leave operation happens only after the confirmation dialog */
+                  /** Leave button is always enabled */
+                  OutlinedButton(
+                      onClick = { showLeaveDialog = true },
+                      enabled = true,
+                      colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
+                      modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
+                        Text(TEXT_LEAVE, color = AppColors.textIcons)
+                      }
 
-                /** The actual deletion happens only after the confirmation dialog */
-                /** Delete button only if not member */
-                if (discussion.creatorId == account.uid)
-                    OutlinedButton(
-                        onClick = { if (isAdmin) showDeleteDialog = true },
-                        enabled = isAdmin,
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative),
-                        modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
-                          Icon(
-                              imageVector = Icons.Default.Delete,
-                              contentDescription = null,
-                              tint = AppColors.textIcons)
-                          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                          Text(TEXT_DELETE, color = AppColors.textIcons)
-                        }
-              }
+                  /** The actual deletion happens only after the confirmation dialog */
+                  /** Delete button only if not member */
+                  if (discussion.creatorId == account.uid)
+                      OutlinedButton(
+                          onClick = { if (isAdmin) showDeleteDialog = true },
+                          enabled = isAdmin,
+                          colors =
+                              ButtonDefaults.outlinedButtonColors(
+                                  contentColor = AppColors.negative),
+                          modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = AppColors.textIcons)
+                            Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                            Text(TEXT_DELETE, color = AppColors.textIcons)
+                          }
+                }
+          }
         }) { padding ->
 
           /** --- Main Content --- */
           Column(
-              modifier = modifier.padding(padding).padding(Dimensions.Spacing.extraLarge),
+              modifier =
+                  modifier
+                      .padding(padding)
+                      .padding(Dimensions.Spacing.extraLarge)
+                      .verticalScroll(scrollState)
+                      .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                      },
               verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
 
                 /** --- Discussion Icon/Profile Picture --- */
@@ -343,7 +364,7 @@ fun DiscussionDetailsScreen(
 
                 /** --- Discussion Name --- */
                 /** These ensure only admins can edit the name field */
-                TextField(
+                FocusableInputField(
                     value = newName,
                     onValueChange = { newName = it },
                     readOnly = !isAdmin,
@@ -351,6 +372,7 @@ fun DiscussionDetailsScreen(
                     modifier =
                         Modifier.fillMaxWidth()
                             .padding(horizontal = Dimensions.Spacing.extraMedium)
+                            .onFocusChanged { isInputFocused = it.isFocused }
                             .testTag(UITestTags.DISCUSSION_NAME),
                     colors =
                         TextFieldDefaults.colors(
@@ -401,7 +423,7 @@ fun DiscussionDetailsScreen(
                     color = AppColors.textIcons)
 
                 /** --- Description TextField --- */
-                TextField(
+                FocusableInputField(
                     value = newDesc,
                     onValueChange = { newDesc = it },
                     readOnly = !isAdmin,
@@ -411,6 +433,7 @@ fun DiscussionDetailsScreen(
                             .padding(
                                 start = Dimensions.Spacing.none,
                                 end = Dimensions.Padding.mediumSmall)
+                            .onFocusChanged { isInputFocused = it.isFocused }
                             .testTag(UITestTags.DISCUSSION_DESCRIPTION),
                     /** Makes the textField look like a line */
                     colors =
@@ -424,7 +447,9 @@ fun DiscussionDetailsScreen(
                             cursorColor = AppColors.textIcons,
                             focusedTextColor = AppColors.textIcons,
                             unfocusedTextColor = AppColors.textIcons),
-                    singleLine = true,
+                    singleLine = false,
+                    minLines = 5,
+                    maxLines = 5,
                     /**
                      * To make the text left-aligned, we use an invisible leading icon to offset the
                      * trailing icon
@@ -451,6 +476,7 @@ fun DiscussionDetailsScreen(
                         isSearching = isSearching,
                         dropdownExpanded = dropdownExpanded,
                         onDismiss = { dropdownExpanded = false },
+                        onFocusChanged = { isInputFocused = it },
                         onSelect = { newAccount ->
                           selectedMembers.add(newAccount)
                           viewModel.addUserToDiscussion(discussion, account, newAccount)
@@ -617,11 +643,19 @@ fun MemberList(
 
   /** Only show the list if there are members */
   if (selectedMembers.isNotEmpty()) {
-    Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+    HorizontalDivider(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    start = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.xxxxLarge),
+                    end = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.xxxxLarge)),
+        thickness = Dimensions.DividerThickness.standard,
+        color = AppColors.divider)
 
     /** --- Members List --- */
-    LazyColumn {
-      items(selectedMembers) { member ->
+    Column {
+      selectedMembers.forEach { member ->
         /**
          * Row is clickable only if the user can manage members. Added this for testing since
          * disabling clickable still exposes OnClick actions
@@ -702,18 +736,6 @@ fun MemberList(
                         fontWeight = FontWeight.Bold)
                   }
             }
-      }
-      item {
-        /** --- Divider after the list --- */
-        HorizontalDivider(
-            modifier =
-                modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.xxxxLarge),
-                        end = Dimensions.AvatarSize.large.plus(Dimensions.Spacing.xxxxLarge)),
-            thickness = Dimensions.DividerThickness.standard,
-            color = AppColors.divider)
       }
     }
   }
