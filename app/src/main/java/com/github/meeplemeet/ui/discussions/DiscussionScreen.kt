@@ -59,6 +59,7 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -1270,7 +1271,7 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
       },
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-          OutlinedTextField(
+          FocusableInputField(
               value = question,
               onValueChange = { question = it },
               label = { Text("Poll Question") },
@@ -1300,7 +1301,7 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                  OutlinedTextField(
+                  FocusableInputField(
                       value = option,
                       colors =
                           TextFieldDefaults.colors()

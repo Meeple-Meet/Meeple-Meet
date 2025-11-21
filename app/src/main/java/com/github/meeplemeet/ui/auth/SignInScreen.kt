@@ -6,9 +6,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Email
@@ -20,7 +24,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -33,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.SignInViewModel
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -93,6 +100,8 @@ fun SignInScreen(
     mutableStateOf<String?>(null)
   } // Client-side password validation errors
 
+  val focusManager = LocalFocusManager.current
+
   // Observe authentication state from the ViewModel
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -135,8 +144,11 @@ fun SignInScreen(
   Column(
       modifier =
           Modifier.fillMaxSize()
+              .imePadding()
               .background(MaterialTheme.colorScheme.background)
-              .padding(SignInScreenUi.xxLargePadding),
+              .verticalScroll(rememberScrollState())
+              .padding(SignInScreenUi.xxLargePadding)
+              .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.SpaceBetween) {
         // Top spacing
@@ -170,7 +182,7 @@ fun SignInScreen(
                     .testTag(NavigationTestTags.SCREEN_TITLE))
 
         // Email input field with validation
-        OutlinedTextField(
+        FocusableInputField(
             leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
             value = email,
             onValueChange = {
@@ -201,7 +213,7 @@ fun SignInScreen(
         Spacer(modifier = Modifier.height(SignInScreenUi.mediumSpacing))
 
         // Password input field with visibility toggle and validation
-        OutlinedTextField(
+        FocusableInputField(
             leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
             value = password,
             onValueChange = {

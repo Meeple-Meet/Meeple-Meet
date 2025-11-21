@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.github.meeplemeet.MainActivity
@@ -130,6 +131,8 @@ class E2E_M2 : FirestoreTests() {
         .assertExists()
         .performTextInput(mainUserPassword)
     composeTestRule.waitForIdle()
+
+    Espresso.closeSoftKeyboard()
     composeTestRule
         .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
         .assertExists()
@@ -156,6 +159,7 @@ class E2E_M2 : FirestoreTests() {
         .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
         .assertExists()
         .performTextInput(mainUserName)
+    Espresso.closeSoftKeyboard()
     composeTestRule
         .onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
         .assertExists()
@@ -827,10 +831,16 @@ class E2E_M2 : FirestoreTests() {
             .assertExists()
             .performClick()
         composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithTag(gamesToggleTag, useUnmergedTree = true)
+            .assertExists()
+            .performClick()
+        composeTestRule.waitForIdle()
       }
     }
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    Espresso.closeSoftKeyboard()
     composeTestRule.waitUntil(timeoutMillis = 8_000) {
       var byTag =
           composeTestRule

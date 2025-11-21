@@ -22,6 +22,8 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.ui.LocalFocusableFieldObserver
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
@@ -253,149 +255,165 @@ fun AddShopContent(
     onBack()
   }
 
-  Scaffold(
-      topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  MeepleMeetScreen.CreateShop.title,
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = onBack,
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.NAV_BACK)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                  }
-            },
-            modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
-      },
-      snackbarHost = {
-        SnackbarHost(
-            snackbarHost, modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
-      },
-      bottomBar = {
-        ActionBar(
-            onDiscard = { onDiscard() },
-            onPrimary = {
-              val addr = locationUi.selectedLocation ?: Location()
-              scope.launch {
-                try {
-                  val shopId = onCreate(shopName, email, addr, week, stock)
-                  onCreated(shopId)
-                } catch (e: IllegalArgumentException) {
-                  snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
-                } catch (_: Exception) {
-                  snackbarHost.showSnackbar(Strings.ERROR_CREATE)
-                }
-              }
-            },
-            enabled = isValid)
-      },
-      modifier = Modifier.testTag(CreateShopScreenTestTags.SCAFFOLD)) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).testTag(CreateShopScreenTestTags.LIST),
-            contentPadding =
-                PaddingValues(
-                    horizontal = AddShopUi.Dimensions.contentHPadding,
-                    vertical = AddShopUi.Dimensions.contentVPadding)) {
-              item {
-                ImageCarousel(
-                    photoCollectionUrl = photoCollectionUrl,
-                    maxNumberOfImages = maxNumberOfImages,
-                    onAdd = { path, index ->
-                      photoCollectionUrl =
-                          if (index < photoCollectionUrl.size &&
-                              photoCollectionUrl[index].isNotEmpty()) {
-                            photoCollectionUrl.mapIndexed { i, old ->
-                              if (i == index) path else old
-                            }
-                          } else {
-                            photoCollectionUrl + path
-                          }
-                    },
-                    onRemove = { url ->
-                      photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                    },
-                    editable = true)
-              }
-              item {
-                CollapsibleSection(
-                    title = Strings.REQUIREMENTS_SECTION,
-                    initiallyExpanded = true,
-                    content = {
-                      RequiredInfoSection(
-                          shop = null,
-                          shopName = shopName,
-                          onShopName = { shopName = it },
-                          email = email,
-                          onEmail = { email = it },
-                          phone = phone,
-                          onPhone = { phone = it },
-                          link = link,
-                          onLink = { link = it },
-                          onPickLocation = { loc -> addressText = loc.name },
-                          viewModel = viewModel,
-                          owner = owner)
-                    },
-                    testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
-              }
+  var isInputFocused by remember { mutableStateOf(false) }
+  var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
-              item {
-                CollapsibleSection(
-                    title = Strings.SECTION_AVAILABILITY,
-                    initiallyExpanded = false,
-                    content = {
-                      AvailabilitySection(
-                          week = week,
-                          onEdit = { day ->
-                            editingDay = day
-                            showHoursDialog = true
-                          })
+  CompositionLocalProvider(
+      LocalFocusableFieldObserver provides
+          { token, focused ->
+            focusedFieldTokens =
+                if (focused) focusedFieldTokens + token else focusedFieldTokens - token
+            isInputFocused = focusedFieldTokens.isNotEmpty()
+          }) {
+        Scaffold(
+            topBar = {
+              CenterAlignedTopAppBar(
+                  title = {
+                    Text(
+                        MeepleMeetScreen.CreateShop.title,
+                        modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
+                  },
+                  navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag(CreateShopScreenTestTags.NAV_BACK)) {
+                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                  },
+                  modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
+            },
+            snackbarHost = {
+              SnackbarHost(
+                  snackbarHost, modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
+            },
+            bottomBar = {
+              val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+              if (!(shouldHide && isInputFocused)) {
+                ActionBar(
+                    onDiscard = { onDiscard() },
+                    onPrimary = {
+                      val addr = locationUi.selectedLocation ?: Location()
+                      scope.launch {
+                        try {
+                          val shopId = onCreate(shopName, email, addr, week, stock)
+                          onCreated(shopId)
+                        } catch (e: IllegalArgumentException) {
+                          snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
+                        } catch (_: Exception) {
+                          snackbarHost.showSnackbar(Strings.ERROR_CREATE)
+                        }
+                      }
                     },
-                    testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
+                    enabled = isValid)
               }
-
-              item {
-                CollapsibleSection(
-                    title = Strings.SECTION_GAMES,
-                    initiallyExpanded = false,
-                    header = {
-                      TextButton(
-                          onClick = {
-                            onSetGameQuery("")
-                            showGameDialog = true
-                          },
-                          modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
-                            Text(
-                                Strings.BTN_ADD_GAME,
-                                modifier =
-                                    Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_LABEL))
-                          }
-                    },
-                    content = {
-                      GamesSection(
-                          stock = stock,
-                          onQuantityChange = { game, newQuantity ->
-                            stock =
-                                stock.map { (g, qty) ->
-                                  if (g.uid == game.uid) g to newQuantity else g to qty
+            },
+            modifier = Modifier.testTag(CreateShopScreenTestTags.SCAFFOLD)) { padding ->
+              LazyColumn(
+                  modifier = Modifier.padding(padding).testTag(CreateShopScreenTestTags.LIST),
+                  contentPadding =
+                      PaddingValues(
+                          horizontal = AddShopUi.Dimensions.contentHPadding,
+                          vertical = AddShopUi.Dimensions.contentVPadding)) {
+                    item {
+                      ImageCarousel(
+                          photoCollectionUrl = photoCollectionUrl,
+                          maxNumberOfImages = maxNumberOfImages,
+                          onAdd = { path, index ->
+                            photoCollectionUrl =
+                                if (index < photoCollectionUrl.size &&
+                                    photoCollectionUrl[index].isNotEmpty()) {
+                                  photoCollectionUrl.mapIndexed { i, old ->
+                                    if (i == index) path else old
+                                  }
+                                } else {
+                                  photoCollectionUrl + path
                                 }
                           },
-                          onDelete = { gameToRemove ->
-                            stock = stock.filterNot { it.first.uid == gameToRemove.uid }
-                          })
-                    },
-                    testTag = CreateShopScreenTestTags.SECTION_GAMES)
-              }
+                          onRemove = { url ->
+                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                          },
+                          editable = true)
+                    }
+                    item {
+                      CollapsibleSection(
+                          title = Strings.REQUIREMENTS_SECTION,
+                          initiallyExpanded = true,
+                          content = {
+                            RequiredInfoSection(
+                                shop = null,
+                                shopName = shopName,
+                                onShopName = { shopName = it },
+                                email = email,
+                                onEmail = { email = it },
+                                phone = phone,
+                                onPhone = { phone = it },
+                                link = link,
+                                onLink = { link = it },
+                                onPickLocation = { loc -> addressText = loc.name },
+                                viewModel = viewModel,
+                                owner = owner)
+                          },
+                          testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
+                    }
 
-              item {
-                Spacer(
-                    Modifier.height(AddShopUi.Dimensions.bottomSpacer)
-                        .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
-              }
+                    item {
+                      CollapsibleSection(
+                          title = Strings.SECTION_AVAILABILITY,
+                          initiallyExpanded = false,
+                          content = {
+                            AvailabilitySection(
+                                week = week,
+                                onEdit = { day ->
+                                  editingDay = day
+                                  showHoursDialog = true
+                                })
+                          },
+                          testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
+                    }
+
+                    item {
+                      CollapsibleSection(
+                          title = Strings.SECTION_GAMES,
+                          initiallyExpanded = false,
+                          header = {
+                            TextButton(
+                                onClick = {
+                                  onSetGameQuery("")
+                                  showGameDialog = true
+                                },
+                                modifier =
+                                    Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)) {
+                                  Icon(Icons.Filled.Add, contentDescription = null)
+                                  Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
+                                  Text(
+                                      Strings.BTN_ADD_GAME,
+                                      modifier =
+                                          Modifier.testTag(
+                                              CreateShopScreenTestTags.GAMES_ADD_LABEL))
+                                }
+                          },
+                          content = {
+                            GamesSection(
+                                stock = stock,
+                                onQuantityChange = { game, newQuantity ->
+                                  stock =
+                                      stock.map { (g, qty) ->
+                                        if (g.uid == game.uid) g to newQuantity else g to qty
+                                      }
+                                },
+                                onDelete = { gameToRemove ->
+                                  stock = stock.filterNot { it.first.uid == gameToRemove.uid }
+                                })
+                          },
+                          testTag = CreateShopScreenTestTags.SECTION_GAMES)
+                    }
+
+                    item {
+                      Spacer(
+                          Modifier.height(AddShopUi.Dimensions.bottomSpacer)
+                              .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
+                    }
+                  }
             }
       }
 

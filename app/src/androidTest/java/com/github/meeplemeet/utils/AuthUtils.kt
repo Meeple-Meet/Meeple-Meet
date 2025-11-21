@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -27,6 +28,8 @@ object AuthUtils {
     onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
         .assertExists()
         .performTextInput(password)
+
+    Espresso.closeSoftKeyboard()
 
     onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
         .assertExists()
@@ -64,6 +67,8 @@ object AuthUtils {
   fun ComposeTestRule.signInUser(email: String, password: String) {
     onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
     onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+
+    Espresso.closeSoftKeyboard()
 
     onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
         .assertExists()

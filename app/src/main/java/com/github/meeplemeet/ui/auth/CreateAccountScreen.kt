@@ -4,10 +4,14 @@ package com.github.meeplemeet.ui.auth
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -15,7 +19,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -23,9 +30,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.auth.Account
 import com.github.meeplemeet.model.auth.CreateAccountViewModel
+import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.utils.KeyboardUtils
 
 object CreateAccountTestTags {
   const val HANDLE_FIELD = "CreateAccountHandleField"
@@ -79,6 +89,14 @@ fun CreateAccountScreen(
 
   var isShopChecked by remember { mutableStateOf(false) }
   var isSpaceRented by remember { mutableStateOf(false) }
+  var isInputFocused by remember { mutableStateOf(false) }
+  val focusManager = LocalFocusManager.current
+  val scrollState = rememberScrollState()
+
+  DisposableEffect(Unit) {
+    val unregister = KeyboardUtils.registerOnKeyboardHidden { isInputFocused = false }
+    onDispose { unregister() }
+  }
 
   /** Checks the handle availability and updates the ViewModel state. */
   fun validateHandle(handle: String) {
@@ -102,62 +120,71 @@ fun CreateAccountScreen(
   /** Root layout column for aligning all UI components vertically. */
   Scaffold(
       bottomBar = {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(
-                        horizontal = CreateAccountScreenUi.xxxLargePadding,
-                        vertical = CreateAccountScreenUi.xxLargePadding),
-            horizontalArrangement = Arrangement.spacedBy(CreateAccountScreenUi.extraLargeSpacing)) {
-              OutlinedButton(
-                  onClick = onBack,
-                  modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
-                  shape = RoundedCornerShape(percent = 50),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null)
-                    Spacer(modifier = Modifier.width(CreateAccountScreenUi.mediumSpacing))
-                    Text(text = "Back", style = MaterialTheme.typography.bodySmall)
-                  }
-
-              Button(
-                  enabled = handle.isNotBlank() && username.isNotBlank() && errorMessage.isBlank(),
-                  colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-                  shape = CircleShape,
-                  elevation =
-                      ButtonDefaults.buttonElevation(
-                          defaultElevation = Dimensions.Elevation.high,
-                          pressedElevation = Dimensions.Elevation.none),
-                  onClick = {
-                    showErrors = true
-                    validateHandle(handle)
-                    val usernameValidation = validateUsername(username)
-                    usernameError = usernameValidation
-
-                    /** Create the handle and call onCreate if there are no errors */
-                    if ((errorMessage.isBlank()) && usernameValidation == null) {
-                      viewModel.createAccountHandle(
-                          account = account,
-                          handle = handle,
-                          username = username,
-                          spaceRenter = isSpaceRented,
-                          shopOwner = isShopChecked)
-                      onCreate()
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          horizontal = CreateAccountScreenUi.xxxLargePadding,
+                          vertical = CreateAccountScreenUi.xxLargePadding),
+              horizontalArrangement =
+                  Arrangement.spacedBy(CreateAccountScreenUi.extraLargeSpacing)) {
+                OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier.weight(1f).testTag(AddDiscussionTestTags.DISCARD_BUTTON),
+                    shape = RoundedCornerShape(percent = 50),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative)) {
+                      Icon(
+                          imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                          contentDescription = null)
+                      Spacer(modifier = Modifier.width(CreateAccountScreenUi.mediumSpacing))
+                      Text(text = "Back", style = MaterialTheme.typography.bodySmall)
                     }
-                  },
-                  modifier = Modifier.weight(1f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
-                    Text("Let's go!")
-                  }
-            }
+
+                Button(
+                    enabled =
+                        handle.isNotBlank() && username.isNotBlank() && errorMessage.isBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
+                    shape = CircleShape,
+                    elevation =
+                        ButtonDefaults.buttonElevation(
+                            defaultElevation = Dimensions.Elevation.high,
+                            pressedElevation = Dimensions.Elevation.none),
+                    onClick = {
+                      showErrors = true
+                      validateHandle(handle)
+                      val usernameValidation = validateUsername(username)
+                      usernameError = usernameValidation
+
+                      /** Create the handle and call onCreate if there are no errors */
+                      if ((errorMessage.isBlank()) && usernameValidation == null) {
+                        viewModel.createAccountHandle(
+                            account = account,
+                            handle = handle,
+                            username = username,
+                            spaceRenter = isSpaceRented,
+                            shopOwner = isShopChecked)
+                        onCreate()
+                      }
+                    },
+                    modifier = Modifier.weight(1f).testTag(CreateAccountTestTags.SUBMIT_BUTTON)) {
+                      Text("Let's go!")
+                    }
+              }
+        }
       }) { padding ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
+                    .imePadding()
+                    .verticalScroll(scrollState)
                     .background(AppColors.primary)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .padding(CreateAccountScreenUi.xxLargePadding),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center) {
+            verticalArrangement = Arrangement.Top) {
 
               // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
@@ -185,7 +212,7 @@ fun CreateAccountScreen(
                   modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
               /** Input field for entering the user's unique handle. */
-              OutlinedTextField(
+              FocusableInputField(
                   value = handle,
                   onValueChange = {
                     handle = it
@@ -213,7 +240,10 @@ fun CreateAccountScreen(
                           focusedTextColor = AppColors.textIcons,
                           unfocusedTextColor = AppColors.textIconsFade),
                   isError = showErrors && errorMessage.isNotBlank(),
-                  modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.HANDLE_FIELD))
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(CreateAccountTestTags.HANDLE_FIELD))
 
               /** Error message displayed if handle validation fails. */
               if (showErrors && errorMessage.isNotBlank()) {
@@ -232,7 +262,7 @@ fun CreateAccountScreen(
               Spacer(modifier = Modifier.height(CreateAccountScreenUi.extraLargeSpacing))
 
               /** Input field for entering the user's display username. */
-              OutlinedTextField(
+              FocusableInputField(
                   value = username,
                   onValueChange = {
                     username = it
@@ -255,7 +285,10 @@ fun CreateAccountScreen(
                           unfocusedTextColor = AppColors.textIconsFade),
                   isError = usernameError != null,
                   textStyle = TextStyle(color = AppColors.textIcons),
-                  modifier = Modifier.fillMaxWidth().testTag(CreateAccountTestTags.USERNAME_FIELD))
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(CreateAccountTestTags.USERNAME_FIELD))
 
               /** Error message displayed if username validation fails. */
               if (usernameError != null) {
@@ -316,11 +349,11 @@ fun RoleCheckBox(
     testTag: String
 ) {
   Row(
-      verticalAlignment = Alignment.Top,
+      verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }) {
         Checkbox(
             checked = isChecked,
-            modifier = Modifier.testTag(testTag).padding(top = CreateAccountScreenUi.tinyPadding),
+            modifier = Modifier.testTag(testTag),
             onCheckedChange = onCheckedChange,
             colors =
                 CheckboxDefaults.colors(
@@ -328,10 +361,7 @@ fun RoleCheckBox(
                     uncheckedColor = AppColors.textIcons,
                     checkmarkColor = AppColors.textIcons))
         Column(
-            modifier =
-                Modifier.padding(
-                    top = CreateAccountScreenUi.largePadding,
-                    bottom = CreateAccountScreenUi.largePadding),
+            modifier = Modifier.padding(start = CreateAccountScreenUi.mediumPadding),
             verticalArrangement = Arrangement.Center) {
               Text(
                   text = label,
