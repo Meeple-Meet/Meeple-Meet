@@ -88,7 +88,7 @@ class CreateSpaceRenterViewModel(
                         address,
                         openingHours,
                         spaces,
-                        photoCollectionUrl
+                        emptyList()
                     )
 
                 val uploadedUrls =
@@ -110,22 +110,24 @@ class CreateSpaceRenterViewModel(
                         emptyList()
                     }
 
-                try {
-                    // Update the document with uploaded URLs (may be empty)
-                    repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
-                } catch (e: Exception) {
-                    // Updating should not crash the app; log and continue.
-                    Log.d(
-                        "upload",
-                        "Failed to update space renter ${created.id} with photo URLs: ${e.message}"
-                    )
-                }
-            } catch (e: Exception) {
-                // Catch any unexpected exception from repository.createSpaceRenter and fail gracefully.
-                Log.d("upload", "Failed to create space renter: ${e.message}")
-                // Re-throw if you want the caller to handle it; otherwise swallow to avoid crash.
-            }
-        } else {
+        // Update the document with Firebase Storage download URLs
+        if (uploadedUrls.isNotEmpty()) {
+          try {
+            repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+          } catch (e: Exception) {
+            // Updating should not crash the app; log and continue.
+            Log.e(
+                "upload",
+                "Failed to update space renter ${created.id} with photo URLs: ${e.message}",
+                e)
+          }
+        }
+      } catch (e: Exception) {
+        // Catch any unexpected exception from repository.createSpaceRenter and fail gracefully.
+        Log.e("upload", "Failed to create space renter: ${e.message}", e)
+        // Re-throw if you want the caller to handle it; otherwise swallow to avoid crash.
+      }
+    } else {
             // OFFLINE: Queue for later creation
 
             // Generate a temporary ID (you might need to adjust this based on your ID generation
@@ -152,6 +154,6 @@ class CreateSpaceRenterViewModel(
             // Optional: Show a message to user that creation will happen when online
             // You might want to expose a callback or LiveData for this
         }
+        }
       }
-  }
-}
+    }
