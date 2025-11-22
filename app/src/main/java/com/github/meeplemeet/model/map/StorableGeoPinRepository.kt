@@ -9,23 +9,26 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
-import org.imperiumlabs.geofirestore.GeoFirestore
-import org.imperiumlabs.geofirestore.extension.removeLocation
-import org.imperiumlabs.geofirestore.extension.setLocation
 
 /**
  * Repository responsible for managing map pins in Firestore. Each pin includes geolocation data
  * stored via the GeoFirestore library.
  *
- * @property db Firestore instance used to access the pins collection.
+ * @property geoOps Operations wrapper for GeoFirestore (injectable for testing).
  */
-class StorableGeoPinRepository : FirestoreRepository("geo_pins") {
+class StorableGeoPinRepository(private val geoOps: GeoFirestoreOperations? = null) :
+    FirestoreRepository("geo_pins") {
 
   /** Retry parameters for GeoFirestore operations */
   private companion object {
 
     const val GEO_RETRY_COUNT = 3
     const val GEO_RETRY_DELAY = 200L
+  }
+
+  // Lazy initialization of the default GeoFirestore operations
+  private val geoOperations: GeoFirestoreOperations by lazy {
+    geoOps ?: DefaultGeoFirestoreOperations(collection)
   }
 
   /**
@@ -101,9 +104,8 @@ class StorableGeoPinRepository : FirestoreRepository("geo_pins") {
    * @param location Location to associate with the pin.
    */
   private suspend fun setGeoLocation(uid: String, location: Location) {
-    val geoFirestore = GeoFirestore(collection)
     suspendCoroutine { cont ->
-      geoFirestore.setLocation(uid, GeoPoint(location.latitude, location.longitude)) { exception ->
+      geoOperations.setLocation(uid, GeoPoint(location.latitude, location.longitude)) { exception ->
         if (exception != null) cont.resumeWithException(exception) else cont.resume(Unit)
       }
     }
@@ -115,9 +117,8 @@ class StorableGeoPinRepository : FirestoreRepository("geo_pins") {
    * @param uid Document ID of the pin.
    */
   private suspend fun removeGeoLocation(uid: String) {
-    val geoFirestore = GeoFirestore(collection)
     suspendCoroutine { cont ->
-      geoFirestore.removeLocation(uid) { exception ->
+      geoOperations.removeLocation(uid) { exception ->
         if (exception != null) cont.resumeWithException(exception) else cont.resume(Unit)
       }
     }
