@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.auth.Account
@@ -119,33 +120,28 @@ const val maxNumberOfImages = 10
 fun CreateShopScreen(
     owner: Account,
     onBack: () -> Unit,
-    onCreated: (String) -> Unit,
+    onCreated: () -> Unit,
     viewModel: CreateShopViewModel = viewModel()
 ) {
   val ui by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   AddShopContent(
       onBack = onBack,
       onCreated = onCreated,
-      onCreate = { name, email, address, week, stock ->
-        try {
-          val shop =
-              viewModel.createShop(
-                  owner = owner,
-                  name = name,
-                  phone = "",
-                  email = email,
-                  website = "",
-                  address = address,
-                  openingHours = week,
-                  gameCollection = stock)
-          shop.id
-        } catch (e: IllegalArgumentException) {
-          throw e
-        } catch (e: Exception) {
-          throw e
-        }
+      onCreate = { name, email, address, week, stock, photoUrls ->
+        viewModel.createShop(
+            context = context,
+            owner = owner,
+            name = name,
+            phone = "",
+            email = email,
+            website = "",
+            address = address,
+            openingHours = week,
+            gameCollection = stock,
+            photoCollectionUrl = photoUrls)
       },
       gameUi = ui,
       locationUi = locationUi,
@@ -181,14 +177,15 @@ fun CreateShopScreen(
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
-    onCreated: (String) -> Unit,
+    onCreated: () -> Unit,
     onCreate:
-        suspend (
+        (
             name: String,
             email: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> String,
+            stock: List<Pair<Game, Int>>,
+            photoUrls: List<String>) -> Unit,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     gameQuery: String,
@@ -279,15 +276,13 @@ fun AddShopContent(
             onDiscard = { onDiscard() },
             onPrimary = {
               val addr = locationUi.selectedLocation ?: Location()
-              scope.launch {
-                try {
-                  val shopId = onCreate(shopName, email, addr, week, stock)
-                  onCreated(shopId)
-                } catch (e: IllegalArgumentException) {
-                  snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
-                } catch (_: Exception) {
-                  snackbarHost.showSnackbar(Strings.ERROR_CREATE)
-                }
+              try {
+                onCreate(shopName, email, addr, week, stock, photoCollectionUrl)
+                onCreated()
+              } catch (e: IllegalArgumentException) {
+                scope.launch { snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION) }
+              } catch (_: Exception) {
+                scope.launch { snackbarHost.showSnackbar(Strings.ERROR_CREATE) }
               }
             },
             enabled = isValid)
