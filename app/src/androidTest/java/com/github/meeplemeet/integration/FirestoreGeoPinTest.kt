@@ -2,13 +2,18 @@
 // Then, the test suite was manually reviewed, cleaned up, and debugged.
 package com.github.meeplemeet.integration
 
+import com.github.meeplemeet.model.map.GeoFirestoreOperations
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinNoUid
+import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.GeoPoint
+import java.util.concurrent.atomic.AtomicInteger
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.fail
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
@@ -165,5 +170,192 @@ class FirestoreGeoPinTest : FirestoreTests() {
 
     val sessionSnapshot = collection.document(sessionPinId).get().await()
     assert(!sessionSnapshot.exists())
+  }
+
+  /* ========== RETRY LOGIC TESTS ========== */
+
+  /* ========== Test 8: Retry on Transient Failure - Success on Second Attempt ========== */
+  @Test
+  fun upsertGeoPinRetriesOnTransientFailureAndSucceeds() = runTest {
+    val attemptCounter = AtomicInteger(0)
+
+    // Mock GeoFirestore that fails once then succeeds
+    val mockGeoOps =
+        object : GeoFirestoreOperations {
+          override fun setLocation(
+              uid: String,
+              geoPoint: GeoPoint,
+              callback: (Exception?) -> Unit
+          ) {
+            val attempt = attemptCounter.incrementAndGet()
+            if (attempt == 1) {
+              // First attempt fails
+              callback(Exception("Transient network error"))
+            } else {
+              // Second attempt succeeds
+              callback(null)
+            }
+          }
+
+          override fun removeLocation(uid: String, callback: (Exception?) -> Unit) {
+            callback(null)
+          }
+        }
+
+    val testRepo = StorableGeoPinRepository(mockGeoOps)
+
+    // This should succeed after retry
+    testRepo.upsertGeoPin("retry-test-1", PinType.SHOP, testLocation1)
+
+    // Verify it retried (attempt counter should be 2)
+    assertEquals(2, attemptCounter.get())
+  }
+
+  /* ========== Test 9: Retry Exhausted - Fails After 3 Attempts ========== */
+  @Test
+  fun upsertGeoPinFailsAfterAllRetriesExhausted() = runTest {
+    val attemptCounter = AtomicInteger(0)
+
+    // Mock GeoFirestore that always fails
+    val mockGeoOps =
+        object : GeoFirestoreOperations {
+          override fun setLocation(
+              uid: String,
+              geoPoint: GeoPoint,
+              callback: (Exception?) -> Unit
+          ) {
+            attemptCounter.incrementAndGet()
+            callback(Exception("Persistent network error"))
+          }
+
+          override fun removeLocation(uid: String, callback: (Exception?) -> Unit) {
+            callback(null)
+          }
+        }
+
+    val testRepo = StorableGeoPinRepository(mockGeoOps)
+
+    // This should fail after 3 attempts
+    try {
+      testRepo.upsertGeoPin("retry-test-2", PinType.SHOP, testLocation1)
+      fail("Expected exception to be thrown")
+    } catch (e: Exception) {
+      // Expected behavior
+      assert(e.message!!.contains("Persistent network error"))
+    }
+
+    // Verify it tried 3 times
+    assertEquals(3, attemptCounter.get())
+  }
+
+  /* ========== Test 10: Delete Retry on Transient Failure ========== */
+  @Test
+  fun deleteGeoPinRetriesOnTransientFailureAndSucceeds() = runTest {
+    val attemptCounter = AtomicInteger(0)
+
+    // Mock GeoFirestore that fails once then succeeds
+    val mockGeoOps =
+        object : GeoFirestoreOperations {
+          override fun setLocation(
+              uid: String,
+              geoPoint: GeoPoint,
+              callback: (Exception?) -> Unit
+          ) {
+            callback(null)
+          }
+
+          override fun removeLocation(uid: String, callback: (Exception?) -> Unit) {
+            val attempt = attemptCounter.incrementAndGet()
+            if (attempt == 1) {
+              // First attempt fails
+              callback(Exception("Transient deletion error"))
+            } else {
+              // Second attempt succeeds
+              callback(null)
+            }
+          }
+        }
+
+    val testRepo = StorableGeoPinRepository(mockGeoOps)
+
+    // This should succeed after retry
+    testRepo.deleteGeoPin("retry-test-3")
+
+    // Verify it retried (attempt counter should be 2)
+    assertEquals(2, attemptCounter.get())
+  }
+
+  /* ========== Test 11: Delete Fails After All Retries ========== */
+  @Test
+  fun deleteGeoPinFailsAfterAllRetriesExhausted() = runTest {
+    val attemptCounter = AtomicInteger(0)
+
+    // Mock GeoFirestore that always fails
+    val mockGeoOps =
+        object : GeoFirestoreOperations {
+          override fun setLocation(
+              uid: String,
+              geoPoint: GeoPoint,
+              callback: (Exception?) -> Unit
+          ) {
+            callback(null)
+          }
+
+          override fun removeLocation(uid: String, callback: (Exception?) -> Unit) {
+            attemptCounter.incrementAndGet()
+            callback(Exception("Persistent deletion error"))
+          }
+        }
+
+    val testRepo = StorableGeoPinRepository(mockGeoOps)
+
+    // This should fail after 3 attempts
+    try {
+      testRepo.deleteGeoPin("retry-test-4")
+      fail("Expected exception to be thrown")
+    } catch (e: Exception) {
+      // Expected behavior
+      assert(e.message!!.contains("Persistent deletion error"))
+    }
+
+    // Verify it tried 3 times
+    assertEquals(3, attemptCounter.get())
+  }
+
+  /* ========== Test 12: Retry Succeeds on Third Attempt ========== */
+  @Test
+  fun upsertGeoPinSucceedsOnThirdAttempt() = runTest {
+    val attemptCounter = AtomicInteger(0)
+
+    // Mock GeoFirestore that fails twice then succeeds
+    val mockGeoOps =
+        object : GeoFirestoreOperations {
+          override fun setLocation(
+              uid: String,
+              geoPoint: GeoPoint,
+              callback: (Exception?) -> Unit
+          ) {
+            val attempt = attemptCounter.incrementAndGet()
+            if (attempt < 3) {
+              // First two attempts fail
+              callback(Exception("Transient error attempt $attempt"))
+            } else {
+              // Third attempt succeeds
+              callback(null)
+            }
+          }
+
+          override fun removeLocation(uid: String, callback: (Exception?) -> Unit) {
+            callback(null)
+          }
+        }
+
+    val testRepo = StorableGeoPinRepository(mockGeoOps)
+
+    // This should succeed on the third attempt
+    testRepo.upsertGeoPin("retry-test-5", PinType.SHOP, testLocation1)
+
+    // Verify it tried 3 times
+    assertEquals(3, attemptCounter.get())
   }
 }
