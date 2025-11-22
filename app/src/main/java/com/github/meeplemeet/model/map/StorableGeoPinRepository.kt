@@ -87,7 +87,6 @@ class StorableGeoPinRepository(private val geoOps: GeoFirestoreOperations? = nul
     repeat(GEO_RETRY_COUNT) { attempt ->
       try {
         block()
-        lastError = null
         return
       } catch (e: Exception) {
         lastError = e
