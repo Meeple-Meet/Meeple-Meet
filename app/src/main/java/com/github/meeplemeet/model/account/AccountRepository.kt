@@ -27,12 +27,15 @@ import kotlinx.coroutines.tasks.await
  *
  * ## Relationship Management
  *
- * Relationships between users are stored bidirectionally in Firestore. When user A has a
- * relationship with user B, both accounts store a reference to each other with potentially
- * different statuses:
+ * Relationships between users are stored bidirectionally in Firestore as a subcollection of
+ * relationship documents. When user A has a relationship with user B, both accounts store a
+ * reference to each other with potentially different statuses:
  * - Friend request sent: A stores "Sent", B stores "Pending"
  * - Accepted friendship: Both A and B store "Friend"
  * - User blocked: A stores "Blocked", B has no relationship document (deleted)
+ *
+ * In the [Account] runtime model, these relationships are loaded into a map keyed by the other
+ * user's UID for efficient lookup
  */
 class AccountRepository : FirestoreRepository("accounts") {
   /**
@@ -71,10 +74,11 @@ class AccountRepository : FirestoreRepository("accounts") {
    * Retrieves an account and its associated discussion previews and relationships by ID.
    *
    * This method fetches the account document, its discussion previews subcollection, and its
-   * relationships subcollection, then combines them into a single [Account] object.
+   * relationships subcollection, then combines them into a single [Account] object. The
+   * relationships are converted from a list to a map for efficient lookup.
    *
    * @param id The account ID to retrieve
-   * @return The Account object with populated discussion previews and relationship lists
+   * @return The Account object with populated discussion previews and relationships map
    * @throws AccountNotFoundException if the account does not exist
    */
   suspend fun getAccount(id: String): Account {
@@ -101,11 +105,12 @@ class AccountRepository : FirestoreRepository("accounts") {
    * Retrieves multiple accounts and their discussion previews and relationships concurrently.
    *
    * This method fetches all accounts in parallel using coroutines for optimal performance. For each
-   * account, it retrieves the account document, discussion previews, and relationships.
+   * account, it retrieves the account document, discussion previews, and relationships. The
+   * relationships are converted from a list to a map for efficient lookup.
    *
    * @param ids List of account IDs to retrieve
    * @return List of Account objects corresponding to the provided IDs, each with populated
-   *   discussion previews and relationship lists
+   *   discussion previews and relationships map
    * @throws AccountNotFoundException if any of the accounts do not exist
    */
   suspend fun getAccounts(ids: List<String>): List<Account> = coroutineScope {
@@ -282,8 +287,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    *
    * This method sets up Firestore listeners that emit updated account data whenever changes occur
    * in the account document, previews subcollection, or relationships subcollection. The flow emits
-   * a complete Account object including all discussion previews and categorized relationship lists
-   * (friends, sent, pending, blocked).
+   * a complete Account object including all discussion previews and the relationships map.
    *
    * The listeners are automatically cleaned up when the flow is cancelled.
    *

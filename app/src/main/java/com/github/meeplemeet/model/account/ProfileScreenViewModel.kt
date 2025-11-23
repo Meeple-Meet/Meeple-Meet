@@ -29,13 +29,13 @@ class ProfileScreenViewModel(
    * able to interact (same user or blocked relationship).
    *
    * @param account The first account to check
-   * @param friend The second account to check
+   * @param other The second account to check
    * @return True if the accounts are the same user, or if either has blocked the other
    */
-  private fun sameOrBlocked(account: Account, friend: Account) =
-      account.uid == friend.uid ||
-          account.blocked.contains(friend.uid) ||
-          friend.blocked.contains(account.uid)
+  private fun sameOrBlocked(account: Account, other: Account) =
+      account.uid == other.uid ||
+          account.relationships[other.uid] == RelationshipStatus.Blocked ||
+          other.relationships[account.uid] == RelationshipStatus.Blocked
 
   /**
    * Sends a friend request from the current account to another user.
@@ -44,9 +44,11 @@ class ProfileScreenViewModel(
    * prevents sending requests in the following cases:
    * - The accounts are the same user
    * - Either user has blocked the other
-   * - A friend request has already been sent (in either direction)
-   * - A friend request is already pending (from either side)
-   * - The users are already friends
+   * - A relationship already exists between the users (any status: Friend, Sent, Pending, or
+   *   Blocked)
+   *
+   * The validation is simplified by checking if a relationship already exists in either direction,
+   * as any existing relationship (regardless of status) should prevent a new friend request.
    *
    * If validation passes, the request is sent asynchronously via the repository.
    *
@@ -54,14 +56,9 @@ class ProfileScreenViewModel(
    * @param other The account receiving the friend request
    */
   fun sendFriendRequest(account: Account, other: Account) {
-    // Prevent duplicate or invalid friend request
     if (sameOrBlocked(account, other) ||
-        account.sent.contains(other.uid) ||
-        account.pending.contains(other.uid) ||
-        account.friends.contains(other.uid) ||
-        other.sent.contains(account.uid) ||
-        other.pending.contains(account.uid) ||
-        other.friends.contains(other.uid))
+        account.relationships[other.uid] != null ||
+        other.relationships[account.uid] != null)
         return
 
     viewModelScope.launch { repository.sendFriendRequest(account.uid, other.uid) }
@@ -71,12 +68,13 @@ class ProfileScreenViewModel(
    * Accepts a pending friend request, establishing a mutual friendship.
    *
    * This method validates that a friend request can be accepted before proceeding. It requires:
-   * - The current account has a pending request from the other user
-   * - The other user has a sent request to the current account
+   * - The current account has a Pending relationship status with the other user
+   * - The other user has a Sent relationship status with the current account
    * - Neither user has blocked the other
    * - The accounts are not the same user
-   * - The users are not already friends
-   * - There are no conflicting request states
+   *
+   * The validation ensures the relationship states are consistent with a valid friend request that
+   * can be accepted.
    *
    * If validation passes, the friendship is established asynchronously via the repository.
    *
@@ -84,13 +82,12 @@ class ProfileScreenViewModel(
    * @param other The account whose friend request is being accepted
    */
   fun acceptFriendRequest(account: Account, other: Account) {
+    val a = account.relationships[other.uid]
+    val b = other.relationships[account.uid]
+
     if (sameOrBlocked(account, other) ||
-        !account.pending.contains(other.uid) ||
-        !other.sent.contains(account.uid) ||
-        account.sent.contains(other.uid) ||
-        other.pending.contains(account.uid) ||
-        account.friends.contains(other.uid) ||
-        other.friends.contains(account.uid))
+        a != RelationshipStatus.Pending ||
+        b != RelationshipStatus.Sent)
         return
 
     viewModelScope.launch { repository.acceptFriendRequest(account.uid, other.uid) }
@@ -102,11 +99,11 @@ class ProfileScreenViewModel(
    * This method validates that the block operation is valid before proceeding. It prevents blocking
    * in the following cases:
    * - The accounts are the same user
-   * - The other user is already blocked
+   * - The other user is already blocked by the current account (relationship status is Blocked)
    *
    * The method handles the case where both users have blocked each other by checking if the other
-   * user has already blocked the current account and passing this information to the repository to
-   * preserve the other user's block status.
+   * user's relationship status with the current account is Blocked, and passing this information to
+   * the repository to preserve the other user's block status.
    *
    * If validation passes, the block is executed asynchronously via the repository.
    *
@@ -114,10 +111,12 @@ class ProfileScreenViewModel(
    * @param other The account being blocked
    */
   fun blockUser(account: Account, other: Account) {
-    if (account.uid == other.uid || account.blocked.contains(other.uid)) return
+    val a = account.relationships[other.uid]
+    if (account.uid == other.uid || (a != null && a == RelationshipStatus.Blocked)) return
 
     viewModelScope.launch {
-      repository.blockUser(account.uid, other.uid, other.blocked.contains(account.uid))
+      val o = other.relationships[account.uid]
+      repository.blockUser(account.uid, other.uid, o != null && o == RelationshipStatus.Blocked)
     }
   }
 
