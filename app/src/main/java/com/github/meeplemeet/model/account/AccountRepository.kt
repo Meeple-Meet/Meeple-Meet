@@ -1,5 +1,6 @@
-// Docs generated with Claude Code.
 package com.github.meeplemeet.model.account
+
+// Claude Code generated the documentation
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
@@ -45,7 +46,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @return A CollectionReference to the relationships subcollection
    */
   private fun relationships(uid: String) =
-      collection.document(uid).collection(AccountNoUid::relationships.name)
+      collection.document(uid).collection(Account::relationships.name)
 
   /**
    * Creates a new account document in Firestore.
@@ -94,8 +95,16 @@ class AccountRepository : FirestoreRepository("accounts") {
     val relationshipsSnap = relationships(id).get().await()
     val relationships: List<Relationship> =
         relationshipsSnap.documents.mapNotNull { doc ->
-          Relationship(
-              doc.id, doc.get("status") as? RelationshipStatus ?: RelationshipStatus.Friend)
+          val statusString = doc.getString("status")
+          val status =
+              statusString?.let {
+                try {
+                  RelationshipStatus.valueOf(it)
+                } catch (e: IllegalArgumentException) {
+                  RelationshipStatus.Friend
+                }
+              } ?: RelationshipStatus.Friend
+          Relationship(doc.id, status)
         }
 
     return fromNoUid(id, account, previews, relationships)
@@ -104,9 +113,8 @@ class AccountRepository : FirestoreRepository("accounts") {
   /**
    * Retrieves multiple accounts and their discussion previews and relationships concurrently.
    *
-   * This method fetches all accounts in parallel using coroutines for optimal performance. For each
-   * account, it retrieves the account document, discussion previews, and relationships. The
-   * relationships are converted from a list to a map for efficient lookup.
+   * This method fetches all accounts in parallel using coroutines for optimal performance by
+   * calling [getAccount] for each ID concurrently.
    *
    * @param ids List of account IDs to retrieve
    * @return List of Account objects corresponding to the provided IDs, each with populated
@@ -114,29 +122,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @throws AccountNotFoundException if any of the accounts do not exist
    */
   suspend fun getAccounts(ids: List<String>): List<Account> = coroutineScope {
-    ids.map { id ->
-          async {
-            val accountSnap = collection.document(id).get().await()
-            val account =
-                accountSnap.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
-
-            val previewsSnap = collection.document(id).collection("previews").get().await()
-            val previews =
-                previewsSnap.documents.associate { doc ->
-                  doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java)!!)
-                }
-
-            val relationshipsSnap = relationships(id).get().await()
-            val relationships =
-                relationshipsSnap.documents.mapNotNull { doc ->
-                  Relationship(
-                      doc.id, doc.get("status") as? RelationshipStatus ?: RelationshipStatus.Friend)
-                }
-
-            fromNoUid(id, account, previews, relationships)
-          }
-        }
-        .awaitAll()
+    ids.map { id -> async { getAccount(id) } }.awaitAll()
   }
 
   /**
@@ -355,9 +341,16 @@ class AccountRepository : FirestoreRepository("accounts") {
                 if (qs != null) {
                   cachedRelationships =
                       qs.documents.mapNotNull { d ->
-                        Relationship(
-                            d.id,
-                            d.get("status") as? RelationshipStatus ?: RelationshipStatus.Friend)
+                        val statusString = d.getString("status")
+                        val status =
+                            statusString?.let {
+                              try {
+                                RelationshipStatus.valueOf(it)
+                              } catch (e: IllegalArgumentException) {
+                                RelationshipStatus.Friend
+                              }
+                            } ?: RelationshipStatus.Friend
+                        Relationship(d.id, status)
                       }
                   tryEmitAccount()
                 }

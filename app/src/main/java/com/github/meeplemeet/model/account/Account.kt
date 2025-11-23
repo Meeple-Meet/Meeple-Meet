@@ -1,5 +1,7 @@
 package com.github.meeplemeet.model.account
 
+// Claude Code generated the documentation
+
 import com.github.meeplemeet.model.discussions.DiscussionPreview
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
 import com.github.meeplemeet.model.discussions.fromNoUid
@@ -96,8 +98,6 @@ data class Account(
  * @property description User's self-description or bio. Null if not provided.
  * @property shopOwner Indicates whether this account owns a board game shop. Defaults to false.
  * @property spaceRenter Indicates whether this account rents out gaming spaces. Defaults to false.
- * @property relationships List of all relationships this account has with other users. Defaults to
- *   empty list.
  */
 @Serializable
 data class AccountNoUid(
@@ -107,8 +107,7 @@ data class AccountNoUid(
     val photoUrl: String? = null,
     val description: String? = null,
     val shopOwner: Boolean = false,
-    val spaceRenter: Boolean = false,
-    val relationships: List<Relationship> = emptyList()
+    val spaceRenter: Boolean = false
 )
 
 /**

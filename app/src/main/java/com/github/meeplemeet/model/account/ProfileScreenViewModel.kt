@@ -1,5 +1,7 @@
 package com.github.meeplemeet.model.account
 
+// Claude Code generated the documentation
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
