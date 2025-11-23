@@ -62,7 +62,10 @@ enum class RelationshipStatus {
   Pending,
 
   /** Blocked - the current user has blocked the other user. */
-  Blocked
+  Blocked,
+
+  /** Deleted - removes the relationship with the other user altogether */
+  Delete,
 }
 
 /**
@@ -145,6 +148,7 @@ fun fromNoUid(
       RelationshipStatus.Sent -> sent += other
       RelationshipStatus.Pending -> pending += other
       RelationshipStatus.Blocked -> blocked += other
+      RelationshipStatus.Delete -> {} // Does not exist in the db
     }
   }
 

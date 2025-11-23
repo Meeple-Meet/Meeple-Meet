@@ -23,8 +23,27 @@ import kotlinx.coroutines.tasks.await
  * - Basic profile information (handle, name, email, photo)
  * - Role flags (shop owner, space renter)
  * - A subcollection of discussion previews
+ * - A subcollection of relationships (friends, sent requests, pending requests, blocked users)
+ *
+ * ## Relationship Management
+ *
+ * Relationships between users are stored bidirectionally in Firestore. When user A has a
+ * relationship with user B, both accounts store a reference to each other with potentially
+ * different statuses:
+ * - Friend request sent: A stores "Sent", B stores "Pending"
+ * - Accepted friendship: Both A and B store "Friend"
+ * - User blocked: A stores "Blocked", B has no relationship document (deleted)
  */
 class AccountRepository : FirestoreRepository("accounts") {
+  /**
+   * Returns a reference to the relationships subcollection for a given account.
+   *
+   * @param uid The account ID whose relationships subcollection to access
+   * @return A CollectionReference to the relationships subcollection
+   */
+  private fun relationships(uid: String) =
+      collection.document(uid).collection(AccountNoUid::relationships.name)
+
   /**
    * Creates a new account document in Firestore.
    *
@@ -49,10 +68,13 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
-   * Retrieves an account and its associated discussion previews by ID.
+   * Retrieves an account and its associated discussion previews and relationships by ID.
+   *
+   * This method fetches the account document, its discussion previews subcollection, and its
+   * relationships subcollection, then combines them into a single [Account] object.
    *
    * @param id The account ID to retrieve
-   * @return The Account object with populated discussion previews
+   * @return The Account object with populated discussion previews and relationship lists
    * @throws AccountNotFoundException if the account does not exist
    */
   suspend fun getAccount(id: String): Account {
@@ -65,16 +87,25 @@ class AccountRepository : FirestoreRepository("accounts") {
           doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java)!!)
         }
 
-    return fromNoUid(id, account, previews)
+    val relationshipsSnap = relationships(id).get().await()
+    val relationships: List<Relationship> =
+        relationshipsSnap.documents.mapNotNull { doc ->
+          Relationship(
+              doc.id, doc.get("status") as? RelationshipStatus ?: RelationshipStatus.Friend)
+        }
+
+    return fromNoUid(id, account, previews, relationships)
   }
 
   /**
-   * Retrieves multiple accounts and their discussion previews concurrently.
+   * Retrieves multiple accounts and their discussion previews and relationships concurrently.
    *
-   * This method fetches all accounts in parallel using coroutines for optimal performance.
+   * This method fetches all accounts in parallel using coroutines for optimal performance. For each
+   * account, it retrieves the account document, discussion previews, and relationships.
    *
    * @param ids List of account IDs to retrieve
-   * @return List of Account objects corresponding to the provided IDs
+   * @return List of Account objects corresponding to the provided IDs, each with populated
+   *   discussion previews and relationship lists
    * @throws AccountNotFoundException if any of the accounts do not exist
    */
   suspend fun getAccounts(ids: List<String>): List<Account> = coroutineScope {
@@ -90,7 +121,14 @@ class AccountRepository : FirestoreRepository("accounts") {
                   doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java)!!)
                 }
 
-            fromNoUid(id, account, previews)
+            val relationshipsSnap = relationships(id).get().await()
+            val relationships =
+                relationshipsSnap.documents.mapNotNull { doc ->
+                  Relationship(
+                      doc.id, doc.get("status") as? RelationshipStatus ?: RelationshipStatus.Friend)
+                }
+
+            fromNoUid(id, account, previews, relationships)
           }
         }
         .awaitAll()
@@ -130,19 +168,124 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
-   * Creates a Flow that listens for real-time changes to an account and its discussion previews.
+   * Sends a friend request from one user to another.
    *
-   * This method sets up Firestore listeners that emit updated account data whenever changes occur.
-   * The flow emits a complete Account object including all discussion previews. The listeners are
-   * automatically cleaned up when the flow is cancelled.
+   * Creates a bidirectional relationship where the sender has status "Sent" and the recipient has
+   * status "Pending". This is executed atomically using a Firestore batch.
+   *
+   * @param accountId The ID of the account sending the friend request
+   * @param friendId The ID of the account receiving the friend request
+   */
+  suspend fun sendFriendRequest(accountId: String, friendId: String) {
+    setFriendStatus(accountId, friendId, RelationshipStatus.Sent, RelationshipStatus.Pending)
+  }
+
+  /**
+   * Accepts a pending friend request, establishing a mutual friendship.
+   *
+   * Updates both users' relationship status to "Friend". This should be called by the user who
+   * received the original friend request. This is executed atomically using a Firestore batch.
+   *
+   * @param accountId The ID of the account accepting the friend request
+   * @param friendId The ID of the account whose friend request is being accepted
+   */
+  suspend fun acceptFriendRequest(accountId: String, friendId: String) {
+    setFriendStatus(accountId, friendId, RelationshipStatus.Friend, RelationshipStatus.Friend)
+  }
+
+  /**
+   * Blocks a user, preventing any further interaction.
+   *
+   * Sets the blocking user's relationship status to "Blocked" and removes the relationship document
+   * from the blocked user's account. This is a one-way operation - the blocked user will have no
+   * record of the relationship. This is executed atomically using a Firestore batch.
+   *
+   * @param accountId The ID of the account performing the block action
+   * @param friendId The ID of the account being blocked
+   */
+  suspend fun blockUser(accountId: String, friendId: String) {
+    setFriendStatus(accountId, friendId, RelationshipStatus.Blocked, RelationshipStatus.Delete)
+  }
+
+  /**
+   * Resets a relationship between two users, removing all connection data.
+   *
+   * This method can be used for multiple purposes:
+   * - Unblocking a user (removes the "Blocked" status)
+   * - Canceling a sent friend request (removes the "Sent"/"Pending" status)
+   * - Denying a received friend request (removes the "Pending"/"Sent" status)
+   * - Removing an existing friend (removes the "Friend" status)
+   *
+   * This deletes the relationship documents from both users' accounts, returning them to a neutral
+   * state with no connection. This is executed atomically using a Firestore batch.
+   *
+   * @param accountId The ID of the first account in the relationship
+   * @param friendId The ID of the second account in the relationship
+   */
+  suspend fun resetRelationship(accountId: String, friendId: String) {
+    setFriendStatus(accountId, friendId, RelationshipStatus.Delete, RelationshipStatus.Delete)
+  }
+
+  /**
+   * Internal helper method to set relationship statuses bidirectionally in a single transaction.
+   *
+   * This method atomically updates the relationship documents for both users involved. It uses
+   * Firestore batched writes to ensure both sides of the relationship are updated together,
+   * preventing inconsistent states.
+   *
+   * For each user, the method either:
+   * - Creates/updates a relationship document with the specified status
+   * - Deletes the relationship document if the status is [RelationshipStatus.Delete]
+   *
+   * @param accountId The ID of the first account in the relationship
+   * @param friendId The ID of the second account in the relationship
+   * @param accountStatus The relationship status to set for the first account's perspective. Use
+   *   [RelationshipStatus.Delete] to remove the relationship document.
+   * @param friendStatus The relationship status to set for the second account's perspective. Use
+   *   [RelationshipStatus.Delete] to remove the relationship document.
+   */
+  private suspend fun setFriendStatus(
+      accountId: String,
+      friendId: String,
+      accountStatus: RelationshipStatus,
+      friendStatus: RelationshipStatus
+  ) {
+    val batch = db.batch()
+
+    val aRef = relationships(accountId).document(friendId)
+    val bRef = relationships(friendId).document(accountId)
+
+    // Update or delete the first user's relationship document
+    if (accountStatus == RelationshipStatus.Delete) batch.delete(aRef)
+    else batch.set(aRef, mapOf("status" to accountStatus))
+
+    // Update or delete the second user's relationship document
+    if (friendStatus == RelationshipStatus.Delete) batch.delete(bRef)
+    else batch.set(bRef, mapOf("status" to friendStatus))
+
+    batch.commit().await()
+  }
+
+  /**
+   * Creates a Flow that listens for real-time changes to an account, its discussion previews, and
+   * its relationships.
+   *
+   * This method sets up Firestore listeners that emit updated account data whenever changes occur
+   * in the account document, previews subcollection, or relationships subcollection. The flow emits
+   * a complete Account object including all discussion previews and categorized relationship lists
+   * (friends, sent, pending, blocked).
+   *
+   * The listeners are automatically cleaned up when the flow is cancelled.
    *
    * @param accountId The ID of the account to listen to
-   * @return A Flow that emits Account objects when changes are detected
+   * @return A Flow that emits Account objects when changes are detected in the account, its
+   *   previews, or its relationships
    */
   fun listenAccount(accountId: String): Flow<Account> = callbackFlow {
     val accountRef = collection.document(accountId)
 
     var previewsListener: ListenerRegistration? = null
+    var relationshipsListener: ListenerRegistration? = null
 
     val accountListener =
         accountRef.addSnapshotListener { snapshot, e ->
@@ -154,8 +297,23 @@ class AccountRepository : FirestoreRepository("accounts") {
 
           val accountNoUid = snapshot.toObject(AccountNoUid::class.java) ?: AccountNoUid()
 
-          // Remove old previews listener before adding a new one
+          // Remove old listeners before adding new ones
           previewsListener?.remove()
+          relationshipsListener?.remove()
+
+          var cachedPreviews: Map<String, DiscussionPreviewNoUid>? = null
+          var cachedRelationships: List<Relationship>? = null
+
+          // Helper function to emit account when both previews and relationships are loaded
+          fun tryEmitAccount() {
+            val previews = cachedPreviews
+            val relationships = cachedRelationships
+            if (previews != null && relationships != null) {
+              trySend(fromNoUid(accountId, accountNoUid, previews, relationships))
+            }
+          }
+
+          // Listen to previews subcollection
           previewsListener =
               accountRef.collection(Account::previews.name).addSnapshotListener { qs, e2 ->
                 if (e2 != null) {
@@ -163,13 +321,31 @@ class AccountRepository : FirestoreRepository("accounts") {
                   return@addSnapshotListener
                 }
                 if (qs != null) {
-                  val previews =
+                  cachedPreviews =
                       qs.documents.associate { d ->
                         d.id to
                             (d.toObject(DiscussionPreviewNoUid::class.java)
                                 ?: DiscussionPreviewNoUid())
                       }
-                  trySend(fromNoUid(accountId, accountNoUid, previews))
+                  tryEmitAccount()
+                }
+              }
+
+          // Listen to relationships subcollection
+          relationshipsListener =
+              relationships(accountId).addSnapshotListener { qs, e3 ->
+                if (e3 != null) {
+                  close(e3)
+                  return@addSnapshotListener
+                }
+                if (qs != null) {
+                  cachedRelationships =
+                      qs.documents.mapNotNull { d ->
+                        Relationship(
+                            d.id,
+                            d.get("status") as? RelationshipStatus ?: RelationshipStatus.Friend)
+                      }
+                  tryEmitAccount()
                 }
               }
         }
@@ -177,6 +353,7 @@ class AccountRepository : FirestoreRepository("accounts") {
     awaitClose {
       accountListener.remove()
       previewsListener?.remove()
+      relationshipsListener?.remove()
     }
   }
 }
