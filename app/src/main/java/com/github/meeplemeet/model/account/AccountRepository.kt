@@ -39,6 +39,11 @@ import kotlinx.coroutines.tasks.await
  * user's UID for efficient lookup
  */
 class AccountRepository : FirestoreRepository("accounts") {
+  companion object {
+    /** Firestore field name for relationship status */
+    private const val FIELD_STATUS = "status"
+  }
+
   /**
    * Returns a reference to the relationships subcollection for a given account.
    *
@@ -95,12 +100,12 @@ class AccountRepository : FirestoreRepository("accounts") {
     val relationshipsSnap = relationships(id).get().await()
     val relationships: List<Relationship> =
         relationshipsSnap.documents.mapNotNull { doc ->
-          val statusString = doc.getString("status")
+          val statusString = doc.getString(FIELD_STATUS)
           val status =
               statusString?.let {
                 try {
                   RelationshipStatus.valueOf(it)
-                } catch (e: IllegalArgumentException) {
+                } catch (_: IllegalArgumentException) {
                   RelationshipStatus.Friend
                 }
               } ?: RelationshipStatus.Friend
@@ -202,7 +207,7 @@ class AccountRepository : FirestoreRepository("accounts") {
     val aRef = relationships(accountId).document(otherId)
     val bRef = relationships(otherId).document(accountId)
 
-    batch.set(aRef, mapOf("status" to RelationshipStatus.Blocked))
+    batch.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.Blocked))
     if (!otherBlockedAccount) batch.delete(bRef)
 
     batch.commit().await()
@@ -258,11 +263,11 @@ class AccountRepository : FirestoreRepository("accounts") {
 
     // Update or delete the first user's relationship document
     if (accountStatus == RelationshipStatus.Delete) batch.delete(aRef)
-    else batch.set(aRef, mapOf("status" to accountStatus))
+    else batch.set(aRef, mapOf(FIELD_STATUS to accountStatus))
 
     // Update or delete the second user's relationship document
     if (friendStatus == RelationshipStatus.Delete) batch.delete(bRef)
-    else batch.set(bRef, mapOf("status" to friendStatus))
+    else batch.set(bRef, mapOf(FIELD_STATUS to friendStatus))
 
     batch.commit().await()
   }
@@ -341,12 +346,12 @@ class AccountRepository : FirestoreRepository("accounts") {
                 if (qs != null) {
                   cachedRelationships =
                       qs.documents.mapNotNull { d ->
-                        val statusString = d.getString("status")
+                        val statusString = d.getString(FIELD_STATUS)
                         val status =
                             statusString?.let {
                               try {
                                 RelationshipStatus.valueOf(it)
-                              } catch (e: IllegalArgumentException) {
+                              } catch (_: IllegalArgumentException) {
                                 RelationshipStatus.Friend
                               }
                             } ?: RelationshipStatus.Friend
