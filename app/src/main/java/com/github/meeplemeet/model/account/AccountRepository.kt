@@ -174,10 +174,10 @@ class AccountRepository : FirestoreRepository("accounts") {
    * status "Pending". This is executed atomically using a Firestore batch.
    *
    * @param accountId The ID of the account sending the friend request
-   * @param friendId The ID of the account receiving the friend request
+   * @param otherId The ID of the account receiving the friend request
    */
-  suspend fun sendFriendRequest(accountId: String, friendId: String) {
-    setFriendStatus(accountId, friendId, RelationshipStatus.Sent, RelationshipStatus.Pending)
+  suspend fun sendFriendRequest(accountId: String, otherId: String) {
+    setFriendStatus(accountId, otherId, RelationshipStatus.Sent, RelationshipStatus.Pending)
   }
 
   /**
@@ -187,10 +187,10 @@ class AccountRepository : FirestoreRepository("accounts") {
    * received the original friend request. This is executed atomically using a Firestore batch.
    *
    * @param accountId The ID of the account accepting the friend request
-   * @param friendId The ID of the account whose friend request is being accepted
+   * @param otherId The ID of the account whose friend request is being accepted
    */
-  suspend fun acceptFriendRequest(accountId: String, friendId: String) {
-    setFriendStatus(accountId, friendId, RelationshipStatus.Friend, RelationshipStatus.Friend)
+  suspend fun acceptFriendRequest(accountId: String, otherId: String) {
+    setFriendStatus(accountId, otherId, RelationshipStatus.Friend, RelationshipStatus.Friend)
   }
 
   /**
@@ -201,10 +201,20 @@ class AccountRepository : FirestoreRepository("accounts") {
    * record of the relationship. This is executed atomically using a Firestore batch.
    *
    * @param accountId The ID of the account performing the block action
-   * @param friendId The ID of the account being blocked
+   * @param otherId The ID of the account being blocked
+   * @param otherBlockedAccount If the account being blocked has already blocked the account
+   *   performing the blocking action
    */
-  suspend fun blockUser(accountId: String, friendId: String) {
-    setFriendStatus(accountId, friendId, RelationshipStatus.Blocked, RelationshipStatus.Delete)
+  suspend fun blockUser(accountId: String, otherId: String, otherBlockedAccount: Boolean) {
+    val batch = db.batch()
+
+    val aRef = relationships(accountId).document(otherId)
+    val bRef = relationships(otherId).document(accountId)
+
+    batch.set(aRef, mapOf("status" to RelationshipStatus.Blocked))
+    if (!otherBlockedAccount) batch.delete(bRef)
+
+    batch.commit().await()
   }
 
   /**
