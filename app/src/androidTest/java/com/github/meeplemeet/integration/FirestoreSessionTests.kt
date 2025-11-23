@@ -4,7 +4,7 @@ import com.github.meeplemeet.model.GameNotFoundException
 import com.github.meeplemeet.model.InvalidHandleFormatException
 import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel

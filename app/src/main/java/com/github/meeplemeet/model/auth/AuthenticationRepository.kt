@@ -5,6 +5,8 @@ import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser

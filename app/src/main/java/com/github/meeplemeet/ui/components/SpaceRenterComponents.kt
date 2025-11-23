@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter

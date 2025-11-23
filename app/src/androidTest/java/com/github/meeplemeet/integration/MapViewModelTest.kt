@@ -1,7 +1,7 @@
 package com.github.meeplemeet.integration
 
 import androidx.test.platform.app.InstrumentationRegistry
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapUIState
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType

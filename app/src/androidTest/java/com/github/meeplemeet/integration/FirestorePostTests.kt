@@ -1,7 +1,7 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.PermissionDeniedException
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.model.posts.PostViewModel

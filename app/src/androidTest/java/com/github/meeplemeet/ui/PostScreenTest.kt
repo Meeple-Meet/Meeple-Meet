@@ -12,8 +12,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository

@@ -1,4 +1,4 @@
-package com.github.meeplemeet.ui.auth
+package com.github.meeplemeet.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen

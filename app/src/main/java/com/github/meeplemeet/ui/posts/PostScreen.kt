@@ -57,8 +57,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel

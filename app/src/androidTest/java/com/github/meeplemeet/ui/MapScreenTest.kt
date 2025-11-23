@@ -18,7 +18,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH

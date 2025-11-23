@@ -1,6 +1,6 @@
 package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals

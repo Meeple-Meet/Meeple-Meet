@@ -3,7 +3,7 @@ package com.github.meeplemeet.integration
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.DiscussionNotFoundException
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse

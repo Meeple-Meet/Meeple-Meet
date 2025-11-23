@@ -8,7 +8,7 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.DiskStorageException
 import com.github.meeplemeet.model.ImageProcessingException
 import com.github.meeplemeet.model.RemoteStorageException
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests

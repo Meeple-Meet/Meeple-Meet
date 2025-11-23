@@ -1,8 +1,8 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.HandleAlreadyTakenException
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.CreateAccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse

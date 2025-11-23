@@ -19,7 +19,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter

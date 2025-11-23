@@ -1,5 +1,5 @@
 // Docs generated with Claude Code.
-package com.github.meeplemeet.model.auth
+package com.github.meeplemeet.model.account
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository

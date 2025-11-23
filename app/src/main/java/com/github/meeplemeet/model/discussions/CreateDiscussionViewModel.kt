@@ -3,8 +3,8 @@ package com.github.meeplemeet.model.discussions
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.CreateAccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.CreateAccountViewModel
 import kotlinx.coroutines.launch
 
 /**

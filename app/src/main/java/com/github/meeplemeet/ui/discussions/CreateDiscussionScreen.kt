@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.CreateDiscussionViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig

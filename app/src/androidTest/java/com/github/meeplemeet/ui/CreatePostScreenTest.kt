@@ -5,7 +5,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.posts.CreatePostViewModel
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.ui.navigation.NavigationTestTags

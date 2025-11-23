@@ -1,5 +1,5 @@
 // Docs generated with Claude Code.
-package com.github.meeplemeet.model.auth
+package com.github.meeplemeet.model.account
 
 import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.CoroutineScope

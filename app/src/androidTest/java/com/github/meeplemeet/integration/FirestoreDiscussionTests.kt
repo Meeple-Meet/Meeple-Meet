@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.DiscussionNotFoundException
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.utils.FirestoreTests
