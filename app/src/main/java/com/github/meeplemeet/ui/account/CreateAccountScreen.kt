@@ -1,5 +1,5 @@
 /** Documentation was written with the help of ChatGPT */
-package com.github.meeplemeet.ui.auth
+package com.github.meeplemeet.ui.account
 
 import android.app.Activity
 import android.content.Context
@@ -32,8 +32,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.CreateAccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags

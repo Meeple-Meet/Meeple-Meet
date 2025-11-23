@@ -3,8 +3,8 @@ package com.github.meeplemeet.model
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository

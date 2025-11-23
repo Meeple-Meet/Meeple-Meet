@@ -4,8 +4,8 @@ import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue

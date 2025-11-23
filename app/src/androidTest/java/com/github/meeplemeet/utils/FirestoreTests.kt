@@ -3,9 +3,9 @@ package com.github.meeplemeet.utils
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.account.AccountRepository
+import com.github.meeplemeet.model.account.HandlesRepository
 import com.github.meeplemeet.model.auth.AuthenticationRepository
-import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository

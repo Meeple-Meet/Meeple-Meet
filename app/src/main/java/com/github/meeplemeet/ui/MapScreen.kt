@@ -91,7 +91,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType

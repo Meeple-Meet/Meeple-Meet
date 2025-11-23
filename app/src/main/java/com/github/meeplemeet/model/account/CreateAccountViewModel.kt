@@ -1,5 +1,5 @@
 // Docs generated with Claude Code.
-package com.github.meeplemeet.model.auth
+package com.github.meeplemeet.model.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

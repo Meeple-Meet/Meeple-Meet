@@ -3,7 +3,7 @@
 package com.github.meeplemeet.model.shops
 
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location

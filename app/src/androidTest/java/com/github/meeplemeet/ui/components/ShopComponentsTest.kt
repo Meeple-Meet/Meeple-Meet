@@ -31,7 +31,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -47,7 +47,6 @@ import io.mockk.mockk
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import kotlin.text.get
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Ignore
 import org.junit.Rule

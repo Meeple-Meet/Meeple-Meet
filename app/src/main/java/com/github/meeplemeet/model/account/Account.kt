@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.auth
+package com.github.meeplemeet.model.account
 
 import com.github.meeplemeet.model.discussions.DiscussionPreview
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid

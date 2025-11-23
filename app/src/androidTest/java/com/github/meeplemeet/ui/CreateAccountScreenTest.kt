@@ -5,10 +5,10 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.MainActivityViewModel
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.CreateAccountViewModel
-import com.github.meeplemeet.ui.auth.CreateAccountScreen
-import com.github.meeplemeet.ui.auth.CreateAccountTestTags
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.CreateAccountViewModel
+import com.github.meeplemeet.ui.account.CreateAccountScreen
+import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint

@@ -4,8 +4,8 @@ package com.github.meeplemeet.model.space_renter
 
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.FirestoreRepository
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.shared.location.Location

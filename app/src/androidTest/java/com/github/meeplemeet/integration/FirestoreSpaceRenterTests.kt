@@ -2,7 +2,7 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.LocationSearchException
 import com.github.meeplemeet.model.PermissionDeniedException
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot

@@ -2,7 +2,7 @@
 // Then, the test suite was manually reviewed, cleaned up, and debugged.
 package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType

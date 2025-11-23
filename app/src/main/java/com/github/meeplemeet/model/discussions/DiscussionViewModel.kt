@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.images.ImageRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

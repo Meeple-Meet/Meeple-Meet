@@ -4,7 +4,7 @@ package com.github.meeplemeet.model.discussions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.AccountViewModel
+import com.github.meeplemeet.model.account.AccountViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

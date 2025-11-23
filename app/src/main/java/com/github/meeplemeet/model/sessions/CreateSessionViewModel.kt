@@ -3,8 +3,8 @@ package com.github.meeplemeet.model.sessions
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
-import com.github.meeplemeet.model.auth.Account
-import com.github.meeplemeet.model.auth.AccountViewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.shared.SearchViewModel
 import com.github.meeplemeet.model.shared.game.Game

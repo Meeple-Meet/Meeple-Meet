@@ -5,7 +5,7 @@ package com.github.meeplemeet.model.posts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.auth.Account
+import com.github.meeplemeet.model.account.Account
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 

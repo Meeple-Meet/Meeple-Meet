@@ -27,9 +27,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.github.meeplemeet.model.MainActivityViewModel
-import com.github.meeplemeet.model.auth.AccountRepository
+import com.github.meeplemeet.model.account.AccountRepository
+import com.github.meeplemeet.model.account.HandlesRepository
 import com.github.meeplemeet.model.auth.AuthenticationRepository
-import com.github.meeplemeet.model.auth.HandlesRepository
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
@@ -46,8 +46,8 @@ import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
-import com.github.meeplemeet.ui.auth.CreateAccountScreen
-import com.github.meeplemeet.ui.auth.ProfileScreen
+import com.github.meeplemeet.ui.account.CreateAccountScreen
+import com.github.meeplemeet.ui.account.ProfileScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.discussions.CreateDiscussionScreen
