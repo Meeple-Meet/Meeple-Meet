@@ -54,6 +54,46 @@ class AccountRepository : FirestoreRepository("accounts") {
       collection.document(uid).collection(Account::relationships.name)
 
   /**
+   * Extracts discussion previews from a Firestore query snapshot.
+   *
+   * @param documents The list of documents from the previews subcollection
+   * @return A map of discussion IDs to their preview objects
+   */
+  private fun extractPreviews(
+      documents: List<com.google.firebase.firestore.DocumentSnapshot>
+  ): Map<String, DiscussionPreviewNoUid> {
+    return documents.associate { doc ->
+      doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java) ?: DiscussionPreviewNoUid())
+    }
+  }
+
+  /**
+   * Extracts relationships from a Firestore query snapshot.
+   *
+   * Parses the relationship status from each document, falling back to Friend status if the status
+   * is invalid or missing.
+   *
+   * @param documents The list of documents from the relationships subcollection
+   * @return A list of Relationship objects
+   */
+  private fun extractRelationships(
+      documents: List<com.google.firebase.firestore.DocumentSnapshot>
+  ): List<Relationship> {
+    return documents.map { doc ->
+      val statusString = doc.getString(FIELD_STATUS)
+      val status =
+          statusString?.let {
+            try {
+              RelationshipStatus.valueOf(it)
+            } catch (_: IllegalArgumentException) {
+              RelationshipStatus.Friend
+            }
+          } ?: RelationshipStatus.Friend
+      Relationship(doc.id, status)
+    }
+  }
+
+  /**
    * Creates a new account document in Firestore.
    *
    * @param userHandle The unique handle for the user (also used as the document ID)
@@ -92,25 +132,10 @@ class AccountRepository : FirestoreRepository("accounts") {
     val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
 
     val previewsSnap = collection.document(id).collection("previews").get().await()
-    val previews: Map<String, DiscussionPreviewNoUid> =
-        previewsSnap.documents.associate { doc ->
-          doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java)!!)
-        }
+    val previews = extractPreviews(previewsSnap.documents)
 
     val relationshipsSnap = relationships(id).get().await()
-    val relationships: List<Relationship> =
-        relationshipsSnap.documents.mapNotNull { doc ->
-          val statusString = doc.getString(FIELD_STATUS)
-          val status =
-              statusString?.let {
-                try {
-                  RelationshipStatus.valueOf(it)
-                } catch (_: IllegalArgumentException) {
-                  RelationshipStatus.Friend
-                }
-              } ?: RelationshipStatus.Friend
-          Relationship(doc.id, status)
-        }
+    val relationships = extractRelationships(relationshipsSnap.documents)
 
     return fromNoUid(id, account, previews, relationships)
   }
@@ -207,7 +232,7 @@ class AccountRepository : FirestoreRepository("accounts") {
     val aRef = relationships(accountId).document(otherId)
     val bRef = relationships(otherId).document(accountId)
 
-    batch.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.Blocked))
+    batch[aRef] = mapOf(FIELD_STATUS to RelationshipStatus.Blocked)
     if (!otherBlockedAccount) batch.delete(bRef)
 
     batch.commit().await()
@@ -263,11 +288,11 @@ class AccountRepository : FirestoreRepository("accounts") {
 
     // Update or delete the first user's relationship document
     if (accountStatus == RelationshipStatus.Delete) batch.delete(aRef)
-    else batch.set(aRef, mapOf(FIELD_STATUS to accountStatus))
+    else batch[aRef] = mapOf(FIELD_STATUS to accountStatus)
 
     // Update or delete the second user's relationship document
     if (friendStatus == RelationshipStatus.Delete) batch.delete(bRef)
-    else batch.set(bRef, mapOf(FIELD_STATUS to friendStatus))
+    else batch[bRef] = mapOf(FIELD_STATUS to friendStatus)
 
     batch.commit().await()
   }
@@ -326,12 +351,7 @@ class AccountRepository : FirestoreRepository("accounts") {
                   return@addSnapshotListener
                 }
                 if (qs != null) {
-                  cachedPreviews =
-                      qs.documents.associate { d ->
-                        d.id to
-                            (d.toObject(DiscussionPreviewNoUid::class.java)
-                                ?: DiscussionPreviewNoUid())
-                      }
+                  cachedPreviews = extractPreviews(qs.documents)
                   tryEmitAccount()
                 }
               }
@@ -344,19 +364,7 @@ class AccountRepository : FirestoreRepository("accounts") {
                   return@addSnapshotListener
                 }
                 if (qs != null) {
-                  cachedRelationships =
-                      qs.documents.mapNotNull { d ->
-                        val statusString = d.getString(FIELD_STATUS)
-                        val status =
-                            statusString?.let {
-                              try {
-                                RelationshipStatus.valueOf(it)
-                              } catch (_: IllegalArgumentException) {
-                                RelationshipStatus.Friend
-                              }
-                            } ?: RelationshipStatus.Friend
-                        Relationship(d.id, status)
-                      }
+                  cachedRelationships = extractRelationships(qs.documents)
                   tryEmitAccount()
                 }
               }
