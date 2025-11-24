@@ -413,6 +413,14 @@ class AccountRepository : FirestoreRepository("accounts") {
         "You've been invited to join ${discussion.name}'s session!")
   }
 
+  /**
+   * Marks a notification as read.
+   *
+   * Updates the read status of a notification in the user's notifications subcollection.
+   *
+   * @param accountId The ID of the account that owns the notification
+   * @param notificationId The ID of the notification to mark as read
+   */
   suspend fun readNotification(accountId: String, notificationId: String) {
     notifications(accountId)
         .document(notificationId)
@@ -420,6 +428,14 @@ class AccountRepository : FirestoreRepository("accounts") {
         .await()
   }
 
+  /**
+   * Deletes a notification from a user's account.
+   *
+   * Removes a notification document from the user's notifications subcollection.
+   *
+   * @param accountId The ID of the account that owns the notification
+   * @param notificationId The ID of the notification to delete
+   */
   suspend fun deleteNotification(accountId: String, notificationId: String) {
     notifications(accountId).document(notificationId).delete().await()
   }
@@ -489,14 +505,17 @@ class AccountRepository : FirestoreRepository("accounts") {
   /**
    * Helper class to manage account-related Firestore listeners and coordinate data updates.
    *
-   * This class encapsulates the logic for listening to previews and relationships subcollections,
-   * caching their data, and emitting complete Account objects when all data is available.
+   * This class encapsulates the logic for listening to previews, relationships, and notifications
+   * subcollections, caching their data, and emitting complete Account objects when all data is
+   * available.
    */
   private inner class AccountListeners {
     private var previewsListener: ListenerRegistration? = null
     private var relationshipsListener: ListenerRegistration? = null
+    private var notificationsListener: ListenerRegistration? = null
     private var cachedPreviews: Map<String, DiscussionPreviewNoUid>? = null
     private var cachedRelationships: List<Relationship>? = null
+    private var cachedNotifications: List<Notification>? = null
 
     /**
      * Updates the account data and sets up listeners for its subcollections.
@@ -517,6 +536,7 @@ class AccountRepository : FirestoreRepository("accounts") {
 
       previewsListener = listenToPreviews(accountRef, flow, accountId, accountNoUid)
       relationshipsListener = listenToRelationships(accountId, flow, accountNoUid)
+      notificationsListener = listenToNotifications(accountId, flow, accountNoUid)
     }
 
     /**
@@ -578,11 +598,39 @@ class AccountRepository : FirestoreRepository("accounts") {
     }
 
     /**
+     * Sets up a Firestore listener for the notifications subcollection.
+     *
+     * When notifications data changes, it updates the cached notifications and attempts to emit a
+     * complete Account object if all required data is available.
+     *
+     * @param accountId The ID of the account
+     * @param flow The callback flow to emit updates to
+     * @param accountNoUid The account data without UID
+     * @return A ListenerRegistration that can be used to remove the listener
+     */
+    private fun listenToNotifications(
+        accountId: String,
+        flow: kotlinx.coroutines.channels.ProducerScope<Account>,
+        accountNoUid: AccountNoUid
+    ): ListenerRegistration {
+      return notifications(accountId).addSnapshotListener { qs, e ->
+        if (e != null) {
+          flow.close(e)
+          return@addSnapshotListener
+        }
+        if (qs != null) {
+          cachedNotifications = extractNotifications(qs.documents, accountId)
+          tryEmitAccount(accountId, accountNoUid, flow)
+        }
+      }
+    }
+
+    /**
      * Attempts to emit a complete Account object if all required data is cached.
      *
-     * This method checks if both previews and relationships data are available. If both are
-     * present, it constructs a complete Account object and emits it to the flow. This ensures that
-     * partial data is never emitted.
+     * This method checks if previews, relationships, and notifications data are all available. If
+     * all three are present, it constructs a complete Account object and emits it to the flow. This
+     * ensures that partial data is never emitted.
      *
      * @param accountId The ID of the account
      * @param accountNoUid The account data without UID
@@ -595,13 +643,14 @@ class AccountRepository : FirestoreRepository("accounts") {
     ) {
       val previews = cachedPreviews
       val relationships = cachedRelationships
-      if (previews != null && relationships != null) {
-        flow.trySend(fromNoUid(accountId, accountNoUid, previews, relationships))
+      val notifications = cachedNotifications
+      if (previews != null && relationships != null && notifications != null) {
+        flow.trySend(fromNoUid(accountId, accountNoUid, previews, relationships, notifications))
       }
     }
 
     /**
-     * Removes all active subcollection listeners (previews and relationships).
+     * Removes all active subcollection listeners (previews, relationships, and notifications).
      *
      * This method should be called before setting up new listeners to prevent memory leaks and
      * duplicate listener registrations.
@@ -609,10 +658,11 @@ class AccountRepository : FirestoreRepository("accounts") {
     private fun removeSubcollectionListeners() {
       previewsListener?.remove()
       relationshipsListener?.remove()
+      notificationsListener?.remove()
     }
 
     /**
-     * Resets the cached data for previews and relationships to null.
+     * Resets the cached data for previews, relationships, and notifications to null.
      *
      * This ensures that partial data from previous listeners is not accidentally combined with new
      * data, preventing inconsistent Account objects from being emitted.
@@ -620,6 +670,7 @@ class AccountRepository : FirestoreRepository("accounts") {
     private fun resetCache() {
       cachedPreviews = null
       cachedRelationships = null
+      cachedNotifications = null
     }
 
     /**

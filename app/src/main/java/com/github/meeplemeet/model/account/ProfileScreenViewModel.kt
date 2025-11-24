@@ -196,18 +196,53 @@ class ProfileScreenViewModel(
     viewModelScope.launch { repository.unblockUser(account.uid, other.uid) }
   }
 
+  /**
+   * Executes the action associated with a notification.
+   *
+   * This method validates that the notification belongs to the current account before executing it.
+   * The execution behavior depends on the notification type:
+   * - **FriendRequest**: Accepts the friend request
+   * - **JoinDiscussion**: Adds the user to the discussion
+   * - **JoinSession**: Adds the user as a participant in the session
+   *
+   * The method is idempotent - executing the same notification multiple times has no additional
+   * effect after the first execution.
+   *
+   * @param account The account executing the notification (must match the notification's receiver)
+   * @param notification The notification to execute
+   * @see Notification.execute for the specific actions performed by each notification type
+   */
   fun executeNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
 
     viewModelScope.launch { notification.execute() }
   }
 
+  /**
+   * Marks a notification as read.
+   *
+   * This method validates that the notification belongs to the current account before marking it as
+   * read. Read notifications are typically displayed differently in the UI to indicate the user has
+   * seen them.
+   *
+   * @param account The account that owns the notification (must match the notification's receiver)
+   * @param notification The notification to mark as read
+   */
   fun readNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
 
     viewModelScope.launch { repository.readNotification(account.uid, notification.uid) }
   }
 
+  /**
+   * Deletes a notification from the user's notification list.
+   *
+   * This method validates that the notification belongs to the current account before deleting it.
+   * Once deleted, the notification is permanently removed from Firestore and cannot be recovered.
+   *
+   * @param account The account that owns the notification (must match the notification's receiver)
+   * @param notification The notification to delete
+   */
   fun deleteNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
 
