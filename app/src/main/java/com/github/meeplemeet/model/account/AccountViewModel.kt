@@ -67,7 +67,7 @@ interface AccountViewModel {
   /**
    * Update account roles.
    *
-   * @param account Account to update it's roles
+   * @param account Account to update its roles
    * @param isShopOwner Boolean for the role Shop Owner
    * @param isSpaceRenter Boolean for the role Space Renter
    */
@@ -80,6 +80,36 @@ interface AccountViewModel {
       RepositoryProvider.accounts.setAccountRole(
           account.uid, isShopOwner = isShopOwner, isSpaceRenter = isSpaceRenter)
     }
+  }
+
+  /**
+   * Update account roles.
+   *
+   * @param account Account to update its roles
+   * @param newEmail The new email address
+   */
+  fun setAccountEmail(account: Account, newEmail: String) {
+    scope.launch { RepositoryProvider.accounts.setAccountEmail(account.uid, newEmail) }
+  }
+
+  /**
+   * Update account description.
+   *
+   * @param account Account to update its description
+   * @param newDescription The new description
+   */
+  fun setAccountDescription(account: Account, newDescription: String) {
+    scope.launch { RepositoryProvider.accounts.setAccountDescription(account.uid, newDescription) }
+  }
+
+  /**
+   * Update account photo URL.
+   *
+   * @param account Account to update its photo URL
+   * @param newPhotoUrl The new photo URL
+   */
+  fun setAccountPhotoUrl(account: Account, newPhotoUrl: String) {
+    scope.launch { RepositoryProvider.accounts.setAccountPhotoUrl(account.uid, newPhotoUrl) }
   }
 
   /**
