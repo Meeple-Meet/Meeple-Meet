@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.account
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -60,7 +61,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @return A map of discussion IDs to their preview objects
    */
   private fun extractPreviews(
-      documents: List<com.google.firebase.firestore.DocumentSnapshot>
+      documents: List<DocumentSnapshot>
   ): Map<String, DiscussionPreviewNoUid> {
     return documents.associate { doc ->
       doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java) ?: DiscussionPreviewNoUid())
@@ -76,9 +77,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param documents The list of documents from the relationships subcollection
    * @return A list of Relationship objects
    */
-  private fun extractRelationships(
-      documents: List<com.google.firebase.firestore.DocumentSnapshot>
-  ): List<Relationship> {
+  private fun extractRelationships(documents: List<DocumentSnapshot>): List<Relationship> {
     return documents.map { doc ->
       val statusString = doc.getString(FIELD_STATUS)
       val status =
@@ -313,9 +312,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   fun listenAccount(accountId: String): Flow<Account> = callbackFlow {
     val accountRef = collection.document(accountId)
-
-    var previewsListener: ListenerRegistration? = null
-    var relationshipsListener: ListenerRegistration? = null
+    val listeners = AccountListeners()
 
     val accountListener =
         accountRef.addSnapshotListener { snapshot, e ->
@@ -323,57 +320,163 @@ class AccountRepository : FirestoreRepository("accounts") {
             close(e)
             return@addSnapshotListener
           }
-          if (snapshot == null || !snapshot.exists()) return@addSnapshotListener
 
-          val accountNoUid = snapshot.toObject(AccountNoUid::class.java) ?: AccountNoUid()
-
-          // Remove old listeners before adding new ones
-          previewsListener?.remove()
-          relationshipsListener?.remove()
-
-          var cachedPreviews: Map<String, DiscussionPreviewNoUid>? = null
-          var cachedRelationships: List<Relationship>? = null
-
-          // Helper function to emit account when both previews and relationships are loaded
-          fun tryEmitAccount() {
-            val previews = cachedPreviews
-            val relationships = cachedRelationships
-            if (previews != null && relationships != null) {
-              trySend(fromNoUid(accountId, accountNoUid, previews, relationships))
-            }
+          val accountNoUid = snapshot?.toObject(AccountNoUid::class.java)
+          if (accountNoUid != null) {
+            listeners.updateAccount(accountId, accountNoUid, accountRef, this)
           }
-
-          // Listen to previews subcollection
-          previewsListener =
-              accountRef.collection(Account::previews.name).addSnapshotListener { qs, e2 ->
-                if (e2 != null) {
-                  close(e2)
-                  return@addSnapshotListener
-                }
-                if (qs != null) {
-                  cachedPreviews = extractPreviews(qs.documents)
-                  tryEmitAccount()
-                }
-              }
-
-          // Listen to relationships subcollection
-          relationshipsListener =
-              relationships(accountId).addSnapshotListener { qs, e3 ->
-                if (e3 != null) {
-                  close(e3)
-                  return@addSnapshotListener
-                }
-                if (qs != null) {
-                  cachedRelationships = extractRelationships(qs.documents)
-                  tryEmitAccount()
-                }
-              }
         }
 
-    awaitClose {
-      accountListener.remove()
+    awaitClose { listeners.removeAll(accountListener) }
+  }
+
+  /**
+   * Helper class to manage account-related Firestore listeners and coordinate data updates.
+   *
+   * This class encapsulates the logic for listening to previews and relationships subcollections,
+   * caching their data, and emitting complete Account objects when all data is available.
+   */
+  private inner class AccountListeners {
+    private var previewsListener: ListenerRegistration? = null
+    private var relationshipsListener: ListenerRegistration? = null
+    private var cachedPreviews: Map<String, DiscussionPreviewNoUid>? = null
+    private var cachedRelationships: List<Relationship>? = null
+
+    /**
+     * Updates the account data and sets up listeners for its subcollections.
+     *
+     * @param accountId The ID of the account
+     * @param accountNoUid The account data without UID
+     * @param accountRef Reference to the account document
+     * @param flow The callback flow to emit updates to
+     */
+    fun updateAccount(
+        accountId: String,
+        accountNoUid: AccountNoUid,
+        accountRef: com.google.firebase.firestore.DocumentReference,
+        flow: kotlinx.coroutines.channels.ProducerScope<Account>
+    ) {
+      removeSubcollectionListeners()
+      resetCache()
+
+      previewsListener = listenToPreviews(accountRef, flow, accountId, accountNoUid)
+      relationshipsListener = listenToRelationships(accountId, flow, accountNoUid)
+    }
+
+    /**
+     * Sets up a Firestore listener for the discussion previews subcollection.
+     *
+     * When previews data changes, it updates the cached previews and attempts to emit a complete
+     * Account object if all required data is available.
+     *
+     * @param accountRef Reference to the account document
+     * @param flow The callback flow to emit updates to
+     * @param accountId The ID of the account
+     * @param accountNoUid The account data without UID
+     * @return A ListenerRegistration that can be used to remove the listener
+     */
+    private fun listenToPreviews(
+        accountRef: com.google.firebase.firestore.DocumentReference,
+        flow: kotlinx.coroutines.channels.ProducerScope<Account>,
+        accountId: String,
+        accountNoUid: AccountNoUid
+    ): ListenerRegistration {
+      return accountRef.collection(Account::previews.name).addSnapshotListener { qs, e ->
+        if (e != null) {
+          flow.close(e)
+          return@addSnapshotListener
+        }
+        if (qs != null) {
+          cachedPreviews = extractPreviews(qs.documents)
+          tryEmitAccount(accountId, accountNoUid, flow)
+        }
+      }
+    }
+
+    /**
+     * Sets up a Firestore listener for the relationships subcollection.
+     *
+     * When relationships data changes, it updates the cached relationships and attempts to emit a
+     * complete Account object if all required data is available.
+     *
+     * @param accountId The ID of the account
+     * @param flow The callback flow to emit updates to
+     * @param accountNoUid The account data without UID
+     * @return A ListenerRegistration that can be used to remove the listener
+     */
+    private fun listenToRelationships(
+        accountId: String,
+        flow: kotlinx.coroutines.channels.ProducerScope<Account>,
+        accountNoUid: AccountNoUid
+    ): ListenerRegistration {
+      return relationships(accountId).addSnapshotListener { qs, e ->
+        if (e != null) {
+          flow.close(e)
+          return@addSnapshotListener
+        }
+        if (qs != null) {
+          cachedRelationships = extractRelationships(qs.documents)
+          tryEmitAccount(accountId, accountNoUid, flow)
+        }
+      }
+    }
+
+    /**
+     * Attempts to emit a complete Account object if all required data is cached.
+     *
+     * This method checks if both previews and relationships data are available. If both are
+     * present, it constructs a complete Account object and emits it to the flow. This ensures that
+     * partial data is never emitted.
+     *
+     * @param accountId The ID of the account
+     * @param accountNoUid The account data without UID
+     * @param flow The callback flow to emit the complete Account to
+     */
+    private fun tryEmitAccount(
+        accountId: String,
+        accountNoUid: AccountNoUid,
+        flow: kotlinx.coroutines.channels.ProducerScope<Account>
+    ) {
+      val previews = cachedPreviews
+      val relationships = cachedRelationships
+      if (previews != null && relationships != null) {
+        flow.trySend(fromNoUid(accountId, accountNoUid, previews, relationships))
+      }
+    }
+
+    /**
+     * Removes all active subcollection listeners (previews and relationships).
+     *
+     * This method should be called before setting up new listeners to prevent memory leaks and
+     * duplicate listener registrations.
+     */
+    private fun removeSubcollectionListeners() {
       previewsListener?.remove()
       relationshipsListener?.remove()
+    }
+
+    /**
+     * Resets the cached data for previews and relationships to null.
+     *
+     * This ensures that partial data from previous listeners is not accidentally combined with new
+     * data, preventing inconsistent Account objects from being emitted.
+     */
+    private fun resetCache() {
+      cachedPreviews = null
+      cachedRelationships = null
+    }
+
+    /**
+     * Removes all listeners including the main account listener and subcollection listeners.
+     *
+     * This method is called when the flow is closed to ensure proper cleanup of all Firestore
+     * listeners and prevent memory leaks.
+     *
+     * @param accountListener The main account document listener to remove
+     */
+    fun removeAll(accountListener: ListenerRegistration) {
+      accountListener.remove()
+      removeSubcollectionListeners()
     }
   }
 }
