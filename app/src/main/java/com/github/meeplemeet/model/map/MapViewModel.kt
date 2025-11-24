@@ -13,6 +13,8 @@ import com.github.meeplemeet.model.map.cluster.DistanceBasedClusterStrategy
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +32,15 @@ import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
  * @param version Version number of the cache; incremented on any data change.
  */
 data class ClusterCache(val clusters: List<Cluster<GeoPinWithLocation>>, val version: Int)
+
+/** Pending operations on the pin list, accumulated during the debounce window. */
+private sealed interface PinOperation {
+  data class Add(val pin: GeoPinWithLocation) : PinOperation
+
+  data class Move(val documentId: String, val newLocation: GeoPoint) : PinOperation
+
+  data class Remove(val documentId: String) : PinOperation
+}
 
 /**
  * Represents the UI state of the map, including currently visible geo-pins, cluster cache, and
@@ -76,6 +87,11 @@ class MapViewModel(
 
   private val geoPinCollection = geoPinRepository.collection
   private var geoQuery: GeoQuery? = null
+
+  // Debounce for pin updates
+  private val pendingOperations = mutableListOf<PinOperation>()
+  private var debounceJob: Job? = null
+  private val PIN_UPDATE_DEBOUNCE_MS = 500L
 
   // Cached user session IDs for filtering
   private var userSessionIds = setOf<String>()
@@ -124,6 +140,63 @@ class MapViewModel(
    */
   fun updateFilters(newFilters: Set<PinType>) {
     _uiState.update { it.copy(activeFilters = newFilters, cacheVersion = it.cacheVersion + 1) }
+  }
+
+  /**
+   * Schedules a pending pin operation to be applied after a short debounce period.
+   *
+   * Multiple operations added within [PIN_UPDATE_DEBOUNCE_MS] milliseconds are batched together to
+   * minimize recompositions and cluster recalculations.
+   *
+   * @param operation The pin operation to schedule (Add, Move, or Remove).
+   */
+  private fun scheduleOperation(operation: PinOperation) {
+    synchronized(pendingOperations) { pendingOperations.add(operation) }
+
+    debounceJob?.cancel()
+    debounceJob =
+        viewModelScope.launch {
+          delay(PIN_UPDATE_DEBOUNCE_MS)
+          flushPendingOperations()
+        }
+  }
+
+  /** Applies all pending pin operations in a single state update to minimize recompositions. */
+  private fun flushPendingOperations() {
+    val operations =
+        synchronized(pendingOperations) {
+          val copy = pendingOperations.toList()
+          pendingOperations.clear()
+          copy
+        }
+
+    if (operations.isEmpty()) return
+
+    _uiState.update { state ->
+      // Use a mutable map for O(1) lookups by documentId
+      val pinMap = state.allGeoPins.associateBy { it.geoPin.uid }.toMutableMap()
+
+      // Apply sequentially all pending operations
+      operations.forEach { op ->
+        when (op) {
+          is PinOperation.Add -> pinMap[op.pin.geoPin.uid] = op.pin
+          is PinOperation.Move ->
+              pinMap[op.documentId]?.let { old ->
+                pinMap[op.documentId] = old.copy(location = op.newLocation)
+              }
+          is PinOperation.Remove -> pinMap.remove(op.documentId)
+        }
+      }
+
+      // Only one state update, thus only one cache invalidation.
+      state.copy(allGeoPins = pinMap.values.toList(), cacheVersion = state.cacheVersion + 1)
+    }
+  }
+
+  /** Immediately flushes all pending operations. */
+  private fun flushImmediately() {
+    debounceJob?.cancel()
+    flushPendingOperations()
   }
 
   /**
@@ -181,10 +254,7 @@ class MapViewModel(
                       return@launch
 
                   val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
-
-                  _uiState.update {
-                    it.copy(allGeoPins = it.allGeoPins + pin, cacheVersion = it.cacheVersion + 1)
-                  }
+                  scheduleOperation(PinOperation.Add(pin))
                 } catch (e: Exception) {
                   _uiState.update {
                     it.copy(
@@ -203,15 +273,7 @@ class MapViewModel(
              * @param location The new geographic position of the pin.
              */
             override fun onKeyMoved(documentID: String, location: GeoPoint) {
-              _uiState.update { state ->
-                val updatedPins =
-                    state.allGeoPins.map { pinWithLocation ->
-                      if (pinWithLocation.geoPin.uid == documentID)
-                          pinWithLocation.copy(location = location)
-                      else pinWithLocation
-                    }
-                state.copy(allGeoPins = updatedPins, cacheVersion = state.cacheVersion + 1)
-              }
+              scheduleOperation(PinOperation.Move(documentID, location))
             }
 
             /**
@@ -221,18 +283,17 @@ class MapViewModel(
              * @param documentID The Firestore document ID.
              */
             override fun onKeyExited(documentID: String) {
-              _uiState.update { it ->
-                it.copy(
-                    allGeoPins = it.allGeoPins.filterNot { it.geoPin.uid == documentID },
-                    cacheVersion = it.cacheVersion + 1)
-              }
+              scheduleOperation(PinOperation.Remove(documentID))
             }
 
             /**
              * Called once all initial documents in range have been loaded. Can be used to signal
              * that the query is ready to display results.
              */
-            override fun onGeoQueryReady() {}
+            override fun onGeoQueryReady() {
+              // Immediately flush pending ops after the initial query burst
+              flushImmediately()
+            }
 
             /**
              * Called when an error occurs while listening to Firestore geo updates. Updates the
@@ -262,6 +323,11 @@ class MapViewModel(
     } catch (_: Exception) {} finally {
       geoQuery = null
     }
+
+    // Cleanup debouncing
+    debounceJob?.cancel()
+    debounceJob = null
+    pendingOperations.clear()
 
     _uiState.update { MapUIState() }
   }
