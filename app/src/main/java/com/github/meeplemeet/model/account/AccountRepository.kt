@@ -70,7 +70,9 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param documents The list of documents from the previews subcollection
    * @return A map of discussion IDs to their preview objects
    */
-  private fun extractPreviews(documents: List<DocumentSnapshot>): Map<String, DiscussionPreviewNoUid> {
+  private fun extractPreviews(
+      documents: List<DocumentSnapshot>
+  ): Map<String, DiscussionPreviewNoUid> {
     return documents.associate { doc ->
       doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java) ?: DiscussionPreviewNoUid())
     }
