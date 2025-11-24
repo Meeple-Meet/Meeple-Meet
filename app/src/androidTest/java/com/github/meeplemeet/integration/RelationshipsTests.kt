@@ -148,7 +148,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun blockUser_setsBlockedStatusAndRemovesFromBlockedUser() = runBlocking {
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     val updatedAlice = accounts[0]
@@ -162,10 +162,10 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun blockUser_whenMutualBlock_preservesBothBlockStatuses() = runBlocking {
     // Bob blocks Alice first
-    accountRepository.blockUser(bob.uid, alice.uid, false)
+    accountRepository.blockUser(bob.uid, alice.uid)
 
     // Alice blocks Bob (Bob has already blocked Alice)
-    accountRepository.blockUser(alice.uid, bob.uid, true)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     val updatedAlice = accounts[0]
@@ -183,7 +183,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     // Alice blocks Bob
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     val updatedAlice = accounts[0]
@@ -201,7 +201,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.sendFriendRequest(alice.uid, bob.uid)
 
     // Bob blocks Alice instead of accepting
-    accountRepository.blockUser(bob.uid, alice.uid, false)
+    accountRepository.blockUser(bob.uid, alice.uid)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     val updatedAlice = accounts[0]
@@ -243,7 +243,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 4: Unblock user
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     accountRepository.resetRelationship(alice.uid, bob.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -302,7 +302,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Workflow 2: Block, unblock, then befriend
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     var updatedAlice = accountRepository.getAccount(alice.uid)
     assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
@@ -367,7 +367,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     // Block user
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     // Unblock
     accountRepository.resetRelationship(alice.uid, bob.uid)
@@ -403,7 +403,7 @@ class RelationshipsTests : FirestoreTests() {
     assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[charlie.uid])
 
     // Test 3: Blocking one user doesn't affect other relationships
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     updatedAlice = accountRepository.getAccount(alice.uid)
     assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
@@ -446,7 +446,7 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 4: Prevent when one user blocked the other
     accountRepository.resetRelationship(alice.uid, bob.uid)
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     updatedAlice = accounts[0]
@@ -508,7 +508,7 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 5: Prevent accepting when blocked
     accountRepository.resetRelationship(alice.uid, bob.uid)
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.acceptFriendRequest(accounts[0], accounts[1])
@@ -539,7 +539,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
     // Test 2: Prevent blocking when already blocked
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.blockUser(accounts[0], accounts[1])
@@ -573,7 +573,7 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 3: Mutual blocking
     accountRepository.resetRelationship(alice.uid, charlie.uid)
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     viewModel.blockUser(accounts[1], accounts[0])
@@ -591,7 +591,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
     // Test 2: Prevent canceling when blocked
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.cancelFriendRequest(accounts[0], accounts[1])
@@ -609,7 +609,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
     // Test 2: Prevent denying when blocked
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.denyFriendRequest(accounts[1], accounts[0])
@@ -627,7 +627,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
     // Test 2: Prevent removing when blocked
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.removeFriend(accounts[0], accounts[1])
@@ -645,7 +645,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
     // Test 2: Prevent unblocking when blocked
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.unblockUser(accounts[0], accounts[1])
@@ -694,9 +694,9 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelUnblockUser_allowsValidUnblock() = runBlocking {
-    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.blockUser(alice.uid, bob.uid)
     accountRepository.resetRelationship(alice.uid, bob.uid)
-    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     // Relationship should be null after unblock
     assertNull(accounts[0].relationships[bob.uid])
