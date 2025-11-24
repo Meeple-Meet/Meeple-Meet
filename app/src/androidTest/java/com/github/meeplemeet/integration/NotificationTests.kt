@@ -103,7 +103,7 @@ class NotificationTests : FirestoreTests() {
     assertNotNull(notification.uid)
     assertEquals(alice.uid, notification.senderOrDiscussionId)
     assertEquals(bob.uid, notification.receiverId)
-    assertEquals(NotificationType.FriendRequest, notification.type)
+    assertEquals(NotificationType.FRIEND_REQUEST, notification.type)
     assertFalse(notification.read)
   }
 
@@ -127,8 +127,8 @@ class NotificationTests : FirestoreTests() {
         updatedCharlie.notifications.find { it.senderOrDiscussionId == bob.uid }
     assertNotNull(notificationFromAlice)
     assertNotNull(notificationFromBob)
-    assertEquals(NotificationType.FriendRequest, notificationFromAlice!!.type)
-    assertEquals(NotificationType.FriendRequest, notificationFromBob!!.type)
+    assertEquals(NotificationType.FRIEND_REQUEST, notificationFromAlice!!.type)
+    assertEquals(NotificationType.FRIEND_REQUEST, notificationFromBob!!.type)
 
     // Bob received from Alice
     assertEquals(1, updatedBob.notifications.size)
@@ -155,7 +155,7 @@ class NotificationTests : FirestoreTests() {
     assertEquals(1, updatedBob.notifications.size)
     assertEquals(discussion1.uid, updatedBob.notifications[0].senderOrDiscussionId)
     assertEquals(bob.uid, updatedBob.notifications[0].receiverId)
-    assertEquals(NotificationType.JoinDiscussion, updatedBob.notifications[0].type)
+    assertEquals(NotificationType.JOIN_DISCUSSION, updatedBob.notifications[0].type)
     assertFalse(updatedBob.notifications[0].read)
 
     // Test multiple users invited to same discussion
@@ -163,7 +163,7 @@ class NotificationTests : FirestoreTests() {
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
     assertEquals(1, updatedCharlie.notifications.size)
     assertEquals(discussion1.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
-    assertEquals(NotificationType.JoinDiscussion, updatedCharlie.notifications[0].type)
+    assertEquals(NotificationType.JOIN_DISCUSSION, updatedCharlie.notifications[0].type)
 
     // Test one user invited to multiple discussions
     accountRepository.sendJoinDiscussionNotification(bob.uid, discussion2)
@@ -173,8 +173,8 @@ class NotificationTests : FirestoreTests() {
     val notif2 = updatedBob.notifications.find { it.senderOrDiscussionId == discussion2.uid }
     assertNotNull(notif1)
     assertNotNull(notif2)
-    assertEquals(NotificationType.JoinDiscussion, notif1!!.type)
-    assertEquals(NotificationType.JoinDiscussion, notif2!!.type)
+    assertEquals(NotificationType.JOIN_DISCUSSION, notif1!!.type)
+    assertEquals(NotificationType.JOIN_DISCUSSION, notif2!!.type)
   }
 
   // ==================== sendJoinSessionNotification Tests ====================
@@ -195,14 +195,14 @@ class NotificationTests : FirestoreTests() {
     val notification = updatedBob.notifications[0]
     assertEquals(discussion.uid, notification.senderOrDiscussionId)
     assertEquals(bob.uid, notification.receiverId)
-    assertEquals(NotificationType.JoinSession, notification.type)
+    assertEquals(NotificationType.JOIN_SESSION, notification.type)
     assertFalse(notification.read)
 
     // Test multiple users can be invited to same session
     accountRepository.sendJoinSessionNotification(charlie.uid, discussion)
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
     assertEquals(1, updatedCharlie.notifications.size)
-    assertEquals(NotificationType.JoinSession, updatedCharlie.notifications[0].type)
+    assertEquals(NotificationType.JOIN_SESSION, updatedCharlie.notifications[0].type)
     assertEquals(discussion.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
   }
 
@@ -528,10 +528,10 @@ class NotificationTests : FirestoreTests() {
     val updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(3, updatedBob.notifications.size)
 
-    val friendNotif = updatedBob.notifications.find { it.type == NotificationType.FriendRequest }
+    val friendNotif = updatedBob.notifications.find { it.type == NotificationType.FRIEND_REQUEST }
     val discussionNotif =
-        updatedBob.notifications.find { it.type == NotificationType.JoinDiscussion }
-    val sessionNotif = updatedBob.notifications.find { it.type == NotificationType.JoinSession }
+        updatedBob.notifications.find { it.type == NotificationType.JOIN_DISCUSSION }
+    val sessionNotif = updatedBob.notifications.find { it.type == NotificationType.JOIN_SESSION }
 
     assertNotNull(friendNotif)
     assertNotNull(discussionNotif)

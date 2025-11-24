@@ -280,10 +280,10 @@ class AccountRepository : FirestoreRepository("accounts") {
           val aRef = relationships(accountId).document(otherId)
           val bRef = relationships(otherId).document(accountId)
 
-          val bSnap = tx.get(bRef)
+          val bSnap = tx[bRef]
           val bStatus = bSnap.getString("status")
 
-          tx.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED))
+          tx[aRef] = mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED)
 
           if (bStatus != RelationshipStatus.BLOCKED.name) {
             tx.delete(bRef)
@@ -374,7 +374,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param sender The account that sent the friend request
    */
   suspend fun sendFriendRequestNotification(receiverId: String, sender: Account) {
-    sendNotification(receiverId, sender.uid, NotificationType.FriendRequest)
+    sendNotification(receiverId, sender.uid, NotificationType.FRIEND_REQUEST)
   }
 
   /**
@@ -387,7 +387,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param discussion The discussion the user is being invited to
    */
   suspend fun sendJoinDiscussionNotification(receiverId: String, discussion: Discussion) {
-    sendNotification(receiverId, discussion.uid, NotificationType.JoinDiscussion)
+    sendNotification(receiverId, discussion.uid, NotificationType.JOIN_DISCUSSION)
   }
 
   /**
@@ -400,7 +400,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param discussion The discussion whose session the user is being invited to
    */
   suspend fun sendJoinSessionNotification(receiverId: String, discussion: Discussion) {
-    sendNotification(receiverId, discussion.uid, NotificationType.JoinSession)
+    sendNotification(receiverId, discussion.uid, NotificationType.JOIN_SESSION)
   }
 
   /**

@@ -14,11 +14,11 @@ import kotlinx.serialization.Serializable
  */
 enum class NotificationType {
   /** Notification for a friend request from another user. */
-  FriendRequest,
+  FRIEND_REQUEST,
   /** Notification to join a discussion. */
-  JoinDiscussion,
+  JOIN_DISCUSSION,
   /** Notification to join a session. */
-  JoinSession
+  JOIN_SESSION
 }
 
 /**
@@ -64,7 +64,7 @@ data class Notification(
     val senderOrDiscussionId: String = "",
     val receiverId: String = "",
     val read: Boolean = false,
-    val type: NotificationType = NotificationType.FriendRequest,
+    val type: NotificationType = NotificationType.FRIEND_REQUEST,
     val sentAt: Timestamp = Timestamp.now(),
     private var executed: Boolean = false,
 ) {
@@ -94,13 +94,13 @@ data class Notification(
 
     executed = true
     when (type) {
-      NotificationType.FriendRequest -> {
+      NotificationType.FRIEND_REQUEST -> {
         RepositoryProvider.accounts.acceptFriendRequest(receiverId, senderOrDiscussionId)
       }
-      NotificationType.JoinDiscussion -> {
+      NotificationType.JOIN_DISCUSSION -> {
         RepositoryProvider.discussions.addUserToDiscussion(senderOrDiscussionId, receiverId)
       }
-      NotificationType.JoinSession -> {
+      NotificationType.JOIN_SESSION -> {
         val disc = RepositoryProvider.discussions.getDiscussion(senderOrDiscussionId)
         RepositoryProvider.sessions.updateSession(
             senderOrDiscussionId, newParticipantList = disc.participants + receiverId)
@@ -164,7 +164,7 @@ data class Notification(
 data class NotificationNoUid(
     val senderOrDiscussionId: String = "",
     val read: Boolean = false,
-    val type: NotificationType = NotificationType.FriendRequest,
+    val type: NotificationType = NotificationType.FRIEND_REQUEST,
     val executed: Boolean = false,
     val sentAt: Timestamp = Timestamp.now(),
 )
