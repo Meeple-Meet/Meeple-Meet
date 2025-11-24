@@ -84,12 +84,12 @@ class ProfileScreenViewModel(
    * @param other The account whose friend request is being accepted
    */
   fun acceptFriendRequest(account: Account, other: Account) {
-    val a = account.relationships[other.uid]
-    val b = other.relationships[account.uid]
+    val accountRels = account.relationships[other.uid]
+    val otherRels = other.relationships[account.uid]
 
     if (sameOrBlocked(account, other) ||
-        a != RelationshipStatus.PENDING ||
-        b != RelationshipStatus.SENT)
+        accountRels != RelationshipStatus.PENDING ||
+        otherRels != RelationshipStatus.SENT)
         return
 
     viewModelScope.launch { repository.acceptFriendRequest(account.uid, other.uid) }
