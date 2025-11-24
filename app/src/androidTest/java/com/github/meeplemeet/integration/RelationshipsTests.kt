@@ -533,6 +533,9 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelBlockUser_preventsInvalidOperations() = runBlocking {
+    // Clean up any leftover state
+    accountRepository.resetRelationship(alice.uid, bob.uid)
+
     // Test 1: Prevent blocking same user
     viewModel.blockUser(alice, alice)
     val aliceAfterSelf = accountRepository.getAccount(alice.uid)
@@ -551,9 +554,16 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelBlockUser_allowsValidBlocking() = runBlocking {
+    // Clean up any leftover state
+    accountRepository.resetRelationship(alice.uid, bob.uid)
+    accountRepository.resetRelationship(alice.uid, charlie.uid)
+
     // Test 1: Block user with no prior relationship
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     viewModel.blockUser(accounts[0], accounts[1])
+
+    // Wait for async operation to complete
+    kotlinx.coroutines.delay(100)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
@@ -567,16 +577,20 @@ class RelationshipsTests : FirestoreTests() {
     accounts = accountRepository.getAccounts(listOf(alice.uid, charlie.uid))
     viewModel.blockUser(accounts[0], accounts[1])
 
+    // Wait for async operation to complete
+    kotlinx.coroutines.delay(100)
+
     accounts = accountRepository.getAccounts(listOf(alice.uid, charlie.uid))
     assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[charlie.uid])
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 3: Mutual blocking
     accountRepository.resetRelationship(alice.uid, charlie.uid)
+    accountRepository.resetRelationship(alice.uid, bob.uid)
     accountRepository.blockUser(alice.uid, bob.uid)
 
-    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    viewModel.blockUser(accounts[1], accounts[0])
+    // Bob blocks Alice back
+    accountRepository.blockUser(bob.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
@@ -621,6 +635,9 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelRemoveFriend_preventsInvalidOperations() = runBlocking {
+    // Clean up any leftover state
+    accountRepository.resetRelationship(alice.uid, bob.uid)
+
     // Test 1: Prevent removing same user
     viewModel.removeFriend(alice, alice)
     val aliceAfterSelf = accountRepository.getAccount(alice.uid)
@@ -639,20 +656,33 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelUnblockUser_preventsInvalidOperations() = runBlocking {
+    // Clean up any leftover state
+    accountRepository.resetRelationship(alice.uid, bob.uid)
+
     // Test 1: Prevent unblocking same user
     viewModel.unblockUser(alice, alice)
     val aliceAfterSelf = accountRepository.getAccount(alice.uid)
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
-    // Test 2: Prevent unblocking when blocked
-    accountRepository.blockUser(alice.uid, bob.uid)
+    // Test 2: Prevent unblocking when NOT blocked (no relationship)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.unblockUser(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertNull(accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
+
+    // Test 3: Prevent unblocking when relationship is Friend (not Blocked)
+    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.acceptFriendRequest(bob.uid, alice.uid)
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+
+    viewModel.unblockUser(accounts[0], accounts[1])
+
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
   }
 
   @Test

@@ -250,10 +250,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param otherId The ID of the account being unblocked
    */
   suspend fun unblockUser(accountId: String, otherId: String) {
-    relationships(accountId)
-        .document(otherId)
-        .set(mapOf(FIELD_STATUS to RelationshipStatus.Blocked))
-        .await()
+    relationships(accountId).document(otherId).delete().await()
   }
 
   /**

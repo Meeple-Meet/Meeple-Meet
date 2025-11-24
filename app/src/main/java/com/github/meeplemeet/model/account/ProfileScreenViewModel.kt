@@ -113,8 +113,8 @@ class ProfileScreenViewModel(
    * @param other The account being blocked
    */
   fun blockUser(account: Account, other: Account) {
-    val a = account.relationships[other.uid]
-    if (account.uid == other.uid || (a != null && a == RelationshipStatus.Blocked)) return
+    if (account.uid == other.uid || account.relationships[other.uid] == RelationshipStatus.Blocked)
+        return
 
     viewModelScope.launch { repository.blockUser(account.uid, other.uid) }
   }
