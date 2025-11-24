@@ -126,15 +126,17 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @return The Account object with populated discussion previews and relationships map
    * @throws AccountNotFoundException if the account does not exist
    */
-  suspend fun getAccount(id: String): Account {
+  suspend fun getAccount(id: String, getAllData: Boolean = true): Account {
     val snapshot = collection.document(id).get().await()
     val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
 
-    val previewsSnap = collection.document(id).collection("previews").get().await()
-    val previews = extractPreviews(previewsSnap.documents)
+    val previewsSnap =
+        if (getAllData) collection.document(id).collection("previews").get().await() else null
+    val previews = if (getAllData) extractPreviews(previewsSnap!!.documents) else emptyMap()
 
-    val relationshipsSnap = relationships(id).get().await()
-    val relationships = extractRelationships(relationshipsSnap.documents)
+    val relationshipsSnap = if (getAllData) relationships(id).get().await() else null
+    val relationships =
+        if (getAllData) extractRelationships(relationshipsSnap!!.documents) else emptyList()
 
     return fromNoUid(id, account, previews, relationships)
   }
@@ -150,9 +152,10 @@ class AccountRepository : FirestoreRepository("accounts") {
    *   discussion previews and relationships map
    * @throws AccountNotFoundException if any of the accounts do not exist
    */
-  suspend fun getAccounts(ids: List<String>): List<Account> = coroutineScope {
-    ids.map { id -> async { getAccount(id) } }.awaitAll()
-  }
+  suspend fun getAccounts(ids: List<String>, getAllData: Boolean = true): List<Account> =
+      coroutineScope {
+        ids.map { id -> async { getAccount(id, getAllData) } }.awaitAll()
+      }
 
   /**
    * Updates the display name of an account.
