@@ -674,7 +674,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 3: Prevent unblocking when relationship is Friend (not Blocked)
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
@@ -687,7 +687,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelCancelFriendRequest_allowsValidCancel() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.cancelFriendRequest(accounts[0], accounts[1])
@@ -699,7 +699,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelDenyFriendRequest_allowsValidDeny() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.denyFriendRequest(accounts[1], accounts[0])
@@ -711,7 +711,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelRemoveFriend_allowsValidRemoval() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 

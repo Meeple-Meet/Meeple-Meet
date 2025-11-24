@@ -246,7 +246,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param otherId The ID of the account receiving the friend request
    */
   suspend fun sendFriendRequest(account: Account, otherId: String) {
-    setFriendStatus(account.uid, otherId, RelationshipStatus.Sent, RelationshipStatus.Pending)
+    setFriendStatus(account.uid, otherId, RelationshipStatus.SENT, RelationshipStatus.PENDING)
     sendFriendRequestNotification(otherId, account)
   }
 
