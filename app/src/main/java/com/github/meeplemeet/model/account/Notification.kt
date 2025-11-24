@@ -61,12 +61,12 @@ enum class NotificationType {
  * @see NotificationNoUid for the Firestore-serializable form
  */
 data class Notification(
-    val uid: String = "",
-    val senderOrDiscussionId: String = "",
-    val receiverId: String = "",
-    val message: String = "",
-    val read: Boolean = false,
-    val type: NotificationType = NotificationType.FriendRequest,
+    val uid: String,
+    val senderOrDiscussionId: String,
+    val receiverId: String,
+    val message: String,
+    val read: Boolean,
+    val type: NotificationType,
     val sentAt: Timestamp = Timestamp.now(),
     private var executed: Boolean = false,
 ) {
@@ -125,7 +125,8 @@ data class Notification(
           message = message,
           read = read,
           type = type,
-          executed = executed)
+          executed = executed,
+          sentAt = sentAt)
 
   /**
    * Reconstructs a full [Notification] from its Firestore representation.
