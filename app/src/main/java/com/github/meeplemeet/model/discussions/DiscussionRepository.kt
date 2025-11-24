@@ -135,7 +135,7 @@ class DiscussionRepository(
    * before calling this method.
    *
    * ## Typical Usage Flow
-   * 1. User selects/captures photo → cached via [ImageFileUtils]
+   * 1. User selects/captures photo → cached via [com.github.meeplemeet.model.images.ImageFileUtils]
    * 2. Upload to Storage → [ImageRepository.saveDiscussionProfilePicture] returns URL
    * 3. Update discussion → this method saves URL to discussion document
    * 4. UI displays photo using the URL
@@ -185,20 +185,20 @@ class DiscussionRepository(
   }
 
   /** Add a user to the participants array. */
-  suspend fun addUserToDiscussion(discussion: Discussion, userId: String) {
+  suspend fun addUserToDiscussion(discussionId: String, userId: String) {
     collection
-        .document(discussion.uid)
+        .document(discussionId)
         .update(Discussion::participants.name, FieldValue.arrayUnion(userId))
         .await()
 
     // Get the last message to populate the preview
-    val lastMessage = getLastMessage(discussion.uid)
+    val lastMessage = getLastMessage(discussionId)
 
     accounts
         .document(userId)
         .collection(Account::previews.name)
-        .document(discussion.uid)
-        .set(toPreview(discussion, lastMessage))
+        .document(discussionId)
+        .set(toPreview(discussionId, lastMessage))
         .await()
   }
 
@@ -254,7 +254,7 @@ class DiscussionRepository(
     val batch = db.batch()
     userIds.forEach { id ->
       val ref = accounts.document(id).collection(Account::previews.name).document(discussion.uid)
-      batch.set(ref, toPreview(discussion, lastMessage))
+      batch.set(ref, toPreview(discussion.uid, lastMessage))
     }
     batch.commit().await()
   }
@@ -279,7 +279,7 @@ class DiscussionRepository(
 
   /** Add a user as admin (and participant if missing). */
   suspend fun addAdminToDiscussion(discussion: Discussion, userId: String) {
-    if (!discussion.participants.contains(userId)) addUserToDiscussion(discussion, userId)
+    if (!discussion.participants.contains(userId)) addUserToDiscussion(discussion.uid, userId)
     collection
         .document(discussion.uid)
         .update(Discussion::admins.name, FieldValue.arrayUnion(userId))
@@ -381,7 +381,7 @@ class DiscussionRepository(
    *
    * ## Usage Flow
    * 1. User selects/captures photo
-   * 2. Photo is cached via [ImageFileUtils.cacheUriToFile]
+   * 2. Photo is cached via [com.github.meeplemeet.model.images.ImageFileUtils.cacheUriToFile]
    * 3. Photo is uploaded via [ImageRepository.saveDiscussionPhotoMessages]
    * 4. This method is called with the returned download URL
    * 5. Message is created and previews are updated

@@ -24,7 +24,7 @@ class DiscussionPreviewTest {
             session = null,
             profilePictureUrl = null)
 
-    val preview = toPreview(discussion)
+    val preview = toPreview(discussion.uid)
 
     assertEquals("disc1", preview.uid)
     assertEquals("", preview.lastMessage)
@@ -55,7 +55,7 @@ class DiscussionPreviewTest {
             poll = null,
             photoUrl = null)
 
-    val preview = toPreview(discussion, lastMessage)
+    val preview = toPreview(discussion.uid, lastMessage)
 
     assertEquals("disc1", preview.uid)
     assertEquals("Hello everyone!", preview.lastMessage)
@@ -77,7 +77,7 @@ class DiscussionPreviewTest {
             session = null,
             profilePictureUrl = null)
 
-    val preview = toPreview(discussion, null)
+    val preview = toPreview(discussion.uid, null)
 
     assertEquals("disc1", preview.uid)
     assertEquals("", preview.lastMessage)
@@ -108,7 +108,7 @@ class DiscussionPreviewTest {
             poll = null,
             photoUrl = null)
 
-    val preview = toPreview(discussion, message)
+    val preview = toPreview(discussion.uid, message)
 
     assertEquals(discussionId, preview.uid)
   }
@@ -136,7 +136,7 @@ class DiscussionPreviewTest {
             poll = null,
             photoUrl = null)
 
-    val preview = toPreview(discussion, message)
+    val preview = toPreview(discussion.uid, message)
 
     assertEquals(0, preview.unreadCount)
   }
