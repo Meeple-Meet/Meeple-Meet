@@ -63,7 +63,7 @@ class ProfileScreenViewModel(
         other.relationships[account.uid] != null)
         return
 
-    viewModelScope.launch { repository.sendFriendRequest(account.uid, other.uid) }
+    viewModelScope.launch { repository.sendFriendRequest(account, other.uid) }
   }
 
   /**
@@ -145,5 +145,23 @@ class ProfileScreenViewModel(
     if (sameOrBlocked(account, friend)) return
 
     viewModelScope.launch { repository.resetRelationship(account.uid, friend.uid) }
+  }
+
+  fun executeNotification(account: Account, notification: Notification) {
+    if (notification.receiverId != account.uid) return
+
+    viewModelScope.launch { notification.execute() }
+  }
+
+  fun readNotification(account: Account, notification: Notification) {
+    if (notification.receiverId != account.uid) return
+
+    viewModelScope.launch { repository.readNotification(account.uid, notification.uid) }
+  }
+
+  fun deleteNotification(account: Account, notification: Notification) {
+    if (notification.receiverId != account.uid) return
+
+    viewModelScope.launch { repository.deleteNotification(account.uid, notification.uid) }
   }
 }
