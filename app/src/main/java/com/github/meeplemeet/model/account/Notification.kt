@@ -92,7 +92,6 @@ data class Notification(
   suspend fun execute() {
     if (executed) return
 
-    executed = true
     when (type) {
       NotificationType.FRIEND_REQUEST -> {
         RepositoryProvider.accounts.acceptFriendRequest(receiverId, senderOrDiscussionId)
@@ -106,6 +105,7 @@ data class Notification(
             senderOrDiscussionId, newParticipantList = disc.participants + receiverId)
       }
     }
+    executed = true
   }
 
   /**
