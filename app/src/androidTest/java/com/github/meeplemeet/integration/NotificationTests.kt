@@ -8,6 +8,7 @@ import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -92,7 +93,7 @@ class NotificationTests : FirestoreTests() {
   // ==================== sendFriendRequestNotification Tests ====================
 
   @Test
-  fun sendFriendRequestNotification_createsNotificationAndPersists() = runBlocking {
+  fun friendRequestNotification_createsAndPersistsWithCorrectFields() = runBlocking {
     accountRepository.sendFriendRequestNotification(bob.uid, alice)
 
     val updatedBob = accountRepository.getAccount(bob.uid)
@@ -107,116 +108,69 @@ class NotificationTests : FirestoreTests() {
   }
 
   @Test
-  fun sendFriendRequest_automaticallySendsNotification() = runBlocking {
-    accountRepository.sendFriendRequest(alice, bob.uid)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-
-    assertEquals(1, updatedBob.notifications.size)
-    val notification = updatedBob.notifications[0]
-    assertEquals(alice.uid, notification.senderOrDiscussionId)
-    assertEquals(NotificationType.FriendRequest, notification.type)
-  }
-
-  @Test
-  fun sendFriendRequestNotification_multipleUsersCanSendToSameUser() = runBlocking {
+  fun friendRequestNotification_supportsMultipleSendersAndReceivers() = runBlocking {
+    // Multiple users send to Charlie
     accountRepository.sendFriendRequestNotification(charlie.uid, alice)
     accountRepository.sendFriendRequestNotification(charlie.uid, bob)
 
-    val updatedCharlie = accountRepository.getAccount(charlie.uid)
+    // Alice sends to multiple users
+    accountRepository.sendFriendRequestNotification(bob.uid, alice)
 
+    val updatedCharlie = accountRepository.getAccount(charlie.uid)
+    val updatedBob = accountRepository.getAccount(bob.uid)
+
+    // Charlie received from Alice and Bob
     assertEquals(2, updatedCharlie.notifications.size)
     val notificationFromAlice =
         updatedCharlie.notifications.find { it.senderOrDiscussionId == alice.uid }
     val notificationFromBob =
         updatedCharlie.notifications.find { it.senderOrDiscussionId == bob.uid }
-
     assertNotNull(notificationFromAlice)
     assertNotNull(notificationFromBob)
     assertEquals(NotificationType.FriendRequest, notificationFromAlice!!.type)
     assertEquals(NotificationType.FriendRequest, notificationFromBob!!.type)
-  }
 
-  @Test
-  fun sendFriendRequestNotification_oneUserCanSendToMultipleUsers() = runBlocking {
-    accountRepository.sendFriendRequestNotification(bob.uid, alice)
-    accountRepository.sendFriendRequestNotification(charlie.uid, alice)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-    val updatedCharlie = accountRepository.getAccount(charlie.uid)
-
+    // Bob received from Alice
     assertEquals(1, updatedBob.notifications.size)
     assertEquals(alice.uid, updatedBob.notifications[0].senderOrDiscussionId)
-
-    assertEquals(1, updatedCharlie.notifications.size)
-    assertEquals(alice.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
   }
 
   // ==================== sendJoinDiscussionNotification Tests ====================
 
   @Test
-  fun sendJoinDiscussionNotification_createsNotificationAndPersists() = runBlocking {
-    val discussion =
-        discussionRepository.createDiscussion(
-            name = "Test Discussion",
-            description = "A test discussion",
-            creatorId = alice.uid,
-            participants = listOf(alice.uid))
-
-    accountRepository.sendJoinDiscussionNotification(bob.uid, discussion)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-
-    assertEquals(1, updatedBob.notifications.size)
-    val notification = updatedBob.notifications[0]
-    assertEquals(discussion.uid, notification.senderOrDiscussionId)
-    assertEquals(bob.uid, notification.receiverId)
-    assertEquals(NotificationType.JoinDiscussion, notification.type)
-    assertFalse(notification.read)
-  }
-
-  @Test
-  fun sendJoinDiscussionNotification_multipleUsersCanBeInvitedToSameDiscussion() = runBlocking {
-    val discussion =
-        discussionRepository.createDiscussion(
-            name = "Group Discussion",
-            description = "A discussion for everyone",
-            creatorId = alice.uid,
-            participants = listOf(alice.uid))
-
-    accountRepository.sendJoinDiscussionNotification(bob.uid, discussion)
-    accountRepository.sendJoinDiscussionNotification(charlie.uid, discussion)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-    val updatedCharlie = accountRepository.getAccount(charlie.uid)
-
-    assertEquals(1, updatedBob.notifications.size)
-    assertEquals(discussion.uid, updatedBob.notifications[0].senderOrDiscussionId)
-    assertEquals(NotificationType.JoinDiscussion, updatedBob.notifications[0].type)
-
-    assertEquals(1, updatedCharlie.notifications.size)
-    assertEquals(discussion.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
-    assertEquals(NotificationType.JoinDiscussion, updatedCharlie.notifications[0].type)
-  }
-
-  @Test
-  fun sendJoinDiscussionNotification_oneUserCanBeInvitedToMultipleDiscussions() = runBlocking {
+  fun discussionInviteNotification_createsAndSupportsMultipleInvitations() = runBlocking {
     val discussion1 =
         discussionRepository.createDiscussion(
-            name = "Discussion 1", description = "First", creatorId = alice.uid)
+            name = "Discussion 1",
+            description = "First discussion",
+            creatorId = alice.uid,
+            participants = listOf(alice.uid))
     val discussion2 =
         discussionRepository.createDiscussion(
-            name = "Discussion 2", description = "Second", creatorId = alice.uid)
+            name = "Discussion 2", description = "Second discussion", creatorId = alice.uid)
 
+    // Test basic creation with correct fields
     accountRepository.sendJoinDiscussionNotification(bob.uid, discussion1)
+    var updatedBob = accountRepository.getAccount(bob.uid)
+    assertEquals(1, updatedBob.notifications.size)
+    assertEquals(discussion1.uid, updatedBob.notifications[0].senderOrDiscussionId)
+    assertEquals(bob.uid, updatedBob.notifications[0].receiverId)
+    assertEquals(NotificationType.JoinDiscussion, updatedBob.notifications[0].type)
+    assertFalse(updatedBob.notifications[0].read)
+
+    // Test multiple users invited to same discussion
+    accountRepository.sendJoinDiscussionNotification(charlie.uid, discussion1)
+    val updatedCharlie = accountRepository.getAccount(charlie.uid)
+    assertEquals(1, updatedCharlie.notifications.size)
+    assertEquals(discussion1.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
+    assertEquals(NotificationType.JoinDiscussion, updatedCharlie.notifications[0].type)
+
+    // Test one user invited to multiple discussions
     accountRepository.sendJoinDiscussionNotification(bob.uid, discussion2)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-
+    updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(2, updatedBob.notifications.size)
     val notif1 = updatedBob.notifications.find { it.senderOrDiscussionId == discussion1.uid }
     val notif2 = updatedBob.notifications.find { it.senderOrDiscussionId == discussion2.uid }
-
     assertNotNull(notif1)
     assertNotNull(notif2)
     assertEquals(NotificationType.JoinDiscussion, notif1!!.type)
@@ -226,64 +180,36 @@ class NotificationTests : FirestoreTests() {
   // ==================== sendJoinSessionNotification Tests ====================
 
   @Test
-  fun sendJoinSessionNotification_createsNotificationAndPersists() = runBlocking {
+  fun sessionInviteNotification_createsAndSupportsMultipleInvitations() = runBlocking {
     val discussion =
         discussionRepository.createDiscussion(
-            name = "Session Discussion",
+            name = "Gaming Session",
             description = "For session testing",
             creatorId = alice.uid,
             participants = listOf(alice.uid))
 
+    // Test basic creation with correct fields
     accountRepository.sendJoinSessionNotification(bob.uid, discussion)
-
     val updatedBob = accountRepository.getAccount(bob.uid)
-
     assertEquals(1, updatedBob.notifications.size)
     val notification = updatedBob.notifications[0]
     assertEquals(discussion.uid, notification.senderOrDiscussionId)
     assertEquals(bob.uid, notification.receiverId)
     assertEquals(NotificationType.JoinSession, notification.type)
     assertFalse(notification.read)
-  }
 
-  @Test
-  fun sendJoinSessionNotification_multipleUsersCanBeInvitedToSameSession() = runBlocking {
-    val discussion =
-        discussionRepository.createDiscussion(
-            name = "Gaming Session", description = "Play games", creatorId = alice.uid)
-
-    accountRepository.sendJoinSessionNotification(bob.uid, discussion)
+    // Test multiple users can be invited to same session
     accountRepository.sendJoinSessionNotification(charlie.uid, discussion)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
-
-    assertEquals(1, updatedBob.notifications.size)
-    assertEquals(NotificationType.JoinSession, updatedBob.notifications[0].type)
-
     assertEquals(1, updatedCharlie.notifications.size)
     assertEquals(NotificationType.JoinSession, updatedCharlie.notifications[0].type)
+    assertEquals(discussion.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
   }
 
   // ==================== readNotification Tests ====================
 
   @Test
-  fun readNotification_marksNotificationAsRead() = runBlocking {
-    accountRepository.sendFriendRequestNotification(bob.uid, alice)
-
-    var updatedBob = accountRepository.getAccount(bob.uid)
-    val notification = updatedBob.notifications[0]
-    assertFalse(notification.read)
-
-    accountRepository.readNotification(bob.uid, notification.uid)
-
-    updatedBob = accountRepository.getAccount(bob.uid)
-    val readNotification = updatedBob.notifications[0]
-    assertTrue(readNotification.read)
-  }
-
-  @Test
-  fun readNotification_onlyMarksSpecificNotification() = runBlocking {
+  fun readNotification_worksCorrectlyForSingleAndMultipleNotifications() = runBlocking {
     accountRepository.sendFriendRequestNotification(bob.uid, alice)
     accountRepository.sendFriendRequestNotification(bob.uid, charlie)
 
@@ -291,78 +217,45 @@ class NotificationTests : FirestoreTests() {
     assertEquals(2, updatedBob.notifications.size)
     val firstNotification = updatedBob.notifications[0]
     val secondNotification = updatedBob.notifications[1]
+    assertFalse(firstNotification.read)
+    assertFalse(secondNotification.read)
 
+    // Test marking specific notification as read
     accountRepository.readNotification(bob.uid, firstNotification.uid)
-
     updatedBob = accountRepository.getAccount(bob.uid)
     val firstRead = updatedBob.notifications.find { it.uid == firstNotification.uid }
     val secondRead = updatedBob.notifications.find { it.uid == secondNotification.uid }
-
     assertTrue(firstRead!!.read)
     assertFalse(secondRead!!.read)
-  }
 
-  @Test
-  fun readNotification_canReadMultipleTimes() = runBlocking {
-    accountRepository.sendFriendRequestNotification(bob.uid, alice)
-
-    val notification = accountRepository.getAccount(bob.uid).notifications[0]
-
-    accountRepository.readNotification(bob.uid, notification.uid)
-    accountRepository.readNotification(bob.uid, notification.uid)
-    accountRepository.readNotification(bob.uid, notification.uid)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-    assertTrue(updatedBob.notifications[0].read)
+    // Test idempotency - reading multiple times doesn't change state
+    accountRepository.readNotification(bob.uid, firstNotification.uid)
+    accountRepository.readNotification(bob.uid, firstNotification.uid)
+    updatedBob = accountRepository.getAccount(bob.uid)
+    assertTrue(updatedBob.notifications.find { it.uid == firstNotification.uid }!!.read)
   }
 
   // ==================== deleteNotification Tests ====================
 
   @Test
-  fun deleteNotification_removesNotification() = runBlocking {
-    accountRepository.sendFriendRequestNotification(bob.uid, alice)
-
-    var updatedBob = accountRepository.getAccount(bob.uid)
-    assertEquals(1, updatedBob.notifications.size)
-    val notification = updatedBob.notifications[0]
-
-    accountRepository.deleteNotification(bob.uid, notification.uid)
-
-    updatedBob = accountRepository.getAccount(bob.uid)
-    assertEquals(0, updatedBob.notifications.size)
-  }
-
-  @Test
-  fun deleteNotification_onlyDeletesSpecificNotification() = runBlocking {
+  fun deleteNotification_removesCorrectNotifications() = runBlocking {
     accountRepository.sendFriendRequestNotification(bob.uid, alice)
     accountRepository.sendFriendRequestNotification(bob.uid, charlie)
 
     var updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(2, updatedBob.notifications.size)
-    val firstNotification =
-        updatedBob.notifications.find { notification ->
-          notification.senderOrDiscussionId == alice.uid
-        }!!
+    val firstNotification = updatedBob.notifications.find { it.senderOrDiscussionId == alice.uid }!!
+    val secondNotification =
+        updatedBob.notifications.find { it.senderOrDiscussionId == charlie.uid }!!
 
+    // Test deleting specific notification
     accountRepository.deleteNotification(bob.uid, firstNotification.uid)
-
     updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(1, updatedBob.notifications.size)
     assertEquals(charlie.uid, updatedBob.notifications[0].senderOrDiscussionId)
-  }
 
-  @Test
-  fun deleteNotification_multipleDeletions() = runBlocking {
-    accountRepository.sendFriendRequestNotification(bob.uid, alice)
-    accountRepository.sendFriendRequestNotification(bob.uid, charlie)
-
-    var updatedBob = accountRepository.getAccount(bob.uid)
-    val firstNotification = updatedBob.notifications[0]
-    val secondNotification = updatedBob.notifications[1]
-
-    accountRepository.deleteNotification(bob.uid, firstNotification.uid)
+    // Test deleting remaining notification
     accountRepository.deleteNotification(bob.uid, secondNotification.uid)
-
     updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(0, updatedBob.notifications.size)
   }
@@ -372,6 +265,7 @@ class NotificationTests : FirestoreTests() {
   @Test
   fun executeNotification_friendRequest_acceptsFriendship() = runBlocking {
     accountRepository.sendFriendRequest(alice, bob.uid)
+    accountRepository.sendFriendRequestNotification(bob.uid, alice)
 
     val updatedBob = accountRepository.getAccount(bob.uid)
     val notification = updatedBob.notifications[0]
@@ -430,6 +324,7 @@ class NotificationTests : FirestoreTests() {
   @Test
   fun executeNotification_isIdempotent() = runBlocking {
     accountRepository.sendFriendRequest(alice, bob.uid)
+    accountRepository.sendFriendRequestNotification(bob.uid, alice)
 
     val updatedBob = accountRepository.getAccount(bob.uid)
     val notification = updatedBob.notifications[0]
@@ -591,8 +486,9 @@ class NotificationTests : FirestoreTests() {
   fun completeNotificationWorkflow_sendReadExecuteDelete() = runBlocking {
     cleanupRelationshipsAndNotifications()
 
-    // Send friend request (which creates notification)
+    // Send friend request and notification
     accountRepository.sendFriendRequest(alice, bob.uid)
+    accountRepository.sendFriendRequestNotification(bob.uid, alice)
 
     var updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(1, updatedBob.notifications.size)
@@ -713,5 +609,40 @@ class NotificationTests : FirestoreTests() {
 
     assertTrue(bobAfterRead.notifications[0].read)
     assertFalse(charlieAfterRead.notifications[0].read)
+  }
+
+  @Test
+  fun notification_executedFlagPreventsMultipleExecutions() = runBlocking {
+    accountRepository.sendFriendRequest(alice, bob.uid)
+    accountRepository.sendFriendRequestNotification(bob.uid, alice)
+
+    val notification = accountRepository.getAccount(bob.uid).notifications[0]
+    assertFalse(notification.executed())
+
+    // Execute first time
+    notification.execute()
+
+    // The executed flag is set in memory (not persisted to Firestore)
+    assertTrue(notification.executed())
+
+    // Verify friendship created
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
+
+    // Reset relationships to test if second execution on the SAME notification object would
+    // recreate
+    accountRepository.resetRelationship(alice.uid, bob.uid)
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertNull(accounts[0].relationships[bob.uid])
+    assertNull(accounts[1].relationships[alice.uid])
+
+    // Execute again on SAME notification object - should be idempotent (no action)
+    notification.execute()
+
+    // Relationships should still be null (execution was idempotent)
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertNull(accounts[0].relationships[bob.uid])
+    assertNull(accounts[1].relationships[alice.uid])
   }
 }
