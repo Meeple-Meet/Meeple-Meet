@@ -116,34 +116,83 @@ class ProfileScreenViewModel(
     val a = account.relationships[other.uid]
     if (account.uid == other.uid || (a != null && a == RelationshipStatus.Blocked)) return
 
-    viewModelScope.launch {
-      val o = other.relationships[account.uid]
-      repository.blockUser(account.uid, other.uid, o != null && o == RelationshipStatus.Blocked)
-    }
+    viewModelScope.launch { repository.blockUser(account.uid, other.uid) }
   }
 
   /**
-   * Resets the relationship between two users, removing all connection data.
+   * Cancels a sent friend request from the current account to another user.
    *
-   * This method can be used for multiple purposes:
-   * - Unblocking a user
-   * - Canceling a sent friend request
-   * - Denying a received friend request
-   * - Removing an existing friend
-   *
-   * It validates that the operation is valid before proceeding. It prevents resetting relationships
-   * in the following cases:
+   * This method validates that the operation is valid before proceeding. It prevents canceling in
+   * the following cases:
    * - The accounts are the same user
-   * - Either user has blocked the other (use blockUser to unblock instead)
+   * - Either user has blocked the other
    *
    * If validation passes, the relationship is reset asynchronously via the repository.
    *
-   * @param account The first account in the relationship
-   * @param friend The second account in the relationship
+   * @param account The account canceling the sent friend request
+   * @param other The account to whom the friend request was sent
    */
-  fun resetRelationship(account: Account, friend: Account) {
+  fun cancelFriendRequest(account: Account, other: Account) {
+    if (sameOrBlocked(account, other)) return
+
+    viewModelScope.launch { repository.resetRelationship(account.uid, other.uid) }
+  }
+
+  /**
+   * Denies a received friend request from another user.
+   *
+   * This method validates that the operation is valid before proceeding. It prevents denying in the
+   * following cases:
+   * - The accounts are the same user
+   * - Either user has blocked the other
+   *
+   * If validation passes, the relationship is reset asynchronously via the repository.
+   *
+   * @param account The account denying the received friend request
+   * @param other The account who sent the friend request
+   */
+  fun denyFriendRequest(account: Account, other: Account) {
+    if (sameOrBlocked(account, other)) return
+
+    viewModelScope.launch { repository.resetRelationship(account.uid, other.uid) }
+  }
+
+  /**
+   * Removes an existing friendship between two users.
+   *
+   * This method validates that the operation is valid before proceeding. It prevents removing
+   * friendships in the following cases:
+   * - The accounts are the same user
+   * - Either user has blocked the other
+   *
+   * If validation passes, the relationship is reset asynchronously via the repository.
+   *
+   * @param account The account removing the friendship
+   * @param friend The friend to be removed
+   */
+  fun removeFriend(account: Account, friend: Account) {
     if (sameOrBlocked(account, friend)) return
 
     viewModelScope.launch { repository.resetRelationship(account.uid, friend.uid) }
+  }
+
+  /**
+   * Unblocks a previously blocked user, removing the block status.
+   *
+   * This method validates that the operation is valid before proceeding. It prevents unblocking in
+   * the following cases:
+   * - The accounts are the same user
+   * - Either user has blocked the other
+   *
+   * If validation passes, the relationship is reset asynchronously via the repository.
+   *
+   * @param account The account unblocking the other user
+   * @param other The account being unblocked
+   */
+  fun unblockUser(account: Account, other: Account) {
+    if (account.uid == other.uid || account.relationships[other.uid] != RelationshipStatus.Blocked)
+        return
+
+    viewModelScope.launch { repository.unblockUser(account.uid, other.uid) }
   }
 }

@@ -584,18 +584,17 @@ class RelationshipsTests : FirestoreTests() {
   }
 
   @Test
-  fun viewModelResetRelationship_preventsInvalidOperations() = runBlocking {
-    // Test 1: Prevent resetting same user
-    viewModel.resetRelationship(alice, alice)
+  fun viewModelCancelFriendRequest_preventsInvalidOperations() = runBlocking {
+    // Test 1: Prevent canceling same user
+    viewModel.cancelFriendRequest(alice, alice)
     val aliceAfterSelf = accountRepository.getAccount(alice.uid)
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
-    // Test 2: Prevent resetting when blocked
+    // Test 2: Prevent canceling when blocked
     accountRepository.blockUser(alice.uid, bob.uid, false)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.resetRelationship(accounts[0], accounts[1])
-    viewModel.resetRelationship(accounts[1], accounts[0])
+    viewModel.cancelFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
@@ -603,43 +602,105 @@ class RelationshipsTests : FirestoreTests() {
   }
 
   @Test
-  fun viewModelResetRelationship_allowsValidReset() = runBlocking {
-    // Test 1: Cancel sent request
+  fun viewModelDenyFriendRequest_preventsInvalidOperations() = runBlocking {
+    // Test 1: Prevent denying same user
+    viewModel.denyFriendRequest(alice, alice)
+    val aliceAfterSelf = accountRepository.getAccount(alice.uid)
+    assertNull(aliceAfterSelf.relationships[alice.uid])
+
+    // Test 2: Prevent denying when blocked
+    accountRepository.blockUser(alice.uid, bob.uid, false)
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+
+    viewModel.denyFriendRequest(accounts[1], accounts[0])
+
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertNull(accounts[1].relationships[alice.uid])
+  }
+
+  @Test
+  fun viewModelRemoveFriend_preventsInvalidOperations() = runBlocking {
+    // Test 1: Prevent removing same user
+    viewModel.removeFriend(alice, alice)
+    val aliceAfterSelf = accountRepository.getAccount(alice.uid)
+    assertNull(aliceAfterSelf.relationships[alice.uid])
+
+    // Test 2: Prevent removing when blocked
+    accountRepository.blockUser(alice.uid, bob.uid, false)
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+
+    viewModel.removeFriend(accounts[0], accounts[1])
+
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertNull(accounts[1].relationships[alice.uid])
+  }
+
+  @Test
+  fun viewModelUnblockUser_preventsInvalidOperations() = runBlocking {
+    // Test 1: Prevent unblocking same user
+    viewModel.unblockUser(alice, alice)
+    val aliceAfterSelf = accountRepository.getAccount(alice.uid)
+    assertNull(aliceAfterSelf.relationships[alice.uid])
+
+    // Test 2: Prevent unblocking when blocked
+    accountRepository.blockUser(alice.uid, bob.uid, false)
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+
+    viewModel.unblockUser(accounts[0], accounts[1])
+
+    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertNull(accounts[1].relationships[alice.uid])
+  }
+
+  @Test
+  fun viewModelCancelFriendRequest_allowsValidCancel() = runBlocking {
     accountRepository.sendFriendRequest(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.resetRelationship(accounts[0], accounts[1])
+    viewModel.cancelFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertNull(accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
+  }
 
-    // Test 2: Deny received request
+  @Test
+  fun viewModelDenyFriendRequest_allowsValidDeny() = runBlocking {
     accountRepository.sendFriendRequest(alice.uid, bob.uid)
-    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.resetRelationship(accounts[1], accounts[0])
+    viewModel.denyFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertNull(accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
+  }
 
-    // Test 3: Remove friendship
+  @Test
+  fun viewModelRemoveFriend_allowsValidRemoval() = runBlocking {
     accountRepository.sendFriendRequest(alice.uid, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
-    accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.resetRelationship(accounts[0], accounts[1])
+    viewModel.removeFriend(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertNull(accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
+  }
 
-    // Test 4: Reset with no existing relationship (should not throw)
-    viewModel.resetRelationship(alice, charlie)
+  @Test
+  fun viewModelUnblockUser_allowsValidUnblock() = runBlocking {
+    accountRepository.blockUser(alice.uid, bob.uid, false)
+    accountRepository.resetRelationship(alice.uid, bob.uid)
+    var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    val charlieAfter = accountRepository.getAccount(charlie.uid)
-    assertNull(charlieAfter.relationships[alice.uid])
+    // Relationship should be null after unblock
+    assertNull(accounts[0].relationships[bob.uid])
+    assertNull(accounts[1].relationships[alice.uid])
   }
 
   @Test

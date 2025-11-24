@@ -222,19 +222,38 @@ class AccountRepository : FirestoreRepository("accounts") {
    *
    * @param accountId The ID of the account performing the block action
    * @param otherId The ID of the account being blocked
-   * @param otherBlockedAccount If the account being blocked has already blocked the account
-   *   performing the blocking action
    */
-  suspend fun blockUser(accountId: String, otherId: String, otherBlockedAccount: Boolean) {
-    val batch = db.batch()
+  suspend fun blockUser(accountId: String, otherId: String) {
+    db.runTransaction { tx ->
+          val aRef = relationships(accountId).document(otherId)
+          val bRef = relationships(otherId).document(accountId)
 
-    val aRef = relationships(accountId).document(otherId)
-    val bRef = relationships(otherId).document(accountId)
+          val bSnap = tx.get(bRef)
+          val bStatus = bSnap.getString("status")
 
-    batch[aRef] = mapOf(FIELD_STATUS to RelationshipStatus.Blocked)
-    if (!otherBlockedAccount) batch.delete(bRef)
+          tx.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.Blocked))
 
-    batch.commit().await()
+          if (bStatus != RelationshipStatus.Blocked.name) {
+            tx.delete(bRef)
+          }
+        }
+        .await()
+  }
+
+  /**
+   * Unblocks a previously blocked user.
+   *
+   * Removes the "Blocked" relationship entry from the unblocking user's account. This restores the
+   * state to "no relationship" and does not modify the other user's data.
+   *
+   * @param accountId The ID of the account performing the unblock action
+   * @param otherId The ID of the account being unblocked
+   */
+  suspend fun unblockUser(accountId: String, otherId: String) {
+    relationships(accountId)
+        .document(otherId)
+        .set(mapOf(FIELD_STATUS to RelationshipStatus.Blocked))
+        .await()
   }
 
   /**

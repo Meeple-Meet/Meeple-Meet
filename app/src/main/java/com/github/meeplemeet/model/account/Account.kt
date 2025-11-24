@@ -88,8 +88,7 @@ data class Account(
  *
  * Firestore stores the UID as the document ID, so it is omitted from the stored object. This class
  * is optimized for serialization and contains only the fields that need to be persisted in the
- * database. The relationships are stored as a flat list rather than separate fields for friends,
- * sent, pending, and blocked.
+ * database. The relationships are stored as a flat list rather than a map.
  *
  * @property handle Unique human-readable identifier for the user. Defaults to empty string.
  * @property name Human-readable display name. Defaults to empty string.
@@ -133,10 +132,7 @@ fun fromNoUid(
     relationships: List<Relationship> = emptyList()
 ): Account {
   // Convert relationship list to map for efficient lookup
-  val mappedRelationships = mutableMapOf<String, RelationshipStatus>()
-  for (rel in relationships) {
-    mappedRelationships += rel.uid to rel.status
-  }
+  val mappedRelationships = relationships.associate { it.uid to it.status }
 
   return Account(
       id,
