@@ -225,16 +225,16 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   suspend fun blockUser(accountId: String, otherId: String) {
     db.runTransaction { tx ->
-          val aRef = relationships(accountId).document(otherId)
-          val bRef = relationships(otherId).document(accountId)
+          val accountRef = relationships(accountId).document(otherId)
+          val otherRef = relationships(otherId).document(accountId)
 
-          val bSnap = tx[bRef]
+          val bSnap = tx[otherRef]
           val bStatus = bSnap.getString("status")
 
-          tx[aRef] = mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED)
+          tx[accountRef] = mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED)
 
           if (bStatus != RelationshipStatus.BLOCKED.name) {
-            tx.delete(bRef)
+            tx.delete(otherRef)
           }
         }
         .await()
@@ -298,16 +298,16 @@ class AccountRepository : FirestoreRepository("accounts") {
   ) {
     val batch = db.batch()
 
-    val aRef = relationships(accountId).document(friendId)
-    val bRef = relationships(friendId).document(accountId)
+    val accountRef = relationships(accountId).document(friendId)
+    val otherRef = relationships(friendId).document(accountId)
 
     // Update or delete the first user's relationship document
-    if (accountStatus == null) batch.delete(aRef)
-    else batch[aRef] = mapOf(FIELD_STATUS to accountStatus)
+    if (accountStatus == null) batch.delete(accountRef)
+    else batch[accountRef] = mapOf(FIELD_STATUS to accountStatus)
 
     // Update or delete the second user's relationship document
-    if (friendStatus == null) batch.delete(bRef)
-    else batch[bRef] = mapOf(FIELD_STATUS to friendStatus)
+    if (friendStatus == null) batch.delete(otherRef)
+    else batch[otherRef] = mapOf(FIELD_STATUS to friendStatus)
 
     batch.commit().await()
   }
