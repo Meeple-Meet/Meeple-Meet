@@ -66,6 +66,10 @@ data class Relationship(
  *   indicating the relationship status from this account's perspective. Possible statuses include
  *   Friend (mutual friendship), Sent (friend request sent), Pending (friend request received), and
  *   Blocked (user has been blocked). An absent key indicates no relationship exists.
+ * @property notifications List of notifications sent to this account. Notifications can include
+ *   friend requests, discussion invitations, and session invitations. Each notification contains
+ *   metadata about the event and can be executed to perform the associated action (e.g., accepting
+ *   a friend request).
  */
 data class Account(
     val uid: String,
@@ -77,7 +81,8 @@ data class Account(
     var description: String? = null,
     var shopOwner: Boolean = false,
     var spaceRenter: Boolean = false,
-    val relationships: Map<String, RelationshipStatus> = emptyMap()
+    val relationships: Map<String, RelationshipStatus> = emptyMap(),
+    val notifications: List<Notification> = emptyList()
 )
 
 /**
@@ -120,13 +125,15 @@ data class AccountNoUid(
  * @param relationships List of all relationships this account has. This will be converted into a
  *   map keyed by the other user's UID with the relationship status as the value. Defaults to empty
  *   list.
+ * @param notifications List of all notifications for this account. Defaults to empty list.
  * @return A fully constructed [Account] instance with relationships map populated.
  */
 fun fromNoUid(
     id: String,
     accountNoUid: AccountNoUid,
     previews: Map<String, DiscussionPreviewNoUid> = emptyMap(),
-    relationships: List<Relationship> = emptyList()
+    relationships: List<Relationship> = emptyList(),
+    notifications: List<Notification> = emptyList()
 ): Account {
   // Convert relationship list to map for efficient lookup
   val mappedRelationships = relationships.associate { it.uid to it.status }
@@ -141,5 +148,6 @@ fun fromNoUid(
       description = accountNoUid.description,
       shopOwner = accountNoUid.shopOwner,
       spaceRenter = accountNoUid.spaceRenter,
-      relationships = mappedRelationships)
+      relationships = mappedRelationships,
+      notifications = notifications)
 }
