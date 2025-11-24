@@ -10,7 +10,9 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for creating new space renters.
@@ -76,6 +78,7 @@ class CreateSpaceRenterViewModel(
     viewModelScope.launch {
         val isOnline = OfflineModeManager.hasInternetConnection.value
 
+<<<<<<< HEAD
         if (isOnline) {
             try {
                 val created =
@@ -109,11 +112,32 @@ class CreateSpaceRenterViewModel(
                     } else {
                         emptyList()
                     }
+=======
+        val uploadedUrls =
+            if (photoCollectionUrl.isNotEmpty()) {
+              try {
+                // Upload photos to Firebase Storage and get download URLs
+                withContext(NonCancellable) {
+                  imageRepository.saveSpaceRenterPhotos(
+                      context, created.id, *photoCollectionUrl.toTypedArray())
+                }
+              } catch (e: Exception) {
+                // Log and continue with empty list so the renter exists even if uploads fail.
+                Log.e(
+                    "upload", "Image upload failed for space renter ${created.id}: ${e.message}", e)
+                emptyList<String>()
+              }
+            } else {
+              emptyList()
+            }
+>>>>>>> d69e185d (fix(CreateSpaceRenter): fix throw error even if stored in firebase succefully)
 
         // Update the document with Firebase Storage download URLs
         if (uploadedUrls.isNotEmpty()) {
           try {
-            repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+            withContext(NonCancellable) {
+              repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+            }
           } catch (e: Exception) {
             // Updating should not crash the app; log and continue.
             Log.e(
