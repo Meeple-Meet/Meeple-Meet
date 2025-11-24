@@ -453,7 +453,9 @@ fun MeepleMeetApp(
             owner = account!!,
             shop = shop!!,
             onBack = { navigationActions.goBack() },
-            onSaved = { navigationActions.goBack() })
+            onSaved = {
+              navigationActions.navigateTo(MeepleMeetScreen.ShopDetails, popUpTo = true)
+            })
       } else {
         LoadingScreen()
       }
@@ -485,7 +487,9 @@ fun MeepleMeetApp(
             owner = account!!,
             spaceRenter = spaceRenter!!,
             onBack = { navigationActions.goBack() },
-            onUpdated = { navigationActions.goBack() })
+            onUpdated = {
+              navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails, popUpTo = true)
+            })
       } else {
         LoadingScreen()
       }

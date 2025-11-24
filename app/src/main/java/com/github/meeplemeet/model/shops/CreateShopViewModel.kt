@@ -10,7 +10,9 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for creating new shops.
@@ -91,8 +93,10 @@ class CreateShopViewModel(
             if (photoCollectionUrl.isNotEmpty()) {
               try {
                 // Upload photos to Firebase Storage and get download URLs
-                imageRepository.saveShopPhotos(
-                    context, created.id, *photoCollectionUrl.toTypedArray())
+                withContext(NonCancellable) {
+                  imageRepository.saveShopPhotos(
+                      context, created.id, *photoCollectionUrl.toTypedArray())
+                }
               } catch (e: Exception) {
                 // Log and continue with empty list so the shop exists even if uploads fail.
                 Log.e("upload", "Image upload failed for shop ${created.id}: ${e.message}", e)
@@ -105,7 +109,9 @@ class CreateShopViewModel(
         // Update the document with Firebase Storage download URLs
         if (uploadedUrls.isNotEmpty()) {
           try {
-            shopRepo.updateShop(id = created.id, photoCollectionUrl = uploadedUrls)
+            withContext(NonCancellable) {
+              shopRepo.updateShop(id = created.id, photoCollectionUrl = uploadedUrls)
+            }
           } catch (e: Exception) {
             // Updating should not crash the app; log and continue.
             Log.e("upload", "Failed to update shop ${created.id} with photo URLs: ${e.message}", e)
