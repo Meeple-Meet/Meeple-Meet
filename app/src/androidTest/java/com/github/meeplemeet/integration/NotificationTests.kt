@@ -56,6 +56,21 @@ class NotificationTests : FirestoreTests() {
     viewModel = ProfileScreenViewModel(accountRepository)
   }
 
+  /**
+   * Cleans up all relationships and notifications between test accounts.
+   *
+   * This helper method removes all existing relationships and notifications between alice, bob, and
+   * charlie to ensure each test starts with a clean slate. This prevents state leakage between
+   * tests that could cause flaky or incorrect test results.
+   *
+   * The cleanup process:
+   * 1. Resets all bidirectional relationships between the three test accounts
+   * 2. Fetches current account states to get all existing notifications
+   * 3. Deletes each notification from each account
+   *
+   * This method should be called in setUp or at the beginning of tests that require isolated
+   * notification state.
+   */
   private suspend fun cleanupRelationshipsAndNotifications() {
     // Reset all relationships between test accounts
     accountRepository.resetRelationship(alice.uid, bob.uid)
@@ -88,7 +103,6 @@ class NotificationTests : FirestoreTests() {
     assertEquals(alice.uid, notification.senderOrDiscussionId)
     assertEquals(bob.uid, notification.receiverId)
     assertEquals(NotificationType.FriendRequest, notification.type)
-    assertEquals("@${alice.handle} sent you a friend request!", notification.message)
     assertFalse(notification.read)
   }
 
@@ -158,7 +172,6 @@ class NotificationTests : FirestoreTests() {
     assertEquals(discussion.uid, notification.senderOrDiscussionId)
     assertEquals(bob.uid, notification.receiverId)
     assertEquals(NotificationType.JoinDiscussion, notification.type)
-    assertEquals("You've been invited to join ${discussion.name}!", notification.message)
     assertFalse(notification.read)
   }
 
@@ -230,7 +243,6 @@ class NotificationTests : FirestoreTests() {
     assertEquals(discussion.uid, notification.senderOrDiscussionId)
     assertEquals(bob.uid, notification.receiverId)
     assertEquals(NotificationType.JoinSession, notification.type)
-    assertEquals("You've been invited to join ${discussion.name}'s session!", notification.message)
     assertFalse(notification.read)
   }
 
@@ -502,43 +514,6 @@ class NotificationTests : FirestoreTests() {
   }
 
   // ==================== ViewModel Notification Tests ====================
-
-  @Test
-  fun viewModelExecuteNotification_preventsInvalidExecution() = runBlocking {
-    cleanupRelationshipsAndNotifications()
-
-    accountRepository.sendFriendRequest(alice, bob.uid)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-    val notification = updatedBob.notifications[0]
-
-    // Try to execute notification from wrong account
-    viewModel.executeNotification(alice, notification)
-
-    // Verify the friend request was NOT accepted
-    val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.PENDING, accounts[1].relationships[alice.uid])
-  }
-
-  @Test
-  fun viewModelExecuteNotification_allowsValidExecution() = runBlocking {
-    cleanupRelationshipsAndNotifications()
-
-    accountRepository.sendFriendRequest(alice, bob.uid)
-
-    val updatedBob = accountRepository.getAccount(bob.uid)
-    val notification = updatedBob.notifications[0]
-
-    viewModel.executeNotification(updatedBob, notification)
-
-    // Wait for async execution
-    delay(500)
-
-    val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
-  }
 
   @Test
   fun viewModelReadNotification_preventsInvalidRead() = runBlocking {

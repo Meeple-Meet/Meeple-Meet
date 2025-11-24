@@ -7,10 +7,12 @@ import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -248,7 +250,6 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   suspend fun sendFriendRequest(account: Account, otherId: String) {
     setFriendStatus(account.uid, otherId, RelationshipStatus.SENT, RelationshipStatus.PENDING)
-    sendFriendRequestNotification(otherId, account)
   }
 
   /**
@@ -373,11 +374,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param sender The account that sent the friend request
    */
   suspend fun sendFriendRequestNotification(receiverId: String, sender: Account) {
-    sendNotification(
-        receiverId,
-        sender.uid,
-        NotificationType.FriendRequest,
-        "@${sender.handle} sent you a friend request!")
+    sendNotification(receiverId, sender.uid, NotificationType.FriendRequest)
   }
 
   /**
@@ -390,11 +387,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param discussion The discussion the user is being invited to
    */
   suspend fun sendJoinDiscussionNotification(receiverId: String, discussion: Discussion) {
-    sendNotification(
-        receiverId,
-        discussion.uid,
-        NotificationType.JoinDiscussion,
-        "You've been invited to join ${discussion.name}!")
+    sendNotification(receiverId, discussion.uid, NotificationType.JoinDiscussion)
   }
 
   /**
@@ -407,11 +400,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param discussion The discussion whose session the user is being invited to
    */
   suspend fun sendJoinSessionNotification(receiverId: String, discussion: Discussion) {
-    sendNotification(
-        receiverId,
-        discussion.uid,
-        NotificationType.JoinSession,
-        "You've been invited to join ${discussion.name}'s session!")
+    sendNotification(receiverId, discussion.uid, NotificationType.JoinSession)
   }
 
   /**
@@ -451,20 +440,16 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param senderOrDiscussionId The ID of the sender (for friend requests) or discussion/session
    *   (for invitations)
    * @param type The type of notification being sent
-   * @param message The human-readable message to display to the user
    */
   private suspend fun sendNotification(
       receiverId: String,
       senderOrDiscussionId: String,
       type: NotificationType,
-      message: String,
   ) {
     val uid = notifications(receiverId).document().id
     notifications(receiverId)
         .document(uid)
-        .set(
-            NotificationNoUid(
-                senderOrDiscussionId = senderOrDiscussionId, message = message, type = type))
+        .set(NotificationNoUid(senderOrDiscussionId = senderOrDiscussionId, type = type))
         .await()
   }
 
@@ -529,8 +514,8 @@ class AccountRepository : FirestoreRepository("accounts") {
     fun updateAccount(
         accountId: String,
         accountNoUid: AccountNoUid,
-        accountRef: com.google.firebase.firestore.DocumentReference,
-        flow: kotlinx.coroutines.channels.ProducerScope<Account>
+        accountRef: DocumentReference,
+        flow: ProducerScope<Account>
     ) {
       removeSubcollectionListeners()
       resetCache()
@@ -553,8 +538,8 @@ class AccountRepository : FirestoreRepository("accounts") {
      * @return A ListenerRegistration that can be used to remove the listener
      */
     private fun listenToPreviews(
-        accountRef: com.google.firebase.firestore.DocumentReference,
-        flow: kotlinx.coroutines.channels.ProducerScope<Account>,
+        accountRef: DocumentReference,
+        flow: ProducerScope<Account>,
         accountId: String,
         accountNoUid: AccountNoUid
     ): ListenerRegistration {
@@ -583,7 +568,7 @@ class AccountRepository : FirestoreRepository("accounts") {
      */
     private fun listenToRelationships(
         accountId: String,
-        flow: kotlinx.coroutines.channels.ProducerScope<Account>,
+        flow: ProducerScope<Account>,
         accountNoUid: AccountNoUid
     ): ListenerRegistration {
       return relationships(accountId).addSnapshotListener { qs, e ->
@@ -611,7 +596,7 @@ class AccountRepository : FirestoreRepository("accounts") {
      */
     private fun listenToNotifications(
         accountId: String,
-        flow: kotlinx.coroutines.channels.ProducerScope<Account>,
+        flow: ProducerScope<Account>,
         accountNoUid: AccountNoUid
     ): ListenerRegistration {
       return notifications(accountId).addSnapshotListener { qs, e ->
@@ -640,7 +625,7 @@ class AccountRepository : FirestoreRepository("accounts") {
     private fun tryEmitAccount(
         accountId: String,
         accountNoUid: AccountNoUid,
-        flow: kotlinx.coroutines.channels.ProducerScope<Account>
+        flow: ProducerScope<Account>
     ) {
       val previews = cachedPreviews
       val relationships = cachedRelationships

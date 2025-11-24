@@ -51,7 +51,6 @@ enum class NotificationType {
  * @property senderOrDiscussionId ID of the sender (for FriendRequest) or discussion/session ID (for
  *   JoinDiscussion/JoinSession).
  * @property receiverId ID of the user receiving this notification.
- * @property message Human-readable notification message displayed to the user.
  * @property read Whether the user has seen/read this notification.
  * @property type The type of notification, determines the action when executed.
  * @property sentAt Server-side timestamp of when the notification was created/sent.
@@ -64,7 +63,6 @@ data class Notification(
     val uid: String = "",
     val senderOrDiscussionId: String = "",
     val receiverId: String = "",
-    val message: String = "",
     val read: Boolean = false,
     val type: NotificationType = NotificationType.FriendRequest,
     val sentAt: Timestamp = Timestamp.now(),
@@ -130,12 +128,22 @@ data class Notification(
           uid = uid,
           receiverId = receiverId,
           senderOrDiscussionId = notificationNoUid.senderOrDiscussionId,
-          message = notificationNoUid.message,
           read = notificationNoUid.read,
           type = notificationNoUid.type,
           sentAt = notificationNoUid.sentAt,
           executed = notificationNoUid.executed,
       )
+
+  /**
+   * Returns whether this notification has been executed.
+   *
+   * This is a getter method for the private [executed] property. It allows external code to check
+   * if a notification has already been executed without being able to modify the execution state
+   * directly.
+   *
+   * @return True if the notification has been executed, false otherwise
+   */
+  fun executed() = executed
 }
 
 /**
@@ -146,7 +154,6 @@ data class Notification(
  * the account document location, so they're not duplicated in the value.
  *
  * @property senderOrDiscussionId ID of the sender or discussion/session being referenced.
- * @property message Human-readable notification message.
  * @property read Whether the notification has been read.
  * @property type The notification type.
  * @property executed Whether the notification has been executed/accepted.
@@ -156,7 +163,6 @@ data class Notification(
 @Serializable
 data class NotificationNoUid(
     val senderOrDiscussionId: String = "",
-    val message: String = "",
     val read: Boolean = false,
     val type: NotificationType = NotificationType.FriendRequest,
     val executed: Boolean = false,
