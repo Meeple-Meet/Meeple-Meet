@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.account
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
+import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.async
@@ -52,6 +53,15 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   private fun relationships(uid: String) =
       collection.document(uid).collection(Account::relationships.name)
+
+  /**
+   * Returns a reference to the notifications subcollection for a given account.
+   *
+   * @param uid The account ID whose notifications subcollection to access
+   * @return A CollectionReference to the notifications subcollection
+   */
+  private fun notifications(uid: String) =
+      collection.document(uid).collection(Account::notifications.name)
 
   /**
    * Extracts discussion previews from a Firestore query snapshot.
@@ -298,6 +308,84 @@ class AccountRepository : FirestoreRepository("accounts") {
     else batch[bRef] = mapOf(FIELD_STATUS to friendStatus)
 
     batch.commit().await()
+  }
+
+  /**
+   * Sends a friend request notification to a user.
+   *
+   * Creates a notification informing the receiver that the sender has sent them a friend request.
+   * The notification can be executed to accept the friend request.
+   *
+   * @param receiverId The ID of the user receiving the notification
+   * @param sender The account that sent the friend request
+   */
+  suspend fun sendFriendRequestNotification(receiverId: String, sender: Account) {
+    sendNotification(
+        receiverId,
+        sender.uid,
+        NotificationType.FriendRequest,
+        "@${sender.handle} sent you a friend request!")
+  }
+
+  /**
+   * Sends a discussion invitation notification to a user.
+   *
+   * Creates a notification informing the receiver that they have been invited to join a discussion.
+   * The notification can be executed to join the discussion.
+   *
+   * @param receiverId The ID of the user receiving the notification
+   * @param discussion The discussion the user is being invited to
+   */
+  suspend fun sendJoinDiscussionNotification(receiverId: String, discussion: Discussion) {
+    sendNotification(
+        receiverId,
+        discussion.uid,
+        NotificationType.JoinDiscussion,
+        "You've been invited to join ${discussion.name}!")
+  }
+
+  /**
+   * Sends a session invitation notification to a user.
+   *
+   * Creates a notification informing the receiver that they have been invited to join a session
+   * associated with a discussion. The notification can be executed to join the session.
+   *
+   * @param receiverId The ID of the user receiving the notification
+   * @param discussion The discussion whose session the user is being invited to
+   */
+  suspend fun sendJoinSessionNotification(receiverId: String, discussion: Discussion) {
+    sendNotification(
+        receiverId,
+        discussion.uid,
+        NotificationType.JoinSession,
+        "You've been invited to join ${discussion.name}'s session!")
+  }
+
+  /**
+   * Internal helper method to create and store a notification in Firestore.
+   *
+   * Generates a unique notification ID and creates a notification document in the receiver's
+   * notifications subcollection. The notification is stored using [NotificationNoUid] format.
+   *
+   * @param receiverId The ID of the user receiving the notification
+   * @param senderOrDiscussionId The ID of the sender (for friend requests) or discussion/session
+   *   (for invitations)
+   * @param type The type of notification being sent
+   * @param message The human-readable message to display to the user
+   */
+  private suspend fun sendNotification(
+      receiverId: String,
+      senderOrDiscussionId: String,
+      type: NotificationType,
+      message: String,
+  ) {
+    val uid = notifications(receiverId).document().id
+    notifications(receiverId)
+        .document(uid)
+        .set(
+            NotificationNoUid(
+                senderOrDiscussionId = senderOrDiscussionId, message = message, type = type))
+        .await()
   }
 
   /**

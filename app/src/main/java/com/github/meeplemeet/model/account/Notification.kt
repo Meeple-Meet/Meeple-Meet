@@ -3,6 +3,7 @@ package com.github.meeplemeet.model.account
 // Claude Code generated the documentation
 
 import com.github.meeplemeet.RepositoryProvider
+import com.google.firebase.Timestamp
 import kotlinx.serialization.Serializable
 
 /**
@@ -53,6 +54,7 @@ enum class NotificationType {
  * @property message Human-readable notification message displayed to the user.
  * @property read Whether the user has seen/read this notification.
  * @property type The type of notification, determines the action when executed.
+ * @property sentAt Server-side timestamp of when the notification was created/sent.
  * @property executed Whether this notification has been executed (accepted) by the user. Private to
  *   prevent external modification.
  * @see NotificationType for available notification types
@@ -65,7 +67,8 @@ data class Notification(
     val message: String,
     val read: Boolean,
     val type: NotificationType,
-    private var executed: Boolean,
+    val sentAt: Timestamp = Timestamp.now(),
+    private var executed: Boolean = false,
 ) {
   /**
    * Executes the action associated with this notification type.
@@ -77,7 +80,7 @@ data class Notification(
    * - **FriendRequest**: Accepts the friend request by calling
    *   [AccountRepository.acceptFriendRequest]
    * - **JoinDiscussion**: Adds the receiver to the discussion by calling
-   *   [DiscussionRepository.addUserToDiscussion]
+   *   [com.github.meeplemeet.model.discussions.DiscussionRepository.addUserToDiscussion]
    * - **JoinSession**: Retrieves the discussion participants and updates the session with the
    *   receiver added
    *
@@ -122,7 +125,8 @@ data class Notification(
           message = message,
           read = read,
           type = type,
-          executed = executed)
+          executed = executed,
+          sentAt = sentAt)
 
   /**
    * Reconstructs a full [Notification] from its Firestore representation.
@@ -147,6 +151,7 @@ data class Notification(
           message = notificationNoUid.message,
           read = notificationNoUid.read,
           type = notificationNoUid.type,
+          sentAt = notificationNoUid.sentAt,
           executed = notificationNoUid.executed,
       )
 }
@@ -163,6 +168,7 @@ data class Notification(
  * @property read Whether the notification has been read.
  * @property type The notification type.
  * @property executed Whether the notification has been executed/accepted.
+ * @property sentAt Server-side timestamp of when the notification was created/sent.
  * @see Notification for the full data class with UID and receiverId
  */
 @Serializable
@@ -172,4 +178,5 @@ data class NotificationNoUid(
     val read: Boolean = false,
     val type: NotificationType = NotificationType.FriendRequest,
     val executed: Boolean = false,
+    val sentAt: Timestamp = Timestamp.now(),
 )
