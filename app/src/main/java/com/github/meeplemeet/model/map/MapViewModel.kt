@@ -2,6 +2,7 @@
 
 package com.github.meeplemeet.model.map
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
@@ -21,20 +22,15 @@ import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
 /**
  * Represents the UI state of the map, including currently visible geo-pins, any selected
  * pin/preview, loading state, and error messages.
- *
- * @property geoPins The filtered list of geo-pins, based on [activeFilters].
  */
 data class MapUIState(
-    val allGeoPins: List<GeoPinWithLocation> = emptyList(),
+    internal val allGeoPins: List<GeoPinWithLocation> = emptyList(),
     val activeFilters: Set<PinType> = PinType.entries.toSet(),
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
     val selectedGeoPin: StorableGeoPin? = null,
-    val isLoadingPreview: Boolean = false
-) {
-  val geoPins: List<GeoPinWithLocation>
-    get() = allGeoPins.filter { it.geoPin.type in activeFilters }
-}
+    val isLoadingPreview: Boolean = false,
+)
 
 /**
  * ViewModel responsible for managing and observing geographically indexed map data (geo-pins).
@@ -204,8 +200,7 @@ class MapViewModel(
   }
 
   /**
-   * Updates the set of active pin type filters applied to the map. This affects the
-   * [MapUIState.geoPins] property, which is the filtered view used by the UI.
+   * Updates the set of active pin type filters applied to the map.
    *
    * @param newFilters The new set of [PinType] to display.
    */
@@ -287,5 +282,12 @@ class MapViewModel(
   override fun onCleared() {
     stopGeoQuery()
     super.onCleared()
+  }
+
+  // Access the filtered pins, for tests backward compatibility
+  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+  fun getFilteredPins(): List<GeoPinWithLocation> {
+    val state = _uiState.value
+    return state.allGeoPins.filter { it.geoPin.type in state.activeFilters }
   }
 }

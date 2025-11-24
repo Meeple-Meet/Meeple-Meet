@@ -75,7 +75,7 @@ class MapViewModelTest : FirestoreTests() {
 
     assertEquals(MapUIState(), state)
     assertTrue(state.allGeoPins.isEmpty())
-    assertTrue(state.geoPins.isEmpty())
+    assertTrue(viewModel.getFilteredPins().isEmpty())
     assertEquals(PinType.entries.toSet(), state.activeFilters)
     assertNull(state.errorMsg)
     assertNull(state.selectedMarkerPreview)
@@ -96,9 +96,9 @@ class MapViewModelTest : FirestoreTests() {
 
     val state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isNotEmpty())
-    assertTrue(state.geoPins.isNotEmpty())
+    assertTrue(viewModel.getFilteredPins().isNotEmpty())
 
-    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    val shopPin = viewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
     assertNotNull(shopPin)
     assertEquals(PinType.SHOP, shopPin!!.geoPin.type)
 
@@ -121,7 +121,7 @@ class MapViewModelTest : FirestoreTests() {
     val state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isNotEmpty())
 
-    val spacePin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
+    val spacePin = viewModel.getFilteredPins().find { it.geoPin.uid == spaceRenter.id }
     assertNotNull(spacePin)
     assertEquals(PinType.SPACE, spacePin!!.geoPin.type)
 
@@ -165,8 +165,8 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(100)
 
-    var state = viewModel.uiState.value
-    val sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid } // note: discussion.uid
+    val sessionPin =
+        viewModel.getFilteredPins().find { it.geoPin.uid == discussion.uid } // note: discussion.uid
     assertNotNull(sessionPin)
     assertEquals(PinType.SESSION, sessionPin!!.geoPin.type)
 
@@ -177,8 +177,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel2.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount2.uid)
     delay(100)
 
-    state = viewModel2.uiState.value
-    val sessionPin2 = state.geoPins.find { it.geoPin.uid == discussion.uid }
+    val sessionPin2 = viewModel.getFilteredPins().find { it.geoPin.uid == discussion.uid }
     assertNull(sessionPin2)
 
     // cleanup
@@ -233,9 +232,9 @@ class MapViewModelTest : FirestoreTests() {
     val state = viewModel.uiState.value
     assertTrue(state.allGeoPins.size >= 3)
 
-    val shopPin = state.geoPins.find { it.geoPin.type == PinType.SHOP }
-    val spacePin = state.geoPins.find { it.geoPin.type == PinType.SPACE }
-    val sessionPin = state.geoPins.find { it.geoPin.type == PinType.SESSION }
+    val shopPin = viewModel.getFilteredPins().find { it.geoPin.type == PinType.SHOP }
+    val spacePin = viewModel.getFilteredPins().find { it.geoPin.type == PinType.SPACE }
+    val sessionPin = viewModel.getFilteredPins().find { it.geoPin.type == PinType.SESSION }
 
     assertNotNull(shopPin)
     assertNotNull(spacePin)
@@ -260,8 +259,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(100)
 
-    val state = viewModel.uiState.value
-    val farPin = state.geoPins.find { it.geoPin.uid == farShop.id }
+    val farPin = viewModel.getFilteredPins().find { it.geoPin.uid == farShop.id }
     assertNull(farPin)
 
     shopRepository.deleteShop(farShop.id)
@@ -286,7 +284,7 @@ class MapViewModelTest : FirestoreTests() {
 
     state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isEmpty())
-    assertTrue(state.geoPins.isEmpty())
+    assertTrue(viewModel.getFilteredPins().isEmpty())
 
     shopRepository.deleteShop(shop.id)
   }
@@ -313,29 +311,28 @@ class MapViewModelTest : FirestoreTests() {
 
     var state = viewModel.uiState.value
     assertTrue(state.allGeoPins.size >= 2)
-    assertTrue(state.geoPins.size >= 2)
+    assertTrue(viewModel.getFilteredPins().size >= 2)
 
     viewModel.updateFilters(setOf(PinType.SHOP))
     delay(100)
 
     state = viewModel.uiState.value
     assertTrue(state.allGeoPins.size >= 2)
-    assertTrue(state.geoPins.all { it.geoPin.type == PinType.SHOP })
-    assertTrue(state.geoPins.none { it.geoPin.type == PinType.SPACE })
+    assertTrue(viewModel.getFilteredPins().all { it.geoPin.type == PinType.SHOP })
+    assertTrue(viewModel.getFilteredPins().none { it.geoPin.type == PinType.SPACE })
 
     viewModel.updateFilters(setOf(PinType.SPACE))
     delay(100)
 
     state = viewModel.uiState.value
     assertTrue(state.allGeoPins.size >= 2)
-    assertTrue(state.geoPins.all { it.geoPin.type == PinType.SPACE })
-    assertTrue(state.geoPins.none { it.geoPin.type == PinType.SHOP })
+    assertTrue(viewModel.getFilteredPins().all { it.geoPin.type == PinType.SPACE })
+    assertTrue(viewModel.getFilteredPins().none { it.geoPin.type == PinType.SHOP })
 
     viewModel.updateFilters(setOf(PinType.SHOP, PinType.SPACE))
     delay(100)
 
-    state = viewModel.uiState.value
-    assertTrue(state.geoPins.size >= 2)
+    assertTrue(viewModel.getFilteredPins().size >= 2)
 
     shopRepository.deleteShop(shop.id)
     spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
@@ -355,14 +352,14 @@ class MapViewModelTest : FirestoreTests() {
 
     var state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isNotEmpty())
-    assertTrue(state.geoPins.isNotEmpty())
+    assertTrue(viewModel.getFilteredPins().isNotEmpty())
 
     viewModel.updateFilters(emptySet())
     delay(100)
 
     state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isNotEmpty())
-    assertTrue(state.geoPins.isEmpty())
+    assertTrue(viewModel.getFilteredPins().isEmpty())
 
     shopRepository.deleteShop(shop.id)
   }
@@ -379,8 +376,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(100)
 
-    val state = viewModel.uiState.value
-    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    val shopPin = viewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
     assertNotNull(shopPin)
 
     viewModel.selectPin(shopPin!!)
@@ -407,8 +403,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(100)
 
-    val state = viewModel.uiState.value
-    val spacePin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
+    val spacePin = viewModel.getFilteredPins().find { it.geoPin.uid == spaceRenter.id }
     assertNotNull(spacePin)
 
     viewModel.selectPin(spacePin!!)
@@ -456,8 +451,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(100)
 
-    val state = viewModel.uiState.value
-    val sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
+    val sessionPin = viewModel.getFilteredPins().find { it.geoPin.uid == discussion.uid }
 
     assertNotNull(sessionPin)
 
@@ -485,8 +479,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(100)
 
-    val state = viewModel.uiState.value
-    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    val shopPin = viewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
     assertNotNull(shopPin)
 
     viewModel.selectPin(shopPin!!)
@@ -792,7 +785,7 @@ class MapViewModelTest : FirestoreTests() {
 
     val filteredState = viewModel.uiState.value
     assertEquals(initialAllCount, filteredState.allGeoPins.size)
-    assertTrue(filteredState.geoPins.size < initialAllCount)
+    assertTrue(viewModel.getFilteredPins().size < initialAllCount)
 
     shopRepository.deleteShop(shop.id)
     spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)

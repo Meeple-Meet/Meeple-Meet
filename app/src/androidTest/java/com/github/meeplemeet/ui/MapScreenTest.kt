@@ -341,8 +341,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)
@@ -377,8 +376,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == spaceRenter.id }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)
@@ -437,8 +435,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == discussion.uid }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == discussion.uid }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)
@@ -478,8 +475,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)
@@ -510,8 +506,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)
@@ -551,8 +546,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)
@@ -596,8 +590,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val initialCount = state.geoPins.size
+        val initialCount = mapViewModel.getFilteredPins().size
         assert(initialCount >= 2)
 
         composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
@@ -606,17 +599,15 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
           !mapViewModel.uiState.value.activeFilters.contains(PinType.SHOP)
         }
 
-        val stateWithFilter = mapViewModel.uiState.value
-        assert(stateWithFilter.geoPins.size < initialCount)
-        assert(stateWithFilter.geoPins.none { it.geoPin.type == PinType.SHOP })
+        assert(mapViewModel.getFilteredPins().size < initialCount)
+        assert(mapViewModel.getFilteredPins().none { it.geoPin.type == PinType.SHOP })
 
         composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
         composeRule.waitUntil(timeoutMillis = 5_000) {
           mapViewModel.uiState.value.activeFilters.contains(PinType.SHOP)
         }
 
-        val stateWithoutFilter = mapViewModel.uiState.value
-        assert(stateWithoutFilter.geoPins.size == initialCount)
+        assert(mapViewModel.getFilteredPins().size == initialCount)
 
         shopRepository.deleteShop(shop.id)
         spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
@@ -639,7 +630,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         delay(2000)
 
         val state = mapViewModel.uiState.value
-        assert(state.geoPins.isNotEmpty())
+        assert(mapViewModel.getFilteredPins().isNotEmpty())
         assert(state.allGeoPins.isNotEmpty())
 
         composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
@@ -654,7 +645,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         val filteredState = mapViewModel.uiState.value
 
-        assert(filteredState.geoPins.isEmpty())
+        assert(mapViewModel.getFilteredPins().isEmpty())
         assert(filteredState.allGeoPins.isNotEmpty())
 
         shopRepository.deleteShop(shop.id)
@@ -676,8 +667,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
         assertNotNull(pin)
 
         // Marker do not expose tag to compose => fix later if possible, but assertNotNull is enough
@@ -709,8 +699,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        assert(state.geoPins.size >= 2)
+        assert(mapViewModel.getFilteredPins().size >= 2)
 
         shopRepository.deleteShop(shop1.id)
         shopRepository.deleteShop(shop2.id)
@@ -753,8 +742,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        var state = mapViewModel.uiState.value
-        var sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
+        var sessionPin = mapViewModel.getFilteredPins().find { it.geoPin.uid == discussion.uid }
         assertNull(sessionPin)
 
         mapViewModel.stopGeoQuery()
@@ -764,8 +752,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
         delay(2000)
 
-        state = ownerViewModel.uiState.value
-        sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
+        sessionPin = mapViewModel.getFilteredPins().find { it.geoPin.uid == discussion.uid }
         assertNotNull(sessionPin)
 
         // cleanup
@@ -789,8 +776,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(2000)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
+        val pin = mapViewModel.getFilteredPins().find { it.geoPin.uid == shop.id }
         assertNotNull(pin)
 
         mapViewModel.selectPin(pin!!)

@@ -375,7 +375,8 @@ fun MapScreen(
                 val pinPriority = listOf(PinType.SESSION, PinType.SHOP, PinType.SPACE)
 
                 val uniquePins =
-                    uiState.geoPins
+                    viewModel
+                        .getFilteredPins() // TODO Remove ASAP
                         .groupBy { it.location }
                         .mapValues { (_, pins) ->
                           pins.minByOrNull { pinPriority.indexOf(it.geoPin.type) }!!
