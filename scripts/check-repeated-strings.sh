@@ -137,9 +137,20 @@ while IFS= read -r file; do
     continue
   fi
 
-  # Extract all string literals from the file (strings with 3+ chars)
+  # Create a temporary file with comments removed
+  # Remove single-line comments (// ...) and multi-line comments (/* ... */)
+  # This preserves the line structure for accurate counting
+  temp_no_comments=$(mktemp)
+  # Remove single-line comments but keep the line
+  sed 's|//.*$||' "$file" | \
+  # Remove multi-line comments (simple approach - may not handle all edge cases)
+  sed '/\/\*/,/\*\//d' > "$temp_no_comments"
+
+  # Extract all string literals from the file without comments (strings with 3+ chars)
   # This regex matches strings in double quotes, excluding single/empty strings
-  strings=$(grep -oE '"[^"]{'"$MIN_STRING_LENGTH"',}"' "$file" 2>/dev/null || true)
+  strings=$(grep -oE '"[^"]{'"$MIN_STRING_LENGTH"',}"' "$temp_no_comments" 2>/dev/null || true)
+
+  rm -f "$temp_no_comments"
 
   if [ -z "$strings" ]; then
     continue
@@ -148,8 +159,11 @@ while IFS= read -r file; do
   # Get unique strings and count occurrences
   while IFS= read -r string; do
     if [ -n "$string" ] && ! should_ignore_string "$string"; then
-      # Count how many times this string appears in the file
-      count=$(grep -oF "$string" "$file" 2>/dev/null | wc -l | tr -d ' ')
+      # Count how many times this string appears in the file (excluding comments)
+      temp_no_comments=$(mktemp)
+      sed 's|//.*$||' "$file" | sed '/\/\*/,/\*\//d' > "$temp_no_comments"
+      count=$(grep -oF "$string" "$temp_no_comments" 2>/dev/null | wc -l | tr -d ' ')
+      rm -f "$temp_no_comments"
 
       # Only record if it appears MIN_OCCURRENCES or more times
       if [ "$count" -ge "$MIN_OCCURRENCES" ]; then
