@@ -600,7 +600,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun viewModelCancelFriendRequest_preventsInvalidOperations() = runBlocking {
     // Test 1: Prevent canceling same user
-    viewModel.cancelFriendRequest(alice, alice)
+    viewModel.rejectFriendRequest(alice, alice)
     val aliceAfterSelf = accountRepository.getAccount(alice.uid)
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
@@ -608,7 +608,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.cancelFriendRequest(accounts[0], accounts[1])
+    viewModel.rejectFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
@@ -618,7 +618,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun viewModelDenyFriendRequest_preventsInvalidOperations() = runBlocking {
     // Test 1: Prevent denying same user
-    viewModel.denyFriendRequest(alice, alice)
+    viewModel.rejectFriendRequest(alice, alice)
     val aliceAfterSelf = accountRepository.getAccount(alice.uid)
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
@@ -626,7 +626,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.blockUser(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.denyFriendRequest(accounts[1], accounts[0])
+    viewModel.rejectFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
@@ -690,7 +690,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.sendFriendRequest(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.cancelFriendRequest(accounts[0], accounts[1])
+    viewModel.rejectFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertNull(accounts[0].relationships[bob.uid])
@@ -702,7 +702,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.sendFriendRequest(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
-    viewModel.denyFriendRequest(accounts[1], accounts[0])
+    viewModel.rejectFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertNull(accounts[0].relationships[bob.uid])

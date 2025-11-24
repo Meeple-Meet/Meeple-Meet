@@ -228,10 +228,10 @@ class AccountRepository : FirestoreRepository("accounts") {
           val aRef = relationships(accountId).document(otherId)
           val bRef = relationships(otherId).document(accountId)
 
-          val bSnap = tx.get(bRef)
+          val bSnap = tx[bRef]
           val bStatus = bSnap.getString("status")
 
-          tx.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED))
+          tx[aRef] = mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED)
 
           if (bStatus != RelationshipStatus.BLOCKED.name) {
             tx.delete(bRef)

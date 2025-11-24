@@ -120,7 +120,7 @@ class ProfileScreenViewModel(
   }
 
   /**
-   * Cancels a sent friend request from the current account to another user.
+   * Cancels or deny's a sent friend request from the current account to another user.
    *
    * This method validates that the operation is valid before proceeding. It prevents canceling in
    * the following cases:
@@ -132,26 +132,7 @@ class ProfileScreenViewModel(
    * @param account The account canceling the sent friend request
    * @param other The account to whom the friend request was sent
    */
-  fun cancelFriendRequest(account: Account, other: Account) {
-    if (sameOrBlocked(account, other)) return
-
-    viewModelScope.launch { repository.resetRelationship(account.uid, other.uid) }
-  }
-
-  /**
-   * Denies a received friend request from another user.
-   *
-   * This method validates that the operation is valid before proceeding. It prevents denying in the
-   * following cases:
-   * - The accounts are the same user
-   * - Either user has blocked the other
-   *
-   * If validation passes, the relationship is reset asynchronously via the repository.
-   *
-   * @param account The account denying the received friend request
-   * @param other The account who sent the friend request
-   */
-  fun denyFriendRequest(account: Account, other: Account) {
+  fun rejectFriendRequest(account: Account, other: Account) {
     if (sameOrBlocked(account, other)) return
 
     viewModelScope.launch { repository.resetRelationship(account.uid, other.uid) }
