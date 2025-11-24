@@ -58,6 +58,7 @@ data class MapUIState(
     val currentZoomLevel: Float = 14f,
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
+    val selectedClusterPreviews: List<Pair<GeoPinWithLocation, MarkerPreview>>? = null,
     val selectedGeoPin: StorableGeoPin? = null,
     val isLoadingPreview: Boolean = false,
 
@@ -395,6 +396,60 @@ class MapViewModel(
   /** Clears the current selection (both marker preview and geo-pin). */
   fun clearSelectedPin() {
     _uiState.update { it.copy(selectedMarkerPreview = null, selectedGeoPin = null) }
+  }
+
+  /**
+   * Selects a cluster and loads previews for all its pins.
+   *
+   * On failure, an error message is exposed.
+   *
+   * @param cluster The cluster whose pins should be previewed.
+   */
+  fun selectCluster(cluster: Cluster<GeoPinWithLocation>) {
+    viewModelScope.launch {
+      _uiState.update { it.copy(isLoadingPreview = true) }
+
+      try {
+        val pins = cluster.items
+        val previews = markerPreviewRepo.getMarkerPreviews(pins.map { it.geoPin })
+
+        val paired = pins.zip(previews.filterNotNull())
+
+        _uiState.update {
+          it.copy(selectedClusterPreviews = paired, errorMsg = null, isLoadingPreview = false)
+        }
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(
+              selectedClusterPreviews = null,
+              errorMsg = "Failed to load previews for cluster: ${e.message}",
+              isLoadingPreview = false)
+        }
+      }
+    }
+  }
+
+  /**
+   * Selects a single pin from an already selected cluster.
+   *
+   * This clears the cluster selection.
+   *
+   * @param pin The pin selected inside the cluster.
+   * @param preview The preview previously loaded for that pin.
+   */
+  fun selectPinFromCluster(pin: GeoPinWithLocation, preview: MarkerPreview) {
+    _uiState.update {
+      it.copy(
+          selectedClusterPreviews = null,
+          selectedGeoPin = pin.geoPin,
+          selectedMarkerPreview = preview,
+          errorMsg = null)
+    }
+  }
+
+  /** Clears the currently selected cluster. */
+  fun clearSelectedCluster() {
+    _uiState.update { it.copy(selectedClusterPreviews = null) }
   }
 
   /** Clears the current error message from [uiState]. */
