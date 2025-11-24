@@ -69,6 +69,10 @@ data class Relationship(
  *   indicating the relationship status from this account's perspective. Possible statuses include
  *   Friend (mutual friendship), Sent (friend request sent), Pending (friend request received), and
  *   Blocked (user has been blocked). An absent key indicates no relationship exists.
+ * @property notifications List of notifications sent to this account. Notifications can include
+ *   friend requests, discussion invitations, and session invitations. Each notification contains
+ *   metadata about the event and can be executed to perform the associated action (e.g., accepting
+ *   a friend request).
  */
 data class Account(
     val uid: String,
@@ -80,7 +84,8 @@ data class Account(
     var description: String? = null,
     var shopOwner: Boolean = false,
     var spaceRenter: Boolean = false,
-    val relationships: Map<String, RelationshipStatus> = emptyMap()
+    val relationships: Map<String, RelationshipStatus> = emptyMap(),
+    val notifications: List<Notification> = emptyList()
 )
 
 /**
