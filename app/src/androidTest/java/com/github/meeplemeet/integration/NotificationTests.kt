@@ -367,8 +367,8 @@ class NotificationTests : FirestoreTests() {
     notification.execute()
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -427,8 +427,8 @@ class NotificationTests : FirestoreTests() {
     notification.execute()
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
   }
 
   // ==================== listenAccount with Notifications Tests ====================
@@ -517,8 +517,8 @@ class NotificationTests : FirestoreTests() {
 
     // Verify the friend request was NOT accepted
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Sent, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -536,8 +536,8 @@ class NotificationTests : FirestoreTests() {
     delay(500)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -633,8 +633,8 @@ class NotificationTests : FirestoreTests() {
     // Execute the notification (accept friend request)
     notification.execute()
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
 
     // Delete the notification
     accountRepository.deleteNotification(bob.uid, notification.uid)

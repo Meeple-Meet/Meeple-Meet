@@ -1,3 +1,4 @@
+// Docs generated with Claude Code.
 package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation

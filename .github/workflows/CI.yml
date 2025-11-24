@@ -12,6 +12,13 @@ on:
       - synchronize
       - reopened
 
+# Cancel previous workflows if they are the same workflow on same ref (branch/tags)
+# with the same event (push/pull_request) even they are in progress.
+# This setting will help reduce the number of duplicated workflows.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   format-check:
     name: Format Check
@@ -216,7 +223,7 @@ jobs:
   android-tests:
     name: Android Instrumentation Tests
     needs: [format-check, magic-number-check, repeated-strings-check]
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.event.pull_request.draft && 'ubuntu-latest' || 'blacksmith-4vcpu-ubuntu-2404' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
