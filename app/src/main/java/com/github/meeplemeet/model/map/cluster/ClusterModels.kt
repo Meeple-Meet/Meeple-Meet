@@ -9,10 +9,11 @@ package com.github.meeplemeet.model.map.cluster
 data class ClusterItem(val lat: Double, val lng: Double)
 
 /**
- * Represents a group of clustered items, along with the geographic center of the cluster.
+ * Represents a group of items clustered together on a map, along with the geographic center.
  *
+ * @param T The type of the items contained in the cluster.
  * @property centerLat The latitude of the cluster's center, in degrees.
  * @property centerLng The longitude of the cluster's center, in degrees.
- * @property items The list of items contained in this cluster.
+ * @property items The list of items contained in this cluster. Can be of any type [T].
  */
-data class Cluster(val centerLat: Double, val centerLng: Double, val items: List<ClusterItem>)
+data class Cluster<T>(val centerLat: Double, val centerLng: Double, val items: List<T>)

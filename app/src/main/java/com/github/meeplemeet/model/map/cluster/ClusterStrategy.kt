@@ -9,6 +9,8 @@ import kotlin.math.sqrt
 /**
  * Strategy interface for clustering a list of items on a map. Implementations define the clustering
  * algorithm.
+ *
+ * The strategy operates on [ClusterItem]s and returns clusters that group items of the same type.
  */
 @FunctionalInterface
 interface ClusterStrategy {
@@ -18,9 +20,9 @@ interface ClusterStrategy {
    *
    * @param items The list of items to cluster.
    * @param zoomLevel The current map zoom level. Can be used to adjust clustering density.
-   * @return A list of clusters.
+   * @return A list of [Cluster]s containing the input items.
    */
-  fun clusterize(items: List<ClusterItem>, zoomLevel: Float): List<Cluster>
+  fun clusterize(items: List<ClusterItem>, zoomLevel: Float): List<Cluster<ClusterItem>>
 }
 
 private const val DEFAULT_THRESHOLD_KM = 1.0
@@ -45,11 +47,11 @@ class DistanceBasedClusterStrategy(
    *
    * @param items The list of items to cluster.
    * @param zoomLevel Current map zoom level.
-   * @return List of clusters.
+   * @return List of [Cluster]s containing the clustered [ClusterItem]s.
    */
-  override fun clusterize(items: List<ClusterItem>, zoomLevel: Float): List<Cluster> {
+  override fun clusterize(items: List<ClusterItem>, zoomLevel: Float): List<Cluster<ClusterItem>> {
     val threshold = zoomToThreshold(zoomLevel)
-    val clusters = mutableListOf<Cluster>()
+    val clusters = mutableListOf<Cluster<ClusterItem>>()
     val remaining = items.toMutableList()
 
     while (remaining.isNotEmpty()) {
