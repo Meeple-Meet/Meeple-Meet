@@ -1,13 +1,16 @@
 /** Documentation was generated using ChatGPT. */
 package com.github.meeplemeet.ui.sessions
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,10 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
@@ -54,6 +60,9 @@ import com.github.meeplemeet.ui.theme.MessagingColors
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
+const val AMOUNT_OF_PICTURES_PER_ROW = 3
+const val TITLE_MAX_LINES = 1
 /**
  * Main screen that lists gaming sessions for the logged-in user.
  * - Collects a real-time list of sessions via [SessionOverviewViewModel.sessionMapFlow].
@@ -73,63 +82,70 @@ fun SessionsOverviewScreen(
     account: Account?,
     onSelectSession: (String) -> Unit = {}
 ) {
-  val sessionMap by
-      viewModel.sessionMapFlow(account?.uid ?: "").collectAsState(initial = emptyMap())
+    val sessionMap by
+    viewModel.sessionMapFlow(account?.uid ?: "").collectAsState(initial = emptyMap())
 
-  /* --------------  NEW: toggle state  -------------- */
-  var showHistory by remember { mutableStateOf(false) }
+    /* --------------  NEW: toggle state  -------------- */
+    var showHistory by remember { mutableStateOf(false) }
 
-  Scaffold(
-      topBar = {
-        Column(Modifier.fillMaxWidth()) {
-          /* 1. original top-bar (kept) */
-          CenterAlignedTopAppBar(
-              title = {
-                Text(
-                    text = MeepleMeetScreen.SessionsOverview.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-              })
+    Scaffold(
+        topBar = {
+            Column(Modifier.fillMaxWidth()) {
+                /* 1. original top-bar (kept) */
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = MeepleMeetScreen.SessionsOverview.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+                    })
 
-          SessionToggle( // <-- use the same variable
-              showHistory = showHistory,
-              onNext = { showHistory = false },
-              onHistory = { showHistory = true })
-        }
-      },
-      bottomBar = {
-        BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.SessionsOverview,
-            onTabSelected = { navigation.navigateTo(it) })
-      }) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-          when {
-            showHistory -> {
-              /* ----------------  HISTORY (WIP)  ---------------- */
-              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "WIP",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = AppColors.textIconsFade)
-              }
+                SessionToggle( // <-- use the same variable
+                    showHistory = showHistory,
+                    onNext = { showHistory = false },
+                    onHistory = { showHistory = true })
             }
-            sessionMap.isEmpty() -> EmptySessionsListText()
-            else -> {
-              /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
-              LazyColumn(
-                  modifier = Modifier.fillMaxSize(),
-                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                    items(sessionMap.entries.toList(), key = { it.key }) { (id, session) ->
-                      SessionCard(
-                          session = session,
-                          viewModel = viewModel,
-                          modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
-                          onClick = { onSelectSession(id) })
+        },
+        bottomBar = {
+            BottomNavigationMenu(
+                currentScreen = MeepleMeetScreen.SessionsOverview,
+                onTabSelected = { navigation.navigateTo(it) })
+        }) { innerPadding ->
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
+            when {
+                showHistory -> {
+                    val now = System.currentTimeMillis()
+
+                    // Separate past sessions
+                    val pastSessions =
+                        sessionMap.filter { (_, session) ->
+                            session.date.toDate().time < now
+                        }.values.sortedByDescending { it.date.toDate().time }
+
+                    HistoryGrid(sessions = pastSessions)
+
+                }
+                sessionMap.isEmpty() -> EmptySessionsListText()
+                else -> {
+                    /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
+                        items(sessionMap.entries.toList(), key = { it.key }) { (id, session) ->
+                            SessionCard(
+                                session = session,
+                                viewModel = viewModel,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sessionCard_$id"),
+                                onClick = { onSelectSession(id) })
+                        }
                     }
-                  }
+                }
             }
-          }
         }
       }
 }
@@ -137,25 +153,27 @@ fun SessionsOverviewScreen(
 /** Displays a centred label when the user has no upcoming sessions. */
 @Composable
 private fun EmptySessionsListText() {
-  Box(
-      modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge),
-      contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(Dimensions.Spacing.xxxLarge),
+        contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-              Icon(
-                  imageVector = Icons.AutoMirrored.Filled.Article,
-                  contentDescription = null,
-                  modifier = Modifier.size(Dimensions.IconSize.giant),
-                  tint = MessagingColors.secondaryText)
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-              Text(
-                  text = NO_SESSIONS_DEFAULT_TEXT,
-                  style = MaterialTheme.typography.bodyLarge,
-                  fontSize = Dimensions.TextSize.title,
-                  color = MessagingColors.secondaryText)
-            }
-      }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Article,
+                contentDescription = null,
+                modifier = Modifier.size(Dimensions.IconSize.giant),
+                tint = MessagingColors.secondaryText)
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+            Text(
+                text = NO_SESSIONS_DEFAULT_TEXT,
+                style = MaterialTheme.typography.bodyLarge,
+                fontSize = Dimensions.TextSize.title,
+                color = MessagingColors.secondaryText)
+        }
+    }
 }
 
 /**
@@ -220,30 +238,30 @@ public fun SessionOverCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                      Icon(imageVector = Icons.Default.Place, contentDescription = null)
-                      Text(
-                          text = session.location.name,
-                          style = MaterialTheme.typography.bodySmall,
-                          fontSize = Dimensions.TextSize.small,
-                          color = AppColors.textIconsFade,
-                          maxLines = 1,
-                          overflow = TextOverflow.Ellipsis,
-                          modifier = Modifier.weight(1f, fill = false))
-                      Text(
-                          text = "•",
-                          fontSize = Dimensions.TextSize.small,
-                          color = AppColors.textIconsFade)
-                      Text(
-                          text = date,
-                          style = MaterialTheme.typography.bodySmall,
-                          fontSize = Dimensions.TextSize.small,
-                          color = AppColors.textIconsFade)
-                    }
-              }
+                    Icon(imageVector = Icons.Default.Place, contentDescription = null)
+                    Text(
+                        text = session.location.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = Dimensions.TextSize.small,
+                        color = AppColors.textIconsFade,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false))
+                    Text(
+                        text = "•",
+                        fontSize = Dimensions.TextSize.small,
+                        color = AppColors.textIconsFade)
+                    Text(
+                        text = date,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = Dimensions.TextSize.small,
+                        color = AppColors.textIconsFade)
+                }
+            }
         }
 
-    HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
-  }
+        HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
+    }
 }
 
 @Composable
@@ -321,40 +339,119 @@ public fun SessionCard(
  */
 @Composable
 private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory: Boolean) {
-  Row(modifier = Modifier.fillMaxWidth().height(Dimensions.Spacing.xxxLarge)) {
-    /* ----  LEFT HALF – Next Sessions  ---- */
-    Box(
-        modifier =
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .background(if (!showHistory) AppColors.primary else AppColors.divider)
-                .clickable { onNext() },
-        contentAlignment = Alignment.Center) {
-          Text(
-              text = "Next sessions",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Normal,
-              color = if (!showHistory) AppColors.textIcons else AppColors.textIconsFade)
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .height(Dimensions.Spacing.xxxLarge)) {
+        /* ----  LEFT HALF – Next Sessions  ---- */
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(if (!showHistory) AppColors.primary else AppColors.divider)
+                    .clickable { onNext() },
+            contentAlignment = Alignment.Center) {
+            Text(
+                text = "Next sessions",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Normal,
+                color = if (!showHistory) AppColors.textIcons else AppColors.textIconsFade)
         }
 
-    /* ----  RIGHT HALF – History  ---- */
-    Box(
-        modifier =
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .background(if (showHistory) AppColors.primary else AppColors.divider)
-                .clickable { onHistory() },
-        contentAlignment = Alignment.Center) {
-          Text(
-              text = "History",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Normal,
-              color = if (showHistory) AppColors.textIcons else AppColors.textIconsFade)
+        /* ----  RIGHT HALF – History  ---- */
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(if (showHistory) AppColors.primary else AppColors.divider)
+                    .clickable { onHistory() },
+            contentAlignment = Alignment.Center) {
+            Text(
+                text = "History",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Normal,
+                color = if (showHistory) AppColors.textIcons else AppColors.textIconsFade)
         }
-  }
-  HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
+    }
+    HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
 }
-/* ========================================== */
 
-/* ============================================================================================= */
-const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
+@Composable
+private fun HistoryGrid(sessions: List<Session>) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(Dimensions.Spacing.medium)
+    ) {
+        items(sessions.chunked(AMOUNT_OF_PICTURES_PER_ROW)) { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)
+            ) {
+                row.forEach { session ->
+                    HistoryCard(
+                        session = session,
+                        modifier = Modifier.weight(Dimensions.Weight.full)
+                    )
+                }
+
+                repeat(AMOUNT_OF_PICTURES_PER_ROW - row.size) {
+                    Spacer(modifier = Modifier.weight(Dimensions.Weight.full))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+        }
+    }
+}
+
+@Composable
+private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
+    val url = getSessionPicture(session)
+
+    Column(
+        modifier = modifier
+            .border(
+                width = Dimensions.DividerThickness.standard,
+                color = AppColors.divider,
+                shape = MaterialTheme.shapes.medium
+            )
+            .clip(MaterialTheme.shapes.medium)
+            .background(AppColors.secondary)
+            .padding(Dimensions.Spacing.small),
+        horizontalAlignment = Alignment.CenterHorizontally   // CENTER TEXT
+    ) {
+        // Selfie-style portrait ratio
+        val selfieRatio = Dimensions.Fractions.topBarDivider
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(selfieRatio)
+                .clip(MaterialTheme.shapes.medium)
+        ) {
+            Image(
+                painter = rememberAsyncImagePainter(url),
+                contentDescription = session.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+
+        Text(
+            text = session.name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textIcons,
+            maxLines = TITLE_MAX_LINES,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.CenterHorizontally)   // ENSURE CENTERING
+        )
+    }
+}
+private fun getSessionPicture(session: Session): String {
+    // TODO: Replace with real game/session image
+    return "https://npr.brightspotcdn.com/dims4/default/389845d/2147483647/strip/true/crop/4373x3279+0+0/resize/880x660!/quality/90/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2Flegacy%2Fimages%2Fnews%2Fnpr%2F2020%2F07%2F887305543_2064699070.jpg"
+}
