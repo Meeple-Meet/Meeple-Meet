@@ -36,9 +36,6 @@ data class MapUIState(
     get() = allGeoPins.filter { it.geoPin.type in activeFilters }
 }
 
-/** A geo-pin along with its current geographic location. */
-data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
-
 /**
  * ViewModel responsible for managing and observing geographically indexed map data (geo-pins).
  *
