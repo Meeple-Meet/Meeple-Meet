@@ -111,6 +111,23 @@ data class Notification(
   }
 
   /**
+   * Converts this notification to its Firestore-serializable form without UID.
+   *
+   * Used when storing notifications in Firestore, where the UID is stored as the map key and
+   * doesn't need to be duplicated in the value.
+   *
+   * @return A [NotificationNoUid] instance with all properties except UID.
+   * @see NotificationNoUid for the serializable form
+   */
+  fun toNoUid(): NotificationNoUid =
+      NotificationNoUid(
+          senderOrDiscussionId = senderOrDiscussionId,
+          message = message,
+          read = read,
+          type = type,
+          executed = executed)
+
+  /**
    * Reconstructs a full [Notification] from its Firestore representation.
    *
    * Combines the map key (notification UID) and receiver ID with the map value (notification data)
