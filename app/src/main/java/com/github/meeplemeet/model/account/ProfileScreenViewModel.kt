@@ -36,8 +36,8 @@ class ProfileScreenViewModel(
    */
   private fun sameOrBlocked(account: Account, other: Account) =
       account.uid == other.uid ||
-          account.relationships[other.uid] == RelationshipStatus.Blocked ||
-          other.relationships[account.uid] == RelationshipStatus.Blocked
+          account.relationships[other.uid] == RelationshipStatus.BLOCKED ||
+          other.relationships[account.uid] == RelationshipStatus.BLOCKED
 
   /**
    * Sends a friend request from the current account to another user.
@@ -88,8 +88,8 @@ class ProfileScreenViewModel(
     val b = other.relationships[account.uid]
 
     if (sameOrBlocked(account, other) ||
-        a != RelationshipStatus.Pending ||
-        b != RelationshipStatus.Sent)
+        a != RelationshipStatus.PENDING ||
+        b != RelationshipStatus.SENT)
         return
 
     viewModelScope.launch { repository.acceptFriendRequest(account.uid, other.uid) }
@@ -113,7 +113,7 @@ class ProfileScreenViewModel(
    * @param other The account being blocked
    */
   fun blockUser(account: Account, other: Account) {
-    if (account.uid == other.uid || account.relationships[other.uid] == RelationshipStatus.Blocked)
+    if (account.uid == other.uid || account.relationships[other.uid] == RelationshipStatus.BLOCKED)
         return
 
     viewModelScope.launch { repository.blockUser(account.uid, other.uid) }
@@ -190,7 +190,7 @@ class ProfileScreenViewModel(
    * @param other The account being unblocked
    */
   fun unblockUser(account: Account, other: Account) {
-    if (account.uid == other.uid || account.relationships[other.uid] != RelationshipStatus.Blocked)
+    if (account.uid == other.uid || account.relationships[other.uid] != RelationshipStatus.BLOCKED)
         return
 
     viewModelScope.launch { repository.unblockUser(account.uid, other.uid) }

@@ -16,19 +16,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class RelationshipStatus {
   /** Mutual friendship - both users have accepted the friend request. */
-  Friend,
+  FRIEND,
 
   /** Friend request sent - the current user has sent a request to the other user. */
-  Sent,
+  SENT,
 
   /** Friend request pending - the other user has sent a request to the current user. */
-  Pending,
+  PENDING,
 
   /** Blocked - the current user has blocked the other user. */
-  Blocked,
-
-  /** Deleted - removes the relationship with the other user altogether */
-  Delete,
+  BLOCKED,
 }
 
 /**
@@ -44,7 +41,7 @@ enum class RelationshipStatus {
 @Serializable
 data class Relationship(
     val uid: String,
-    val status: RelationshipStatus = RelationshipStatus.Friend
+    val status: RelationshipStatus = RelationshipStatus.FRIEND
 )
 
 /**

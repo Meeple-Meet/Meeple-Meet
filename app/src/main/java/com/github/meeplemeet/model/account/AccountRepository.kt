@@ -85,9 +85,9 @@ class AccountRepository : FirestoreRepository("accounts") {
             try {
               RelationshipStatus.valueOf(it)
             } catch (_: IllegalArgumentException) {
-              RelationshipStatus.Friend
+              RelationshipStatus.FRIEND
             }
-          } ?: RelationshipStatus.Friend
+          } ?: RelationshipStatus.FRIEND
       Relationship(doc.id, status)
     }
   }
@@ -197,7 +197,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param otherId The ID of the account receiving the friend request
    */
   suspend fun sendFriendRequest(accountId: String, otherId: String) {
-    setFriendStatus(accountId, otherId, RelationshipStatus.Sent, RelationshipStatus.Pending)
+    setFriendStatus(accountId, otherId, RelationshipStatus.SENT, RelationshipStatus.PENDING)
   }
 
   /**
@@ -210,7 +210,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param otherId The ID of the account whose friend request is being accepted
    */
   suspend fun acceptFriendRequest(accountId: String, otherId: String) {
-    setFriendStatus(accountId, otherId, RelationshipStatus.Friend, RelationshipStatus.Friend)
+    setFriendStatus(accountId, otherId, RelationshipStatus.FRIEND, RelationshipStatus.FRIEND)
   }
 
   /**
@@ -231,9 +231,9 @@ class AccountRepository : FirestoreRepository("accounts") {
           val bSnap = tx.get(bRef)
           val bStatus = bSnap.getString("status")
 
-          tx.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.Blocked))
+          tx.set(aRef, mapOf(FIELD_STATUS to RelationshipStatus.BLOCKED))
 
-          if (bStatus != RelationshipStatus.Blocked.name) {
+          if (bStatus != RelationshipStatus.BLOCKED.name) {
             tx.delete(bRef)
           }
         }
@@ -269,7 +269,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param friendId The ID of the second account in the relationship
    */
   suspend fun resetRelationship(accountId: String, friendId: String) {
-    setFriendStatus(accountId, friendId, RelationshipStatus.Delete, RelationshipStatus.Delete)
+    setFriendStatus(accountId, friendId, null, null)
   }
 
   /**
@@ -281,20 +281,20 @@ class AccountRepository : FirestoreRepository("accounts") {
    *
    * For each user, the method either:
    * - Creates/updates a relationship document with the specified status
-   * - Deletes the relationship document if the status is [RelationshipStatus.Delete]
+   * - Deletes the relationship document if the status is null
    *
    * @param accountId The ID of the first account in the relationship
    * @param friendId The ID of the second account in the relationship
    * @param accountStatus The relationship status to set for the first account's perspective. Use
-   *   [RelationshipStatus.Delete] to remove the relationship document.
+   *   null to remove the relationship document.
    * @param friendStatus The relationship status to set for the second account's perspective. Use
-   *   [RelationshipStatus.Delete] to remove the relationship document.
+   *   null to remove the relationship document.
    */
   private suspend fun setFriendStatus(
       accountId: String,
       friendId: String,
-      accountStatus: RelationshipStatus,
-      friendStatus: RelationshipStatus
+      accountStatus: RelationshipStatus?,
+      friendStatus: RelationshipStatus?
   ) {
     val batch = db.batch()
 
@@ -302,11 +302,11 @@ class AccountRepository : FirestoreRepository("accounts") {
     val bRef = relationships(friendId).document(accountId)
 
     // Update or delete the first user's relationship document
-    if (accountStatus == RelationshipStatus.Delete) batch.delete(aRef)
+    if (accountStatus == null) batch.delete(aRef)
     else batch[aRef] = mapOf(FIELD_STATUS to accountStatus)
 
     // Update or delete the second user's relationship document
-    if (friendStatus == RelationshipStatus.Delete) batch.delete(bRef)
+    if (friendStatus == null) batch.delete(bRef)
     else batch[bRef] = mapOf(FIELD_STATUS to friendStatus)
 
     batch.commit().await()

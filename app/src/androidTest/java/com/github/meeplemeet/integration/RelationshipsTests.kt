@@ -62,9 +62,9 @@ class RelationshipsTests : FirestoreTests() {
     val updatedBob = accounts[1]
 
     assertNotNull(updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[bob.uid])
     assertNotNull(updatedBob.relationships[alice.uid])
-    assertEquals(RelationshipStatus.Pending, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedBob.relationships[alice.uid])
   }
 
   @Test
@@ -75,8 +75,8 @@ class RelationshipsTests : FirestoreTests() {
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
 
     assertEquals(2, updatedCharlie.relationships.size)
-    assertEquals(RelationshipStatus.Pending, updatedCharlie.relationships[alice.uid])
-    assertEquals(RelationshipStatus.Pending, updatedCharlie.relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedCharlie.relationships[alice.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedCharlie.relationships[bob.uid])
   }
 
   @Test
@@ -87,8 +87,8 @@ class RelationshipsTests : FirestoreTests() {
     val updatedAlice = accountRepository.getAccount(alice.uid)
 
     assertEquals(2, updatedAlice.relationships.size)
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[charlie.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[charlie.uid])
   }
 
   // ==================== acceptFriendRequest Tests ====================
@@ -102,8 +102,8 @@ class RelationshipsTests : FirestoreTests() {
     val updatedAlice = accounts[0]
     val updatedBob = accounts[1]
 
-    assertEquals(RelationshipStatus.Friend, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedBob.relationships[alice.uid])
   }
 
   @Test
@@ -112,13 +112,13 @@ class RelationshipsTests : FirestoreTests() {
 
     // Verify Sent and Pending states exist first
     val beforeAccept = accountRepository.getAccount(alice.uid)
-    assertEquals(RelationshipStatus.Sent, beforeAccept.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, beforeAccept.relationships[bob.uid])
 
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     // Verify both are now Friend status
     val afterAccept = accountRepository.getAccount(alice.uid)
-    assertEquals(RelationshipStatus.Friend, afterAccept.relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, afterAccept.relationships[bob.uid])
   }
 
   @Test
@@ -136,12 +136,12 @@ class RelationshipsTests : FirestoreTests() {
     val updatedCharlie = accounts[2]
 
     // Alice and Bob are friends
-    assertEquals(RelationshipStatus.Friend, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedBob.relationships[alice.uid])
 
     // Alice and Charlie still have pending request
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[charlie.uid])
-    assertEquals(RelationshipStatus.Pending, updatedCharlie.relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[charlie.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedCharlie.relationships[alice.uid])
   }
 
   // ==================== blockUser Tests ====================
@@ -154,7 +154,7 @@ class RelationshipsTests : FirestoreTests() {
     val updatedAlice = accounts[0]
     val updatedBob = accounts[1]
 
-    assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedAlice.relationships[bob.uid])
     assertNull(updatedBob.relationships[alice.uid])
     assertFalse(updatedBob.relationships.containsKey(alice.uid))
   }
@@ -172,8 +172,8 @@ class RelationshipsTests : FirestoreTests() {
     val updatedBob = accounts[1]
 
     // Both should have Blocked status
-    assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Blocked, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedBob.relationships[alice.uid])
   }
 
   @Test
@@ -190,7 +190,7 @@ class RelationshipsTests : FirestoreTests() {
     val updatedBob = accounts[1]
 
     // Alice has Bob blocked
-    assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedAlice.relationships[bob.uid])
     // Bob has no relationship with Alice
     assertNull(updatedBob.relationships[alice.uid])
   }
@@ -208,7 +208,7 @@ class RelationshipsTests : FirestoreTests() {
     val updatedBob = accounts[1]
 
     // Bob has Alice blocked
-    assertEquals(RelationshipStatus.Blocked, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedBob.relationships[alice.uid])
     // Alice has no relationship (her Sent status was deleted)
     assertNull(updatedAlice.relationships[bob.uid])
   }
@@ -269,8 +269,8 @@ class RelationshipsTests : FirestoreTests() {
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     var updatedAlice = accounts[0]
     var updatedBob = accounts[1]
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedBob.relationships[alice.uid])
 
     // Accept request
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
@@ -278,8 +278,8 @@ class RelationshipsTests : FirestoreTests() {
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     updatedAlice = accounts[0]
     updatedBob = accounts[1]
-    assertEquals(RelationshipStatus.Friend, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedBob.relationships[alice.uid])
 
     // Remove friendship
     accountRepository.resetRelationship(alice.uid, bob.uid)
@@ -305,7 +305,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.blockUser(alice.uid, bob.uid)
 
     var updatedAlice = accountRepository.getAccount(alice.uid)
-    assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedAlice.relationships[bob.uid])
 
     accountRepository.resetRelationship(alice.uid, bob.uid)
 
@@ -316,8 +316,8 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -337,14 +337,14 @@ class RelationshipsTests : FirestoreTests() {
     val updatedCharlie = accounts[2]
 
     // Verify all relationships are independent
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, updatedAlice.relationships[charlie.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedAlice.relationships[charlie.uid])
 
-    assertEquals(RelationshipStatus.Pending, updatedBob.relationships[alice.uid])
-    assertEquals(RelationshipStatus.Sent, updatedBob.relationships[charlie.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedBob.relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, updatedBob.relationships[charlie.uid])
 
-    assertEquals(RelationshipStatus.Sent, updatedCharlie.relationships[alice.uid])
-    assertEquals(RelationshipStatus.Pending, updatedCharlie.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, updatedCharlie.relationships[alice.uid])
+    assertEquals(RelationshipStatus.PENDING, updatedCharlie.relationships[bob.uid])
   }
 
   // ==================== Edge Cases ====================
@@ -390,24 +390,24 @@ class RelationshipsTests : FirestoreTests() {
     val fetch2 = accountRepository.getAccount(alice.uid)
     val fetch3 = accountRepository.getAccount(alice.uid)
 
-    assertEquals(RelationshipStatus.Sent, fetch1.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Sent, fetch2.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Sent, fetch3.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, fetch1.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, fetch2.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, fetch3.relationships[bob.uid])
 
     // Test 2: Friendship with one user doesn't affect other relationships
     accountRepository.sendFriendRequest(alice.uid, charlie.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     var updatedAlice = accountRepository.getAccount(alice.uid)
-    assertEquals(RelationshipStatus.Friend, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[charlie.uid])
+    assertEquals(RelationshipStatus.FRIEND, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[charlie.uid])
 
     // Test 3: Blocking one user doesn't affect other relationships
     accountRepository.blockUser(alice.uid, bob.uid)
 
     updatedAlice = accountRepository.getAccount(alice.uid)
-    assertEquals(RelationshipStatus.Blocked, updatedAlice.relationships[bob.uid])
-    assertEquals(RelationshipStatus.Sent, updatedAlice.relationships[charlie.uid])
+    assertEquals(RelationshipStatus.BLOCKED, updatedAlice.relationships[bob.uid])
+    assertEquals(RelationshipStatus.SENT, updatedAlice.relationships[charlie.uid])
   }
 
   // ==================== ViewModel Validation Tests ====================
@@ -427,8 +427,8 @@ class RelationshipsTests : FirestoreTests() {
 
     viewModel.sendFriendRequest(updatedAlice, updatedBob)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Sent, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, accounts[1].relationships[alice.uid])
 
     // Test 3: Prevent when already friends
     accountRepository.resetRelationship(alice.uid, bob.uid)
@@ -441,8 +441,8 @@ class RelationshipsTests : FirestoreTests() {
 
     viewModel.sendFriendRequest(updatedAlice, updatedBob)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
 
     // Test 4: Prevent when one user blocked the other
     accountRepository.resetRelationship(alice.uid, bob.uid)
@@ -456,7 +456,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.sendFriendRequest(updatedBob, updatedAlice)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 
@@ -467,8 +467,8 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.sendFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Sent, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -489,8 +489,8 @@ class RelationshipsTests : FirestoreTests() {
 
     viewModel.acceptFriendRequest(accounts[0], accounts[1])
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Sent, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, accounts[1].relationships[alice.uid])
 
     // Test 3: Prevent accepting when already friends
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
@@ -498,8 +498,8 @@ class RelationshipsTests : FirestoreTests() {
 
     viewModel.acceptFriendRequest(accounts[0], accounts[1])
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
 
     // Test 4: Prevent accepting same user
     viewModel.acceptFriendRequest(alice, alice)
@@ -515,7 +515,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.acceptFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 
@@ -527,8 +527,8 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.acceptFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -548,7 +548,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.blockUser(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 
@@ -566,7 +566,7 @@ class RelationshipsTests : FirestoreTests() {
     kotlinx.coroutines.delay(100)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 2: Block after friendship
@@ -581,7 +581,7 @@ class RelationshipsTests : FirestoreTests() {
     kotlinx.coroutines.delay(100)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, charlie.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[charlie.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[charlie.uid])
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 3: Mutual blocking
@@ -593,8 +593,8 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.blockUser(bob.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Blocked, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -611,7 +611,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.cancelFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 
@@ -629,7 +629,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.denyFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 
@@ -650,7 +650,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.removeFriend(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 
@@ -681,8 +681,8 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.unblockUser(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
   }
 
   @Test
@@ -742,8 +742,8 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.sendFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Sent, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Pending, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.PENDING, accounts[1].relationships[alice.uid])
 
     // Test 2: After accepting, cannot send another request
     viewModel.acceptFriendRequest(accounts[1], accounts[0])
@@ -752,8 +752,8 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.sendFriendRequest(accounts[0], accounts[1])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Friend, accounts[0].relationships[bob.uid])
-    assertEquals(RelationshipStatus.Friend, accounts[1].relationships[alice.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.FRIEND, accounts[1].relationships[alice.uid])
 
     // Test 3: After blocking, cannot send friend request
     viewModel.blockUser(accounts[0], accounts[1])
@@ -763,7 +763,7 @@ class RelationshipsTests : FirestoreTests() {
     viewModel.sendFriendRequest(accounts[1], accounts[0])
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
-    assertEquals(RelationshipStatus.Blocked, accounts[0].relationships[bob.uid])
+    assertEquals(RelationshipStatus.BLOCKED, accounts[0].relationships[bob.uid])
     assertNull(accounts[1].relationships[alice.uid])
   }
 }
