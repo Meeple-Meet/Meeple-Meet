@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.storage.StorageManager
+import android.util.Log
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.DiskStorageException
@@ -19,6 +20,7 @@ import java.net.URLDecoder
 import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -828,7 +830,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @return The encoded WebP image as a byte array
    * @throws ImageProcessingException if image decoding or encoding fails
    */
-  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 800, quality: Int = 40): ByteArray {
+  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 800, quality: Int = 75): ByteArray {
     // Check if file exists and is readable
     val inputFile = File(inputPath)
     if (!inputFile.exists()) {

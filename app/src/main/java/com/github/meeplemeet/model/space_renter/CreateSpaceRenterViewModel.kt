@@ -9,7 +9,9 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for creating new space renters.
@@ -86,8 +88,10 @@ class CreateSpaceRenterViewModel(
             if (photoCollectionUrl.isNotEmpty()) {
               try {
                 // Upload photos to Firebase Storage and get download URLs
-                imageRepository.saveSpaceRenterPhotos(
-                    context, created.id, *photoCollectionUrl.toTypedArray())
+                withContext(NonCancellable) {
+                  imageRepository.saveSpaceRenterPhotos(
+                      context, created.id, *photoCollectionUrl.toTypedArray())
+                }
               } catch (e: Exception) {
                 // Log and continue with empty list so the renter exists even if uploads fail.
                 Log.e(
@@ -101,7 +105,9 @@ class CreateSpaceRenterViewModel(
         // Update the document with Firebase Storage download URLs
         if (uploadedUrls.isNotEmpty()) {
           try {
-            repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+            withContext(NonCancellable) {
+              repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+            }
           } catch (e: Exception) {
             // Updating should not crash the app; log and continue.
             Log.e(
