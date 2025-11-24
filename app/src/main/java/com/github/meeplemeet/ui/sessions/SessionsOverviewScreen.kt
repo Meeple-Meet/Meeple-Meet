@@ -102,7 +102,7 @@ fun SessionsOverviewScreen(
                     modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
               })
 
-          SessionToggle( // <-- use the same variable
+          SessionToggle(
               showHistory = showHistory,
               onNext = { showHistory = false },
               onHistory = { showHistory = true })
@@ -118,7 +118,6 @@ fun SessionsOverviewScreen(
             showHistory -> {
               val now = System.currentTimeMillis()
 
-              // Separate past sessions
               val pastSessions =
                   sessionMap
                       .filter { (_, session) -> session.date.toDate().time < now }
@@ -423,7 +422,7 @@ private fun HistoryGrid(sessions: List<Session>) {
  */
 @Composable
 private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
-  val url = getSessionPicture(session)
+  val url = getSessionPicture()
 
   Column(
       modifier =
@@ -435,9 +434,7 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
               .clip(MaterialTheme.shapes.medium)
               .background(AppColors.secondary)
               .padding(Dimensions.Spacing.small),
-      horizontalAlignment = Alignment.CenterHorizontally // CENTER TEXT
-      ) {
-        // Selfie-style portrait ratio
+      horizontalAlignment = Alignment.CenterHorizontally) {
         val selfieRatio = Dimensions.Fractions.topBarDivider
 
         Box(
@@ -460,8 +457,7 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
             color = AppColors.textIcons,
             maxLines = TITLE_MAX_LINES,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.CenterHorizontally) // ENSURE CENTERING
-            )
+            modifier = Modifier.align(Alignment.CenterHorizontally))
       }
 }
 
@@ -471,10 +467,8 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
  * This function acts as a placeholder until the real session or game image retrieval logic is
  * implemented. All history cards currently use this placeholder image.
  *
- * @param session The session for which an image should be resolved.
  * @return A placeholder URL pointing to a temporary session image.
  */
-private fun getSessionPicture(session: Session): String {
-  // TODO: Replace with real game/session image
+private fun getSessionPicture(): String {
   return "https://npr.brightspotcdn.com/dims4/default/389845d/2147483647/strip/true/crop/4373x3279+0+0/resize/880x660!/quality/90/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2Flegacy%2Fimages%2Fnews%2Fnpr%2F2020%2F07%2F887305543_2064699070.jpg"
 }
