@@ -125,13 +125,15 @@ data class AccountNoUid(
  * @param relationships List of all relationships this account has. This will be converted into a
  *   map keyed by the other user's UID with the relationship status as the value. Defaults to empty
  *   list.
+ * @param notifications List of all notifications for this account. Defaults to empty list.
  * @return A fully constructed [Account] instance with relationships map populated.
  */
 fun fromNoUid(
     id: String,
     accountNoUid: AccountNoUid,
     previews: Map<String, DiscussionPreviewNoUid> = emptyMap(),
-    relationships: List<Relationship> = emptyList()
+    relationships: List<Relationship> = emptyList(),
+    notifications: List<Notification> = emptyList()
 ): Account {
   // Convert relationship list to map for efficient lookup
   val mappedRelationships = relationships.associate { it.uid to it.status }
@@ -146,5 +148,6 @@ fun fromNoUid(
       description = accountNoUid.description,
       shopOwner = accountNoUid.shopOwner,
       spaceRenter = accountNoUid.spaceRenter,
-      relationships = mappedRelationships)
+      relationships = mappedRelationships,
+      notifications = notifications)
 }

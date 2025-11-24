@@ -61,12 +61,12 @@ enum class NotificationType {
  * @see NotificationNoUid for the Firestore-serializable form
  */
 data class Notification(
-    val uid: String,
-    val senderOrDiscussionId: String,
-    val receiverId: String,
-    val message: String,
-    val read: Boolean,
-    val type: NotificationType,
+    val uid: String = "",
+    val senderOrDiscussionId: String = "",
+    val receiverId: String = "",
+    val message: String = "",
+    val read: Boolean = false,
+    val type: NotificationType = NotificationType.FriendRequest,
     val sentAt: Timestamp = Timestamp.now(),
     private var executed: Boolean = false,
 ) {
@@ -109,24 +109,6 @@ data class Notification(
       }
     }
   }
-
-  /**
-   * Converts this notification to its Firestore-serializable form without UID.
-   *
-   * Used when storing notifications in Firestore, where the UID is stored as the map key and
-   * doesn't need to be duplicated in the value.
-   *
-   * @return A [NotificationNoUid] instance with all properties except UID.
-   * @see NotificationNoUid for the serializable form
-   */
-  fun toNoUid(): NotificationNoUid =
-      NotificationNoUid(
-          senderOrDiscussionId = senderOrDiscussionId,
-          message = message,
-          read = read,
-          type = type,
-          executed = executed,
-          sentAt = sentAt)
 
   /**
    * Reconstructs a full [Notification] from its Firestore representation.
