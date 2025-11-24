@@ -852,7 +852,7 @@ class FirestoreSessionTests : FirestoreTests() {
   @Test(expected = PermissionDeniedException::class)
   fun nonAdminCannotModifySessionFields() = runTest {
     // First add account2 to the discussion
-    discussionRepository.addUserToDiscussion(baseDiscussion, account2.uid)
+    discussionRepository.addUserToDiscussion(baseDiscussion.uid, account2.uid)
 
     val updatedBaseDiscussion = discussionRepository.getDiscussion(baseDiscussion.uid)
 
