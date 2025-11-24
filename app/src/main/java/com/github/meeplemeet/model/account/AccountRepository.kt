@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -70,7 +71,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @return A map of discussion IDs to their preview objects
    */
   private fun extractPreviews(
-      documents: List<com.google.firebase.firestore.DocumentSnapshot>
+      documents: List<DocumentSnapshot>
   ): Map<String, DiscussionPreviewNoUid> {
     return documents.associate { doc ->
       doc.id to (doc.toObject(DiscussionPreviewNoUid::class.java) ?: DiscussionPreviewNoUid())
@@ -86,9 +87,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param documents The list of documents from the relationships subcollection
    * @return A list of Relationship objects
    */
-  private fun extractRelationships(
-      documents: List<com.google.firebase.firestore.DocumentSnapshot>
-  ): List<Relationship> {
+  private fun extractRelationships(documents: List<DocumentSnapshot>): List<Relationship> {
     return documents.map { doc ->
       val statusString = doc.getString(FIELD_STATUS)
       val status =
@@ -100,6 +99,30 @@ class AccountRepository : FirestoreRepository("accounts") {
             }
           } ?: RelationshipStatus.Friend
       Relationship(doc.id, status)
+    }
+  }
+
+  /**
+   * Extracts notifications from a Firestore query snapshot.
+   *
+   * Converts Firestore documents from the notifications subcollection into [Notification] objects.
+   * Each document is deserialized from [NotificationNoUid] format and enriched with the document ID
+   * (as the notification UID) and the receiver's account ID using [Notification.fromNoUid].
+   *
+   * Documents that fail to deserialize are silently skipped using [mapNotNull], ensuring that
+   * malformed data doesn't break the entire notifications list.
+   *
+   * @param documents The list of documents from the notifications subcollection
+   * @param receiverId The ID of the user receiving the notifications
+   * @return A list of Notification objects with UIDs and receiverId populated
+   */
+  private fun extractNotifications(
+      documents: List<DocumentSnapshot>,
+      receiverId: String
+  ): List<Notification> {
+    return documents.mapNotNull { doc ->
+      val notificationNoUid = doc.toObject(NotificationNoUid::class.java)
+      notificationNoUid?.let { Notification().fromNoUid(doc.id, receiverId, notificationNoUid) }
     }
   }
 
@@ -127,14 +150,19 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
-   * Retrieves an account and its associated discussion previews and relationships by ID.
+   * Retrieves an account and its associated discussion previews, relationships, and notifications
+   * by ID.
    *
-   * This method fetches the account document, its discussion previews subcollection, and its
-   * relationships subcollection, then combines them into a single [Account] object. The
-   * relationships are converted from a list to a map for efficient lookup.
+   * This method fetches the account document, its discussion previews subcollection, its
+   * relationships subcollection, and its notifications subcollection, then combines them into a
+   * single [Account] object. The relationships are converted from a list to a map for efficient
+   * lookup.
    *
    * @param id The account ID to retrieve
-   * @return The Account object with populated discussion previews and relationships map
+   * @param getAllData If true, fetches all subcollections (previews, relationships, notifications).
+   *   If false, returns account with empty subcollections. Defaults to true.
+   * @return The Account object with populated discussion previews, relationships map, and
+   *   notifications list
    * @throws AccountNotFoundException if the account does not exist
    */
   suspend fun getAccount(id: String, getAllData: Boolean = true): Account {
@@ -149,18 +177,25 @@ class AccountRepository : FirestoreRepository("accounts") {
     val relationships =
         if (getAllData) extractRelationships(relationshipsSnap!!.documents) else emptyList()
 
-    return fromNoUid(id, account, previews, relationships)
+    val notificationsSnap = if (getAllData) notifications(id).get().await() else null
+    val notifications =
+        if (getAllData) extractNotifications(notificationsSnap!!.documents, id) else emptyList()
+
+    return fromNoUid(id, account, previews, relationships, notifications)
   }
 
   /**
-   * Retrieves multiple accounts and their discussion previews and relationships concurrently.
+   * Retrieves multiple accounts and their discussion previews, relationships, and notifications
+   * concurrently.
    *
    * This method fetches all accounts in parallel using coroutines for optimal performance by
    * calling [getAccount] for each ID concurrently.
    *
    * @param ids List of account IDs to retrieve
+   * @param getAllData If true, fetches all subcollections (previews, relationships, notifications)
+   *   for each account. If false, returns accounts with empty subcollections. Defaults to true.
    * @return List of Account objects corresponding to the provided IDs, each with populated
-   *   discussion previews and relationships map
+   *   discussion previews, relationships map, and notifications list
    * @throws AccountNotFoundException if any of the accounts do not exist
    */
   suspend fun getAccounts(ids: List<String>, getAllData: Boolean = true): List<Account> =
@@ -207,11 +242,12 @@ class AccountRepository : FirestoreRepository("accounts") {
    * Creates a bidirectional relationship where the sender has status "Sent" and the recipient has
    * status "Pending". This is executed atomically using a Firestore batch.
    *
-   * @param accountId The ID of the account sending the friend request
+   * @param account The the account sending the friend request
    * @param otherId The ID of the account receiving the friend request
    */
-  suspend fun sendFriendRequest(accountId: String, otherId: String) {
-    setFriendStatus(accountId, otherId, RelationshipStatus.Sent, RelationshipStatus.Pending)
+  suspend fun sendFriendRequest(account: Account, otherId: String) {
+    setFriendStatus(account.uid, otherId, RelationshipStatus.Sent, RelationshipStatus.Pending)
+    sendFriendRequestNotification(otherId, account)
   }
 
   /**
@@ -361,6 +397,17 @@ class AccountRepository : FirestoreRepository("accounts") {
         "You've been invited to join ${discussion.name}'s session!")
   }
 
+  suspend fun readNotification(accountId: String, notificationId: String) {
+    notifications(accountId)
+        .document(notificationId)
+        .update(NotificationNoUid::read.name, true)
+        .await()
+  }
+
+  suspend fun deleteNotification(accountId: String, notificationId: String) {
+    notifications(accountId).document(notificationId).delete().await()
+  }
+
   /**
    * Internal helper method to create and store a notification in Firestore.
    *
@@ -389,24 +436,26 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
-   * Creates a Flow that listens for real-time changes to an account, its discussion previews, and
-   * its relationships.
+   * Creates a Flow that listens for real-time changes to an account, its discussion previews, its
+   * relationships, and its notifications.
    *
    * This method sets up Firestore listeners that emit updated account data whenever changes occur
-   * in the account document, previews subcollection, or relationships subcollection. The flow emits
-   * a complete Account object including all discussion previews and the relationships map.
+   * in the account document, previews subcollection, relationships subcollection, or notifications
+   * subcollection. The flow emits a complete Account object including all discussion previews, the
+   * relationships map, and the notifications list.
    *
    * The listeners are automatically cleaned up when the flow is cancelled.
    *
    * @param accountId The ID of the account to listen to
    * @return A Flow that emits Account objects when changes are detected in the account, its
-   *   previews, or its relationships
+   *   previews, its relationships, or its notifications
    */
   fun listenAccount(accountId: String): Flow<Account> = callbackFlow {
     val accountRef = collection.document(accountId)
 
     var previewsListener: ListenerRegistration? = null
     var relationshipsListener: ListenerRegistration? = null
+    var notificationsListener: ListenerRegistration? = null
 
     val accountListener =
         accountRef.addSnapshotListener { snapshot, e ->
@@ -421,16 +470,19 @@ class AccountRepository : FirestoreRepository("accounts") {
           // Remove old listeners before adding new ones
           previewsListener?.remove()
           relationshipsListener?.remove()
+          notificationsListener?.remove()
 
           var cachedPreviews: Map<String, DiscussionPreviewNoUid>? = null
           var cachedRelationships: List<Relationship>? = null
+          var cachedNotifications: List<Notification>? = null
 
-          // Helper function to emit account when both previews and relationships are loaded
+          // Helper function to emit account when all subcollections are loaded
           fun tryEmitAccount() {
             val previews = cachedPreviews
             val relationships = cachedRelationships
-            if (previews != null && relationships != null) {
-              trySend(fromNoUid(accountId, accountNoUid, previews, relationships))
+            val notifications = cachedNotifications
+            if (previews != null && relationships != null && notifications != null) {
+              trySend(fromNoUid(accountId, accountNoUid, previews, relationships, notifications))
             }
           }
 
@@ -459,12 +511,26 @@ class AccountRepository : FirestoreRepository("accounts") {
                   tryEmitAccount()
                 }
               }
+
+          // Listen to notifications subcollection
+          notificationsListener =
+              notifications(accountId).addSnapshotListener { qs, e4 ->
+                if (e4 != null) {
+                  close(e4)
+                  return@addSnapshotListener
+                }
+                if (qs != null) {
+                  cachedNotifications = extractNotifications(qs.documents, accountId)
+                  tryEmitAccount()
+                }
+              }
         }
 
     awaitClose {
       accountListener.remove()
       previewsListener?.remove()
       relationshipsListener?.remove()
+      notificationsListener?.remove()
     }
   }
 }

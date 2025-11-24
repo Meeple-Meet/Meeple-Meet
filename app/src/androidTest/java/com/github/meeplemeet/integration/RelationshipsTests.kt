@@ -54,7 +54,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun sendFriendRequest_createsBidirectionalRelationshipAndPersists() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     // Fetch accounts fresh from Firestore to verify persistence
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -69,8 +69,8 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun sendFriendRequest_multipleUsersCanSendToSameUser() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, charlie.uid)
-    accountRepository.sendFriendRequest(bob.uid, charlie.uid)
+    accountRepository.sendFriendRequest(alice, charlie.uid)
+    accountRepository.sendFriendRequest(bob, charlie.uid)
 
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
 
@@ -81,8 +81,8 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun sendFriendRequest_oneUserCanSendToMultipleUsers() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
-    accountRepository.sendFriendRequest(alice.uid, charlie.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
+    accountRepository.sendFriendRequest(alice, charlie.uid)
 
     val updatedAlice = accountRepository.getAccount(alice.uid)
 
@@ -95,7 +95,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun acceptFriendRequest_createsMutualFriendship() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -108,7 +108,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun acceptFriendRequest_updatesExistingDocuments() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     // Verify Sent and Pending states exist first
     val beforeAccept = accountRepository.getAccount(alice.uid)
@@ -124,8 +124,8 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun acceptFriendRequest_multipleFriendshipsIndependent() = runBlocking {
     // Alice sends to Bob and Charlie
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
-    accountRepository.sendFriendRequest(alice.uid, charlie.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
+    accountRepository.sendFriendRequest(alice, charlie.uid)
 
     // Only Bob accepts
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
@@ -179,7 +179,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun blockUser_afterFriendshipEstablished() = runBlocking {
     // Establish friendship
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     // Alice blocks Bob
@@ -198,7 +198,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun blockUser_afterPendingRequest() = runBlocking {
     // Alice sends friend request to Bob
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     // Bob blocks Alice instead of accepting
     accountRepository.blockUser(bob.uid, alice.uid, false)
@@ -218,7 +218,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun resetRelationship_removesBothSidesInAllScenarios() = runBlocking {
     // Test 1: Remove friendship
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
     accountRepository.resetRelationship(alice.uid, bob.uid)
 
@@ -227,7 +227,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 2: Cancel sent friend request (Alice cancels)
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.resetRelationship(alice.uid, bob.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -235,7 +235,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 3: Deny received friend request (Bob denies)
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.resetRelationship(bob.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -264,7 +264,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun completeRelationshipLifecycle_sendAcceptRemove() = runBlocking {
     // Send request
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     var updatedAlice = accounts[0]
@@ -294,7 +294,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun complexWorkflows_cancelRequestAndBlockUnblockBefriend() = runBlocking {
     // Workflow 1: Friend request canceled before acceptance
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.resetRelationship(alice.uid, bob.uid)
 
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -312,7 +312,7 @@ class RelationshipsTests : FirestoreTests() {
     updatedAlice = accountRepository.getAccount(alice.uid)
     assertNull(updatedAlice.relationships[bob.uid])
 
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -323,13 +323,13 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun multipleSimultaneousRelationships() = runBlocking {
     // Alice sends to Bob
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     // Bob sends to Charlie
-    accountRepository.sendFriendRequest(bob.uid, charlie.uid)
+    accountRepository.sendFriendRequest(bob, charlie.uid)
 
     // Charlie sends to Alice
-    accountRepository.sendFriendRequest(charlie.uid, alice.uid)
+    accountRepository.sendFriendRequest(charlie, alice.uid)
 
     val accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid, charlie.uid))
     val updatedAlice = accounts[0]
@@ -361,7 +361,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun multipleOperationsOnSameRelationship() = runBlocking {
     // Send request
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     // Accept request
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
@@ -384,7 +384,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun relationshipsAreIndependentAndPersistent() = runBlocking {
     // Test 1: Relationships persist across multiple retrievals
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
 
     val fetch1 = accountRepository.getAccount(alice.uid)
     val fetch2 = accountRepository.getAccount(alice.uid)
@@ -395,7 +395,7 @@ class RelationshipsTests : FirestoreTests() {
     assertEquals(RelationshipStatus.Sent, fetch3.relationships[bob.uid])
 
     // Test 2: Friendship with one user doesn't affect other relationships
-    accountRepository.sendFriendRequest(alice.uid, charlie.uid)
+    accountRepository.sendFriendRequest(alice, charlie.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     var updatedAlice = accountRepository.getAccount(alice.uid)
@@ -420,7 +420,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(aliceAfterSelf.relationships[alice.uid])
 
     // Test 2: Prevent duplicate request
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     var updatedAlice = accounts[0]
     var updatedBob = accounts[1]
@@ -432,7 +432,7 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 3: Prevent when already friends
     accountRepository.resetRelationship(alice.uid, bob.uid)
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -484,7 +484,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 2: Prevent accepting in wrong direction
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.acceptFriendRequest(accounts[0], accounts[1])
@@ -521,7 +521,7 @@ class RelationshipsTests : FirestoreTests() {
 
   @Test
   fun viewModelAcceptFriendRequest_allowsValidAcceptance() = runBlocking {
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.acceptFriendRequest(accounts[1], accounts[0])
@@ -561,7 +561,7 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 2: Block after friendship
     accountRepository.resetRelationship(alice.uid, bob.uid)
-    accountRepository.sendFriendRequest(alice.uid, charlie.uid)
+    accountRepository.sendFriendRequest(alice, charlie.uid)
     accountRepository.acceptFriendRequest(charlie.uid, alice.uid)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, charlie.uid))
@@ -605,7 +605,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun viewModelResetRelationship_allowsValidReset() = runBlocking {
     // Test 1: Cancel sent request
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.resetRelationship(accounts[0], accounts[1])
@@ -615,7 +615,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 2: Deny received request
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.resetRelationship(accounts[1], accounts[0])
@@ -625,7 +625,7 @@ class RelationshipsTests : FirestoreTests() {
     assertNull(accounts[1].relationships[alice.uid])
 
     // Test 3: Remove friendship
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     accountRepository.acceptFriendRequest(bob.uid, alice.uid)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
@@ -645,7 +645,7 @@ class RelationshipsTests : FirestoreTests() {
   @Test
   fun viewModelValidation_complexScenarios() = runBlocking {
     // Test 1: Cannot send request in opposite direction when pending
-    accountRepository.sendFriendRequest(alice.uid, bob.uid)
+    accountRepository.sendFriendRequest(alice, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     viewModel.sendFriendRequest(accounts[1], accounts[0])
