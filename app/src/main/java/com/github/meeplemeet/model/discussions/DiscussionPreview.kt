@@ -90,14 +90,14 @@ fun fromNoUid(id: String, discussionPreviewNoUid: DiscussionPreviewNoUid): Discu
  * to a discussion. If no lastMessage is provided, the preview will have empty strings and current
  * timestamp.
  *
- * @param discussion The discussion to create preview for.
+ * @param discussionId The id of the discussion to create the preview for.
  * @param lastMessage Optional last message to populate preview data. If null, preview will have
  *   empty lastMessage and lastMessageSender fields.
  * @return A [DiscussionPreview] instance with unreadCount initialized to 0.
  */
-fun toPreview(discussion: Discussion, lastMessage: Message? = null): DiscussionPreview {
+fun toPreview(discussionId: String, lastMessage: Message? = null): DiscussionPreview {
   return DiscussionPreview(
-      discussion.uid,
+      discussionId,
       lastMessage?.content ?: "",
       lastMessage?.senderId ?: "",
       lastMessage?.createdAt ?: Timestamp.now(),
