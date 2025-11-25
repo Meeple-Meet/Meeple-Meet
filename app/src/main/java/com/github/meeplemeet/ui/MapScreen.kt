@@ -200,6 +200,7 @@ private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
+private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val DEFAULT_MARKER_SCALE = 1.5f
 private const val DEFAULT_MARKER_BACKGROUND_ALPHA = 1.0f
 private const val RGB_MAX_ALPHA = 255
@@ -415,15 +416,27 @@ fun MapScreen(
         }
 
         /**
-         * Watches camera movement and updates Firestore query center after a short debounce.
-         * Ensures live results around current map area.
+         * Watches camera updates and reacts to movement & zoom changes. When the map center
+         * changes, updates the Firestore query center after a short debounce. When the zoom level
+         * changes, updates the ViewModel so clustering can recompute with the right threshold. Both
+         * flows are collected concurrently via `launch` to avoid blocking.
          */
         LaunchedEffect(cameraPositionState) {
-          snapshotFlow { cameraPositionState.position.target }
-              .debounce(CAMERA_CENTER_DEBOUNCE_MS)
-              .collect { latLng ->
-                viewModel.updateQueryCenter(Location(latLng.latitude, latLng.longitude))
-              }
+          // Update query center when map moves
+          launch {
+            snapshotFlow { cameraPositionState.position.target }
+                .debounce(CAMERA_CENTER_DEBOUNCE_MS)
+                .collect { latLng ->
+                  viewModel.updateQueryCenter(Location(latLng.latitude, latLng.longitude))
+                }
+          }
+
+          // Update zoom level for clustering when zoom changes
+          launch {
+            snapshotFlow { cameraPositionState.position.zoom }
+                .debounce(CAMERA_ZOOM_DEBOUNCE_MS)
+                .collect { zoom -> viewModel.updateZoomLevel(zoom) }
+          }
         }
 
         // --- Google Map content ---
