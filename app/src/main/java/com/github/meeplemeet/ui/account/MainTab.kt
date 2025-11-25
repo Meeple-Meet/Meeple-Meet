@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui.account
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -55,19 +56,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.FocusableInputField
@@ -166,27 +164,110 @@ object PrivateInfoTestTags {
 }
 
 object NotificationsSectionTestTags {
-    const val NOTIFICATION_SECTION_TITLE = "notification_section_title"
-    const val RADIO_EVERYONE = "radio_everyone"
-    const val RADIO_FRIENDS = "radio_friends"
-    const val RADIO_NONE = "radio_none"
+  const val NOTIFICATION_SECTION_TITLE = "notification_section_title"
+  const val RADIO_EVERYONE = "radio_everyone"
+  const val RADIO_FRIENDS = "radio_friends"
+  const val RADIO_NONE = "radio_none"
 }
 
 object DeleteAccSectionTestTags {
-    const val BUTTON = "delete_acc_button"
-    const val POPUP = "delete_acc_popup"
-    const val CONFIRM = "delete_acc_popup_confirm"
-    const val CANCEL = "delete_acc_popup_cancel"
+  const val BUTTON = "delete_acc_button"
+  const val POPUP = "delete_acc_popup"
+  const val CONFIRM = "delete_acc_popup_confirm"
+  const val CANCEL = "delete_acc_popup_cancel"
 }
 
+object MainTabUi {
+  val ACTION_BUTTON_SIZE = 56.dp
+  val LOGOUT_BUTTON_W = 140.dp
+  val LOGOUT_BUTTON_H = 46.dp
+  val AVATAR_SIZE = 130.dp
 
+  object Misc {
+    const val DELETE_ACCOUNT = "Delete Account"
+    const val DIALOG_TITLE = "Delete your account"
+    const val DIALOG_DESC =
+        "Do you really want to delete your account? All data related to your account will be erased"
+    const val DIALOG_CONFIRM = "Confirm"
+    const val DIALOG_CANCEL = "Cancel"
+  }
+
+  object PublicInfo {
+    const val NOTIF_BTN_DESC = "Notifications"
+    const val FRIENDS_BTN_DESC = "Friends"
+    const val LOGOUT_BTN = "Logout"
+    const val NAME_INPUT_FIELD = "Username"
+    const val HANDLE_INPUT_FIELD = "Handle"
+    const val DESC_INPUT_FIELD = "Description"
+    const val NAME_INPUT_FIELD_ERR = "Username cannot be blank."
+    const val HANDLE_PREFIX = "@"
+
+    const val AVATAR_HOLDER_DESC = "Placeholder Image"
+    const val AVATAR_IMAGE_DESC = "User's Image"
+    const val AVATAR_EDIT_DESC = "Edit image"
+
+    const val NO_PERMS_TITLE = "Permission denied"
+    const val NO_PERMS_TEXT = "Camera access is required to take a profile picture"
+    const val NO_PERMS_OK = "OK"
+
+    const val AVATAR_DIALOG_TITLE = "Change Profile Picture"
+    const val AVATAR_DIALOG_PROMPT = "Choose a source"
+
+    const val AVATAR_CAMERA_OPT = "Camera"
+    const val AVATAR_GALLERY_OPT = "Gallery"
+    const val AVATAR_REMOVE_OPT = "Remove Photo"
+    const val AVATAR_CANCEL_OPT = "Cancel"
+  }
+
+  object PrivateInfo {
+    const val TITLE = "Private Info"
+    const val EMAIL_INPUT_FIELD = "Email"
+
+    const val TOAST_MSG = "Sent"
+    const val SEND_ICON_DESC = "Send verification meail"
+    const val VERIFIED_MSG = "Email Verified"
+    const val UNVERIFIED_MSG = "Email not Verified"
+    const val ROLES_TITLE = "I also want to"
+    const val SELL_ITEMS_LABEL = "Sell Items"
+    const val SELL_ITEMS_DESC = "List your shop and games you sell"
+
+    const val RENT_SPACES_LABEL = "Rent out Spaces"
+    const val RENT_SPACES_DESC = "Offer your spaces for other players to book."
+    const val DIALOG_CONFIRM = "Confirm"
+    const val DIALOG_CANCEL = "Cancel"
+
+    const val ROLE_ACTION_SHOP =
+        "Are you sure you want to stop selling items? Your shops will be removed from the platform.\nThis action is irreversible."
+    const val ROLE_ACTION_SPACE =
+        "Are you sure you want to stop renting out spaces? Your spaces will be removed from the platform.\nThis action is irreversible."
+  }
+
+  object NotificationsSection {
+    const val TITLE = "Notification Settings"
+    const val OPT_EVERY = "Accept notifications from everyone."
+    const val OPT_FRIENDS = "Accept notifications from friends only."
+    const val OPT_NONE = "Accept notifications from no one."
+  }
+}
+
+/**
+ * Main tab of the profile screen. Displays all the account information that is
+ * important and manageable by the user
+ * @param viewModel the viewmodel used for this screen
+ * @param account current user of the app
+ * @param onFriendsClick callback to navigate to the friend's tab
+ * @param onNotificationClick callback to navigate to the notification's tab
+ * @param onSignOut callback upon signing out
+ * @param onDelAcc callback upon account deletion
+ */
 @Composable
 fun MainTab(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
     onFriendsClick: (account: Account) -> Unit,
     onNotificationClick: (account: Account) -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onDelAcc: () -> Unit
 ) {
 
   val focusManager = LocalFocusManager.current
@@ -214,8 +295,8 @@ fun MainTab(
 
         Button(
             onClick = { showDelDialog = true },
-            shape = RoundedCornerShape(8.dp),
-            elevation = ButtonDefaults.buttonElevation(2.dp),
+            shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+            elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
             modifier = Modifier.testTag(DeleteAccSectionTestTags.BUTTON),
             colors =
                 ButtonColors(
@@ -223,7 +304,7 @@ fun MainTab(
                     disabledContainerColor = AppColors.negative,
                     contentColor = AppColors.textIcons,
                     disabledContentColor = AppColors.textIcons)) {
-              Text("Delete Account")
+              Text(text = MainTabUi.Misc.DELETE_ACCOUNT)
             }
 
         DeleteAccountDialog(
@@ -231,15 +312,25 @@ fun MainTab(
             onCancel = { showDelDialog = false },
             onConfirm = {
               showDelDialog = false
+              onDelAcc()
               viewModel.deleteAccount(account)
+              Log.d("Account after deletion", account.uid)
             })
       }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////
-// PUBLIC INFO SECTION
 /////////////////////////////////////////////////////////////////////////////////////
+// PUBLIC INFO SECTION
+//////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Public info section composable. One of 3 sections of the MainTab screen
+ * @param account Current user
+ * @param viewModel viewModel used
+ * @param onFriendsClick callback to navigate to the friend's tab
+ * @param onNotificationClick callback to navigate to the notifications's tab
+ * @param onSignOut callback to sign out
+ */
 @Composable
 fun PublicInfo(
     account: Account,
@@ -251,7 +342,7 @@ fun PublicInfo(
   Box(
       modifier =
           Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(20.dp))
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
               .background(AppColors.secondary)
               .testTag(PublicInfoTestTags.PUBLIC_INFO)) {
         Column(
@@ -282,6 +373,14 @@ fun PublicInfo(
       }
 }
 
+/**
+ * Composable representing all 3 buttons in the public info section
+ * @param account Current user
+ * @param viewModel viewmodel used by this screen
+ * @param onFriendsClick callback to navigate to the friend's tab
+ * @param onNotificationClick callback to navigate to the notifications's tab
+ * @param onSignOut callback to sign out
+ */
 @Composable
 fun PublicInfoActions(
     account: Account,
@@ -292,40 +391,44 @@ fun PublicInfoActions(
 ) {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
             verticalAlignment = Alignment.CenterVertically) {
               // Friends Button
               Button(
-                  modifier = Modifier.size(56.dp).testTag(PublicInfoTestTags.ACTION_FRIENDS),
+                  modifier =
+                      Modifier.size(MainTabUi.ACTION_BUTTON_SIZE)
+                          .testTag(PublicInfoTestTags.ACTION_FRIENDS),
                   onClick = { onFriendsClick(account) },
-                  shape = RoundedCornerShape(18.dp),
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                   contentPadding = PaddingValues(0.dp),
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = AppColors.secondary, contentColor = AppColors.textIcons),
-                  elevation = ButtonDefaults.buttonElevation(4.dp)) {
+                  elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.high)) {
                     Icon(
                         Icons.Default.Group,
-                        contentDescription = "Friends",
-                        modifier = Modifier.size(28.dp))
+                        contentDescription = MainTabUi.PublicInfo.FRIENDS_BTN_DESC,
+                        modifier = Modifier.size(Dimensions.IconSize.extraLarge))
                   }
 
               // Notifications Button
               Button(
-                  modifier = Modifier.size(56.dp).testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
+                  modifier =
+                      Modifier.size(MainTabUi.ACTION_BUTTON_SIZE)
+                          .testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
                   onClick = { onNotificationClick(account) },
-                  shape = RoundedCornerShape(18.dp),
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                   contentPadding = PaddingValues(0.dp),
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = AppColors.secondary, contentColor = AppColors.textIcons),
-                  elevation = ButtonDefaults.buttonElevation(4.dp)) {
+                  elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.high)) {
                     Icon(
                         Icons.Outlined.NotificationsNone,
-                        contentDescription = "Notifications",
-                        modifier = Modifier.size(28.dp))
+                        contentDescription = MainTabUi.PublicInfo.NOTIF_BTN_DESC,
+                        modifier = Modifier.size(Dimensions.IconSize.extraLarge))
                   }
             }
 
@@ -336,20 +439,28 @@ fun PublicInfoActions(
               viewModel.signOut()
             },
             modifier =
-                Modifier.width(140.dp).height(46.dp).testTag(PublicInfoTestTags.ACTION_LOGOUT),
+                Modifier.width(MainTabUi.LOGOUT_BUTTON_W)
+                    .height(MainTabUi.LOGOUT_BUTTON_H)
+                    .testTag(PublicInfoTestTags.ACTION_LOGOUT),
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor = AppColors.textIconsFade,
                     disabledContainerColor = AppColors.textIconsFade,
                     contentColor = AppColors.primary,
                     disabledContentColor = AppColors.primary),
-            shape = RoundedCornerShape(14.dp),
-            elevation = ButtonDefaults.buttonElevation(4.dp)) {
-              Text("Logout")
+            shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+            elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.high)) {
+              Text(text = MainTabUi.PublicInfo.LOGOUT_BTN)
             }
       }
 }
 
+
+/**
+ * Handles the input fields in that first section
+ * @param account Current user
+ * @param viewModel viewmodel used by this screen
+ */
 @Composable
 fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
   var name by remember { mutableStateOf(account.name) }
@@ -359,7 +470,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
   val nameError = name.isBlank()
 
   FocusableInputField(
-      label = { Text("Username") },
+      label = { Text(text = MainTabUi.PublicInfo.NAME_INPUT_FIELD) },
       modifier = Modifier.testTag(PublicInfoTestTags.INPUT_USERNAME),
       value = name,
       onValueChange = { name = it },
@@ -371,11 +482,12 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
       })
   if (nameError) {
     Text(
-        text = "Username cannot be blank.",
+        text = MainTabUi.PublicInfo.NAME_INPUT_FIELD_ERR,
         color = AppColors.negative,
         style = MaterialTheme.typography.bodySmall,
         modifier =
-            Modifier.padding(start = 16.dp, top = 4.dp).testTag(PublicInfoTestTags.ERROR_USERNAME))
+            Modifier.padding(start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
+                .testTag(PublicInfoTestTags.ERROR_USERNAME))
   }
 
   // HANDLE VALIDATION
@@ -396,18 +508,18 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
           showErrors = false
         }
       },
-      label = { Text("Handle") },
+      label = { Text(text = MainTabUi.PublicInfo.HANDLE_INPUT_FIELD) },
       leadingIcon = {
         Text(
-            "@",
+            text = MainTabUi.PublicInfo.HANDLE_PREFIX,
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textIcons,
-            modifier = Modifier.padding(start = 8.dp))
+            modifier = Modifier.padding(start = Dimensions.Padding.medium))
       },
       singleLine = true,
       isError = errorHandle,
       onFocusChanged = { focused ->
-        if (!focused && !errorHandle) viewModel.setAccountHandle(account, handle)
+        if (!focused && !errorHandle) viewModel.setAccountHandle(account, newHandle = handle)
       })
 
   if (errorHandle) {
@@ -416,21 +528,29 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
         color = AppColors.negative,
         style = MaterialTheme.typography.bodySmall,
         modifier =
-            Modifier.padding(start = 16.dp, top = 4.dp).testTag(PublicInfoTestTags.ERROR_HANDLE))
+            Modifier.padding(start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
+                .testTag(PublicInfoTestTags.ERROR_HANDLE))
   }
 
   // DESCRIPTION
   FocusableInputField(
-      label = { Text("Description") },
+      label = { Text(MainTabUi.PublicInfo.DESC_INPUT_FIELD) },
       modifier = Modifier.testTag(PublicInfoTestTags.INPUT_DESCRIPTION),
       value = desc,
       onValueChange = { desc = it },
       singleLine = false,
-      onFocusChanged = { focused -> if (!focused) viewModel.setAccountDescription(account, desc) })
+      onFocusChanged = { focused ->
+        if (!focused) viewModel.setAccountDescription(account, newDescription = desc)
+      })
 
   Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 }
 
+/**
+ * Handles the avatar section of the user
+ * @param viewModel viewmodel used by this screen
+ * @param account Current user
+ */
 @Composable
 fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   val context = LocalContext.current
@@ -485,41 +605,43 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   // --- Avatar display ---
   Box(
       modifier =
-          Modifier.size(130.dp)
+          Modifier.size(MainTabUi.AVATAR_SIZE)
               .clickable { showChooser = true }
               .testTag(PublicInfoTestTags.AVATAR_CONTAINER),
       contentAlignment = Alignment.TopEnd) {
         if (account.photoUrl.isNullOrBlank()) {
           Box(
               modifier =
-                  Modifier.size(130.dp)
+                  Modifier.size(MainTabUi.AVATAR_SIZE)
                       .clip(CircleShape)
                       .background(AppColors.textIconsFade)
                       .testTag(PublicInfoTestTags.AVATAR_PLACEHOLDER),
               contentAlignment = Alignment.Center) {
                 Icon(
-                    Icons.Default.Person,
-                    contentDescription = "Placeholder Image",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(60.dp))
+                    imageVector = Icons.Default.Person,
+                    contentDescription = MainTabUi.PublicInfo.AVATAR_HOLDER_DESC,
+                    tint = AppColors.divider,
+                    modifier = Modifier.size(Dimensions.IconSize.giant))
               }
         } else {
           Image(
               painter = rememberAsyncImagePainter(account.photoUrl),
-              contentDescription = "Profile Image",
+              contentDescription = MainTabUi.PublicInfo.AVATAR_IMAGE_DESC,
               contentScale = ContentScale.Crop,
               modifier =
-                  Modifier.size(130.dp).clip(CircleShape).testTag(PublicInfoTestTags.AVATAR_IMAGE))
+                  Modifier.size(MainTabUi.AVATAR_SIZE)
+                      .clip(CircleShape)
+                      .testTag(PublicInfoTestTags.AVATAR_IMAGE))
         }
 
         Icon(
             imageVector = Icons.Default.Edit,
-            contentDescription = "Edit image",
-            tint = Color.White,
+            contentDescription = MainTabUi.PublicInfo.AVATAR_EDIT_DESC,
+            tint = AppColors.primary,
             modifier =
-                Modifier.size(28.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                    .padding(4.dp)
+                Modifier.size(Dimensions.IconSize.extraLarge)
+                    .background(AppColors.textIconsFade, CircleShape)
+                    .padding(Dimensions.Padding.small)
                     .testTag(PublicInfoTestTags.AVATAR_EDIT_ICON))
       }
 
@@ -549,18 +671,25 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_DIALOG),
         onDismissRequest = { showPermissionDenied = false },
-        title = { Text(text = "Permission denied") },
-        text = { Text(text = "Camera access is required to take a profile picture.") },
+        title = { Text(text = MainTabUi.PublicInfo.NO_PERMS_TITLE) },
+        text = { Text(text = MainTabUi.PublicInfo.NO_PERMS_TEXT) },
         confirmButton = {
           TextButton(
               onClick = { showPermissionDenied = false },
               modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_OK)) {
-                Text(text = "OK")
+                Text(text = MainTabUi.PublicInfo.NO_PERMS_OK)
               }
         })
   }
 }
 
+/**
+ * Dialog upon editing the avatar
+ * @param onDismiss callback upon dismissing
+ * @param onCamera callback upon selecting camera
+ * @param onGallery callback upon selecting gallery
+ * @param onRemove callback upon removing user's profile picture
+ */
 @Composable
 fun AvatarChooserDialog(
     onDismiss: () -> Unit,
@@ -571,28 +700,32 @@ fun AvatarChooserDialog(
   Dialog(onDismissRequest = onDismiss) {
     Box(
         modifier =
-            Modifier.clip(RoundedCornerShape(16.dp))
+            Modifier.clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
                 .background(AppColors.primary)
-                .padding(20.dp)
+                .padding(Dimensions.Padding.xLarge)
                 .testTag(PublicInfoTestTags.AVATAR_CHOOSER_DIALOG)) {
           Column(
-              verticalArrangement = Arrangement.spacedBy(12.dp),
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
               modifier = Modifier.fillMaxWidth()) {
-                Text(text = "Change profile picture", style = MaterialTheme.typography.titleMedium)
-                Text(text = "Choose a source", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = MainTabUi.PublicInfo.AVATAR_DIALOG_TITLE,
+                    style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = MainTabUi.PublicInfo.AVATAR_DIALOG_PROMPT,
+                    style = MaterialTheme.typography.bodyMedium)
 
                 Button(
                     onClick = onCamera,
                     modifier =
                         Modifier.fillMaxWidth().testTag(PublicInfoTestTags.AVATAR_CHOOSER_CAMERA)) {
-                      Text(text = "Camera")
+                      Text(text = MainTabUi.PublicInfo.AVATAR_CAMERA_OPT)
                     }
                 Button(
                     onClick = onGallery,
                     modifier =
                         Modifier.fillMaxWidth()
                             .testTag(PublicInfoTestTags.AVATAR_CHOOSER_GALLERY)) {
-                      Text(text = "Gallery")
+                      Text(text = MainTabUi.PublicInfo.AVATAR_GALLERY_OPT)
                     }
                 if (onRemove != null) {
                   Button(
@@ -603,14 +736,14 @@ fun AvatarChooserDialog(
                           ButtonDefaults.buttonColors(
                               containerColor = AppColors.negative,
                               contentColor = AppColors.textIcons)) {
-                        Text(text = "Remove Photo")
+                        Text(text = MainTabUi.PublicInfo.AVATAR_REMOVE_OPT)
                       }
                 }
                 TextButton(
                     onClick = onDismiss,
                     modifier =
                         Modifier.fillMaxWidth().testTag(PublicInfoTestTags.AVATAR_CHOOSER_CANCEL)) {
-                      Text(text = "Cancel")
+                      Text(text = MainTabUi.PublicInfo.AVATAR_CANCEL_OPT)
                     }
               }
         }
@@ -621,6 +754,11 @@ fun AvatarChooserDialog(
 // PRIVATE INFO SECTION
 /////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Second section of the MainTab's screen. This one handles information only the user has access to
+ * @param account Current user
+ * @param viewModel viewmodel used by this screen
+ */
 @Composable
 fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
 
@@ -632,7 +770,7 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
   Box(
       modifier =
           Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(20.dp))
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
               .background(AppColors.secondary)
               .testTag(PrivateInfoTestTags.PRIVATE_INFO)) {
         Column(
@@ -643,7 +781,7 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
               // TITLE
               Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Private Info",
+                    text = MainTabUi.PrivateInfo.TITLE,
                     modifier = Modifier.testTag(PrivateInfoTestTags.PRIVATE_INFO_TITLE),
                     style = MaterialTheme.typography.headlineSmall,
                 )
@@ -665,12 +803,20 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
                   })
 
               // ROLES SECTION
-              RolesSection(account = account, createAccountViewModel = viewModel)
+              RolesSection(account = account, viewModel = viewModel)
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
             }
       }
 }
 
+/**
+ * Handles everything related to the email field
+ * @param email email of the user
+ * @param isVerified whether the user has his email verified or not
+ * @param onEmailChange callback upon email change
+ * @param onFocusChanged callback upon stop of the edition
+ * @param onSendVerification callback upon click of the verify email button
+ */
 @Composable
 fun EmailSection(
     email: String,
@@ -684,9 +830,9 @@ fun EmailSection(
   Box(
       modifier =
           Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(20.dp))
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
               .background(AppColors.secondary)
-              .padding(14.dp)
+              .padding(Dimensions.Padding.large)
               .testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
         Column {
           Row(
@@ -694,39 +840,41 @@ fun EmailSection(
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically) {
                 FocusableInputField(
-                    label = { Text("Email") },
+                    label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
                     value = email,
                     onValueChange = onEmailChange,
                     trailingIcon = {
                       if (!isVerified) {
                         IconButton(
                             modifier =
-                                Modifier.padding(top = 4.dp)
+                                Modifier.padding(top = Dimensions.Padding.small)
                                     .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
                             onClick = {
                               onSendVerification()
-                              toast = ToastData("Sent")
+                              toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
                             }) {
                               Icon(
                                   imageVector = Icons.AutoMirrored.Filled.Send,
-                                  contentDescription = "Send verification email",
+                                  contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
                                   tint = AppColors.textIcons)
                             }
                       }
                     },
                     onFocusChanged = onFocusChanged,
-                    modifier = Modifier.weight(1f).testTag(PrivateInfoTestTags.EMAIL_INPUT))
+                    modifier =
+                        Modifier.weight(Dimensions.Weight.full)
+                            .testTag(PrivateInfoTestTags.EMAIL_INPUT))
               }
 
           Row {
             if (isVerified) {
               Text(
-                  text = "Email Verified",
+                  text = MainTabUi.PrivateInfo.VERIFIED_MSG,
                   color = AppColors.affirmative,
                   modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_VERIFIED_LABEL))
             } else {
               Text(
-                  text = "Email Not Verified",
+                  text = MainTabUi.PrivateInfo.UNVERIFIED_MSG,
                   color = AppColors.negative,
                   modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL))
             }
@@ -742,6 +890,12 @@ data class ToastData(
     val id: Long = System.currentTimeMillis() // unique per show
 )
 
+/**
+ * Handles the box of text that appears upon sending the verification email
+ * @param toast Toastdata
+ * @param duration How long till the popup dissapears
+ * @param onToastFinished What to do when the duration has elapsed
+ */
 @Composable
 fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> Unit) {
   Box(modifier = Modifier.fillMaxSize().testTag(PrivateInfoTestTags.EMAIL_TOAST)) {
@@ -763,18 +917,27 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
             Box(
                 modifier =
                     Modifier.background(
-                            color = AppColors.textIconsFade, shape = RoundedCornerShape(20.dp))
-                        .padding(horizontal = 16.dp, vertical = 0.dp)) {
-                  Text(text = data.message, color = Color.White, fontSize = 14.sp)
+                            color = AppColors.textIconsFade,
+                            shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
+                        .padding(horizontal = Dimensions.Padding.extraLarge, vertical = 0.dp)) {
+                  Text(
+                      text = data.message,
+                      color = AppColors.primary,
+                      fontSize = Dimensions.TextSize.standard)
                 }
           }
     }
   }
 }
 
+/**
+ * Handles everything related to the user's roles
+ * @param account Current user
+ * @param viewModel viewmodel used by this screen
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewModel) {
+fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
 
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }
@@ -783,13 +946,15 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
   var pendingAction by remember { mutableStateOf<RoleAction?>(null) }
 
   Box(
-      modifier = Modifier.fillMaxWidth().background(AppColors.secondary).padding(14.dp),
+      modifier =
+          Modifier.fillMaxWidth().background(AppColors.secondary).padding(Dimensions.Padding.large),
       contentAlignment = Alignment.CenterStart) {
         Text(
-            "I also want to:",
+            text = MainTabUi.PrivateInfo.ROLES_TITLE,
             style = MaterialTheme.typography.titleMedium,
             modifier =
-                Modifier.padding(top = 4.dp).testTag(PrivateInfoTestTags.ROLES_SECTION_TITLE))
+                Modifier.padding(top = Dimensions.Padding.small)
+                    .testTag(PrivateInfoTestTags.ROLES_SECTION_TITLE))
       }
 
   RoleCheckBox(
@@ -800,12 +965,12 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
           showDialog = true
         } else {
           isShopChecked = true
-          createAccountViewModel.setAccountRole(
+          viewModel.setAccountRole(
               account, isShopOwner = true, isSpaceRenter = isSpaceRented)
         }
       },
-      label = "Sell Items",
-      description = "List your shop and games you sell",
+      label = MainTabUi.PrivateInfo.SELL_ITEMS_LABEL,
+      description = MainTabUi.PrivateInfo.SELL_ITEMS_DESC,
       testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
 
   RoleCheckBox(
@@ -816,12 +981,12 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
           showDialog = true
         } else {
           isSpaceRented = true
-          createAccountViewModel.setAccountRole(
+          viewModel.setAccountRole(
               account, isShopOwner = isShopChecked, isSpaceRenter = true)
         }
       },
-      label = "Rent out spaces",
-      description = "Offer your play spaces for other players to book.",
+      label = MainTabUi.PrivateInfo.RENT_SPACES_LABEL,
+      description = MainTabUi.PrivateInfo.RENT_SPACES_DESC,
       testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
 
   // CONFIRMATION DIALOG
@@ -834,13 +999,13 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
             RoleAction.ShopOff -> {
               // Todo: Delete user's shops from the platform
               isShopChecked = false
-              createAccountViewModel.setAccountRole(
+              viewModel.setAccountRole(
                   account, isShopOwner = false, isSpaceRenter = isSpaceRented)
             }
             RoleAction.SpaceOff -> {
               // Todo: Delete user's spaces from the platform
               isSpaceRented = false
-              createAccountViewModel.setAccountRole(
+              viewModel.setAccountRole(
                   account, isShopOwner = isShopChecked, isSpaceRenter = false)
             }
             else -> {}
@@ -860,6 +1025,13 @@ private enum class RoleAction {
   SpaceOff
 }
 
+/**
+ * Handles the dialog that pops upon removal of a role
+ * @param visible whether this popup is visible
+ * @param action Differentiates between removing Shop/SpaceRenter role
+ * @param onConfirm callback upon confirmation
+ * @param onCancel callback upon cancellation
+ */
 @Composable
 private fun RemoveCatalogDialog(
     visible: Boolean,
@@ -869,11 +1041,10 @@ private fun RemoveCatalogDialog(
 ) {
   val informativeText =
       when (action) {
-        RoleAction.ShopOff ->
-            "Are you sure you want to stop selling items? Your shops will be removed from the platform.\nThis action is irreversible."
-        RoleAction.SpaceOff ->
-            "Are you sure you want to stop renting out spaces? Your spaces will be removed from the platform.\nThis action is irreversible."
+        RoleAction.ShopOff -> MainTabUi.PrivateInfo.ROLE_ACTION_SHOP
+        RoleAction.SpaceOff -> MainTabUi.PrivateInfo.ROLE_ACTION_SPACE
       }
+
   if (visible) {
     AlertDialog(
         containerColor = AppColors.primary,
@@ -896,7 +1067,7 @@ private fun RemoveCatalogDialog(
                       contentColor = AppColors.textIcons,
                       disabledContainerColor = AppColors.divider,
                       disabledContentColor = AppColors.textIcons)) {
-                Text("Confirm")
+                Text(text = MainTabUi.PrivateInfo.DIALOG_CONFIRM)
               }
         },
         dismissButton = {
@@ -909,10 +1080,10 @@ private fun RemoveCatalogDialog(
                       disabledContainerColor = AppColors.affirmative,
                       contentColor = AppColors.textIcons,
                       disabledContentColor = AppColors.textIcons)) {
-                Text("Cancel")
+                Text(text = MainTabUi.PrivateInfo.DIALOG_CANCEL)
               }
         },
-        shape = RoundedCornerShape(16.dp))
+        shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
   }
 }
 
@@ -925,6 +1096,11 @@ enum class NotificationPreference {
   NO_ONE
 }
 
+/**
+ * Handles the notification settings section
+ * @param preference The user's selected preference
+ * @param onPreferenceChange callback invoked upon change of preference
+ */
 @Composable
 fun NotificationSettingsSection(
     preference: NotificationPreference,
@@ -933,45 +1109,69 @@ fun NotificationSettingsSection(
   Column(
       modifier =
           Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(20.dp))
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
               .background(AppColors.secondary)
-              .padding(20.dp)) {
-        Text(text = "Notification settings", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag(
-            NotificationsSectionTestTags.NOTIFICATION_SECTION_TITLE))
+              .padding(Dimensions.Padding.xLarge)) {
+        Text(
+            text = MainTabUi.NotificationsSection.TITLE,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.testTag(NotificationsSectionTestTags.NOTIFICATION_SECTION_TITLE))
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Dimensions.Spacing.large))
 
         NotificationOptionRow(
             modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_EVERYONE),
-            label = "Accept notifications from everyone",
+            label = MainTabUi.NotificationsSection.OPT_EVERY,
             selected = preference == NotificationPreference.EVERYONE,
             onClick = { onPreferenceChange(NotificationPreference.EVERYONE) })
 
         NotificationOptionRow(
             modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_FRIENDS),
-            label = "Accept notifications from friends only",
+            label = MainTabUi.NotificationsSection.OPT_FRIENDS,
             selected = preference == NotificationPreference.FRIENDS_ONLY,
             onClick = { onPreferenceChange(NotificationPreference.FRIENDS_ONLY) })
 
         NotificationOptionRow(
             modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_NONE),
-            label = "Accept notifications from no one",
+            label = MainTabUi.NotificationsSection.OPT_NONE,
             selected = preference == NotificationPreference.NO_ONE,
             onClick = { onPreferenceChange(NotificationPreference.NO_ONE) })
       }
 }
 
+/**
+ * Composable used for the rows options between notification settings
+ * @param label Description of the option
+ * @param selected Whether this option is currently selected
+ * @param onClick callback invoked upon click
+ * @param modifier Additional modifiers to add (used for testTags normally)
+ */
 @Composable
-private fun NotificationOptionRow(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun NotificationOptionRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
   Row(
-      modifier = modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(vertical = Dimensions.Padding.medium),
       verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = onClick)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Dimensions.Spacing.medium))
         Text(text = label)
       }
 }
 
+/**
+ * Handles the delete account dialog
+ * @param show Whether this dialog is visible
+ * @param onCancel callback upon cancellation of the operation
+ * @param onConfirm callback upon confirmation
+ */
 @Composable
 fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
   if (show) {
@@ -979,8 +1179,8 @@ fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Un
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(DeleteAccSectionTestTags.POPUP),
         onDismissRequest = onCancel,
-        title = { Text("Delete account") },
-        text = { Text("Do you really want to delete your account?") },
+        title = { Text(text = MainTabUi.Misc.DIALOG_TITLE) },
+        text = { Text(text = MainTabUi.Misc.DIALOG_DESC) },
         confirmButton = {
           TextButton(
               onClick = onConfirm,
@@ -991,7 +1191,7 @@ fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Un
                       disabledContentColor = AppColors.negative,
                       contentColor = AppColors.textIcons,
                       disabledContainerColor = AppColors.textIcons)) {
-                Text("Confirm")
+                Text(MainTabUi.Misc.DIALOG_CONFIRM)
               }
         },
         dismissButton = {
@@ -1004,7 +1204,7 @@ fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Un
                       disabledContentColor = AppColors.affirmative,
                       contentColor = AppColors.textIcons,
                       disabledContainerColor = AppColors.textIcons)) {
-                Text("Cancel")
+                Text(MainTabUi.Misc.DIALOG_CANCEL)
               }
         })
   }

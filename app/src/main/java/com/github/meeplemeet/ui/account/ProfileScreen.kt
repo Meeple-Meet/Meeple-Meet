@@ -49,7 +49,7 @@ fun ProfileScreen(
     navigation: NavigationActions,
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
 ) {
   val uiState by viewModel.uiState.collectAsState()
 
@@ -80,8 +80,9 @@ fun ProfileScreen(
               MainTab(
                   viewModel = viewModel,
                   account = account,
-                  onFriendsClick = {}, // define if needed
-                  onNotificationClick = {}, // define if needed
+                  onFriendsClick = {}, // define when implemented
+                  onNotificationClick = {}, // define when implemented
+                  onDelAcc = {}, // define when implemented
                   onSignOut = onSignOut,
               )
             }
