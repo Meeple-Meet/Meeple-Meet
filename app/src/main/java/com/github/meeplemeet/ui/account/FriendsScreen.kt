@@ -111,15 +111,15 @@ object FriendsManagementDefaults {
   const val RESET_QUERY_TEXT = ""
 
   object Layout {
-    val BetweenSearchAndContent = Dimensions.Spacing.large
-    val ItemVerticalPadding = Dimensions.Padding.small
-    val ItemHorizontalPadding = Dimensions.Padding.extraMedium
-    val ItemInnerHorizontalSpacing = Dimensions.Spacing.medium
-    val ItemAvatarNameSpacing = Dimensions.Spacing.medium
-    val ItemActionsSpacing = Dimensions.Spacing.small
-    val SectionTitleBottomPadding = Dimensions.Padding.small
+    val BETWEEN_SEARCH_AND_CONTENT = Dimensions.Spacing.large
+    val ITEM_VERTICAL_PADDING = Dimensions.Padding.small
+    val ITEM_HORIZONTAL_PADDING = Dimensions.Padding.extraMedium
+    val ITEM_INNER_HORIZONTAL_SPACING = Dimensions.Spacing.medium
+    val ITEM_AVATAR_NAME_SPACING = Dimensions.Spacing.medium
+    val ITEM_ACTIONS_SPACING = Dimensions.Spacing.small
+    val SECTION_TITLE_BOTTOM_PADDING = Dimensions.Padding.small
 
-    val RowMinHeight = 72.dp
+    val ROW_MIN_HEIGHT = 72.dp
     const val MAX_VISIBLE_FRIEND_ROWS = 6
     const val MAX_VISIBLE_SEARCH_ROWS = 6
   }
@@ -130,8 +130,8 @@ object FriendsManagementDefaults {
   }
 
   object Scrollbar {
-    val TrackWidth = 15.dp
-    val TrackPadding = Dimensions.Padding.tiny
+    val TRACK_WIDTH = 15.dp
+    val TRACK_PADDING = Dimensions.Padding.tiny
     const val MIN_ITEMS_FOR_SCROLLBAR = 8
     const val SCROLLBAR_ALPHA = 0.1f
 
@@ -244,7 +244,7 @@ fun FriendsManagementScreen(
             modifier = Modifier.fillMaxWidth(),
         )
       } else {
-        Spacer(Modifier.height(FriendsManagementDefaults.Layout.BetweenSearchAndContent))
+        Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_CONTENT))
 
         Text(
             text = FriendsManagementDefaults.SECTION_TITLE_FRIENDS,
@@ -256,7 +256,7 @@ fun FriendsManagementScreen(
                     .testTag(FriendsManagementTestTags.SECTION_TITLE_FRIENDS),
         )
 
-        Spacer(Modifier.height(FriendsManagementDefaults.Layout.SectionTitleBottomPadding))
+        Spacer(Modifier.height(FriendsManagementDefaults.Layout.SECTION_TITLE_BOTTOM_PADDING))
 
         FriendsList(
             currentAccount = account,
@@ -425,11 +425,11 @@ fun RelationshipUserRow(
       modifier =
           Modifier.fillMaxWidth()
               .background(MaterialTheme.colorScheme.surface)
-              .defaultMinSize(minHeight = FriendsManagementDefaults.Layout.RowMinHeight)
+              .defaultMinSize(minHeight = FriendsManagementDefaults.Layout.ROW_MIN_HEIGHT)
               .testTag("$itemPrefix${user.uid}")
               .padding(
-                  vertical = FriendsManagementDefaults.Layout.ItemVerticalPadding,
-                  horizontal = FriendsManagementDefaults.Layout.ItemHorizontalPadding,
+                  vertical = FriendsManagementDefaults.Layout.ITEM_VERTICAL_PADDING,
+                  horizontal = FriendsManagementDefaults.Layout.ITEM_HORIZONTAL_PADDING,
               ),
       verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -440,7 +440,7 @@ fun RelationshipUserRow(
                 .testTag("${FriendsManagementTestTags.AVATAR_PREFIX}${user.uid}"),
     )
 
-    Spacer(Modifier.width(FriendsManagementDefaults.Layout.ItemAvatarNameSpacing))
+    Spacer(Modifier.width(FriendsManagementDefaults.Layout.ITEM_AVATAR_NAME_SPACING))
 
     Column(
         modifier = Modifier.weight(weight = 1f),
@@ -463,12 +463,12 @@ fun RelationshipUserRow(
       )
     }
 
-    Spacer(Modifier.width(FriendsManagementDefaults.Layout.ItemInnerHorizontalSpacing))
+    Spacer(Modifier.width(FriendsManagementDefaults.Layout.ITEM_INNER_HORIZONTAL_SPACING))
 
     Row(
         horizontalArrangement =
             Arrangement.spacedBy(
-                FriendsManagementDefaults.Layout.ItemActionsSpacing,
+                FriendsManagementDefaults.Layout.ITEM_ACTIONS_SPACING,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -585,7 +585,7 @@ fun FriendsList(
       remember(friends.size) {
         val visibleRows =
             friends.size.coerceAtMost(FriendsManagementDefaults.Layout.MAX_VISIBLE_FRIEND_ROWS)
-        FriendsManagementDefaults.Layout.RowMinHeight * visibleRows
+        FriendsManagementDefaults.Layout.ROW_MIN_HEIGHT * visibleRows
       }
 
   Box(
@@ -649,8 +649,8 @@ private fun FriendsScrollBar(
       modifier =
           modifier
               .fillMaxHeight()
-              .width(FriendsManagementDefaults.Scrollbar.TrackWidth)
-              .padding(FriendsManagementDefaults.Scrollbar.TrackPadding)
+              .width(FriendsManagementDefaults.Scrollbar.TRACK_WIDTH)
+              .padding(FriendsManagementDefaults.Scrollbar.TRACK_PADDING)
               .clip(CircleShape)
               .background(
                   MaterialTheme.colorScheme.background.copy(
@@ -735,7 +735,7 @@ fun FriendsSearchResultsDropdown(
       remember(results.size) {
         val visibleRows =
             results.size.coerceAtMost(FriendsManagementDefaults.Layout.MAX_VISIBLE_SEARCH_ROWS)
-        FriendsManagementDefaults.Layout.RowMinHeight * visibleRows
+        FriendsManagementDefaults.Layout.ROW_MIN_HEIGHT * visibleRows
       }
 
   Surface(
