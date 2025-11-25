@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
@@ -39,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +77,11 @@ object CommonComponentsTestTags {
   const val PHOTO_DIALOG_BACK_BUTTON = "PhotoDialogBackButton"
   const val PHOTO_DIALOG_CAMERA_BUTTON = "PhotoDialogCameraButton"
   const val PHOTO_DIALOG_GALLERY_BUTTON = "PhotoDialogGalleryButton"
+  const val CONFIRMATION_DIALOG = "ConfirmationDialog"
+  const val CONFIRMATION_DIALOG_TITLE = "ConfirmationDialogTitle"
+  const val CONFIRMATION_DIALOG_MESSAGE = "ConfirmationDialogMessage"
+  const val CONFIRMATION_DIALOG_CONFIRM = "ConfirmationDialogConfirm"
+  const val CONFIRMATION_DIALOG_CANCEL = "ConfirmationDialogCancel"
 }
 
 // The default size for the image carousel.
@@ -495,4 +502,59 @@ fun EditableImageCarousel(
       },
       onRemove = { url -> setPhotoCollectionUrl(photoCollectionUrl.filter { it != url }) },
       editable = true)
+}
+
+/**
+ * Displays a confirmation dialog with customizable title, message, and action buttons.
+ *
+ * @param show Whether the dialog should be displayed.
+ * @param title The title text of the dialog.
+ * @param message The message text of the dialog.
+ * @param confirmText The text for the confirm button.
+ * @param cancelText The text for the cancel button.
+ * @param onConfirm Callback invoked when the confirm button is clicked.
+ * @param onDismiss Callback invoked when the dialog is dismissed (via cancel button or outside
+ *   click).
+ * @param dialogTestTag Optional test tag for the dialog container.
+ * @param confirmTestTag Optional test tag for the confirm button.
+ * @param cancelTestTag Optional test tag for the cancel button.
+ */
+@Composable
+fun ConfirmationDialog(
+    show: Boolean,
+    title: String,
+    message: String,
+    confirmText: String,
+    cancelText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    dialogTestTag: String = CommonComponentsTestTags.CONFIRMATION_DIALOG,
+    confirmTestTag: String = CommonComponentsTestTags.CONFIRMATION_DIALOG_CONFIRM,
+    cancelTestTag: String = CommonComponentsTestTags.CONFIRMATION_DIALOG_CANCEL
+) {
+  if (show) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+          Text(
+              title,
+              modifier = Modifier.testTag(CommonComponentsTestTags.CONFIRMATION_DIALOG_TITLE))
+        },
+        text = {
+          Text(
+              message,
+              modifier = Modifier.testTag(CommonComponentsTestTags.CONFIRMATION_DIALOG_MESSAGE))
+        },
+        confirmButton = {
+          TextButton(onClick = onConfirm, modifier = Modifier.testTag(confirmTestTag)) {
+            Text(confirmText)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = onDismiss, modifier = Modifier.testTag(cancelTestTag)) {
+            Text(cancelText)
+          }
+        },
+        modifier = Modifier.testTag(dialogTestTag))
+  }
 }

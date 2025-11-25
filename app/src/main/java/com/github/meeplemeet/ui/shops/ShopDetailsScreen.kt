@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -26,6 +27,7 @@ import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
+import com.github.meeplemeet.ui.components.ConfirmationDialog
 import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
@@ -34,7 +36,6 @@ import com.github.meeplemeet.ui.components.RequiredInfoSection
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
-import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
@@ -46,6 +47,10 @@ object EditShopScreenTestTags {
   const val TOPBAR = "edit_shop_topbar"
   const val TITLE = "edit_shop_title"
   const val NAV_BACK = "edit_shop_nav_back"
+  const val DELETE_BUTTON = "edit_shop_delete_button"
+  const val DELETE_DIALOG = "edit_shop_delete_dialog"
+  const val DELETE_CONFIRM = "edit_shop_delete_confirm"
+  const val DELETE_CANCEL = "edit_shop_delete_cancel"
   const val SNACKBAR_HOST = "edit_shop_snackbar_host"
   const val LIST = "edit_shop_list"
 
@@ -99,6 +104,12 @@ private object EditShopUi {
     const val EMPTY_GAMES = "No games selected yet."
     const val ERROR_VALIDATION = "Validation error"
     const val ERROR_SAVE = "Failed to save shop"
+
+    const val DELETE_DIALOG_TITLE = "Delete Shop"
+    const val DELETE_DIALOG_MESSAGE =
+        "Are you sure you want to delete this shop? This action cannot be undone."
+    const val DELETE_CONFIRM = "Delete"
+    const val DELETE_CANCEL = "Cancel"
   }
 }
 
@@ -113,6 +124,7 @@ private object EditShopUi {
  * @param owner The account of the shop owner.
  * @param onBack Callback function to be invoked when the back navigation is triggered.
  * @param onSaved Callback function to be invoked when the shop is successfully saved.
+ * @param onDelete Callback function to be invoked when the shop is deleted.
  * @param viewModel The ViewModel managing the state and logic for editing a shop.
  */
 @Composable
@@ -121,6 +133,7 @@ fun ShopDetailsScreen(
     shop: Shop,
     onBack: () -> Unit,
     onSaved: () -> Unit,
+    onDelete: () -> Unit = {},
     viewModel: EditShopViewModel = viewModel()
 ) {
   val gameUi by viewModel.gameUIState.collectAsState()
@@ -194,7 +207,7 @@ fun ShopDetailsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditShopContent(
-    shop: Shop?,
+    shop: Shop,
     onBack: () -> Unit,
     onSaved: () -> Unit,
     onSave:
@@ -224,22 +237,23 @@ fun EditShopContent(
   val scope = rememberCoroutineScope()
 
   // Initialize state with loaded shop data or default values
-  var photoCollectionUrl by
-      rememberSaveable(shop) { mutableStateOf(shop?.photoCollectionUrl ?: emptyList()) }
-  var shopName by rememberSaveable(shop) { mutableStateOf(shop?.name ?: "") }
-  var email by rememberSaveable(shop) { mutableStateOf(shop?.email ?: "") }
-  var addressText by rememberSaveable(shop) { mutableStateOf(shop?.address?.name ?: "") }
-  var phone by rememberSaveable(shop) { mutableStateOf(shop?.phone ?: "") }
-  var link by rememberSaveable(shop) { mutableStateOf(shop?.website ?: "") }
+  var photoCollectionUrl by rememberSaveable(shop) { mutableStateOf(shop.photoCollectionUrl) }
+  var shopName by rememberSaveable(shop) { mutableStateOf(shop.name) }
+  var email by rememberSaveable(shop) { mutableStateOf(shop.email) }
+  var addressText by rememberSaveable(shop) { mutableStateOf(shop.address.name) }
+  var phone by rememberSaveable(shop) { mutableStateOf(shop.phone) }
+  var link by rememberSaveable(shop) { mutableStateOf(shop.website) }
 
-  var week by remember(shop) { mutableStateOf(shop?.openingHours ?: emptyWeek()) }
+  var week by remember(shop) { mutableStateOf(shop.openingHours) }
 
   var editingDay by remember { mutableStateOf<Int?>(null) }
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var showGameDialog by remember { mutableStateOf(false) }
   var qty by rememberSaveable { mutableIntStateOf(1) }
-  var stock by remember(shop) { mutableStateOf(shop?.gameCollection ?: initialStock) }
+  var stock by remember(shop) { mutableStateOf(shop.gameCollection) }
+
+  var showDeleteDialog by remember { mutableStateOf(false) }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
@@ -288,6 +302,13 @@ fun EditShopContent(
                           Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                   },
+                  actions = {
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.testTag(EditShopScreenTestTags.DELETE_BUTTON)) {
+                          Icon(Icons.Filled.Delete, contentDescription = "Delete shop")
+                        }
+                  },
                   modifier = Modifier.testTag(EditShopScreenTestTags.TOPBAR))
             },
             snackbarHost = {
@@ -300,23 +321,21 @@ fun EditShopContent(
                   ActionBar(
                       onDiscard = { onDiscard() },
                       onPrimary = {
-                        if (shop != null) {
-                          val addr = locationUi.selectedLocation ?: Location()
-                          val err =
-                              onSave(
-                                  shop,
-                                  shop.owner,
-                                  shopName,
-                                  email,
-                                  phone,
-                                  link,
-                                  addr,
-                                  week,
-                                  stock,
-                                  photoCollectionUrl)
-                          if (err == null) onSaved()
-                          else scope.launch { snackbarHost.showSnackbar(err) }
-                        }
+                        val addr = locationUi.selectedLocation ?: Location()
+                        val err =
+                            onSave(
+                                shop,
+                                shop.owner,
+                                shopName,
+                                email,
+                                phone,
+                                link,
+                                addr,
+                                week,
+                                stock,
+                                photoCollectionUrl)
+                        if (err == null) onSaved()
+                        else scope.launch { snackbarHost.showSnackbar(err) }
                       },
                       enabled = isValid,
                       primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
@@ -462,6 +481,23 @@ fun EditShopContent(
       onSetGameQuery = onSetGameQuery,
       onSetGame = onSetGame,
       onDismiss = { showGameDialog = false })
+
+  ConfirmationDialog(
+      show = showDeleteDialog,
+      title = EditShopUi.Strings.DELETE_DIALOG_TITLE,
+      message = EditShopUi.Strings.DELETE_DIALOG_MESSAGE,
+      confirmText = EditShopUi.Strings.DELETE_CONFIRM,
+      cancelText = EditShopUi.Strings.DELETE_CANCEL,
+      onConfirm = {
+        showDeleteDialog = false
+        viewModel.deleteShop(shop, owner)
+        onBack()
+        onBack()
+      },
+      onDismiss = { showDeleteDialog = false },
+      dialogTestTag = EditShopScreenTestTags.DELETE_DIALOG,
+      confirmTestTag = EditShopScreenTestTags.DELETE_CONFIRM,
+      cancelTestTag = EditShopScreenTestTags.DELETE_CANCEL)
 }
 
 /* ================================================================================================
