@@ -314,6 +314,22 @@ class ProfileScreenViewModel(
     }
   }
 
+  fun loadAccountProfilePicture(
+      accountId: String,
+      context: Context,
+      onLoaded: (ByteArray?) -> Unit
+  ) {
+    viewModelScope.launch {
+      val bytes =
+          try {
+            imageRepository.loadAccountProfilePicture(accountId, context)
+          } catch (e: Exception) {
+            null
+          }
+      onLoaded(bytes)
+    }
+  }
+
   /**
    * Signs out the current user.
    *

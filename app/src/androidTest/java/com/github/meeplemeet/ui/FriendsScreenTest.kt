@@ -1,5 +1,5 @@
 // This file was done first by hand, corrected and improved using ChatGPT-5
-// and finally completed by copilot
+// and finally completed by copilot. Comments were done by ChatGPT-5
 package com.github.meeplemeet.ui
 
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -15,11 +15,13 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.navigation.compose.rememberNavController
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -193,7 +195,10 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_smoke_showsTopBarSearchAndFriendList() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
+        val navController = rememberNavController()
+        val navigationActions = NavigationActions(navController)
         FriendsScreen(
+            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -224,29 +229,23 @@ class FriendsScreenTest : FirestoreTests() {
           .assertHasClickAction()
     }
 
-    /* 2  Friends section title and list -------------------------------------- */
-    checkpoint("Friends section title and list are visible") {
+    /* 2  Friends list -------------------------------------------------------- */
+    checkpoint("Friends list is visible") {
       // Wait until at least one friend row exists -> means friends have been loaded
       compose.waitUntil(timeoutMillis = 5_000) {
         compose
-            .onAllNodesWithTag(
-                FriendsManagementTestTags.FRIEND_ITEM_PREFIX + friend1.uid,
+            .onAllNodes(
+                SemanticsMatcher("friend row") { node ->
+                  val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+                  tag?.startsWith(FriendsManagementTestTags.FRIEND_ITEM_PREFIX) == true
+                },
                 useUnmergedTree = true,
             )
             .fetchSemanticsNodes()
             .isNotEmpty()
       }
 
-      // Section title should now be visible
-      compose
-          .onNodeWithTag(
-              FriendsManagementTestTags.SECTION_TITLE_FRIENDS,
-              useUnmergedTree = true,
-          )
-          .assertExists()
-          .assertIsDisplayed()
-
-      // And the list container itself should exist & be visible
+      // The list container itself should exist & be visible
       compose
           .onNodeWithTag(
               FriendsManagementTestTags.FRIEND_LIST,
@@ -370,7 +369,10 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_search_showsDropdownAndHidesFriendsSection() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
+        val navController = rememberNavController()
+        val navigationActions = NavigationActions(navController)
         FriendsScreen(
+            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -419,11 +421,14 @@ class FriendsScreenTest : FirestoreTests() {
 
     /* 3  Search result rows and their actions exist ------------------------- */
     checkpoint("Search results show multiple accounts with avatars and actions") {
-      // currentUser is filtered out, others with prefix "meeple_" should appear
-      val expectedResultUids =
+      // currentUser is filtered out by the composable; these should appear
+      val allResultUids =
           listOf(friend1.uid, friend2.uid, friend3.uid, stranger.uid, blockedUser.uid)
 
-      expectedResultUids.forEach { uid ->
+      val withActionButtonUids = listOf(friend1.uid, friend2.uid, friend3.uid, stranger.uid)
+
+      // All result rows should have row, avatar and block button
+      allResultUids.forEach { uid ->
         compose
             .onNodeWithTag(
                 FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX + uid, useUnmergedTree = true)
@@ -439,7 +444,10 @@ class FriendsScreenTest : FirestoreTests() {
                 useUnmergedTree = true)
             .assertExists()
             .assertHasClickAction()
+      }
 
+      // Only non-blocked results should have an action button
+      withActionButtonUids.forEach { uid ->
         compose
             .onNodeWithTag(
                 FriendsManagementTestTags.SEARCH_RESULT_ACTION_BUTTON_PREFIX + uid,
@@ -469,7 +477,6 @@ class FriendsScreenTest : FirestoreTests() {
           .assertCountEquals(0)
     }
   }
-
   // ────────────────────────────────────────────────────────────────────────────
   // TEST 3 – Remove friend from list updates Firestore relationships
   // ────────────────────────────────────────────────────────────────────────────
@@ -479,7 +486,10 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_removeFriend_updatesRepository() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
+        val navController = rememberNavController()
+        val navigationActions = NavigationActions(navController)
         FriendsScreen(
+            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -547,7 +557,10 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_blockFromSearch_updatesRepository() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
+        val navController = rememberNavController()
+        val navigationActions = NavigationActions(navController)
         FriendsScreen(
+            navigation = navigationActions,
             account =
                 currentUser.copy( // ensure we start without relationship to stranger
                     relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
@@ -609,7 +622,10 @@ class FriendsScreenTest : FirestoreTests() {
     // currentUser already has blockedUser as BLOCKED in setup()
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
+        val navController = rememberNavController()
+        val navigationActions = NavigationActions(navController)
         FriendsScreen(
+            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},

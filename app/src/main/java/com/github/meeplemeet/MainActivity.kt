@@ -476,6 +476,7 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.Friends.name) {
       account?.let { currentAccount ->
         FriendsScreen(
+            navigation = navigationActions,
             account = currentAccount,
             onBack = { navigationActions.goBack() },
         )
