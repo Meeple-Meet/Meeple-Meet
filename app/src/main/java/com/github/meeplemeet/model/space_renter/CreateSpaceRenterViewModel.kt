@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.space_renter
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.coroutines.launch
@@ -18,7 +19,8 @@ import kotlinx.coroutines.launch
  * @property repository The repository used for space renter operations.
  */
 class CreateSpaceRenterViewModel(
-    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
+    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
 ) : SpaceRenterSearchViewModel() {
   /**
    * Creates a new space renter in Firestore.
@@ -61,8 +63,10 @@ class CreateSpaceRenterViewModel(
         throw IllegalArgumentException("An address it required to create a space renter")
 
     viewModelScope.launch {
-      repository.createSpaceRenter(
-          owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+      val space =
+          repository.createSpaceRenter(
+              owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+      accountRepository.addSpaceRenterId(owner.uid, space.id)
     }
   }
 }

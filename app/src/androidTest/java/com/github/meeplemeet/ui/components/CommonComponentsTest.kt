@@ -175,15 +175,14 @@ class CommonComponentsTest : FirestoreTests() {
   }
 
   @Test
-  fun confirmation_dialog_not_shown_when_show_is_false() = runBlocking {
+  fun full_smoke_confirmation_dialog() = runBlocking {
+    /* 1  Dialog not shown initially -------------------------------------------- */
     checkpoint("Dialog not shown initially") {
       compose.waitForIdle()
       confirmationDialog().assertDoesNotExist()
     }
-  }
 
-  @Test
-  fun confirmation_dialog_displays_title_and_message() = runBlocking {
+    /* 2  Show dialog and verify content --------------------------------------- */
     showConfirmationDialog = true
     compose.waitForIdle()
 
@@ -196,35 +195,39 @@ class CommonComponentsTest : FirestoreTests() {
     checkpoint("Message displayed") {
       confirmationDialogMessage().assertExists().assertTextEquals("Test Message")
     }
-  }
 
-  @Test
-  fun confirmation_dialog_confirm_button_works() = runBlocking {
-    showConfirmationDialog = true
-    compose.waitForIdle()
-
+    /* 3  Confirm button functionality ----------------------------------------- */
     checkpoint("Confirm button exists") { confirmationDialogConfirm().assertExists() }
 
     checkpoint("Confirm button click triggers callback") {
       confirmationDialogConfirm().performClick()
       compose.waitForIdle()
-      assert(confirmClicked) { "Confirm callback was not triggered" }
-      confirmationDialog().assertDoesNotExist()
     }
-  }
 
-  @Test
-  fun confirmation_dialog_cancel_button_works() = runBlocking {
+    checkpoint("Dialog dismissed after confirm") { confirmationDialog().assertDoesNotExist() }
+
+    checkpoint("Confirm callback triggered") {
+      assert(confirmClicked) { "Confirm callback was not triggered" }
+    }
+
+    /* 4  Cancel button functionality ------------------------------------------ */
+    // Reset state
     showConfirmationDialog = true
+    confirmClicked = false
+    dismissClicked = false
     compose.waitForIdle()
 
     checkpoint("Cancel button exists") { confirmationDialogCancel().assertExists() }
 
-    checkpoint("Cancel button click triggers dismiss callback") {
+    checkpoint("Cancel button click triggers dismiss") {
       confirmationDialogCancel().performClick()
       compose.waitForIdle()
+    }
+
+    checkpoint("Dialog dismissed after cancel") { confirmationDialog().assertDoesNotExist() }
+
+    checkpoint("Dismiss callback triggered") {
       assert(dismissClicked) { "Dismiss callback was not triggered" }
-      confirmationDialog().assertDoesNotExist()
     }
   }
 }

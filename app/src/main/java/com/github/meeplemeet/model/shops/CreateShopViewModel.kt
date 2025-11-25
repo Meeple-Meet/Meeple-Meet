@@ -2,11 +2,14 @@
 
 package com.github.meeplemeet.model.shops
 
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel for creating new shops.
@@ -18,6 +21,7 @@ import com.github.meeplemeet.model.shared.location.Location
  */
 class CreateShopViewModel(
     private val shopRepo: ShopRepository = RepositoryProvider.shops,
+    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     gameRepository: GameRepository = RepositoryProvider.games
 ) : ShopSearchViewModel(gameRepository) {
   /**
@@ -42,7 +46,7 @@ class CreateShopViewModel(
    * @throws IllegalArgumentException if the shop name is blank, if not exactly 7 opening hours
    *   entries are provided, or if the address is not valid.
    */
-  suspend fun createShop(
+  fun createShop(
       owner: Account,
       name: String,
       phone: String = "",
@@ -52,7 +56,7 @@ class CreateShopViewModel(
       openingHours: List<OpeningHours>,
       gameCollection: List<Pair<Game, Int>> = emptyList(),
       photoCollectionUrl: List<String> = emptyList()
-  ): Shop {
+  ) {
     if (name.isBlank()) throw IllegalArgumentException("Shop name cannot be blank")
 
     val uniqueByDay = openingHours.distinctBy { it.day }
@@ -61,15 +65,19 @@ class CreateShopViewModel(
     if (address == Location())
         throw IllegalArgumentException("An address is required to create a shop")
 
-    return shopRepo.createShop(
-        owner,
-        name,
-        phone,
-        email,
-        website,
-        address,
-        openingHours,
-        gameCollection,
-        photoCollectionUrl)
+    viewModelScope.launch {
+      val shop =
+          shopRepo.createShop(
+              owner,
+              name,
+              phone,
+              email,
+              website,
+              address,
+              openingHours,
+              gameCollection,
+              photoCollectionUrl)
+      accountRepository.addShopId(owner.uid, shop.id)
+    }
   }
 }

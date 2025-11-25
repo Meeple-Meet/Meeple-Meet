@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,10 +19,12 @@ import kotlinx.coroutines.launch
  * This ViewModel handles shop updates and deletions with permission validation to ensure only the
  * shop owner can perform these operations.
  *
- * @property repository The repository used for shop operations.
+ * @property shopRepository The repository used for shop operations.
  */
-class EditShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ShopSearchViewModel() {
+class EditShopViewModel(
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
+    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
+) : ShopSearchViewModel() {
 
   // Expose the currently loaded shop for editing
   private val _shop = MutableStateFlow<Shop?>(null)
@@ -88,7 +91,7 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
         throw IllegalArgumentException("An address is required to create a shop")
 
     viewModelScope.launch {
-      repository.updateShop(
+      shopRepository.updateShop(
           shop.id,
           owner?.uid,
           name,
@@ -116,6 +119,9 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
     if (shop.owner.uid != requester.uid)
         throw PermissionDeniedException("Only the shop's owner can delete his own shop")
 
-    viewModelScope.launch { repository.deleteShop(shop.id) }
+    viewModelScope.launch {
+      shopRepository.deleteShop(shop.id)
+      accountRepository.removeShopId(requester.uid, shop.id)
+    }
   }
 }

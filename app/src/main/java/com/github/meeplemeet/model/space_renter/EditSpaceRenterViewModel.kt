@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.coroutines.launch
@@ -16,10 +17,11 @@ import kotlinx.coroutines.launch
  * This ViewModel handles space renter updates and deletions with permission validation to ensure
  * only the space renter owner can perform these operations.
  *
- * @property repository The repository used for space renter operations.
+ * @property spaceRenterRepository The repository used for space renter operations.
  */
 class EditSpaceRenterViewModel(
-    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
 ) : SpaceRenterSearchViewModel() {
 
   /**
@@ -76,7 +78,7 @@ class EditSpaceRenterViewModel(
         throw IllegalArgumentException("An address it required to create a space renter")
 
     viewModelScope.launch {
-      repository.updateSpaceRenter(
+      spaceRenterRepository.updateSpaceRenter(
           spaceRenter.id,
           owner?.uid,
           name,
@@ -105,6 +107,9 @@ class EditSpaceRenterViewModel(
         throw PermissionDeniedException(
             "Only the space renter's owner can delete his own space renter")
 
-    viewModelScope.launch { repository.deleteSpaceRenter(spaceRenter.id) }
+    viewModelScope.launch {
+      spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+      accountRepository.removeSpaceRenterId(requester.uid, spaceRenter.id)
+    }
   }
 }
