@@ -26,6 +26,9 @@ class SessionRepository(
     private val discussions: CollectionReference = RepositoryProvider.discussions.collection,
 ) {
   private val geoPinsRepo = RepositoryProvider.geoPins
+  private val sessionDate: String = "session.date"
+  private val sessionParticipants: String = "session.participants"
+  private val sessionPhotos: String = "session.sessionPhotos"
 
   /**
    * Creates a new session within a discussion.
@@ -106,7 +109,7 @@ class SessionRepository(
     while (true) {
       val query =
           discussions
-              .whereArrayContains("session.participants", userId)
+              .whereArrayContains(sessionParticipants, userId)
               .orderBy(FieldPath.documentId())
               .let { if (lastDocumentId != null) it.startAfter(lastDocumentId) else it }
               .limit(batchSize)
@@ -141,9 +144,9 @@ class SessionRepository(
     while (true) {
       val query =
           discussions
-              .whereArrayContains("session.participants", userId)
-              .whereLessThan("session.date", Timestamp.now())
-              .orderBy("session.date")
+              .whereArrayContains(sessionParticipants, userId)
+              .whereLessThan(sessionDate, Timestamp.now())
+              .orderBy(sessionDate)
               .orderBy(FieldPath.documentId())
               .let { if (lastDocumentId != null) it.startAfter(lastDocumentId) else it }
               .limit(batchSize)
@@ -184,7 +187,7 @@ class SessionRepository(
    * @return Cold [Flow] that delivers a list of discussion document ids.
    */
   fun getSessionIdsForUserFlow(userId: String): Flow<List<String>> =
-      discussions.whereArrayContains("session.participants", userId).snapshots().map { snap ->
+      discussions.whereArrayContains(sessionParticipants, userId).snapshots().map { snap ->
         snap.documents.map { it.id }
       }
 
@@ -200,8 +203,8 @@ class SessionRepository(
    */
   fun getUpcomingSessionIdsForUserFlow(userId: String): Flow<List<String>> =
       discussions
-          .whereArrayContains("session.participants", userId)
-          .whereGreaterThan("session.date", Timestamp.now())
+          .whereArrayContains(sessionParticipants, userId)
+          .whereGreaterThan(sessionDate, Timestamp.now())
           .snapshots()
           .map { snap -> snap.documents.map { it.id } }
 
@@ -217,7 +220,7 @@ class SessionRepository(
    * @throws FirebaseFirestoreException if the Firestore update fails
    */
   suspend fun addSessionPhotos(discussionId: String, photos: List<SessionPhoto>) {
-    val sessionPhotosField = "session.sessionPhotos"
+    val sessionPhotosField = sessionPhotos
     discussions
         .document(discussionId)
         .update(sessionPhotosField, FieldValue.arrayUnion(*photos.toTypedArray()))
@@ -237,7 +240,7 @@ class SessionRepository(
     val session = getSession(discussionId) ?: return
     val updatedPhotos = session.sessionPhotos.filterNot { it.uuid == photoUuid }
 
-    val sessionPhotosField = "session.sessionPhotos"
+    val sessionPhotosField = sessionPhotos
     discussions.document(discussionId).update(sessionPhotosField, updatedPhotos).await()
   }
 }
