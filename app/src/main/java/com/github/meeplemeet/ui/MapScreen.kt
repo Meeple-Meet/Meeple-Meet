@@ -85,6 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -161,20 +162,38 @@ object MapScreenTestTags {
  * depending on how many pins are grouped together.
  */
 object ClusterConfig {
-  val smallClusterColor = Color(0xFF4CAF50) // Green
-  val mediumClusterColor = Color(0xFFFF9800) // Orange
-  val largeClusterColor = Color(0xFFF44336) // Red
+  private val startColor = Color(0xFF4CAF50) // Green
+  private val midColor = Color(0xFFFFC107) // Amber
+  private val endColor = Color(0xFFE53935) // Red
 
-  const val SMALL_CLUSTER_THRESHOLD = 5
-  const val MEDIUM_CLUSTER_THRESHOLD = 15
+  private const val SMALL_CLUSTER_THRESHOLD = 5
+  private const val MEDIUM_CLUSTER_THRESHOLD = 15
 
-  /** Returns the color corresponding to a cluster size. */
-  fun getColorForSize(size: Int): Color =
-      when {
-        size <= SMALL_CLUSTER_THRESHOLD -> smallClusterColor
-        size <= MEDIUM_CLUSTER_THRESHOLD -> mediumClusterColor
-        else -> largeClusterColor
-      }
+  private const val BACKGROUND_ALPHA = 0.85f
+
+  /** Returns a gradient-based color depending on cluster size. */
+  fun getColorForSize(size: Int): Color {
+    val normalized =
+        when {
+          size <= SMALL_CLUSTER_THRESHOLD -> 0f
+          size <= MEDIUM_CLUSTER_THRESHOLD ->
+              (size - SMALL_CLUSTER_THRESHOLD).toFloat() /
+                  (MEDIUM_CLUSTER_THRESHOLD - SMALL_CLUSTER_THRESHOLD)
+          else -> 1f
+        }
+
+    // Interpolate:
+    val color =
+        if (normalized < 0.5f) {
+          val t = normalized / 0.5f
+          lerp(startColor, midColor, t)
+        } else {
+          val t = (normalized - 0.5f) / 0.5f
+          lerp(midColor, endColor, t)
+        }
+
+    return color.copy(alpha = BACKGROUND_ALPHA)
+  }
 }
 
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
@@ -1063,10 +1082,12 @@ private fun rememberMarkerIcon(
  * @return a [BitmapDescriptor] usable as a Google Maps marker icon
  */
 @Composable
-private fun rememberClusterIcon(size: Int, diameterDp: Int = 64): BitmapDescriptor {
+private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescriptor {
   val density = LocalDensity.current
+
   return remember(size, diameterDp) {
     val diameterPx = with(density) { diameterDp.dp.toPx() }.toInt()
+    val radius = diameterPx / 2f
 
     // Create a bitmap
     val bitmap = createBitmap(diameterPx, diameterPx)
@@ -1079,18 +1100,27 @@ private fun rememberClusterIcon(size: Int, diameterDp: Int = 64): BitmapDescript
           color = ClusterConfig.getColorForSize(size).toArgb()
           style = Paint.Style.FILL
         }
-    val radius = diameterPx / 2f
     canvas.drawCircle(radius, radius, radius, paint)
 
-    // Draw text (size number)
+    // Draw auto-sized text (size number)
+    val digits = size.toString().length
+    val textFactor =
+        when (digits) {
+          1 -> 0.50f
+          2 -> 0.40f
+          3 -> 0.32f
+          else -> 0.28f
+        }
+
     val textPaint =
         Paint().apply {
           color = Color.White.toArgb()
-          textSize = diameterPx / 2.5f
+          textSize = diameterPx * textFactor
           textAlign = Paint.Align.CENTER
           typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
           isAntiAlias = true
         }
+
     val textY = radius - (textPaint.descent() + textPaint.ascent()) / 2
     canvas.drawText(size.toString(), radius, textY, textPaint)
 
