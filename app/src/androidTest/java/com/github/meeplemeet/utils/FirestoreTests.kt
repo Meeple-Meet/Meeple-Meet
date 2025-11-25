@@ -74,10 +74,10 @@ open class FirestoreTests {
   private suspend fun deleteAllCollectionsOnce(db: FirebaseFirestore) {
     val cleaner = FirestoreTests()
     cleaner.db = db
-    cleaner.deleteCollection(accountRepository.collection)
+    cleaner.deleteCollection(accountRepository.collection, isAccount = true)
     cleaner.deleteCollection(handlesRepository.collection)
     cleaner.deleteCollection(discussionRepository.collection)
-    cleaner.deleteCollection(postRepository.collection)
+    cleaner.deleteCollection(postRepository.collection, isPost = true)
     cleaner.deleteCollection(geoPinRepository.collection)
   }
 
@@ -100,6 +100,12 @@ open class FirestoreTests {
         if (isAccount) {
           deleteCollection(
               collection.document(doc.id).collection("previews"), batchSize = batchSize)
+          deleteCollection(
+              collection.document(doc.id).collection("businesses"), batchSize = batchSize)
+          deleteCollection(
+              collection.document(doc.id).collection("relationships"), batchSize = batchSize)
+          deleteCollection(
+              collection.document(doc.id).collection("notifications"), batchSize = batchSize)
         }
         doc.reference.delete().await()
       }

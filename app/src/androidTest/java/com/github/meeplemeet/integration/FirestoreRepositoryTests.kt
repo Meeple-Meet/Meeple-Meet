@@ -730,4 +730,123 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertNotNull(poll)
     assertEquals(20, poll!!.options.size)
   }
+
+  // Business IDs Tests
+
+  @Test
+  fun businessIdsManagementWorksCorrectly() = runBlocking {
+    // Initially both lists should be empty
+    val (initialShops, initialSpaceRenters) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertTrue(initialShops.isEmpty())
+    assertTrue(initialSpaceRenters.isEmpty())
+
+    // Add shop IDs
+    accountRepository.addShopId(testAccount1.uid, "shop1")
+    accountRepository.addShopId(testAccount1.uid, "shop2")
+    accountRepository.addShopId(testAccount1.uid, "shop3")
+
+    // Add space renter IDs
+    accountRepository.addSpaceRenterId(testAccount1.uid, "spaceRenter1")
+    accountRepository.addSpaceRenterId(testAccount1.uid, "spaceRenter2")
+
+    // Verify both lists are populated correctly
+    val (shops, spaceRenters) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(3, shops.size)
+    assertTrue(shops.contains("shop1"))
+    assertTrue(shops.contains("shop2"))
+    assertTrue(shops.contains("shop3"))
+    assertEquals(2, spaceRenters.size)
+    assertTrue(spaceRenters.contains("spaceRenter1"))
+    assertTrue(spaceRenters.contains("spaceRenter2"))
+
+    // Remove a shop ID
+    accountRepository.removeShopId(testAccount1.uid, "shop2")
+    val (shopsAfterRemove, spaceRentersAfterRemove) =
+        accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(2, shopsAfterRemove.size)
+    assertFalse(shopsAfterRemove.contains("shop2"))
+    assertTrue(shopsAfterRemove.contains("shop1"))
+    assertTrue(shopsAfterRemove.contains("shop3"))
+    // Space renters should be unchanged
+    assertEquals(2, spaceRentersAfterRemove.size)
+
+    // Remove a space renter ID
+    accountRepository.removeSpaceRenterId(testAccount1.uid, "spaceRenter1")
+    val (finalShops, finalSpaceRenters) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(2, finalShops.size)
+    assertEquals(1, finalSpaceRenters.size)
+    assertFalse(finalSpaceRenters.contains("spaceRenter1"))
+    assertTrue(finalSpaceRenters.contains("spaceRenter2"))
+
+    // Remove all remaining IDs
+    accountRepository.removeShopId(testAccount1.uid, "shop1")
+    accountRepository.removeShopId(testAccount1.uid, "shop3")
+    accountRepository.removeSpaceRenterId(testAccount1.uid, "spaceRenter2")
+
+    val (emptyShops, emptySpaceRenters) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertTrue(emptyShops.isEmpty())
+    assertTrue(emptySpaceRenters.isEmpty())
+  }
+
+  @Test
+  fun businessIdsHandlesDuplicatesAndEdgeCases() = runBlocking {
+    // Add the same shop ID multiple times
+    accountRepository.addShopId(testAccount1.uid, "shop1")
+    accountRepository.addShopId(testAccount1.uid, "shop1")
+    accountRepository.addShopId(testAccount1.uid, "shop1")
+
+    // Should only have one instance due to distinct()
+    val (shops, _) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(1, shops.size)
+    assertEquals("shop1", shops[0])
+
+    // Add the same space renter ID multiple times
+    accountRepository.addSpaceRenterId(testAccount1.uid, "spaceRenter1")
+    accountRepository.addSpaceRenterId(testAccount1.uid, "spaceRenter1")
+
+    val (_, spaceRenters) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(1, spaceRenters.size)
+    assertEquals("spaceRenter1", spaceRenters[0])
+
+    // Removing a non-existent ID should not cause errors
+    accountRepository.removeShopId(testAccount1.uid, "nonexistent")
+    accountRepository.removeSpaceRenterId(testAccount1.uid, "nonexistent")
+
+    // Lists should remain unchanged
+    val (finalShops, finalSpaceRenters) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(1, finalShops.size)
+    assertEquals(1, finalSpaceRenters.size)
+  }
+
+  @Test
+  fun multipleAccountsHaveIndependentBusinessIds() = runBlocking {
+    // Add businesses to account 1
+    accountRepository.addShopId(testAccount1.uid, "shop1")
+    accountRepository.addSpaceRenterId(testAccount1.uid, "spaceRenter1")
+
+    // Add different businesses to account 2
+    accountRepository.addShopId(testAccount2.uid, "shop2")
+    accountRepository.addSpaceRenterId(testAccount2.uid, "spaceRenter2")
+
+    // Verify account 1 has only its businesses
+    val (shops1, spaceRenters1) = accountRepository.getBusinessIds(testAccount1.uid)
+    assertEquals(1, shops1.size)
+    assertEquals("shop1", shops1[0])
+    assertEquals(1, spaceRenters1.size)
+    assertEquals("spaceRenter1", spaceRenters1[0])
+
+    // Verify account 2 has only its businesses
+    val (shops2, spaceRenters2) = accountRepository.getBusinessIds(testAccount2.uid)
+    assertEquals(1, shops2.size)
+    assertEquals("shop2", shops2[0])
+    assertEquals(1, spaceRenters2.size)
+    assertEquals("spaceRenter2", spaceRenters2[0])
+
+    // Removing from one account shouldn't affect the other
+    accountRepository.removeShopId(testAccount1.uid, "shop1")
+    val (shops1After, _) = accountRepository.getBusinessIds(testAccount1.uid)
+    val (shops2After, _) = accountRepository.getBusinessIds(testAccount2.uid)
+    assertTrue(shops1After.isEmpty())
+    assertEquals(1, shops2After.size)
+  }
 }

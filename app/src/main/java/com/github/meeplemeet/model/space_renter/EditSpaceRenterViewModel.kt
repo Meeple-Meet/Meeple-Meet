@@ -16,10 +16,10 @@ import kotlinx.coroutines.launch
  * This ViewModel handles space renter updates and deletions with permission validation to ensure
  * only the space renter owner can perform these operations.
  *
- * @property repository The repository used for space renter operations.
+ * @property spaceRenterRepository The repository used for space renter operations.
  */
 class EditSpaceRenterViewModel(
-    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
 ) : SpaceRenterSearchViewModel() {
 
   /**
@@ -76,7 +76,7 @@ class EditSpaceRenterViewModel(
         throw IllegalArgumentException("An address it required to create a space renter")
 
     viewModelScope.launch {
-      repository.updateSpaceRenter(
+      spaceRenterRepository.updateSpaceRenter(
           spaceRenter.id,
           owner?.uid,
           name,
@@ -94,7 +94,8 @@ class EditSpaceRenterViewModel(
    * Deletes a space renter from Firestore.
    *
    * This operation is performed asynchronously in the viewModelScope. Only the space renter owner
-   * can delete the space renter.
+   * can delete the space renter. The repository will automatically remove the space renter ID from
+   * the owner's businesses subcollection.
    *
    * @param spaceRenter The space renter to delete.
    * @param requester The account requesting the deletion.
@@ -105,6 +106,6 @@ class EditSpaceRenterViewModel(
         throw PermissionDeniedException(
             "Only the space renter's owner can delete his own space renter")
 
-    viewModelScope.launch { repository.deleteSpaceRenter(spaceRenter.id) }
+    viewModelScope.launch { spaceRenterRepository.deleteSpaceRenter(spaceRenter.id) }
   }
 }

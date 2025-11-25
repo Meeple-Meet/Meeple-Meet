@@ -47,6 +47,10 @@ class AccountRepository : FirestoreRepository("accounts") {
   companion object {
     /** Firestore field name for relationship status */
     private const val FIELD_STATUS = "status"
+    /** Firestore field name for shop IDs list */
+    private const val FIELD_SHOP_IDS = "shopIds"
+    /** Firestore field name for space renter IDs list */
+    private const val FIELD_SPACE_RENTER_IDS = "spaceRenterIds"
   }
 
   /**
@@ -66,6 +70,17 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   private fun notifications(uid: String) =
       collection.document(uid).collection(Account::notifications.name)
+
+  /**
+   * Returns a reference to the businesses document for a given account.
+   *
+   * This document contains two lists: shopIds and spaceRenterIds.
+   *
+   * @param uid The account ID whose businesses document to access
+   * @return A DocumentReference to the businesses document
+   */
+  private fun businessesDoc(uid: String) =
+      collection.document(uid).collection("businesses").document("ids")
 
   /**
    * Extracts discussion previews from a Firestore query snapshot.
@@ -237,6 +252,100 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   suspend fun deleteAccount(id: String) {
     collection.document(id).delete().await()
+  }
+
+  /**
+   * Adds a shop ID to the account's owned shops list.
+   *
+   * @param accountId The account ID to add the shop to
+   * @param shopId The shop ID to add
+   */
+  suspend fun addShopId(accountId: String, shopId: String) {
+    val docRef = businessesDoc(accountId)
+    db.runTransaction { transaction ->
+          val snapshot = transaction.get(docRef)
+          val currentShops = snapshot.get(FIELD_SHOP_IDS) as? List<*> ?: emptyList<String>()
+          val updatedShops = (currentShops.filterIsInstance<String>() + shopId).distinct()
+          transaction.set(
+              docRef,
+              mapOf(FIELD_SHOP_IDS to updatedShops),
+              com.google.firebase.firestore.SetOptions.merge())
+        }
+        .await()
+  }
+
+  /**
+   * Removes a shop ID from the account's owned shops list.
+   *
+   * @param accountId The account ID to remove the shop from
+   * @param shopId The shop ID to remove
+   */
+  suspend fun removeShopId(accountId: String, shopId: String) {
+    val docRef = businessesDoc(accountId)
+    db.runTransaction { transaction ->
+          val snapshot = transaction.get(docRef)
+          val currentShops = snapshot.get(FIELD_SHOP_IDS) as? List<*> ?: emptyList<String>()
+          val updatedShops = currentShops.filterIsInstance<String>().filter { it != shopId }
+          transaction.update(docRef, FIELD_SHOP_IDS, updatedShops)
+        }
+        .await()
+  }
+
+  /**
+   * Adds a space renter ID to the account's owned space renters list.
+   *
+   * @param accountId The account ID to add the space renter to
+   * @param spaceRenterId The space renter ID to add
+   */
+  suspend fun addSpaceRenterId(accountId: String, spaceRenterId: String) {
+    val docRef = businessesDoc(accountId)
+    db.runTransaction { transaction ->
+          val snapshot = transaction.get(docRef)
+          val currentSpaceRenters =
+              snapshot.get(FIELD_SPACE_RENTER_IDS) as? List<*> ?: emptyList<String>()
+          val updatedSpaceRenters =
+              (currentSpaceRenters.filterIsInstance<String>() + spaceRenterId).distinct()
+          transaction.set(
+              docRef,
+              mapOf(FIELD_SPACE_RENTER_IDS to updatedSpaceRenters),
+              com.google.firebase.firestore.SetOptions.merge())
+        }
+        .await()
+  }
+
+  /**
+   * Removes a space renter ID from the account's owned space renters list.
+   *
+   * @param accountId The account ID to remove the space renter from
+   * @param spaceRenterId The space renter ID to remove
+   */
+  suspend fun removeSpaceRenterId(accountId: String, spaceRenterId: String) {
+    val docRef = businessesDoc(accountId)
+    db.runTransaction { transaction ->
+          val snapshot = transaction.get(docRef)
+          val currentSpaceRenters =
+              snapshot.get(FIELD_SPACE_RENTER_IDS) as? List<*> ?: emptyList<String>()
+          val updatedSpaceRenters =
+              currentSpaceRenters.filterIsInstance<String>().filter { it != spaceRenterId }
+          transaction.update(docRef, FIELD_SPACE_RENTER_IDS, updatedSpaceRenters)
+        }
+        .await()
+  }
+
+  /**
+   * Retrieves the lists of owned shop IDs and space renter IDs for an account.
+   *
+   * @param accountId The account ID to retrieve businesses for
+   * @return A Pair where first is the list of shop IDs and second is the list of space renter IDs
+   */
+  suspend fun getBusinessIds(accountId: String): Pair<List<String>, List<String>> {
+    val snapshot = businessesDoc(accountId).get().await()
+    val shopIds =
+        (snapshot.get(FIELD_SHOP_IDS) as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+    val spaceRenterIds =
+        (snapshot.get(FIELD_SPACE_RENTER_IDS) as? List<*>)?.filterIsInstance<String>()
+            ?: emptyList()
+    return Pair(shopIds, spaceRenterIds)
   }
 
   /**

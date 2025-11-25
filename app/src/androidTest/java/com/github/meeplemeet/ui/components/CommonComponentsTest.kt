@@ -39,11 +39,32 @@ class CommonComponentsTest : FirestoreTests() {
   private fun carouselImageNodes() =
       compose.onAllNodesWithTag(CommonComponentsTestTags.CAROUSEL_IMAGE)
 
+  private fun confirmationDialog() =
+      compose.onNodeWithTag(CommonComponentsTestTags.CONFIRMATION_DIALOG)
+
+  private fun confirmationDialogTitle() =
+      compose.onNodeWithTag(CommonComponentsTestTags.CONFIRMATION_DIALOG_TITLE)
+
+  private fun confirmationDialogMessage() =
+      compose.onNodeWithTag(CommonComponentsTestTags.CONFIRMATION_DIALOG_MESSAGE)
+
+  private fun confirmationDialogConfirm() =
+      compose.onNodeWithTag(CommonComponentsTestTags.CONFIRMATION_DIALOG_CONFIRM)
+
+  private fun confirmationDialogCancel() =
+      compose.onNodeWithTag(CommonComponentsTestTags.CONFIRMATION_DIALOG_CANCEL)
+
   /* ------------------------- setup ---------------------------- */
 
   private var showGalleryDialog by mutableStateOf(false)
   private var galleryEditable by mutableStateOf(true)
   private var carouselImages by mutableStateOf<List<String>>(emptyList())
+
+  private var showConfirmationDialog by mutableStateOf(false)
+  private var confirmationTitle by mutableStateOf("Test Title")
+  private var confirmationMessage by mutableStateOf("Test Message")
+  private var confirmClicked by mutableStateOf(false)
+  private var dismissClicked by mutableStateOf(false)
 
   @Before
   fun setup() = runBlocking {
@@ -58,11 +79,31 @@ class CommonComponentsTest : FirestoreTests() {
             editable = galleryEditable)
       }
       ImageCarousel(photoCollectionUrl = carouselImages, editable = true)
+
+      ConfirmationDialog(
+          show = showConfirmationDialog,
+          title = confirmationTitle,
+          message = confirmationMessage,
+          confirmText = "Confirm",
+          cancelText = "Cancel",
+          onConfirm = {
+            confirmClicked = true
+            showConfirmationDialog = false
+          },
+          onDismiss = {
+            dismissClicked = true
+            showConfirmationDialog = false
+          })
     }
     // initialize default state for tests
     showGalleryDialog = false
     galleryEditable = true
     carouselImages = emptyList()
+    showConfirmationDialog = false
+    confirmClicked = false
+    dismissClicked = false
+    confirmationTitle = "Test Title"
+    confirmationMessage = "Test Message"
   }
 
   /* ---------------------- tests ------------------------------- */
@@ -131,5 +172,62 @@ class CommonComponentsTest : FirestoreTests() {
     compose.waitForIdle()
 
     checkpoint("GalleryDialog appears") { galleryDialogImage().assertExists() }
+  }
+
+  @Test
+  fun full_smoke_confirmation_dialog() = runBlocking {
+    /* 1  Dialog not shown initially -------------------------------------------- */
+    checkpoint("Dialog not shown initially") {
+      compose.waitForIdle()
+      confirmationDialog().assertDoesNotExist()
+    }
+
+    /* 2  Show dialog and verify content --------------------------------------- */
+    showConfirmationDialog = true
+    compose.waitForIdle()
+
+    checkpoint("Dialog shown") { confirmationDialog().assertExists() }
+
+    checkpoint("Title displayed") {
+      confirmationDialogTitle().assertExists().assertTextEquals("Test Title")
+    }
+
+    checkpoint("Message displayed") {
+      confirmationDialogMessage().assertExists().assertTextEquals("Test Message")
+    }
+
+    /* 3  Confirm button functionality ----------------------------------------- */
+    checkpoint("Confirm button exists") { confirmationDialogConfirm().assertExists() }
+
+    checkpoint("Confirm button click triggers callback") {
+      confirmationDialogConfirm().performClick()
+      compose.waitForIdle()
+    }
+
+    checkpoint("Dialog dismissed after confirm") { confirmationDialog().assertDoesNotExist() }
+
+    checkpoint("Confirm callback triggered") {
+      assert(confirmClicked) { "Confirm callback was not triggered" }
+    }
+
+    /* 4  Cancel button functionality ------------------------------------------ */
+    // Reset state
+    showConfirmationDialog = true
+    confirmClicked = false
+    dismissClicked = false
+    compose.waitForIdle()
+
+    checkpoint("Cancel button exists") { confirmationDialogCancel().assertExists() }
+
+    checkpoint("Cancel button click triggers dismiss") {
+      confirmationDialogCancel().performClick()
+      compose.waitForIdle()
+    }
+
+    checkpoint("Dialog dismissed after cancel") { confirmationDialog().assertDoesNotExist() }
+
+    checkpoint("Dismiss callback triggered") {
+      assert(dismissClicked) { "Dismiss callback was not triggered" }
+    }
   }
 }

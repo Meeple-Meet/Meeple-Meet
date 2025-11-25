@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
@@ -36,6 +37,10 @@ object EditSpaceRenterScreenTestTags {
   const val TOPBAR = "edit_space_renter_topbar"
   const val TITLE = "edit_space_renter_title"
   const val NAV_BACK = "edit_space_renter_nav_back"
+  const val DELETE_BUTTON = "edit_space_renter_delete_button"
+  const val DELETE_DIALOG = "edit_space_renter_delete_dialog"
+  const val DELETE_CONFIRM = "edit_space_renter_delete_confirm"
+  const val DELETE_CANCEL = "edit_space_renter_delete_cancel"
   const val SNACKBAR_HOST = "edit_space_renter_snackbar_host"
   const val LIST = "edit_space_renter_list"
 
@@ -62,6 +67,12 @@ object EditSpaceRenterUi {
     const val SECTION_SPACES = "Available Spaces"
     const val ERROR_VALIDATION = "Validation error"
     const val ERROR_UPDATE = "Failed to update space renter"
+
+    const val DELETE_DIALOG_TITLE = "Delete Space Renter"
+    const val DELETE_DIALOG_MESSAGE =
+        "Are you sure you want to delete this space renter? This action cannot be undone."
+    const val DELETE_CONFIRM = "Delete"
+    const val DELETE_CANCEL = "Cancel"
   }
 }
 
@@ -198,6 +209,8 @@ internal fun EditSpaceRenterContent(
   var spacesExpanded by rememberSaveable { mutableStateOf(false) }
   val validation = rememberSpaceRenterValidationState(week, spaces, locationUi)
 
+  var showDeleteDialog by remember { mutableStateOf(false) }
+
   // Determines whether all required fields are filled and valid.
   val isValid by
       remember(name, email, validation) {
@@ -256,6 +269,13 @@ internal fun EditSpaceRenterContent(
                         onClick = onBack,
                         modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.NAV_BACK)) {
                           Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                  },
+                  actions = {
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.DELETE_BUTTON)) {
+                          Icon(Icons.Filled.Delete, contentDescription = "Delete space renter")
                         }
                   },
                   modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TOPBAR))
@@ -386,4 +406,21 @@ internal fun EditSpaceRenterContent(
       week = week,
       onWeekChange = { week = it },
       onDismiss = { showHoursDialog = false })
+
+  ConfirmationDialog(
+      show = showDeleteDialog,
+      title = EditSpaceRenterUi.Strings.DELETE_DIALOG_TITLE,
+      message = EditSpaceRenterUi.Strings.DELETE_DIALOG_MESSAGE,
+      confirmText = EditSpaceRenterUi.Strings.DELETE_CONFIRM,
+      cancelText = EditSpaceRenterUi.Strings.DELETE_CANCEL,
+      onConfirm = {
+        showDeleteDialog = false
+        viewModel.deleteSpaceRenter(initialRenter, owner)
+        onBack()
+        onBack()
+      },
+      onDismiss = { showDeleteDialog = false },
+      dialogTestTag = EditSpaceRenterScreenTestTags.DELETE_DIALOG,
+      confirmTestTag = EditSpaceRenterScreenTestTags.DELETE_CONFIRM,
+      cancelTestTag = EditSpaceRenterScreenTestTags.DELETE_CANCEL)
 }

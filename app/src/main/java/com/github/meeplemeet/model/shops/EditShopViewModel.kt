@@ -18,10 +18,11 @@ import kotlinx.coroutines.launch
  * This ViewModel handles shop updates and deletions with permission validation to ensure only the
  * shop owner can perform these operations.
  *
- * @property repository The repository used for shop operations.
+ * @property shopRepository The repository used for shop operations.
  */
-class EditShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ShopSearchViewModel() {
+class EditShopViewModel(
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
+) : ShopSearchViewModel() {
 
   // Expose the currently loaded shop for editing
   private val _shop = MutableStateFlow<Shop?>(null)
@@ -88,7 +89,7 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
         throw IllegalArgumentException("An address is required to create a shop")
 
     viewModelScope.launch {
-      repository.updateShop(
+      shopRepository.updateShop(
           shop.id,
           owner?.uid,
           name,
@@ -106,7 +107,8 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
    * Deletes a shop from Firestore.
    *
    * This operation is performed asynchronously in the viewModelScope. Only the shop owner can
-   * delete the shop.
+   * delete the shop. The repository will automatically remove the shop ID from the owner's
+   * businesses subcollection.
    *
    * @param shop The shop to delete.
    * @param requester The account requesting the deletion.
@@ -116,6 +118,6 @@ class EditShopViewModel(private val repository: ShopRepository = RepositoryProvi
     if (shop.owner.uid != requester.uid)
         throw PermissionDeniedException("Only the shop's owner can delete his own shop")
 
-    viewModelScope.launch { repository.deleteShop(shop.id) }
+    viewModelScope.launch { shopRepository.deleteShop(shop.id) }
   }
 }

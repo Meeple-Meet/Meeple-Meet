@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
  * @property repository The repository used for space renter operations.
  */
 class CreateSpaceRenterViewModel(
-    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
+    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
 ) : SpaceRenterSearchViewModel() {
   /**
    * Creates a new space renter in Firestore.
@@ -27,6 +27,9 @@ class CreateSpaceRenterViewModel(
    * - The space renter name is not blank
    * - Exactly 7 opening hours entries are provided (one for each day of the week)
    * - A valid address is provided
+   *
+   * The repository will automatically add the space renter ID to the owner's businesses
+   * subcollection.
    *
    * @param owner The account that owns the space rental business.
    * @param name The name of the space rental business.

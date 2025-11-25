@@ -28,6 +28,8 @@ class CreateShopViewModel(
    * - Exactly 7 opening hours entries are provided (one for each day of the week)
    * - A valid address is provided
    *
+   * The repository will automatically add the shop ID to the owner's businesses subcollection.
+   *
    * @param owner The account that owns the shop.
    * @param name The name of the shop.
    * @param phone The contact phone number for the shop (optional).

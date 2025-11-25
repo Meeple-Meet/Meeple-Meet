@@ -71,6 +71,8 @@ class SpaceRenterRepository(
 
     geoPinRepository.upsertGeoPin(ref = spaceRenter.id, type = PinType.SPACE, location = address)
 
+    accountRepository.addSpaceRenterId(owner.uid, spaceRenter.id)
+
     return spaceRenter
   }
 
@@ -181,10 +183,43 @@ class SpaceRenterRepository(
   /**
    * Deletes a space renter from Firestore.
    *
+   * Also removes the space renter ID from the owner's businesses subcollection.
+   *
    * @param id The unique identifier of the space renter to delete.
    */
   suspend fun deleteSpaceRenter(id: String) {
+    // Get the space renter to retrieve the owner ID before deletion
+    val spaceRenter = getSpaceRenter(id)
+
     geoPinRepository.deleteGeoPin(id)
     collection.document(id).delete().await()
+
+    // Remove the space renter ID from the owner's businesses
+    accountRepository.removeSpaceRenterId(spaceRenter.owner.uid, id)
+  }
+
+  /**
+   * Deletes multiple space renters from Firestore efficiently in parallel.
+   *
+   * Also removes the space renter IDs from the owners' businesses subcollections.
+   *
+   * @param ids The list of unique identifiers of the space renters to delete.
+   */
+  suspend fun deleteSpaceRenters(ids: List<String>) {
+    coroutineScope {
+      ids.map { id ->
+            async {
+              // Get the space renter to retrieve the owner ID before deletion
+              val spaceRenter = getSpaceRenter(id)
+
+              geoPinRepository.deleteGeoPin(id)
+              collection.document(id).delete().await()
+
+              // Remove the space renter ID from the owner's businesses
+              accountRepository.removeSpaceRenterId(spaceRenter.owner.uid, id)
+            }
+          }
+          .awaitAll()
+    }
   }
 }

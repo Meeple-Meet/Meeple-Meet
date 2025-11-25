@@ -131,23 +131,17 @@ fun CreateShopScreen(
       onBack = onBack,
       onCreated = onCreated,
       onCreate = { name, email, address, week, stock ->
-        try {
-          val shop =
-              viewModel.createShop(
-                  owner = owner,
-                  name = name,
-                  phone = "",
-                  email = email,
-                  website = "",
-                  address = address,
-                  openingHours = week,
-                  gameCollection = stock)
-          shop.id
-        } catch (e: IllegalArgumentException) {
-          throw e
-        } catch (e: Exception) {
-          throw e
-        }
+        val shop =
+            viewModel.createShop(
+                owner = owner,
+                name = name,
+                phone = "",
+                email = email,
+                website = "",
+                address = address,
+                openingHours = week,
+                gameCollection = stock)
+        shop.id
       },
       gameUi = ui,
       locationUi = locationUi,

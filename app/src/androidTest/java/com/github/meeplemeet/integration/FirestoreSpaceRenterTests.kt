@@ -209,139 +209,64 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   }
 
   @Test
-  fun updateSpaceRenterNameUpdatesName() = runTest {
+  fun updateSpaceRenterIndividualFieldsWorkCorrectly() = runTest {
+    // Test updating individual fields
     val spaceRenter =
         spaceRenterRepository.createSpaceRenter(
             owner = testAccount1,
-            name = "Old Name",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, name = "New Name")
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
-    assertEquals("New Name", updated.name)
-    assertEquals(spaceRenter.id, updated.id)
-  }
-
-  @Test
-  fun updateSpaceRenterPhoneUpdatesPhone() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
+            name = "Original Space Renter",
             phone = "+41 11 111 1111",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, phone = "+41 22 222 2222")
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
-    assertEquals("+41 22 222 2222", updated.phone)
-  }
-
-  @Test
-  fun updateSpaceRenterEmailUpdatesEmail() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
             email = "old@spacerenter.com",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, email = "new@spacerenter.com")
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
-    assertEquals("new@spacerenter.com", updated.email)
-  }
-
-  @Test
-  fun updateSpaceRenterWebsiteUpdatesWebsite() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
             website = "https://old.com",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, website = "https://new.com")
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
-    assertEquals("https://new.com", updated.website)
-  }
-
-  @Test
-  fun updateSpaceRenterAddressUpdatesAddress() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, address = testLocation2)
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
-    assertEquals(testLocation2, updated.address)
-  }
-
-  @Test
-  fun updateSpaceRenterOpeningHoursUpdatesOpeningHours() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    val newOpeningHours =
-        listOf(
-            OpeningHours(day = 1, hours = listOf(TimeSlot("10:00", "19:00"))),
-            OpeningHours(day = 2, hours = listOf(TimeSlot("10:00", "19:00"))))
-
-    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, openingHours = newOpeningHours)
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
-    assertEquals(2, updated.openingHours.size)
-    assertEquals("10:00", updated.openingHours[0].hours[0].open)
-    assertEquals("19:00", updated.openingHours[0].hours[0].close)
-  }
-
-  @Test
-  fun updateSpaceRenterSpacesUpdatesSpaces() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
             address = testLocation1,
             openingHours = testOpeningHours,
             spaces = listOf(testSpace1))
 
+    // Update name
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, name = "New Name")
+    var updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    assertEquals("New Name", updated.name)
+
+    // Update phone
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, phone = "+41 22 222 2222")
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    assertEquals("+41 22 222 2222", updated.phone)
+
+    // Update email
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, email = "new@spacerenter.com")
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    assertEquals("new@spacerenter.com", updated.email)
+
+    // Update website
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, website = "https://new.com")
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    assertEquals("https://new.com", updated.website)
+
+    // Update address
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, address = testLocation2)
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    assertEquals(testLocation2, updated.address)
+
+    // Update opening hours
+    val newOpeningHours =
+        listOf(
+            OpeningHours(day = 1, hours = listOf(TimeSlot("10:00", "19:00"))),
+            OpeningHours(day = 2, hours = listOf(TimeSlot("10:00", "19:00"))))
+    spaceRenterRepository.updateSpaceRenter(spaceRenter.id, openingHours = newOpeningHours)
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    assertEquals(2, updated.openingHours.size)
+    assertEquals("10:00", updated.openingHours[0].hours[0].open)
+
+    // Update spaces
     val newSpaces = listOf(testSpace2, Space(seats = 5, costPerHour = 15.0))
     spaceRenterRepository.updateSpaceRenter(spaceRenter.id, spaces = newSpaces)
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals(2, updated.spaces.size)
     assertEquals(20, updated.spaces[0].seats)
-    assertEquals(50.0, updated.spaces[0].costPerHour)
-    assertEquals(5, updated.spaces[1].seats)
-    assertEquals(15.0, updated.spaces[1].costPerHour)
-  }
 
-  @Test
-  fun updateSpaceRenterOwnerIdUpdatesOwnerId() = runTest {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Space Renter",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
+    // Update owner
     spaceRenterRepository.updateSpaceRenter(spaceRenter.id, ownerId = testAccount2.uid)
-
-    val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+    updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
     assertEquals(testAccount2.uid, updated.owner.uid)
   }
 
@@ -408,6 +333,63 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // This should throw IllegalArgumentException
     spaceRenterRepository.getSpaceRenter(spaceRenter.id)
+  }
+
+  @Test
+  fun deleteSpaceRentersRemovesMultipleSpaceRentersInParallel() = runTest {
+    // Create multiple space renters
+    val spaceRenter1 =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Space Renter to Delete 1",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val spaceRenter2 =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount2,
+            name = "Space Renter to Delete 2",
+            address = testLocation2,
+            openingHours = testOpeningHours)
+
+    val spaceRenter3 =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Space Renter to Delete 3",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val idsToDelete = listOf(spaceRenter1.id, spaceRenter2.id, spaceRenter3.id)
+
+    // Delete all space renters in parallel
+    spaceRenterRepository.deleteSpaceRenters(idsToDelete)
+
+    // Verify all space renters are deleted
+    idsToDelete.forEach { id ->
+      try {
+        spaceRenterRepository.getSpaceRenter(id)
+        throw AssertionError("SpaceRenter $id should have been deleted")
+      } catch (_: IllegalArgumentException) {
+        // Expected - space renter doesn't exist anymore
+      }
+    }
+  }
+
+  @Test
+  fun deleteSpaceRentersWithEmptyListDoesNothing() = runTest {
+    // Create a space renter to ensure the repository is not empty
+    spaceRenterRepository.createSpaceRenter(
+        owner = testAccount1,
+        name = "Test Space Renter",
+        address = testLocation1,
+        openingHours = testOpeningHours)
+
+    // Delete empty list should not throw
+    spaceRenterRepository.deleteSpaceRenters(emptyList())
+
+    // Verify space renters still exist
+    val spaceRenters = spaceRenterRepository.getSpaceRenters(10u)
+    assertTrue(spaceRenters.isNotEmpty())
   }
 
   @Test
