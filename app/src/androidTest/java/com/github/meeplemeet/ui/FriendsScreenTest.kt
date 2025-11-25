@@ -153,7 +153,7 @@ class FriendsScreenTest : FirestoreTests() {
 
       // Make friend1..friend8 friends of currentUser
       suspend fun befriend(other: Account) {
-        accountRepository.sendFriendRequest(currentUser.uid, other.uid)
+        accountRepository.sendFriendRequest(currentUser, other.uid)
         accountRepository.acceptFriendRequest(other.uid, currentUser.uid)
       }
 
