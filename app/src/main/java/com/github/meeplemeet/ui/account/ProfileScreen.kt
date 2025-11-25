@@ -17,8 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.CreateAccountViewModel
-import com.github.meeplemeet.model.auth.AuthenticationViewModel
+import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -48,15 +47,14 @@ object ProfileScreenUi {
 @Composable
 fun ProfileScreen(
     navigation: NavigationActions,
-    authViewModel: AuthenticationViewModel = viewModel(),
-    createAccountViewModel: CreateAccountViewModel = viewModel(),
+    viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
     onSignOut: () -> Unit
 ) {
-  val uiState by authViewModel.uiState.collectAsState()
+  val uiState by viewModel.uiState.collectAsState()
 
   // Refresh email verification status when the profile is shown
-  LaunchedEffect(account.uid) { authViewModel.refreshEmailVerificationStatus() }
+  LaunchedEffect(account.uid) { viewModel.refreshEmailVerificationStatus() }
 
   Scaffold(
       topBar = {
@@ -80,8 +78,7 @@ fun ProfileScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.TopCenter) {
               MainTab(
-                  authViewModel = authViewModel,
-                  createAccountViewModel = createAccountViewModel,
+                  viewModel = viewModel,
                   account = account,
                   onFriendsClick = {}, // define if needed
                   onNotificationClick = {}, // define if needed

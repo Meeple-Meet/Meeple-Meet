@@ -2,7 +2,16 @@ package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
 
+import android.content.Context
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.auth.AuthUIState
+import com.github.meeplemeet.model.auth.AuthenticationRepository
+import com.github.meeplemeet.model.auth.coolDownErrMessage
+import com.github.meeplemeet.model.images.ImageRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -18,7 +27,14 @@ import kotlinx.coroutines.launch
 class ProfileScreenViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
+    private val imageRepository: ImageRepository = RepositoryProvider.images,
+    private val authRepository: AuthenticationRepository = RepositoryProvider.authentication
 ) : CreateAccountViewModel(handlesRepository) {
+
+  protected val _uiState = MutableStateFlow(AuthUIState())
+
+  // Public read-only state flow that UI components can observe for state changes
+  val uiState: StateFlow<AuthUIState> = _uiState
 
   /**
    * Checks if two accounts are the same user or if either has blocked the other.
@@ -171,5 +187,88 @@ class ProfileScreenViewModel(
         return
 
     scope.launch { accountRepository.unblockUser(account.uid, other.uid) }
+  }
+
+  fun setAccountPhoto(account: Account, context: Context, localPath: String) {
+    viewModelScope.launch {
+      val downloadUrl =
+          imageRepository.saveAccountProfilePicture(account.uid, context = context, localPath)
+      accountRepository.setAccountPhotoUrl(account.uid, downloadUrl)
+    }
+  }
+
+  fun removeAccountPhoto(account: Account, context: Context) {
+    viewModelScope.launch {
+      imageRepository.deleteAccountProfilePicture(account.uid, context)
+      accountRepository.setAccountPhotoUrl(account.uid, "")
+    }
+  }
+
+  fun refreshEmailVerificationStatus() {
+    viewModelScope.launch {
+      val result = authRepository.isEmailVerified()
+      result
+          .onSuccess { isVerified ->
+            _uiState.update { it.copy(isEmailVerified = isVerified, errorMsg = null) }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
+    }
+  }
+
+  /**
+   * Sends a verification email to the current user.
+   *
+   * This method enforces a 1-minute cooldown between emails and calls the repository to send a
+   * verification email. If it fails, the error message is updated in the UI state.
+   */
+  fun sendVerificationEmail() {
+    val now = System.currentTimeMillis()
+    val lastSent = _uiState.value.lastVerificationEmailSentAtMillis
+
+    // Enforce a 1-minute (60,000 ms) cooldown between verification emails
+    if (lastSent != null && now - lastSent < 60_000) {
+      _uiState.update { it.copy(errorMsg = coolDownErrMessage) }
+      return
+    }
+
+    viewModelScope.launch {
+      authRepository
+          .sendVerificationEmail()
+          .onSuccess {
+            // Update the timestamp on successful send
+            _uiState.update {
+              it.copy(
+                  lastVerificationEmailSentAtMillis = System.currentTimeMillis(), errorMsg = null)
+            }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
+    }
+  }
+
+  /**
+   * Signs out the current user.
+   *
+   * This method calls the repository to sign out from Firebase Auth and updates the UI state to
+   * reflect the signed-out status.
+   */
+  open fun signOut() {
+    // Prevent multiple simultaneous operations
+    if (_uiState.value.isLoading) return
+
+    viewModelScope.launch {
+      // Set loading state
+      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
+
+      // Call repository to handle sign-out
+      authRepository.logout().fold({
+        // Success: Update UI to signed-out state
+        _uiState.update {
+          it.copy(isLoading = false, account = null, signedOut = true, errorMsg = null)
+        }
+      }) { failure ->
+        // Logout failed: Show error but keep user signed in
+        _uiState.update { it.copy(isLoading = false, errorMsg = failure.localizedMessage) }
+      }
+    }
   }
 }

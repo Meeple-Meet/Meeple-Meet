@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,10 +28,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -54,8 +55,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,7 +67,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.CreateAccountViewModel
-import com.github.meeplemeet.model.auth.AuthenticationViewModel
+import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.AppColors
@@ -72,49 +75,142 @@ import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+object PublicInfoTestTags {
+
+  // ROOT
+  const val PUBLIC_INFO = "public_info_root"
+
+  // ------------------------------------------------------------
+  // SECTION 1 — Avatar
+  // ------------------------------------------------------------
+  const val AVATAR_CONTAINER = "public_info_avatar_container"
+  const val AVATAR_IMAGE = "public_info_avatar_image"
+  const val AVATAR_PLACEHOLDER = "public_info_avatar_placeholder"
+  const val AVATAR_EDIT_ICON = "public_info_avatar_edit_icon"
+
+  // Avatar Chooser Dialog
+  const val AVATAR_CHOOSER_DIALOG = "avatar_chooser_dialog"
+  const val AVATAR_CHOOSER_CAMERA = "avatar_chooser_camera"
+  const val AVATAR_CHOOSER_GALLERY = "avatar_chooser_gallery"
+  const val AVATAR_CHOOSER_REMOVE = "avatar_chooser_remove"
+  const val AVATAR_CHOOSER_CANCEL = "avatar_chooser_cancel"
+
+  // Permission Denied Alert
+  const val CAMERA_PERMISSION_DIALOG = "camera_permission_dialog"
+  const val CAMERA_PERMISSION_OK = "camera_permission_ok"
+
+  // ------------------------------------------------------------
+  // SECTION 2 — Action Buttons
+  // ------------------------------------------------------------
+  const val ACTIONS_CONTAINER = "public_info_actions"
+
+  const val ACTION_FRIENDS = "action_friends"
+  const val ACTION_NOTIFICATIONS = "action_notifications"
+  const val ACTION_LOGOUT = "action_logout"
+
+  // ------------------------------------------------------------
+  // SECTION 3 — Inputs
+  // ------------------------------------------------------------
+
+  // USERNAME
+  const val INPUT_USERNAME = "input_username"
+  const val ERROR_USERNAME = "error_username_blank"
+
+  // HANDLE
+  const val INPUT_HANDLE = "input_handle"
+  const val ERROR_HANDLE = "error_handle_message"
+
+  // DESCRIPTION
+  const val INPUT_DESCRIPTION = "input_description"
+
+  // ------------------------------------------------------------
+  // TOAST (email verification toast inside EmailSection but triggered here)
+  // ------------------------------------------------------------
+  const val GLOBAL_TOAST = "global_toast"
+}
+
+object PrivateInfoTestTags {
+
+  // ------------------------------------------------------------
+  // PRIVATE INFO ROOT
+  // ------------------------------------------------------------
+  const val PRIVATE_INFO = "private_info_root"
+  const val PRIVATE_INFO_TITLE = "private_info_title"
+
+  // ------------------------------------------------------------
+  // EMAIL SECTION
+  // ------------------------------------------------------------
+  const val EMAIL_SECTION = "email_section"
+
+  const val EMAIL_INPUT = "email_input"
+  const val EMAIL_VERIFIED_LABEL = "email_verified_label"
+  const val EMAIL_NOT_VERIFIED_LABEL = "email_not_verified_label"
+
+  const val EMAIL_SEND_BUTTON = "email_send_verification_btn"
+  const val EMAIL_TOAST = "email_section_toast"
+
+  // ------------------------------------------------------------
+  // ROLES SECTION
+  // ------------------------------------------------------------
+  const val ROLES_SECTION_TITLE = "roles_section_title"
+
+  const val ROLE_SHOP_CHECKBOX = "role_checkbox_shop_owner"
+  const val ROLE_SPACE_CHECKBOX = "role_checkbox_space_renter"
+
+  // Confirmation dialog
+  const val ROLE_DIALOG = "roles_remove_dialog"
+  const val ROLE_DIALOG_CONFIRM = "roles_remove_dialog_confirm"
+  const val ROLE_DIALOG_CANCEL = "roles_remove_dialog_cancel"
+  const val ROLE_DIALOG_TEXT = "roles_remove_dialog_text"
+}
+
 @Composable
 fun MainTab(
-    authViewModel: AuthenticationViewModel = viewModel(),
-    createAccountViewModel: CreateAccountViewModel = viewModel(),
+    viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
     onFriendsClick: (account: Account) -> Unit,
     onNotificationClick: (account: Account) -> Unit,
     onSignOut: () -> Unit
 ) {
+
+  val focusManager = LocalFocusManager.current
   Column(
       modifier =
           Modifier.fillMaxSize()
               .padding(ProfileScreenUi.xxLargePadding)
+              .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
               .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.spacedBy(ProfileScreenUi.extraLargeSpacing),
       horizontalAlignment = Alignment.CenterHorizontally) {
         PublicInfo(
             account = account,
-            authViewModel = authViewModel,
-            createAccountViewModel = createAccountViewModel,
+            viewModel = viewModel,
             onFriendsClick = onFriendsClick,
             onNotificationClick = onNotificationClick,
             onSignOut = onSignOut)
 
-        PrivateInfo(
-            account = account,
-            authViewModel = authViewModel,
-            createAccountViewModel = createAccountViewModel)
+        PrivateInfo(account = account, viewModel = viewModel)
       }
 }
+
+//////////////////////////////////////////////////////////////////////////////////////
+// PUBLIC INFO SECTION
+/////////////////////////////////////////////////////////////////////////////////////
 
 @Composable
 fun PublicInfo(
     account: Account,
-    authViewModel: AuthenticationViewModel,
-    createAccountViewModel: CreateAccountViewModel,
+    viewModel: ProfileScreenViewModel,
     onFriendsClick: (account: Account) -> Unit,
     onNotificationClick: (account: Account) -> Unit,
     onSignOut: () -> Unit
 ) {
   Box(
       modifier =
-          Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(AppColors.secondary)) {
+          Modifier.fillMaxWidth()
+              .clip(RoundedCornerShape(20.dp))
+              .background(AppColors.secondary)
+              .testTag(PublicInfoTestTags.PUBLIC_INFO)) {
         Column(
             modifier = Modifier.padding(Dimensions.Padding.large),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
@@ -124,21 +220,21 @@ fun PublicInfo(
                   verticalAlignment = Alignment.CenterVertically) {
 
                     // 🔹 SECTION 1: Avatar
-                    DisplayAvatar(createAccountViewModel, account)
+                    DisplayAvatar(viewModel, account)
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     // 🔹 SECTION 2: Action buttons
                     PublicInfoActions(
                         account = account,
-                        authViewModel = authViewModel,
+                        viewModel = viewModel,
                         onFriendsClick = onFriendsClick,
                         onNotificationClick = onNotificationClick,
                         onSignOut = onSignOut)
                   }
 
               // 🔹 SECTION 3: Input fields
-              PublicInfoInputs(account = account, createAccountViewModel = createAccountViewModel)
+              PublicInfoInputs(account = account, viewModel = viewModel)
             }
       }
 }
@@ -146,7 +242,7 @@ fun PublicInfo(
 @Composable
 fun PublicInfoActions(
     account: Account,
-    authViewModel: AuthenticationViewModel,
+    viewModel: ProfileScreenViewModel,
     onFriendsClick: (Account) -> Unit,
     onNotificationClick: (Account) -> Unit,
     onSignOut: () -> Unit
@@ -157,8 +253,9 @@ fun PublicInfoActions(
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
+              // Friends Button
               Button(
-                  modifier = Modifier.size(56.dp),
+                  modifier = Modifier.size(56.dp).testTag(PublicInfoTestTags.ACTION_FRIENDS),
                   onClick = { onFriendsClick(account) },
                   shape = RoundedCornerShape(18.dp),
                   contentPadding = PaddingValues(0.dp),
@@ -172,8 +269,9 @@ fun PublicInfoActions(
                         modifier = Modifier.size(28.dp))
                   }
 
+              // Notifications Button
               Button(
-                  modifier = Modifier.size(56.dp),
+                  modifier = Modifier.size(56.dp).testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
                   onClick = { onNotificationClick(account) },
                   shape = RoundedCornerShape(18.dp),
                   contentPadding = PaddingValues(0.dp),
@@ -188,21 +286,26 @@ fun PublicInfoActions(
                   }
             }
 
+        // Logout Button
         Button(
             onClick = {
               onSignOut()
-              authViewModel.signOut()
+              viewModel.signOut()
             },
-            modifier = Modifier.width(140.dp).height(46.dp),
+            modifier =
+                Modifier.width(140.dp).height(46.dp).testTag(PublicInfoTestTags.ACTION_LOGOUT),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = AppColors.textIconsFade, contentColor = AppColors.primary),
             shape = RoundedCornerShape(14.dp),
             elevation = ButtonDefaults.buttonElevation(4.dp)) {
-              Text("Logout")
+              Text("Logout", color = Color.Transparent)
             }
       }
 }
 
 @Composable
-fun PublicInfoInputs(account: Account, createAccountViewModel: CreateAccountViewModel) {
+fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
   var name by remember { mutableStateOf(account.name) }
   var desc by remember { mutableStateOf(account.description ?: "") }
 
@@ -211,12 +314,13 @@ fun PublicInfoInputs(account: Account, createAccountViewModel: CreateAccountView
 
   FocusableInputField(
       label = { Text("Username") },
+      modifier = Modifier.testTag(PublicInfoTestTags.INPUT_USERNAME),
       value = name,
       onValueChange = { name = it },
       isError = nameError,
       onFocusChanged = { focused ->
         if (!focused && !nameError) {
-          createAccountViewModel.setAccountName(account, name)
+          viewModel.setAccountName(account, name)
         }
       })
   if (nameError) {
@@ -224,22 +328,24 @@ fun PublicInfoInputs(account: Account, createAccountViewModel: CreateAccountView
         text = "Username cannot be blank.",
         color = AppColors.negative,
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        modifier =
+            Modifier.padding(start = 16.dp, top = 4.dp).testTag(PublicInfoTestTags.ERROR_USERNAME))
   }
 
   // HANDLE VALIDATION
-  val errorMsg by createAccountViewModel.errorMessage.collectAsState()
+  val errorMsg by viewModel.errorMessage.collectAsState()
   var handle by remember { mutableStateOf(account.handle) }
   var showErrors by remember { mutableStateOf(false) }
   val errorHandle = showErrors && errorMsg.isNotBlank() && handle != account.handle
 
   FocusableInputField(
       value = handle,
+      modifier = Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE),
       onValueChange = {
         handle = it
         if (it.isNotBlank()) {
           showErrors = true
-          createAccountViewModel.checkHandleAvailable(it)
+          viewModel.checkHandleAvailable(it)
         } else {
           showErrors = false
         }
@@ -254,9 +360,8 @@ fun PublicInfoInputs(account: Account, createAccountViewModel: CreateAccountView
       },
       singleLine = true,
       isError = errorHandle,
-      onFocusChanged = {focused ->
-          if (!focused && !errorHandle)
-              createAccountViewModel.setAccountHandle(account, handle)
+      onFocusChanged = { focused ->
+        if (!focused && !errorHandle) viewModel.setAccountHandle(account, handle)
       })
 
   if (errorHandle) {
@@ -264,24 +369,24 @@ fun PublicInfoInputs(account: Account, createAccountViewModel: CreateAccountView
         text = errorMsg,
         color = AppColors.negative,
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        modifier =
+            Modifier.padding(start = 16.dp, top = 4.dp).testTag(PublicInfoTestTags.ERROR_HANDLE))
   }
 
   // DESCRIPTION
   FocusableInputField(
       label = { Text("Description") },
+      modifier = Modifier.testTag(PublicInfoTestTags.INPUT_DESCRIPTION),
       value = desc,
       onValueChange = { desc = it },
       singleLine = false,
-      onFocusChanged = { focused ->
-        if (!focused) createAccountViewModel.setAccountDescription(account, desc)
-      })
+      onFocusChanged = { focused -> if (!focused) viewModel.setAccountDescription(account, desc) })
 
   Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 }
 
 @Composable
-fun DisplayAvatar(createAccountViewModel: CreateAccountViewModel, account: Account) {
+fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   var showChooser by remember { mutableStateOf(false) }
@@ -292,7 +397,8 @@ fun DisplayAvatar(createAccountViewModel: CreateAccountViewModel, account: Accou
   val setPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
-      createAccountViewModel.setAccountPhotoUrl(account, newPhotoUrl = path)
+
+      viewModel.setAccountPhoto(account, context, path)
     } finally {
       isSending = false
     }
@@ -332,12 +438,18 @@ fun DisplayAvatar(createAccountViewModel: CreateAccountViewModel, account: Accou
 
   // --- Avatar display ---
   Box(
-      modifier = Modifier.size(130.dp).clickable { showChooser = true },
+      modifier =
+          Modifier.size(130.dp)
+              .clickable { showChooser = true }
+              .testTag(PublicInfoTestTags.AVATAR_CONTAINER),
       contentAlignment = Alignment.TopEnd) {
         if (account.photoUrl.isNullOrBlank()) {
           Box(
               modifier =
-                  Modifier.size(130.dp).clip(CircleShape).background(AppColors.textIconsFade),
+                  Modifier.size(130.dp)
+                      .clip(CircleShape)
+                      .background(AppColors.textIconsFade)
+                      .testTag(PublicInfoTestTags.AVATAR_PLACEHOLDER),
               contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Default.Person,
@@ -350,7 +462,8 @@ fun DisplayAvatar(createAccountViewModel: CreateAccountViewModel, account: Accou
               painter = rememberAsyncImagePainter(account.photoUrl),
               contentDescription = "Profile Image",
               contentScale = ContentScale.Crop,
-              modifier = Modifier.size(130.dp).clip(CircleShape))
+              modifier =
+                  Modifier.size(130.dp).clip(CircleShape).testTag(PublicInfoTestTags.AVATAR_IMAGE))
         }
 
         Icon(
@@ -360,7 +473,8 @@ fun DisplayAvatar(createAccountViewModel: CreateAccountViewModel, account: Accou
             modifier =
                 Modifier.size(28.dp)
                     .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                    .padding(4.dp))
+                    .padding(4.dp)
+                    .testTag(PublicInfoTestTags.AVATAR_EDIT_ICON))
       }
 
   // --- Chooser dialog ---
@@ -378,19 +492,24 @@ fun DisplayAvatar(createAccountViewModel: CreateAccountViewModel, account: Accou
         onRemove = {
           if (!account.photoUrl.isNullOrBlank()) {
             showChooser = false
-            scope.launch { setPhoto("") }
-          } else null
+            viewModel.removeAccountPhoto(account, context)
+          }
         })
   }
 
   // --- Permission denied ---
   if (showPermissionDenied) {
     AlertDialog(
+        modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_DIALOG),
         onDismissRequest = { showPermissionDenied = false },
         title = { Text(text = "Permission denied") },
         text = { Text(text = "Camera access is required to take a profile picture.") },
         confirmButton = {
-          TextButton(onClick = { showPermissionDenied = false }) { Text(text = "OK") }
+          TextButton(
+              onClick = { showPermissionDenied = false },
+              modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_OK)) {
+                Text(text = "OK")
+              }
         })
   }
 }
@@ -405,23 +524,34 @@ fun AvatarChooserDialog(
   Dialog(onDismissRequest = onDismiss) {
     Box(
         modifier =
-            Modifier.clip(RoundedCornerShape(16.dp)).background(AppColors.primary).padding(20.dp)) {
+            Modifier.clip(RoundedCornerShape(16.dp))
+                .background(AppColors.primary)
+                .padding(20.dp)
+                .testTag(PublicInfoTestTags.AVATAR_CHOOSER_DIALOG)) {
           Column(
               verticalArrangement = Arrangement.spacedBy(12.dp),
               modifier = Modifier.fillMaxWidth()) {
                 Text(text = "Change profile picture", style = MaterialTheme.typography.titleMedium)
                 Text(text = "Choose a source", style = MaterialTheme.typography.bodyMedium)
 
-                Button(onClick = onCamera, modifier = Modifier.fillMaxWidth()) {
-                  Text(text = "Camera")
-                }
-                Button(onClick = onGallery, modifier = Modifier.fillMaxWidth()) {
-                  Text(text = "Gallery")
-                }
+                Button(
+                    onClick = onCamera,
+                    modifier =
+                        Modifier.fillMaxWidth().testTag(PublicInfoTestTags.AVATAR_CHOOSER_CAMERA)) {
+                      Text(text = "Camera")
+                    }
+                Button(
+                    onClick = onGallery,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(PublicInfoTestTags.AVATAR_CHOOSER_GALLERY)) {
+                      Text(text = "Gallery")
+                    }
                 if (onRemove != null) {
                   Button(
                       onClick = onRemove,
-                      modifier = Modifier.fillMaxWidth(),
+                      modifier =
+                          Modifier.fillMaxWidth().testTag(PublicInfoTestTags.AVATAR_CHOOSER_REMOVE),
                       colors =
                           ButtonDefaults.buttonColors(
                               containerColor = AppColors.negative,
@@ -429,28 +559,35 @@ fun AvatarChooserDialog(
                         Text(text = "Remove Photo")
                       }
                 }
-                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                  Text(text = "Cancel")
-                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier =
+                        Modifier.fillMaxWidth().testTag(PublicInfoTestTags.AVATAR_CHOOSER_CANCEL)) {
+                      Text(text = "Cancel")
+                    }
               }
         }
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
+// PRIVATE INFO SECTION
+/////////////////////////////////////////////////////////////////////////////////////
+
 @Composable
-fun PrivateInfo(
-    account: Account,
-    authViewModel: AuthenticationViewModel,
-    createAccountViewModel: CreateAccountViewModel
-) {
-  val uiState by authViewModel.uiState.collectAsState()
+fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
+
+  val uiState by viewModel.uiState.collectAsState()
 
   var email by remember { mutableStateOf(account.email) }
   val isVerified = uiState.isEmailVerified
 
   Box(
       modifier =
-          Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(AppColors.secondary)) {
+          Modifier.fillMaxWidth()
+              .clip(RoundedCornerShape(20.dp))
+              .background(AppColors.secondary)
+              .testTag(PrivateInfoTestTags.PRIVATE_INFO)) {
         Column(
             modifier = Modifier.padding(Dimensions.Padding.xxxLarge),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
@@ -459,7 +596,8 @@ fun PrivateInfo(
               // TITLE
               Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    "Private Info",
+                    text = "Private Info",
+                    modifier = Modifier.testTag(PrivateInfoTestTags.PRIVATE_INFO_TITLE),
                     style = MaterialTheme.typography.headlineSmall,
                 )
               }
@@ -471,16 +609,16 @@ fun PrivateInfo(
                   onEmailChange = { newEmail -> email = newEmail },
                   onFocusChanged = { focused ->
                     if (!focused) {
-                      createAccountViewModel.setAccountEmail(account, email)
+                      viewModel.setAccountEmail(account, email)
                     }
                   },
                   onSendVerification = {
-                    authViewModel.sendVerificationEmail()
-                    authViewModel.refreshEmailVerificationStatus()
+                    viewModel.sendVerificationEmail()
+                    viewModel.refreshEmailVerificationStatus()
                   })
 
               // ROLES SECTION
-              RolesSection(account = account, createAccountViewModel = createAccountViewModel)
+              RolesSection(account = account, createAccountViewModel = viewModel)
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
             }
       }
@@ -501,8 +639,9 @@ fun EmailSection(
           Modifier.fillMaxWidth()
               .clip(RoundedCornerShape(20.dp))
               .background(AppColors.secondary)
-              .padding(14.dp)) {
-        Column() {
+              .padding(14.dp)
+              .testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
+        Column {
           Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
@@ -514,27 +653,35 @@ fun EmailSection(
                     trailingIcon = {
                       if (!isVerified) {
                         IconButton(
-                            modifier = Modifier.padding(top = 4.dp),
+                            modifier =
+                                Modifier.padding(top = 4.dp)
+                                    .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
                             onClick = {
                               onSendVerification()
                               toast = ToastData("Sent")
                             }) {
                               Icon(
-                                  imageVector = Icons.Default.Send,
+                                  imageVector = Icons.AutoMirrored.Filled.Send,
                                   contentDescription = "Send verification email",
                                   tint = AppColors.textIcons)
                             }
                       }
                     },
                     onFocusChanged = onFocusChanged,
-                    modifier = Modifier.weight(1f))
+                    modifier = Modifier.weight(1f).testTag(PrivateInfoTestTags.EMAIL_INPUT))
               }
 
-          Row() {
+          Row {
             if (isVerified) {
-              Text("Email Verified", color = AppColors.affirmative)
+              Text(
+                  text = "Email Verified",
+                  color = AppColors.affirmative,
+                  modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_VERIFIED_LABEL))
             } else {
-              Text("Email Not Verified", color = AppColors.negative)
+              Text(
+                  text = "Email Not Verified",
+                  color = AppColors.negative,
+                  modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL))
             }
 
             ToastHost(toast = toast, onToastFinished = { toast = null })
@@ -550,7 +697,7 @@ data class ToastData(
 
 @Composable
 fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> Unit) {
-  Box(modifier = Modifier.fillMaxSize()) {
+  Box(modifier = Modifier.fillMaxSize().testTag(PrivateInfoTestTags.EMAIL_TOAST)) {
     toast?.let { data ->
       var visible by remember(data.id) { mutableStateOf(true) }
 
@@ -565,7 +712,7 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
           visible = visible,
           enter = fadeIn() + scaleIn(),
           exit = fadeOut() + scaleOut(),
-          modifier = Modifier.align(Alignment.BottomEnd)) {
+          modifier = Modifier.align(Alignment.BottomEnd).testTag(PublicInfoTestTags.GLOBAL_TOAST)) {
             Box(
                 modifier =
                     Modifier.background(
@@ -594,7 +741,8 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
         Text(
             "I also want to:",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 4.dp))
+            modifier =
+                Modifier.padding(top = 4.dp).testTag(PrivateInfoTestTags.ROLES_SECTION_TITLE))
       }
 
   RoleCheckBox(
@@ -611,7 +759,7 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
       },
       label = "Sell Items",
       description = "List your shop and games you sell",
-      testTag = CreateAccountTestTags.CHECKBOX_OWNER)
+      testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
 
   RoleCheckBox(
       isChecked = isSpaceRented,
@@ -627,7 +775,7 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
       },
       label = "Rent out spaces",
       description = "Offer your play spaces for other players to book.",
-      testTag = CreateAccountTestTags.CHECKBOX_RENTER)
+      testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
 
   // CONFIRMATION DIALOG
   if (showDialog && pendingAction != null) {
@@ -637,13 +785,13 @@ fun RolesSection(account: Account, createAccountViewModel: CreateAccountViewMode
         onConfirm = {
           when (pendingAction) {
             RoleAction.ShopOff -> {
-                // Todo: Delete user's shops from the platform
+              // Todo: Delete user's shops from the platform
               isShopChecked = false
               createAccountViewModel.setAccountRole(
                   account, isShopOwner = false, isSpaceRenter = isSpaceRented)
             }
             RoleAction.SpaceOff -> {
-                // Todo: Delete user's spaces from the platform
+              // Todo: Delete user's spaces from the platform
               isSpaceRented = false
               createAccountViewModel.setAccountRole(
                   account, isShopOwner = isShopChecked, isSpaceRenter = false)
@@ -677,16 +825,23 @@ private fun RemoveCatalogDialog(
         RoleAction.ShopOff ->
             "Are you sure you want to stop selling items? Your shops will be removed from the platform.\nThis action is irreversible."
         RoleAction.SpaceOff ->
-            "Are you sure you want to stop renting out spaces? Your listings will be removed from the platform.\nThis action is irreversible."
+            "Are you sure you want to stop renting out spaces? Your spaces will be removed from the platform.\nThis action is irreversible."
       }
   if (visible) {
     AlertDialog(
         containerColor = AppColors.primary,
+        modifier = Modifier.testTag(PrivateInfoTestTags.ROLE_DIALOG),
         onDismissRequest = onCancel,
         title = null,
-        text = { Text(text = informativeText, style = MaterialTheme.typography.bodyLarge) },
+        text = {
+          Text(
+              text = informativeText,
+              style = MaterialTheme.typography.bodyLarge,
+              modifier = Modifier.testTag(PrivateInfoTestTags.ROLE_DIALOG_TEXT))
+        },
         confirmButton = {
           TextButton(
+              modifier = Modifier.testTag(PrivateInfoTestTags.ROLE_DIALOG_CONFIRM),
               onClick = onConfirm,
               colors =
                   ButtonColors(
@@ -699,6 +854,7 @@ private fun RemoveCatalogDialog(
         },
         dismissButton = {
           TextButton(
+              modifier = Modifier.testTag(PrivateInfoTestTags.ROLE_DIALOG_CANCEL),
               onClick = onCancel,
               colors =
                   ButtonColors(
