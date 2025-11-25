@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.images
+// AI was used in this file
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -9,6 +10,7 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.DiskStorageException
 import com.github.meeplemeet.model.ImageProcessingException
 import com.github.meeplemeet.model.RemoteStorageException
+import com.github.meeplemeet.model.sessions.SessionPhoto
 import com.google.firebase.storage.StorageException
 import com.google.firebase.storage.StorageReference
 import java.io.ByteArrayOutputStream
@@ -35,6 +37,7 @@ import kotlinx.coroutines.withContext
  * - Discussion message photo attachments (NEW)
  * - Shop photos
  * - Space renter photos
+ * - Session photos
  *
  * ## Image Processing
  * - All images are automatically converted to WebP format for optimal compression
@@ -107,6 +110,11 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   private fun shopPath(id: String) = "${RepositoryProvider.shops.collectionName}/$id"
 
   private fun spaceRenterPath(id: String) = "${RepositoryProvider.spaceRenters.collectionName}/$id"
+
+  private fun sessionPath(discussionId: String) = "discussions/${discussionId}/session"
+
+  private fun sessionPhotoPath(discussionId: String, photoUuid: String) =
+      "${sessionPath(discussionId)}/${photoUuid}.webp"
 
   private fun normalizePath(candidate: String, expectedPrefix: String): String {
     val path =
@@ -411,6 +419,88 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
       val normalized = storagePaths.map { normalizePath(it, base) }.toTypedArray()
       deleteImages(context, *normalized)
     }
+  }
+
+  /**
+   * Saves session photos to Firebase Storage and local cache, returning SessionPhoto objects.
+   *
+   * Generates unique UUIDs for each photo, uploads them in parallel, and fetches download URLs.
+   * The caller is responsible for updating session metadata with the returned SessionPhoto objects.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion/session
+   * @param inputPaths Variable number of absolute paths to source image files
+   * @return List of SessionPhoto objects containing UUID and URL for each uploaded photo
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
+   */
+  suspend fun saveSessionPhotos(
+    context: Context,
+    discussionId: String,
+    vararg inputPaths: String
+  ): List<SessionPhoto> = coroutineScope {
+      // Upload all images in parallel and get their URLs
+      inputPaths.map { inputPath ->
+          async {
+              val uuid = UUID.randomUUID().toString()
+              val path = sessionPhotoPath(discussionId, uuid)
+              saveImage(context, inputPath, path)
+              
+              // Get download URL from Firebase Storage
+              val url = storage.reference.child(path).downloadUrl.await().toString()
+              
+              SessionPhoto(uuid, url)
+          }
+      }.awaitAll()
+  }
+
+
+  /**
+   * Loads session photos for the given UUIDs
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion/session
+   * @param photoUuids List of photo UUIDs to load
+   * @return List of pairs containing photo UUIDs and their corresponding image byte arrays
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage operations fail
+   */
+  suspend fun loadSessionPhotos(
+    context: Context,
+    discussionId: String,
+    photoUuids: List<String>
+  ): List<Pair<String, ByteArray>> = coroutineScope {
+      // Load each image in parallel
+      val bytes = photoUuids.map { uuid ->
+          async {
+              val path = sessionPhotoPath(discussionId, uuid)
+              loadImage(context, path)
+          }
+      }.awaitAll()
+      
+      // Zip UUIDs with their bytes
+      photoUuids.zip(bytes)
+  }
+
+  /**
+   * Deletes a session photo from Firebase Storage and local cache, returning its UUID.
+   *
+   * Removes the photo file from both Firebase Storage and the local cache. The caller is
+   * responsible for removing the UUID from session metadata in Firestore using
+   * SessionRepository.removeSessionPhoto().
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion/session
+   * @param photoUuid The UUID of the photo to delete (without .webp extension)
+   * @return The UUID of the deleted photo (same as input, for coordination convenience)
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   */
+  suspend fun deleteSessionPhoto(context: Context, discussionId: String, photoUuid: String): String {
+    val path = sessionPhotoPath(discussionId, photoUuid)
+    deleteImages(context, path)
+    return photoUuid
   }
 
   /**
