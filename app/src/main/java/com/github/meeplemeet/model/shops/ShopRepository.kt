@@ -70,6 +70,8 @@ class ShopRepository(
 
     geoPinRepository.upsertGeoPin(ref = shop.id, type = PinType.SHOP, location = address)
 
+    accountRepository.addShopId(owner.uid, shop.id)
+
     return shop
   }
 
@@ -202,15 +204,25 @@ class ShopRepository(
   /**
    * Deletes a shop from Firestore.
    *
+   * Also removes the shop ID from the owner's businesses subcollection.
+   *
    * @param id The unique identifier of the shop to delete.
    */
   suspend fun deleteShop(id: String) {
+    // Get the shop to retrieve the owner ID before deletion
+    val shop = getShop(id)
+
     geoPinRepository.deleteGeoPin(id)
     collection.document(id).delete().await()
+
+    // Remove the shop ID from the owner's businesses
+    accountRepository.removeShopId(shop.owner.uid, id)
   }
 
   /**
    * Deletes multiple shops from Firestore efficiently in parallel.
+   *
+   * Also removes the shop IDs from the owners' businesses subcollections.
    *
    * @param ids The list of unique identifiers of the shops to delete.
    */
@@ -218,8 +230,14 @@ class ShopRepository(
     coroutineScope {
       ids.map { id ->
             async {
+              // Get the shop to retrieve the owner ID before deletion
+              val shop = getShop(id)
+
               geoPinRepository.deleteGeoPin(id)
               collection.document(id).delete().await()
+
+              // Remove the shop ID from the owner's businesses
+              accountRepository.removeShopId(shop.owner.uid, id)
             }
           }
           .awaitAll()

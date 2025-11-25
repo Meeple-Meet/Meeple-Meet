@@ -39,6 +39,7 @@ import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import com.github.meeplemeet.ui.theme.Dimensions
+import kotlinx.coroutines.launch
 
 /* ================================================================================================
  * Test tags
@@ -96,6 +97,8 @@ private object AddShopUi {
 
     const val BTN_ADD_GAME = "Add game"
     const val EMPTY_GAMES = "No games selected yet."
+    const val ERROR_VALIDATION = "Validation error"
+    const val ERROR_CREATE = "Failed to create shop"
   }
 }
 
@@ -118,7 +121,7 @@ const val maxNumberOfImages = 10
 fun CreateShopScreen(
     owner: Account,
     onBack: () -> Unit,
-    onCreated: () -> Unit,
+    onCreated: (String) -> Unit,
     viewModel: CreateShopViewModel = viewModel()
 ) {
   val ui by viewModel.gameUIState.collectAsState()
@@ -128,15 +131,17 @@ fun CreateShopScreen(
       onBack = onBack,
       onCreated = onCreated,
       onCreate = { name, email, address, week, stock ->
-        viewModel.createShop(
-            owner = owner,
-            name = name,
-            phone = "",
-            email = email,
-            website = "",
-            address = address,
-            openingHours = week,
-            gameCollection = stock)
+        val shop =
+            viewModel.createShop(
+                owner = owner,
+                name = name,
+                phone = "",
+                email = email,
+                website = "",
+                address = address,
+                openingHours = week,
+                gameCollection = stock)
+        shop.id
       },
       gameUi = ui,
       locationUi = locationUi,
@@ -172,14 +177,14 @@ fun CreateShopScreen(
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
-    onCreated: () -> Unit,
+    onCreated: (String) -> Unit,
     onCreate:
-        (
+        suspend (
             name: String,
             email: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> Unit,
+            stock: List<Pair<Game, Int>>) -> String,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     gameQuery: String,
@@ -192,6 +197,7 @@ fun AddShopContent(
     owner: Account
 ) {
   val snackbarHost = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
 
   var shopName by rememberSaveable { mutableStateOf("") }
   var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
@@ -281,8 +287,16 @@ fun AddShopContent(
                     onDiscard = { onDiscard() },
                     onPrimary = {
                       val addr = locationUi.selectedLocation ?: Location()
-                      onCreate(shopName, email, addr, week, stock)
-                      onCreated()
+                      scope.launch {
+                        try {
+                          val shopId = onCreate(shopName, email, addr, week, stock)
+                          onCreated(shopId)
+                        } catch (e: IllegalArgumentException) {
+                          snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
+                        } catch (_: Exception) {
+                          snackbarHost.showSnackbar(Strings.ERROR_CREATE)
+                        }
+                      }
                     },
                     enabled = isValid)
               }

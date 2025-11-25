@@ -216,6 +216,9 @@ class CreateShopScreenTest {
    */
   @Test
   fun addShop_coreFlows_singleComposition() {
+    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+
     // Capture vars for create stages
     var calledCreate = false
     var calledCreated = false
@@ -223,6 +226,9 @@ class CreateShopScreenTest {
     var backCalled = false
 
     lateinit var stage: MutableIntState
+
+    // Create ViewModel once per test to avoid infinite recomposition from state accumulation
+    // Use a stable key to ensure it's only created once during the entire test
     val viewModel = CreateShopViewModel()
 
     compose.setContent {
@@ -447,6 +453,9 @@ class CreateShopScreenTest {
       // The topbar and list are already verified in the earlier stages of this test
       // (stages 0, 1, etc.) which all use the same composition.
     }
+
+    // Reset config to default for other tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = true
   }
   /* ─────────────────────────────── SMOKE ─────────────────────────────────── */
 }

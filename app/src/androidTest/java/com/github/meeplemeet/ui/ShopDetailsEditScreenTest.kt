@@ -191,6 +191,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun all_tests() {
+    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+
     // Load the shop into the ViewModel
     editShopViewModel.setShop(testShop)
 
@@ -646,5 +649,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
           .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL, useUnmergedTree = true)
           .performClick()
     }
+
+    // Reset config to default for other tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = true
   }
 }

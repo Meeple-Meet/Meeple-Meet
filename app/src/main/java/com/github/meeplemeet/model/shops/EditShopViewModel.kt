@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +22,6 @@ import kotlinx.coroutines.launch
  */
 class EditShopViewModel(
     private val shopRepository: ShopRepository = RepositoryProvider.shops,
-    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
 ) : ShopSearchViewModel() {
 
   // Expose the currently loaded shop for editing
@@ -109,7 +107,8 @@ class EditShopViewModel(
    * Deletes a shop from Firestore.
    *
    * This operation is performed asynchronously in the viewModelScope. Only the shop owner can
-   * delete the shop.
+   * delete the shop. The repository will automatically remove the shop ID from the owner's
+   * businesses subcollection.
    *
    * @param shop The shop to delete.
    * @param requester The account requesting the deletion.
@@ -119,9 +118,6 @@ class EditShopViewModel(
     if (shop.owner.uid != requester.uid)
         throw PermissionDeniedException("Only the shop's owner can delete his own shop")
 
-    viewModelScope.launch {
-      shopRepository.deleteShop(shop.id)
-      accountRepository.removeShopId(requester.uid, shop.id)
-    }
+    viewModelScope.launch { shopRepository.deleteShop(shop.id) }
   }
 }

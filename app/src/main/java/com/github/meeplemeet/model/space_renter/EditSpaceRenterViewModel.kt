@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.coroutines.launch
@@ -21,7 +20,6 @@ import kotlinx.coroutines.launch
  */
 class EditSpaceRenterViewModel(
     private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
-    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
 ) : SpaceRenterSearchViewModel() {
 
   /**
@@ -96,7 +94,8 @@ class EditSpaceRenterViewModel(
    * Deletes a space renter from Firestore.
    *
    * This operation is performed asynchronously in the viewModelScope. Only the space renter owner
-   * can delete the space renter.
+   * can delete the space renter. The repository will automatically remove the space renter ID from
+   * the owner's businesses subcollection.
    *
    * @param spaceRenter The space renter to delete.
    * @param requester The account requesting the deletion.
@@ -107,9 +106,6 @@ class EditSpaceRenterViewModel(
         throw PermissionDeniedException(
             "Only the space renter's owner can delete his own space renter")
 
-    viewModelScope.launch {
-      spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-      accountRepository.removeSpaceRenterId(requester.uid, spaceRenter.id)
-    }
+    viewModelScope.launch { spaceRenterRepository.deleteSpaceRenter(spaceRenter.id) }
   }
 }

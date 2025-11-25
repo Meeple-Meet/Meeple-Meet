@@ -2,14 +2,11 @@
 
 package com.github.meeplemeet.model.shops
 
-import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
-import kotlinx.coroutines.launch
 
 /**
  * ViewModel for creating new shops.
@@ -21,7 +18,6 @@ import kotlinx.coroutines.launch
  */
 class CreateShopViewModel(
     private val shopRepo: ShopRepository = RepositoryProvider.shops,
-    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     gameRepository: GameRepository = RepositoryProvider.games
 ) : ShopSearchViewModel(gameRepository) {
   /**
@@ -31,6 +27,8 @@ class CreateShopViewModel(
    * - The shop name is not blank
    * - Exactly 7 opening hours entries are provided (one for each day of the week)
    * - A valid address is provided
+   *
+   * The repository will automatically add the shop ID to the owner's businesses subcollection.
    *
    * @param owner The account that owns the shop.
    * @param name The name of the shop.
@@ -46,7 +44,7 @@ class CreateShopViewModel(
    * @throws IllegalArgumentException if the shop name is blank, if not exactly 7 opening hours
    *   entries are provided, or if the address is not valid.
    */
-  fun createShop(
+  suspend fun createShop(
       owner: Account,
       name: String,
       phone: String = "",
@@ -56,7 +54,7 @@ class CreateShopViewModel(
       openingHours: List<OpeningHours>,
       gameCollection: List<Pair<Game, Int>> = emptyList(),
       photoCollectionUrl: List<String> = emptyList()
-  ) {
+  ): Shop {
     if (name.isBlank()) throw IllegalArgumentException("Shop name cannot be blank")
 
     val uniqueByDay = openingHours.distinctBy { it.day }
@@ -65,19 +63,15 @@ class CreateShopViewModel(
     if (address == Location())
         throw IllegalArgumentException("An address is required to create a shop")
 
-    viewModelScope.launch {
-      val shop =
-          shopRepo.createShop(
-              owner,
-              name,
-              phone,
-              email,
-              website,
-              address,
-              openingHours,
-              gameCollection,
-              photoCollectionUrl)
-      accountRepository.addShopId(owner.uid, shop.id)
-    }
+    return shopRepo.createShop(
+        owner,
+        name,
+        phone,
+        email,
+        website,
+        address,
+        openingHours,
+        gameCollection,
+        photoCollectionUrl)
   }
 }

@@ -122,6 +122,9 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
 
   @Test
   fun all_edit_space_renter_tests() {
+    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+
     var backCalled = false
     var updatedCalled = false
 
@@ -206,5 +209,8 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
 
       assertTrue(updatedCalled)
     }
+
+    // Reset config to default for other tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = true
   }
 }
