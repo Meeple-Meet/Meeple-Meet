@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
@@ -228,8 +229,8 @@ object MainTabUi {
     const val SEND_ICON_DESC = "Send verification meail"
     const val VERIFIED_MSG = "Email Verified"
     const val UNVERIFIED_MSG = "Email not Verified"
-    const val EMAIL_INVALID_MSG = "Invalid Email"
-    const val ROLES_TITLE = "I also want to"
+    const val EMAIL_INVALID_MSG = "Invalid Email Format"
+    const val ROLES_TITLE = "I also want to:"
     const val SELL_ITEMS_LABEL = "Sell Items"
     const val SELL_ITEMS_DESC = "List your shop and games you sell"
 
@@ -846,7 +847,7 @@ fun EmailSection(
           Modifier.fillMaxWidth()
               .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
               .background(AppColors.secondary)
-              .padding(Dimensions.Padding.large)
+              .padding(horizontal = Dimensions.Padding.large)
               .testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
         Column {
           Row(
@@ -986,11 +987,14 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
 
   Box(
       modifier =
-          Modifier.fillMaxWidth().background(AppColors.secondary).padding(Dimensions.Padding.large),
+          Modifier.fillMaxWidth()
+              .background(AppColors.secondary)
+              .padding(horizontal = Dimensions.Padding.large),
       contentAlignment = Alignment.CenterStart) {
         Text(
             text = MainTabUi.PrivateInfo.ROLES_TITLE,
             style = MaterialTheme.typography.titleMedium,
+            fontSize = Dimensions.TextSize.largeHeading,
             modifier =
                 Modifier.padding(top = Dimensions.Padding.small)
                     .testTag(PrivateInfoTestTags.ROLES_SECTION_TITLE))
