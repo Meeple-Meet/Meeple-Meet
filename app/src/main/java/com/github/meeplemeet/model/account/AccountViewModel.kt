@@ -88,6 +88,19 @@ interface AccountViewModel {
    * @param account The account to delete
    */
   fun deleteAccount(account: Account) {
-    scope.launch { RepositoryProvider.accounts.deleteAccount(account.uid) }
+    scope.launch {
+      // Leave all the discussions and sessions the account is a part of
+      account.previews.forEach { (id, _) ->
+        val disc = RepositoryProvider.discussions.getDiscussion(id)
+        if (disc.session != null)
+            RepositoryProvider.sessions.updateSession(
+                id, newParticipantList = disc.session.participants - account.uid)
+        RepositoryProvider.discussions.removeUserFromDiscussion(
+            disc, account.uid, disc.creatorId == account.uid)
+      }
+
+      // Delete the account
+      RepositoryProvider.accounts.deleteAccount(account.uid)
+    }
   }
 }
