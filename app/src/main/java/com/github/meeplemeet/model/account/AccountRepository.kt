@@ -47,6 +47,10 @@ class AccountRepository : FirestoreRepository("accounts") {
   companion object {
     /** Firestore field name for relationship status */
     private const val FIELD_STATUS = "status"
+    /** Firestore field name for shop IDs list */
+    private const val FIELD_SHOP_IDS = "shopIds"
+    /** Firestore field name for space renter IDs list */
+    private const val FIELD_SPACE_RENTER_IDS = "spaceRenterIds"
   }
 
   /**
@@ -260,11 +264,11 @@ class AccountRepository : FirestoreRepository("accounts") {
     val docRef = businessesDoc(accountId)
     db.runTransaction { transaction ->
           val snapshot = transaction.get(docRef)
-          val currentShops = snapshot.get("shopIds") as? List<*> ?: emptyList<String>()
+          val currentShops = snapshot.get(FIELD_SHOP_IDS) as? List<*> ?: emptyList<String>()
           val updatedShops = (currentShops.filterIsInstance<String>() + shopId).distinct()
           transaction.set(
               docRef,
-              mapOf("shopIds" to updatedShops),
+              mapOf(FIELD_SHOP_IDS to updatedShops),
               com.google.firebase.firestore.SetOptions.merge())
         }
         .await()
@@ -280,9 +284,9 @@ class AccountRepository : FirestoreRepository("accounts") {
     val docRef = businessesDoc(accountId)
     db.runTransaction { transaction ->
           val snapshot = transaction.get(docRef)
-          val currentShops = snapshot.get("shopIds") as? List<*> ?: emptyList<String>()
+          val currentShops = snapshot.get(FIELD_SHOP_IDS) as? List<*> ?: emptyList<String>()
           val updatedShops = currentShops.filterIsInstance<String>().filter { it != shopId }
-          transaction.update(docRef, "shopIds", updatedShops)
+          transaction.update(docRef, FIELD_SHOP_IDS, updatedShops)
         }
         .await()
   }
@@ -298,12 +302,12 @@ class AccountRepository : FirestoreRepository("accounts") {
     db.runTransaction { transaction ->
           val snapshot = transaction.get(docRef)
           val currentSpaceRenters =
-              snapshot.get("spaceRenterIds") as? List<*> ?: emptyList<String>()
+              snapshot.get(FIELD_SPACE_RENTER_IDS) as? List<*> ?: emptyList<String>()
           val updatedSpaceRenters =
               (currentSpaceRenters.filterIsInstance<String>() + spaceRenterId).distinct()
           transaction.set(
               docRef,
-              mapOf("spaceRenterIds" to updatedSpaceRenters),
+              mapOf(FIELD_SPACE_RENTER_IDS to updatedSpaceRenters),
               com.google.firebase.firestore.SetOptions.merge())
         }
         .await()
@@ -320,10 +324,10 @@ class AccountRepository : FirestoreRepository("accounts") {
     db.runTransaction { transaction ->
           val snapshot = transaction.get(docRef)
           val currentSpaceRenters =
-              snapshot.get("spaceRenterIds") as? List<*> ?: emptyList<String>()
+              snapshot.get(FIELD_SPACE_RENTER_IDS) as? List<*> ?: emptyList<String>()
           val updatedSpaceRenters =
               currentSpaceRenters.filterIsInstance<String>().filter { it != spaceRenterId }
-          transaction.update(docRef, "spaceRenterIds", updatedSpaceRenters)
+          transaction.update(docRef, FIELD_SPACE_RENTER_IDS, updatedSpaceRenters)
         }
         .await()
   }
@@ -336,9 +340,11 @@ class AccountRepository : FirestoreRepository("accounts") {
    */
   suspend fun getBusinessIds(accountId: String): Pair<List<String>, List<String>> {
     val snapshot = businessesDoc(accountId).get().await()
-    val shopIds = (snapshot.get("shopIds") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+    val shopIds =
+        (snapshot.get(FIELD_SHOP_IDS) as? List<*>)?.filterIsInstance<String>() ?: emptyList()
     val spaceRenterIds =
-        (snapshot.get("spaceRenterIds") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        (snapshot.get(FIELD_SPACE_RENTER_IDS) as? List<*>)?.filterIsInstance<String>()
+            ?: emptyList()
     return Pair(shopIds, spaceRenterIds)
   }
 
