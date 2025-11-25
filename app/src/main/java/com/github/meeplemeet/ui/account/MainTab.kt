@@ -41,6 +41,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -177,10 +178,10 @@ fun MainTab(
   Column(
       modifier =
           Modifier.fillMaxSize()
-              .padding(ProfileScreenUi.xxLargePadding)
+              .padding(Dimensions.Padding.xxLarge)
               .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
               .verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(ProfileScreenUi.extraLargeSpacing),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge),
       horizontalAlignment = Alignment.CenterHorizontally) {
         PublicInfo(
             account = account,
@@ -190,6 +191,10 @@ fun MainTab(
             onSignOut = onSignOut)
 
         PrivateInfo(account = account, viewModel = viewModel)
+
+        var pref by remember { mutableStateOf(NotificationPreference.EVERYONE) }
+
+        NotificationSettingsSection(preference = pref, onPreferenceChange = { pref = it })
       }
 }
 
@@ -296,10 +301,13 @@ fun PublicInfoActions(
                 Modifier.width(140.dp).height(46.dp).testTag(PublicInfoTestTags.ACTION_LOGOUT),
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = AppColors.textIconsFade, contentColor = AppColors.primary),
+                    containerColor = AppColors.textIconsFade,
+                    disabledContainerColor = AppColors.textIconsFade,
+                    contentColor = Color.Transparent,
+                    disabledContentColor = Color.Transparent),
             shape = RoundedCornerShape(14.dp),
             elevation = ButtonDefaults.buttonElevation(4.dp)) {
-              Text("Logout", color = Color.Transparent)
+              Text("Logout", color = AppColors.primary)
             }
       }
 }
@@ -867,4 +875,57 @@ private fun RemoveCatalogDialog(
         },
         shape = RoundedCornerShape(16.dp))
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+// NOTIFICATION SETTINGS SECTION
+/////////////////////////////////////////////////////////////////////////////////////
+enum class NotificationPreference {
+  EVERYONE,
+  FRIENDS_ONLY,
+  NO_ONE
+}
+
+@Composable
+fun NotificationSettingsSection(
+    preference: NotificationPreference,
+    onPreferenceChange: (NotificationPreference) -> Unit
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+//              .padding(16.dp)
+              .clip(RoundedCornerShape(20.dp))
+              .background(AppColors.secondary)
+              .padding(20.dp)) {
+        Text(text = "Notification settings", style = MaterialTheme.typography.titleMedium)
+
+        Spacer(Modifier.height(12.dp))
+
+        NotificationOptionRow(
+            label = "Accept notifications from everyone",
+            selected = preference == NotificationPreference.EVERYONE,
+            onClick = { onPreferenceChange(NotificationPreference.EVERYONE) })
+
+        NotificationOptionRow(
+            label = "Accept notifications from friends only",
+            selected = preference == NotificationPreference.FRIENDS_ONLY,
+            onClick = { onPreferenceChange(NotificationPreference.FRIENDS_ONLY) })
+
+        NotificationOptionRow(
+            label = "Accept notifications from no one",
+            selected = preference == NotificationPreference.NO_ONE,
+            onClick = { onPreferenceChange(NotificationPreference.NO_ONE) })
+      }
+}
+
+@Composable
+private fun NotificationOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
+      verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(8.dp))
+        Text(text = label)
+      }
 }

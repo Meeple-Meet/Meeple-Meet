@@ -8,8 +8,7 @@ import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountNoUid
-import com.github.meeplemeet.model.account.CreateAccountViewModel
-import com.github.meeplemeet.model.auth.AuthenticationViewModel
+import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.account.MainTab
 import com.github.meeplemeet.ui.account.PrivateInfoTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
@@ -31,16 +30,14 @@ class MainTabComposableTest : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
-  private lateinit var authVm: AuthenticationViewModel
-  private lateinit var createVm: CreateAccountViewModel
+  private lateinit var profileVM: ProfileScreenViewModel
   private lateinit var user: Account
   private lateinit var otherUser: Account
 
   @Before
   fun setup() {
     runBlocking {
-      authVm = AuthenticationViewModel()
-      createVm = CreateAccountViewModel()
+      profileVM = ProfileScreenViewModel()
 
       val uid1 = "test_user_1"
       val uid2 = "test_user_2"
@@ -230,8 +227,7 @@ class MainTabComposableTest : FirestoreTests() {
     compose.setContent {
       AppTheme {
         MainTab(
-            viewModel = authVm,
-            viewModel = createVm,
+            viewModel = profileVM,
             account = accountState.value,
             onFriendsClick = {},
             onNotificationClick = {},
