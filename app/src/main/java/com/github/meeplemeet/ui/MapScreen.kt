@@ -5,7 +5,6 @@ package com.github.meeplemeet.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -1070,7 +1069,7 @@ private fun rememberClusterIcon(size: Int, diameterDp: Int = 64): BitmapDescript
     val diameterPx = with(density) { diameterDp.dp.toPx() }.toInt()
 
     // Create a bitmap
-    val bitmap = Bitmap.createBitmap(diameterPx, diameterPx, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(diameterPx, diameterPx)
     val canvas = Canvas(bitmap)
 
     // Background circle
