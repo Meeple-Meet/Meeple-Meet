@@ -89,6 +89,9 @@ interface AccountViewModel {
    */
   fun deleteAccount(account: Account) {
     scope.launch {
+      // Remove the user's handle
+      RepositoryProvider.handles.deleteAccountHandle(account.handle)
+
       // Leave all the discussions and sessions the account is a part of
       account.previews.forEach { (id, _) ->
         val disc = RepositoryProvider.discussions.getDiscussion(id)
