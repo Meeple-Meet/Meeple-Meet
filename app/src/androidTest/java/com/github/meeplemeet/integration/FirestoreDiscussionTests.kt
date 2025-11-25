@@ -87,7 +87,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   fun canAddParticipant() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(account2.uid))
@@ -97,7 +97,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun canAddAdminFromExistingParticipant() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val withUser = discussionRepository.getDiscussion(discussion.uid)
     discussionRepository.addAdminToDiscussion(withUser, account2.uid)
@@ -220,7 +220,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun canRemoveUserFromDiscussion() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val withUser = discussionRepository.getDiscussion(discussion.uid)
     discussionRepository.removeUserFromDiscussion(withUser, account2.uid)
@@ -274,7 +274,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun nonAdminUserCanRemoveThemselves() = runTest {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val withUser = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(withUser.participants.contains(account2.uid))
@@ -484,7 +484,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun canVoteOnPollUsingDiscussionAndMessageIds() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val pollMessage =
         discussionRepository.createPoll(
@@ -500,7 +500,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun canRemoveVoteFromPollUsingDiscussionAndMessageIds() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val pollMessage =
         discussionRepository.createPoll(
@@ -543,7 +543,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     discussionRepository.sendMessageToDiscussion(discussion, account1, "Welcome!")
     Thread.sleep(100)
 
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val acc2Updated = accountRepository.getAccount(account2.uid)
     val preview = acc2Updated.previews[discussion.uid]
@@ -624,7 +624,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun viewModelVoteOnPollUsesIdsInsteadOfObjects() = runTest {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val pollMessage =
         discussionRepository.createPoll(
@@ -641,7 +641,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test
   fun viewModelRemoveVoteFromPollUsesIdsInsteadOfObjects() = runTest {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val pollMessage =
         discussionRepository.createPoll(
@@ -686,7 +686,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   @Test(expected = com.github.meeplemeet.model.PermissionDeniedException::class)
   fun viewModelSetDiscussionProfilePictureRequiresAdmin() = runTest {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-    discussionRepository.addUserToDiscussion(discussion, account2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
     val testImagePath = createTestImage("test_profile.jpg", 800, 800, Color.BLUE)
 

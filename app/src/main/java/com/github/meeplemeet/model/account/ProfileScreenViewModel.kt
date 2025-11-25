@@ -2,8 +2,12 @@ package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for managing user profile interactions and friend system operations.
@@ -12,13 +16,14 @@ import kotlinx.coroutines.launch
  * and resetting relationships. It includes validation logic to prevent invalid operations (e.g.,
  * sending duplicate friend requests, accepting non-existent requests).
  *
- * @property accountRepository The AccountRepository used for data operations. Defaults to the
- *   shared instance from RepositoryProvider.
+ * @property repository The AccountRepository used for data operations. Defaults to the shared
+ *   instance from RepositoryProvider.
  */
 class ProfileScreenViewModel(
-    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
-    handlesRepository: HandlesRepository = RepositoryProvider.handles,
-) : CreateAccountViewModel(handlesRepository) {
+    private val repository: AccountRepository = RepositoryProvider.accounts
+) : ViewModel(), AccountViewModel {
+  override val scope: CoroutineScope
+    get() = this.viewModelScope
 
   /**
    * Checks if two accounts are the same user or if either has blocked the other.
@@ -59,7 +64,10 @@ class ProfileScreenViewModel(
         other.relationships[account.uid] != null)
         return
 
-    scope.launch { accountRepository.sendFriendRequest(account.uid, other.uid) }
+    viewModelScope.launch {
+      repository.sendFriendRequest(account, other.uid)
+      repository.sendFriendRequestNotification(other.uid, account)
+    }
   }
 
   /**
@@ -79,7 +87,9 @@ class ProfileScreenViewModel(
    * @param account The account accepting the friend request
    * @param other The account whose friend request is being accepted
    */
-  fun acceptFriendRequest(account: Account, other: Account) {
+  fun acceptFriendRequest(account: Account, notification: Notification) {
+    val other: Account
+    runBlocking { other = repository.getAccount(notification.senderOrDiscussionId) }
     val accountRels = account.relationships[other.uid]
     val otherRels = other.relationships[account.uid]
 
@@ -88,7 +98,8 @@ class ProfileScreenViewModel(
         otherRels != RelationshipStatus.SENT)
         return
 
-    scope.launch { accountRepository.acceptFriendRequest(account.uid, other.uid) }
+    viewModelScope.launch { repository.acceptFriendRequest(account.uid, other.uid) }
+    executeNotification(account, notification)
   }
 
   /**
@@ -112,7 +123,7 @@ class ProfileScreenViewModel(
     if (account.uid == other.uid || account.relationships[other.uid] == RelationshipStatus.BLOCKED)
         return
 
-    scope.launch { accountRepository.blockUser(account.uid, other.uid) }
+    viewModelScope.launch { repository.blockUser(account.uid, other.uid) }
   }
 
   /**
@@ -131,7 +142,16 @@ class ProfileScreenViewModel(
   fun rejectFriendRequest(account: Account, other: Account) {
     if (sameOrBlocked(account, other)) return
 
-    scope.launch { accountRepository.resetRelationship(account.uid, other.uid) }
+    viewModelScope.launch {
+      repository.resetRelationship(account.uid, other.uid)
+      // Clear out previous notifications
+      account.notifications
+          .find { not -> not.senderOrDiscussionId == other.uid }
+          ?.let { not -> repository.deleteNotification(account.uid, not.uid) }
+      other.notifications
+          .find { not -> not.senderOrDiscussionId == account.uid }
+          ?.let { not -> repository.deleteNotification(other.uid, not.uid) }
+    }
   }
 
   /**
@@ -150,7 +170,7 @@ class ProfileScreenViewModel(
   fun removeFriend(account: Account, friend: Account) {
     if (sameOrBlocked(account, friend)) return
 
-    scope.launch { accountRepository.resetRelationship(account.uid, friend.uid) }
+    viewModelScope.launch { repository.resetRelationship(account.uid, friend.uid) }
   }
 
   /**
@@ -159,9 +179,9 @@ class ProfileScreenViewModel(
    * This method validates that the operation is valid before proceeding. It prevents unblocking in
    * the following cases:
    * - The accounts are the same user
-   * - The relationship from the current account to the other user is not Blocked
+   * - Either user has blocked the other
    *
-   * If validation passes, the unblock is executed asynchronously via the repository.
+   * If validation passes, the relationship is reset asynchronously via the repository.
    *
    * @param account The account unblocking the other user
    * @param other The account being unblocked
@@ -170,6 +190,59 @@ class ProfileScreenViewModel(
     if (account.uid == other.uid || account.relationships[other.uid] != RelationshipStatus.BLOCKED)
         return
 
-    scope.launch { accountRepository.unblockUser(account.uid, other.uid) }
+    viewModelScope.launch { repository.unblockUser(account.uid, other.uid) }
+  }
+
+  /**
+   * Executes the action associated with a notification.
+   *
+   * This method validates that the notification belongs to the current account before executing it.
+   * The execution behavior depends on the notification type:
+   * - **FriendRequest**: Accepts the friend request
+   * - **JoinDiscussion**: Adds the user to the discussion
+   * - **JoinSession**: Adds the user as a participant in the session
+   *
+   * The method is idempotent - executing the same notification multiple times has no additional
+   * effect after the first execution.
+   *
+   * @param account The account executing the notification (must match the notification's receiver)
+   * @param notification The notification to execute
+   * @see Notification.execute for the specific actions performed by each notification type
+   */
+  private fun executeNotification(account: Account, notification: Notification) {
+    if (notification.receiverId != account.uid) return
+
+    viewModelScope.launch { notification.execute() }
+  }
+
+  /**
+   * Marks a notification as read.
+   *
+   * This method validates that the notification belongs to the current account before marking it as
+   * read. Read notifications are typically displayed differently in the UI to indicate the user has
+   * seen them.
+   *
+   * @param account The account that owns the notification (must match the notification's receiver)
+   * @param notification The notification to mark as read
+   */
+  fun readNotification(account: Account, notification: Notification) {
+    if (notification.receiverId != account.uid) return
+
+    viewModelScope.launch { repository.readNotification(account.uid, notification.uid) }
+  }
+
+  /**
+   * Deletes a notification from the user's notification list.
+   *
+   * This method validates that the notification belongs to the current account before deleting it.
+   * Once deleted, the notification is permanently removed from Firestore and cannot be recovered.
+   *
+   * @param account The account that owns the notification (must match the notification's receiver)
+   * @param notification The notification to delete
+   */
+  fun deleteNotification(account: Account, notification: Notification) {
+    if (notification.receiverId != account.uid) return
+
+    viewModelScope.launch { repository.deleteNotification(account.uid, notification.uid) }
   }
 }
