@@ -24,7 +24,7 @@ interface AccountViewModel {
    */
   fun getAccount(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
-    scope.launch { RepositoryProvider.accounts.getAccount(id, false) }
+    scope.launch { RepositoryProvider.accounts.getAccount(id) }
   }
 
   /**
@@ -39,7 +39,7 @@ interface AccountViewModel {
    */
   fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
-    scope.launch { onResult(RepositoryProvider.accounts.getAccount(id, false)) }
+    scope.launch { onResult(RepositoryProvider.accounts.getAccount(id)) }
   }
 
   /**

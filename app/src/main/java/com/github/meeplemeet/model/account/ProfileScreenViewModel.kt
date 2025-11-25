@@ -75,7 +75,7 @@ class ProfileScreenViewModel(
         other.relationships[account.uid] != null)
         return
 
-    scope.launch { accountRepository.sendFriendRequest(account, other.uid) }
+    scope.launch { accountRepository.sendFriendRequest(account.uid, other.uid) }
   }
 
   /**
