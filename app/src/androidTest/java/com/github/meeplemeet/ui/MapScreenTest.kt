@@ -21,7 +21,6 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.cluster.Cluster
-import com.github.meeplemeet.model.map.cluster.ClusterItem
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
 import com.github.meeplemeet.model.map.cluster.DistanceBasedClusterStrategy
@@ -94,28 +93,18 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   private var renderTrigger by mutableStateOf(0)
 
   // Cluster strategies for testing
-  private val singleClusterStrategy =
-      object : ClusterStrategy {
-        override fun clusterize(
-            items: List<ClusterItem>,
-            zoomLevel: Float
-        ): List<Cluster<ClusterItem>> {
-          if (items.isEmpty()) return emptyList()
-          val centerLat = items.map { it.lat }.average()
-          val centerLng = items.map { it.lng }.average()
-          return listOf(Cluster(centerLat, centerLng, items))
-        }
-      }
+  private val singleClusterStrategy = ClusterStrategy { items, _ ->
+    if (items.isEmpty()) emptyList()
+    else {
+      val centerLat = items.map { it.lat }.average()
+      val centerLng = items.map { it.lng }.average()
+      listOf(Cluster(centerLat, centerLng, items))
+    }
+  }
 
-  private val noClusterStrategy =
-      object : ClusterStrategy {
-        override fun clusterize(
-            items: List<ClusterItem>,
-            zoomLevel: Float
-        ): List<Cluster<ClusterItem>> {
-          return items.map { Cluster(it.lat, it.lng, listOf(it)) }
-        }
-      }
+  private val noClusterStrategy = ClusterStrategy { items, _ ->
+    items.map { Cluster(it.lat, it.lng, listOf(it)) }
+  }
 
   @Before
   fun setup() {

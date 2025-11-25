@@ -12,8 +12,7 @@ import kotlin.math.sqrt
  *
  * The strategy operates on [ClusterItem]s and returns clusters that group items of the same type.
  */
-@FunctionalInterface
-interface ClusterStrategy {
+fun interface ClusterStrategy {
 
   /**
    * Groups the given items into clusters based on the strategy.

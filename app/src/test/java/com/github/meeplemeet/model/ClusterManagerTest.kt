@@ -3,7 +3,6 @@ package com.github.meeplemeet.model
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterItem
 import com.github.meeplemeet.model.map.cluster.ClusterManager
-import com.github.meeplemeet.model.map.cluster.ClusterStrategy
 import junit.framework.TestCase.assertEquals
 import kotlin.test.Test
 
@@ -11,20 +10,14 @@ class ClusterManagerTest {
 
   private val clusterManager =
       ClusterManager(
-          strategy =
-              object : ClusterStrategy {
-                override fun clusterize(
-                    items: List<ClusterItem>,
-                    zoomLevel: Float
-                ): List<Cluster<ClusterItem>> {
-                  if (items.isEmpty()) return emptyList()
-
-                  // Regroup all items into a single cluster
-                  val centerLat = items.map { it.lat }.average()
-                  val centerLng = items.map { it.lng }.average()
-                  return listOf(Cluster(centerLat, centerLng, items))
-                }
-              })
+          strategy = { items, _ ->
+            if (items.isEmpty()) emptyList()
+            else {
+              val centerLat = items.map { it.lat }.average()
+              val centerLng = items.map { it.lng }.average()
+              listOf(Cluster(centerLat, centerLng, items))
+            }
+          })
 
   data class TestItem(val id: Int, val lat: Double, val lng: Double)
 
