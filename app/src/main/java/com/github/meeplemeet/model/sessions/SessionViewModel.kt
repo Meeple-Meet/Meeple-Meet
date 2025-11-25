@@ -1,12 +1,18 @@
 package com.github.meeplemeet.model.sessions
+// AI was used for this file
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -19,7 +25,17 @@ import kotlinx.coroutines.launch
  */
 class SessionViewModel(
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : CreateSessionViewModel() {
+
+  private val _errorMessage = MutableStateFlow<String?>(null)
+  /** StateFlow for observing error messages from photo operations */
+  val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+  /** Clears the current error message */
+  fun clearError() {
+    _errorMessage.value = null
+  }
   /**
    * Checks if an account has admin privileges for a discussion.
    *
@@ -107,5 +123,90 @@ class SessionViewModel(
         throw PermissionDeniedException("Only discussion admins can perform this operation")
 
     viewModelScope.launch { sessionRepository.deleteSession(discussion.uid) }
+  }
+
+  /**
+   * Adds photos to a gaming session.
+   *
+   * Uploads photos to Firebase Storage, retrieves their URLs, and updates the session's photo
+   * list in Firestore with SessionPhoto objects (containing UUID and URL). The operation is 
+   * performed asynchronously in the viewModelScope. Errors are communicated via [errorMessage] 
+   * StateFlow.
+   *
+   * @param context Android context for accessing storage
+   * @param discussionId The unique identifier of the discussion containing the session
+   * @param photoPaths Absolute paths to the photo files to upload
+   */
+  fun addSessionPhotos(context: Context, discussionId: String, vararg photoPaths: String) {
+    viewModelScope.launch {
+      try {
+        _errorMessage.value = null
+        val photos = imageRepository.saveSessionPhotos(context, discussionId, *photoPaths)
+        sessionRepository.addSessionPhotos(discussionId, photos)
+      } catch (e: Exception) {
+        _errorMessage.value = "Failed to add photo: ${e.message}"
+      }
+    }
+  }
+
+  /**
+   * Removes a photo from a gaming session.
+   *
+   * Deletes the photo from both Firebase Storage and the session's photo list in Firestore. The
+   * imageRepository handles both operations internally. Errors are communicated via [errorMessage]
+   * StateFlow.
+   *
+   * @param context Android context for accessing storage
+   * @param discussionId The unique identifier of the discussion containing the session
+   * @param photoUuid The UUID of the photo to remove (without .webp extension)
+   */
+  fun removeSessionPhoto(context: Context, discussionId: String, photoUuid: String) {
+    viewModelScope.launch {
+      try {
+        _errorMessage.value = null
+        imageRepository.deleteSessionPhoto(context, discussionId, photoUuid)
+        sessionRepository.removeSessionPhoto(discussionId, photoUuid)
+      } catch (e: Exception) {
+        _errorMessage.value = "Failed to delete photo: ${e.message}"
+      }
+    }
+  }
+
+  /**
+   * Loads all photos belonging to a gaming session.
+   *
+   * Fetches photo UUIDs from the session document, then loads the corresponding images from
+   * Firebase Storage. Returns results via a callback. On success, the callback receives
+   * Result.success with the photo list. On failure, it receives Result.failure with the exception.
+   * The operation is performed asynchronously in the viewModelScope.
+   *
+   * @param context Android context for accessing storage
+   * @param discussionId The unique identifier of the discussion containing the session
+   * @param onResult Callback that receives a Result containing either the list of (UUID, photo
+   *   bytes) pairs or an exception
+   */
+  fun loadSessionPhotos(
+      context: Context,
+      discussionId: String,
+      onResult: (Result<List<Pair<String, ByteArray>>>) -> Unit
+  ) {
+    viewModelScope.launch {
+      try {
+        // Get UUIDs from session repository
+        val session = sessionRepository.getSession(discussionId)
+        if (session == null) {
+          onResult(Result.success(emptyList()))
+          return@launch
+        }
+        
+        val photoUuids = session.sessionPhotos.map { it.uuid }
+        
+        // Load images from image repository
+        val photos = imageRepository.loadSessionPhotos(context, discussionId, photoUuids)
+        onResult(Result.success(photos))
+      } catch (e: Exception) {
+        onResult(Result.failure(e))
+      }
+    }
   }
 }
