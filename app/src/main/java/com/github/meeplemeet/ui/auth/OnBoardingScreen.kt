@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
+import com.github.meeplemeet.ui.auth.OnBoardingTestTags.DiscussionPreviewCard
 import com.github.meeplemeet.ui.discussions.ChatBubble
 import com.github.meeplemeet.ui.discussions.PollBubble
 import com.github.meeplemeet.ui.theme.AppColors
@@ -45,6 +47,18 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import java.security.Timestamp
 import java.util.Date
 import kotlinx.coroutines.launch
+
+// Test tags used for UI testing
+object OnBoardingTestTags {
+  const val SkipButton = "OnBoarding_SkipButton"
+  const val PageTitle = "OnBoarding_PageTitle"
+  const val BackButton = "OnBoarding_BackButton"
+  const val NextButton = "OnBoarding_NextButton"
+  const val PagerDot = "OnBoarding_PagerDot"
+  const val Pager = "OnBoarding_Pager"
+  const val DiscussionPreviewCard = "DiscussionPreviewCard"
+  const val CloseDialog = "OnBoarding_CloseDialog"
+}
 
 data class OnBoardPage(val image: Int, val title: String, val description: String)
 
@@ -73,7 +87,11 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
         Text(
             text = "Skip",
             color = Color.Gray,
-            modifier = Modifier.align(Alignment.TopEnd).clickable { onSkip() }.padding(8.dp))
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .clickable { onSkip() }
+                    .padding(8.dp)
+                    .testTag(OnBoardingTestTags.SkipButton))
 
         // Top-left back button removed as bottom nav now handles back navigation
         // if (pagerState.currentPage > 0) {
@@ -99,7 +117,7 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
             horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
               HorizontalPager(
                   state = pagerState,
-                  modifier = Modifier.weight(1f).fillMaxWidth(),
+                  modifier = Modifier.weight(1f).fillMaxWidth().testTag(OnBoardingTestTags.Pager),
                   userScrollEnabled =
                       pagerState.currentPage != 0 || hasInteractedWithDiscussion.value) { page ->
                     if (page == 0) {
@@ -123,7 +141,9 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                 text = pages[page].title,
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 12.dp))
+                                modifier =
+                                    Modifier.padding(bottom = 12.dp)
+                                        .testTag("${OnBoardingTestTags.PageTitle}_$page"))
                             Text(
                                 text =
                                     "Meeple Meet helps you connect with new friends and join fun discussions around your favorite games.",
@@ -137,7 +157,8 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                     Modifier.fillMaxWidth()
                                         .padding(horizontal = 16.dp)
                                         .heightIn(min = 68.dp, max = 84.dp)
-                                        .focusRequester(focusRequester),
+                                        .focusRequester(focusRequester)
+                                        .testTag(DiscussionPreviewCard),
                                 shape = RoundedCornerShape(24.dp),
                                 tonalElevation = 8.dp,
                                 shadowElevation = 4.dp,
@@ -271,7 +292,10 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                                   verticalAlignment = Alignment.CenterVertically) {
                                                     // Close button at far left
                                                     IconButton(
-                                                        onClick = { showDialog.value = false }) {
+                                                        onClick = { showDialog.value = false },
+                                                        modifier =
+                                                            Modifier.testTag(
+                                                                OnBoardingTestTags.CloseDialog)) {
                                                           Icon(
                                                               imageVector = Icons.Default.Close,
                                                               contentDescription = "Close",
@@ -430,7 +454,9 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                 text = pages[page].title,
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 12.dp))
+                                modifier =
+                                    Modifier.padding(bottom = 12.dp)
+                                        .testTag("${OnBoardingTestTags.PageTitle}_$page"))
                             Text(
                                 text = pages[page].description,
                                 fontSize = 16.sp,
@@ -456,7 +482,8 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                         pagerState.animateScrollToPage(pagerState.currentPage - 1)
                                       }
                                     }
-                            else Modifier.size(42.dp),
+                                    .testTag(OnBoardingTestTags.BackButton)
+                            else Modifier.size(42.dp).testTag(OnBoardingTestTags.BackButton),
                         contentAlignment = Alignment.Center) {
                           if (canGoBack) {
                             Icon(
@@ -478,7 +505,8 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                     .size(animatedSize.dp)
                                     .background(
                                         color = if (isSelected) Color.DarkGray else Color.LightGray,
-                                        shape = CircleShape))
+                                        shape = CircleShape)
+                                    .testTag(OnBoardingTestTags.PagerDot))
                       }
                     }
 
@@ -498,7 +526,8 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                                     scope.launch {
                                       pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                     }
-                                  },
+                                  }
+                                  .testTag(OnBoardingTestTags.NextButton),
                           contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
@@ -507,7 +536,7 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                           }
                     } else {
                       // Invisible placeholder to keep layout consistent
-                      Box(modifier = Modifier.size(42.dp))
+                      Box(modifier = Modifier.size(42.dp).testTag(OnBoardingTestTags.NextButton))
                     }
                   }
             }
