@@ -105,7 +105,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   fun addUserToDiscussionAddsParticipant() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
 
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     val updated = discussionRepository.getDiscussion(discussion.uid)
     assertTrue(updated.participants.contains(testAccount2.uid))
@@ -115,7 +115,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun removeUserFromDiscussionRemovesParticipant() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     val withUser = discussionRepository.getDiscussion(discussion.uid)
     discussionRepository.removeUserFromDiscussion(withUser, testAccount2.uid)
@@ -209,7 +209,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun sendMessageToDiscussionAppendsMessage() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Hello World")
 
@@ -273,7 +273,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun readDiscussionMessagesResetsUnreadCount() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
     discussionRepository.sendMessageToDiscussion(discussion, testAccount1, "Hello")
 
     val messages = discussionRepository.getMessages(discussion.uid)
@@ -351,7 +351,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun voteOnPollSingleVoteMode() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     discussionRepository.createPoll(
         discussion = discussion,
@@ -374,7 +374,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun voteOnPollMultipleVoteMode() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     discussionRepository.createPoll(
         discussion = discussion,
@@ -400,7 +400,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun voteOnPollSingleVoteReplacesPreviousVote() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     discussionRepository.createPoll(
         discussion = discussion,
@@ -467,7 +467,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun removeVoteFromPollRemovesSpecificOption() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     discussionRepository.createPoll(
         discussion = discussion,
@@ -497,7 +497,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun removeVoteFromPollRemovesUserIfNoVotesLeft() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
 
     discussionRepository.createPoll(
         discussion = discussion,
@@ -657,7 +657,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun pollGetUserVotesReturnsCorrectVotes() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Select all", listOf("A", "B", "C"), true)
 
@@ -683,7 +683,7 @@ class FirestoreRepositoryTests : FirestoreTests() {
   @Test
   fun pollHasUserVotedWorksCorrectly() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
     discussionRepository.createPoll(
         discussion, testAccount1.uid, "Question", listOf("A", "B"), false)
 

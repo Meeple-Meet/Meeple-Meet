@@ -144,7 +144,7 @@ class FirestoreViewModelPollingTests : FirestoreTests() {
   @Test
   fun voteOnPollWithMultipleUsers() = runBlocking {
     val discussion = discussionRepository.createDiscussion("Test", "Desc", testAccount1.uid)
-    discussionRepository.addUserToDiscussion(discussion, testAccount2.uid)
+    discussionRepository.addUserToDiscussion(discussion.uid, testAccount2.uid)
     viewModel.createPoll(discussion, testAccount1.uid, "Question", listOf("A", "B", "C"), false)
     delay(500)
 

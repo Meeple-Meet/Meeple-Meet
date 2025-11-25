@@ -115,7 +115,7 @@ class DiscussionDetailsViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    viewModelScope.launch { repository.addUserToDiscussion(discussion, user.uid) }
+    viewModelScope.launch { repository.addUserToDiscussion(discussion.uid, user.uid) }
   }
 
   /**
