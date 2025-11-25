@@ -138,6 +138,8 @@ object MapScreenTestTags {
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
 
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
+
+  fun getTestTagForCluster(pos: LatLng) = "mapCluster_${pos.latitude}_${pos.longitude}"
 }
 
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
@@ -360,6 +362,7 @@ fun MapScreen(
                 null
               }
 
+          // Prepare marker icons for different pin types
           val shopIcon = rememberMarkerIcon(resId = R.drawable.ic_storefront)
           val spaceIcon = rememberMarkerIcon(resId = R.drawable.ic_table)
           val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
@@ -372,36 +375,48 @@ fun MapScreen(
               cameraPositionState = cameraPositionState,
               properties =
                   MapProperties(mapStyleOptions = mapStyleOptions, isMyLocationEnabled = true)) {
-                val pinPriority = listOf(PinType.SESSION, PinType.SHOP, PinType.SPACE)
+                val clusters = viewModel.getClusters()
 
-                val uniquePins =
-                    viewModel
-                        .getFilteredPins() // TODO Remove ASAP
-                        .groupBy { it.location }
-                        .mapValues { (_, pins) ->
-                          pins.minByOrNull { pinPriority.indexOf(it.geoPin.type) }!!
-                        }
-                        .values
+                clusters
+                    .filter { it.items.isNotEmpty() }
+                    .forEach { cluster ->
+                      val size = cluster.items.size
+                      val pos = LatLng(cluster.centerLat, cluster.centerLng)
 
-                uniquePins.forEach { gp ->
-                  val pos = LatLng(gp.location.latitude, gp.location.longitude)
-                  val icon =
-                      when (gp.geoPin.type) {
-                        PinType.SHOP -> shopIcon
-                        PinType.SPACE -> spaceIcon
-                        PinType.SESSION -> sessionIcon
+                      if (size == 1) {
+                        // Single pin, show the appropriate marker icon
+                        val gp = cluster.items.first()
+                        val icon =
+                            when (gp.geoPin.type) {
+                              PinType.SHOP -> shopIcon
+                              PinType.SPACE -> spaceIcon
+                              PinType.SESSION -> sessionIcon
+                            }
+                        Marker(
+                            state = MarkerState(pos),
+                            title = gp.geoPin.uid,
+                            snippet = gp.geoPin.type.name,
+                            onClick = {
+                              viewModel.selectPin(gp) // Open preview for this pin
+                              true
+                            },
+                            icon = icon,
+                            tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
+                      } else {
+                        // Cluster with multiple pins, create a cluster icon
+                        val clusterIcon = rememberClusterIcon(size = size)
+                        Marker(
+                            state = MarkerState(pos),
+                            title = "Cluster ($size)",
+                            snippet = "$size items",
+                            onClick = {
+                              viewModel.selectCluster(cluster) // Open cluster sheet
+                              true
+                            },
+                            icon = clusterIcon,
+                            tag = MapScreenTestTags.getTestTagForCluster(pos))
                       }
-                  Marker(
-                      state = MarkerState(pos),
-                      title = gp.geoPin.uid,
-                      snippet = gp.geoPin.type.name,
-                      onClick = {
-                        viewModel.selectPin(gp)
-                        true
-                      },
-                      icon = icon,
-                      tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
-                }
+                    }
               }
 
           // --- FILTER BUTTON + vertical list of filter chips (top-start) ---
@@ -901,4 +916,9 @@ private fun rememberMarkerIcon(
 
     BitmapDescriptorFactory.fromBitmap(bitmap)
   }
+}
+
+@Composable
+private fun rememberClusterIcon(size: Int, diameterDp: Int = 64): BitmapDescriptor {
+  throw NotImplementedError()
 }
