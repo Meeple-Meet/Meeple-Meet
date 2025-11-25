@@ -371,7 +371,7 @@ class MapViewModel(
    */
   fun selectPin(pin: GeoPinWithLocation) {
     viewModelScope.launch {
-      _uiState.update { it.copy(isLoadingPreview = true, selectedGeoPin = pin.geoPin) }
+      _uiState.update { it.copy(isLoadingPreview = true) }
       try {
         val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
         _uiState.update {
