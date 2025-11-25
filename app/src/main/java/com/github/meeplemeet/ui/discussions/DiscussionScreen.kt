@@ -1092,7 +1092,7 @@ fun FullscreenImageDialog(
  * @param showSenderName Whether to show the sender name for this message.
  */
 @Composable
-private fun ChatBubble(
+fun ChatBubble(
     message: Message,
     isMine: Boolean,
     senderName: String?,
