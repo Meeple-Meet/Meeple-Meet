@@ -7,13 +7,10 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.google.android.gms.tasks.Task
 import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.ListResult
 import com.google.firebase.storage.StorageReference
-import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
@@ -77,15 +74,15 @@ class ImageRepositoryTest {
         val mockUrl = "https://firebase.storage.com/image.webp"
 
         // Mock saveImage to succeed
-        coEvery { 
-          imageRepository["saveImage"](mockContext, any<String>(), any<String>()) 
-        } returns mockUrl
-        
+        coEvery { imageRepository["saveImage"](mockContext, any<String>(), any<String>()) } returns
+            mockUrl
+
         // Mock Firebase Storage downloadUrl
         val mockStorageRef = mockk<StorageReference>(relaxed = true)
-        val mockDownloadUrlTask = mockk<com.google.android.gms.tasks.Task<android.net.Uri>>(relaxed = true)
+        val mockDownloadUrlTask =
+            mockk<com.google.android.gms.tasks.Task<android.net.Uri>>(relaxed = true)
         val mockUri = mockk<android.net.Uri>(relaxed = true)
-        
+
         every { mockStorage.reference } returns rootReference
         every { rootReference.child(any()) } returns mockStorageRef
         every { mockStorageRef.downloadUrl } returns mockDownloadUrlTask
@@ -96,20 +93,22 @@ class ImageRepositoryTest {
 
         // Result should be a list of 2 SessionPhoto objects
         assertEquals(2, result.size)
-        
+
         // Verify each SessionPhoto has valid UUID and URL
         result.forEach { photo ->
           // Check UUID format (36 characters with dashes)
           assertEquals(36, photo.uuid.length)
-          assert(photo.uuid.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
-          
+          assert(
+              photo.uuid.matches(
+                  Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
+
           // Check URL is set
           assertEquals(mockUrl, photo.url)
         }
-        
+
         // Verify saveImage was called twice (once per input)
-        coVerify(exactly = 2) { 
-          imageRepository["saveImage"](mockContext, any<String>(), any<String>()) 
+        coVerify(exactly = 2) {
+          imageRepository["saveImage"](mockContext, any<String>(), any<String>())
         }
       }
 
@@ -145,8 +144,6 @@ class ImageRepositoryTest {
         imageRepository.saveSessionPhotos(mockContext, discussionId, *inputs)
       }
 
-
-
   @Test(expected = RuntimeException::class)
   fun `deleteSessionPhoto propagates exception when storage fails`() =
       runTest(testDispatcher) {
@@ -172,8 +169,6 @@ class ImageRepositoryTest {
         val result = imageRepository.deleteSessionPhoto(mockContext, discussionId, photoUuid)
 
         assertEquals(photoUuid, result)
-        coVerify {
-          imageRepository["deleteImages"](mockContext, arrayOf(expectedPath))
-        }
+        coVerify { imageRepository["deleteImages"](mockContext, arrayOf(expectedPath)) }
       }
 }

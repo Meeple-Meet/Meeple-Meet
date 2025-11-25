@@ -128,10 +128,9 @@ class SessionViewModel(
   /**
    * Adds photos to a gaming session.
    *
-   * Uploads photos to Firebase Storage, retrieves their URLs, and updates the session's photo
-   * list in Firestore with SessionPhoto objects (containing UUID and URL). The operation is 
-   * performed asynchronously in the viewModelScope. Errors are communicated via [errorMessage] 
-   * StateFlow.
+   * Uploads photos to Firebase Storage, retrieves their URLs, and updates the session's photo list
+   * in Firestore with SessionPhoto objects (containing UUID and URL). The operation is performed
+   * asynchronously in the viewModelScope. Errors are communicated via [errorMessage] StateFlow.
    *
    * @param context Android context for accessing storage
    * @param discussionId The unique identifier of the discussion containing the session
@@ -198,9 +197,9 @@ class SessionViewModel(
           onResult(Result.success(emptyList()))
           return@launch
         }
-        
+
         val photoUuids = session.sessionPhotos.map { it.uuid }
-        
+
         // Load images from image repository
         val photos = imageRepository.loadSessionPhotos(context, discussionId, photoUuids)
         onResult(Result.success(photos))

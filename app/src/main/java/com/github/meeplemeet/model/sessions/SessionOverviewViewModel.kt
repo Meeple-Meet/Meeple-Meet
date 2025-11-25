@@ -1,6 +1,5 @@
 package com.github.meeplemeet.model.sessions
 
-import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.images.ImageRepository
@@ -39,33 +38,35 @@ class SessionOverviewViewModel(
   /**
    * Loads all SessionPhoto objects for a user across all past sessions.
    *
-   * Fetches all past sessions and collects their SessionPhoto objects (UUID + URL).
-   * Individual session failures are handled gracefully and don't prevent loading other photos.
+   * Fetches all past sessions and collects their SessionPhoto objects (UUID + URL). Individual
+   * session failures are handled gracefully and don't prevent loading other photos.
    *
    * @param userId The ID of the user whose session photos are to be loaded
-   * @param onResult Callback invoked with Result containing the list of SessionPhoto objects, or an exception
+   * @param onResult Callback invoked with Result containing the list of SessionPhoto objects, or an
+   *   exception
    */
-  fun loadAllPhotosForAUser(
-      userId: String,
-      onResult: (Result<List<SessionPhoto>>) -> Unit
-  ) {
+  fun loadAllPhotosForAUser(userId: String, onResult: (Result<List<SessionPhoto>>) -> Unit) {
     viewModelScope.launch {
       try {
         val sessionIds = sessionRepository.getPastSessionIdsForUser(userId)
 
         // Load photos from all sessions in parallel
-        val allPhotos = sessionIds.map { sessionId ->
-          async {
-            try {
-              // Get session to retrieve SessionPhoto objects
-              val session = sessionRepository.getSession(sessionId)
-              session?.sessionPhotos ?: emptyList()
-            } catch (e: Exception) {
-              // Continue with other sessions if one fails
-              emptyList<SessionPhoto>()
-            }
-          }
-        }.awaitAll().flatten()
+        val allPhotos =
+            sessionIds
+                .map { sessionId ->
+                  async {
+                    try {
+                      // Get session to retrieve SessionPhoto objects
+                      val session = sessionRepository.getSession(sessionId)
+                      session?.sessionPhotos ?: emptyList()
+                    } catch (e: Exception) {
+                      // Continue with other sessions if one fails
+                      emptyList<SessionPhoto>()
+                    }
+                  }
+                }
+                .awaitAll()
+                .flatten()
 
         onResult(Result.success(allPhotos))
       } catch (e: Exception) {
@@ -81,7 +82,8 @@ class SessionOverviewViewModel(
    *
    * @param userId The ID of the user
    * @param photoUuid The UUID of the photo to search for
-   * @param onResult Callback invoked with Result containing the found Session (or null if not found), or an exception
+   * @param onResult Callback invoked with Result containing the found Session (or null if not
+   *   found), or an exception
    */
   fun getSessionFromPhoto(userId: String, photoUuid: String, onResult: (Result<Session?>) -> Unit) {
     viewModelScope.launch {
@@ -89,21 +91,25 @@ class SessionOverviewViewModel(
         val sessionIds = sessionRepository.getPastSessionIdsForUser(userId)
 
         // Search all sessions in parallel and return first match
-        val foundSession = sessionIds.map { sessionId ->
-          async {
-            try {
-              val session = sessionRepository.getSession(sessionId)
-              // Check if any SessionPhoto has matching UUID
-              if (session?.sessionPhotos?.any { it.uuid == photoUuid } == true) {
-                session
-              } else {
-                null
-              }
-            } catch (e: Exception) {
-              null
-            }
-          }
-        }.awaitAll().firstOrNull { it != null }
+        val foundSession =
+            sessionIds
+                .map { sessionId ->
+                  async {
+                    try {
+                      val session = sessionRepository.getSession(sessionId)
+                      // Check if any SessionPhoto has matching UUID
+                      if (session?.sessionPhotos?.any { it.uuid == photoUuid } == true) {
+                        session
+                      } else {
+                        null
+                      }
+                    } catch (e: Exception) {
+                      null
+                    }
+                  }
+                }
+                .awaitAll()
+                .firstOrNull { it != null }
 
         onResult(Result.success(foundSession))
       } catch (e: Exception) {

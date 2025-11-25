@@ -107,7 +107,8 @@ class SessionRepositoryTest {
         val snapshot = mockk<QuerySnapshot>()
         val doc1 = mockk<DocumentSnapshot>()
 
-        // Mock the chain: whereArrayContains -> whereLessThan(now) -> orderBy(date) -> orderBy(id) -> limit -> get
+        // Mock the chain: whereArrayContains -> whereLessThan(now) -> orderBy(date) -> orderBy(id)
+        // -> limit -> get
         every { collectionReference.whereArrayContains("session.participants", userId) } returns
             query1
 
@@ -129,7 +130,7 @@ class SessionRepositoryTest {
         assertEquals(listOf("pastSession"), result)
 
         // Verify the specific query construction includes orderBy date
-        io.mockk.verify { 
+        io.mockk.verify {
           query1.whereLessThan(eq("session.date"), any<Timestamp>())
           query2.orderBy("session.date")
         }
@@ -139,10 +140,10 @@ class SessionRepositoryTest {
   fun `addSessionPhotos updates session with new photos`() =
       runTest(testDispatcher) {
         val discussionId = "discussion-1"
-        val photos = listOf(
-            com.github.meeplemeet.model.sessions.SessionPhoto("uuid-1", "url-1"),
-            com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "url-2")
-        )
+        val photos =
+            listOf(
+                com.github.meeplemeet.model.sessions.SessionPhoto("uuid-1", "url-1"),
+                com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "url-2"))
         val docRef = mockk<com.google.firebase.firestore.DocumentReference>(relaxed = true)
         val mockFieldValue = mockk<FieldValue>()
 
@@ -152,12 +153,8 @@ class SessionRepositoryTest {
 
         sessionRepository.addSessionPhotos(discussionId, photos)
 
-        io.mockk.verify {
-          docRef.update("session.sessionPhotos", mockFieldValue)
-        }
-        io.mockk.verify {
-          FieldValue.arrayUnion(*photos.toTypedArray())
-        }
+        io.mockk.verify { docRef.update("session.sessionPhotos", mockFieldValue) }
+        io.mockk.verify { FieldValue.arrayUnion(*photos.toTypedArray()) }
       }
 
   @Test
@@ -167,24 +164,29 @@ class SessionRepositoryTest {
         val photoUuid = "uuid-1"
         val docRef = mockk<com.google.firebase.firestore.DocumentReference>(relaxed = true)
         val snapshot = mockk<DocumentSnapshot>()
-        val session = com.github.meeplemeet.model.sessions.Session(
-            sessionPhotos = listOf(
-                com.github.meeplemeet.model.sessions.SessionPhoto("uuid-1", "url-1"),
-                com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "url-2")
-            )
-        )
-        val discussionNoUid = com.github.meeplemeet.model.discussions.DiscussionNoUid(session = session)
+        val session =
+            com.github.meeplemeet.model.sessions.Session(
+                sessionPhotos =
+                    listOf(
+                        com.github.meeplemeet.model.sessions.SessionPhoto("uuid-1", "url-1"),
+                        com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "url-2")))
+        val discussionNoUid =
+            com.github.meeplemeet.model.discussions.DiscussionNoUid(session = session)
 
         every { collectionReference.document(discussionId) } returns docRef
         coEvery { docRef.get().await() } returns snapshot
         every { snapshot.exists() } returns true
-        every { snapshot.toObject(com.github.meeplemeet.model.discussions.DiscussionNoUid::class.java) } returns discussionNoUid
+        every {
+          snapshot.toObject(com.github.meeplemeet.model.discussions.DiscussionNoUid::class.java)
+        } returns discussionNoUid
         coEvery { docRef.update(any<String>(), any()).await() } returns mockk()
 
         sessionRepository.removeSessionPhoto(discussionId, photoUuid)
 
         io.mockk.verify {
-          docRef.update("session.sessionPhotos", listOf(com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "url-2")))
+          docRef.update(
+              "session.sessionPhotos",
+              listOf(com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "url-2")))
         }
       }
 }

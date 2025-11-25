@@ -6,7 +6,6 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import io.mockk.Awaits
-import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -78,9 +77,10 @@ class SessionViewModelTest {
       runTest(testDispatcher) {
         val discussionId = "disc-123"
         val photoPath = "/path/to/photo.jpg"
-        val expectedPhotos = listOf(
-            com.github.meeplemeet.model.sessions.SessionPhoto("uuid-1", "https://example.com/photo.webp")
-        )
+        val expectedPhotos =
+            listOf(
+                com.github.meeplemeet.model.sessions.SessionPhoto(
+                    "uuid-1", "https://example.com/photo.webp"))
 
         coEvery {
           mockImageRepository.saveSessionPhotos(mockContext, discussionId, photoPath)

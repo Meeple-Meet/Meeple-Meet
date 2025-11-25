@@ -80,22 +80,28 @@ class SessionOverviewViewModelTest {
       runTest(testDispatcher) {
         val userId = "user-123"
         val sessionIds = listOf("session-1", "session-2")
-        val photo1 = com.github.meeplemeet.model.sessions.SessionPhoto("uuid-1", "https://example.com/photo1.webp")
-        val photo2 = com.github.meeplemeet.model.sessions.SessionPhoto("uuid-2", "https://example.com/photo2.webp")
-        val session1 = Session(
-            name = "Game Night 1",
-            gameId = "game-1",
-            date = Timestamp.now(),
-            location = Location(0.0, 0.0, "Location 1"),
-            participants = listOf(userId),
-            sessionPhotos = listOf(photo1))
-        val session2 = Session(
-            name = "Game Night 2",
-            gameId = "game-2",
-            date = Timestamp.now(),
-            location = Location(0.0, 0.0, "Location 2"),
-            participants = listOf(userId),
-            sessionPhotos = listOf(photo2))
+        val photo1 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "uuid-1", "https://example.com/photo1.webp")
+        val photo2 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "uuid-2", "https://example.com/photo2.webp")
+        val session1 =
+            Session(
+                name = "Game Night 1",
+                gameId = "game-1",
+                date = Timestamp.now(),
+                location = Location(0.0, 0.0, "Location 1"),
+                participants = listOf(userId),
+                sessionPhotos = listOf(photo1))
+        val session2 =
+            Session(
+                name = "Game Night 2",
+                gameId = "game-2",
+                date = Timestamp.now(),
+                location = Location(0.0, 0.0, "Location 2"),
+                participants = listOf(userId),
+                sessionPhotos = listOf(photo2))
         var result: Result<List<com.github.meeplemeet.model.sessions.SessionPhoto>>? = null
 
         coEvery { mockSessionRepository.getPastSessionIdsForUser(userId) } returns sessionIds
@@ -132,20 +138,22 @@ class SessionOverviewViewModelTest {
       runTest(testDispatcher) {
         val userId = "user-123"
         val sessionIds = listOf("session-1", "session-2")
-        val session1 = Session(
-            name = "Game Night 1",
-            gameId = "game-1",
-            date = Timestamp.now(),
-            location = Location(0.0, 0.0, "Location 1"),
-            participants = listOf(userId),
-            sessionPhotos = emptyList())
-        val session2 = Session(
-            name = "Game Night 2",
-            gameId = "game-2",
-            date = Timestamp.now(),
-            location = Location(0.0, 0.0, "Location 2"),
-            participants = listOf(userId),
-            sessionPhotos = emptyList())
+        val session1 =
+            Session(
+                name = "Game Night 1",
+                gameId = "game-1",
+                date = Timestamp.now(),
+                location = Location(0.0, 0.0, "Location 1"),
+                participants = listOf(userId),
+                sessionPhotos = emptyList())
+        val session2 =
+            Session(
+                name = "Game Night 2",
+                gameId = "game-2",
+                date = Timestamp.now(),
+                location = Location(0.0, 0.0, "Location 2"),
+                participants = listOf(userId),
+                sessionPhotos = emptyList())
         var result: Result<List<com.github.meeplemeet.model.sessions.SessionPhoto>>? = null
 
         coEvery { mockSessionRepository.getPastSessionIdsForUser(userId) } returns sessionIds
@@ -165,8 +173,12 @@ class SessionOverviewViewModelTest {
         val userId = "user-123"
         val photoUuid = "photo-uuid-1"
         val sessionIds = listOf("session-1", "session-2")
-        val photo1 = com.github.meeplemeet.model.sessions.SessionPhoto(photoUuid, "https://example.com/photo1.webp")
-        val photo2 = com.github.meeplemeet.model.sessions.SessionPhoto("other-uuid", "https://example.com/photo2.webp")
+        val photo1 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                photoUuid, "https://example.com/photo1.webp")
+        val photo2 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "other-uuid", "https://example.com/photo2.webp")
         val session1 =
             Session(
                 name = "Game Night 1",
@@ -203,8 +215,12 @@ class SessionOverviewViewModelTest {
         val userId = "user-123"
         val photoUuid = "non-existent-uuid"
         val sessionIds = listOf("session-1", "session-2")
-        val photo1 = com.github.meeplemeet.model.sessions.SessionPhoto("other-uuid-1", "https://example.com/photo1.webp")
-        val photo2 = com.github.meeplemeet.model.sessions.SessionPhoto("other-uuid-2", "https://example.com/photo2.webp")
+        val photo1 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "other-uuid-1", "https://example.com/photo1.webp")
+        val photo2 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "other-uuid-2", "https://example.com/photo2.webp")
         val session1 =
             Session(
                 name = "Game Night 1",
@@ -256,9 +272,15 @@ class SessionOverviewViewModelTest {
         val userId = "user-123"
         val photoUuid = "photo-uuid"
         val sessionIds = listOf("session-1", "session-2", "session-3")
-        val photo1 = com.github.meeplemeet.model.sessions.SessionPhoto("other-uuid", "https://example.com/photo1.webp")
-        val photo2 = com.github.meeplemeet.model.sessions.SessionPhoto(photoUuid, "https://example.com/photo2.webp")
-        val photo3 = com.github.meeplemeet.model.sessions.SessionPhoto("another-uuid", "https://example.com/photo3.webp")
+        val photo1 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "other-uuid", "https://example.com/photo1.webp")
+        val photo2 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                photoUuid, "https://example.com/photo2.webp")
+        val photo3 =
+            com.github.meeplemeet.model.sessions.SessionPhoto(
+                "another-uuid", "https://example.com/photo3.webp")
         val session1 =
             Session(
                 name = "Game Night 1",

@@ -424,8 +424,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   /**
    * Saves session photos to Firebase Storage and local cache, returning SessionPhoto objects.
    *
-   * Generates unique UUIDs for each photo, uploads them in parallel, and fetches download URLs.
-   * The caller is responsible for updating session metadata with the returned SessionPhoto objects.
+   * Generates unique UUIDs for each photo, uploads them in parallel, and fetches download URLs. The
+   * caller is responsible for updating session metadata with the returned SessionPhoto objects.
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion/session
@@ -436,25 +436,26 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
   suspend fun saveSessionPhotos(
-    context: Context,
-    discussionId: String,
-    vararg inputPaths: String
+      context: Context,
+      discussionId: String,
+      vararg inputPaths: String
   ): List<SessionPhoto> = coroutineScope {
-      // Upload all images in parallel and get their URLs
-      inputPaths.map { inputPath ->
+    // Upload all images in parallel and get their URLs
+    inputPaths
+        .map { inputPath ->
           async {
-              val uuid = UUID.randomUUID().toString()
-              val path = sessionPhotoPath(discussionId, uuid)
-              saveImage(context, inputPath, path)
-              
-              // Get download URL from Firebase Storage
-              val url = storage.reference.child(path).downloadUrl.await().toString()
-              
-              SessionPhoto(uuid, url)
-          }
-      }.awaitAll()
-  }
+            val uuid = UUID.randomUUID().toString()
+            val path = sessionPhotoPath(discussionId, uuid)
+            saveImage(context, inputPath, path)
 
+            // Get download URL from Firebase Storage
+            val url = storage.reference.child(path).downloadUrl.await().toString()
+
+            SessionPhoto(uuid, url)
+          }
+        }
+        .awaitAll()
+  }
 
   /**
    * Loads session photos for the given UUIDs
@@ -467,20 +468,23 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
   suspend fun loadSessionPhotos(
-    context: Context,
-    discussionId: String,
-    photoUuids: List<String>
+      context: Context,
+      discussionId: String,
+      photoUuids: List<String>
   ): List<Pair<String, ByteArray>> = coroutineScope {
-      // Load each image in parallel
-      val bytes = photoUuids.map { uuid ->
-          async {
-              val path = sessionPhotoPath(discussionId, uuid)
-              loadImage(context, path)
-          }
-      }.awaitAll()
-      
-      // Zip UUIDs with their bytes
-      photoUuids.zip(bytes)
+    // Load each image in parallel
+    val bytes =
+        photoUuids
+            .map { uuid ->
+              async {
+                val path = sessionPhotoPath(discussionId, uuid)
+                loadImage(context, path)
+              }
+            }
+            .awaitAll()
+
+    // Zip UUIDs with their bytes
+    photoUuids.zip(bytes)
   }
 
   /**
@@ -497,7 +501,11 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteSessionPhoto(context: Context, discussionId: String, photoUuid: String): String {
+  suspend fun deleteSessionPhoto(
+      context: Context,
+      discussionId: String,
+      photoUuid: String
+  ): String {
     val path = sessionPhotoPath(discussionId, photoUuid)
     deleteImages(context, path)
     return photoUuid

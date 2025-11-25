@@ -218,7 +218,10 @@ class SessionRepository(
    */
   suspend fun addSessionPhotos(discussionId: String, photos: List<SessionPhoto>) {
     val sessionPhotosField = "session.sessionPhotos"
-    discussions.document(discussionId).update(sessionPhotosField, FieldValue.arrayUnion(*photos.toTypedArray())).await()
+    discussions
+        .document(discussionId)
+        .update(sessionPhotosField, FieldValue.arrayUnion(*photos.toTypedArray()))
+        .await()
   }
 
   /**
@@ -233,11 +236,8 @@ class SessionRepository(
   suspend fun removeSessionPhoto(discussionId: String, photoUuid: String) {
     val session = getSession(discussionId) ?: return
     val updatedPhotos = session.sessionPhotos.filterNot { it.uuid == photoUuid }
-    
+
     val sessionPhotosField = "session.sessionPhotos"
-    discussions
-        .document(discussionId)
-        .update(sessionPhotosField, updatedPhotos)
-        .await()
+    discussions.document(discussionId).update(sessionPhotosField, updatedPhotos).await()
   }
 }
