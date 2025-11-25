@@ -141,7 +141,7 @@ fun ImageCarousel(
     onStateChange: (List<String>) -> Unit = {}
 ) {
   // --- State ---
-  var photoCollectionState by remember { mutableStateOf(photoCollectionUrl) }
+  var photoCollectionState by remember(photoCollectionUrl) { mutableStateOf(photoCollectionUrl) }
   val canAddMoreImages = editable && photoCollectionState.size < maxNumberOfImages
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
@@ -174,8 +174,7 @@ fun ImageCarousel(
             // Add image to state at current page
             val insertIndex = pagerState.currentPage
             val newList =
-                if (insertIndex < photoCollectionState.size &&
-                    photoCollectionState[insertIndex].isNotEmpty()) {
+                if (insertIndex < photoCollectionState.size) {
                   photoCollectionState.mapIndexed { i, old -> if (i == insertIndex) path else old }
                 } else {
                   photoCollectionState + path
@@ -275,6 +274,7 @@ fun ImageCarousel(
                                     val newList = photoCollectionState.filter { it != url }
                                     photoCollectionState = newList
                                     onStateChange(newList)
+                                    onRemove(url)
                                   }
                                   .testTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON),
                           contentAlignment = Alignment.Center) {

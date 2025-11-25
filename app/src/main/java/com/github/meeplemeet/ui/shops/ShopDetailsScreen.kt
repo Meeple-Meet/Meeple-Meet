@@ -8,7 +8,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -120,6 +122,7 @@ fun ShopDetailsScreen(
 ) {
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   LaunchedEffect(shop) { viewModel.initialize(shop) }
 
@@ -127,6 +130,38 @@ fun ShopDetailsScreen(
       shop = shop,
       onBack = onBack,
       onSaved = onSaved,
+      onSave = {
+          loadedShop,
+          requester,
+          name,
+          email,
+          phone,
+          website,
+          address,
+          week,
+          stock,
+          photoCollectionUrl ->
+        try {
+          viewModel.updateShop(
+              context = context,
+              shop = loadedShop,
+              requester = requester,
+              owner = owner,
+              name = name,
+              phone = phone,
+              email = email,
+              website = website,
+              address = address,
+              openingHours = week,
+              gameCollection = stock,
+              photoCollectionUrl = photoCollectionUrl)
+          null
+        } catch (e: IllegalArgumentException) {
+          e.message ?: EditShopUi.Strings.ERROR_VALIDATION
+        } catch (_: Exception) {
+          EditShopUi.Strings.ERROR_SAVE
+        }
+      },
       gameUi = gameUi,
       locationUi = locationUi,
       viewModel = viewModel,
@@ -174,7 +209,12 @@ fun EditShopContent(
           initialShop = shop,
           onSetGameQuery = viewModel::setGameQuery,
           onSetGame = viewModel::setGame)
+  // Initialize state with loaded shop data or default values
+  var photoCollectionUrl by rememberSaveable(shop) { mutableStateOf(shop.photoCollectionUrl) }
 
+    LaunchedEffect(shop.photoCollectionUrl) {
+        photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
+    }
   var showDeleteDialog by remember { mutableStateOf(false) }
 
   val hasOpeningHours by
