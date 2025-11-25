@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
@@ -76,23 +75,25 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
             color = Color.Gray,
             modifier = Modifier.align(Alignment.TopEnd).clickable { onSkip() }.padding(8.dp))
 
-        if (pagerState.currentPage > 0) {
-          Box(
-              modifier =
-                  Modifier.align(Alignment.TopStart)
-                      .size(42.dp)
-                      .zIndex(1f)
-                      .background(color = AppColors.primary, shape = CircleShape)
-                      .clickable {
-                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
-                      },
-              contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = AppColors.textIcons)
-              }
-        }
+        // Top-left back button removed as bottom nav now handles back navigation
+        // if (pagerState.currentPage > 0) {
+        //   Box(
+        //       modifier =
+        //           Modifier.align(Alignment.TopStart)
+        //               .size(42.dp)
+        //               .zIndex(1f)
+        //               .background(color = AppColors.primary, shape = CircleShape)
+        //               .clickable {
+        //                 scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1)
+        // }
+        //               },
+        //       contentAlignment = Alignment.Center) {
+        //         Icon(
+        //             imageVector = Icons.Default.ArrowBack,
+        //             contentDescription = "Back",
+        //             tint = AppColors.textIcons)
+        //       }
+        // }
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
@@ -443,9 +444,27 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                   modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.SpaceBetween) {
-                    // Placeholder for left arrow (back) in layout (top back arrow handles actual
-                    // navigation)
-                    Box(modifier = Modifier.size(42.dp))
+                    // Back arrow (previous page), hidden on first page
+                    val canGoBack = pagerState.currentPage > 0
+                    Box(
+                        modifier =
+                            if (canGoBack)
+                                Modifier.size(42.dp)
+                                    .background(color = AppColors.primary, shape = CircleShape)
+                                    .clickable {
+                                      scope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                      }
+                                    }
+                            else Modifier.size(42.dp),
+                        contentAlignment = Alignment.Center) {
+                          if (canGoBack) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = AppColors.textIcons)
+                          }
+                        }
 
                     // Dots centered
                     Row(verticalAlignment = Alignment.CenterVertically) {
