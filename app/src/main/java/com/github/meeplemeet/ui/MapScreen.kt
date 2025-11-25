@@ -5,8 +5,10 @@ package com.github.meeplemeet.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.location.Location as AndroidLocation
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -81,8 +83,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
@@ -140,6 +144,29 @@ object MapScreenTestTags {
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 
   fun getTestTagForCluster(pos: LatLng) = "mapCluster_${pos.latitude}_${pos.longitude}"
+}
+
+/**
+ * Configuration object for cluster marker visuals on the map.
+ *
+ * Provides thresholds and colors for cluster sizes, allowing consistent coloring of cluster icons
+ * depending on how many pins are grouped together.
+ */
+object ClusterConfig {
+  val smallClusterColor = Color(0xFF4CAF50) // Green
+  val mediumClusterColor = Color(0xFFFF9800) // Orange
+  val largeClusterColor = Color(0xFFF44336) // Red
+
+  const val SMALL_CLUSTER_THRESHOLD = 5
+  const val MEDIUM_CLUSTER_THRESHOLD = 15
+
+  /** Returns the color corresponding to a cluster size. */
+  fun getColorForSize(size: Int): Color =
+      when {
+        size <= SMALL_CLUSTER_THRESHOLD -> smallClusterColor
+        size <= MEDIUM_CLUSTER_THRESHOLD -> mediumClusterColor
+        else -> largeClusterColor
+      }
 }
 
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
@@ -918,7 +945,48 @@ private fun rememberMarkerIcon(
   }
 }
 
+/**
+ * Creates a custom Google Maps cluster icon with the cluster size displayed.
+ *
+ * The icon is a circle whose color depends on the cluster size (small/medium/large), and the size
+ * number is drawn centered in white text.
+ *
+ * @param size number of items in the cluster
+ * @param diameterDp diameter of the cluster icon in dp (default is 64dp)
+ * @return a [BitmapDescriptor] usable as a Google Maps marker icon
+ */
 @Composable
 private fun rememberClusterIcon(size: Int, diameterDp: Int = 64): BitmapDescriptor {
-  throw NotImplementedError()
+  val density = LocalDensity.current
+  return remember(size, diameterDp) {
+    val diameterPx = with(density) { diameterDp.dp.toPx() }.toInt()
+
+    // Create a bitmap
+    val bitmap = Bitmap.createBitmap(diameterPx, diameterPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // Background circle
+    val paint =
+        Paint().apply {
+          isAntiAlias = true
+          color = ClusterConfig.getColorForSize(size).toArgb()
+          style = Paint.Style.FILL
+        }
+    val radius = diameterPx / 2f
+    canvas.drawCircle(radius, radius, radius, paint)
+
+    // Draw text (size number)
+    val textPaint =
+        Paint().apply {
+          color = Color.White.toArgb()
+          textSize = diameterPx / 2.5f
+          textAlign = Paint.Align.CENTER
+          typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+          isAntiAlias = true
+        }
+    val textY = radius - (textPaint.descent() + textPaint.ascent()) / 2
+    canvas.drawText(size.toString(), radius, textY, textPaint)
+
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+  }
 }
