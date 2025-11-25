@@ -262,6 +262,32 @@ class ProfileScreenViewModel(
   }
 
   /**
+   * Marks a notification as read, with basic validation.
+   *
+   * Only allows reading the notification if it actually belongs to the given account.
+   */
+  fun readNotification(owner: Account, notification: Notification) {
+    // Prevent invalid operations (wrong owner)
+    if (notification.receiverId != owner.uid) return
+
+    // Delegate to repository
+    scope.launch { accountRepository.readNotification(owner.uid, notification.uid) }
+  }
+
+  /**
+   * Deletes a notification, with basic validation.
+   *
+   * Only allows deleting the notification if it actually belongs to the given account.
+   */
+  fun deleteNotification(owner: Account, notification: Notification) {
+    // Prevent invalid operations (wrong owner)
+    if (notification.receiverId != owner.uid) return
+
+    // Delegate to repository
+    scope.launch { accountRepository.deleteNotification(owner.uid, notification.uid) }
+  }
+
+  /**
    * Signs out the current user.
    *
    * This method calls the repository to sign out from Firebase Auth and updates the UI state to
