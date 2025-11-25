@@ -210,6 +210,23 @@ class ShopRepository(
   }
 
   /**
+   * Deletes multiple shops from Firestore efficiently in parallel.
+   *
+   * @param ids The list of unique identifiers of the shops to delete.
+   */
+  suspend fun deleteShops(ids: List<String>) {
+    coroutineScope {
+      ids.map { id ->
+            async {
+              geoPinRepository.deleteGeoPin(id)
+              collection.document(id).delete().await()
+            }
+          }
+          .awaitAll()
+    }
+  }
+
+  /**
    * Retrieves the first shop owned by the specified account from Firestore.
    *
    * @param ownerId The unique identifier of the shop owner.

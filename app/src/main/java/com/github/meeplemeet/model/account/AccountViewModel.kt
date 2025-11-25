@@ -99,6 +99,11 @@ interface AccountViewModel {
             disc, account.uid, disc.creatorId == account.uid)
       }
 
+      // Delete all shops and spaces owned by the account
+      val (shops, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+      RepositoryProvider.shops.deleteShops(shops)
+      RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+
       // Delete the account
       RepositoryProvider.accounts.deleteAccount(account.uid)
     }

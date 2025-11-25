@@ -187,4 +187,21 @@ class SpaceRenterRepository(
     geoPinRepository.deleteGeoPin(id)
     collection.document(id).delete().await()
   }
+
+  /**
+   * Deletes multiple space renters from Firestore efficiently in parallel.
+   *
+   * @param ids The list of unique identifiers of the space renters to delete.
+   */
+  suspend fun deleteSpaceRenters(ids: List<String>) {
+    coroutineScope {
+      ids.map { id ->
+            async {
+              geoPinRepository.deleteGeoPin(id)
+              collection.document(id).delete().await()
+            }
+          }
+          .awaitAll()
+    }
+  }
 }

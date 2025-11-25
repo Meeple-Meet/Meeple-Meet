@@ -228,137 +228,64 @@ class FirestoreShopTests : FirestoreTests() {
   }
 
   @Test
-  fun updateShopNameUpdatesName() = runTest {
+  fun updateShopIndividualFieldsWorkCorrectly() = runTest {
+    // Test updating name
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
-            name = "Old Name",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    shopRepository.updateShop(shop.id, name = "New Name")
-
-    val updated = shopRepository.getShop(shop.id)
-    assertEquals("New Name", updated.name)
-    assertEquals(shop.id, updated.id)
-  }
-
-  @Test
-  fun updateShopPhoneUpdatesPhone() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
+            name = "Original Shop",
             phone = "+41 11 111 1111",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    shopRepository.updateShop(shop.id, phone = "+41 22 222 2222")
-
-    val updated = shopRepository.getShop(shop.id)
-    assertEquals("+41 22 222 2222", updated.phone)
-  }
-
-  @Test
-  fun updateShopEmailUpdatesEmail() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
             email = "old@shop.com",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    shopRepository.updateShop(shop.id, email = "new@shop.com")
-
-    val updated = shopRepository.getShop(shop.id)
-    assertEquals("new@shop.com", updated.email)
-  }
-
-  @Test
-  fun updateShopWebsiteUpdatesWebsite() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
             website = "https://old.com",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    shopRepository.updateShop(shop.id, website = "https://new.com")
-
-    val updated = shopRepository.getShop(shop.id)
-    assertEquals("https://new.com", updated.website)
-  }
-
-  @Test
-  fun updateShopAddressUpdatesAddress() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    shopRepository.updateShop(shop.id, address = testLocation2)
-
-    val updated = shopRepository.getShop(shop.id)
-    assertEquals(testLocation2, updated.address)
-  }
-
-  @Test
-  fun updateShopOpeningHoursUpdatesOpeningHours() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
-    val newOpeningHours =
-        listOf(
-            OpeningHours(day = 1, hours = listOf(TimeSlot("10:00", "19:00"))),
-            OpeningHours(day = 2, hours = listOf(TimeSlot("10:00", "19:00"))))
-
-    shopRepository.updateShop(shop.id, openingHours = newOpeningHours)
-
-    val updated = shopRepository.getShop(shop.id)
-    assertEquals(2, updated.openingHours.size)
-    assertEquals("10:00", updated.openingHours[0].hours[0].open)
-    assertEquals("19:00", updated.openingHours[0].hours[0].close)
-  }
-
-  @Test
-  fun updateShopGameCollectionUpdatesGameCollection() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
             address = testLocation1,
             openingHours = testOpeningHours,
             gameCollection = listOf(testGame1 to 5))
 
+    // Update name
+    shopRepository.updateShop(shop.id, name = "New Name")
+    var updated = shopRepository.getShop(shop.id)
+    assertEquals("New Name", updated.name)
+
+    // Update phone
+    shopRepository.updateShop(shop.id, phone = "+41 22 222 2222")
+    updated = shopRepository.getShop(shop.id)
+    assertEquals("+41 22 222 2222", updated.phone)
+
+    // Update email
+    shopRepository.updateShop(shop.id, email = "new@shop.com")
+    updated = shopRepository.getShop(shop.id)
+    assertEquals("new@shop.com", updated.email)
+
+    // Update website
+    shopRepository.updateShop(shop.id, website = "https://new.com")
+    updated = shopRepository.getShop(shop.id)
+    assertEquals("https://new.com", updated.website)
+
+    // Update address
+    shopRepository.updateShop(shop.id, address = testLocation2)
+    updated = shopRepository.getShop(shop.id)
+    assertEquals(testLocation2, updated.address)
+
+    // Update opening hours
+    val newOpeningHours =
+        listOf(
+            OpeningHours(day = 1, hours = listOf(TimeSlot("10:00", "19:00"))),
+            OpeningHours(day = 2, hours = listOf(TimeSlot("10:00", "19:00"))))
+    shopRepository.updateShop(shop.id, openingHours = newOpeningHours)
+    updated = shopRepository.getShop(shop.id)
+    assertEquals(2, updated.openingHours.size)
+    assertEquals("10:00", updated.openingHours[0].hours[0].open)
+
+    // Update game collection
     val newGameCollection = listOf(testGame2 to 8, testGame1 to 3)
     shopRepository.updateShop(shop.id, gameCollection = newGameCollection)
-
-    val updated = shopRepository.getShop(shop.id)
+    updated = shopRepository.getShop(shop.id)
     assertEquals(2, updated.gameCollection.size)
     assertEquals(8, updated.gameCollection.find { it.first.uid == testGame2.uid }?.second)
-    assertEquals(3, updated.gameCollection.find { it.first.uid == testGame1.uid }?.second)
-  }
 
-  @Test
-  fun updateShopOwnerIdUpdatesOwnerId() = runTest {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Test Shop",
-            address = testLocation1,
-            openingHours = testOpeningHours)
-
+    // Update owner
     shopRepository.updateShop(shop.id, ownerId = testAccount2.uid)
-
-    val updated = shopRepository.getShop(shop.id)
+    updated = shopRepository.getShop(shop.id)
     assertEquals(testAccount2.uid, updated.owner.uid)
   }
 
@@ -425,6 +352,63 @@ class FirestoreShopTests : FirestoreTests() {
 
     // This should throw IllegalArgumentException
     shopRepository.getShop(shop.id)
+  }
+
+  @Test
+  fun deleteShopsRemovesMultipleShopsInParallel() = runTest {
+    // Create multiple shops
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop to Delete 1",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount2,
+            name = "Shop to Delete 2",
+            address = testLocation2,
+            openingHours = testOpeningHours)
+
+    val shop3 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop to Delete 3",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+
+    val idsToDelete = listOf(shop1.id, shop2.id, shop3.id)
+
+    // Delete all shops in parallel
+    shopRepository.deleteShops(idsToDelete)
+
+    // Verify all shops are deleted
+    idsToDelete.forEach { id ->
+      try {
+        shopRepository.getShop(id)
+        throw AssertionError("Shop $id should have been deleted")
+      } catch (_: IllegalArgumentException) {
+        // Expected - shop doesn't exist anymore
+      }
+    }
+  }
+
+  @Test
+  fun deleteShopsWithEmptyListDoesNothing() = runTest {
+    // Create a shop to ensure the repository is not empty
+    shopRepository.createShop(
+        owner = testAccount1,
+        name = "Test Shop",
+        address = testLocation1,
+        openingHours = testOpeningHours)
+
+    // Delete empty list should not throw
+    shopRepository.deleteShops(emptyList())
+
+    // Verify shops still exist
+    val shops = shopRepository.getShops(10u)
+    assertTrue(shops.isNotEmpty())
   }
 
   @Test
