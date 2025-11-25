@@ -2,11 +2,17 @@ package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import kotlinx.coroutines.CoroutineScope
+import com.github.meeplemeet.model.auth.AuthUIState
+import com.github.meeplemeet.model.auth.AuthenticationRepository
+import com.github.meeplemeet.model.auth.coolDownErrMessage
+import com.github.meeplemeet.model.images.ImageRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for managing user profile interactions and friend system operations.
@@ -21,9 +27,14 @@ import kotlinx.coroutines.runBlocking
 class ProfileScreenViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
+    private val imageRepository: ImageRepository = RepositoryProvider.images,
+    private val authRepository: AuthenticationRepository = RepositoryProvider.authentication
 ) : CreateAccountViewModel(handlesRepository) {
-  override val scope: CoroutineScope
-    get() = this.viewModelScope
+
+  protected val _uiState = MutableStateFlow(AuthUIState())
+
+  // Public read-only state flow that UI components can observe for state changes
+  val uiState: StateFlow<AuthUIState> = _uiState
 
   /**
    * Checks if two accounts are the same user or if either has blocked the other.
@@ -64,10 +75,7 @@ class ProfileScreenViewModel(
         other.relationships[account.uid] != null)
         return
 
-    viewModelScope.launch {
-      accountRepository.sendFriendRequest(account, other.uid)
-      accountRepository.sendFriendRequestNotification(other.uid, account)
-    }
+    scope.launch { accountRepository.sendFriendRequest(account, other.uid) }
   }
 
   /**
@@ -87,9 +95,7 @@ class ProfileScreenViewModel(
    * @param account The account accepting the friend request
    * @param other The account whose friend request is being accepted
    */
-  fun acceptFriendRequest(account: Account, notification: Notification) {
-    val other: Account
-    runBlocking { other = accountRepository.getAccount(notification.senderOrDiscussionId) }
+  fun acceptFriendRequest(account: Account, other: Account) {
     val accountRels = account.relationships[other.uid]
     val otherRels = other.relationships[account.uid]
 
@@ -98,8 +104,7 @@ class ProfileScreenViewModel(
         otherRels != RelationshipStatus.SENT)
         return
 
-    viewModelScope.launch { accountRepository.acceptFriendRequest(account.uid, other.uid) }
-    executeNotification(account, notification)
+    scope.launch { accountRepository.acceptFriendRequest(account.uid, other.uid) }
   }
 
   /**
@@ -123,7 +128,7 @@ class ProfileScreenViewModel(
     if (account.uid == other.uid || account.relationships[other.uid] == RelationshipStatus.BLOCKED)
         return
 
-    viewModelScope.launch { accountRepository.blockUser(account.uid, other.uid) }
+    scope.launch { accountRepository.blockUser(account.uid, other.uid) }
   }
 
   /**
@@ -142,16 +147,7 @@ class ProfileScreenViewModel(
   fun rejectFriendRequest(account: Account, other: Account) {
     if (sameOrBlocked(account, other)) return
 
-    viewModelScope.launch {
-      accountRepository.resetRelationship(account.uid, other.uid)
-      // Clear out previous notifications
-      account.notifications
-          .find { not -> not.senderOrDiscussionId == other.uid }
-          ?.let { not -> accountRepository.deleteNotification(account.uid, not.uid) }
-      other.notifications
-          .find { not -> not.senderOrDiscussionId == account.uid }
-          ?.let { not -> accountRepository.deleteNotification(other.uid, not.uid) }
-    }
+    scope.launch { accountRepository.resetRelationship(account.uid, other.uid) }
   }
 
   /**
@@ -170,7 +166,7 @@ class ProfileScreenViewModel(
   fun removeFriend(account: Account, friend: Account) {
     if (sameOrBlocked(account, friend)) return
 
-    viewModelScope.launch { accountRepository.resetRelationship(account.uid, friend.uid) }
+    scope.launch { accountRepository.resetRelationship(account.uid, friend.uid) }
   }
 
   /**
@@ -179,9 +175,9 @@ class ProfileScreenViewModel(
    * This method validates that the operation is valid before proceeding. It prevents unblocking in
    * the following cases:
    * - The accounts are the same user
-   * - Either user has blocked the other
+   * - The relationship from the current account to the other user is not Blocked
    *
-   * If validation passes, the relationship is reset asynchronously via the repository.
+   * If validation passes, the unblock is executed asynchronously via the repository.
    *
    * @param account The account unblocking the other user
    * @param other The account being unblocked
@@ -190,59 +186,89 @@ class ProfileScreenViewModel(
     if (account.uid == other.uid || account.relationships[other.uid] != RelationshipStatus.BLOCKED)
         return
 
-    viewModelScope.launch { accountRepository.unblockUser(account.uid, other.uid) }
+    scope.launch { accountRepository.unblockUser(account.uid, other.uid) }
+  }
+
+  fun setAccountPhoto(account: Account, context: Context, localPath: String) {
+    viewModelScope.launch {
+      val downloadUrl =
+          imageRepository.saveAccountProfilePicture(account.uid, context = context, localPath)
+      accountRepository.setAccountPhotoUrl(account.uid, downloadUrl)
+    }
+  }
+
+  fun removeAccountPhoto(account: Account, context: Context) {
+    viewModelScope.launch {
+      imageRepository.deleteAccountProfilePicture(account.uid, context)
+      accountRepository.setAccountPhotoUrl(account.uid, "")
+    }
+  }
+
+  fun refreshEmailVerificationStatus() {
+    viewModelScope.launch {
+      val result = authRepository.isEmailVerified()
+      result
+          .onSuccess { isVerified ->
+            _uiState.update { it.copy(isEmailVerified = isVerified, errorMsg = null) }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
+    }
   }
 
   /**
-   * Executes the action associated with a notification.
+   * Sends a verification email to the current user.
    *
-   * This method validates that the notification belongs to the current account before executing it.
-   * The execution behavior depends on the notification type:
-   * - **FriendRequest**: Accepts the friend request
-   * - **JoinDiscussion**: Adds the user to the discussion
-   * - **JoinSession**: Adds the user as a participant in the session
-   *
-   * The method is idempotent - executing the same notification multiple times has no additional
-   * effect after the first execution.
-   *
-   * @param account The account executing the notification (must match the notification's receiver)
-   * @param notification The notification to execute
-   * @see Notification.execute for the specific actions performed by each notification type
+   * This method enforces a 1-minute cooldown between emails and calls the repository to send a
+   * verification email. If it fails, the error message is updated in the UI state.
    */
-  private fun executeNotification(account: Account, notification: Notification) {
-    if (notification.receiverId != account.uid) return
+  fun sendVerificationEmail() {
+    val now = System.currentTimeMillis()
+    val lastSent = _uiState.value.lastVerificationEmailSentAtMillis
 
-    viewModelScope.launch { notification.execute() }
+    // Enforce a 1-minute (60,000 ms) cooldown between verification emails
+    if (lastSent != null && now - lastSent < 60_000) {
+      _uiState.update { it.copy(errorMsg = coolDownErrMessage) }
+      return
+    }
+
+    viewModelScope.launch {
+      authRepository
+          .sendVerificationEmail()
+          .onSuccess {
+            // Update the timestamp on successful send
+            _uiState.update {
+              it.copy(
+                  lastVerificationEmailSentAtMillis = System.currentTimeMillis(), errorMsg = null)
+            }
+          }
+          .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
+    }
   }
 
   /**
-   * Marks a notification as read.
+   * Signs out the current user.
    *
-   * This method validates that the notification belongs to the current account before marking it as
-   * read. Read notifications are typically displayed differently in the UI to indicate the user has
-   * seen them.
-   *
-   * @param account The account that owns the notification (must match the notification's receiver)
-   * @param notification The notification to mark as read
+   * This method calls the repository to sign out from Firebase Auth and updates the UI state to
+   * reflect the signed-out status.
    */
-  fun readNotification(account: Account, notification: Notification) {
-    if (notification.receiverId != account.uid) return
+  open fun signOut() {
+    // Prevent multiple simultaneous operations
+    if (_uiState.value.isLoading) return
 
-    viewModelScope.launch { accountRepository.readNotification(account.uid, notification.uid) }
-  }
+    viewModelScope.launch {
+      // Set loading state
+      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
 
-  /**
-   * Deletes a notification from the user's notification list.
-   *
-   * This method validates that the notification belongs to the current account before deleting it.
-   * Once deleted, the notification is permanently removed from Firestore and cannot be recovered.
-   *
-   * @param account The account that owns the notification (must match the notification's receiver)
-   * @param notification The notification to delete
-   */
-  fun deleteNotification(account: Account, notification: Notification) {
-    if (notification.receiverId != account.uid) return
-
-    viewModelScope.launch { accountRepository.deleteNotification(account.uid, notification.uid) }
+      // Call repository to handle sign-out
+      authRepository.logout().fold({
+        // Success: Update UI to signed-out state
+        _uiState.update {
+          it.copy(isLoading = false, account = null, signedOut = true, errorMsg = null)
+        }
+      }) { failure ->
+        // Logout failed: Show error but keep user signed in
+        _uiState.update { it.copy(isLoading = false, errorMsg = failure.localizedMessage) }
+      }
+    }
   }
 }
