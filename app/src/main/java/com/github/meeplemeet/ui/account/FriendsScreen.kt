@@ -3,6 +3,7 @@
 package com.github.meeplemeet.ui.account
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,8 +28,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +50,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +60,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,7 +72,11 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.Dimensions
+import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TEST TAGS
@@ -82,8 +91,14 @@ object FriendsManagementTestTags {
   const val SEARCH_TEXT_FIELD = "FRIENDS_SEARCH_TEXT_FIELD"
   const val SEARCH_CLEAR = "FRIENDS_SEARCH_CLEAR"
 
-  const val SECTION_TITLE_FRIENDS = "FRIENDS_SECTION_TITLE"
+  const val TABS = "FRIENDS_TABS"
+  const val TAB_FRIENDS = "FRIENDS_TAB_FRIENDS"
+  const val TAB_REQUESTS = "FRIENDS_TAB_REQUESTS"
+  const val TAB_BLOCKED = "FRIENDS_TAB_BLOCKED"
+
   const val FRIEND_LIST = "FRIENDS_LIST"
+  const val SENT_REQUESTS_LIST = "FRIENDS_SENT_REQUESTS_LIST"
+  const val BLOCKED_LIST = "FRIENDS_BLOCKED_LIST"
   const val FRIEND_ITEM_PREFIX = "FRIEND_ITEM_"
   const val FRIEND_BLOCK_BUTTON_PREFIX = "FRIEND_BLOCK_BUTTON_"
   const val FRIEND_ACTION_BUTTON_PREFIX = "FRIEND_ACTION_BUTTON_"
@@ -106,21 +121,20 @@ object FriendsManagementTestTags {
 object FriendsManagementDefaults {
 
   const val TITLE = "Manage your friends"
-  const val SECTION_TITLE_FRIENDS = "Your friends :"
   const val SEARCH_PLACEHOLDER = "Search users"
   const val RESET_QUERY_TEXT = ""
 
   object Layout {
-    val BETWEEN_SEARCH_AND_CONTENT = Dimensions.Spacing.large
+    val FRIENDS_TABS_HEIGHT = 48.dp
+    val BETWEEN_SEARCH_AND_TABS = Dimensions.Spacing.xxLarge
+
     val ITEM_VERTICAL_PADDING = Dimensions.Padding.small
     val ITEM_HORIZONTAL_PADDING = Dimensions.Padding.extraMedium
     val ITEM_INNER_HORIZONTAL_SPACING = Dimensions.Spacing.medium
     val ITEM_AVATAR_NAME_SPACING = Dimensions.Spacing.medium
     val ITEM_ACTIONS_SPACING = Dimensions.Spacing.small
-    val SECTION_TITLE_BOTTOM_PADDING = Dimensions.Padding.small
 
     val ROW_MIN_HEIGHT = 72.dp
-    const val MAX_VISIBLE_FRIEND_ROWS = 6
     const val MAX_VISIBLE_SEARCH_ROWS = 6
   }
 
@@ -143,75 +157,146 @@ object FriendsManagementDefaults {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Enums
+//  Enums & helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Secondary action types for user rows in the friends management screen. */
 enum class UserRowSecondaryAction {
   ADD_FRIEND,
   REMOVE_FRIEND,
+  REQUEST_SENT,
 }
 
-/** Contexts in which a user row can be displayed in the friends management screen. */
 enum class UserRowContext {
   FRIEND_LIST,
   SEARCH_RESULTS,
 }
 
-/** Data class representing scroll metrics for the custom scrollbar. */
+enum class FriendsTab {
+  FRIENDS,
+  REQUESTS,
+  BLOCKED,
+}
+
 private data class ScrollMetrics(
     val progress: Float,
     val thumbFraction: Float,
 )
+
+private data class FriendsLists(
+    val friends: List<Account>,
+    val sentRequests: List<Account>,
+    val blockedUsers: List<Account>,
+)
+
+private val RelationshipStatus?.isFriend: Boolean
+  get() = (this == RelationshipStatus.FRIEND)
+
+private val RelationshipStatus?.isBlocked: Boolean
+  get() = (this == RelationshipStatus.BLOCKED)
+
+private val RelationshipStatus?.isRequestSent: Boolean
+  get() = (this == RelationshipStatus.SENT)
+
+/**
+ * Extension function to get a list of account IDs for a specific relationship status.
+ *
+ * @param status The relationship status to filter by.
+ * @return List of account IDs matching the specified relationship status.
+ */
+private fun Account.idsFor(status: RelationshipStatus): List<String> =
+    relationships.filterValues { it == status }.keys.toList()
+
+/**
+ * Loads accounts based on the provided IDs or returns an empty list if the IDs list is empty.
+ *
+ * @param ids List of account IDs to load.
+ * @param onResult Callback function to handle the loaded accounts.
+ */
+private fun ProfileScreenViewModel.loadAccountsOrEmpty(
+    ids: List<String>,
+    onResult: (List<Account>) -> Unit,
+) {
+  if (ids.isEmpty()) {
+    onResult(emptyList())
+  } else {
+    getAccounts(ids, onResult)
+  }
+}
+
+/**
+ * Toggles the block status of another user for the current user.
+ *
+ * @param current The current user's account.
+ * @param other The other user's account to block or unblock.
+ */
+private fun ProfileScreenViewModel.toggleBlock(
+    current: Account,
+    other: Account,
+) {
+  val status = current.relationships[other.uid]
+  if (status.isBlocked) {
+    unblockUser(current, other)
+  } else {
+    blockUser(current, other)
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Main screen
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Composable function representing the Friends Management screen, allowing users to view, search,
- * add, remove, block, and unblock friends.
+ * Composable function to display the Friends Management Screen.
  *
+ * @param navigation Navigation actions for screen transitions.
+ * @param viewModel ViewModel for profile-related operations.
  * @param account The current user's account.
- * @param viewModel The ViewModel managing the profile screen state and actions.
- * @param onBack Callback invoked when the back button is pressed.
+ * @param onBack Callback function to be invoked when the back button is pressed.
  */
 @Composable
 fun FriendsScreen(
-    account: Account,
+    navigation: NavigationActions,
     viewModel: ProfileScreenViewModel = viewModel(),
+    account: Account,
     onBack: () -> Unit,
 ) {
   val rawSuggestions by viewModel.handleSuggestions.collectAsStateWithLifecycle()
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
+  var selectedTab by rememberSaveable { mutableStateOf(FriendsTab.FRIENDS) }
 
-  val friendIds =
-      remember(account.relationships) {
-        account.relationships.filterValues { it == RelationshipStatus.FRIEND }.keys.toList()
-      }
+  val trimmedQuery = remember(searchQuery) { searchQuery.trim() }
+  val isSearching = trimmedQuery.isNotBlank()
+
+  val friendIds = remember(account.relationships) { account.idsFor(RelationshipStatus.FRIEND) }
+  val sentRequestIds = remember(account.relationships) { account.idsFor(RelationshipStatus.SENT) }
+  val blockedIds = remember(account.relationships) { account.idsFor(RelationshipStatus.BLOCKED) }
 
   var friends by remember { mutableStateOf<List<Account>>(emptyList()) }
+  var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
+  var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
 
-  LaunchedEffect(friendIds) {
-    if (friendIds.isEmpty()) {
-      friends = emptyList()
-    } else {
-      viewModel.getAccounts(friendIds) { result -> friends = result }
-    }
+  LaunchedEffect(friendIds) { viewModel.loadAccountsOrEmpty(friendIds) { friends = it } }
+
+  LaunchedEffect(sentRequestIds) {
+    viewModel.loadAccountsOrEmpty(sentRequestIds) { sentRequests = it }
   }
 
-  LaunchedEffect(searchQuery) { viewModel.searchByHandle(searchQuery.trim()) }
+  LaunchedEffect(blockedIds) { viewModel.loadAccountsOrEmpty(blockedIds) { blockedUsers = it } }
+
+  LaunchedEffect(trimmedQuery) { viewModel.searchByHandle(trimmedQuery) }
 
   val suggestions =
-      remember(rawSuggestions, searchQuery) {
-        if (searchQuery.isBlank()) emptyList() else rawSuggestions
+      remember(rawSuggestions, trimmedQuery) {
+        if (trimmedQuery.isBlank()) emptyList() else rawSuggestions
       }
 
   Scaffold(
-      topBar = {
-        FriendsTopBar(
-            onBack = onBack,
+      topBar = { FriendsTopBar(onBack = onBack) },
+      bottomBar = {
+        BottomNavigationMenu(
+            currentScreen = MeepleMeetScreen.Profile,
+            onTabSelected = { screen -> navigation.navigateTo(screen) },
         )
       },
       containerColor = MaterialTheme.colorScheme.background,
@@ -226,14 +311,27 @@ fun FriendsScreen(
           query = searchQuery,
           onQueryChange = { searchQuery = it },
           onClearQuery = { searchQuery = FriendsManagementDefaults.RESET_QUERY_TEXT },
-          modifier = Modifier.fillMaxWidth(),
       )
+
+      if (!isSearching) {
+        Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
+        FriendsTabSwitcher(
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it },
+        )
+      }
 
       FriendsManagementContent(
           account = account,
-          friends = friends,
+          lists =
+              FriendsLists(
+                  friends = friends,
+                  sentRequests = sentRequests,
+                  blockedUsers = blockedUsers,
+              ),
           suggestions = suggestions,
           searchQuery = searchQuery,
+          selectedTab = selectedTab,
           viewModel = viewModel,
       )
     }
@@ -241,79 +339,75 @@ fun FriendsScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Composables
+//  Screen content
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Content area for the friends screen, displaying either search results or the friends list based
- * on the search query.
+ * Composable function to display the main content of the Friends Management Screen.
  *
  * @param account The current user's account.
- * @param friends The list of current friends.
- * @param suggestions The list of user suggestions based on the search query.
+ * @param lists The lists of friends, sent requests, and blocked users.
+ * @param suggestions The list of suggested accounts based on the search query.
  * @param searchQuery The current search query.
- * @param viewModel The ViewModel managing the profile screen state and actions.
+ * @param selectedTab The currently selected tab in the friends management screen.
+ * @param viewModel ViewModel for profile-related operations.
  */
 @Composable
 private fun FriendsManagementContent(
     account: Account,
-    friends: List<Account>,
+    lists: FriendsLists,
     suggestions: List<Account>,
     searchQuery: String,
+    selectedTab: FriendsTab,
     viewModel: ProfileScreenViewModel,
 ) {
-  val isSearching = searchQuery.isNotBlank() && suggestions.isNotEmpty()
+  val isSearching = searchQuery.isNotBlank()
 
   if (isSearching) {
     FriendsSearchResultsDropdown(
         currentAccount = account,
         results = suggestions.filter { it.uid != account.uid },
-        onBlockToggle = { other ->
-          if (account.relationships[other.uid] == RelationshipStatus.BLOCKED) {
-            viewModel.unblockUser(account, other)
-          } else {
-            viewModel.blockUser(account, other)
-          }
-        },
+        onBlockToggle = { other -> viewModel.toggleBlock(account, other) },
         onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
         onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
-        modifier = Modifier.fillMaxWidth(),
+        onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
     )
   } else {
-    Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_CONTENT))
-
-    Text(
-        text = FriendsManagementDefaults.SECTION_TITLE_FRIENDS,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier =
-            Modifier.padding(Dimensions.Padding.medium)
-                .fillMaxWidth()
-                .testTag(FriendsManagementTestTags.SECTION_TITLE_FRIENDS),
-    )
-
-    Spacer(Modifier.height(FriendsManagementDefaults.Layout.SECTION_TITLE_BOTTOM_PADDING))
-
-    FriendsList(
-        currentAccount = account,
-        friends = friends,
-        modifier = Modifier.fillMaxWidth(),
-        onBlockToggle = { friend ->
-          if (account.relationships[friend.uid] == RelationshipStatus.BLOCKED) {
-            viewModel.unblockUser(account, friend)
-          } else {
-            viewModel.blockUser(account, friend)
-          }
-        },
-        onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
-    )
+    when (selectedTab) {
+      FriendsTab.FRIENDS -> {
+        FriendsList(
+            currentAccount = account,
+            friends = lists.friends,
+            onBlockToggle = { friend -> viewModel.toggleBlock(account, friend) },
+            onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
+        )
+      }
+      FriendsTab.REQUESTS -> {
+        SentRequestsList(
+            currentAccount = account,
+            sentRequests = lists.sentRequests,
+            onBlockToggle = { other -> viewModel.toggleBlock(account, other) },
+            onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
+        )
+      }
+      FriendsTab.BLOCKED -> {
+        BlockedUsersList(
+            blockedUsers = lists.blockedUsers,
+            onUnblock = { other -> viewModel.unblockUser(account, other) },
+        )
+      }
+    }
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Top bar & search
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Top bar for the Friends Management screen with a back button and title.
+ * Composable function to display the top bar of the Friends Management Screen.
  *
- * @param onBack Callback invoked when the back button is pressed.
+ * @param onBack Callback function to be invoked when the back button is pressed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -348,12 +442,11 @@ private fun FriendsTopBar(
 }
 
 /**
- * Search bar for searching users to add as friends.
+ * Composable function to display the search bar for friends management.
  *
  * @param query The current search query.
- * @param onQueryChange Callback invoked when the search query changes.
- * @param onClearQuery Callback invoked to clear the search query.
- * @param modifier Modifier to be applied to the search bar.
+ * @param onQueryChange Callback function to handle changes to the search query.
+ * @param onClearQuery Callback function to clear the search query.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -361,16 +454,19 @@ fun FriendsSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
   FocusableInputField(
       value = query,
       onValueChange = onQueryChange,
       modifier =
-          modifier
+          Modifier.fillMaxWidth()
               .height(Dimensions.ContainerSize.timeFieldHeight)
               .testTag(FriendsManagementTestTags.SEARCH_TEXT_FIELD)
-              .shadow(elevation = Dimensions.Elevation.high, shape = RectangleShape, clip = false)
+              .shadow(
+                  elevation = Dimensions.Elevation.high,
+                  shape = RectangleShape,
+                  clip = false,
+              )
               .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium),
       placeholder = {
         Text(
@@ -412,16 +508,92 @@ fun FriendsSearchBar(
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Friends tabs
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * A row representing a user in the friends management context, with options to block/unblock and
- * add/remove as a friend.
+ * Composable function to display the tab switcher for friends management.
  *
- * @param user The user account to display.
- * @param isBlocked Whether the user is currently blocked.
- * @param secondaryAction The secondary action to display (add/remove friend).
- * @param context The context in which this row is used (friend list or search results).
- * @param onBlockClick Callback invoked when the block/unblock button is clicked.
- * @param onSecondaryActionClick Callback invoked when the secondary action button is clicked.
+ * @param selectedTab The currently selected tab.
+ * @param onTabSelected Callback function to handle tab selection changes.
+ */
+@Composable
+private fun FriendsTabSwitcher(
+    selectedTab: FriendsTab,
+    onTabSelected: (FriendsTab) -> Unit,
+) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(FriendsManagementDefaults.Layout.FRIENDS_TABS_HEIGHT)
+              .background(MaterialTheme.colorScheme.background)
+              .testTag(FriendsManagementTestTags.TABS),
+  ) {
+    FriendsTab.entries.forEach { tab ->
+      val isSelected = (tab == selectedTab)
+      val label =
+          when (tab) {
+            FriendsTab.FRIENDS -> "Friends"
+            FriendsTab.REQUESTS -> "Requests"
+            FriendsTab.BLOCKED -> "Blocked"
+          }
+
+      val bgColor =
+          if (isSelected) {
+            MaterialTheme.colorScheme.outline
+          } else {
+            MaterialTheme.colorScheme.background
+          }
+
+      val textColor =
+          if (isSelected) {
+            MaterialTheme.colorScheme.onBackground
+          } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+          }
+
+      val tabTag =
+          when (tab) {
+            FriendsTab.FRIENDS -> FriendsManagementTestTags.TAB_FRIENDS
+            FriendsTab.REQUESTS -> FriendsManagementTestTags.TAB_REQUESTS
+            FriendsTab.BLOCKED -> FriendsManagementTestTags.TAB_BLOCKED
+          }
+
+      Box(
+          modifier =
+              Modifier.weight(1f)
+                  .fillMaxHeight()
+                  .background(bgColor)
+                  .clickable { onTabSelected(tab) }
+                  .testTag(tabTag),
+          contentAlignment = Alignment.Center,
+      ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = textColor,
+        )
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Row & avatar
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Composable function to display a user row with relationship actions.
+ *
+ * @param user The account of the user to display.
+ * @param isBlocked Boolean indicating if the user is blocked.
+ * @param secondaryAction The secondary action to display for the user row.
+ * @param context The context in which the user row is displayed.
+ * @param onBlockClick Callback function to handle block/unblock action.
+ * @param onSecondaryActionClick Callback function to handle the secondary action.
+ * @param showSecondaryAction Boolean indicating whether to show the secondary action button.
  */
 @Composable
 fun RelationshipUserRow(
@@ -431,6 +603,7 @@ fun RelationshipUserRow(
     context: UserRowContext,
     onBlockClick: () -> Unit,
     onSecondaryActionClick: () -> Unit,
+    showSecondaryAction: Boolean = true,
 ) {
   val itemPrefix =
       when (context) {
@@ -497,62 +670,63 @@ fun RelationshipUserRow(
 
     Row(
         horizontalArrangement =
-            Arrangement.spacedBy(
-                FriendsManagementDefaults.Layout.ITEM_ACTIONS_SPACING,
-            ),
+            Arrangement.spacedBy(FriendsManagementDefaults.Layout.ITEM_ACTIONS_SPACING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
       IconButton(
           onClick = onBlockClick,
           modifier = Modifier.testTag("$blockButtonPrefix${user.uid}"),
       ) {
+        val blockIcon = if (isBlocked) Icons.Default.LockOpen else Icons.Default.Block
+
         Icon(
-            imageVector = Icons.Default.Block,
+            imageVector = blockIcon,
             contentDescription = if (isBlocked) "Unblock" else "Block",
-            tint =
-                if (isBlocked) {
-                  MaterialTheme.colorScheme.error
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                },
         )
       }
 
-      val (icon, description, tint) =
-          when (secondaryAction) {
-            UserRowSecondaryAction.ADD_FRIEND ->
-                Triple(
-                    Icons.Default.PersonAdd,
-                    "Add friend",
-                    MaterialTheme.colorScheme.onBackground,
-                )
-            UserRowSecondaryAction.REMOVE_FRIEND ->
-                Triple(
-                    Icons.Default.PersonRemove,
-                    "Remove friend",
-                    MaterialTheme.colorScheme.onBackground,
-                )
-          }
+      if (showSecondaryAction) {
+        val (icon, description, tint) =
+            when (secondaryAction) {
+              UserRowSecondaryAction.ADD_FRIEND ->
+                  Triple(
+                      Icons.Default.PersonAdd,
+                      "Add friend",
+                      MaterialTheme.colorScheme.onBackground,
+                  )
+              UserRowSecondaryAction.REMOVE_FRIEND ->
+                  Triple(
+                      Icons.Default.PersonRemove,
+                      "Remove friend",
+                      MaterialTheme.colorScheme.onBackground,
+                  )
+              UserRowSecondaryAction.REQUEST_SENT ->
+                  Triple(
+                      Icons.Default.Schedule,
+                      "Friend request sent",
+                      MaterialTheme.colorScheme.onBackground,
+                  )
+            }
 
-      IconButton(
-          onClick = onSecondaryActionClick,
-          modifier = Modifier.testTag("$actionButtonPrefix${user.uid}"),
-      ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = tint,
-        )
+        IconButton(
+            onClick = onSecondaryActionClick,
+            modifier = Modifier.testTag("$actionButtonPrefix${user.uid}"),
+        ) {
+          Icon(
+              imageVector = icon,
+              contentDescription = description,
+              tint = tint,
+          )
+        }
       }
     }
   }
 }
 
 /**
- * Composable to display a user's avatar. If the user has a photo URL, it loads and displays the
- * image; otherwise, it shows the user's initials in a colored circle.
+ * Composable function to display a user's avatar.
  *
- * @param account The user account whose avatar is to be displayed.
+ * @param account The account of the user whose avatar is to be displayed.
  * @param modifier Modifier to be applied to the avatar.
  */
 @Composable
@@ -560,24 +734,36 @@ private fun UserAvatar(
     account: Account,
     modifier: Modifier = Modifier,
 ) {
-  val placeholderColor = MaterialTheme.colorScheme.primary
   val initials =
       remember(account.name) {
         account.name.trim().takeIf { it.isNotEmpty() }?.first()?.uppercase()
             ?: FriendsManagementDefaults.Avatar.DEFAULT_TEXT_AVATAR
       }
 
+  val context = LocalContext.current
+  val profileViewModel: ProfileScreenViewModel = viewModel()
+  val scope = rememberCoroutineScope()
+
+  var avatarBytes by remember(account.uid) { mutableStateOf<ByteArray?>(null) }
+
+  LaunchedEffect(account.uid) {
+    scope.launch {
+      profileViewModel.loadAccountProfilePicture(
+          accountId = account.uid,
+          context = context,
+      ) { bytes ->
+        avatarBytes = bytes
+      }
+    }
+  }
+
   Box(
-      modifier =
-          modifier
-              .clip(CircleShape)
-              .background(placeholderColor)
-              .shadow(Dimensions.Elevation.minimal, CircleShape, clip = true),
+      modifier = modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary),
       contentAlignment = Alignment.Center,
   ) {
-    if (account.photoUrl != null) {
+    if (avatarBytes != null) {
       AsyncImage(
-          model = account.photoUrl,
+          model = avatarBytes,
           contentDescription = "Profile picture of ${account.name}",
           contentScale = ContentScale.Crop,
           modifier = Modifier.fillMaxSize(),
@@ -593,37 +779,26 @@ private fun UserAvatar(
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Generic list container + specific lists
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Composable to display a scrollable list of friends with block and remove actions.
+ * Generic composable function to display a list of friends with a scrollbar.
  *
- * @param currentAccount The current user's account.
- * @param friends The list of friend accounts to display.
- * @param onBlockToggle Callback invoked when a friend is blocked or unblocked.
- * @param onRemoveFriend Callback invoked when a friend is removed.
- * @param modifier Modifier to be applied to the friends list.
+ * @param T The type of items in the list.
+ * @param items The list of items to display.
+ * @param listTestTag The test tag for the list container.
+ * @param rowContent Composable function to define the content of each row in the list.
  */
 @Composable
-fun FriendsList(
-    currentAccount: Account,
-    friends: List<Account>,
-    onBlockToggle: (Account) -> Unit,
-    onRemoveFriend: (Account) -> Unit,
-    modifier: Modifier = Modifier,
+private fun <T> FriendsListContainer(
+    items: List<T>,
+    listTestTag: String,
+    rowContent: @Composable (index: Int, item: T) -> Unit,
 ) {
-
-  val listHeight =
-      remember(friends.size) {
-        val visibleRows =
-            friends.size.coerceAtMost(FriendsManagementDefaults.Layout.MAX_VISIBLE_FRIEND_ROWS)
-        FriendsManagementDefaults.Layout.ROW_MIN_HEIGHT * visibleRows
-      }
-
   Box(
-      modifier =
-          modifier
-              .heightIn(max = listHeight)
-              .fillMaxWidth()
-              .testTag(FriendsManagementTestTags.FRIEND_LIST),
+      modifier = Modifier.fillMaxWidth().testTag(listTestTag),
   ) {
     val listState = rememberLazyListState()
 
@@ -631,19 +806,10 @@ fun FriendsList(
         state = listState,
         modifier = Modifier.fillMaxSize(),
     ) {
-      itemsIndexed(friends, key = { _, friend -> friend.uid }) { index, friend ->
-        val isBlocked = (currentAccount.relationships[friend.uid] == RelationshipStatus.BLOCKED)
+      itemsIndexed(items) { index, item ->
+        rowContent(index, item)
 
-        RelationshipUserRow(
-            user = friend,
-            isBlocked = isBlocked,
-            secondaryAction = UserRowSecondaryAction.REMOVE_FRIEND,
-            context = UserRowContext.FRIEND_LIST,
-            onBlockClick = { onBlockToggle(friend) },
-            onSecondaryActionClick = { onRemoveFriend(friend) },
-        )
-
-        if (index < friends.lastIndex) {
+        if (index < items.lastIndex) {
           HorizontalDivider(
               color = MaterialTheme.colorScheme.onBackground,
               thickness = Dimensions.DividerThickness.standard,
@@ -652,10 +818,10 @@ fun FriendsList(
       }
     }
 
-    if (friends.size >= FriendsManagementDefaults.Scrollbar.MIN_ITEMS_FOR_SCROLLBAR) {
+    if (items.size >= FriendsManagementDefaults.Scrollbar.MIN_ITEMS_FOR_SCROLLBAR) {
       FriendsScrollBar(
           listState = listState,
-          itemCount = friends.size,
+          itemCount = items.size,
           modifier = Modifier.align(Alignment.CenterEnd),
       )
     }
@@ -663,7 +829,104 @@ fun FriendsList(
 }
 
 /**
- * Composable to display a custom scrollbar for a lazy list.
+ * Composable function to display the friends list.
+ *
+ * @param currentAccount The current user's account.
+ * @param friends The list of friends to display.
+ * @param onBlockToggle Callback function to handle block/unblock action.
+ * @param onRemoveFriend Callback function to handle removing a friend.
+ */
+@Composable
+fun FriendsList(
+    currentAccount: Account,
+    friends: List<Account>,
+    onBlockToggle: (Account) -> Unit,
+    onRemoveFriend: (Account) -> Unit,
+) {
+  FriendsListContainer(
+      items = friends,
+      listTestTag = FriendsManagementTestTags.FRIEND_LIST,
+  ) { _, friend ->
+    val status = currentAccount.relationships[friend.uid]
+    val isBlocked = status.isBlocked
+
+    RelationshipUserRow(
+        user = friend,
+        isBlocked = isBlocked,
+        secondaryAction = UserRowSecondaryAction.REMOVE_FRIEND,
+        context = UserRowContext.FRIEND_LIST,
+        onBlockClick = { onBlockToggle(friend) },
+        onSecondaryActionClick = { onRemoveFriend(friend) },
+    )
+  }
+}
+
+/**
+ * Composable function to display the sent friend requests list.
+ *
+ * @param currentAccount The current user's account.
+ * @param sentRequests The list of sent friend requests to display.
+ * @param onBlockToggle Callback function to handle block/unblock action.
+ * @param onCancelRequest Callback function to handle canceling a friend request.
+ */
+@Composable
+private fun SentRequestsList(
+    currentAccount: Account,
+    sentRequests: List<Account>,
+    onBlockToggle: (Account) -> Unit,
+    onCancelRequest: (Account) -> Unit,
+) {
+  FriendsListContainer(
+      items = sentRequests,
+      listTestTag = FriendsManagementTestTags.SENT_REQUESTS_LIST,
+  ) { _, other ->
+    val status = currentAccount.relationships[other.uid]
+    val isBlocked = status.isBlocked
+
+    RelationshipUserRow(
+        user = other,
+        isBlocked = isBlocked,
+        secondaryAction = UserRowSecondaryAction.REQUEST_SENT,
+        context = UserRowContext.FRIEND_LIST,
+        onBlockClick = { onBlockToggle(other) },
+        onSecondaryActionClick = { onCancelRequest(other) },
+    )
+  }
+}
+
+/**
+ * Composable function to display the blocked users list.
+ *
+ * @param blockedUsers The list of blocked users to display.
+ * @param onUnblock Callback function to handle unblocking a user.
+ */
+@Composable
+private fun BlockedUsersList(
+    blockedUsers: List<Account>,
+    onUnblock: (Account) -> Unit,
+) {
+  FriendsListContainer(
+      items = blockedUsers,
+      listTestTag = FriendsManagementTestTags.BLOCKED_LIST,
+  ) { _, other ->
+    RelationshipUserRow(
+        user = other,
+        isBlocked = true,
+        secondaryAction = UserRowSecondaryAction.ADD_FRIEND,
+        context = UserRowContext.FRIEND_LIST,
+        onBlockClick = { onUnblock(other) },
+        onSecondaryActionClick = {},
+        showSecondaryAction = false,
+    )
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Scrollbar
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Composable function to display a custom scrollbar for the friends list.
  *
  * @param listState The state of the lazy list to track scroll position.
  * @param itemCount The total number of items in the list.
@@ -684,7 +947,8 @@ private fun FriendsScrollBar(
               .clip(CircleShape)
               .background(
                   MaterialTheme.colorScheme.background.copy(
-                      alpha = FriendsManagementDefaults.Scrollbar.SCROLLBAR_ALPHA),
+                      alpha = FriendsManagementDefaults.Scrollbar.SCROLLBAR_ALPHA,
+                  ),
               )
               .testTag(FriendsManagementTestTags.SCROLLBAR_TRACK),
   ) {
@@ -692,25 +956,28 @@ private fun FriendsScrollBar(
       derivedStateOf {
         val visibleItems =
             listState.layoutInfo.visibleItemsInfo.size.coerceAtLeast(
-                FriendsManagementDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR)
+                FriendsManagementDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR,
+            )
         val totalItems =
-            itemCount.coerceAtLeast(FriendsManagementDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR)
+            itemCount.coerceAtLeast(
+                FriendsManagementDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR,
+            )
 
-        // Scroll progress
         val lastStartIndex =
             (totalItems - visibleItems).coerceAtLeast(
-                FriendsManagementDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR)
+                FriendsManagementDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR,
+            )
         val rawProgress =
             if (totalItems <= visibleItems) 0f
             else listState.firstVisibleItemIndex.toFloat() / lastStartIndex.toFloat()
         val progress = rawProgress.coerceIn(0f, 1f)
 
-        // How much of the list is visible
         val rawThumbFraction = visibleItems.toFloat() / totalItems.toFloat()
         val thumbFraction =
             rawThumbFraction.coerceIn(
                 FriendsManagementDefaults.Scrollbar.MIN_SCROLLBAR_SIZE_PERCENTAGE,
-                FriendsManagementDefaults.Scrollbar.MAX_SCROLLBAR_SIZE_PERCENTAGE)
+                FriendsManagementDefaults.Scrollbar.MAX_SCROLLBAR_SIZE_PERCENTAGE,
+            )
 
         ScrollMetrics(progress = progress, thumbFraction = thumbFraction)
       }
@@ -741,15 +1008,19 @@ private fun FriendsScrollBar(
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Search dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Composable to display a dropdown list of search results for adding friends.
+ * Composable function to display the search results dropdown for friends management.
  *
  * @param currentAccount The current user's account.
- * @param results The list of account search results to display.
- * @param onBlockToggle Callback invoked when a user is blocked or unblocked.
- * @param onAddFriend Callback invoked when a user is added as a friend.
- * @param onRemoveFriend Callback invoked when a user is removed as a friend.
- * @param modifier Modifier to be applied to the search results dropdown.
+ * @param results The list of accounts matching the search query.
+ * @param onBlockToggle Callback function to handle block/unblock action.
+ * @param onAddFriend Callback function to handle adding a friend.
+ * @param onRemoveFriend Callback function to handle removing a friend.
+ * @param onCancelRequest Callback function to handle canceling a friend request.
  */
 @Composable
 fun FriendsSearchResultsDropdown(
@@ -758,19 +1029,25 @@ fun FriendsSearchResultsDropdown(
     onBlockToggle: (Account) -> Unit,
     onAddFriend: (Account) -> Unit,
     onRemoveFriend: (Account) -> Unit,
-    modifier: Modifier = Modifier,
+    onCancelRequest: (Account) -> Unit,
 ) {
+  val visibleResults =
+      remember(results, currentAccount.uid) { results.filter { it.uid != currentAccount.uid } }
+
+  if (visibleResults.isEmpty()) return
 
   val dropdownMaxHeight =
-      remember(results.size) {
+      remember(visibleResults.size) {
         val visibleRows =
-            results.size.coerceAtMost(FriendsManagementDefaults.Layout.MAX_VISIBLE_SEARCH_ROWS)
+            visibleResults.size.coerceAtMost(
+                FriendsManagementDefaults.Layout.MAX_VISIBLE_SEARCH_ROWS,
+            )
         FriendsManagementDefaults.Layout.ROW_MIN_HEIGHT * visibleRows
       }
 
   Surface(
       modifier =
-          modifier
+          Modifier.fillMaxWidth()
               .heightIn(max = dropdownMaxHeight)
               .testTag(FriendsManagementTestTags.SEARCH_RESULTS_DROPDOWN),
       tonalElevation = Dimensions.Elevation.low,
@@ -779,24 +1056,34 @@ fun FriendsSearchResultsDropdown(
       color = MaterialTheme.colorScheme.surface,
   ) {
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-      items(results, key = { it.uid }) { other ->
-        val relStatus = currentAccount.relationships[other.uid]
-        val isFriend = (relStatus == RelationshipStatus.FRIEND)
-        val isBlocked = (relStatus == RelationshipStatus.BLOCKED)
+      items(visibleResults, key = { it.uid }) { other ->
+        val status = currentAccount.relationships[other.uid]
+        val isFriend = status.isFriend
+        val isBlocked = status.isBlocked
+        val isSent = status.isRequestSent
 
-        val action =
-            if (isFriend) UserRowSecondaryAction.REMOVE_FRIEND
-            else UserRowSecondaryAction.ADD_FRIEND
+        val secondaryAction: UserRowSecondaryAction? =
+            when {
+              isBlocked -> null
+              isFriend -> UserRowSecondaryAction.REMOVE_FRIEND
+              isSent -> UserRowSecondaryAction.REQUEST_SENT
+              else -> UserRowSecondaryAction.ADD_FRIEND
+            }
 
         RelationshipUserRow(
             user = other,
             isBlocked = isBlocked,
-            secondaryAction = action,
+            secondaryAction = secondaryAction ?: UserRowSecondaryAction.ADD_FRIEND,
             context = UserRowContext.SEARCH_RESULTS,
             onBlockClick = { onBlockToggle(other) },
             onSecondaryActionClick = {
-              if (isFriend) onRemoveFriend(other) else onAddFriend(other)
+              when {
+                isFriend -> onRemoveFriend(other)
+                isSent -> onCancelRequest(other)
+                else -> onAddFriend(other)
+              }
             },
+            showSecondaryAction = secondaryAction != null,
         )
       }
     }
