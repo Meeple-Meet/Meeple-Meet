@@ -47,7 +47,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.account.CreateAccountScreen
-import com.github.meeplemeet.ui.account.FriendsManagementScreen
+import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.account.ProfileScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignUpScreen
@@ -475,7 +475,7 @@ fun MeepleMeetApp(
     }
     composable(MeepleMeetScreen.Friends.name) {
       account?.let { currentAccount ->
-        FriendsManagementScreen(
+        FriendsScreen(
             account = currentAccount,
             onBack = { navigationActions.goBack() },
         )
