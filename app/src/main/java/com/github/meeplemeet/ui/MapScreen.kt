@@ -20,6 +20,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +36,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +49,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -96,6 +101,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.map.GeoPinWithLocation
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType
@@ -140,10 +146,13 @@ object MapScreenTestTags {
   const val PREVIEW_DATE = "previewDate"
   const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
+  const val CLUSTER_SHEET = "clusterSheet"
 
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
 
   fun getTestTagForCluster(pos: LatLng) = "mapCluster_${pos.latitude}_${pos.longitude}"
+
+  fun getTestTagForClusterItem(pinId: String) = "clusterItem_$pinId"
 }
 
 /**
@@ -749,12 +758,12 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
  * Displays a simple loading sheet while fetching marker preview data.
  *
  * Shows a centered text and a circular progress indicator. The text varies depending on the type of
- * the pin being loaded.
+ * the pin being loaded, or shows "Loading cluster..." if loading a cluster (geoPin is null).
  *
  * @param geoPin the [StorableGeoPin] for which the preview is loading
  */
 @Composable
-private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
+private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin?) {
   Column(
       modifier =
           Modifier.fillMaxWidth()
@@ -763,10 +772,11 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text =
-                when (geoPin.type) {
+                when (geoPin?.type) {
                   PinType.SHOP -> "Loading shop..."
                   PinType.SPACE -> "Loading space..."
                   PinType.SESSION -> "Loading session..."
+                  null -> "Loading cluster..."
                 },
             style = MaterialTheme.typography.titleMedium)
 
@@ -888,6 +898,82 @@ private fun MarkerPreviewSheet(
                     .testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
               Text(text = "View details")
             }
+      }
+}
+
+/**
+ * Displays a list of multiple marker previews as a cluster sheet.
+ *
+ * @param clusterPreviews list of geo pins with their preview data
+ * @param onSelectPreview callback when a cluster item is selected
+ */
+@Composable
+private fun ClusterPreviewSheet(
+    clusterPreviews: List<Pair<GeoPinWithLocation, MarkerPreview>>,
+    onSelectPreview: (GeoPinWithLocation, MarkerPreview) -> Unit
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(Dimensions.Padding.large)
+              .testTag(MapScreenTestTags.CLUSTER_SHEET)) {
+        Text(text = "Multiple locations", style = MaterialTheme.typography.titleLarge)
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+          items(clusterPreviews) { (pin, preview) ->
+            ClusterPreviewItem(
+                preview = preview,
+                onClick = { onSelectPreview(pin, preview) },
+                testTag = MapScreenTestTags.getTestTagForClusterItem(pin.geoPin.uid))
+          }
+        }
+      }
+}
+
+/**
+ * Single item in a cluster preview list.
+ *
+ * Displays icon based on pin type, name, and game if session.
+ *
+ * @param preview marker preview data
+ * @param onClick callback when the item is clicked
+ * @param testTag UI testing tag
+ */
+@Composable
+private fun ClusterPreviewItem(preview: MarkerPreview, onClick: () -> Unit, testTag: String) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable { onClick() }
+              .padding(Dimensions.Padding.medium)
+              .testTag(testTag),
+      verticalAlignment = Alignment.CenterVertically) {
+        val icon =
+            when (preview) {
+              is MarkerPreview.ShopMarkerPreview -> Icons.Default.Storefront
+              is MarkerPreview.SpaceMarkerPreview -> Icons.Default.TableRestaurant
+              is MarkerPreview.SessionMarkerPreview -> Icons.Default.SportsEsports
+            }
+
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(Dimensions.IconSize.large))
+
+        Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+        Column {
+          Text(text = preview.name, style = MaterialTheme.typography.bodyLarge)
+
+          if (preview is MarkerPreview.SessionMarkerPreview) {
+            Text(
+                text = preview.game,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+        }
       }
 }
 
