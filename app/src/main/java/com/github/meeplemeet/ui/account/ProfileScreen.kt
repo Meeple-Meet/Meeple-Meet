@@ -74,16 +74,17 @@ fun ProfileScreen(
       }) { innerPadding ->
 
         // New content here
+
         Box(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.TopCenter) {
-              MainTab(
+              /*MainTab(
                   viewModel = viewModel,
                   account = account,
                   onFriendsClick = {}, // define if needed
                   onNotificationClick = {}, // define if needed
                   onSignOut = onSignOut,
-              )
+              )*/
             }
       }
 }
