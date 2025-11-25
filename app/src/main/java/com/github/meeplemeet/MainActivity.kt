@@ -48,6 +48,8 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.account.CreateAccountScreen
 import com.github.meeplemeet.ui.account.ProfileScreen
+import com.github.meeplemeet.ui.auth.OnBoardPage
+import com.github.meeplemeet.ui.auth.OnBoardingScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.discussions.CreateDiscussionScreen
@@ -257,9 +259,7 @@ fun MeepleMeetApp(
       DiscussionsOverviewScreen(
           account!!,
           navigationActions,
-          onClickAddDiscussion = {
-            navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
-          },
+          onClickAddDiscussion = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
           onSelectDiscussion = {
             discussionId = it.uid
             navigationActions.navigateTo(MeepleMeetScreen.Discussion)
@@ -471,6 +471,32 @@ fun MeepleMeetApp(
       } else {
         LoadingScreen()
       }
+    }
+
+    // OnBoarding Screen
+    composable(MeepleMeetScreen.OnBoarding.name) {
+      val pages =
+          listOf(
+              OnBoardPage(
+                  image = R.drawable.logo_discussion,
+                  title = "Discussions",
+                  description = "Discover events and meet new people."),
+              OnBoardPage(
+                  image = R.drawable.logo_discussion,
+                  title = "Create",
+                  description = "Host your own gatherings easily."),
+              OnBoardPage(
+                  image = R.drawable.logo_discussion,
+                  title = "Explore",
+                  description = "Find activities near you."))
+      OnBoardingScreen(
+          pages = pages,
+          onSkip = { /* navigate to SignIn */
+            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+          },
+          onFinished = { /* navigate to SignIn */
+            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+          })
     }
   }
 }
