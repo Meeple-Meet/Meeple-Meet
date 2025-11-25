@@ -69,7 +69,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
@@ -212,7 +212,7 @@ private fun Account.idsFor(status: RelationshipStatus): List<String> =
  * @param ids List of account IDs to load.
  * @param onResult Callback function to handle the loaded accounts.
  */
-private fun ProfileScreenViewModel.loadAccountsOrEmpty(
+private fun FriendsScreenViewModel.loadAccountsOrEmpty(
     ids: List<String>,
     onResult: (List<Account>) -> Unit,
 ) {
@@ -229,7 +229,7 @@ private fun ProfileScreenViewModel.loadAccountsOrEmpty(
  * @param current The current user's account.
  * @param other The other user's account to block or unblock.
  */
-private fun ProfileScreenViewModel.toggleBlock(
+private fun FriendsScreenViewModel.toggleBlock(
     current: Account,
     other: Account,
 ) {
@@ -249,14 +249,14 @@ private fun ProfileScreenViewModel.toggleBlock(
  * Composable function to display the Friends Management Screen.
  *
  * @param navigation Navigation actions for screen transitions.
- * @param viewModel ViewModel for profile-related operations.
+ * @param viewModel ViewModel for friends-related operations.
  * @param account The current user's account.
  * @param onBack Callback function to be invoked when the back button is pressed.
  */
 @Composable
 fun FriendsScreen(
     navigation: NavigationActions,
-    viewModel: ProfileScreenViewModel = viewModel(),
+    viewModel: FriendsScreenViewModel = viewModel(),
     account: Account,
     onBack: () -> Unit,
 ) {
@@ -350,7 +350,7 @@ fun FriendsScreen(
  * @param suggestions The list of suggested accounts based on the search query.
  * @param searchQuery The current search query.
  * @param selectedTab The currently selected tab in the friends management screen.
- * @param viewModel ViewModel for profile-related operations.
+ * @param viewModel ViewModel for friends-related operations.
  */
 @Composable
 private fun FriendsManagementContent(
@@ -359,7 +359,7 @@ private fun FriendsManagementContent(
     suggestions: List<Account>,
     searchQuery: String,
     selectedTab: FriendsTab,
-    viewModel: ProfileScreenViewModel,
+    viewModel: FriendsScreenViewModel,
 ) {
   val isSearching = searchQuery.isNotBlank()
 
@@ -741,14 +741,14 @@ private fun UserAvatar(
       }
 
   val context = LocalContext.current
-  val profileViewModel: ProfileScreenViewModel = viewModel()
+  val viewModel: FriendsScreenViewModel = viewModel()
   val scope = rememberCoroutineScope()
 
   var avatarBytes by remember(account.uid) { mutableStateOf<ByteArray?>(null) }
 
   LaunchedEffect(account.uid) {
     scope.launch {
-      profileViewModel.loadAccountProfilePicture(
+      viewModel.loadAccountProfilePicture(
           accountId = account.uid,
           context = context,
       ) { bytes ->

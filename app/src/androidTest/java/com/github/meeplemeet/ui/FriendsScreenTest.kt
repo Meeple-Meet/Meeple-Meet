@@ -17,7 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.navigation.compose.rememberNavController
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
@@ -39,7 +39,7 @@ class FriendsScreenTest : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
-  private lateinit var viewModel: ProfileScreenViewModel
+  private lateinit var viewModel: FriendsScreenViewModel
 
   private lateinit var currentUser: Account
   private lateinit var friend1: Account
@@ -56,7 +56,7 @@ class FriendsScreenTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    viewModel = ProfileScreenViewModel(accountRepository, handlesRepository)
+    viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
 
     runBlocking {
       val suffix = System.currentTimeMillis()
