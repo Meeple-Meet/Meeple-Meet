@@ -41,7 +41,7 @@ object ProfileScreenUi {
  * @param viewModel ViewModel for authentication-related operations.
  * @param account The current user's account.
  * @param viewModel ViewModel for discussion-related operations.
- * @param onSignOut Callback function to be invoked on sign out.
+ * @param onSignOutOrDel Callback function to be invoked on sign out.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,8 +49,8 @@ fun ProfileScreen(
     navigation: NavigationActions,
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
-    onSignOut: () -> Unit,
-    onDelAcc: () -> Unit
+    onSignOutOrDel: () -> Unit,
+    onDelete: () -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()
 
@@ -83,9 +83,8 @@ fun ProfileScreen(
                   account = account,
                   onFriendsClick = {}, // define when implemented
                   onNotificationClick = {}, // define when implemented
-                  onDelAcc = onDelAcc, // define when implemented
-                  onSignOut = onSignOut,
-              )
+                  onSignOutOrDel = onSignOutOrDel,
+                  onDelete = onDelete)
             }
       }
 }

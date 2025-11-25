@@ -260,7 +260,7 @@ object MainTabUi {
  * @param account current user of the app
  * @param onFriendsClick callback to navigate to the friend's tab
  * @param onNotificationClick callback to navigate to the notification's tab
- * @param onSignOut callback upon signing out
+ * @param onSignOutOrDel callback upon signing out
  * @param onDelAcc callback upon account deletion
  */
 @Composable
@@ -269,8 +269,8 @@ fun MainTab(
     account: Account,
     onFriendsClick: (account: Account) -> Unit,
     onNotificationClick: (account: Account) -> Unit,
-    onSignOut: () -> Unit,
-    onDelAcc: () -> Unit
+    onSignOutOrDel: () -> Unit,
+    onDelete: () -> Unit
 ) {
 
   val focusManager = LocalFocusManager.current
@@ -290,7 +290,7 @@ fun MainTab(
             viewModel = viewModel,
             onFriendsClick = onFriendsClick,
             onNotificationClick = onNotificationClick,
-            onSignOut = onSignOut)
+            onSignOut = onSignOutOrDel)
 
         PrivateInfo(account = account, viewModel = viewModel)
 
@@ -315,8 +315,9 @@ fun MainTab(
             onCancel = { showDelDialog = false },
             onConfirm = {
               showDelDialog = false
-              onDelAcc()
+              onSignOutOrDel()
               viewModel.deleteAccount(account)
+              onDelete()
               Log.d("Account after deletion", account.uid)
             })
       }

@@ -245,7 +245,7 @@ class MainTabComposableTest : FirestoreTests() {
             onFriendsClick = { friendsClicked = true },
             onNotificationClick = { notifClicked = true },
             onDelAcc = { delClicked = true },
-            onSignOut = { logoutClicked = true })
+            onSignOutOrDel = { logoutClicked = true })
       }
     }
 
