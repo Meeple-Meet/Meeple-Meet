@@ -50,6 +50,7 @@ fun ProfileScreen(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
     onSignOut: () -> Unit,
+    onDelAcc: () -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()
 
@@ -82,7 +83,7 @@ fun ProfileScreen(
                   account = account,
                   onFriendsClick = {}, // define when implemented
                   onNotificationClick = {}, // define when implemented
-                  onDelAcc = {}, // define when implemented
+                  onDelAcc = onDelAcc, // define when implemented
                   onSignOut = onSignOut,
               )
             }

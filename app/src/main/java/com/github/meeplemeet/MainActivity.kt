@@ -26,6 +26,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navigation
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.HandlesRepository
@@ -403,7 +404,8 @@ fun MeepleMeetApp(
             onSignOut = {
               navigationActions.navigateTo(MeepleMeetScreen.SignIn)
               signedOut = true
-            })
+            },
+            onDelAcc = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) })
       } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
     }
 
