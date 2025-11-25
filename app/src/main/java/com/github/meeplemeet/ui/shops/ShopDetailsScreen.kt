@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -29,6 +30,7 @@ import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.ConfirmationDialog
 import com.github.meeplemeet.ui.components.EditableGameItem
+import com.github.meeplemeet.ui.components.EditableImageCarousel
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
@@ -138,6 +140,7 @@ fun ShopDetailsScreen(
 ) {
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   EditShopContent(
       shop = shop,
@@ -156,6 +159,7 @@ fun ShopDetailsScreen(
           photoCollectionUrl ->
         try {
           viewModel.updateShop(
+              context = context,
               shop = loadedShop,
               requester = requester,
               owner = owner,
@@ -238,6 +242,10 @@ fun EditShopContent(
 
   // Initialize state with loaded shop data or default values
   var photoCollectionUrl by rememberSaveable(shop) { mutableStateOf(shop.photoCollectionUrl) }
+
+    LaunchedEffect(shop.photoCollectionUrl) {
+        photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
+    }
   var shopName by rememberSaveable(shop) { mutableStateOf(shop.name) }
   var email by rememberSaveable(shop) { mutableStateOf(shop.email) }
   var addressText by rememberSaveable(shop) { mutableStateOf(shop.address.name) }
