@@ -18,8 +18,8 @@ import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
-import com.github.meeplemeet.ui.account.FriendsManagementScreen
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
+import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -193,7 +193,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_smoke_showsTopBarSearchAndFriendList() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsManagementScreen(
+        FriendsScreen(
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -370,7 +370,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_search_showsDropdownAndHidesFriendsSection() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsManagementScreen(
+        FriendsScreen(
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -479,7 +479,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_removeFriend_updatesRepository() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsManagementScreen(
+        FriendsScreen(
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -547,7 +547,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_blockFromSearch_updatesRepository() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsManagementScreen(
+        FriendsScreen(
             account =
                 currentUser.copy( // ensure we start without relationship to stranger
                     relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
@@ -609,7 +609,7 @@ class FriendsScreenTest : FirestoreTests() {
     // currentUser already has blockedUser as BLOCKED in setup()
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsManagementScreen(
+        FriendsScreen(
             account = currentUser,
             viewModel = viewModel,
             onBack = {},

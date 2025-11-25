@@ -169,24 +169,23 @@ private data class ScrollMetrics(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Screen for managing friends: viewing current friends, searching users, adding/removing friends,
- * blocking/unblocking users.
+ * Composable function representing the Friends Management screen, allowing users to view, search,
+ * add, remove, block, and unblock friends.
  *
  * @param account The current user's account.
  * @param viewModel The ViewModel managing the profile screen state and actions.
  * @param onBack Callback invoked when the back button is pressed.
  */
 @Composable
-fun FriendsManagementScreen(
+fun FriendsScreen(
     account: Account,
     viewModel: ProfileScreenViewModel = viewModel(),
     onBack: () -> Unit,
 ) {
-  val suggestions by viewModel.handleSuggestions.collectAsStateWithLifecycle()
+  val rawSuggestions by viewModel.handleSuggestions.collectAsStateWithLifecycle()
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
 
-  // Load current friends as Account list
   val friendIds =
       remember(account.relationships) {
         account.relationships.filterValues { it == RelationshipStatus.FRIEND }.keys.toList()
@@ -202,8 +201,12 @@ fun FriendsManagementScreen(
     }
   }
 
-  // Keep search suggestions updated
   LaunchedEffect(searchQuery) { viewModel.searchByHandle(searchQuery.trim()) }
+
+  val suggestions =
+      remember(rawSuggestions, searchQuery) {
+        if (searchQuery.isBlank()) emptyList() else rawSuggestions
+      }
 
   Scaffold(
       topBar = {
@@ -226,52 +229,13 @@ fun FriendsManagementScreen(
           modifier = Modifier.fillMaxWidth(),
       )
 
-      val isSearching = searchQuery.isNotBlank() && suggestions.isNotEmpty()
-
-      if (isSearching) {
-        FriendsSearchResultsDropdown(
-            currentAccount = account,
-            results = suggestions.filter { it.uid != account.uid },
-            onBlockToggle = { other ->
-              if (account.relationships[other.uid] == RelationshipStatus.BLOCKED) {
-                viewModel.unblockUser(account, other)
-              } else {
-                viewModel.blockUser(account, other)
-              }
-            },
-            onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
-            onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-      } else {
-        Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_CONTENT))
-
-        Text(
-            text = FriendsManagementDefaults.SECTION_TITLE_FRIENDS,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier =
-                Modifier.padding(Dimensions.Padding.medium)
-                    .fillMaxWidth()
-                    .testTag(FriendsManagementTestTags.SECTION_TITLE_FRIENDS),
-        )
-
-        Spacer(Modifier.height(FriendsManagementDefaults.Layout.SECTION_TITLE_BOTTOM_PADDING))
-
-        FriendsList(
-            currentAccount = account,
-            friends = friends,
-            modifier = Modifier.fillMaxWidth(),
-            onBlockToggle = { friend ->
-              if (account.relationships[friend.uid] == RelationshipStatus.BLOCKED) {
-                viewModel.unblockUser(account, friend)
-              } else {
-                viewModel.blockUser(account, friend)
-              }
-            },
-            onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
-        )
-      }
+      FriendsManagementContent(
+          account = account,
+          friends = friends,
+          suggestions = suggestions,
+          searchQuery = searchQuery,
+          viewModel = viewModel,
+      )
     }
   }
 }
@@ -279,6 +243,72 @@ fun FriendsManagementScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 //  Composables
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Content area for the friends screen, displaying either search results or the friends list based
+ * on the search query.
+ *
+ * @param account The current user's account.
+ * @param friends The list of current friends.
+ * @param suggestions The list of user suggestions based on the search query.
+ * @param searchQuery The current search query.
+ * @param viewModel The ViewModel managing the profile screen state and actions.
+ */
+@Composable
+private fun FriendsManagementContent(
+    account: Account,
+    friends: List<Account>,
+    suggestions: List<Account>,
+    searchQuery: String,
+    viewModel: ProfileScreenViewModel,
+) {
+  val isSearching = searchQuery.isNotBlank() && suggestions.isNotEmpty()
+
+  if (isSearching) {
+    FriendsSearchResultsDropdown(
+        currentAccount = account,
+        results = suggestions.filter { it.uid != account.uid },
+        onBlockToggle = { other ->
+          if (account.relationships[other.uid] == RelationshipStatus.BLOCKED) {
+            viewModel.unblockUser(account, other)
+          } else {
+            viewModel.blockUser(account, other)
+          }
+        },
+        onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
+        onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
+        modifier = Modifier.fillMaxWidth(),
+    )
+  } else {
+    Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_CONTENT))
+
+    Text(
+        text = FriendsManagementDefaults.SECTION_TITLE_FRIENDS,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier =
+            Modifier.padding(Dimensions.Padding.medium)
+                .fillMaxWidth()
+                .testTag(FriendsManagementTestTags.SECTION_TITLE_FRIENDS),
+    )
+
+    Spacer(Modifier.height(FriendsManagementDefaults.Layout.SECTION_TITLE_BOTTOM_PADDING))
+
+    FriendsList(
+        currentAccount = account,
+        friends = friends,
+        modifier = Modifier.fillMaxWidth(),
+        onBlockToggle = { friend ->
+          if (account.relationships[friend.uid] == RelationshipStatus.BLOCKED) {
+            viewModel.unblockUser(account, friend)
+          } else {
+            viewModel.blockUser(account, friend)
+          }
+        },
+        onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
+    )
+  }
+}
 
 /**
  * Top bar for the Friends Management screen with a back button and title.
