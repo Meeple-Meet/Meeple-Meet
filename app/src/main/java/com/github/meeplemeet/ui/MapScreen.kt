@@ -345,15 +345,21 @@ fun MapScreen(
           return@Scaffold
         }
 
-        // --- Marker preview bottom sheet ---
-        uiState.selectedGeoPin?.let { geoPin ->
-          ModalBottomSheet(
-              sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
-                when {
-                  uiState.isLoadingPreview -> {
-                    MarkerPreviewLoadingSheet(geoPin = geoPin)
-                  }
-                  uiState.selectedMarkerPreview != null -> {
+        // --- Cluster bottom sheet OR Marker preview bottom sheet ---
+        // If a marker preview is selected we show the marker preview sheet (priority).
+        // Otherwise if selectedClusterPreviews is non-null we show cluster sheet.
+
+        val markerPreview = uiState.selectedMarkerPreview
+        val clusterPreviews = uiState.selectedClusterPreviews
+        val isLoading = uiState.isLoadingPreview
+
+        when {
+          markerPreview != null -> {
+            ModalBottomSheet(
+                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
+                  if (isLoading) {
+                    MarkerPreviewLoadingSheet(geoPin = uiState.selectedGeoPin!!)
+                  } else {
                     MarkerPreviewSheet(
                         preview = uiState.selectedMarkerPreview!!,
                         onClose = { viewModel.clearSelectedPin() },
@@ -361,7 +367,21 @@ fun MapScreen(
                         onRedirect = onRedirect)
                   }
                 }
-              }
+          }
+          clusterPreviews != null -> {
+            ModalBottomSheet(
+                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedCluster() }) {
+                  if (isLoading) {
+                    MarkerPreviewLoadingSheet(null)
+                  } else {
+                    ClusterPreviewSheet(
+                        clusterPreviews = clusterPreviews,
+                        onSelectPreview = { geoPin, preview ->
+                          viewModel.selectPinFromCluster(geoPin, preview)
+                        })
+                  }
+                }
+          }
         }
 
         // --- Map rendering ---
@@ -707,9 +727,11 @@ fun MapScreen(
         }
       }
 
-  /** Controls bottom sheet visibility based on whether a marker preview is available. */
-  LaunchedEffect(uiState.selectedMarkerPreview) {
-    if (uiState.selectedMarkerPreview != null) {
+  /** Controls bottom sheet visibility based on any selection (marker or cluster). */
+  LaunchedEffect(uiState.selectedMarkerPreview, uiState.selectedClusterPreviews) {
+    val shouldShow =
+        uiState.selectedMarkerPreview != null || uiState.selectedClusterPreviews != null
+    if (shouldShow) {
       coroutineScope.launch { sheetState.show() }
     } else {
       if (sheetState.isVisible) {
