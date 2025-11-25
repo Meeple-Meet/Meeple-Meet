@@ -244,7 +244,7 @@ class MainTabComposableTest : FirestoreTests() {
             account = accountState.value,
             onFriendsClick = { friendsClicked = true },
             onNotificationClick = { notifClicked = true },
-            onDelAcc = { delClicked = true },
+            onDelete = { delClicked = true },
             onSignOutOrDel = { logoutClicked = true })
       }
     }
@@ -346,7 +346,7 @@ class MainTabComposableTest : FirestoreTests() {
 
       compose.emailNotVerifiedLabel().assertExists()
       inputText(PrivateInfoTestTags.EMAIL_INPUT, "badlyformattedmail")
-      compose.emailErrorLabel().assertExists().assertTextEquals("Invalid Email")
+      compose.emailErrorLabel().assertExists().assertTextEquals("Invalid Email Format")
 
       inputText(PrivateInfoTestTags.EMAIL_INPUT, "newmail@example.com")
       compose.emailSendButton().performClick()
