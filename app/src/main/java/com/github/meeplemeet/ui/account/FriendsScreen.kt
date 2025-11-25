@@ -39,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -67,6 +66,7 @@ import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.Dimensions
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -363,7 +363,7 @@ fun FriendsSearchBar(
     onClearQuery: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  TextField(
+  FocusableInputField(
       value = query,
       onValueChange = onQueryChange,
       modifier =
