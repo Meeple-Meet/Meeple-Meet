@@ -12,6 +12,7 @@ import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
 import com.github.meeplemeet.ui.account.MainTab
 import com.github.meeplemeet.ui.account.NotificationsSectionTestTags
+import com.github.meeplemeet.ui.account.PrivateInfo
 import com.github.meeplemeet.ui.account.PrivateInfoTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -172,9 +173,8 @@ class MainTabComposableTest : FirestoreTests() {
   // =======================
   private fun ComposeTestRule.emailNotVerifiedLabel() =
       onTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL)
-
+    private fun ComposeTestRule.emailErrorLabel() = onTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL)
   private fun ComposeTestRule.emailSendButton() = onTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON)
-
   private fun ComposeTestRule.emailToast() = onTag(PrivateInfoTestTags.EMAIL_TOAST)
 
   // =======================
@@ -233,6 +233,7 @@ class MainTabComposableTest : FirestoreTests() {
     var friendsClicked = false
     var notifClicked = false
     var logoutClicked = false
+      var delClicked = false
 
     compose.setContent {
       AppTheme {
@@ -241,6 +242,7 @@ class MainTabComposableTest : FirestoreTests() {
             account = accountState.value,
             onFriendsClick = { friendsClicked = true },
             onNotificationClick = { notifClicked = true },
+            onDelAcc = { delClicked = true },
             onSignOut = { logoutClicked = true })
       }
     }
@@ -341,13 +343,12 @@ class MainTabComposableTest : FirestoreTests() {
       scrollToTag(PrivateInfoTestTags.EMAIL_SECTION)
 
       compose.emailNotVerifiedLabel().assertExists()
+        inputText(PrivateInfoTestTags.EMAIL_INPUT, "badlyformattedmail")
+        compose.emailErrorLabel().assertExists().assertTextEquals("Invalid Email")
 
-      inputText(PrivateInfoTestTags.EMAIL_INPUT, "newmail@example.com")
+        inputText(PrivateInfoTestTags.EMAIL_INPUT, "newmail@example.com")
+        compose.emailSendButton().performClick()
 
-      // Trigger verification
-      compose.emailSendButton().performClick()
-
-      // Toast visible
       compose.emailToast().assertExists()
       compose.publicInfoToast().assertExists()
       compose.waitForIdle()
@@ -448,6 +449,7 @@ class MainTabComposableTest : FirestoreTests() {
       compose.delAccountPopup().assertDoesNotExist()
       compose.delAccountBtn().performClick()
       compose.delAccountPopupConfirm().assertExists().performClick()
+        assert(delClicked)
       compose.waitForIdle()
     }
   }

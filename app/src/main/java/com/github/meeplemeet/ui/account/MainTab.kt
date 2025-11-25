@@ -147,6 +147,7 @@ object PrivateInfoTestTags {
 
   const val EMAIL_SEND_BUTTON = "email_send_verification_btn"
   const val EMAIL_TOAST = "email_section_toast"
+  const val EMAIL_ERROR_LABEL = "email_error_label"
 
   // ------------------------------------------------------------
   // ROLES SECTION
@@ -227,6 +228,7 @@ object MainTabUi {
     const val SEND_ICON_DESC = "Send verification meail"
     const val VERIFIED_MSG = "Email Verified"
     const val UNVERIFIED_MSG = "Email not Verified"
+    const val EMAIL_INVALID_MSG = "Invalid Email"
     const val ROLES_TITLE = "I also want to"
     const val SELL_ITEMS_LABEL = "Sell Items"
     const val SELL_ITEMS_DESC = "List your shop and games you sell"
@@ -251,8 +253,9 @@ object MainTabUi {
 }
 
 /**
- * Main tab of the profile screen. Displays all the account information that is
- * important and manageable by the user
+ * Main tab of the profile screen. Displays all the account information that is important and
+ * manageable by the user
+ *
  * @param viewModel the viewmodel used for this screen
  * @param account current user of the app
  * @param onFriendsClick callback to navigate to the friend's tab
@@ -325,6 +328,7 @@ fun MainTab(
 
 /**
  * Public info section composable. One of 3 sections of the MainTab screen
+ *
  * @param account Current user
  * @param viewModel viewModel used
  * @param onFriendsClick callback to navigate to the friend's tab
@@ -375,6 +379,7 @@ fun PublicInfo(
 
 /**
  * Composable representing all 3 buttons in the public info section
+ *
  * @param account Current user
  * @param viewModel viewmodel used by this screen
  * @param onFriendsClick callback to navigate to the friend's tab
@@ -455,9 +460,9 @@ fun PublicInfoActions(
       }
 }
 
-
 /**
  * Handles the input fields in that first section
+ *
  * @param account Current user
  * @param viewModel viewmodel used by this screen
  */
@@ -548,6 +553,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
 
 /**
  * Handles the avatar section of the user
+ *
  * @param viewModel viewmodel used by this screen
  * @param account Current user
  */
@@ -685,6 +691,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
 
 /**
  * Dialog upon editing the avatar
+ *
  * @param onDismiss callback upon dismissing
  * @param onCamera callback upon selecting camera
  * @param onGallery callback upon selecting gallery
@@ -756,6 +763,7 @@ fun AvatarChooserDialog(
 
 /**
  * Second section of the MainTab's screen. This one handles information only the user has access to
+ *
  * @param account Current user
  * @param viewModel viewmodel used by this screen
  */
@@ -811,6 +819,7 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
 
 /**
  * Handles everything related to the email field
+ *
  * @param email email of the user
  * @param isVerified whether the user has his email verified or not
  * @param onEmailChange callback upon email change
@@ -826,6 +835,10 @@ fun EmailSection(
     onSendVerification: () -> Unit
 ) {
   var toast by remember { mutableStateOf<ToastData?>(null) }
+  var localEmail by remember { mutableStateOf(email) }
+  var showErrors by remember { mutableStateOf(false) }
+
+  val emailError = showErrors && !isValidEmail(localEmail)
 
   Box(
       modifier =
@@ -842,9 +855,15 @@ fun EmailSection(
                 FocusableInputField(
                     label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
                     value = email,
-                    onValueChange = onEmailChange,
+                    onValueChange = { new ->
+                      localEmail = new
+                      onEmailChange(new)
+
+                      showErrors = new.isNotBlank()
+                    },
+                    isError = emailError,
                     trailingIcon = {
-                      if (!isVerified) {
+                      if (!isVerified && !emailError) {
                         IconButton(
                             modifier =
                                 Modifier.padding(top = Dimensions.Padding.small)
@@ -860,14 +879,27 @@ fun EmailSection(
                             }
                       }
                     },
-                    onFocusChanged = onFocusChanged,
+                    onFocusChanged = { focused ->
+                      if (!focused && !emailError) {
+                        onFocusChanged(false)
+                      } else onFocusChanged(focused)
+                    },
                     modifier =
                         Modifier.weight(Dimensions.Weight.full)
                             .testTag(PrivateInfoTestTags.EMAIL_INPUT))
               }
 
           Row {
-            if (isVerified) {
+            if (emailError) {
+              Text(
+                  text = MainTabUi.PrivateInfo.EMAIL_INVALID_MSG,
+                  color = AppColors.negative,
+                  style = MaterialTheme.typography.bodySmall,
+                  modifier =
+                      Modifier.padding(
+                              start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
+                          .testTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL))
+            } else if (isVerified) {
               Text(
                   text = MainTabUi.PrivateInfo.VERIFIED_MSG,
                   color = AppColors.affirmative,
@@ -885,6 +917,10 @@ fun EmailSection(
       }
 }
 
+/** Helper function used to validate the user's email */
+private fun isValidEmail(value: String): Boolean =
+    android.util.Patterns.EMAIL_ADDRESS.matcher(value).matches()
+
 data class ToastData(
     val message: String,
     val id: Long = System.currentTimeMillis() // unique per show
@@ -892,6 +928,7 @@ data class ToastData(
 
 /**
  * Handles the box of text that appears upon sending the verification email
+ *
  * @param toast Toastdata
  * @param duration How long till the popup dissapears
  * @param onToastFinished What to do when the duration has elapsed
@@ -932,6 +969,7 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
 
 /**
  * Handles everything related to the user's roles
+ *
  * @param account Current user
  * @param viewModel viewmodel used by this screen
  */
@@ -965,8 +1003,7 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
           showDialog = true
         } else {
           isShopChecked = true
-          viewModel.setAccountRole(
-              account, isShopOwner = true, isSpaceRenter = isSpaceRented)
+          viewModel.setAccountRole(account, isShopOwner = true, isSpaceRenter = isSpaceRented)
         }
       },
       label = MainTabUi.PrivateInfo.SELL_ITEMS_LABEL,
@@ -981,8 +1018,7 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
           showDialog = true
         } else {
           isSpaceRented = true
-          viewModel.setAccountRole(
-              account, isShopOwner = isShopChecked, isSpaceRenter = true)
+          viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = true)
         }
       },
       label = MainTabUi.PrivateInfo.RENT_SPACES_LABEL,
@@ -999,14 +1035,12 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
             RoleAction.ShopOff -> {
               // Todo: Delete user's shops from the platform
               isShopChecked = false
-              viewModel.setAccountRole(
-                  account, isShopOwner = false, isSpaceRenter = isSpaceRented)
+              viewModel.setAccountRole(account, isShopOwner = false, isSpaceRenter = isSpaceRented)
             }
             RoleAction.SpaceOff -> {
               // Todo: Delete user's spaces from the platform
               isSpaceRented = false
-              viewModel.setAccountRole(
-                  account, isShopOwner = isShopChecked, isSpaceRenter = false)
+              viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = false)
             }
             else -> {}
           }
@@ -1027,6 +1061,7 @@ private enum class RoleAction {
 
 /**
  * Handles the dialog that pops upon removal of a role
+ *
  * @param visible whether this popup is visible
  * @param action Differentiates between removing Shop/SpaceRenter role
  * @param onConfirm callback upon confirmation
@@ -1098,6 +1133,7 @@ enum class NotificationPreference {
 
 /**
  * Handles the notification settings section
+ *
  * @param preference The user's selected preference
  * @param onPreferenceChange callback invoked upon change of preference
  */
@@ -1141,6 +1177,7 @@ fun NotificationSettingsSection(
 
 /**
  * Composable used for the rows options between notification settings
+ *
  * @param label Description of the option
  * @param selected Whether this option is currently selected
  * @param onClick callback invoked upon click
@@ -1168,6 +1205,7 @@ private fun NotificationOptionRow(
 
 /**
  * Handles the delete account dialog
+ *
  * @param show Whether this dialog is visible
  * @param onCancel callback upon cancellation of the operation
  * @param onConfirm callback upon confirmation
