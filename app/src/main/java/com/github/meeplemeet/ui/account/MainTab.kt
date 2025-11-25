@@ -165,6 +165,21 @@ object PrivateInfoTestTags {
   const val ROLE_DIALOG_TEXT = "roles_remove_dialog_text"
 }
 
+object NotificationsSectionTestTags {
+    const val NOTIFICATION_SECTION_TITLE = "notification_section_title"
+    const val RADIO_EVERYONE = "radio_everyone"
+    const val RADIO_FRIENDS = "radio_friends"
+    const val RADIO_NONE = "radio_none"
+}
+
+object DeleteAccSectionTestTags {
+    const val BUTTON = "delete_acc_button"
+    const val POPUP = "delete_acc_popup"
+    const val CONFIRM = "delete_acc_popup_confirm"
+    const val CANCEL = "delete_acc_popup_cancel"
+}
+
+
 @Composable
 fun MainTab(
     viewModel: ProfileScreenViewModel = viewModel(),
@@ -183,6 +198,9 @@ fun MainTab(
               .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge),
       horizontalAlignment = Alignment.CenterHorizontally) {
+        var pref by remember { mutableStateOf(NotificationPreference.EVERYONE) }
+        var showDelDialog by remember { mutableStateOf(false) }
+
         PublicInfo(
             account = account,
             viewModel = viewModel,
@@ -192,9 +210,29 @@ fun MainTab(
 
         PrivateInfo(account = account, viewModel = viewModel)
 
-        var pref by remember { mutableStateOf(NotificationPreference.EVERYONE) }
-
         NotificationSettingsSection(preference = pref, onPreferenceChange = { pref = it })
+
+        Button(
+            onClick = { showDelDialog = true },
+            shape = RoundedCornerShape(8.dp),
+            elevation = ButtonDefaults.buttonElevation(2.dp),
+            modifier = Modifier.testTag(DeleteAccSectionTestTags.BUTTON),
+            colors =
+                ButtonColors(
+                    containerColor = AppColors.negative,
+                    disabledContainerColor = AppColors.negative,
+                    contentColor = AppColors.textIcons,
+                    disabledContentColor = AppColors.textIcons)) {
+              Text("Delete Account")
+            }
+
+        DeleteAccountDialog(
+            showDelDialog,
+            onCancel = { showDelDialog = false },
+            onConfirm = {
+              showDelDialog = false
+              viewModel.deleteAccount(account)
+            })
       }
 }
 
@@ -303,11 +341,11 @@ fun PublicInfoActions(
                 ButtonDefaults.buttonColors(
                     containerColor = AppColors.textIconsFade,
                     disabledContainerColor = AppColors.textIconsFade,
-                    contentColor = Color.Transparent,
-                    disabledContentColor = Color.Transparent),
+                    contentColor = AppColors.primary,
+                    disabledContentColor = AppColors.primary),
             shape = RoundedCornerShape(14.dp),
             elevation = ButtonDefaults.buttonElevation(4.dp)) {
-              Text("Logout", color = AppColors.primary)
+              Text("Logout")
             }
       }
 }
@@ -508,6 +546,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   // --- Permission denied ---
   if (showPermissionDenied) {
     AlertDialog(
+        containerColor = AppColors.primary,
         modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_DIALOG),
         onDismissRequest = { showPermissionDenied = false },
         title = { Text(text = "Permission denied") },
@@ -894,25 +933,28 @@ fun NotificationSettingsSection(
   Column(
       modifier =
           Modifier.fillMaxWidth()
-//              .padding(16.dp)
               .clip(RoundedCornerShape(20.dp))
               .background(AppColors.secondary)
               .padding(20.dp)) {
-        Text(text = "Notification settings", style = MaterialTheme.typography.titleMedium)
+        Text(text = "Notification settings", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag(
+            NotificationsSectionTestTags.NOTIFICATION_SECTION_TITLE))
 
         Spacer(Modifier.height(12.dp))
 
         NotificationOptionRow(
+            modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_EVERYONE),
             label = "Accept notifications from everyone",
             selected = preference == NotificationPreference.EVERYONE,
             onClick = { onPreferenceChange(NotificationPreference.EVERYONE) })
 
         NotificationOptionRow(
+            modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_FRIENDS),
             label = "Accept notifications from friends only",
             selected = preference == NotificationPreference.FRIENDS_ONLY,
             onClick = { onPreferenceChange(NotificationPreference.FRIENDS_ONLY) })
 
         NotificationOptionRow(
+            modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_NONE),
             label = "Accept notifications from no one",
             selected = preference == NotificationPreference.NO_ONE,
             onClick = { onPreferenceChange(NotificationPreference.NO_ONE) })
@@ -920,12 +962,50 @@ fun NotificationSettingsSection(
 }
 
 @Composable
-private fun NotificationOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun NotificationOptionRow(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
   Row(
-      modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
+      modifier = modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
       verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = onClick)
         Spacer(Modifier.width(8.dp))
         Text(text = label)
       }
+}
+
+@Composable
+fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
+  if (show) {
+    AlertDialog(
+        containerColor = AppColors.primary,
+        modifier = Modifier.testTag(DeleteAccSectionTestTags.POPUP),
+        onDismissRequest = onCancel,
+        title = { Text("Delete account") },
+        text = { Text("Do you really want to delete your account?") },
+        confirmButton = {
+          TextButton(
+              onClick = onConfirm,
+              modifier = Modifier.testTag(DeleteAccSectionTestTags.CONFIRM),
+              colors =
+                  ButtonColors(
+                      containerColor = AppColors.negative,
+                      disabledContentColor = AppColors.negative,
+                      contentColor = AppColors.textIcons,
+                      disabledContainerColor = AppColors.textIcons)) {
+                Text("Confirm")
+              }
+        },
+        dismissButton = {
+          TextButton(
+              onClick = onCancel,
+              modifier = Modifier.testTag(DeleteAccSectionTestTags.CANCEL),
+              colors =
+                  ButtonColors(
+                      containerColor = AppColors.affirmative,
+                      disabledContentColor = AppColors.affirmative,
+                      contentColor = AppColors.textIcons,
+                      disabledContainerColor = AppColors.textIcons)) {
+                Text("Cancel")
+              }
+        })
+  }
 }

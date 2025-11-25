@@ -9,7 +9,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountNoUid
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
 import com.github.meeplemeet.ui.account.MainTab
+import com.github.meeplemeet.ui.account.NotificationsSectionTestTags
 import com.github.meeplemeet.ui.account.PrivateInfoTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -91,9 +93,6 @@ class MainTabComposableTest : FirestoreTests() {
     }
   }
 
-  /** Ensures a toast is visible and returns the node. */
-  private fun expectToast(tag: String) = compose.onTag(tag).assertExists()
-
   /** Clears and types text into an input field. */
   private fun inputText(tag: String, value: String) {
     compose.onTag(tag).performTextClearance()
@@ -117,99 +116,79 @@ class MainTabComposableTest : FirestoreTests() {
   // AVATAR SECTION
   // =======================
   private fun ComposeTestRule.avatarContainer() = onTag(PublicInfoTestTags.AVATAR_CONTAINER)
-
-  private fun ComposeTestRule.avatarImage() = onTag(PublicInfoTestTags.AVATAR_IMAGE)
-
   private fun ComposeTestRule.avatarPlaceholder() = onTag(PublicInfoTestTags.AVATAR_PLACEHOLDER)
-
   private fun ComposeTestRule.avatarEditIcon() = onTag(PublicInfoTestTags.AVATAR_EDIT_ICON)
 
   private fun ComposeTestRule.avatarChooserDialog() =
       onTag(PublicInfoTestTags.AVATAR_CHOOSER_DIALOG)
-
   private fun ComposeTestRule.avatarChooserCamera() =
       onTag(PublicInfoTestTags.AVATAR_CHOOSER_CAMERA)
-
   private fun ComposeTestRule.avatarChooserGallery() =
       onTag(PublicInfoTestTags.AVATAR_CHOOSER_GALLERY)
-
   private fun ComposeTestRule.avatarChooserRemove() =
       onTag(PublicInfoTestTags.AVATAR_CHOOSER_REMOVE)
-
   private fun ComposeTestRule.avatarChooserCancel() =
       onTag(PublicInfoTestTags.AVATAR_CHOOSER_CANCEL)
-
-  private fun ComposeTestRule.cameraPermissionDialog() =
-      onTag(PublicInfoTestTags.CAMERA_PERMISSION_DIALOG)
-
-  private fun ComposeTestRule.cameraPermissionOk() = onTag(PublicInfoTestTags.CAMERA_PERMISSION_OK)
 
   // =======================
   // PUBLIC INFO ACTIONS
   // =======================
   private fun ComposeTestRule.actionFriends() = onTag(PublicInfoTestTags.ACTION_FRIENDS)
-
   private fun ComposeTestRule.actionNotifications() = onTag(PublicInfoTestTags.ACTION_NOTIFICATIONS)
-
   private fun ComposeTestRule.actionLogout() = onTag(PublicInfoTestTags.ACTION_LOGOUT)
 
   // =======================
   // PUBLIC INFO INPUTS
   // =======================
   private fun ComposeTestRule.usernameField() = onTag(PublicInfoTestTags.INPUT_USERNAME)
-
   private fun ComposeTestRule.usernameError() = onTag(PublicInfoTestTags.ERROR_USERNAME)
-
   private fun ComposeTestRule.handleField() = onTag(PublicInfoTestTags.INPUT_HANDLE)
-
   private fun ComposeTestRule.handleError() = onTag(PublicInfoTestTags.ERROR_HANDLE)
-
   private fun ComposeTestRule.descriptionField() = onTag(PublicInfoTestTags.INPUT_DESCRIPTION)
-
   private fun ComposeTestRule.publicInfoToast() = onTag(PublicInfoTestTags.GLOBAL_TOAST)
 
   // =======================
   // PRIVATE INFO SECTION
   // =======================
   private fun ComposeTestRule.privateInfoRoot() = onTag(PrivateInfoTestTags.PRIVATE_INFO)
-
   private fun ComposeTestRule.privateInfoTitle() = onTag(PrivateInfoTestTags.PRIVATE_INFO_TITLE)
 
   // =======================
   // EMAIL SECTION
   // =======================
-  private fun ComposeTestRule.emailSection() = onTag(PrivateInfoTestTags.EMAIL_SECTION)
-
-  private fun ComposeTestRule.emailInput() = onTag(PrivateInfoTestTags.EMAIL_INPUT)
-
-  private fun ComposeTestRule.emailVerifiedLabel() = onTag(PrivateInfoTestTags.EMAIL_VERIFIED_LABEL)
-
   private fun ComposeTestRule.emailNotVerifiedLabel() =
       onTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL)
-
   private fun ComposeTestRule.emailSendButton() = onTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON)
-
   private fun ComposeTestRule.emailToast() = onTag(PrivateInfoTestTags.EMAIL_TOAST)
 
   // =======================
   // ROLES SECTION
   // =======================
   private fun ComposeTestRule.rolesTitle() = onTag(PrivateInfoTestTags.ROLES_SECTION_TITLE)
-
   private fun ComposeTestRule.roleShopCheckbox() = onTag(PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
-
   private fun ComposeTestRule.roleSpaceCheckbox() = onTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
 
   // =======================
   // ROLE REMOVAL DIALOG
   // =======================
   private fun ComposeTestRule.roleDialog() = onTag(PrivateInfoTestTags.ROLE_DIALOG)
-
   private fun ComposeTestRule.roleDialogConfirm() = onTag(PrivateInfoTestTags.ROLE_DIALOG_CONFIRM)
-
   private fun ComposeTestRule.roleDialogCancel() = onTag(PrivateInfoTestTags.ROLE_DIALOG_CANCEL)
-
   private fun ComposeTestRule.rolesDialogText() = onTag(PrivateInfoTestTags.ROLE_DIALOG_TEXT)
+
+
+    // NOTIFICATION SECTION
+    private fun ComposeTestRule.notifRadioNone() = onTag(NotificationsSectionTestTags.RADIO_NONE)
+    private fun ComposeTestRule.notifTitle() = onTag(NotificationsSectionTestTags.NOTIFICATION_SECTION_TITLE)
+    private fun ComposeTestRule.notifRadioEvery() = onTag(NotificationsSectionTestTags.RADIO_EVERYONE)
+    private fun ComposeTestRule.notifRadioFriends() = onTag(NotificationsSectionTestTags.RADIO_FRIENDS)
+
+    // DELETE ACCOUNT
+
+    private fun ComposeTestRule.delAccountBtn() = onTag(DeleteAccSectionTestTags.BUTTON)
+    private fun ComposeTestRule.delAccountPopup() = onTag(DeleteAccSectionTestTags.POPUP)
+    private fun ComposeTestRule.delAccountPopupConfirm() = onTag(DeleteAccSectionTestTags.CONFIRM)
+    private fun ComposeTestRule.delAccountPopupCancel() = onTag(DeleteAccSectionTestTags.CANCEL)
 
   /// Other helpers
 
@@ -223,15 +202,18 @@ class MainTabComposableTest : FirestoreTests() {
 
     // Local state wrapper so changes propagate to UI as in your other screens
     val accountState = mutableAccount(user)
+      var friendsClicked = false
+      var notifClicked = false
+      var logoutClicked = false
 
     compose.setContent {
       AppTheme {
         MainTab(
             viewModel = profileVM,
             account = accountState.value,
-            onFriendsClick = {},
-            onNotificationClick = {},
-            onSignOut = {})
+            onFriendsClick = {friendsClicked = true},
+            onNotificationClick = {notifClicked = true},
+            onSignOut = {logoutClicked = true})
       }
     }
 
@@ -246,12 +228,15 @@ class MainTabComposableTest : FirestoreTests() {
       compose.usernameField().assertTextEquals("testUser")
       compose.handleField().assertTextEquals("@tester")
       compose.descriptionField().assertTextEquals("")
+        compose.waitForIdle()
+
     }
 
     // ---------------------------------------------------------------------
     checkpoint("avatar_shows_chooser_and_handles_cancel") {
       scrollToTag(PublicInfoTestTags.AVATAR_CONTAINER)
       compose.avatarContainer().performClick()
+        compose.avatarEditIcon().assertExists()
 
       compose.avatarChooserDialog().assertExists()
 
@@ -260,7 +245,21 @@ class MainTabComposableTest : FirestoreTests() {
       compose.avatarChooserRemove().assertExists().performClick()
       compose.avatarChooserCancel().assertExists().performClick()
       compose.avatarChooserDialog().assertDoesNotExist()
+        compose.waitForIdle()
+
     }
+
+      checkpoint("button_callbacks_are_handled")
+      {
+          compose.actionFriends().assertExists().performClick()
+          assert(friendsClicked)
+          compose.actionNotifications().assertExists().performClick()
+          assert(notifClicked)
+          compose.actionLogout().assertExists().performClick()
+          assert(logoutClicked)
+          compose.waitForIdle()
+
+      }
 
     // ---------------------------------------------------------------------
     checkpoint("username_blank_shows_error_and_can_be_fixed") {
@@ -273,6 +272,8 @@ class MainTabComposableTest : FirestoreTests() {
       // Fix the username
       inputText(PublicInfoTestTags.INPUT_USERNAME, "NewName")
       compose.usernameError().assertDoesNotExist()
+        compose.waitForIdle()
+
     }
 
     // ---------------------------------------------------------------------
@@ -295,6 +296,8 @@ class MainTabComposableTest : FirestoreTests() {
 
       inputText(PublicInfoTestTags.INPUT_HANDLE, "tester") // Original handle, should be OK
       compose.handleError().assertDoesNotExist()
+        compose.waitForIdle()
+
     }
 
     // ---------------------------------------------------------------------
@@ -308,6 +311,8 @@ class MainTabComposableTest : FirestoreTests() {
     checkpoint("Private info section renders") {
       compose.privateInfoRoot().assertExists()
       compose.privateInfoTitle().assertExists()
+        compose.waitForIdle()
+
     }
 
     // ---------------------------------------------------------------------
@@ -323,6 +328,8 @@ class MainTabComposableTest : FirestoreTests() {
 
       // Toast visible
       compose.emailToast().assertExists()
+        compose.publicInfoToast().assertExists()
+        compose.waitForIdle()
     }
 
     // ---------------------------------------------------------------------
@@ -333,6 +340,7 @@ class MainTabComposableTest : FirestoreTests() {
       compose.waitForIdle()
       compose.onRoot().performTouchInput { swipeUp() }
 
+        compose.rolesTitle().assertExists()
       // Toggle on for the first time == no dialog
       compose.roleShopCheckbox().assertExists().performClick()
       compose.roleDialog().assertDoesNotExist()
@@ -352,6 +360,8 @@ class MainTabComposableTest : FirestoreTests() {
 
       compose.roleDialogConfirm().performClick()
       compose.roleDialog().assertDoesNotExist()
+        compose.waitForIdle()
+
     }
 
     // ---------------------------------------------------------------------
@@ -379,6 +389,49 @@ class MainTabComposableTest : FirestoreTests() {
 
       compose.roleDialogConfirm().performClick()
       compose.roleDialog().assertDoesNotExist()
+        compose.waitForIdle()
+
     }
+
+      checkpoint("Notifications section exists and works well")
+      {
+          compose.onRoot().performTouchInput {
+              swipeUp()
+          }
+
+          compose.notifTitle().assertExists()
+          compose.notifRadioEvery().assertExists().performClick()
+          compose.notifRadioEvery()
+              .onChildren()
+              .filterToOne(hasClickAction() or hasSetTextAction())
+              .assertIsSelected()
+
+          compose.notifRadioFriends().assertExists().performClick()
+          compose.notifRadioFriends()              .onChildren()
+              .filterToOne(hasClickAction() or hasSetTextAction())
+              .assertIsSelected()
+
+          compose.notifRadioNone().assertExists().performClick()
+          compose.notifRadioNone() .onChildren()
+              .filterToOne(hasClickAction() or hasSetTextAction())
+              .assertIsSelected()
+          compose.waitForIdle()
+
+      }
+
+      checkpoint("Delete button user flow")
+      {
+          compose.onRoot().performTouchInput {
+              swipeUp()
+          }
+
+          compose.delAccountBtn().assertExists().performClick()
+          compose.delAccountPopup().assertExists()
+          compose.delAccountPopupCancel().assertExists().performClick()
+          compose.delAccountPopup().assertDoesNotExist()
+          compose.delAccountBtn().performClick()
+          compose.delAccountPopupConfirm().assertExists().performClick()
+          compose.waitForIdle()
+      }
   }
 }
