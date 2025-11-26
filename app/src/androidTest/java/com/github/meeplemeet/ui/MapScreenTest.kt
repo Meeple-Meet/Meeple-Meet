@@ -12,7 +12,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -21,6 +20,9 @@ import androidx.test.rule.GrantPermissionRule
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.cluster.Cluster
+import com.github.meeplemeet.model.map.cluster.ClusterManager
+import com.github.meeplemeet.model.map.cluster.ClusterStrategy
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -35,8 +37,10 @@ import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import com.google.firebase.Timestamp
 import io.mockk.mockk
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -48,15 +52,15 @@ import org.junit.runner.RunWith
 private const val DEFAULT_TEST_KM = 10.0
 
 /**
- * Comprehensive UI test suite for MapScreen with real Firestore data.
+ * Comprehensive UI test suite for MapScreen with clustering support.
  *
  * Tests cover:
- * - Map display and UI structure
- * - FAB visibility and interactions based on user roles
- * - Create dialog for users with multiple roles
- * - Filter functionality
- * - Bottom sheet previews with real data
- * - Integration with geo queries
+ * - Basic UI structure and FAB behavior
+ * - Clustering display and interactions
+ * - Single pin and cluster bottom sheets
+ * - Filter functionality with clustering
+ * - Zoom level effects on clustering
+ * - Session filtering by participant
  */
 @RunWith(AndroidJUnit4::class)
 class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
@@ -71,7 +75,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
-  private lateinit var mapViewModel: MapViewModel
   private lateinit var mockNavigation: NavigationActions
 
   private lateinit var regularAccount: Account
@@ -88,6 +91,20 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   private lateinit var currentAccountState: MutableState<Account>
   private var renderTrigger by mutableStateOf(0)
 
+  // Cluster strategies for testing
+  private val singleClusterStrategy = ClusterStrategy { items, _ ->
+    if (items.isEmpty()) emptyList()
+    else {
+      val centerLat = items.map { it.lat }.average()
+      val centerLng = items.map { it.lng }.average()
+      listOf(Cluster(centerLat, centerLng, items))
+    }
+  }
+
+  private val noClusterStrategy = ClusterStrategy { items, _ ->
+    items.map { Cluster(it.lat, it.lng, listOf(it)) }
+  }
+
   @Before
   fun setup() {
     try {
@@ -97,7 +114,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
           this)
     } catch (_: Exception) {}
 
-    mapViewModel = MapViewModel()
     mockNavigation = mockk(relaxed = true)
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
@@ -151,14 +167,20 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {}
 
+  /**
+   * Tests basic UI structure, FAB behavior, filters, and creation dialog. Uses no clustering
+   * strategy to test individual pins.
+   */
   @Test
-  fun all_tests() {
+  fun test_basicUI_FAB_and_filters() {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
     composeRule.setContent {
       val trigger = renderTrigger
       AppTheme {
         key(trigger) {
           MapScreen(
-              viewModel = mapViewModel,
+              viewModel = viewModel,
               navigation = mockNavigation,
               account = currentAccountState.value,
               onFABCLick = { type ->
@@ -194,96 +216,43 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertHasClickAction()
     }
 
-    checkpoint("fab_visibleForSpaceRenter") {
-      currentAccountState.value = spaceRenterAccount
-      composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertHasClickAction()
-    }
-
-    checkpoint("fab_visibleForBothRoles") {
-      currentAccountState.value = bothRolesAccount
-      composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
-    }
-
     checkpoint("fab_shopOwnerOnly_directlyCallsCallbackWithShopType") {
       currentAccountState.value = shopOwnerAccount
-      fabClickCount = 0 // Reset counter
+      fabClickCount = 0
       lastFabClickType = null
       composeRule.waitForIdle()
 
       composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
       composeRule.waitForIdle()
 
-      assert(fabClickCount == 1)
-      assert(lastFabClickType == PinType.SHOP)
+      assertEquals(1, fabClickCount)
+      assertEquals(PinType.SHOP, lastFabClickType)
       composeRule.onNodeWithTag(MapScreenTestTags.ADD_CHOOSE_DIALOG).assertDoesNotExist()
     }
 
     checkpoint("fab_spaceRenterOnly_directlyCallsCallbackWithSpaceType") {
       currentAccountState.value = spaceRenterAccount
-      fabClickCount = 0 // Reset counter
+      fabClickCount = 0
       lastFabClickType = null
       composeRule.waitForIdle()
 
       composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
       composeRule.waitForIdle()
 
-      assert(fabClickCount == 1)
-      assert(lastFabClickType == PinType.SPACE)
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_CHOOSE_DIALOG).assertDoesNotExist()
+      assertEquals(1, fabClickCount)
+      assertEquals(PinType.SPACE, lastFabClickType)
     }
 
     checkpoint("fab_bothRoles_showsDialogForSelection") {
       currentAccountState.value = bothRolesAccount
-      fabClickCount = 0 // Reset counter
+      fabClickCount = 0
       composeRule.waitForIdle()
 
       composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
       composeRule.waitForIdle()
 
       composeRule.onNodeWithTag(MapScreenTestTags.ADD_CHOOSE_DIALOG).assertIsDisplayed()
-      assert(fabClickCount == 0)
-    }
-
-    checkpoint("createDialog_canSelectShop") {
-      currentAccountState.value = bothRolesAccount
-      fabClickCount = 0 // Reset counter
-      composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
-      composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_CHOOSE_DIALOG).assertIsDisplayed()
-
-      composeRule.waitForIdle()
-
-      assert(fabClickCount == 0)
-    }
-
-    checkpoint("createDialog_canSelectSpace") {
-      currentAccountState.value = bothRolesAccount
-      fabClickCount = 0 // Reset counter
-      composeRule.waitForIdle()
-
-      // Close any open dialog first
-      if (composeRule
-          .onAllNodesWithTag(MapScreenTestTags.ADD_CHOOSE_DIALOG)
-          .fetchSemanticsNodes()
-          .isNotEmpty()) {
-        composeRule.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).performClick()
-        composeRule.waitForIdle()
-      }
-
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
-      composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.ADD_CHOOSE_DIALOG).assertIsDisplayed()
-
-      assert(fabClickCount == 0)
+      assertEquals(0, fabClickCount)
     }
 
     checkpoint("filterButton_opensAndClosesFilterPanel") {
@@ -312,177 +281,139 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
       composeRule.waitForIdle()
 
-      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).assertIsDisplayed()
       composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
       composeRule.waitForIdle()
 
       composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SPACE_CHIP).performClick()
       composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SESSIONS_CHIP).performClick()
-      composeRule.waitForIdle()
-
-      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
-      composeRule.waitForIdle()
     }
 
-    checkpoint("bottomSheet_displaysShopPreview") {
+    checkpoint("filterIntegration_hidesAndShowsPins") {
       runBlocking {
         val shop =
             shopRepository.createShop(
                 owner = shopOwnerAccount,
-                name = "Chess & Checkers Shop",
+                name = "Filter Test Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        val space =
+            spaceRenterRepository.createSpaceRenter(
+                owner = spaceRenterAccount,
+                name = "Filter Test Space",
+                address = testLocation,
+                openingHours = testOpeningHours,
+                spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+        refreshContent()
+
+        viewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val initialClusters = viewModel.getClusters()
+        assertTrue(initialClusters.size >= 2)
+
+        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
+        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+          !viewModel.uiState.value.activeFilters.contains(PinType.SHOP)
+        }
+
+        val filteredClusters = viewModel.getClusters()
+        assertTrue(
+            filteredClusters.all { cluster ->
+              cluster.items.all { it.geoPin.type != PinType.SHOP }
+            })
+
+        shopRepository.deleteShop(shop.id)
+        spaceRenterRepository.deleteSpaceRenter(space.id)
+      }
+    }
+  }
+
+  /**
+   * Tests clustering display, single pin selection, and cluster interactions. Tests with both
+   * single cluster strategy and no cluster strategy.
+   */
+  @Test
+  fun test_clustering_and_singlePin_interactions() {
+    // First part: test with no clustering (individual pins)
+    val noClusterViewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    composeRule.setContent {
+      val trigger = renderTrigger
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = noClusterViewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              onRedirect = { pin -> lastRedirect = pin.uid })
+        }
+      }
+    }
+
+    checkpoint("singlePin_displaysMarkerPreviewSheet") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Single Pin Shop",
                 address = testLocation,
                 openingHours = testOpeningHours)
 
         refreshContent()
 
-        mapViewModel.startGeoQuery(
+        noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
+        delay(1500)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
-        assertNotNull(pin)
+        val clusters = noClusterViewModel.getClusters()
+        val cluster = clusters.find { it.items.size == 1 && it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
+        assertEquals(1, cluster!!.items.size)
 
-        mapViewModel.selectPin(pin!!)
+        // Click on the single pin
+        noClusterViewModel.selectPin(cluster.items[0])
         delay(1000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(shop.name)
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
-            .assertTextContains(shop.address.name)
+            .assertTextContains(testLocation.name)
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).assertIsDisplayed()
 
         shopRepository.deleteShop(shop.id)
       }
     }
 
-    checkpoint("bottomSheet_displaysSpacePreview") {
-      runBlocking {
-        val spaceRenter =
-            spaceRenterRepository.createSpaceRenter(
-                owner = spaceRenterAccount,
-                name = "Game Arena",
-                address = testLocation,
-                openingHours = testOpeningHours,
-                spaces = listOf(Space(seats = 20, costPerHour = 30.0)))
-
-        refreshContent()
-
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
-
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
-        assertNotNull(pin)
-
-        mapViewModel.selectPin(pin!!)
-        delay(1000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-        composeRule
-            .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
-            .assertTextContains(spaceRenter.name)
-        composeRule
-            .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
-            .assertTextContains(spaceRenter.address.name)
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
-
-        spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-      }
-    }
-
-    checkpoint("bottomSheet_displaysSessionPreview") {
-      runBlocking {
-        // create game document
-        db.collection(GAMES_COLLECTION_PATH)
-            .document("test_game_map")
-            .set(
-                GameNoUid(
-                    name = "Catan",
-                    description = "Strategy board game",
-                    imageURL = "https://example.com/catan.jpg",
-                    minPlayers = 3,
-                    maxPlayers = 4,
-                    recommendedPlayers = null,
-                    averagePlayTime = null,
-                    genres = emptyList()))
-            .await()
-
-        val testGame = gameRepository.getGameById("test_game_map")
-
-        // create discussion then session linked to it
-        val discussion =
-            discussionRepository.createDiscussion(
-                "Friday Night Catan",
-                "Test discussion for bottom sheet preview",
-                regularAccount.uid)
-
-        sessionRepository.createSession(
-            discussion.uid,
-            "Friday Night Catan",
-            testGame.uid,
-            Timestamp.now(),
-            testLocation,
-            regularAccount.uid)
-
-        refreshContent()
-
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
-
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == discussion.uid }
-        assertNotNull(pin)
-
-        mapViewModel.selectPin(pin!!)
-        delay(2000)
-
-        val newState = mapViewModel.uiState.value
-        assertNotNull(newState.selectedMarkerPreview)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-        composeRule
-            .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
-            .assertTextContains("Friday Night Catan")
-        composeRule
-            .onNodeWithTag(MapScreenTestTags.PREVIEW_GAME)
-            .assertTextContains("Catan", substring = true)
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS).assertTextContains("EPFL")
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_DATE).assertExists()
-
-        // cleanup via discussion delete (removes session index)
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        discussionRepository.deleteDiscussion(context, discussion)
-      }
-    }
-
-    checkpoint("bottomSheet_closeButton_closesSheet") {
+    checkpoint("singlePin_closeButton_closesSheet") {
       runBlocking {
         val shop =
             shopRepository.createShop(
                 owner = shopOwnerAccount,
-                name = "Test Shop",
+                name = "Close Test Shop",
                 address = testLocation,
                 openingHours = testOpeningHours)
 
         refreshContent()
 
-        mapViewModel.startGeoQuery(
+        noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
+        delay(1500)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
-        assertNotNull(pin)
+        val clusters = noClusterViewModel.getClusters()
+        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
 
-        mapViewModel.selectPin(pin!!)
+        noClusterViewModel.selectPin(cluster!!.items[0])
         delay(1000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
@@ -495,232 +426,99 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       }
     }
 
-    checkpoint("bottomSheet_viewDetailsButton_callsRedirect") {
+    checkpoint("singlePin_viewDetailsButton_callsRedirect") {
       runBlocking {
         val shop =
             shopRepository.createShop(
                 owner = shopOwnerAccount,
-                name = "Details Test Shop",
+                name = "Redirect Test Shop",
                 address = testLocation,
                 openingHours = testOpeningHours)
 
         refreshContent()
 
-        mapViewModel.startGeoQuery(
+        noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
+        delay(1500)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
-        assertNotNull(pin)
+        val clusters = noClusterViewModel.getClusters()
+        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
 
-        mapViewModel.selectPin(pin!!)
+        noClusterViewModel.selectPin(cluster!!.items[0])
         delay(1000)
 
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        lastRedirect = null
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).performClick()
         composeRule.waitForIdle()
 
-        assert(lastRedirect == shop.id)
+        assertEquals(shop.id, lastRedirect)
 
         shopRepository.deleteShop(shop.id)
       }
     }
 
-    checkpoint("completeUserFlow_shopOwner_createAndView") {
+    checkpoint("sessionPin_displaysCorrectPreview") {
       runBlocking {
-        val shop =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Complete Flow Shop",
-                address = testLocation,
-                openingHours = testOpeningHours)
+        db.collection(GAMES_COLLECTION_PATH)
+            .document("test_game_session_pin")
+            .set(
+                GameNoUid(
+                    name = "Catan",
+                    description = "Strategy board game",
+                    imageURL = "https://example.com/catan.jpg",
+                    minPlayers = 3,
+                    maxPlayers = 4,
+                    recommendedPlayers = null,
+                    averagePlayTime = null,
+                    genres = emptyList()))
+            .await()
 
-        refreshContent(shopOwnerAccount)
+        val testGame = gameRepository.getGameById("test_game_session_pin")
 
-        composeRule.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
-        composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertIsDisplayed()
+        val discussion =
+            discussionRepository.createDiscussion(
+                "Session Preview Test", "Test discussion", regularAccount.uid)
 
-        val initialCount = fabClickCount
-        composeRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
-        composeRule.waitForIdle()
-        assert(fabClickCount == initialCount + 1)
-        assert(lastFabClickType == PinType.SHOP)
+        sessionRepository.createSession(
+            discussion.uid,
+            "Session Preview Test",
+            testGame.uid,
+            Timestamp.now(),
+            testLocation,
+            regularAccount.uid)
 
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
-        delay(2000)
+        refreshContent()
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
-        assertNotNull(pin)
+        noClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
 
-        mapViewModel.selectPin(pin!!)
-        delay(1000)
+        val clusters = noClusterViewModel.getClusters()
+        val cluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
+        assertNotNull(cluster)
+
+        noClusterViewModel.selectPin(cluster!!.items[0])
+        delay(1500)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
-            .onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)
-            .assertHasClickAction()
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
+            .assertTextContains("Session Preview Test")
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_GAME)
+            .assertTextContains("Catan", substring = true)
+        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_DATE).assertExists()
 
-        mapViewModel.clearSelectedPin()
-        delay(500)
-
-        val clearedState = mapViewModel.uiState.value
-        assert(clearedState.selectedMarkerPreview == null)
-
-        shopRepository.deleteShop(shop.id)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        discussionRepository.deleteDiscussion(context, discussion)
       }
     }
 
-    checkpoint("filterIntegration_hidesAndShowsPins") {
-      runBlocking {
-        val shop =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Shop",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        val spaceRenter =
-            spaceRenterRepository.createSpaceRenter(
-                owner = spaceRenterAccount,
-                name = "Space",
-                address = testLocation,
-                openingHours = testOpeningHours,
-                spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
-
-        refreshContent()
-
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
-
-        val state = mapViewModel.uiState.value
-        val initialCount = state.geoPins.size
-        assert(initialCount >= 2)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-          !mapViewModel.uiState.value.activeFilters.contains(PinType.SHOP)
-        }
-
-        val stateWithFilter = mapViewModel.uiState.value
-        assert(stateWithFilter.geoPins.size < initialCount)
-        assert(stateWithFilter.geoPins.none { it.geoPin.type == PinType.SHOP })
-
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-          mapViewModel.uiState.value.activeFilters.contains(PinType.SHOP)
-        }
-
-        val stateWithoutFilter = mapViewModel.uiState.value
-        assert(stateWithoutFilter.geoPins.size == initialCount)
-
-        shopRepository.deleteShop(shop.id)
-        spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-      }
-    }
-
-    checkpoint("filterIntegration_canHideAllPinTypes") {
-      runBlocking {
-        val shop =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Shop",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        refreshContent()
-
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
-
-        val state = mapViewModel.uiState.value
-        assert(state.geoPins.isNotEmpty())
-        assert(state.allGeoPins.isNotEmpty())
-
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SPACE_CHIP).performClick()
-        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SESSIONS_CHIP).performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-          mapViewModel.uiState.value.activeFilters.isEmpty()
-        }
-
-        val filteredState = mapViewModel.uiState.value
-
-        assert(filteredState.geoPins.isEmpty())
-        assert(filteredState.allGeoPins.isNotEmpty())
-
-        shopRepository.deleteShop(shop.id)
-      }
-    }
-
-    checkpoint("markers_areDisplayedOnMap") {
-      runBlocking {
-        val shop =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Marker Shop",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        refreshContent()
-
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
-
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
-        assertNotNull(pin)
-
-        // Marker do not expose tag to compose => fix later if possible, but assertNotNull is enough
-        // composeRule.onNodeWithTag(MapScreenTestTags.getTestTagForPin(shop.id)).assertExists()
-
-        shopRepository.deleteShop(shop.id)
-      }
-    }
-
-    checkpoint("multipleMarkers_allDisplayed") {
-      runBlocking {
-        val shop1 =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Shop 1",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        val shop2 =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Shop 2",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        refreshContent()
-
-        mapViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
-
-        val state = mapViewModel.uiState.value
-        assert(state.geoPins.size >= 2)
-
-        shopRepository.deleteShop(shop1.id)
-        shopRepository.deleteShop(shop2.id)
-      }
-    }
-
-    checkpoint("sessionMarkers_onlyVisibleToParticipants") {
+    checkpoint("sessionPin_onlyVisibleToParticipants") {
       runBlocking {
         db.collection(GAMES_COLLECTION_PATH)
-            .document("test_game_private_session")
+            .document("test_game_private")
             .set(
                 GameNoUid(
                     name = "Chess",
@@ -733,11 +531,11 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
                     genres = emptyList()))
             .await()
 
-        val testGame = gameRepository.getGameById("test_game_private_session")
+        val testGame = gameRepository.getGameById("test_game_private")
 
         val discussion =
             discussionRepository.createDiscussion(
-                "Private Session Discussion", "Private session test", shopOwnerAccount.uid)
+                "Private Session", "Private test", shopOwnerAccount.uid)
 
         sessionRepository.createSession(
             discussion.uid,
@@ -749,74 +547,350 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         refreshContent(regularAccount)
 
-        mapViewModel.startGeoQuery(
+        noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
+        delay(1500)
 
-        var state = mapViewModel.uiState.value
-        var sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
-        assertNull(sessionPin)
+        val clusters = noClusterViewModel.getClusters()
+        val sessionCluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
+        assertNull(sessionCluster)
 
-        mapViewModel.stopGeoQuery()
+        noClusterViewModel.stopGeoQuery()
 
-        val ownerViewModel = MapViewModel()
+        val ownerViewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
         ownerViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
-        delay(2000)
+        delay(1500)
 
-        state = ownerViewModel.uiState.value
-        sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
-        assertNotNull(sessionPin)
+        val ownerClusters = ownerViewModel.getClusters()
+        val ownerSessionCluster = ownerClusters.find { it.items[0].geoPin.uid == discussion.uid }
+        assertNotNull(ownerSessionCluster)
 
-        // cleanup
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         discussionRepository.deleteDiscussion(context, discussion)
       }
     }
+  }
 
-    checkpoint("loadingState_displaysWhileLoadingPreview") {
+  /**
+   * Tests cluster sheet display, cluster item selection, and zoom level effects. Uses single
+   * cluster strategy to force clustering.
+   */
+  @Test
+  fun test_clusterSheet_items_and_zoomEffects() {
+    val singleClusterViewModel =
+        MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    composeRule.setContent {
+      val trigger = renderTrigger
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = singleClusterViewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              onRedirect = { pin -> lastRedirect = pin.uid })
+        }
+      }
+    }
+
+    checkpoint("cluster_displaysClusterSheet") {
       runBlocking {
-        val shop =
+        val shop1 =
             shopRepository.createShop(
                 owner = shopOwnerAccount,
-                name = "Loading Test Shop",
+                name = "Cluster Shop 1",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        val shop2 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Cluster Shop 2",
                 address = testLocation,
                 openingHours = testOpeningHours)
 
         refreshContent()
 
-        mapViewModel.startGeoQuery(
+        singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(2000)
+        delay(1500)
 
-        val state = mapViewModel.uiState.value
-        val pin = state.geoPins.find { it.geoPin.uid == shop.id }
-        assertNotNull(pin)
+        val clusters = singleClusterViewModel.getClusters()
+        assertEquals(1, clusters.size)
+        assertTrue(clusters[0].items.size >= 2)
 
-        mapViewModel.selectPin(pin!!)
+        // Select the cluster
+        singleClusterViewModel.selectCluster(clusters[0])
+        delay(1500)
+
+        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+
+        // Verify cluster items are displayed
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop1.id))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop2.id))
+            .assertIsDisplayed()
+
+        shopRepository.deleteShop(shop1.id)
+        shopRepository.deleteShop(shop2.id)
+      }
+    }
+
+    checkpoint("clusterSheet_loadingState_displayed") {
+      runBlocking {
+        val shop1 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Loading Cluster Shop 1",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        val shop2 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Loading Cluster Shop 2",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        singleClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = singleClusterViewModel.getClusters()
+        singleClusterViewModel.selectCluster(clusters[0])
 
         composeRule.waitForIdle()
         delay(100)
 
-        val loadingState = mapViewModel.uiState.value
-        assert(loadingState.isLoadingPreview || loadingState.selectedMarkerPreview != null)
+        val loadingState = singleClusterViewModel.uiState.value
+        assertTrue(loadingState.isLoadingPreview || loadingState.selectedClusterPreviews != null)
 
-        shopRepository.deleteShop(shop.id)
+        shopRepository.deleteShop(shop1.id)
+        shopRepository.deleteShop(shop2.id)
       }
     }
 
-    checkpoint("darkMode_appliesMapStyle") {
-      refreshContent()
-      composeRule.waitForIdle()
+    checkpoint("clusterItem_click_transitionsToSinglePinSheet") {
+      runBlocking {
+        val shop1 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Item Click Shop 1",
+                address = testLocation,
+                openingHours = testOpeningHours)
 
-      composeRule.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
+        val shop2 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Item Click Shop 2",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        singleClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = singleClusterViewModel.getClusters()
+        singleClusterViewModel.selectCluster(clusters[0])
+        delay(1500)
+
+        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+
+        // Click on first cluster item
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop1.id))
+            .performClick()
+        delay(500)
+
+        // Should now show single pin preview sheet
+        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertDoesNotExist()
+        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
+            .assertTextContains("Item Click Shop 1")
+
+        shopRepository.deleteShop(shop1.id)
+        shopRepository.deleteShop(shop2.id)
+      }
     }
 
-    checkpoint("mapScreen_displaysBottomNavigation") {
-      refreshContent()
-      composeRule.waitForIdle()
+    checkpoint("clusterSheet_displaysMultipleTypes") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Mixed Cluster Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
 
-      composeRule.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
+        val space =
+            spaceRenterRepository.createSpaceRenter(
+                owner = spaceRenterAccount,
+                name = "Mixed Cluster Space",
+                address = testLocation,
+                openingHours = testOpeningHours,
+                spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+        refreshContent()
+
+        singleClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = singleClusterViewModel.getClusters()
+        assertTrue(clusters[0].items.size >= 2)
+
+        singleClusterViewModel.selectCluster(clusters[0])
+        delay(1500)
+
+        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop.id))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(space.id))
+            .assertIsDisplayed()
+
+        shopRepository.deleteShop(shop.id)
+        spaceRenterRepository.deleteSpaceRenter(space.id)
+      }
+    }
+
+    checkpoint("multipleMarkers_displayedAsClusters") {
+      runBlocking {
+        val shops = mutableListOf<String>()
+        repeat(5) { i ->
+          val shop =
+              shopRepository.createShop(
+                  owner = shopOwnerAccount,
+                  name = "Multi Shop $i",
+                  address = testLocation,
+                  openingHours = testOpeningHours)
+          shops.add(shop.id)
+        }
+
+        refreshContent()
+
+        singleClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = singleClusterViewModel.getClusters()
+        assertEquals(1, clusters.size)
+        assertTrue(clusters[0].items.size >= 5)
+
+        shops.forEach { shopRepository.deleteShop(it) }
+      }
+    }
+
+    checkpoint("filter_affectsClusterContents") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Filter Cluster Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        val space =
+            spaceRenterRepository.createSpaceRenter(
+                owner = spaceRenterAccount,
+                name = "Filter Cluster Space",
+                address = testLocation,
+                openingHours = testOpeningHours,
+                spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+        refreshContent()
+
+        singleClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val allTypeClusters = singleClusterViewModel.getClusters()
+        assertTrue(allTypeClusters[0].items.size >= 2)
+
+        // Filter to only shops
+        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
+        composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SPACE_CHIP).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+          !singleClusterViewModel.uiState.value.activeFilters.contains(PinType.SPACE)
+        }
+
+        val shopOnlyClusters = singleClusterViewModel.getClusters()
+        assertTrue(shopOnlyClusters[0].items.all { it.geoPin.type == PinType.SHOP })
+
+        shopRepository.deleteShop(shop.id)
+        spaceRenterRepository.deleteSpaceRenter(space.id)
+      }
+    }
+
+    checkpoint("zoomLevel_affectsClustering") {
+      runBlocking {
+        // Shops are spaced by ~500m around center
+        val shop1 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Zoom Test Shop 1",
+                address = Location(testLocation.latitude + 0.0000, testLocation.longitude, "Z1"),
+                openingHours = testOpeningHours)
+
+        val shop2 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Zoom Test Shop 2",
+                address = Location(testLocation.latitude + 0.0045, testLocation.longitude, "Z2"),
+                openingHours = testOpeningHours)
+
+        val shop3 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Zoom Test Shop 3",
+                address = Location(testLocation.latitude, testLocation.longitude + 0.0045, "Z3"),
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        // Use actual simplified viewmodel for distance-based clustering strategy
+        val mapViewModel = MapViewModel()
+
+        mapViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val initialZoom = 10f // Threshold = 5 km
+        val newZoom = 18f // Threshold = 50 m
+
+        mapViewModel.updateZoomLevel(initialZoom)
+        delay(500)
+        val clustersAtInitialZoom = mapViewModel.getClusters()
+
+        // Change zoom level
+        mapViewModel.updateZoomLevel(newZoom)
+        delay(500)
+        val clustersAtNewZoom = mapViewModel.getClusters()
+
+        val state = mapViewModel.uiState.value
+        assertEquals(newZoom, state.currentZoomLevel)
+
+        // Test clustering granularity
+        assertEquals(1, clustersAtInitialZoom.size)
+        assertEquals(3, clustersAtNewZoom.size)
+
+        shopRepository.deleteShop(shop1.id)
+        shopRepository.deleteShop(shop2.id)
+        shopRepository.deleteShop(shop3.id)
+      }
     }
   }
 

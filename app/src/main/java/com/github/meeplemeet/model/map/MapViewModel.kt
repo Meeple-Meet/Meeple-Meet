@@ -2,12 +2,19 @@
 
 package com.github.meeplemeet.model.map
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.map.cluster.Cluster
+import com.github.meeplemeet.model.map.cluster.ClusterItem
+import com.github.meeplemeet.model.map.cluster.ClusterManager
+import com.github.meeplemeet.model.map.cluster.DistanceBasedClusterStrategy
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,48 +26,61 @@ import org.imperiumlabs.geofirestore.GeoQuery
 import org.imperiumlabs.geofirestore.listeners.GeoQueryEventListener
 
 /**
- * Represents the UI state of the map, including currently visible geo-pins, any selected
- * pin/preview, loading state, and error messages.
+ * Cached cluster data with a version number to detect invalidation.
  *
- * @property geoPins The filtered list of geo-pins, based on [activeFilters].
+ * @param clusters The list of clusters in this cache.
+ * @param version Version number of the cache; incremented on any data change.
  */
-data class MapUIState(
-    val allGeoPins: List<GeoPinWithLocation> = emptyList(),
-    val activeFilters: Set<PinType> = PinType.entries.toSet(),
-    val errorMsg: String? = null,
-    val selectedMarkerPreview: MarkerPreview? = null,
-    val selectedGeoPin: StorableGeoPin? = null,
-    val isLoadingPreview: Boolean = false
-) {
-  val geoPins: List<GeoPinWithLocation>
-    get() = allGeoPins.filter { it.geoPin.type in activeFilters }
+data class ClusterCache(val clusters: List<Cluster<GeoPinWithLocation>>, val version: Int)
+
+/** Pending operations on the pin list, accumulated during the debounce window. */
+private sealed interface PinOperation {
+  data class Add(val pin: GeoPinWithLocation) : PinOperation
+
+  data class Move(val documentId: String, val newLocation: GeoPoint) : PinOperation
+
+  data class Remove(val documentId: String) : PinOperation
 }
 
-/** A geo-pin along with its current geographic location. */
-data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
+/**
+ * Represents the UI state of the map, including currently visible geo-pins, cluster cache, and
+ * selection state.
+ *
+ * @property allGeoPins The complete list of geo-pins from the query.
+ * @property activeFilters The set of active pin type filters.
+ * @property currentZoomLevel The current zoom level of the map.
+ * @property clusterCache Cached cluster computation to avoid redundant calculations.
+ * @property cacheVersion Incremented whenever allGeoPins, activeFilters, or zoom changes.
+ */
+data class MapUIState(
+    internal val allGeoPins: List<GeoPinWithLocation> = emptyList(),
+    val activeFilters: Set<PinType> = PinType.entries.toSet(),
+    val currentZoomLevel: Float = 14f,
+    val errorMsg: String? = null,
+    val selectedMarkerPreview: MarkerPreview? = null,
+    val selectedClusterPreviews: List<Pair<GeoPinWithLocation, MarkerPreview>>? = null,
+    val selectedGeoPin: StorableGeoPin? = null,
+    val isLoadingPreview: Boolean = false,
+
+    // Internal cluster cache
+    internal val clusterCache: ClusterCache? = null,
+    internal val cacheVersion: Int = 0
+)
 
 /**
- * ViewModel responsible for managing and observing geographically indexed map data (geo-pins).
+ * ViewModel managing geographically indexed map data (geo-pins) and clustering.
  *
- * This class connects the UI layer (e.g., a map composable) to Firestore through [GeoFirestore],
- * enabling real-time spatial queries based on a geographic center and radius.
+ * Connects the UI layer (e.g., map composable) to Firestore through [GeoFirestore], enabling
+ * real-time spatial queries with automatic updates.
  *
- * The ViewModel maintains a [MapUIState] representing the current visible markers, selection state,
- * and potential errors, all exposed as a [StateFlow].
- *
- * The lifecycle of the geographic query is controlled by [startGeoQuery] and [stopGeoQuery].
- *
- * ### Usage Notes
- * - [startGeoQuery] should typically be called **once** when the screen or map component is
- *   launched.
- * - After initialization, the query is kept up to date automatically by [GeoFirestore].
- * - To change the query parameters (center or radius), simply call [updateQueryCenter],
- *   [updateRadius], or [updateCenterAndRadius]; there is **no need** to restart the query.
+ * Clusters are cached to reduce recomputation, and updates are debounced to avoid multiple
+ * recompositions.
  */
 class MapViewModel(
     private val markerPreviewRepo: MarkerPreviewRepository = RepositoryProvider.markerPreviews,
     geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins,
-    private val sessionRepo: SessionRepository = RepositoryProvider.sessions
+    private val sessionRepo: SessionRepository = RepositoryProvider.sessions,
+    private val clusterManager: ClusterManager = ClusterManager(DistanceBasedClusterStrategy())
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   /** Public observable state of the map, containing geo-pins, errors, and selection info. */
@@ -68,6 +88,117 @@ class MapViewModel(
 
   private val geoPinCollection = geoPinRepository.collection
   private var geoQuery: GeoQuery? = null
+
+  // Debounce for pin updates
+  private val pendingOperations = mutableListOf<PinOperation>()
+  private var debounceJob: Job? = null
+  private val PIN_UPDATE_DEBOUNCE_MS = 500L
+
+  // Cached user session IDs for filtering
+  private var userSessionIds = setOf<String>()
+
+  /**
+   * Returns the current clusters for the filtered pins at the current zoom level.
+   *
+   * Uses cached result if available and valid. Otherwise, computes new clusters and updates the
+   * cache.
+   */
+  fun getClusters(): List<Cluster<GeoPinWithLocation>> {
+    val state = _uiState.value
+
+    // Check if cache is valid
+    if (state.clusterCache != null && state.clusterCache.version == state.cacheVersion) {
+      return state.clusterCache.clusters
+    }
+
+    // Cache is invalid or missing - recompute
+    val filteredPins = state.allGeoPins.filter { it.geoPin.type in state.activeFilters }
+    val clusters =
+        clusterManager.cluster(
+            items = filteredPins,
+            zoomLevel = state.currentZoomLevel,
+            mapper = { pin -> ClusterItem(pin.location.latitude, pin.location.longitude) })
+
+    // Update cache in state
+    _uiState.update { it.copy(clusterCache = ClusterCache(clusters, state.cacheVersion)) }
+
+    return clusters
+  }
+
+  /**
+   * Updates the current zoom level. Invalidates cluster cache.
+   *
+   * @param zoomLevel The new zoom level to apply for clustering.
+   */
+  fun updateZoomLevel(zoomLevel: Float) {
+    _uiState.update { it.copy(currentZoomLevel = zoomLevel, cacheVersion = it.cacheVersion + 1) }
+  }
+
+  /**
+   * Updates the set of active pin type filters applied to the map. Invalidates cluster cache.
+   *
+   * @param newFilters The new set of [PinType] to display.
+   */
+  fun updateFilters(newFilters: Set<PinType>) {
+    _uiState.update { it.copy(activeFilters = newFilters, cacheVersion = it.cacheVersion + 1) }
+  }
+
+  /**
+   * Schedules a pending pin operation to be applied after a short debounce period.
+   *
+   * Multiple operations added within [PIN_UPDATE_DEBOUNCE_MS] milliseconds are batched together to
+   * minimize recompositions and cluster recalculations.
+   *
+   * @param operation The pin operation to schedule (Add, Move, or Remove).
+   */
+  private fun scheduleOperation(operation: PinOperation) {
+    synchronized(pendingOperations) { pendingOperations.add(operation) }
+
+    debounceJob?.cancel()
+    debounceJob =
+        viewModelScope.launch {
+          delay(PIN_UPDATE_DEBOUNCE_MS)
+          flushPendingOperations()
+        }
+  }
+
+  /** Applies all pending pin operations in a single state update to minimize recompositions. */
+  private fun flushPendingOperations() {
+    val operations =
+        synchronized(pendingOperations) {
+          val copy = pendingOperations.toList()
+          pendingOperations.clear()
+          copy
+        }
+
+    if (operations.isEmpty()) return
+
+    _uiState.update { state ->
+      // Use a mutable map for O(1) lookups by documentId
+      val pinMap = state.allGeoPins.associateBy { it.geoPin.uid }.toMutableMap()
+
+      // Apply sequentially all pending operations
+      operations.forEach { op ->
+        when (op) {
+          is PinOperation.Add -> pinMap[op.pin.geoPin.uid] = op.pin
+          is PinOperation.Move ->
+              pinMap[op.documentId]?.let { old ->
+                pinMap[op.documentId] = old.copy(location = op.newLocation)
+              }
+          is PinOperation.Remove -> pinMap.remove(op.documentId)
+        }
+      }
+
+      // Only one state update, thus only one cache invalidation.
+      state.copy(allGeoPins = pinMap.values.toList(), cacheVersion = state.cacheVersion + 1)
+    }
+  }
+
+  /** Immediately flushes all pending operations. */
+  private fun flushImmediately() {
+    debounceJob?.cancel()
+    flushPendingOperations()
+  }
 
   /**
    * Starts a new geographic Firestore query centered around the given [center] and within the given
@@ -86,12 +217,11 @@ class MapViewModel(
     // Always reset previous query before creating a new one.
     stopGeoQuery()
 
-    // Pre-fetch session IDs where user is participating
     viewModelScope.launch {
-      val userSessionIds = mutableSetOf<String>()
       try {
+        // Load user sessions for filtering
         val ids = sessionRepo.getSessionIdsForUser(currentUserId)
-        userSessionIds.addAll(ids)
+        userSessionIds = ids.toSet()
       } catch (e: Exception) {
         _uiState.update {
           it.copy(errorMsg = "Failed to load user sessions: ${e.message ?: "unknown"}")
@@ -125,8 +255,7 @@ class MapViewModel(
                       return@launch
 
                   val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
-
-                  _uiState.update { it.copy(allGeoPins = it.allGeoPins + pin) }
+                  scheduleOperation(PinOperation.Add(pin))
                 } catch (e: Exception) {
                   _uiState.update {
                     it.copy(
@@ -145,15 +274,7 @@ class MapViewModel(
              * @param location The new geographic position of the pin.
              */
             override fun onKeyMoved(documentID: String, location: GeoPoint) {
-              _uiState.update { state ->
-                val updatedPins =
-                    state.allGeoPins.map { pinWithLocation ->
-                      if (pinWithLocation.geoPin.uid == documentID)
-                          pinWithLocation.copy(location = location)
-                      else pinWithLocation
-                    }
-                state.copy(allGeoPins = updatedPins)
-              }
+              scheduleOperation(PinOperation.Move(documentID, location))
             }
 
             /**
@@ -163,16 +284,17 @@ class MapViewModel(
              * @param documentID The Firestore document ID.
              */
             override fun onKeyExited(documentID: String) {
-              _uiState.update { it ->
-                it.copy(allGeoPins = it.allGeoPins.filterNot { it.geoPin.uid == documentID })
-              }
+              scheduleOperation(PinOperation.Remove(documentID))
             }
 
             /**
              * Called once all initial documents in range have been loaded. Can be used to signal
              * that the query is ready to display results.
              */
-            override fun onGeoQueryReady() {}
+            override fun onGeoQueryReady() {
+              // Immediately flush pending ops after the initial query burst
+              flushImmediately()
+            }
 
             /**
              * Called when an error occurs while listening to Firestore geo updates. Updates the
@@ -203,17 +325,12 @@ class MapViewModel(
       geoQuery = null
     }
 
-    _uiState.update { MapUIState() }
-  }
+    // Cleanup debouncing
+    debounceJob?.cancel()
+    debounceJob = null
+    pendingOperations.clear()
 
-  /**
-   * Updates the set of active pin type filters applied to the map. This affects the
-   * [MapUIState.geoPins] property, which is the filtered view used by the UI.
-   *
-   * @param newFilters The new set of [PinType] to display.
-   */
-  fun updateFilters(newFilters: Set<PinType>) {
-    _uiState.update { it.copy(activeFilters = newFilters) }
+    _uiState.update { MapUIState() }
   }
 
   /**
@@ -254,7 +371,7 @@ class MapViewModel(
    */
   fun selectPin(pin: GeoPinWithLocation) {
     viewModelScope.launch {
-      _uiState.update { it.copy(isLoadingPreview = true, selectedGeoPin = pin.geoPin) }
+      _uiState.update { it.copy(isLoadingPreview = true) }
       try {
         val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
         _uiState.update {
@@ -281,6 +398,60 @@ class MapViewModel(
     _uiState.update { it.copy(selectedMarkerPreview = null, selectedGeoPin = null) }
   }
 
+  /**
+   * Selects a cluster and loads previews for all its pins.
+   *
+   * On failure, an error message is exposed.
+   *
+   * @param cluster The cluster whose pins should be previewed.
+   */
+  fun selectCluster(cluster: Cluster<GeoPinWithLocation>) {
+    viewModelScope.launch {
+      _uiState.update { it.copy(isLoadingPreview = true) }
+
+      try {
+        val pins = cluster.items
+        val previews = markerPreviewRepo.getMarkerPreviews(pins.map { it.geoPin })
+
+        val paired = pins.zip(previews.filterNotNull())
+
+        _uiState.update {
+          it.copy(selectedClusterPreviews = paired, errorMsg = null, isLoadingPreview = false)
+        }
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(
+              selectedClusterPreviews = null,
+              errorMsg = "Failed to load previews for cluster: ${e.message}",
+              isLoadingPreview = false)
+        }
+      }
+    }
+  }
+
+  /**
+   * Selects a single pin from an already selected cluster.
+   *
+   * This clears the cluster selection.
+   *
+   * @param pin The pin selected inside the cluster.
+   * @param preview The preview previously loaded for that pin.
+   */
+  fun selectPinFromCluster(pin: GeoPinWithLocation, preview: MarkerPreview) {
+    _uiState.update {
+      it.copy(
+          selectedClusterPreviews = null,
+          selectedGeoPin = pin.geoPin,
+          selectedMarkerPreview = preview,
+          errorMsg = null)
+    }
+  }
+
+  /** Clears the currently selected cluster. */
+  fun clearSelectedCluster() {
+    _uiState.update { it.copy(selectedClusterPreviews = null) }
+  }
+
   /** Clears the current error message from [uiState]. */
   fun clearErrorMsg() {
     _uiState.update { it.copy(errorMsg = null) }
@@ -290,5 +461,12 @@ class MapViewModel(
   override fun onCleared() {
     stopGeoQuery()
     super.onCleared()
+  }
+
+  // Access the filtered pins, for tests backward compatibility
+  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+  fun getFilteredPins(): List<GeoPinWithLocation> {
+    val state = _uiState.value
+    return state.allGeoPins.filter { it.geoPin.type in state.activeFilters }
   }
 }

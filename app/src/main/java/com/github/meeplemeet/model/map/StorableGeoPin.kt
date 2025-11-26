@@ -1,5 +1,6 @@
 package com.github.meeplemeet.model.map
 
+import com.google.firebase.firestore.GeoPoint
 import kotlinx.serialization.Serializable
 
 /** Enum representing the type of entity linked to a map pin. */
@@ -16,6 +17,9 @@ enum class PinType {
  * @property type Type of the pin (e.g. SHOP, SESSION, SPACE).
  */
 data class StorableGeoPin(val uid: String, val type: PinType)
+
+/** A geo-pin along with its current geographic location. */
+data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
 
 /**
  * Minimal serializable form of [StorableGeoPin] without the UID, used for Firestore storage.
