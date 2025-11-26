@@ -1,6 +1,7 @@
 // Docs generated with Claude Code.
 package com.github.meeplemeet.model.account
 
+import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -28,6 +29,27 @@ interface AccountViewModel {
   }
 
   /**
+   * Retrieves multiple accounts by their IDs and provides them to a callback.
+   *
+   * Additionally, this method preloads each account's profile picture in the provided context.
+   *
+   * @param uids List of account IDs to retrieve
+   * @param context Context used for loading profile pictures
+   * @param onResult Callback that receives the list of retrieved accounts
+   */
+  fun getAccounts(uids: List<String>, context: Context, onResult: (List<Account>) -> Unit) {
+    scope.launch {
+      val accounts = RepositoryProvider.accounts.getAccounts(uids)
+      onResult(accounts)
+      accounts.forEach { account ->
+        launch {
+          runCatching { RepositoryProvider.images.loadAccountProfilePicture(account.uid, context) }
+        }
+      }
+    }
+  }
+
+  /**
    * Retrieves an account by ID and provides it to a callback.
    *
    * This method is useful when you need to fetch account data without updating the current
@@ -40,6 +62,22 @@ interface AccountViewModel {
   fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
     if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
     scope.launch { onResult(RepositoryProvider.accounts.getAccount(id, false)) }
+  }
+
+  /**
+   * Retrieves an account by ID and provides it to a callback, preloading its profile picture.
+   *
+   * @param id The account ID to retrieve
+   * @param context Context used for loading the profile picture
+   * @param onResult Callback that receives the retrieved account
+   */
+  fun getOtherAccount(id: String, context: Context, onResult: (Account) -> Unit) {
+    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    scope.launch {
+      val account = RepositoryProvider.accounts.getAccount(id, false)
+      onResult(account)
+      runCatching { RepositoryProvider.images.loadAccountProfilePicture(account.uid, context) }
+    }
   }
 
   /**
