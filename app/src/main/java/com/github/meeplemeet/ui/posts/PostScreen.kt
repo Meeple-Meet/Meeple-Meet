@@ -236,9 +236,7 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    toFetch.forEach { uid: String ->
-      accountViewModel.getOtherAccount(uid) { acc -> userCache[uid] = acc }
-    }
+    accountViewModel.getAccounts(toFetch) { it.forEach { acc -> userCache[acc.uid] = acc } }
   }
 
   Scaffold(

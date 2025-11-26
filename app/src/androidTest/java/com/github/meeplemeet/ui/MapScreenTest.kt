@@ -45,6 +45,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+private const val DEFAULT_TEST_KM = 10.0
+
 /**
  * Comprehensive UI test suite for MapScreen with real Firestore data.
  *
@@ -69,7 +71,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
-  private val DEFAULT_TEST_KM = 10.0
   private lateinit var mapViewModel: MapViewModel
   private lateinit var mockNavigation: NavigationActions
 
@@ -168,6 +169,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         }
       }
     }
+
+    Thread.sleep(500)
 
     checkpoint("mapScreen_initialDisplay_showsMapAndFilterButton") {
       composeRule.waitForIdle()

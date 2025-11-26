@@ -1,4 +1,3 @@
-// Docs generated with Claude Code.
 package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
@@ -18,6 +17,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+
+private const val BUSINESSES_SUB_COLLECTION = "businesses"
 
 /**
  * Repository for managing user account data in Firestore.
@@ -43,7 +44,14 @@ import kotlinx.coroutines.tasks.await
  * In the [Account] runtime model, these relationships are loaded into a map keyed by the other
  * user's UID for efficient lookup
  */
-class AccountRepository : FirestoreRepository("accounts") {
+class AccountRepository :
+    FirestoreRepository(
+        "accounts",
+        listOf(
+            Account::previews.name,
+            Account::relationships.name,
+            Account::notifications.name,
+            BUSINESSES_SUB_COLLECTION)) {
   companion object {
     /** Firestore field name for relationship status */
     private const val FIELD_STATUS = "status"
@@ -52,6 +60,13 @@ class AccountRepository : FirestoreRepository("accounts") {
     /** Firestore field name for space renter IDs list */
     private const val FIELD_SPACE_RENTER_IDS = "spaceRenterIds"
   }
+  /**
+   * Returns a reference to the previews subcollection for a given account.
+   *
+   * @param uid The account ID whose previews subcollection to access
+   * @return A CollectionReference to the previews subcollection
+   */
+  private fun previews(uid: String) = collection.document(uid).collection(Account::previews.name)
 
   /**
    * Returns a reference to the relationships subcollection for a given account.
@@ -80,7 +95,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @return A DocumentReference to the businesses document
    */
   private fun businessesDoc(uid: String) =
-      collection.document(uid).collection("businesses").document("ids")
+      collection.document(uid).collection(BUSINESSES_SUB_COLLECTION).document("ids")
 
   /**
    * Extracts discussion previews from a Firestore query snapshot.
@@ -168,6 +183,20 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
+   * Returns a reference to a specific discussion preview document for deletion.
+   *
+   * Used when cleaning up orphaned preview documents (previews that reference non-existent
+   * discussions). This ensures atomic deletion operations.
+   *
+   * @param accountId The account ID that owns the preview
+   * @param discussionId The discussion ID of the preview to delete
+   * @return A DocumentReference to the preview document
+   */
+  fun previewToDeleteRef(accountId: String, discussionId: String): DocumentReference {
+    return previews(accountId).document(discussionId)
+  }
+
+  /**
    * Retrieves an account and its associated discussion previews, relationships, and notifications
    * by ID.
    *
@@ -187,8 +216,7 @@ class AccountRepository : FirestoreRepository("accounts") {
     val snapshot = collection.document(id).get().await()
     val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
 
-    val previewsSnap =
-        if (getAllData) collection.document(id).collection("previews").get().await() else null
+    val previewsSnap = if (getAllData) previews(id).get().await() else null
     val previews = if (getAllData) extractPreviews(previewsSnap!!.documents) else emptyMap()
 
     val relationshipsSnap = if (getAllData) relationships(id).get().await() else null
@@ -251,7 +279,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param id The account ID to delete
    */
   suspend fun deleteAccount(id: String) {
-    collection.document(id).delete().await()
+    fullyDeleteDocument(collection.document(id))
   }
 
   /**

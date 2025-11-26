@@ -202,15 +202,8 @@ fun DiscussionDetailsScreen(
 
   /** Populate selectedMembers with current discussion participants */
   LaunchedEffect(discussion.participants) {
-    val uids = discussion.participants
     selectedMembers.clear()
-    for (uid in uids) {
-      viewModel.getOtherAccount(uid) { acc ->
-        if (selectedMembers.none { it.uid == acc.uid }) {
-          selectedMembers.add(acc)
-        }
-      }
-    }
+    viewModel.getAccounts(discussion.participants) { accounts -> selectedMembers.addAll(accounts) }
     /** Add current account only if not already present */
     account.let {
       if (selectedMembers.none { member -> member.uid == it.uid }) {
