@@ -73,9 +73,6 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
-import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
-import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.Dimensions
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -249,14 +246,12 @@ private fun FriendsScreenViewModel.toggleBlock(
 /**
  * Composable function to display the Friends Management Screen.
  *
- * @param navigation Navigation actions for screen transitions.
  * @param viewModel ViewModel for friends-related operations.
  * @param account The current user's account.
  * @param onBack Callback function to be invoked when the back button is pressed.
  */
 @Composable
 fun FriendsScreen(
-    navigation: NavigationActions,
     viewModel: FriendsScreenViewModel = viewModel(),
     account: Account,
     onBack: () -> Unit,
@@ -298,12 +293,6 @@ fun FriendsScreen(
 
   Scaffold(
       topBar = { FriendsTopBar(onBack = onBack) },
-      bottomBar = {
-        BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.Profile,
-            onTabSelected = { screen -> navigation.navigateTo(screen) },
-        )
-      },
       containerColor = MaterialTheme.colorScheme.background,
   ) { innerPadding ->
     Column(
