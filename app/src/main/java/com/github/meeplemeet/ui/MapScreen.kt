@@ -1091,7 +1091,7 @@ private fun rememberMarkerIcon(
  * number is drawn centered in white text.
  *
  * @param size number of items in the cluster
- * @param diameterDp diameter of the cluster icon in dp (default is 64dp)
+ * @param diameterDp diameter of the cluster icon in dp (default is 32dp)
  * @return a [BitmapDescriptor] usable as a Google Maps marker icon
  */
 @Composable
