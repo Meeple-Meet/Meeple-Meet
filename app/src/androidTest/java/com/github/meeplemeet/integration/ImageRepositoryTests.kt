@@ -1107,5 +1107,46 @@ class ImageRepositoryTests : FirestoreTests() {
         }
       }
     }
+
+    // ========================================================================
+    // Session Photo Tests
+    // ========================================================================
+
+    checkpoint("Save session photo succeeds") {
+      runTest {
+        val discussionId = "test_discussion_${System.currentTimeMillis()}"
+        val testImagePath = createTestImage("session_photo.jpg", 100, 100, Color.GREEN)
+        val url = imageRepository.saveSessionPhoto(context, discussionId, testImagePath)
+        assertNotNull(url)
+        assertTrue(url.contains(discussionId))
+      }
+    }
+
+    checkpoint("Load session photo returns correct data") {
+      runTest {
+        val discussionId = "test_discussion_${System.currentTimeMillis()}"
+        val testImagePath = createTestImage("session_photo_load.jpg", 100, 100, Color.YELLOW)
+        imageRepository.saveSessionPhoto(context, discussionId, testImagePath)
+        val bytes = imageRepository.loadSessionPhoto(context, discussionId)
+        assertNotNull(bytes)
+        assertTrue(bytes.isNotEmpty())
+      }
+    }
+
+    checkpoint("Delete session photo succeeds") {
+      runTest {
+        val discussionId = "test_discussion_${System.currentTimeMillis()}"
+        val testImagePath = createTestImage("session_photo_delete.jpg", 100, 100, Color.RED)
+        imageRepository.saveSessionPhoto(context, discussionId, testImagePath)
+        imageRepository.deleteSessionPhoto(context, discussionId)
+        // Try to load after delete, should throw RemoteStorageException or DiskStorageException
+        val result = runCatching { imageRepository.loadSessionPhoto(context, discussionId) }
+        assertTrue(result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue(
+            exception is com.github.meeplemeet.model.RemoteStorageException ||
+                exception is com.github.meeplemeet.model.DiskStorageException)
+      }
+    }
   }
 }
