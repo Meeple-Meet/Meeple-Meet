@@ -98,7 +98,7 @@ class MapViewModelTest : FirestoreTests() {
     assertEquals(PinType.entries.toSet(), state.activeFilters)
     assertNull(state.errorMsg)
     assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedGeoPin)
+    assertNull(state.selectedPin)
     assertNull(state.selectedClusterPreviews)
     assertNull(state.clusterCache)
     assertEquals(0, state.cacheVersion)
@@ -508,8 +508,8 @@ class MapViewModelTest : FirestoreTests() {
 
     val state = viewModel.uiState.value
     assertNotNull(state.selectedMarkerPreview)
-    assertNotNull(state.selectedGeoPin)
-    assertEquals(shop.id, state.selectedGeoPin!!.uid)
+    assertNotNull(state.selectedPin)
+    assertEquals(shop.id, state.selectedPin!!.geoPin.uid)
     assertFalse(state.isLoadingPreview)
 
     shopRepository.deleteShop(shop.id)
@@ -539,7 +539,7 @@ class MapViewModelTest : FirestoreTests() {
 
     val state = viewModel.uiState.value
     assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedGeoPin)
+    assertNull(state.selectedPin)
 
     shopRepository.deleteShop(shop.id)
   }
@@ -621,9 +621,9 @@ class MapViewModelTest : FirestoreTests() {
 
     val finalState = viewModel.uiState.value
     assertNull(finalState.selectedClusterPreviews)
-    assertNotNull(finalState.selectedGeoPin)
+    assertNotNull(finalState.selectedPin)
     assertNotNull(finalState.selectedMarkerPreview)
-    assertEquals(pin.geoPin.uid, finalState.selectedGeoPin!!.uid)
+    assertEquals(pin.geoPin.uid, finalState.selectedPin!!.geoPin.uid)
 
     shopRepository.deleteShop(shop1.id)
     shopRepository.deleteShop(shop2.id)
