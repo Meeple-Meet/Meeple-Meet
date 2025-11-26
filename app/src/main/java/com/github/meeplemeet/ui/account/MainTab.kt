@@ -184,6 +184,9 @@ object MainTabUi {
   val LOGOUT_BUTTON_W = 140.dp
   val LOGOUT_BUTTON_H = 46.dp
   val AVATAR_SIZE = 130.dp
+    val OFFSET_X = 4.dp
+    val OFFSET_Y = (-4).dp
+    val MAX_NOTIF_COUNT = 9
 
   object Misc {
     const val DELETE_ACCOUNT = "Delete Account"
@@ -443,14 +446,14 @@ fun PublicInfoActions(
                 if (notificationCount > 0) {
                   Box(
                       modifier =
-                          Modifier.size(24.dp)
+                          Modifier.size(Dimensions.IconSize.large)
                               .align(Alignment.TopEnd)
-                              .offset(4.dp, (-4).dp)
+                              .offset(MainTabUi.OFFSET_X, MainTabUi.OFFSET_Y)
                               .background(AppColors.negative, CircleShape),
                       contentAlignment = Alignment.Center) {
                         Text(
                             text =
-                                if (notificationCount > 9) "9+" else notificationCount.toString(),
+                                if (notificationCount > MainTabUi.MAX_NOTIF_COUNT) "9+" else notificationCount.toString(),
                             color = AppColors.primary,
                             fontSize = Dimensions.TextSize.tiny)
                       }
@@ -1057,12 +1060,12 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
         onConfirm = {
           when (pendingAction) {
             RoleAction.ShopOff -> {
-              // Todo: Delete user's shops from the platform
+              viewModel.deleteAccountShops(account)
               isShopChecked = false
               viewModel.setAccountRole(account, isShopOwner = false, isSpaceRenter = isSpaceRented)
             }
             RoleAction.SpaceOff -> {
-              // Todo: Delete user's spaces from the platform
+              viewModel.deleteAccountSpaceRenters(account)
               isSpaceRented = false
               viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = false)
             }
