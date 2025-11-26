@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -193,6 +194,57 @@ private val RelationshipStatus?.isBlocked: Boolean
 
 private val RelationshipStatus?.isRequestSent: Boolean
   get() = (this == RelationshipStatus.SENT)
+
+private data class FriendsTabUiData(
+    val label: String,
+    val testTag: String,
+)
+
+/**
+ * Extension function to convert a FriendsTab enum to its corresponding UI data.
+ *
+ * @return FriendsTabUiData containing label and test tag for the tab.
+ */
+private fun FriendsTab.toUiData(): FriendsTabUiData =
+    when (this) {
+      FriendsTab.FRIENDS ->
+          FriendsTabUiData(
+              label = "Friends",
+              testTag = FriendsManagementTestTags.TAB_FRIENDS,
+          )
+      FriendsTab.REQUESTS ->
+          FriendsTabUiData(
+              label = "Requests",
+              testTag = FriendsManagementTestTags.TAB_REQUESTS,
+          )
+      FriendsTab.BLOCKED ->
+          FriendsTabUiData(
+              label = "Blocked",
+              testTag = FriendsManagementTestTags.TAB_BLOCKED,
+          )
+    }
+
+/**
+ * Function to get the appropriate test tag prefixes based on the user row context.
+ *
+ * @param context The context in which the user row is displayed.
+ * @return Triple containing item prefix, block button prefix, and action button prefix.
+ */
+private fun prefixesFor(context: UserRowContext): Triple<String, String, String> =
+    when (context) {
+      UserRowContext.FRIEND_LIST ->
+          Triple(
+              FriendsManagementTestTags.FRIEND_ITEM_PREFIX,
+              FriendsManagementTestTags.FRIEND_BLOCK_BUTTON_PREFIX,
+              FriendsManagementTestTags.FRIEND_ACTION_BUTTON_PREFIX,
+          )
+      UserRowContext.SEARCH_RESULTS ->
+          Triple(
+              FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX,
+              FriendsManagementTestTags.SEARCH_RESULT_BLOCK_BUTTON_PREFIX,
+              FriendsManagementTestTags.SEARCH_RESULT_ACTION_BUTTON_PREFIX,
+          )
+    }
 
 /**
  * Extension function to get a list of account IDs for a specific relationship status.
@@ -444,7 +496,7 @@ private fun FriendsTopBar(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FriendsSearchBar(
+private fun FriendsSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
@@ -507,6 +559,51 @@ fun FriendsSearchBar(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Composable function to display a single tab item in the friends management tab switcher.
+ *
+ * @param label The label of the tab.
+ * @param isSelected Boolean indicating whether the tab is currently selected.
+ * @param testTag The test tag for the tab item.
+ * @param onClick Callback function to handle tab selection.
+ */
+@Composable
+private fun RowScope.FriendsTabItem(
+    label: String,
+    isSelected: Boolean,
+    testTag: String,
+    onClick: () -> Unit,
+) {
+  val bgColor =
+      if (isSelected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.background
+
+  val textColor =
+      if (isSelected) MaterialTheme.colorScheme.onBackground
+      else MaterialTheme.colorScheme.onSurfaceVariant
+
+  Box(
+      modifier =
+          Modifier.weight(1f)
+              .fillMaxHeight()
+              .background(bgColor)
+              .border(
+                  width = 0.dp,
+                  color = MaterialTheme.colorScheme.outline,
+                  shape = RectangleShape,
+              )
+              .clickable(onClick = onClick)
+              .testTag(testTag),
+      contentAlignment = Alignment.Center,
+  ) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+        color = textColor,
+    )
+  }
+}
+
+/**
  * Composable function to display the tab switcher for friends management.
  *
  * @param selectedTab The currently selected tab.
@@ -525,56 +622,15 @@ private fun FriendsTabSwitcher(
               .testTag(FriendsManagementTestTags.TABS),
   ) {
     FriendsTab.entries.forEach { tab ->
-      val isSelected = (tab == selectedTab)
-      val label =
-          when (tab) {
-            FriendsTab.FRIENDS -> "Friends"
-            FriendsTab.REQUESTS -> "Requests"
-            FriendsTab.BLOCKED -> "Blocked"
-          }
+      val isSelected = tab == selectedTab
+      val ui = tab.toUiData()
 
-      val bgColor =
-          if (isSelected) {
-            MaterialTheme.colorScheme.outline
-          } else {
-            MaterialTheme.colorScheme.background
-          }
-
-      val textColor =
-          if (isSelected) {
-            MaterialTheme.colorScheme.onBackground
-          } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-          }
-
-      val tabTag =
-          when (tab) {
-            FriendsTab.FRIENDS -> FriendsManagementTestTags.TAB_FRIENDS
-            FriendsTab.REQUESTS -> FriendsManagementTestTags.TAB_REQUESTS
-            FriendsTab.BLOCKED -> FriendsManagementTestTags.TAB_BLOCKED
-          }
-
-      Box(
-          modifier =
-              Modifier.weight(1f)
-                  .fillMaxHeight()
-                  .background(bgColor)
-                  .border(
-                      width = 0.dp,
-                      color = MaterialTheme.colorScheme.outline,
-                      shape = RectangleShape,
-                  )
-                  .clickable { onTabSelected(tab) }
-                  .testTag(tabTag),
-          contentAlignment = Alignment.Center,
-      ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = textColor,
-        )
-      }
+      FriendsTabItem(
+          label = ui.label,
+          isSelected = isSelected,
+          testTag = ui.testTag,
+          onClick = { onTabSelected(tab) },
+      )
     }
   }
 }
@@ -595,7 +651,7 @@ private fun FriendsTabSwitcher(
  * @param showSecondaryAction Boolean indicating whether to show the secondary action button.
  */
 @Composable
-fun RelationshipUserRow(
+private fun RelationshipUserRow(
     user: Account,
     isBlocked: Boolean,
     secondaryAction: UserRowSecondaryAction,
@@ -604,24 +660,7 @@ fun RelationshipUserRow(
     onSecondaryActionClick: () -> Unit,
     showSecondaryAction: Boolean = true,
 ) {
-  val itemPrefix =
-      when (context) {
-        UserRowContext.FRIEND_LIST -> FriendsManagementTestTags.FRIEND_ITEM_PREFIX
-        UserRowContext.SEARCH_RESULTS -> FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX
-      }
-
-  val blockButtonPrefix =
-      when (context) {
-        UserRowContext.FRIEND_LIST -> FriendsManagementTestTags.FRIEND_BLOCK_BUTTON_PREFIX
-        UserRowContext.SEARCH_RESULTS -> FriendsManagementTestTags.SEARCH_RESULT_BLOCK_BUTTON_PREFIX
-      }
-
-  val actionButtonPrefix =
-      when (context) {
-        UserRowContext.FRIEND_LIST -> FriendsManagementTestTags.FRIEND_ACTION_BUTTON_PREFIX
-        UserRowContext.SEARCH_RESULTS ->
-            FriendsManagementTestTags.SEARCH_RESULT_ACTION_BUTTON_PREFIX
-      }
+  val (itemPrefix, blockButtonPrefix, actionButtonPrefix) = prefixesFor(context)
 
   Row(
       modifier =
@@ -645,7 +684,7 @@ fun RelationshipUserRow(
     Spacer(Modifier.width(FriendsManagementDefaults.Layout.ITEM_AVATAR_NAME_SPACING))
 
     Column(
-        modifier = Modifier.weight(weight = 1f),
+        modifier = Modifier.weight(1f),
         verticalArrangement = Arrangement.Center,
     ) {
       Text(
@@ -677,48 +716,64 @@ fun RelationshipUserRow(
           modifier = Modifier.testTag("$blockButtonPrefix${user.uid}"),
       ) {
         val blockIcon = if (isBlocked) Icons.Default.LockOpen else Icons.Default.Block
+        val description = if (isBlocked) "Unblock" else "Block"
 
         Icon(
             imageVector = blockIcon,
-            contentDescription = if (isBlocked) "Unblock" else "Block",
+            contentDescription = description,
         )
       }
 
       if (showSecondaryAction) {
-        val (icon, description, tint) =
-            when (secondaryAction) {
-              UserRowSecondaryAction.ADD_FRIEND ->
-                  Triple(
-                      Icons.Default.PersonAdd,
-                      "Add friend",
-                      MaterialTheme.colorScheme.onBackground,
-                  )
-              UserRowSecondaryAction.REMOVE_FRIEND ->
-                  Triple(
-                      Icons.Default.PersonRemove,
-                      "Remove friend",
-                      MaterialTheme.colorScheme.onBackground,
-                  )
-              UserRowSecondaryAction.REQUEST_SENT ->
-                  Triple(
-                      Icons.Default.Schedule,
-                      "Friend request sent",
-                      MaterialTheme.colorScheme.onBackground,
-                  )
-            }
-
-        IconButton(
-            onClick = onSecondaryActionClick,
-            modifier = Modifier.testTag("$actionButtonPrefix${user.uid}"),
-        ) {
-          Icon(
-              imageVector = icon,
-              contentDescription = description,
-              tint = tint,
-          )
-        }
+        SecondaryActionButton(
+            userId = user.uid,
+            secondaryAction = secondaryAction,
+            actionButtonPrefix = actionButtonPrefix,
+            onSecondaryActionClick = onSecondaryActionClick,
+        )
       }
     }
+  }
+}
+
+/**
+ * Composable function to display the secondary action button in a user row.
+ *
+ * @param userId The ID of the user.
+ * @param secondaryAction The secondary action to display.
+ * @param actionButtonPrefix The prefix for the action button test tag.
+ * @param onSecondaryActionClick Callback function to handle the secondary action click.
+ */
+@Composable
+private fun SecondaryActionButton(
+    userId: String,
+    secondaryAction: UserRowSecondaryAction,
+    actionButtonPrefix: String,
+    onSecondaryActionClick: () -> Unit,
+) {
+  val (icon, description, tint) =
+      when (secondaryAction) {
+        UserRowSecondaryAction.ADD_FRIEND ->
+            Triple(Icons.Default.PersonAdd, "Add friend", MaterialTheme.colorScheme.onBackground)
+        UserRowSecondaryAction.REMOVE_FRIEND ->
+            Triple(
+                Icons.Default.PersonRemove, "Remove friend", MaterialTheme.colorScheme.onBackground)
+        UserRowSecondaryAction.REQUEST_SENT ->
+            Triple(
+                Icons.Default.Schedule,
+                "Friend request sent",
+                MaterialTheme.colorScheme.onBackground)
+      }
+
+  IconButton(
+      onClick = onSecondaryActionClick,
+      modifier = Modifier.testTag("$actionButtonPrefix$userId"),
+  ) {
+    Icon(
+        imageVector = icon,
+        contentDescription = description,
+        tint = tint,
+    )
   }
 }
 
@@ -833,7 +888,7 @@ private fun <T> FriendsListContainer(
  * @param onRemoveFriend Callback function to handle removing a friend.
  */
 @Composable
-fun FriendsList(
+private fun FriendsList(
     currentAccount: Account,
     friends: List<Account>,
     onBlockToggle: (Account) -> Unit,
@@ -1019,7 +1074,7 @@ private fun FriendsScrollBar(
  * @param onCancelRequest Callback function to handle canceling a friend request.
  */
 @Composable
-fun FriendsSearchResultsDropdown(
+private fun FriendsSearchResultsDropdown(
     currentAccount: Account,
     results: List<Account>,
     onBlockToggle: (Account) -> Unit,
