@@ -884,6 +884,8 @@ private fun MarkerPreviewSheet(
     pin: GeoPinWithLocation,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
+  val context = LocalContext.current
+
   Column(
       modifier =
           Modifier.fillMaxWidth()
@@ -978,7 +980,9 @@ private fun MarkerPreviewSheet(
           Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
 
           Button(
-              onClick = {},
+              onClick = {
+                context.openGoogleMapsDirections(pin.location.latitude, pin.location.longitude)
+              },
               modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_NAVIGATE_BUTTON)) {
                 Text(text = "Navigate")
               }
