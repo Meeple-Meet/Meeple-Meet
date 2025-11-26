@@ -1040,7 +1040,7 @@ private fun MarkerPreviewSheet(
                 context.openGoogleMapsDirections(pin.location.latitude, pin.location.longitude)
               },
               modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_NAVIGATE_BUTTON)) {
-                Text(text = "Navigate")
+                Text(text = "Go To")
               }
         }
       }
