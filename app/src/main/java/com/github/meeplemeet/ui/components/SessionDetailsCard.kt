@@ -87,19 +87,6 @@ fun SessionDetailsCard(
     }
   }
 
-  val participantText =
-      when {
-        names.size < session.participants.size -> "Loading…"
-        names.isEmpty() -> "No participants"
-        names.size == 1 -> names.first()
-        names.size == 2 -> names.joinToString(", ")
-        else -> {
-          val firstTwo = names.take(2).joinToString(", ")
-          val remaining = names.size - 2
-          "$firstTwo and $remaining more participant${if (remaining > 1) "s" else ""}"
-        }
-      }
-
   val gameName by
       produceState(
           key1 = session.gameId, initialValue = session.gameId // fallback: show id while loading
@@ -137,128 +124,131 @@ fun SessionDetailsCard(
 
               // TITLE + CLOSE
               Box(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.align(Alignment.CenterStart).padding(end = 40.dp)) {
-                  Text(
-                      text = session.name,
-                      style = MaterialTheme.typography.headlineMedium,
-                      fontWeight = FontWeight.Bold,
-                      maxLines = 2,
-                      overflow = TextOverflow.Ellipsis)
+                Column(
+                    modifier =
+                        Modifier.align(Alignment.CenterStart)
+                            .padding(end = Dimensions.Padding.huge)) {
+                      Text(
+                          text = session.name,
+                          style = MaterialTheme.typography.headlineMedium,
+                          fontWeight = FontWeight.Bold,
+                          maxLines = 2,
+                          overflow = TextOverflow.Ellipsis)
 
-                  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+                      Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-                  // Game with Dice Icon
-                  Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Extension,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimensions.IconSize.medium),
-                        tint = AppColors.textIconsFade)
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-                    Text(
-                        text = gameName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textIconsFade,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
-                  }
-
-                  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
-
-                  // Participants with People Icon
-                  Row(
-                      verticalAlignment = Alignment.CenterVertically,
-                      modifier = Modifier.fillMaxWidth()) {
+                      // Game with Dice Icon
+                      Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.People,
+                            imageVector = Icons.Filled.Extension,
                             contentDescription = null,
                             modifier = Modifier.size(Dimensions.IconSize.medium),
                             tint = AppColors.textIconsFade)
                         Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-
-                        when {
-                          names.size < session.participants.size -> {
-                            Text(
-                                text = "Loading…",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.textIconsFade)
-                          }
-                          names.isEmpty() -> {
-                            Text(
-                                text = "No participants",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.textIconsFade)
-                          }
-                          names.size == 1 -> {
-                            Text(
-                                text = names.first(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.textIconsFade,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis)
-                          }
-                          names.size == 2 -> {
-                            Text(
-                                text = names.joinToString(", "),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.textIconsFade,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis)
-                          }
-                          else -> {
-                            val firstTwo = names.take(2).joinToString(", ")
-                            val remaining = names.size - 2
-
-                            Text(
-                                text = firstTwo,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.textIconsFade,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false))
-                            Text(
-                                text =
-                                    " and $remaining more participant${if (remaining > 1) "s" else ""}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.textIconsFade,
-                                maxLines = 1)
-                          }
-                        }
+                        Text(
+                            text = gameName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = AppColors.textIconsFade,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
                       }
 
-                  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+                      Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-                  // Location and Date
-                  Row(
-                      verticalAlignment = Alignment.CenterVertically,
-                      modifier = Modifier.fillMaxWidth()) {
-                        if (session.location.name.isNotBlank()) {
-                          Icon(
-                              imageVector = Icons.Default.Place,
-                              contentDescription = null,
-                              modifier = Modifier.size(Dimensions.IconSize.medium),
-                              tint = AppColors.textIconsFade)
-                          Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-                          Text(
-                              text = session.location.name,
-                              style = MaterialTheme.typography.bodyLarge,
-                              color = AppColors.textIconsFade,
-                              maxLines = 1,
-                              overflow = TextOverflow.Ellipsis,
-                              modifier = Modifier.weight(1f, fill = false))
-                          Text(
-                              text = " • $date",
-                              style = MaterialTheme.typography.bodyLarge,
-                              color = AppColors.textIconsFade,
-                              maxLines = 1)
-                        } else {
-                          Text(
-                              text = date,
-                              style = MaterialTheme.typography.bodyLarge,
-                              color = AppColors.textIconsFade)
-                        }
-                      }
-                }
+                      // Participants with People Icon
+                      Row(
+                          verticalAlignment = Alignment.CenterVertically,
+                          modifier = Modifier.fillMaxWidth()) {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = null,
+                                modifier = Modifier.size(Dimensions.IconSize.medium),
+                                tint = AppColors.textIconsFade)
+                            Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+
+                            when {
+                              names.size < session.participants.size -> {
+                                Text(
+                                    text = "Loading…",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = AppColors.textIconsFade)
+                              }
+                              names.isEmpty() -> {
+                                Text(
+                                    text = "No participants",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = AppColors.textIconsFade)
+                              }
+                              names.size == 1 -> {
+                                Text(
+                                    text = names.first(),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = AppColors.textIconsFade,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis)
+                              }
+                              names.size == 2 -> {
+                                Text(
+                                    text = names.joinToString(", "),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = AppColors.textIconsFade,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis)
+                              }
+                              else -> {
+                                val firstTwo = names.take(2).joinToString(", ")
+                                val remaining = names.size - 2
+
+                                Text(
+                                    text = firstTwo,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = AppColors.textIconsFade,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false))
+                                Text(
+                                    text =
+                                        " and $remaining more participant${if (remaining > 1) "s" else ""}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = AppColors.textIconsFade,
+                                    maxLines = 1)
+                              }
+                            }
+                          }
+
+                      Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+
+                      // Location and Date
+                      Row(
+                          verticalAlignment = Alignment.CenterVertically,
+                          modifier = Modifier.fillMaxWidth()) {
+                            if (session.location.name.isNotBlank()) {
+                              Icon(
+                                  imageVector = Icons.Default.Place,
+                                  contentDescription = null,
+                                  modifier = Modifier.size(Dimensions.IconSize.medium),
+                                  tint = AppColors.textIconsFade)
+                              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                              Text(
+                                  text = session.location.name,
+                                  style = MaterialTheme.typography.bodyLarge,
+                                  color = AppColors.textIconsFade,
+                                  maxLines = 1,
+                                  overflow = TextOverflow.Ellipsis,
+                                  modifier = Modifier.weight(1f, fill = false))
+                              Text(
+                                  text = " • $date",
+                                  style = MaterialTheme.typography.bodyLarge,
+                                  color = AppColors.textIconsFade,
+                                  maxLines = 1)
+                            } else {
+                              Text(
+                                  text = date,
+                                  style = MaterialTheme.typography.bodyLarge,
+                                  color = AppColors.textIconsFade)
+                            }
+                          }
+                    }
 
                 IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd)) {
                   Icon(Icons.Default.Close, contentDescription = "Close")
