@@ -1,6 +1,9 @@
 package com.github.meeplemeet.ui
 
 import android.Manifest
+import android.app.Activity
+import android.app.Instrumentation
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -14,6 +17,11 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.test.espresso.intent.Intents
+import androidx.test.espresso.intent.Intents.intended
+import androidx.test.espresso.intent.Intents.intending
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
+import androidx.test.espresso.intent.matcher.IntentMatchers.toPackage
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
@@ -44,6 +52,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import org.hamcrest.Matchers.allOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -422,6 +431,50 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertDoesNotExist()
 
+        shopRepository.deleteShop(shop.id)
+      }
+    }
+
+    checkpoint("singlePin_navigateButton_triggers_maps_intent_if_available") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Navigate Test Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        noClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = noClusterViewModel.getClusters()
+        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
+
+        // show preview sheet
+        noClusterViewModel.selectPin(cluster!!.items[0])
+        delay(1000)
+        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+
+        // init Espresso-Intents to observe intents
+        Intents.init()
+        try {
+          // perform click on Navigate button but intercept opening Google Maps
+          val matcher =
+              allOf(hasAction(Intent.ACTION_VIEW), toPackage("com.google.android.apps.maps"))
+          intending(matcher).respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+
+          composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_NAVIGATE_BUTTON).performClick()
+
+          intended(matcher)
+        } finally {
+          Intents.release()
+        }
+
+        // cleanup
         shopRepository.deleteShop(shop.id)
       }
     }
