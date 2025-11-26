@@ -158,43 +158,85 @@ object FriendsManagementDefaults {
 //  Enums & helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Enum representing the secondary action available for a user row.
+ *
+ * @property ADD_FRIEND Action to send a friend request.
+ * @property REMOVE_FRIEND Action to remove an existing friend.
+ * @property REQUEST_SENT Indicates a friend request has already been sent (view-only state).
+ */
 enum class UserRowSecondaryAction {
   ADD_FRIEND,
   REMOVE_FRIEND,
   REQUEST_SENT,
 }
 
+/**
+ * Enum representing the context in which a user row is displayed.
+ *
+ * @property FRIEND_LIST User row is displayed in the friends list.
+ * @property SEARCH_RESULTS User row is displayed in search results.
+ */
 enum class UserRowContext {
   FRIEND_LIST,
   SEARCH_RESULTS,
 }
 
+/**
+ * Enum representing the available tabs in the friends management screen.
+ *
+ * @property FRIENDS Tab displaying the user's friends.
+ * @property REQUESTS Tab displaying sent friend requests.
+ * @property BLOCKED Tab displaying blocked users.
+ */
 enum class FriendsTab {
   FRIENDS,
   REQUESTS,
   BLOCKED,
 }
 
+/**
+ * Data class to hold scroll-related metrics for the custom scrollbar.
+ *
+ * @property progress The current scroll progress (0.0 to 1.0).
+ * @property thumbFraction The fraction of the scrollbar occupied by the thumb (0.0 to 1.0).
+ */
 private data class ScrollMetrics(
     val progress: Float,
     val thumbFraction: Float,
 )
 
+/**
+ * Data class to hold lists of users in different relationship categories.
+ *
+ * @property friends List of accounts that are friends.
+ * @property sentRequests List of accounts to whom friend requests have been sent.
+ * @property blockedUsers List of accounts that are blocked.
+ */
 private data class FriendsLists(
     val friends: List<Account>,
     val sentRequests: List<Account>,
     val blockedUsers: List<Account>,
 )
 
+/** Extension property to check if a relationship status indicates a friend relationship. */
 private val RelationshipStatus?.isFriend: Boolean
   get() = (this == RelationshipStatus.FRIEND)
 
+/** Extension property to check if a relationship status indicates a blocked relationship. */
 private val RelationshipStatus?.isBlocked: Boolean
   get() = (this == RelationshipStatus.BLOCKED)
 
+/** Extension property to check if a relationship status indicates a sent friend request. */
 private val RelationshipStatus?.isRequestSent: Boolean
   get() = (this == RelationshipStatus.SENT)
 
+/**
+ * Data class to hold UI-related data for a friends tab.
+ *
+ * @property label The display label for the tab.
+ * @property testTag The test tag identifier for the tab.
+ */
 private data class FriendsTabUiData(
     val label: String,
     val testTag: String,
