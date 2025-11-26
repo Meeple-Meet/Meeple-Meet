@@ -24,21 +24,70 @@ fun interface ClusterStrategy {
   fun clusterize(items: List<ClusterItem>, zoomLevel: Float): List<Cluster<ClusterItem>>
 }
 
-private const val DEFAULT_THRESHOLD_KM = 1.0
+object ClusterThresholds {
+
+  /**
+   * Returns a threshold in kilometers based on a linear mapping from zoom level.
+   *
+   * Example approximate values:
+   * - zoom 10 → 1000 m
+   * - zoom 14 → 500 m
+   * - zoom 18 → 40 m
+   */
+  val linearScaling: (Float) -> Double = { zoom ->
+    val threshold = 2.2 - 0.12 * zoom
+    threshold.coerceAtLeast(0.03)
+  }
+
+  /**
+   * Returns a cluster threshold in kilometers based on a piecewise-linear mapping.
+   *
+   * Example approximate values:
+   * - zoom 10 → 2.0 km
+   * - zoom 14 → 400 m
+   * - zoom 16 → 150 m
+   */
+  val piecewiseLinearScaling: (Float) -> Double = { zoom ->
+    when {
+      zoom <= 13f -> 2.0 - 0.35 * (zoom - 10.0)
+      zoom <= 18f -> 0.7 * 0.6.pow(zoom - 13.0)
+      else -> 0.03
+    }
+  }
+
+  /**
+   * Returns a threshold in kilometers based on a exponential mapping from zoom level.
+   *
+   * Example approximate values:
+   * - zoom 10 → 16 km
+   * - zoom 14 → 1000 m
+   * - zoom 18 → 60 m
+   */
+  val exponentialScaling: (Float) -> Double = { zoom -> 2.0.pow(14.0 - zoom) }
+
+  /**
+   * Returns a threshold in kilometers based on a piecewise exponential mapping from zoom level.
+   *
+   * Example approximate values:
+   * - zoom 10 → 5 km
+   * - zoom 14 → 1000 m
+   * - zoom 18 → 60 m
+   */
+  val piecewiseExponentialScaling: (Float) -> Double = { zoom ->
+    val base = if (zoom >= 14f) 2.0 else 1.5
+    base.pow(14.0 - zoom)
+  }
+}
 
 /**
  * A simple distance-based clustering strategy.
  *
  * Items closer than a threshold (adjusted for zoom) are grouped into clusters.
  *
- * @property baseThresholdKm Base distance threshold in kilometers.
  * @property zoomToThreshold Function to compute the effective threshold based on zoom.
  */
 class DistanceBasedClusterStrategy(
-    private val baseThresholdKm: Double = DEFAULT_THRESHOLD_KM,
-    private val zoomToThreshold: (Float) -> Double = { zoom ->
-      baseThresholdKm / 2.0.pow(zoom / 5.0)
-    }
+    private val zoomToThreshold: (Float) -> Double = ClusterThresholds.piecewiseExponentialScaling
 ) : ClusterStrategy {
 
   /**
