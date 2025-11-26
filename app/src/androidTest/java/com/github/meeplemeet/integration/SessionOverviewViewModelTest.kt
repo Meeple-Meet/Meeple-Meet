@@ -115,9 +115,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
             testLocation,
             account.uid)
     val photoUrl = "https://example.com/archived_photo.webp"
-    sessionRepository.archiveSession(session.uid, java.util.UUID.randomUUID().toString(), photoUrl)
-    // Retrieve archived photo URLs
-    val urls = viewModel.getArchivedSessionPhotoUrls(account.uid)
+    val archivedId = java.util.UUID.randomUUID().toString()
+    sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
+
+    delay(200) // Wait for archiving to complete
+
+    // Retrieve archived photo URLs directly from repository
+    val urls = sessionRepository.getArchivedSessionPhotoUrls(account.uid)
     assertTrue(urls.contains(photoUrl))
   }
 
@@ -135,15 +139,52 @@ class SessionOverviewViewModelTest : FirestoreTests() {
             testLocation,
             account.uid)
     val photoUrl = "https://example.com/find_by_photo.webp"
-    sessionRepository.archiveSession(session.uid, java.util.UUID.randomUUID().toString(), photoUrl)
-    // Find session by photo URL
-    val foundSession = viewModel.getArchivedSessionByPhotoUrl(photoUrl)
+    val archivedId = java.util.UUID.randomUUID().toString()
+    sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
+
+    delay(200) // Wait for archiving to complete
+
+    // Find session by photo URL directly from repository
+    val foundSession = sessionRepository.getArchivedSessionByPhotoUrl(photoUrl)
     assertNotNull(foundSession)
     assertEquals(photoUrl, foundSession?.photoUrl)
+    assertEquals("Find By Photo Session", foundSession?.name)
   }
 
   @Test
-  fun updateSessions_archivesPassedSessions_withoutPhoto() = runBlocking {
+  fun getArchivedSessionPhotoUrls_returnsEmpty_whenNoArchivedSessions() = runBlocking {
+    // User has no archived sessions
+    val urls = sessionRepository.getArchivedSessionPhotoUrls(account.uid)
+    assertTrue(urls.isEmpty())
+  }
+
+  @Test
+  fun getArchivedSessionPhotoUrls_returnsEmpty_whenPageOutOfBounds() = runBlocking {
+    // Archive one session
+    val discussion = discussionRepository.createDiscussion("Single Archive", "Test", account.uid)
+    val game = gameRepository.getGameById(existingGameId)
+    sessionRepository.createSession(
+        discussion.uid, "Single Session", game.uid, Timestamp.now(), testLocation, account.uid)
+    val photoUrl = "https://example.com/single_photo.webp"
+    val archivedId = java.util.UUID.randomUUID().toString()
+    sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
+
+    delay(200)
+
+    // Request page 1 (but only 1 item exists in page 0)
+    val urls = sessionRepository.getArchivedSessionPhotoUrls(account.uid, page = 1)
+    assertTrue(urls.isEmpty())
+  }
+
+  @Test
+  fun getArchivedSessionByPhotoUrl_returnsNull_whenPhotoUrlNotFound() = runBlocking {
+    val foundSession =
+        sessionRepository.getArchivedSessionByPhotoUrl("https://nonexistent.com/photo.webp")
+    assertNull(foundSession)
+  }
+
+  @Test
+  fun updateSession_archivesPassedSession_withoutPhoto() = runBlocking {
     // Create a discussion and session that has passed (3 hours ago)
     val discussion =
         discussionRepository.createDiscussion("Past Session", "Happened earlier", account.uid)
@@ -161,24 +202,26 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val sessionBefore = viewModel.sessionMapFlow(account.uid).first()
     assertEquals(1, sessionBefore.size)
 
-    // Call updateSessions
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    viewModel.updateSessions(context, account.uid)
+    // Verify session is considered passed
+    assertTrue(sessionRepository.isSessionPassed(discussion.uid))
 
-    delay(200) // wait for archiving to complete
+    // Call updateSession
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    viewModel.updateSession(context, discussion.uid)
+
+    delay(2000) // wait for archiving to complete
 
     // Verify session is no longer in active sessions
     val sessionAfter = viewModel.sessionMapFlow(account.uid).first()
     assertTrue(sessionAfter.isEmpty())
 
-    // Verify session appears in archived sessions
-    val archivedUrls = viewModel.getArchivedSessionPhotoUrls(account.uid)
-    // No photo URL expected since session had no photo
+    // Verify session appears in archived sessions (photos list will be empty since no photo)
+    val archivedUrls = sessionRepository.getArchivedSessionPhotoUrls(account.uid)
     assertTrue(archivedUrls.isEmpty())
   }
 
   @Test
-  fun updateSessions_archivesPassedSessions_withPhoto() = runBlocking {
+  fun updateSession_archivesPassedSession_withPhoto() = runBlocking {
     // Create a discussion and session that has passed with a photo
     val discussion =
         discussionRepository.createDiscussion("Past Session With Photo", "Had a photo", account.uid)
@@ -186,9 +229,8 @@ class SessionOverviewViewModelTest : FirestoreTests() {
 
     val fourHoursAgo = Timestamp(System.currentTimeMillis() / 1000 - (4 * 60 * 60), 0)
 
-    val session =
-        sessionRepository.createSession(
-            discussion.uid, "Photo Chess Night", game.uid, fourHoursAgo, testLocation, account.uid)
+    sessionRepository.createSession(
+        discussion.uid, "Photo Chess Night", game.uid, fourHoursAgo, testLocation, account.uid)
 
     // Add a photo to the session - create a valid image file
     val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -205,23 +247,24 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val sessionWithPhoto = sessionRepository.getSession(discussion.uid)
     assertNotNull(sessionWithPhoto?.photoUrl)
 
-    // Call updateSessions
-    viewModel.updateSessions(context, account.uid)
+    // Call updateSession
+    viewModel.updateSession(context, discussion.uid)
 
-    delay(2000)
+    delay(2000) // Wait for archiving and photo moving to complete
 
     // Verify session is archived
     val sessionAfter = viewModel.sessionMapFlow(account.uid).first()
     assertTrue(sessionAfter.isEmpty())
 
     // Verify archived session has the moved photo URL
-    val archivedUrls = viewModel.getArchivedSessionPhotoUrls(account.uid)
+    val archivedUrls = sessionRepository.getArchivedSessionPhotoUrls(account.uid)
     assertEquals(1, archivedUrls.size)
-    assertTrue(archivedUrls[0].startsWith("https://") && archivedUrls[0].contains("past_sessions"))
+    assertTrue(
+        archivedUrls[0].startsWith("https://") && archivedUrls[0].contains("archived_sessions"))
   }
 
   @Test
-  fun updateSessions_doesNotArchive_nonPassedSessions() = runBlocking {
+  fun updateSession_doesNotArchive_nonPassedSession() = runBlocking {
     // Create a discussion and session with a future timestamp
     val discussion =
         discussionRepository.createDiscussion("Future Session", "Will happen later", account.uid)
@@ -239,9 +282,9 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val sessionBefore = viewModel.sessionMapFlow(account.uid).first()
     assertEquals(1, sessionBefore.size)
 
-    // Call updateSessions
+    // Call updateSession
     val context = InstrumentationRegistry.getInstrumentation().targetContext
-    viewModel.updateSessions(context, account.uid)
+    viewModel.updateSession(context, discussion.uid)
 
     delay(200)
 
