@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -261,7 +262,7 @@ object MainTabUi {
  * @param onFriendsClick callback to navigate to the friend's tab
  * @param onNotificationClick callback to navigate to the notification's tab
  * @param onSignOutOrDel callback upon signing out
- * @param onDelAcc callback upon account deletion
+ * @param onDelete callback upon account deletion
  */
 @Composable
 fun MainTab(
@@ -420,22 +421,41 @@ fun PublicInfoActions(
                   }
 
               // Notifications Button
-              Button(
-                  modifier =
-                      Modifier.size(MainTabUi.ACTION_BUTTON_SIZE)
-                          .testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
-                  onClick = { onNotificationClick(account) },
-                  shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
-                  contentPadding = PaddingValues(0.dp),
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = AppColors.secondary, contentColor = AppColors.textIcons),
-                  elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.high)) {
-                    Icon(
-                        Icons.Outlined.NotificationsNone,
-                        contentDescription = MainTabUi.PublicInfo.NOTIF_BTN_DESC,
-                        modifier = Modifier.size(Dimensions.IconSize.extraLarge))
-                  }
+              Box(modifier = Modifier.size(MainTabUi.ACTION_BUTTON_SIZE)) {
+                Button(
+                    modifier =
+                        Modifier.matchParentSize().testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
+                    onClick = { onNotificationClick(account) },
+                    shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
+                    contentPadding = PaddingValues(0.dp),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = AppColors.secondary,
+                            contentColor = AppColors.textIcons),
+                    elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.high)) {
+                      Icon(
+                          Icons.Outlined.NotificationsNone,
+                          contentDescription = MainTabUi.PublicInfo.NOTIF_BTN_DESC,
+                          modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+                    }
+
+                val notificationCount = account.notifications.size
+                if (notificationCount > 0) {
+                  Box(
+                      modifier =
+                          Modifier.size(24.dp)
+                              .align(Alignment.TopEnd)
+                              .offset(4.dp, (-4).dp)
+                              .background(AppColors.negative, CircleShape),
+                      contentAlignment = Alignment.Center) {
+                        Text(
+                            text =
+                                if (notificationCount > 9) "9+" else notificationCount.toString(),
+                            color = AppColors.primary,
+                            fontSize = Dimensions.TextSize.tiny)
+                      }
+                }
+              }
             }
 
         // Logout Button
