@@ -99,7 +99,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
   private fun discussionProfilePath(id: String) = "${discussionBasePath(id)}/profile.webp"
 
-  private fun sessionPhotoPath(id: String) = "discussions/${id}/session/photo.webp"
+  private fun sessionPhotoPath(id: String) = "${discussionBasePath(id)}/session.webp"
 
   private fun discussionMessagesDir(id: String) = "${discussionBasePath(id)}/messages"
 

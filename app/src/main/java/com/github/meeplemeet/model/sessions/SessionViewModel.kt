@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.sessions
+// AI was used in this file
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
@@ -10,6 +11,8 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
+
+private val onlyAdminErrorText: String = "Only discussion admins can perform this operation"
 
 /**
  * ViewModel for managing gaming sessions within a discussion.
@@ -71,7 +74,7 @@ class SessionViewModel(
               location == null
 
       if (!isRemovingSelfOnly) {
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+        throw PermissionDeniedException(onlyAdminErrorText)
       }
     }
 
@@ -106,8 +109,7 @@ class SessionViewModel(
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
   fun deleteSession(requester: Account, discussion: Discussion) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(onlyAdminErrorText)
 
     viewModelScope.launch { sessionRepository.deleteSession(discussion.uid) }
   }
@@ -131,8 +133,7 @@ class SessionViewModel(
       context: Context,
       inputPath: String
   ) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException("Only discussion admins can perform this operation")
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(onlyAdminErrorText)
 
     viewModelScope.launch {
       val photoUrl = imageRepository.saveSessionPhoto(context, discussion.uid, inputPath)
