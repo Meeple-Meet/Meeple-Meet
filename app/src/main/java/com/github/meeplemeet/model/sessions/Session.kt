@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
  * @property date The scheduled date and time of the session
  * @property location The physical or virtual location where the session will take place
  * @property participants List of participant IDs (typically user IDs) who are part of this session
+ * @property photoUrl Optional URL to the session photo stored in Firebase Storage
  */
 @Serializable
 data class Session(
@@ -22,5 +23,6 @@ data class Session(
     val gameId: String = "",
     val date: Timestamp = Timestamp.now(),
     val location: Location = Location(),
-    val participants: List<String> = emptyList()
+    val participants: List<String> = emptyList(),
+    val photoUrl: String? = null
 )

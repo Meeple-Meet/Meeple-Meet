@@ -8,6 +8,7 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -58,7 +59,8 @@ class SessionRepository(
       gameId: String? = null,
       date: Timestamp? = null,
       location: Location? = null,
-      newParticipantList: List<String>? = null
+      newParticipantList: List<String>? = null,
+      photoUrl: String? = null
   ): Discussion {
     val updates = mutableMapOf<String, Any>()
 
@@ -68,6 +70,11 @@ class SessionRepository(
     location?.let { updates["${DiscussionNoUid::session.name}.${Session::location.name}"] = it }
     newParticipantList?.let {
       updates["${DiscussionNoUid::session.name}.${Session::participants.name}"] = it
+    }
+    photoUrl?.let {
+      // Use FieldValue.delete() to clear the field when empty string is passed
+      val value = if (it.isEmpty()) FieldValue.delete() else it
+      updates["${DiscussionNoUid::session.name}.${Session::photoUrl.name}"] = value
     }
 
     if (updates.isEmpty())
