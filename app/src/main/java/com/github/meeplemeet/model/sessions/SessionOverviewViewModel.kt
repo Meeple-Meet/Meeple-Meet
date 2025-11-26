@@ -42,16 +42,20 @@ class SessionOverviewViewModel(
     viewModelScope.launch {
       val sessionIds = sessionRepository.getSessionIdsForUser(userId)
       for (id in sessionIds) {
-        if (sessionRepository.isSessionPassed(id)) {
-          val session = sessionRepository.getSession(id)
-          if (session != null) {
-            val newUuid = java.util.UUID.randomUUID().toString()
-            var newUrl: String? = null
-            if (session.photoUrl != null) {
-              newUrl = imageRepository.moveSessionPhoto(context, id, newUuid)
+        try {
+          if (sessionRepository.isSessionPassed(id)) {
+            val session = sessionRepository.getSession(id)
+            if (session != null) {
+              val newUuid = java.util.UUID.randomUUID().toString()
+              var newUrl: String? = null
+              if (session.photoUrl != null) {
+                newUrl = imageRepository.moveSessionPhoto(context, id, newUuid)
+              }
+              sessionRepository.archiveSession(id, newUuid, newUrl)
             }
-            sessionRepository.archiveSession(id, newUuid, newUrl)
           }
+        } catch (e: Exception) {
+          e.printStackTrace()
         }
       }
     }
