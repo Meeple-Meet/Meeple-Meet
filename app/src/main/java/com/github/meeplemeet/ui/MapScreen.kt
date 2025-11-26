@@ -4,11 +4,14 @@ package com.github.meeplemeet.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location as AndroidLocation
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
@@ -146,6 +149,7 @@ object MapScreenTestTags {
   const val PREVIEW_DATE = "previewDate"
   const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
+  const val PREVIEW_NAVIGATE_BUTTON = "previewNavigateButton"
   const val CLUSTER_SHEET = "clusterSheet"
 
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
@@ -808,6 +812,23 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
 }
 
 /**
+ * Opens Google Maps in navigation mode toward a given latitude/longitude.
+ *
+ * This uses the `google.navigation:` URI scheme to directly launch turn-by-turn navigation if
+ * Google Maps is installed. If the Maps app is not available, the call is safely ignored.
+ *
+ * @param lat The destination latitude.
+ * @param lng The destination longitude.
+ */
+private fun Context.openGoogleMapsDirections(lat: Double, lng: Double) {
+  val uri = Uri.parse("google.navigation:q=$lat,$lng")
+  val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") }
+  if (intent.resolveActivity(packageManager) != null) {
+    startActivity(intent)
+  }
+}
+
+/**
  * Displays a simple loading sheet while fetching marker preview data.
  *
  * Shows a centered text and a circular progress indicator. The text varies depending on the type of
@@ -851,7 +872,10 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin?) {
  *     - Address with location icon
  *     - Date with calendar icon
  *
- * The sheet includes a close icon in the top-right corner.
+ * The sheet includes:
+ * - A close button (top-right)
+ * - A "View details" button
+ * - A "Navigate" button opening Google Maps directions
  */
 @Composable
 private fun MarkerPreviewSheet(
@@ -944,13 +968,21 @@ private fun MarkerPreviewSheet(
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        Button(
-            onClick = { onRedirect(geoPin) },
-            modifier =
-                Modifier.align(Alignment.End)
-                    .testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
-              Text(text = "View details")
-            }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+          Button(
+              onClick = { onRedirect(geoPin) },
+              modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
+                Text(text = "View details")
+              }
+
+          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+          Button(
+              onClick = {},
+              modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_NAVIGATE_BUTTON)) {
+                Text(text = "Navigate")
+              }
+        }
       }
 }
 
