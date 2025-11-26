@@ -127,7 +127,12 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlin.math.asin
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
@@ -387,6 +392,7 @@ fun MapScreen(
                         preview = uiState.selectedMarkerPreview!!,
                         onClose = { viewModel.clearSelectedPin() },
                         pin = uiState.selectedPin!!,
+                        userLocation = userLocation,
                         onRedirect = onRedirect)
                   }
                 }
@@ -399,6 +405,7 @@ fun MapScreen(
                   } else {
                     ClusterPreviewSheet(
                         clusterPreviews = clusterPreviews,
+                        userLocation = userLocation,
                         onSelectPreview = { geoPin, preview ->
                           viewModel.selectPinFromCluster(geoPin, preview)
                         })
@@ -829,6 +836,51 @@ private fun Context.openGoogleMapsDirections(lat: Double, lng: Double) {
 }
 
 /**
+ * Calculates the distance between two geographic coordinates using the Haversine formula.
+ *
+ * @param lat1 Latitude of the first point in degrees.
+ * @param lng1 Longitude of the first point in degrees.
+ * @param lat2 Latitude of the second point in degrees.
+ * @param lng2 Longitude of the second point in degrees.
+ * @return Distance between the two points in kilometers.
+ */
+private fun distanceKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+  val r = 6371.0 // Earth radius
+  val dLat = Math.toRadians(lat2 - lat1)
+  val dLng = Math.toRadians(lng2 - lng1)
+  val lat1 = Math.toRadians(lat1)
+  val lat2 = Math.toRadians(lat2)
+
+  val haversine = sin(dLat / 2).pow(2.0) + sin(dLng / 2).pow(2.0) * cos(lat1) * cos(lat2)
+  return 2 * r * asin(sqrt(haversine))
+}
+
+/**
+ * Extension function for GeoPinWithLocation to compute the distance to a given location.
+ *
+ * @param location Target location.
+ * @return Distance to the target location in kilometers.
+ */
+private fun GeoPinWithLocation.distanceTo(location: Location): Double {
+  return distanceKm(
+      this.location.latitude, this.location.longitude, location.latitude, location.longitude)
+}
+
+/**
+ * Returns a user-friendly string representation of the distance from this GeoPinWithLocation to the
+ * specified location.
+ *
+ * Distances below 1 km are shown in meters, otherwise in kilometers with 1 decimal.
+ *
+ * @param location Target location.
+ * @return Distance as a formatted string, e.g., "500 m" or "2.3 km".
+ */
+private fun GeoPinWithLocation.distanceToString(location: Location): String {
+  val km = distanceTo(location)
+  return if (km < 1.0) "\${(km * 1000).toInt()} m" else String.format("%.1f km", km)
+}
+
+/**
  * Displays a simple loading sheet while fetching marker preview data.
  *
  * Shows a centered text and a circular progress indicator. The text varies depending on the type of
@@ -882,6 +934,7 @@ private fun MarkerPreviewSheet(
     preview: MarkerPreview,
     onClose: () -> Unit,
     pin: GeoPinWithLocation,
+    userLocation: Location?,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
   val context = LocalContext.current
@@ -892,8 +945,11 @@ private fun MarkerPreviewSheet(
               .padding(Dimensions.Padding.extraLarge)
               .testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
         Box(modifier = Modifier.fillMaxWidth()) {
+          val title =
+              if (userLocation != null) "${preview.name} — ${pin.distanceToString(userLocation)}"
+              else preview.name
           Text(
-              text = preview.name,
+              text = title,
               style = MaterialTheme.typography.titleLarge,
               modifier =
                   Modifier.align(Alignment.CenterStart).testTag(MapScreenTestTags.PREVIEW_TITLE))
@@ -999,6 +1055,7 @@ private fun MarkerPreviewSheet(
 @Composable
 private fun ClusterPreviewSheet(
     clusterPreviews: List<Pair<GeoPinWithLocation, MarkerPreview>>,
+    userLocation: Location?,
     onSelectPreview: (GeoPinWithLocation, MarkerPreview) -> Unit
 ) {
   Column(
@@ -1014,6 +1071,8 @@ private fun ClusterPreviewSheet(
           items(clusterPreviews) { (pin, preview) ->
             ClusterPreviewItem(
                 preview = preview,
+                pin = pin,
+                userLocation = userLocation,
                 onClick = { onSelectPreview(pin, preview) },
                 testTag = MapScreenTestTags.getTestTagForClusterItem(pin.geoPin.uid))
           }
@@ -1031,37 +1090,54 @@ private fun ClusterPreviewSheet(
  * @param testTag UI testing tag
  */
 @Composable
-private fun ClusterPreviewItem(preview: MarkerPreview, onClick: () -> Unit, testTag: String) {
+private fun ClusterPreviewItem(
+    preview: MarkerPreview,
+    pin: GeoPinWithLocation,
+    userLocation: Location?,
+    onClick: () -> Unit,
+    testTag: String
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .clickable { onClick() }
               .padding(Dimensions.Padding.medium)
               .testTag(testTag),
-      verticalAlignment = Alignment.CenterVertically) {
-        val icon =
-            when (preview) {
-              is MarkerPreview.ShopMarkerPreview -> Icons.Default.Storefront
-              is MarkerPreview.SpaceMarkerPreview -> Icons.Default.TableRestaurant
-              is MarkerPreview.SessionMarkerPreview -> Icons.Default.SportsEsports
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          val icon =
+              when (preview) {
+                is MarkerPreview.ShopMarkerPreview -> Icons.Default.Storefront
+                is MarkerPreview.SpaceMarkerPreview -> Icons.Default.TableRestaurant
+                is MarkerPreview.SessionMarkerPreview -> Icons.Default.SportsEsports
+              }
+
+          Icon(
+              imageVector = icon,
+              contentDescription = null,
+              modifier = Modifier.size(Dimensions.IconSize.large))
+
+          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+          Column {
+            Text(text = preview.name, style = MaterialTheme.typography.bodyLarge)
+
+            if (preview is MarkerPreview.SessionMarkerPreview) {
+              Text(
+                  text = preview.game,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(Dimensions.IconSize.large))
-
-        Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-
-        Column {
-          Text(text = preview.name, style = MaterialTheme.typography.bodyLarge)
-
-          if (preview is MarkerPreview.SessionMarkerPreview) {
-            Text(
-                text = preview.game,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
+        }
+
+        // Distance added to the end
+        userLocation?.let {
+          Text(
+              text = pin.distanceToString(it),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
 }
