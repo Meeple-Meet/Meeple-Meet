@@ -6,6 +6,8 @@ import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+const val BLANK_ACCOUNT_ID_ERROR = "Account id cannot be blank"
+
 /**
  * Interface defining common account management operations for ViewModels.
  *
@@ -24,7 +26,7 @@ interface AccountViewModel {
    * @throws IllegalArgumentException if the ID is blank
    */
   fun getAccount(id: String) {
-    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    if (id.isBlank()) throw IllegalArgumentException(BLANK_ACCOUNT_ID_ERROR)
     scope.launch { RepositoryProvider.accounts.getAccount(id, false) }
   }
 
@@ -60,7 +62,7 @@ interface AccountViewModel {
    * @throws IllegalArgumentException if the ID is blank
    */
   fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
-    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    if (id.isBlank()) throw IllegalArgumentException(BLANK_ACCOUNT_ID_ERROR)
     scope.launch { onResult(RepositoryProvider.accounts.getAccount(id, false)) }
   }
 
@@ -72,7 +74,7 @@ interface AccountViewModel {
    * @param onResult Callback that receives the retrieved account
    */
   fun getOtherAccount(id: String, context: Context, onResult: (Account) -> Unit) {
-    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    if (id.isBlank()) throw IllegalArgumentException(BLANK_ACCOUNT_ID_ERROR)
     scope.launch {
       val account = RepositoryProvider.accounts.getAccount(id, false)
       onResult(account)
