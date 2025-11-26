@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissState
@@ -41,19 +42,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,22 +62,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.meeplemeet.R
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationType
-import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -86,51 +87,27 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
-
-/* ---------------------------------------------------------
-   UI Test Tags
---------------------------------------------------------- */
+import kotlinx.coroutines.launch
 
 object NotificationsTabTestTags {
   const val HEADER_TITLE = "header_title"
 }
 
 /* ---------------------------------------------------------
-   MESSAGE BUILDING (prefix + variable + suffix)
+   EXTENSIONS + HELPERS
 --------------------------------------------------------- */
 
-data class NotificationParts(val prefix: String, val bold: String, val suffix: String)
+fun Notification.sentAtLocalDateTime(): LocalDateTime =
+    sentAt.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
 
-/**
- * Very simple text parts based on backend NotificationType and IDs. Can be enriched later once we
- * have display names from backend.
- */
-fun Notification.parts(): NotificationParts {
-  return when (type) {
-    NotificationType.FRIEND_REQUEST ->
-        NotificationParts(
-            prefix = "User ", bold = senderOrDiscussionId, suffix = " sent you a friend request.")
-    NotificationType.JOIN_DISCUSSION ->
-        NotificationParts(
-            prefix = "You've been invited to join discussion ",
-            bold = senderOrDiscussionId,
-            suffix = ".")
-    NotificationType.JOIN_SESSION ->
-        NotificationParts(
-            prefix = "You've been invited to join session ",
-            bold = senderOrDiscussionId,
-            suffix = ".")
-  }
-}
-
-/* ---------------------------------------------------------
-   GROUPING: Today / Yesterday / Earlier
---------------------------------------------------------- */
+fun NotificationType.label(): String =
+    when (this) {
+      NotificationType.FRIEND_REQUEST -> "Incoming friend request"
+      NotificationType.JOIN_DISCUSSION -> "Discussion invite"
+      NotificationType.JOIN_SESSION -> "Session invite"
+    }
 
 data class NotificationSection(val header: String, val items: List<Notification>)
-
-private fun Notification.sentAtLocalDateTime(): LocalDateTime =
-    sentAt.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
 
 fun groupNotifications(list: List<Notification>): List<NotificationSection> {
   val today = LocalDate.now()
@@ -152,17 +129,13 @@ fun groupNotifications(list: List<Notification>): List<NotificationSection> {
   return sections
 }
 
-/* ---------------------------------------------------------
-   POPUP DATA
---------------------------------------------------------- */
-
 sealed class NotificationPopupData {
   data class Discussion(
       val title: String,
       val participants: Int,
       val dateLabel: String,
       val description: String,
-      val icon: Painter
+      val icon: ByteArray?
   ) : NotificationPopupData()
 
   data class Session(
@@ -170,22 +143,47 @@ sealed class NotificationPopupData {
       val participants: Int,
       val dateLabel: String,
       val description: String,
-      val icon: Painter
+      val icon: ByteArray?
   ) : NotificationPopupData()
 
   data class FriendRequest(
       val username: String,
       val handle: String,
       val bio: String,
-      val avatar: Painter
+      val avatar: ByteArray?
   ) : NotificationPopupData()
 }
 
-/** Wrapper to keep popup UI data + backing backend notification together. */
 data class NotificationSheetState(
     val notification: Notification,
     val popupData: NotificationPopupData
 )
+
+fun Notification.toPopupData(): NotificationPopupData {
+  val dateLabel = sentAtLocalDateTime().format(DateTimeFormatter.ofPattern("MMM d"))
+  return when (type) {
+    NotificationType.FRIEND_REQUEST ->
+        NotificationPopupData.FriendRequest(
+            username = "User $senderOrDiscussionId",
+            handle = senderOrDiscussionId,
+            bio = "User $senderOrDiscussionId wants to add you as a friend.",
+            avatar = null)
+    NotificationType.JOIN_DISCUSSION ->
+        NotificationPopupData.Discussion(
+            title = "Discussion invitation",
+            participants = 0,
+            dateLabel = dateLabel,
+            description = "You've been invited to join discussion $senderOrDiscussionId.",
+            icon = null)
+    NotificationType.JOIN_SESSION ->
+        NotificationPopupData.Session(
+            title = "Session invitation",
+            participants = 0,
+            dateLabel = dateLabel,
+            description = "You've been invited to join session $senderOrDiscussionId.",
+            icon = null)
+  }
+}
 
 /* ---------------------------------------------------------
    MAIN SCREEN
@@ -195,13 +193,14 @@ data class NotificationSheetState(
 @Composable
 fun NotificationsTab(
     account: Account,
-    viewModel: ProfileScreenViewModel = viewModel(),
+    viewModel: NotificationsViewModel = viewModel(),
     onBack: () -> Unit
 ) {
+  val scope = rememberCoroutineScope()
+
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
 
-  // Backend notifications
   val notifications: List<Notification> =
       account.notifications.ifEmpty { stubBackendNotifications(account.uid) }
 
@@ -215,7 +214,7 @@ fun NotificationsTab(
             notifications.filter { it.type == NotificationType.JOIN_DISCUSSION }
         NotificationFilter.SESSIONS ->
             notifications.filter { it.type == NotificationType.JOIN_SESSION }
-      }
+      }.sortedByDescending { n -> n.sentAt }
 
   val grouped = groupNotifications(filtered)
 
@@ -224,30 +223,24 @@ fun NotificationsTab(
   if (sheetState != null) {
     val current = sheetState!!
     NotificationSheet(
+        notification = current.notification,
         data = current.popupData,
+        viewModel = viewModel,
         onDismiss = { sheetState = null },
         onAccept = {
-          when (current.notification.type) {
-            NotificationType.FRIEND_REQUEST -> {
-              viewModel.acceptFriendRequest(account, current.notification)
-            }
-            NotificationType.JOIN_DISCUSSION,
-            NotificationType.JOIN_SESSION -> {
-              // TODO: expose a public executeNotification(account, notification) in the ViewModel
-              // and call it here instead of just marking as read.
-              viewModel.readNotification(account, current.notification)
-            }
+          scope.launch {
+            current.notification.execute()
+            viewModel.readNotification(account, current.notification)
+            sheetState = null
           }
-          sheetState = null
         },
         onDecline = {
-          // Decline == delete notification for now
           viewModel.deleteNotification(account, current.notification)
           sheetState = null
         })
   }
 
-  Scaffold(
+  androidx.compose.material3.Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
             colors =
@@ -273,31 +266,37 @@ fun NotificationsTab(
           FilterRow(
               filters = filters, selected = selectedFilter, onSelected = { selectedFilter = it })
 
-          LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
-            grouped.forEachIndexed { index, section ->
-              if (index > 0) {
-                item { Spacer(Modifier.height(20.dp)) }
-              }
+          if (filtered.isEmpty()) {
+            EmptyNotificationState(filter = selectedFilter)
+          } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
+              grouped.forEachIndexed { index, section ->
+                if (index > 0) item { Spacer(Modifier.height(20.dp)) }
 
-              item {
-                Text(
-                    text = section.header,
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
-                    color = AppColors.textIcons,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-              }
+                item {
+                  Text(
+                      text = section.header,
+                      style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                      color = AppColors.textIcons,
+                      modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
 
-              items(section.items, key = { it.uid }) { notif ->
-                val icon = painterResource(R.drawable.google_logo)
-                NotificationListItem(
-                    notif = notif,
-                    onClick = {
-                      sheetState =
-                          NotificationSheetState(
-                              notification = notif, popupData = notif.toPopupData(icon))
-                    },
-                    onMarkRead = { viewModel.readNotification(account, notif) },
-                    onDelete = { viewModel.deleteNotification(account, notif) })
+                items(section.items, key = { it.uid }) { notif ->
+                  val context = LocalContext.current
+                  NotificationCard(
+                      notif = notif,
+                      viewModel = viewModel,
+                      onClick = {
+                        scope.launch {
+                          viewModel.preparePopupData(notif, context) { popupData ->
+                            sheetState = NotificationSheetState(notif, popupData)
+                          }
+                        }
+                        viewModel.readNotification(account, notif)
+                      },
+                      onMarkRead = { viewModel.readNotification(account, notif) },
+                      onDelete = { viewModel.deleteNotification(account, notif) })
+                }
               }
             }
           }
@@ -306,8 +305,16 @@ fun NotificationsTab(
 }
 
 /* ---------------------------------------------------------
-   FILTER ROW + CHIP
+   FILTERS
 --------------------------------------------------------- */
+
+enum class NotificationFilter(val label: String) {
+  ALL("All"),
+  UNREAD("Unread"),
+  FRIEND_REQUESTS("Friend requests"),
+  DISCUSSIONS("Discussions"),
+  SESSIONS("Sessions")
+}
 
 @Composable
 fun FilterRow(
@@ -315,85 +322,63 @@ fun FilterRow(
     selected: NotificationFilter,
     onSelected: (NotificationFilter) -> Unit,
 ) {
-  val scrollState = rememberScrollState()
+  val scroll = rememberScrollState()
 
-  val showLeftFade by remember { derivedStateOf { scrollState.value > 0 } }
-  val showRightFade by remember { derivedStateOf { scrollState.value < scrollState.maxValue } }
+  val showLeft by remember { derivedStateOf { scroll.value > 0 } }
+  val showRight by remember { derivedStateOf { scroll.value < scroll.maxValue } }
 
   Column(modifier = Modifier.fillMaxWidth()) {
     val padLimit = 24
-    val dynamicPaddingStart = if (scrollState.value <= padLimit) scrollState.value else padLimit
-    val dynamicPaddingEnd =
-        if (scrollState.maxValue - scrollState.value <= padLimit)
-            (scrollState.maxValue - scrollState.value)
-        else padLimit
+    val padStart = minOf(scroll.value, padLimit)
+    val padEnd = minOf(scroll.maxValue - scroll.value, padLimit)
 
     Box(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(40.dp)
-                .padding(start = dynamicPaddingStart.dp, end = dynamicPaddingEnd.dp)) {
-
-          // === SCROLLABLE CHIP ROW ===
-          Row(modifier = Modifier.horizontalScroll(scrollState).padding(horizontal = 12.dp)) {
+            Modifier.fillMaxWidth().height(40.dp).padding(start = padStart.dp, end = padEnd.dp)) {
+          Row(modifier = Modifier.horizontalScroll(scroll).padding(horizontal = 12.dp)) {
             filters.forEach { filter ->
-              val isSelected = filter == selected
-
               FilterChip(
-                  text = filter.label, selected = isSelected, onClick = { onSelected(filter) })
+                  text = filter.label,
+                  selected = filter == selected,
+                  onClick = { onSelected(filter) })
 
               Spacer(Modifier.width(16.dp))
             }
           }
 
-          // === LEFT FADE ===
-          if (showLeftFade) {
+          if (showLeft) {
             Box(
-                modifier =
-                    Modifier.align(Alignment.CenterStart)
-                        .width(32.dp)
-                        .fillMaxHeight()
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    AppColors.primary,
-                                    AppColors.primary.copy(alpha = 0.7f),
-                                    Color.Transparent))))
+                Modifier.align(Alignment.CenterStart)
+                    .width(32.dp)
+                    .fillMaxHeight()
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                AppColors.primary,
+                                AppColors.primary.copy(alpha = 0.7f),
+                                Color.Transparent))))
           }
 
-          // === RIGHT FADE ===
-          if (showRightFade) {
+          if (showRight) {
             Box(
-                modifier =
-                    Modifier.align(Alignment.CenterEnd)
-                        .width(32.dp)
-                        .fillMaxHeight()
-                        .background(
-                            Brush.horizontalGradient(listOf(Color.Transparent, AppColors.primary))))
+                Modifier.align(Alignment.CenterEnd)
+                    .width(32.dp)
+                    .fillMaxHeight()
+                    .background(
+                        Brush.horizontalGradient(listOf(Color.Transparent, AppColors.primary))))
           }
         }
 
-    // === ARROWS BELOW CHIPS (visual cue only) ===
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp, start = 12.dp, end = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween) {
-          if (showLeftFade) {
-            Icon(
-                imageVector = Icons.Default.ChevronLeft,
-                contentDescription = null,
-                tint = AppColors.textIconsFade)
-          } else {
-            Spacer(Modifier.size(24.dp))
-          }
+          if (showLeft) {
+            Icon(Icons.Default.ChevronLeft, null, tint = AppColors.textIconsFade)
+          } else Spacer(Modifier.size(24.dp))
 
-          if (showRightFade) {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = AppColors.textIconsFade)
-          } else {
-            Spacer(Modifier.size(24.dp))
-          }
+          if (showRight) {
+            Icon(Icons.Default.ChevronRight, null, tint = AppColors.textIconsFade)
+          } else Spacer(Modifier.size(24.dp))
         }
   }
 }
@@ -405,48 +390,26 @@ fun FilterChip(text: String, selected: Boolean, onClick: () -> Unit) {
   Box(
       modifier =
           Modifier.clip(RoundedCornerShape(4.dp))
-              .background(Color.Transparent)
               .border(if (selected) 2.dp else 1.dp, border, RoundedCornerShape(16.dp))
               .clickable { onClick() }
               .padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = text, color = AppColors.textIcons)
+        Text(text, color = AppColors.textIcons)
       }
 }
 
-enum class NotificationFilter(val label: String) {
-  ALL("All"),
-  UNREAD("Unread"),
-  FRIEND_REQUESTS("Friend requests"),
-  DISCUSSIONS("Discussions"),
-  SESSIONS("Sessions")
-}
-
 /* ---------------------------------------------------------
-   LIST ITEM (CARD + DIVIDER)
---------------------------------------------------------- */
-
-@Composable
-fun NotificationListItem(
-    notif: Notification,
-    onClick: () -> Unit,
-    onMarkRead: () -> Unit,
-    onDelete: () -> Unit
-) {
-  Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
-    NotificationCard(notif = notif, onDelete = onDelete, onMarkRead = onMarkRead)
-    HorizontalDivider(
-        modifier = Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp),
-        color = AppColors.textIcons.copy(alpha = 0.4f))
-  }
-}
-
-/* ---------------------------------------------------------
-   SWIPE CARD
+   NOTIFICATION CARD
 --------------------------------------------------------- */
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun NotificationCard(notif: Notification, onDelete: () -> Unit, onMarkRead: () -> Unit) {
+fun NotificationCard(
+    notif: Notification,
+    viewModel: NotificationsViewModel,
+    onClick: () -> Unit,
+    onMarkRead: () -> Unit,
+    onDelete: () -> Unit
+) {
   val dismissState =
       rememberDismissState(
           confirmStateChange = { state ->
@@ -466,12 +429,12 @@ fun NotificationCard(notif: Notification, onDelete: () -> Unit, onMarkRead: () -
   SwipeToDismiss(
       state = dismissState,
       background = { SwipeBackground(dismissState) },
-      dismissContent = { NotificationContent(notif = notif) },
+      dismissContent = { NotificationRowContent(notif, viewModel, onClick) },
       directions = setOf(DismissDirection.StartToEnd, DismissDirection.EndToStart),
-      dismissThresholds = { direction ->
-        when (direction) {
-          DismissDirection.StartToEnd -> FractionalThreshold(0.10f) // mark read
-          DismissDirection.EndToStart -> FractionalThreshold(0.40f) // delete
+      dismissThresholds = {
+        when (it) {
+          DismissDirection.StartToEnd -> FractionalThreshold(0.10f)
+          DismissDirection.EndToStart -> FractionalThreshold(0.40f)
         }
       })
 }
@@ -479,13 +442,12 @@ fun NotificationCard(notif: Notification, onDelete: () -> Unit, onMarkRead: () -
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun SwipeBackground(state: DismissState) {
-  val direction = state.dismissDirection ?: return
-
+  val dir = state.dismissDirection ?: return
   val isTriggered = state.targetValue != DismissValue.Default
   val scale by animateFloatAsState(if (isTriggered) 1.3f else 1f)
 
   val color =
-      when (direction) {
+      when (dir) {
         DismissDirection.StartToEnd -> AppColors.neutral
         DismissDirection.EndToStart -> AppColors.negative
       }
@@ -493,51 +455,96 @@ private fun SwipeBackground(state: DismissState) {
   Box(
       modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 20.dp),
       contentAlignment =
-          when (direction) {
+          when (dir) {
             DismissDirection.StartToEnd -> Alignment.CenterStart
             DismissDirection.EndToStart -> Alignment.CenterEnd
           }) {
         val icon =
-            when (direction) {
+            when (dir) {
               DismissDirection.StartToEnd -> Icons.Default.MarkChatRead
               DismissDirection.EndToStart -> Icons.Default.Delete
             }
 
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.scale(scale))
+        Icon(icon, null, tint = Color.White, modifier = Modifier.scale(scale))
       }
 }
 
-/* ---------------------------------------------------------
-   CARD CONTENT
---------------------------------------------------------- */
-
 @Composable
-private fun NotificationContent(notif: Notification) {
+private fun NotificationRowContent(
+    notif: Notification,
+    viewModel: NotificationsViewModel,
+    onClick: () -> Unit
+) {
+  val context = LocalContext.current
+
+  var avatarBytes by remember(notif.uid) { mutableStateOf<ByteArray?>(null) }
+  var friend by remember { mutableStateOf<Account?>(null) }
+  var discussionName by remember { mutableStateOf<String?>(null) }
+  var sessionName by remember { mutableStateOf<String?>(null) }
+
+  LaunchedEffect(notif.uid) {
+    when (notif.type) {
+      NotificationType.FRIEND_REQUEST -> {
+        viewModel.getOtherAccount(notif.senderOrDiscussionId) { acc ->
+          friend = acc
+          viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
+        }
+      }
+      NotificationType.JOIN_DISCUSSION -> {
+        viewModel.getDiscussion(notif.senderOrDiscussionId) { disc ->
+          discussionName = disc.name
+          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
+        }
+      }
+      NotificationType.JOIN_SESSION -> {
+        viewModel.getDiscussion(notif.senderOrDiscussionId) { disc ->
+          val session = disc.session
+          sessionName = session?.name ?: disc.name
+          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
+        }
+      }
+    }
+  }
 
   val dateTime = notif.sentAtLocalDateTime()
   val date = dateTime.toLocalDate()
   val today = LocalDate.now()
-  val yesterday = today.minusDays(1)
-
   val timeText =
-      when (date) {
-        today,
-        yesterday -> dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))
-        else -> dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+      if (date == today || date == today.minusDays(1))
+          dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))
+      else dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+
+  val displayName =
+      when (notif.type) {
+        NotificationType.FRIEND_REQUEST -> friend?.name ?: "User"
+        NotificationType.JOIN_DISCUSSION -> discussionName ?: "Discussion"
+        NotificationType.JOIN_SESSION -> sessionName ?: "Session"
       }
 
-  val parts = notif.parts()
-  val iconPainter = painterResource(R.drawable.google_logo) // Placeholder for all notifications
+  val fallbackLetter = displayName.firstOrNull()?.uppercaseChar() ?: '•'
 
   Row(
       modifier =
-          Modifier.background(AppColors.primary)
-              .fillMaxWidth()
+          Modifier.fillMaxWidth()
+              .background(AppColors.primary)
+              .clickable { onClick() }
               .padding(horizontal = 12.dp, vertical = 10.dp)) {
-        Icon(
-            painter = iconPainter,
-            contentDescription = null,
-            modifier = Modifier.width(44.dp).clip(RoundedCornerShape(22.dp)))
+        if (!notif.read) {
+          Box(
+              modifier =
+                  Modifier.padding(top = 12.dp)
+                      .size(18.dp)
+                      .clip(RoundedCornerShape(50))
+                      .background(AppColors.negative))
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        LetterAvatar(
+            letter = fallbackLetter,
+            size = 44.dp,
+            modifier = Modifier.clip(RoundedCornerShape(22.dp)),
+            imageBytes = avatarBytes)
 
         Spacer(Modifier.width(12.dp))
 
@@ -548,13 +555,28 @@ private fun NotificationContent(notif: Notification) {
               fontSize = 17.sp,
               color = AppColors.textIcons)
 
+          val subtitle =
+              when (notif.type) {
+                NotificationType.FRIEND_REQUEST ->
+                    buildAnnotatedString {
+                      append("User ")
+                      withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("$displayName ") }
+                      append("wants to add you as a friend.")
+                    }
+                NotificationType.JOIN_DISCUSSION ->
+                    buildAnnotatedString {
+                      append("Invited to join discussion ")
+                      withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(displayName) }
+                    }
+                NotificationType.JOIN_SESSION ->
+                    buildAnnotatedString {
+                      append("Invited to join session ")
+                      withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(displayName) }
+                    }
+              }
+
           Text(
-              text =
-                  buildAnnotatedString {
-                    append(parts.prefix)
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(parts.bold) }
-                    append(parts.suffix)
-                  },
+              text = subtitle,
               style = MaterialTheme.typography.bodySmall,
               color = AppColors.textIconsFade,
               modifier = Modifier.padding(top = 2.dp))
@@ -565,124 +587,138 @@ private fun NotificationContent(notif: Notification) {
         Column(horizontalAlignment = Alignment.End) {
           Text(
               text = timeText,
-              style = MaterialTheme.typography.bodySmall,
-              color = AppColors.textIconsFade)
-
-          if (!notif.read) {
-            Box(
-                modifier =
-                    Modifier.padding(top = 6.dp)
-                        .size(10.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(AppColors.negative))
-          }
+              color = AppColors.textIconsFade,
+              style = MaterialTheme.typography.bodySmall)
         }
       }
 }
 
 /* ---------------------------------------------------------
-   EXTENSION FOR DISPLAY NAME
+   BOTTOM SHEET
 --------------------------------------------------------- */
-
-fun NotificationType.label(): String {
-  return when (this) {
-    NotificationType.FRIEND_REQUEST -> "Incoming friend request"
-    NotificationType.JOIN_DISCUSSION -> "Discussion invite"
-    NotificationType.JOIN_SESSION -> "Session invite"
-  }
-}
-
-@Composable
-fun ExpandableText(text: String, previewCharLimit: Int = 160, modifier: Modifier = Modifier) {
-  var expanded by remember { mutableStateOf(false) }
-
-  Column(modifier = modifier) {
-    Text(
-        text =
-            if (expanded || text.length <= previewCharLimit) text
-            else text.take(previewCharLimit) + "…",
-        color = AppColors.textIcons)
-
-    if (text.length > previewCharLimit) {
-      Text(
-          text = if (expanded) "Show less" else "Show more",
-          color = AppColors.textIcons,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier.padding(top = 4.dp).clickable { expanded = !expanded })
-    }
-  }
-}
-
-@Composable
-fun ExpandableAnnotatedBio(username: String, fullBio: String, previewCharLimit: Int = 150) {
-  var expanded by remember { mutableStateOf(false) }
-
-  fun annotate(text: String): AnnotatedString {
-    return buildAnnotatedString {
-      withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(username) }
-      append(text.removePrefix(username))
-    }
-  }
-
-  if (fullBio.length <= previewCharLimit) {
-    Text(annotate(fullBio))
-  } else {
-    Column {
-      val preview = fullBio.take(previewCharLimit) + "…"
-      Text(annotate(if (expanded) fullBio else preview))
-
-      Text(
-          text = if (expanded) "Show less" else "Show more",
-          color = MaterialTheme.colorScheme.primary,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier.padding(top = 4.dp).clickable { expanded = !expanded })
-    }
-  }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSheet(
+    notification: Notification,
     data: NotificationPopupData,
+    viewModel: NotificationsViewModel,
     onDismiss: () -> Unit,
     onAccept: () -> Unit,
     onDecline: () -> Unit
 ) {
+  val context = LocalContext.current
+
+  var avatar by remember { mutableStateOf<ByteArray?>(null) }
+  var icon by remember { mutableStateOf<ByteArray?>(null) }
+  var loadedData by remember { mutableStateOf(data) }
+
+  LaunchedEffect(notification.uid) {
+    when (notification.type) {
+      NotificationType.FRIEND_REQUEST -> {
+        viewModel.getOtherAccount(notification.senderOrDiscussionId) { acc ->
+          viewModel.loadAccountImage(notification.senderOrDiscussionId, context) { bytes ->
+            avatar = bytes
+          }
+
+          loadedData =
+              NotificationPopupData.FriendRequest(
+                  username = acc.name,
+                  handle = acc.handle,
+                  bio =
+                      if (!acc.description.isNullOrBlank()) acc.description!!
+                      else "No description provided",
+                  avatar = avatar)
+        }
+      }
+      NotificationType.JOIN_DISCUSSION -> {
+        viewModel.getDiscussion(notification.senderOrDiscussionId) { disc ->
+          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> icon = bytes }
+
+          loadedData =
+              NotificationPopupData.Discussion(
+                  title = disc.name,
+                  participants = disc.participants.size,
+                  dateLabel = disc.createdAt.toString(),
+                  description = disc.description.ifBlank { "No description provided." },
+                  icon = icon)
+        }
+      }
+      NotificationType.JOIN_SESSION -> {
+        viewModel.getDiscussion(notification.senderOrDiscussionId) { disc ->
+          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatar = bytes }
+
+          val session = disc.session
+          if (session != null) {
+            viewModel.getGame(session.gameId) { game ->
+              val gameName = game.name
+              val formattedDate = session.date.toString()
+              val formattedTime = session.date.toString()
+
+              loadedData =
+                  NotificationPopupData.Session(
+                      title = session.name,
+                      participants = session.participants.size,
+                      dateLabel = formattedDate,
+                      description =
+                          "Play $gameName at $formattedTime on $formattedDate at ${session.location.name}",
+                      icon = avatar)
+            }
+          }
+        }
+      }
+    }
+  }
+
   ModalBottomSheet(
       onDismissRequest = onDismiss,
       containerColor = AppColors.primary,
       contentColor = AppColors.textIcons,
       dragHandle = null) {
-        when (data) {
-          is NotificationPopupData.Discussion ->
-              DiscussionSessionSheetContent(
-                  title = data.title,
-                  participants = data.participants,
-                  dateLabel = data.dateLabel,
-                  description = data.description,
-                  icon = data.icon,
-                  onAccept = onAccept,
-                  onDecline = onDecline,
-                  onClose = onDismiss)
-          is NotificationPopupData.Session ->
-              DiscussionSessionSheetContent(
-                  title = data.title,
-                  participants = data.participants,
-                  dateLabel = data.dateLabel,
-                  description = data.description,
-                  icon = data.icon,
-                  onAccept = onAccept,
-                  onDecline = onDecline,
-                  onClose = onDismiss)
-          is NotificationPopupData.FriendRequest ->
-              FriendRequestSheetContent(
-                  username = data.username,
-                  handle = data.handle,
-                  bio = data.bio,
-                  avatar = data.avatar,
-                  onAccept = onAccept,
-                  onDecline = onDecline,
-                  onClose = onDismiss)
+        when (val d = loadedData) {
+          is NotificationPopupData.Discussion -> {
+            NotificationSheetContent(
+                avatarBytes = d.icon,
+                title = d.title,
+                subtitle = null,
+                meta = "${d.participants} participants • ${d.dateLabel}",
+                aboutLabel =
+                    if (d.title.contains("discussion", ignoreCase = true)) "About this discussion"
+                    else "About this session",
+                description = d.description,
+                previewCharLimit = 160,
+                onAccept = onAccept,
+                onDecline = onDecline,
+                onClose = onDismiss)
+          }
+          is NotificationPopupData.Session -> {
+            NotificationSheetContent(
+                avatarBytes = d.icon,
+                title = d.title,
+                subtitle = null,
+                meta = "${d.participants} participants • ${d.dateLabel}",
+                aboutLabel =
+                    if (d.title.contains("discussion", ignoreCase = true)) "About this discussion"
+                    else "About this session",
+                description = d.description,
+                previewCharLimit = 160,
+                onAccept = onAccept,
+                onDecline = onDecline,
+                onClose = onDismiss)
+          }
+          is NotificationPopupData.FriendRequest -> {
+            NotificationSheetContent(
+                avatarBytes = d.avatar,
+                title = d.username,
+                subtitle = "@${d.handle}",
+                meta = null,
+                aboutLabel = "About",
+                description = d.bio,
+                previewCharLimit = 150,
+                onAccept = onAccept,
+                onDecline = onDecline,
+                onClose = onDismiss)
+          }
         }
       }
 }
@@ -701,8 +737,8 @@ fun BottomSheetButtons(onDecline: () -> Unit, onAccept: () -> Unit) {
             elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)) {
               Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = null)
-                Text(text = "Decline", modifier = Modifier.padding(4.dp))
+                Icon(Icons.Default.Close, null)
+                Text("Decline", modifier = Modifier.padding(4.dp))
               }
             }
 
@@ -715,172 +751,150 @@ fun BottomSheetButtons(onDecline: () -> Unit, onAccept: () -> Unit) {
             elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)) {
               Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                Text(text = "Accept", modifier = Modifier.padding(4.dp))
+                Icon(Icons.Default.Check, null)
+                Text("Accept", modifier = Modifier.padding(4.dp))
               }
             }
       }
 }
 
 @Composable
-fun DiscussionSessionSheetContent(
+fun NotificationSheetContent(
+    avatarBytes: ByteArray?,
     title: String,
-    participants: Int,
-    dateLabel: String,
+    subtitle: String?,
+    meta: String?,
+    aboutLabel: String,
     description: String,
-    icon: Painter,
+    previewCharLimit: Int,
     onAccept: () -> Unit,
     onDecline: () -> Unit,
     onClose: () -> Unit
 ) {
   Column(modifier = Modifier.padding(20.dp)) {
-
-    // Close button
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
       Icon(
-          imageVector = Icons.Default.Close,
-          contentDescription = "Close",
+          Icons.Default.Close,
+          "Close",
           tint = AppColors.textIcons,
           modifier = Modifier.clickable { onClose() })
     }
 
     Spacer(Modifier.height(4.dp))
 
-    // Title area
     Row(verticalAlignment = Alignment.CenterVertically) {
-      Icon(
-          painter = icon,
-          contentDescription = null,
-          modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
-      Spacer(Modifier.width(12.dp))
-      Text(
-          text = title,
-          style = MaterialTheme.typography.titleLarge,
-          color = AppColors.textIconsFade)
-    }
-
-    Spacer(Modifier.height(8.dp))
-
-    Text(
-        text = "$participants participants • $dateLabel",
-        style = MaterialTheme.typography.bodyMedium,
-        color = AppColors.textIconsFade)
-
-    Spacer(Modifier.height(16.dp))
-
-    // Header for description
-    Text(
-        text =
-            if (title.contains("discussion", ignoreCase = true)) "About this discussion"
-            else "About this session",
-        style = MaterialTheme.typography.titleMedium,
-        color = AppColors.textIcons,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(bottom = 6.dp))
-
-    // Expandable long description
-    ExpandableText(text = description, previewCharLimit = 160)
-
-    Spacer(Modifier.height(20.dp))
-
-    BottomSheetButtons(onDecline = onDecline, onAccept = onAccept)
-  }
-}
-
-@Composable
-fun FriendRequestSheetContent(
-    username: String,
-    handle: String,
-    bio: String,
-    avatar: Painter,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit,
-    onClose: () -> Unit
-) {
-  Column(modifier = Modifier.padding(20.dp)) {
-
-    // Close button
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-      Icon(
-          imageVector = Icons.Default.Close,
-          contentDescription = "Close",
-          tint = AppColors.textIcons,
-          modifier = Modifier.clickable { onClose() })
-    }
-
-    Spacer(Modifier.height(4.dp))
-
-    // Title area
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Icon(
-          painter = avatar,
-          contentDescription = null,
-          modifier = Modifier.size(52.dp).clip(RoundedCornerShape(26.dp)))
+      LetterAvatar(letter = title.firstOrNull() ?: '•', size = 52.dp, imageBytes = avatarBytes)
 
       Spacer(Modifier.width(12.dp))
 
       Column {
-        Text(
-            text = username,
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.textIcons)
-        Text(
-            text = "@$handle",
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppColors.textIcons)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = AppColors.textIcons)
+        if (subtitle != null) {
+          Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
+        }
       }
+    }
+
+    if (meta != null) {
+      Spacer(Modifier.height(8.dp))
+      Text(meta, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIconsFade)
     }
 
     Spacer(Modifier.height(16.dp))
 
-    // BIO header
     Text(
-        text = "About",
+        text = aboutLabel,
         style = MaterialTheme.typography.titleMedium,
         color = AppColors.textIcons,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(bottom = 6.dp))
 
-    // Bold-username bio with expandable text
-    ExpandableAnnotatedBio(username = username, fullBio = bio, previewCharLimit = 150)
+    ExpandableText(text = description, previewCharLimit = previewCharLimit)
 
     Spacer(Modifier.height(20.dp))
 
-    BottomSheetButtons(onDecline = onDecline, onAccept = onAccept)
+    BottomSheetButtons(onDecline, onAccept)
   }
 }
 
 /* ---------------------------------------------------------
-   BACKEND-BASED POPUP MAPPING
+   EXPANDABLE TEXT / AVATAR / EMPTY STATE
 --------------------------------------------------------- */
 
-fun Notification.toPopupData(icon: Painter): NotificationPopupData {
-  val dateLabel = sentAtLocalDateTime().format(DateTimeFormatter.ofPattern("MMM d"))
-  return when (type) {
-    NotificationType.FRIEND_REQUEST ->
-        NotificationPopupData.FriendRequest(
-            username = "User $senderOrDiscussionId",
-            handle = senderOrDiscussionId,
-            bio = "User $senderOrDiscussionId wants to add you as a friend.",
-            avatar = icon)
-    NotificationType.JOIN_DISCUSSION ->
-        NotificationPopupData.Discussion(
-            title = "Discussion invitation",
-            participants = 0,
-            dateLabel = dateLabel,
-            description = "You've been invited to join discussion $senderOrDiscussionId.",
-            icon = icon)
-    NotificationType.JOIN_SESSION ->
-        NotificationPopupData.Session(
-            title = "Session invitation",
-            participants = 0,
-            dateLabel = dateLabel,
-            description = "You've been invited to join session $senderOrDiscussionId.",
-            icon = icon)
+@Composable
+fun ExpandableText(text: String, previewCharLimit: Int = 160) {
+  var expanded by remember { mutableStateOf(false) }
+
+  Column {
+    Text(
+        if (expanded || text.length <= previewCharLimit) text
+        else text.take(previewCharLimit) + "…",
+        color = AppColors.textIcons)
+
+    if (text.length > previewCharLimit) {
+      Text(
+          text = if (expanded) "Show less" else "Show more",
+          color = AppColors.textIcons,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.padding(top = 4.dp).clickable { expanded = !expanded })
+    }
   }
 }
 
+@Composable
+fun LetterAvatar(
+    letter: Char,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    imageBytes: ByteArray? = null
+) {
+  if (imageBytes != null) {
+    AsyncImage(
+        model = imageBytes,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier.size(size).clip(CircleShape))
+  } else {
+    Box(
+        modifier = modifier.size(size).clip(CircleShape).background(AppColors.neutral),
+        contentAlignment = Alignment.Center) {
+          Text(
+              text = letter.uppercase(),
+              color = AppColors.primary,
+              fontSize = (size.value * 0.45).sp,
+              fontWeight = FontWeight.Bold)
+        }
+  }
+}
+
+@Composable
+fun EmptyNotificationState(filter: NotificationFilter, modifier: Modifier = Modifier) {
+  val message =
+      when (filter) {
+        NotificationFilter.ALL -> "You have no notifications yet."
+        NotificationFilter.UNREAD -> "You're all caught up! No unread notifications."
+        NotificationFilter.FRIEND_REQUESTS -> "No incoming friend requests."
+        NotificationFilter.DISCUSSIONS -> "No discussion invitations."
+        NotificationFilter.SESSIONS -> "No session invitations."
+      }
+
+  Column(
+      modifier = modifier.fillMaxSize().padding(32.dp),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = message,
+            color = AppColors.textIconsFade,
+            style = MaterialTheme.typography.bodyLarge)
+      }
+}
+
+/* ---------------------------------------------------------
+   STUB BACKEND DATA
+--------------------------------------------------------- */
+
 fun stubBackendNotifications(receiverId: String): List<Notification> {
+  val now = System.currentTimeMillis()
   return listOf(
       Notification(
           uid = "n1",
@@ -888,7 +902,7 @@ fun stubBackendNotifications(receiverId: String): List<Notification> {
           receiverId = receiverId,
           read = false,
           type = NotificationType.FRIEND_REQUEST,
-          sentAt = Timestamp(Date(System.currentTimeMillis() - 60 * 60 * 1000)) // 1h ago
+          sentAt = Timestamp(Date(now - 60 * 60 * 1000)) // 1h ago
           ),
       Notification(
           uid = "n2",
@@ -896,7 +910,7 @@ fun stubBackendNotifications(receiverId: String): List<Notification> {
           receiverId = receiverId,
           read = true,
           type = NotificationType.JOIN_DISCUSSION,
-          sentAt = Timestamp(Date(System.currentTimeMillis() - 2 * 60 * 60 * 1000)) // 2h ago
+          sentAt = Timestamp(Date(now - 2 * 60 * 60 * 1000)) // 2h ago
           ),
       Notification(
           uid = "n3",
@@ -904,7 +918,7 @@ fun stubBackendNotifications(receiverId: String): List<Notification> {
           receiverId = receiverId,
           read = false,
           type = NotificationType.JOIN_SESSION,
-          sentAt = Timestamp(Date(System.currentTimeMillis() - 5 * 60 * 60 * 1000)) // 5h ago
+          sentAt = Timestamp(Date(now - 5 * 60 * 60 * 1000)) // 5h ago
           ),
       Notification(
           uid = "n4",
@@ -912,7 +926,7 @@ fun stubBackendNotifications(receiverId: String): List<Notification> {
           receiverId = receiverId,
           read = true,
           type = NotificationType.FRIEND_REQUEST,
-          sentAt = Timestamp(Date(System.currentTimeMillis() - 26 * 60 * 60 * 1000)) // 26h ago
+          sentAt = Timestamp(Date(now - 26 * 60 * 60 * 1000)) // 26h ago
           ),
       Notification(
           uid = "n5",
@@ -920,6 +934,6 @@ fun stubBackendNotifications(receiverId: String): List<Notification> {
           receiverId = receiverId,
           read = false,
           type = NotificationType.JOIN_DISCUSSION,
-          sentAt = Timestamp(Date(System.currentTimeMillis() - 48 * 60 * 60 * 1000)) // 2 days ago
+          sentAt = Timestamp(Date(now - 48 * 60 * 60 * 1000)) // 2 days ago
           ))
 }
