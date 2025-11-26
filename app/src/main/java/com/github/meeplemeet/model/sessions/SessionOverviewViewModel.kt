@@ -47,7 +47,7 @@ class SessionOverviewViewModel(
         if (sessionRepository.isSessionPassed(id)) {
           val session = sessionRepository.getSession(id)
           if (session != null) {
-            val newUuid = java.util.UUID.randomUUID().toString()
+            val newUuid = sessionRepository.newUUID()
             var newUrl: String? = null
             if (session.photoUrl != null) {
               newUrl = imageRepository.moveSessionPhoto(context, id, newUuid)

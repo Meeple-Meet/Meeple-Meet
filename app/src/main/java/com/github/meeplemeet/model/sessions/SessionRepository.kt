@@ -1,7 +1,7 @@
 package com.github.meeplemeet.model.sessions
 
-import com.github.meeplemeet.FirebaseProvider.db
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionNoUid
 import com.github.meeplemeet.model.discussions.DiscussionRepository
@@ -18,8 +18,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
-private val ARCHIVED_SESSIONS: String = "archived_sessions"
-
 /**
  * Repository for managing gaming sessions within discussions in Firestore.
  *
@@ -27,7 +25,7 @@ private val ARCHIVED_SESSIONS: String = "archived_sessions"
  */
 class SessionRepository(
     discussionRepository: DiscussionRepository = RepositoryProvider.discussions
-) {
+) : FirestoreRepository("archived_sessions") {
   private val discussions = discussionRepository.collection
   private val discussionRepo = DiscussionRepository()
   private val geoPinsRepo = RepositoryProvider.geoPins
@@ -79,7 +77,7 @@ class SessionRepository(
     }
     photoUrl?.let {
       // Use FieldValue.delete() to clear the field when empty string is passed
-      val value = if (it.isEmpty()) FieldValue.delete() else it
+      val value = it.ifEmpty { FieldValue.delete() }
       updates["${DiscussionNoUid::session.name}.${Session::photoUrl.name}"] = value
     }
 
@@ -217,7 +215,7 @@ class SessionRepository(
     val batch = db.batch()
 
     // 1. Save to archived_sessions collection
-    val archivedRef = db.collection(ARCHIVED_SESSIONS).document(newSessionId)
+    val archivedRef = collection.document(newSessionId)
     batch[archivedRef] = archivedSession
 
     // 2. Add session UUID to each participant's pastSessionIds
@@ -263,15 +261,13 @@ class SessionRepository(
     val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
     val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
 
-    val archivedSessionsCollection = db.collection(ARCHIVED_SESSIONS)
-
     sessionIdsForPage
         .map { sessionId ->
           async {
             try {
-              val snapshot = archivedSessionsCollection.document(sessionId).get().await()
+              val snapshot = collection.document(sessionId).get().await()
               snapshot.toObject(Session::class.java)?.photoUrl
-            } catch (e: Exception) {
+            } catch (_: Exception) {
               null // Skip sessions that fail to load or don't exist
             }
           }
@@ -292,16 +288,14 @@ class SessionRepository(
    */
   suspend fun getArchivedSessionByPhotoUrl(photoUrl: String): Session? {
     return try {
-      val archivedSessionsCollection = db.collection(ARCHIVED_SESSIONS)
-      val querySnapshot =
-          archivedSessionsCollection.whereEqualTo("photoUrl", photoUrl).limit(1).get().await()
+      val querySnapshot = collection.whereEqualTo("photoUrl", photoUrl).limit(1).get().await()
 
       if (querySnapshot.isEmpty) {
         null
       } else {
         querySnapshot.documents.first().toObject(Session::class.java)
       }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       null
     }
   }
