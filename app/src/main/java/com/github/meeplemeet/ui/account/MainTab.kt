@@ -184,9 +184,9 @@ object MainTabUi {
   val LOGOUT_BUTTON_W = 140.dp
   val LOGOUT_BUTTON_H = 46.dp
   val AVATAR_SIZE = 130.dp
-    val OFFSET_X = 4.dp
-    val OFFSET_Y = (-4).dp
-    val MAX_NOTIF_COUNT = 9
+  val OFFSET_X = 4.dp
+  val OFFSET_Y = (-4).dp
+  val MAX_NOTIF_COUNT = 9
 
   object Misc {
     const val DELETE_ACCOUNT = "Delete Account"
@@ -453,7 +453,8 @@ fun PublicInfoActions(
                       contentAlignment = Alignment.Center) {
                         Text(
                             text =
-                                if (notificationCount > MainTabUi.MAX_NOTIF_COUNT) "9+" else notificationCount.toString(),
+                                if (notificationCount > MainTabUi.MAX_NOTIF_COUNT) "9+"
+                                else notificationCount.toString(),
                             color = AppColors.primary,
                             fontSize = Dimensions.TextSize.tiny)
                       }
