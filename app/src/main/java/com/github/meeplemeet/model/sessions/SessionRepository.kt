@@ -1,5 +1,6 @@
 package com.github.meeplemeet.model.sessions
 
+import com.github.meeplemeet.FirebaseProvider.db
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionNoUid
@@ -9,7 +10,6 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
-private val archivedSessions: String = "archived_sessions"
+private val ARCHIVED_SESSIONS: String = "archived_sessions"
 
 /**
  * Repository for managing gaming sessions within discussions in Firestore.
@@ -93,7 +93,12 @@ class SessionRepository(
     return discussionRepo.getDiscussion(discussionId)
   }
 
-  /** Deletes the session from a discussion by setting it to null. */
+  /**
+   * Deletes the session embedded in the discussion document identified by [discussionId]. Also
+   * removes the associated GeoPin.
+   *
+   * @param discussionId Firestore document id of the parent discussion.
+   */
   suspend fun deleteSession(discussionId: String) {
     geoPinsRepo.deleteGeoPin(discussionId)
     discussions.document(discussionId).update(DiscussionNoUid::session.name, null).await()
@@ -162,6 +167,15 @@ class SessionRepository(
         snap.documents.map { it.id }
       }
 
+  /**
+   * Checks if the session identified by [sessionId] has already passed.
+   *
+   * A session is considered passed if the current time is more than 3 hours after the session's
+   * scheduled date and time.
+   *
+   * @param sessionId Firestore document id of the parent discussion containing the session.
+   * @return `true` if the session has passed, `false` otherwise or if the session does not exist.
+   */
   suspend fun isSessionPassed(sessionId: String): Boolean {
     val session = getSession(sessionId) ?: return false
     val date = session.date
@@ -170,6 +184,12 @@ class SessionRepository(
     return (date.toDate().time + threeHoursInMillis) < Timestamp.now().toDate().time
   }
 
+  /**
+   * Updates the photo URL of a session within a discussion.
+   *
+   * @param sessionId The ID of the discussion containing the session.
+   * @param photoUrl The new photo URL to set for the session.
+   */
   suspend fun updateSessionPhoto(sessionId: String, photoUrl: String) {
     val session = getSession(sessionId)
     if (session != null) {
@@ -181,7 +201,7 @@ class SessionRepository(
   }
 
   /**
-   * Archives the current session by moving it to the past_sessions subcollection and removing it
+   * Archives the current session by moving it to the archived_sessions collection and removing it
    * from the discussion. Also updates each participant's account to include this session in their
    * pastSessionIds list.
    *
@@ -194,12 +214,11 @@ class SessionRepository(
 
     val archivedSession = session.copy(photoUrl = newPhotoUrl)
 
-    val batch = FirebaseFirestore.getInstance().batch()
+    val batch = db.batch()
 
     // 1. Save to archived_sessions collection
-    val archivedRef =
-        FirebaseFirestore.getInstance().collection(archivedSessions).document(newSessionId)
-    batch.set(archivedRef, archivedSession)
+    val archivedRef = db.collection(ARCHIVED_SESSIONS).document(newSessionId)
+    batch[archivedRef] = archivedSession
 
     // 2. Add session UUID to each participant's pastSessionIds
     val accountsRef = RepositoryProvider.accounts.collection
@@ -222,9 +241,10 @@ class SessionRepository(
    * Retrieves photo URLs from archived sessions with pagination support.
    *
    * This method supports loading photo URLs in batches (default 12 per page) to enable efficient
-   * gradual loading in the UI.
+   * gradual loading in the UI. It fetches the user's pastSessionIds from their Account and
+   * retrieves the corresponding archived sessions.
    *
-   * @param pastSessionIds List of archived session UUIDs from Account.pastSessionIds
+   * @param userId The user ID whose archived session photos should be retrieved
    * @param page Page number (0-indexed). Page 0 returns the first batch, page 1 the next, etc.
    * @param pageSize Number of photos to return per page (default 12)
    * @return List of photo URLs for the requested page (may be smaller than pageSize on the last
@@ -243,7 +263,7 @@ class SessionRepository(
     val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
     val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
 
-    val archivedSessionsCollection = FirebaseFirestore.getInstance().collection(archivedSessions)
+    val archivedSessionsCollection = db.collection(ARCHIVED_SESSIONS)
 
     sessionIdsForPage
         .map { sessionId ->
@@ -272,7 +292,7 @@ class SessionRepository(
    */
   suspend fun getArchivedSessionByPhotoUrl(photoUrl: String): Session? {
     return try {
-      val archivedSessionsCollection = FirebaseFirestore.getInstance().collection(archivedSessions)
+      val archivedSessionsCollection = db.collection(ARCHIVED_SESSIONS)
       val querySnapshot =
           archivedSessionsCollection.whereEqualTo("photoUrl", photoUrl).limit(1).get().await()
 

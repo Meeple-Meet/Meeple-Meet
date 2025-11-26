@@ -274,7 +274,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    *
    * This operation:
    * 1. Downloads the current session photo
-   * 2. Uploads it to the new location: `past_sessions/{newUuid}.webp`
+   * 2. Uploads it to the new location: `archived_sessions/{newUuid}.webp`
    * 3. Deletes the original photo
    *
    * @param context Android context for accessing cache directory
@@ -284,7 +284,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    */
   suspend fun moveSessionPhoto(context: Context, discussionId: String, newUuid: String): String {
     val oldPath = sessionPhotoPath(discussionId)
-    val newPath = "past_sessions/${newUuid}.webp"
+    val newPath = "archived_sessions/${newUuid}.webp"
 
     // 1. Download the current photo
     val bytes = loadImage(context, oldPath)
@@ -301,6 +301,11 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   /**
    * Helper to save bytes directly, used by moveSessionPhoto. This is a variation of saveImage that
    * takes bytes instead of file path.
+   *
+   * @param context Android context for accessing cache directory
+   * @param bytes The image data as a byte array
+   * @param storagePath Storage path (used for both local cache and Firebase Storage)
+   * @return The public HTTPS download URL of the saved image
    */
   private suspend fun saveImage(context: Context, bytes: ByteArray, storagePath: String): String {
     // Save to disk
@@ -564,41 +569,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
           throw ImageProcessingException("Failed to encode image at $inputPath", e)
         }
 
-    // Save to disk
-    try {
-      withContext(dispatcher) {
-        val diskPath = cachePath(context, storagePath)
-        val parentDir = File(diskPath).parentFile
-
-        // Check if parent directory can be created
-        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
-          throw DiskStorageException("Failed to create directory: ${parentDir.absolutePath}")
-        }
-
-        // Ensure sufficient storage space (uses StorageManager on O+ to clear cache if needed)
-        ensureStorageSpace(context, bytes.size.toLong())
-
-        FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
-      }
-    } catch (e: DiskStorageException) {
-      throw e
-    } catch (e: IOException) {
-      throw DiskStorageException("Failed to write image to disk at $storagePath", e)
-    } catch (e: SecurityException) {
-      throw DiskStorageException("Permission denied writing to $storagePath", e)
-    }
-
-    // Upload to Firebase Storage
-    try {
-      val ref = storage.reference.child(storagePath)
-      ref.putBytes(bytes).await()
-      return toHttps(ref.downloadUrl.await().toString())
-    } catch (e: StorageException) {
-      throw RemoteStorageException(
-          "Firebase Storage upload failed for $storagePath: ${e.errorCode}", e)
-    } catch (e: Exception) {
-      throw RemoteStorageException("Failed to upload image to Firebase Storage at $storagePath", e)
-    }
+    return saveImage(context, bytes, storagePath)
   }
 
   /**
