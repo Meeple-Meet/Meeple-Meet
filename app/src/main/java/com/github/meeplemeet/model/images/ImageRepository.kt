@@ -110,6 +110,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
   private fun spaceRenterPath(id: String) = "${RepositoryProvider.spaceRenters.collectionName}/$id"
 
+  private fun cachePath(context: Context, storagePath: String) = "${context.cacheDir}/$storagePath"
+
   private fun normalizePath(candidate: String, expectedPrefix: String): String {
     val path =
         if (candidate.contains("/o/")) {
@@ -304,7 +306,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     // Save to disk
     try {
       withContext(dispatcher) {
-        val diskPath = "${context.cacheDir}/$storagePath"
+        val diskPath = cachePath(context, storagePath)
         val parentDir = File(diskPath).parentFile
 
         // Check if parent directory can be created
@@ -565,7 +567,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     // Save to disk
     try {
       withContext(dispatcher) {
-        val diskPath = "${context.cacheDir}/$storagePath"
+        val diskPath = cachePath(context, storagePath)
         val parentDir = File(diskPath).parentFile
 
         // Check if parent directory can be created
@@ -784,7 +786,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     try {
       withContext(dispatcher) {
         storagePaths.forEach { storagePath ->
-          val diskPath = "${context.cacheDir}/$storagePath"
+          val diskPath = cachePath(context, storagePath)
           val file = File(diskPath)
           if (file.exists() && !file.delete()) {
             throw DiskStorageException("Failed to delete cached image at $storagePath")

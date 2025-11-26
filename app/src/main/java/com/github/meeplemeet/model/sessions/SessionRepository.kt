@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
+private val archivedSessions: String = "archived_sessions"
+
 /**
  * Repository for managing gaming sessions within discussions in Firestore.
  *
@@ -196,7 +198,7 @@ class SessionRepository(
 
     // 1. Save to archived_sessions collection
     val archivedRef =
-        FirebaseFirestore.getInstance().collection("archived_sessions").document(newSessionId)
+        FirebaseFirestore.getInstance().collection(archivedSessions).document(newSessionId)
     batch.set(archivedRef, archivedSession)
 
     // 2. Add session UUID to each participant's pastSessionIds
@@ -241,7 +243,7 @@ class SessionRepository(
     val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
     val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
 
-    val archivedSessionsCollection = FirebaseFirestore.getInstance().collection("archived_sessions")
+    val archivedSessionsCollection = FirebaseFirestore.getInstance().collection(archivedSessions)
 
     sessionIdsForPage
         .map { sessionId ->
@@ -270,8 +272,7 @@ class SessionRepository(
    */
   suspend fun getArchivedSessionByPhotoUrl(photoUrl: String): Session? {
     return try {
-      val archivedSessionsCollection =
-          FirebaseFirestore.getInstance().collection("archived_sessions")
+      val archivedSessionsCollection = FirebaseFirestore.getInstance().collection(archivedSessions)
       val querySnapshot =
           archivedSessionsCollection.whereEqualTo("photoUrl", photoUrl).limit(1).get().await()
 
