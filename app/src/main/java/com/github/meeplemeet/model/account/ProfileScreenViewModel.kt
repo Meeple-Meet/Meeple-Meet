@@ -273,6 +273,12 @@ class ProfileScreenViewModel(
     }
   }
 
+  /**
+   * Refreshes the user's email verification status.
+   *
+   * This function is safe to call from the UI and does not return a value, as all updates are
+   * propagated via [_uiState].
+   */
   fun refreshEmailVerificationStatus() {
     viewModelScope.launch {
       val result = authRepository.isEmailVerified()
@@ -338,6 +344,30 @@ class ProfileScreenViewModel(
         // Logout failed: Show error but keep user signed in
         _uiState.update { it.copy(isLoading = false, errorMsg = failure.localizedMessage) }
       }
+    }
+  }
+
+  /**
+   * Deletes all the shops associated to an account
+   *
+   * @param account Account to delete it's shops
+   */
+  fun deleteAccountShops(account: Account) {
+    viewModelScope.launch {
+      val (shops, _) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+      RepositoryProvider.shops.deleteShops(shops)
+    }
+  }
+
+  /**
+   * Deletes all the space renters associated to an account
+   *
+   * @param account Account to delete it's space renters
+   */
+  fun deleteAccountSpaceRenters(account: Account) {
+    viewModelScope.launch {
+      val (_, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+      RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
     }
   }
 }
