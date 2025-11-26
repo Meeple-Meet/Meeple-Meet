@@ -82,7 +82,8 @@ data class Account(
     var shopOwner: Boolean = false,
     var spaceRenter: Boolean = false,
     val relationships: Map<String, RelationshipStatus> = emptyMap(),
-    val notifications: List<Notification> = emptyList()
+    val notifications: List<Notification> = emptyList(),
+    val pastSessionIds: List<String> = emptyList()
 )
 
 /**
@@ -108,7 +109,8 @@ data class AccountNoUid(
     val photoUrl: String? = null,
     val description: String? = null,
     val shopOwner: Boolean = false,
-    val spaceRenter: Boolean = false
+    val spaceRenter: Boolean = false,
+    val pastSessionIds: List<String> = emptyList()
 )
 
 /**
@@ -149,5 +151,6 @@ fun fromNoUid(
       shopOwner = accountNoUid.shopOwner,
       spaceRenter = accountNoUid.spaceRenter,
       relationships = mappedRelationships,
-      notifications = notifications)
+      notifications = notifications,
+      pastSessionIds = accountNoUid.pastSessionIds)
 }
