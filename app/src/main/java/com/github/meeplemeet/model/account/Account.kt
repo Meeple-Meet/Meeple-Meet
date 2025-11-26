@@ -70,6 +70,8 @@ data class Relationship(
  *   friend requests, discussion invitations, and session invitations. Each notification contains
  *   metadata about the event and can be executed to perform the associated action (e.g., accepting
  *   a friend request).
+ *     @property pastSessionIds List of UUIDs representing sessions that have been archived for this
+ *       user.
  */
 data class Account(
     val uid: String,
@@ -82,7 +84,8 @@ data class Account(
     var shopOwner: Boolean = false,
     var spaceRenter: Boolean = false,
     val relationships: Map<String, RelationshipStatus> = emptyMap(),
-    val notifications: List<Notification> = emptyList()
+    val notifications: List<Notification> = emptyList(),
+    val pastSessionIds: List<String> = emptyList()
 )
 
 /**
@@ -108,7 +111,8 @@ data class AccountNoUid(
     val photoUrl: String? = null,
     val description: String? = null,
     val shopOwner: Boolean = false,
-    val spaceRenter: Boolean = false
+    val spaceRenter: Boolean = false,
+    val pastSessionIds: List<String> = emptyList()
 )
 
 /**
@@ -149,5 +153,6 @@ fun fromNoUid(
       shopOwner = accountNoUid.shopOwner,
       spaceRenter = accountNoUid.spaceRenter,
       relationships = mappedRelationships,
-      notifications = notifications)
+      notifications = notifications,
+      pastSessionIds = accountNoUid.pastSessionIds)
 }
