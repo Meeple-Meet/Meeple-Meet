@@ -392,7 +392,9 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         delay(1000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE).assertTextContains(shop.name)
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
+            .assertTextContains(shop.name, substring = true)
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
             .assertTextContains(testLocation.name)
@@ -511,6 +513,40 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       }
     }
 
+    checkpoint("singlePin_distance_displayed") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Distance Test Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        noClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = noClusterViewModel.getClusters()
+        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
+
+        // show preview sheet
+        noClusterViewModel.selectPin(cluster!!.items[0])
+        delay(1000)
+        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+
+        // The title should include the pin name and the distance
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
+            .assertTextContains("m", substring = true)
+
+        // cleanup
+        shopRepository.deleteShop(shop.id)
+      }
+    }
+
     checkpoint("sessionPin_displaysCorrectPreview") {
       runBlocking {
         db.collection(GAMES_COLLECTION_PATH)
@@ -557,7 +593,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
-            .assertTextContains("Session Preview Test")
+            .assertTextContains("Session Preview Test", substring = true)
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_GAME)
             .assertTextContains("Catan", substring = true)
@@ -732,6 +768,53 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       }
     }
 
+    checkpoint("cluster_preview_items_display_distance") {
+      runBlocking {
+        val shop1 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Cluster Distance Shop 1",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        val shop2 =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Cluster Distance Shop 2",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        singleClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(1500)
+
+        val clusters = singleClusterViewModel.getClusters()
+        assertTrue(clusters.isNotEmpty())
+
+        // Select the cluster and show the sheet
+        singleClusterViewModel.selectCluster(clusters[0])
+        delay(1500)
+
+        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+
+        // Each displayed cluster item should contain a distance string
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop1.id))
+            .assertIsDisplayed()
+            .assertTextContains("m", substring = true)
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop2.id))
+            .assertIsDisplayed()
+            .assertTextContains("m", substring = true)
+
+        // cleanup
+        shopRepository.deleteShop(shop1.id)
+        shopRepository.deleteShop(shop2.id)
+      }
+    }
+
     checkpoint("clusterItem_click_transitionsToSinglePinSheet") {
       runBlocking {
         val shop1 =
@@ -771,7 +854,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
-            .assertTextContains("Item Click Shop 1")
+            .assertTextContains("Item Click Shop 1", substring = true)
 
         shopRepository.deleteShop(shop1.id)
         shopRepository.deleteShop(shop2.id)
