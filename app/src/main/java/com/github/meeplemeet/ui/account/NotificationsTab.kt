@@ -50,7 +50,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,13 +74,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.Notification
+import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import com.google.firebase.Timestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Date
 
 /* ---------------------------------------------------------
    UI Test Tags
@@ -92,41 +96,30 @@ object NotificationsTabTestTags {
 }
 
 /* ---------------------------------------------------------
-   BACKEND-READY MODELS
---------------------------------------------------------- */
-
-data class Notification(
-    val id: Int,
-    val type: NotificationType,
-    val variableText: String, // The bold part
-    val time: LocalDateTime,
-    val isUnread: Boolean,
-    val icon: Painter // Replace with URL later
-)
-
-enum class NotificationType {
-  FRIEND_REQUEST,
-  DISCUSSION_INVITE,
-  SESSION_INVITE
-}
-
-/* ---------------------------------------------------------
    MESSAGE BUILDING (prefix + variable + suffix)
 --------------------------------------------------------- */
 
 data class NotificationParts(val prefix: String, val bold: String, val suffix: String)
 
+/**
+ * Very simple text parts based on backend NotificationType and IDs. Can be enriched later once we
+ * have display names from backend.
+ */
 fun Notification.parts(): NotificationParts {
   return when (type) {
     NotificationType.FRIEND_REQUEST ->
         NotificationParts(
-            prefix = "", bold = variableText, suffix = " wants to add you as a friend!")
-    NotificationType.DISCUSSION_INVITE ->
+            prefix = "User ", bold = senderOrDiscussionId, suffix = " sent you a friend request.")
+    NotificationType.JOIN_DISCUSSION ->
         NotificationParts(
-            prefix = "You've been invited to join ", bold = variableText, suffix = "!")
-    NotificationType.SESSION_INVITE ->
+            prefix = "You've been invited to join discussion ",
+            bold = senderOrDiscussionId,
+            suffix = ".")
+    NotificationType.JOIN_SESSION ->
         NotificationParts(
-            prefix = "You've been invited to join ", bold = variableText, suffix = "!")
+            prefix = "You've been invited to join session ",
+            bold = senderOrDiscussionId,
+            suffix = ".")
   }
 }
 
@@ -136,15 +129,18 @@ fun Notification.parts(): NotificationParts {
 
 data class NotificationSection(val header: String, val items: List<Notification>)
 
+private fun Notification.sentAtLocalDateTime(): LocalDateTime =
+    sentAt.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+
 fun groupNotifications(list: List<Notification>): List<NotificationSection> {
   val today = LocalDate.now()
   val yesterday = today.minusDays(1)
 
-  val todayItems = list.filter { it.time.toLocalDate() == today }
-  val yesterdayItems = list.filter { it.time.toLocalDate() == yesterday }
+  val todayItems = list.filter { it.sentAtLocalDateTime().toLocalDate() == today }
+  val yesterdayItems = list.filter { it.sentAtLocalDateTime().toLocalDate() == yesterday }
   val earlierItems =
       list.filter {
-        val d = it.time.toLocalDate()
+        val d = it.sentAtLocalDateTime().toLocalDate()
         d != today && d != yesterday
       }
 
@@ -155,6 +151,10 @@ fun groupNotifications(list: List<Notification>): List<NotificationSection> {
 
   return sections
 }
+
+/* ---------------------------------------------------------
+   POPUP DATA
+--------------------------------------------------------- */
 
 sealed class NotificationPopupData {
   data class Discussion(
@@ -181,6 +181,12 @@ sealed class NotificationPopupData {
   ) : NotificationPopupData()
 }
 
+/** Wrapper to keep popup UI data + backing backend notification together. */
+data class NotificationSheetState(
+    val notification: Notification,
+    val popupData: NotificationPopupData
+)
+
 /* ---------------------------------------------------------
    MAIN SCREEN
 --------------------------------------------------------- */
@@ -195,17 +201,50 @@ fun NotificationsTab(
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
 
-  // Replace with VM later
-  val notifications = rememberDummyNotifications()
-  val grouped = groupNotifications(notifications.value)
-  var sheetData by remember { mutableStateOf<NotificationPopupData?>(null) }
+  // Backend notifications
+  val notifications: List<Notification> =
+      account.notifications.ifEmpty { stubBackendNotifications(account.uid) }
 
-  if (sheetData != null) {
+  val filtered =
+      when (selectedFilter) {
+        NotificationFilter.ALL -> notifications
+        NotificationFilter.UNREAD -> notifications.filter { !it.read }
+        NotificationFilter.FRIEND_REQUESTS ->
+            notifications.filter { it.type == NotificationType.FRIEND_REQUEST }
+        NotificationFilter.DISCUSSIONS ->
+            notifications.filter { it.type == NotificationType.JOIN_DISCUSSION }
+        NotificationFilter.SESSIONS ->
+            notifications.filter { it.type == NotificationType.JOIN_SESSION }
+      }
+
+  val grouped = groupNotifications(filtered)
+
+  var sheetState by remember { mutableStateOf<NotificationSheetState?>(null) }
+
+  if (sheetState != null) {
+    val current = sheetState!!
     NotificationSheet(
-        data = sheetData!!,
-        onDismiss = { sheetData = null },
-        onAccept = { sheetData = null },
-        onDecline = { sheetData = null })
+        data = current.popupData,
+        onDismiss = { sheetState = null },
+        onAccept = {
+          when (current.notification.type) {
+            NotificationType.FRIEND_REQUEST -> {
+              viewModel.acceptFriendRequest(account, current.notification)
+            }
+            NotificationType.JOIN_DISCUSSION,
+            NotificationType.JOIN_SESSION -> {
+              // TODO: expose a public executeNotification(account, notification) in the ViewModel
+              // and call it here instead of just marking as read.
+              viewModel.readNotification(account, current.notification)
+            }
+          }
+          sheetState = null
+        },
+        onDecline = {
+          // Decline == delete notification for now
+          viewModel.deleteNotification(account, current.notification)
+          sheetState = null
+        })
   }
 
   Scaffold(
@@ -248,21 +287,17 @@ fun NotificationsTab(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
               }
 
-              items(section.items, key = { it.id }) { notif ->
+              items(section.items, key = { it.uid }) { notif ->
+                val icon = painterResource(R.drawable.google_logo)
                 NotificationListItem(
                     notif = notif,
-                    onClick = { sheetData = notif.toPopupData() },
-                    onMarkRead = {
-                      val list = notifications.value.toMutableList()
-                      val idx = list.indexOfFirst { it.id == notif.id }
-                      if (idx != -1) {
-                        list[idx] = list[idx].copy(isUnread = false)
-                      }
-                      notifications.value = list
+                    onClick = {
+                      sheetState =
+                          NotificationSheetState(
+                              notification = notif, popupData = notif.toPopupData(icon))
                     },
-                    onDelete = {
-                      notifications.value = notifications.value.filterNot { it.id == notif.id }
-                    })
+                    onMarkRead = { viewModel.readNotification(account, notif) },
+                    onDelete = { viewModel.deleteNotification(account, notif) })
               }
             }
           }
@@ -479,18 +514,20 @@ private fun SwipeBackground(state: DismissState) {
 @Composable
 private fun NotificationContent(notif: Notification) {
 
-  val date = notif.time.toLocalDate()
+  val dateTime = notif.sentAtLocalDateTime()
+  val date = dateTime.toLocalDate()
   val today = LocalDate.now()
   val yesterday = today.minusDays(1)
 
   val timeText =
       when (date) {
         today,
-        yesterday -> notif.time.format(DateTimeFormatter.ofPattern("h:mm a"))
-        else -> notif.time.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        yesterday -> dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))
+        else -> dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
       }
 
   val parts = notif.parts()
+  val iconPainter = painterResource(R.drawable.google_logo) // Placeholder for all notifications
 
   Row(
       modifier =
@@ -498,7 +535,7 @@ private fun NotificationContent(notif: Notification) {
               .fillMaxWidth()
               .padding(horizontal = 12.dp, vertical = 10.dp)) {
         Icon(
-            painter = notif.icon,
+            painter = iconPainter,
             contentDescription = null,
             modifier = Modifier.width(44.dp).clip(RoundedCornerShape(22.dp)))
 
@@ -531,7 +568,7 @@ private fun NotificationContent(notif: Notification) {
               style = MaterialTheme.typography.bodySmall,
               color = AppColors.textIconsFade)
 
-          if (notif.isUnread) {
+          if (!notif.read) {
             Box(
                 modifier =
                     Modifier.padding(top = 6.dp)
@@ -550,8 +587,8 @@ private fun NotificationContent(notif: Notification) {
 fun NotificationType.label(): String {
   return when (this) {
     NotificationType.FRIEND_REQUEST -> "Incoming friend request"
-    NotificationType.DISCUSSION_INVITE -> "Incoming discussion invite"
-    NotificationType.SESSION_INVITE -> "Incoming session invite"
+    NotificationType.JOIN_DISCUSSION -> "Discussion invite"
+    NotificationType.JOIN_SESSION -> "Session invite"
   }
 }
 
@@ -814,104 +851,75 @@ fun FriendRequestSheetContent(
 }
 
 /* ---------------------------------------------------------
-   EVERYTHING BELOW THIS LINE IS *ONLY BEFORE BACKEND*
-   Dummy notifications + icon loading for previews
+   BACKEND-BASED POPUP MAPPING
 --------------------------------------------------------- */
 
-fun Notification.toPopupData(): NotificationPopupData {
+fun Notification.toPopupData(icon: Painter): NotificationPopupData {
+  val dateLabel = sentAtLocalDateTime().format(DateTimeFormatter.ofPattern("MMM d"))
   return when (type) {
-    NotificationType.DISCUSSION_INVITE ->
-        NotificationPopupData.Discussion(
-            title = "Discussion Invite",
-            participants = 12, // placeholder, replace when backend provides value
-            dateLabel = time.format(DateTimeFormatter.ofPattern("MMM d")),
-            description = "You've been invited to join $variableText.",
-            icon = icon)
-    NotificationType.SESSION_INVITE ->
-        NotificationPopupData.Session(
-            title = "Session Invite",
-            participants = 8, // placeholder
-            dateLabel = time.format(DateTimeFormatter.ofPattern("MMM d")),
-            description = "You've been invited to join $variableText.",
-            icon = icon)
     NotificationType.FRIEND_REQUEST ->
         NotificationPopupData.FriendRequest(
-            username = variableText,
-            handle = variableText.lowercase(), // placeholder until backend
-            bio = "$variableText wants to add you as a friend!",
+            username = "User $senderOrDiscussionId",
+            handle = senderOrDiscussionId,
+            bio = "User $senderOrDiscussionId wants to add you as a friend.",
             avatar = icon)
+    NotificationType.JOIN_DISCUSSION ->
+        NotificationPopupData.Discussion(
+            title = "Discussion invitation",
+            participants = 0,
+            dateLabel = dateLabel,
+            description = "You've been invited to join discussion $senderOrDiscussionId.",
+            icon = icon)
+    NotificationType.JOIN_SESSION ->
+        NotificationPopupData.Session(
+            title = "Session invitation",
+            participants = 0,
+            dateLabel = dateLabel,
+            description = "You've been invited to join session $senderOrDiscussionId.",
+            icon = icon)
   }
 }
 
-@Composable
-fun rememberDummyNotifications(): MutableState<List<Notification>> {
-  val icon = painterResource(R.drawable.google_logo)
-
-  return remember {
-    mutableStateOf(
-        listOf(
-            Notification(
-                id = 1,
-                type = NotificationType.FRIEND_REQUEST,
-                variableText = "raging monkey",
-                time = LocalDateTime.now().minusHours(1),
-                isUnread = true,
-                icon = icon),
-            Notification(
-                id = 2,
-                type = NotificationType.DISCUSSION_INVITE,
-                variableText = "Monopoly's bazaar",
-                time = LocalDateTime.now().minusHours(3),
-                isUnread = false,
-                icon = icon),
-            Notification(
-                id = 3,
-                type = NotificationType.SESSION_INVITE,
-                variableText = "Monopoly this Friday",
-                time = LocalDateTime.now().minusHours(5),
-                isUnread = true,
-                icon = icon),
-            Notification(
-                id = 4,
-                type = NotificationType.FRIEND_REQUEST,
-                variableText = "Tobey Maguire",
-                time = LocalDateTime.now().minusDays(1).minusHours(2),
-                isUnread = false,
-                icon = icon),
-            Notification(
-                id = 5,
-                type = NotificationType.DISCUSSION_INVITE,
-                variableText = "Catan strategies",
-                time = LocalDateTime.now().minusDays(1).minusHours(4),
-                isUnread = true,
-                icon = icon),
-            Notification(
-                id = 6,
-                type = NotificationType.SESSION_INVITE,
-                variableText = "Catan this weekend",
-                time = LocalDateTime.now().minusDays(1).minusHours(6),
-                isUnread = false,
-                icon = icon),
-            Notification(
-                id = 7,
-                type = NotificationType.FRIEND_REQUEST,
-                variableText = "boardgame_fox",
-                time = LocalDateTime.now().minusDays(2),
-                isUnread = false,
-                icon = icon),
-            Notification(
-                id = 8,
-                type = NotificationType.SESSION_INVITE,
-                variableText = "Ticket to Ride",
-                time = LocalDateTime.now().minusDays(3),
-                isUnread = true,
-                icon = icon),
-            Notification(
-                id = 9,
-                type = NotificationType.DISCUSSION_INVITE,
-                variableText = "House Rules Meetup",
-                time = LocalDateTime.now().minusDays(4),
-                isUnread = false,
-                icon = icon)))
-  }
+fun stubBackendNotifications(receiverId: String): List<Notification> {
+  return listOf(
+      Notification(
+          uid = "n1",
+          senderOrDiscussionId = "user_abc",
+          receiverId = receiverId,
+          read = false,
+          type = NotificationType.FRIEND_REQUEST,
+          sentAt = Timestamp(Date(System.currentTimeMillis() - 60 * 60 * 1000)) // 1h ago
+          ),
+      Notification(
+          uid = "n2",
+          senderOrDiscussionId = "disc_jan_game",
+          receiverId = receiverId,
+          read = true,
+          type = NotificationType.JOIN_DISCUSSION,
+          sentAt = Timestamp(Date(System.currentTimeMillis() - 2 * 60 * 60 * 1000)) // 2h ago
+          ),
+      Notification(
+          uid = "n3",
+          senderOrDiscussionId = "session_fri_night",
+          receiverId = receiverId,
+          read = false,
+          type = NotificationType.JOIN_SESSION,
+          sentAt = Timestamp(Date(System.currentTimeMillis() - 5 * 60 * 60 * 1000)) // 5h ago
+          ),
+      Notification(
+          uid = "n4",
+          senderOrDiscussionId = "user_xyz",
+          receiverId = receiverId,
+          read = true,
+          type = NotificationType.FRIEND_REQUEST,
+          sentAt = Timestamp(Date(System.currentTimeMillis() - 26 * 60 * 60 * 1000)) // 26h ago
+          ),
+      Notification(
+          uid = "n5",
+          senderOrDiscussionId = "disc_strategy",
+          receiverId = receiverId,
+          read = false,
+          type = NotificationType.JOIN_DISCUSSION,
+          sentAt = Timestamp(Date(System.currentTimeMillis() - 48 * 60 * 60 * 1000)) // 2 days ago
+          ))
 }
