@@ -61,6 +61,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
+const val NO_SESSIONS_HISTORY_TEXT = "No past sessions yet"
 const val AMOUNT_OF_PICTURES_PER_ROW = 3
 const val TITLE_MAX_LINES = 1
 /**
@@ -124,9 +125,13 @@ fun SessionsOverviewScreen(
                       .values
                       .sortedByDescending { it.date.toDate().time }
 
-              HistoryGrid(sessions = pastSessions)
+              if (pastSessions.isEmpty()) {
+                EmptySessionsListText(isHistory = true)
+              } else {
+                HistoryGrid(sessions = pastSessions)
+              }
             }
-            sessionMap.isEmpty() -> EmptySessionsListText()
+            sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
             else -> {
               /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
               LazyColumn(
@@ -148,7 +153,7 @@ fun SessionsOverviewScreen(
 
 /** Displays a centred label when the user has no upcoming sessions. */
 @Composable
-private fun EmptySessionsListText() {
+private fun EmptySessionsListText(isHistory: Boolean = true) {
   Box(
       modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge),
       contentAlignment = Alignment.Center) {
@@ -162,7 +167,7 @@ private fun EmptySessionsListText() {
                   tint = MessagingColors.secondaryText)
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
               Text(
-                  text = NO_SESSIONS_DEFAULT_TEXT,
+                  text = if (isHistory) NO_SESSIONS_HISTORY_TEXT else NO_SESSIONS_DEFAULT_TEXT,
                   style = MaterialTheme.typography.bodyLarge,
                   fontSize = Dimensions.TextSize.title,
                   color = MessagingColors.secondaryText)
