@@ -70,6 +70,8 @@ data class Relationship(
  *   friend requests, discussion invitations, and session invitations. Each notification contains
  *   metadata about the event and can be executed to perform the associated action (e.g., accepting
  *   a friend request).
+ *     @property pastSessionIds List of UUIDs representing sessions that have been archived for this
+ *       user.
  */
 data class Account(
     val uid: String,
