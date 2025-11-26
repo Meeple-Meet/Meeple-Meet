@@ -15,13 +15,11 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.navigation.compose.rememberNavController
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
-import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -195,10 +193,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_smoke_showsTopBarSearchAndFriendList() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        val navController = rememberNavController()
-        val navigationActions = NavigationActions(navController)
         FriendsScreen(
-            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -369,10 +364,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_search_showsDropdownAndHidesFriendsSection() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        val navController = rememberNavController()
-        val navigationActions = NavigationActions(navController)
         FriendsScreen(
-            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -486,10 +478,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_removeFriend_updatesRepository() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        val navController = rememberNavController()
-        val navigationActions = NavigationActions(navController)
         FriendsScreen(
-            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
@@ -557,10 +546,7 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_blockFromSearch_updatesRepository() {
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        val navController = rememberNavController()
-        val navigationActions = NavigationActions(navController)
         FriendsScreen(
-            navigation = navigationActions,
             account =
                 currentUser.copy( // ensure we start without relationship to stranger
                     relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
@@ -622,10 +608,7 @@ class FriendsScreenTest : FirestoreTests() {
     // currentUser already has blockedUser as BLOCKED in setup()
     compose.setContent {
       AppTheme(themeMode = ThemeMode.DARK) {
-        val navController = rememberNavController()
-        val navigationActions = NavigationActions(navController)
         FriendsScreen(
-            navigation = navigationActions,
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
