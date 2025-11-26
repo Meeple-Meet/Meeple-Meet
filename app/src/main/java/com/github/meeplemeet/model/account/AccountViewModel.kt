@@ -1,9 +1,12 @@
 // Docs generated with Claude Code.
 package com.github.meeplemeet.model.account
 
+import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
+const val BLANK_ACCOUNT_ID_ERROR = "Account id cannot be blank"
 
 /**
  * Interface defining common account management operations for ViewModels.
@@ -23,8 +26,29 @@ interface AccountViewModel {
    * @throws IllegalArgumentException if the ID is blank
    */
   fun getAccount(id: String) {
-    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
     scope.launch { RepositoryProvider.accounts.getAccount(id, false) }
+  }
+
+  /**
+   * Retrieves multiple accounts by their IDs and provides them to a callback.
+   *
+   * Additionally, this method preloads each account's profile picture in the provided context.
+   *
+   * @param uids List of account IDs to retrieve
+   * @param context Context used for loading profile pictures
+   * @param onResult Callback that receives the list of retrieved accounts
+   */
+  fun getAccounts(uids: List<String>, context: Context, onResult: (List<Account>) -> Unit) {
+    scope.launch {
+      val accounts = RepositoryProvider.accounts.getAccounts(uids)
+      onResult(accounts)
+      accounts.forEach { account ->
+        launch {
+          runCatching { RepositoryProvider.images.loadAccountProfilePicture(account.uid, context) }
+        }
+      }
+    }
   }
 
   /**
@@ -38,8 +62,24 @@ interface AccountViewModel {
    * @throws IllegalArgumentException if the ID is blank
    */
   fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
-    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
+    require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
     scope.launch { onResult(RepositoryProvider.accounts.getAccount(id, false)) }
+  }
+
+  /**
+   * Retrieves an account by ID and provides it to a callback, preloading its profile picture.
+   *
+   * @param id The account ID to retrieve
+   * @param context Context used for loading the profile picture
+   * @param onResult Callback that receives the retrieved account
+   */
+  fun getOtherAccount(id: String, context: Context, onResult: (Account) -> Unit) {
+    require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
+    scope.launch {
+      val account = RepositoryProvider.accounts.getAccount(id, false)
+      onResult(account)
+      runCatching { RepositoryProvider.images.loadAccountProfilePicture(account.uid, context) }
+    }
   }
 
   /**
