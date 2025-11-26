@@ -64,7 +64,10 @@ class FriendsScreenViewModel(
         other.relationships[account.uid] != null)
         return
 
-    scope.launch { accountRepository.sendFriendRequest(account, other.uid) }
+    scope.launch {
+      accountRepository.sendFriendRequest(account, other.uid)
+      accountRepository.sendFriendRequestNotification(other.uid, account)
+    }
   }
 
   /**
