@@ -182,6 +182,48 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         sessionRepository.getArchivedSessionByPhotoUrl("https://nonexistent.com/photo.webp")
     assertNull(foundSession)
   }
+  @Test
+  fun viewModel_getArchivedSessionByPhotoUrl_returnsSession() = runBlocking {
+    // Archive a session with a photo URL
+    val discussion =
+        discussionRepository.createDiscussion("ViewModel Find By Photo", "Test", account.uid)
+    val game = gameRepository.getGameById(existingGameId)
+    sessionRepository.createSession(
+        discussion.uid,
+        "ViewModel Find By Photo Session",
+        game.uid,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
+    val photoUrl = "https://example.com/viewmodel_find_by_photo.webp"
+    val archivedId = java.util.UUID.randomUUID().toString()
+    sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
+
+    delay(200) // Wait for archiving to complete
+
+    // Use ViewModel method with callback
+    var foundSession: com.github.meeplemeet.model.sessions.Session? = null
+    viewModel.getArchivedSessionByPhotoUrl(photoUrl) { foundSession = it }
+
+    delay(100) // Wait for callback to execute
+
+    assertNotNull(foundSession)
+    assertEquals(photoUrl, foundSession?.photoUrl)
+    assertEquals("ViewModel Find By Photo Session", foundSession?.name)
+  }
+
+  @Test
+  fun viewModel_getArchivedSessionByPhotoUrl_returnsNull_whenPhotoUrlNotFound() = runBlocking {
+    // Use ViewModel method with callback
+    var foundSession: com.github.meeplemeet.model.sessions.Session? = null
+    viewModel.getArchivedSessionByPhotoUrl("https://nonexistent.com/viewmodel_photo.webp") {
+      foundSession = it
+    }
+
+    delay(100) // Wait for callback to execute
+
+    assertNull(foundSession)
+  }
 
   @Test
   fun updateSession_archivesPassedSession_withoutPhoto() = runBlocking {
