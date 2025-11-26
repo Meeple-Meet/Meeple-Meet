@@ -21,6 +21,7 @@ import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
 import kotlin.io.println
 import kotlin.random.Random
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -406,6 +407,8 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 2), useUnmergedTree = true)
           .performClick()
 
+      runBlocking { delay(250) }
+
       checkpoint("Popcorn 50 %") { waitUntilPercentIs(multiMsgIndex, 0, "50%") }
       checkpoint("Soda 50 %") { waitUntilPercentIs(multiMsgIndex, 2, "50%") }
 
@@ -414,6 +417,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
           .onNodeWithTag(
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
           .performClick()
+
+      runBlocking { delay(250) }
+
       checkpoint("Popcorn 0 %") { waitUntilPercentIs(multiMsgIndex, 0, "0%") }
       checkpoint("Soda now 100 %") { waitUntilPercentIs(multiMsgIndex, 2, "100%") }
 
