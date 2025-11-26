@@ -99,6 +99,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
   private fun discussionProfilePath(id: String) = "${discussionBasePath(id)}/profile.webp"
 
+  private fun sessionPhotoPath(id: String) = "${discussionBasePath(id)}/session.webp"
+
   private fun discussionMessagesDir(id: String) = "${discussionBasePath(id)}/messages"
 
   private fun discussionMessagePath(id: String) =
@@ -206,6 +208,64 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    */
   suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray =
       loadImage(context, discussionProfilePath(discussionId))
+
+  /**
+   * Saves a session photo to Firebase Storage and local cache.
+   *
+   * Session photos are stored at a fixed path `discussions/{discussionId}/session/photo.webp`. This
+   * operation requires admin privileges in the discussion (enforced by caller).
+   *
+   * ## Usage
+   * Typically called by [SessionViewModel.saveSessionPhoto], which handles permission checks and
+   * updates the session document with the returned photo URL.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion containing the session
+   * @param inputPath Absolute path to the source image file (from gallery or camera)
+   * @return The public HTTPS download URL of the saved session photo
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
+   * @see SessionViewModel.saveSessionPhoto for high-level API
+   * @see loadSessionPhoto to retrieve the session photo
+   * @see deleteSessionPhoto to delete the session photo
+   */
+  suspend fun saveSessionPhoto(context: Context, discussionId: String, inputPath: String): String =
+      saveImage(context, inputPath, sessionPhotoPath(discussionId))
+
+  /**
+   * Deletes the session photo from both cache and Firebase Storage.
+   *
+   * Removes the session photo stored at `discussions/{discussionId}/session/photo.webp`. This
+   * operation requires admin privileges in the discussion (enforced by caller).
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion containing the session
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   * @see SessionViewModel.deleteSessionPhoto for high-level API
+   * @see saveSessionPhoto to upload a session photo
+   */
+  suspend fun deleteSessionPhoto(context: Context, discussionId: String) =
+      deleteImages(context, sessionPhotoPath(discussionId))
+
+  /**
+   * Loads the session photo from cache or Firebase Storage.
+   *
+   * Checks local cache first; on cache miss, downloads from Firebase Storage and caches locally.
+   * The image is returned as a byte array in WebP format.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion containing the session
+   * @return The image as a byte array in WebP format
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage download fails or session photo doesn't
+   *   exist
+   * @see SessionViewModel.loadSessionPhoto for high-level API
+   * @see saveSessionPhoto to upload a session photo
+   */
+  suspend fun loadSessionPhoto(context: Context, discussionId: String): ByteArray =
+      loadImage(context, sessionPhotoPath(discussionId))
 
   /**
    * Saves discussion message photos to Firebase Storage under unique names and returns their URLs.
