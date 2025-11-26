@@ -109,8 +109,7 @@ class SessionViewModel(
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
   fun deleteSession(requester: Account, discussion: Discussion) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException(onlyAdminErrorText)
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(onlyAdminErrorText)
 
     viewModelScope.launch { sessionRepository.deleteSession(discussion.uid) }
   }
@@ -134,8 +133,7 @@ class SessionViewModel(
       context: Context,
       inputPath: String
   ) {
-    if (!isAdmin(requester, discussion))
-        throw PermissionDeniedException(onlyAdminErrorText)
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(onlyAdminErrorText)
 
     viewModelScope.launch {
       val photoUrl = imageRepository.saveSessionPhoto(context, discussion.uid, inputPath)
