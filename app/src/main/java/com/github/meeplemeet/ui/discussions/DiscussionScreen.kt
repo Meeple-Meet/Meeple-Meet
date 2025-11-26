@@ -225,8 +225,6 @@ fun DiscussionScreen(
   val discussionState by viewModel.discussionFlow(discussion.uid).collectAsState()
   val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
 
-  LaunchedEffect(discussion.uid) { viewModel.readDiscussionMessages(account, discussion) }
-
   LaunchedEffect(discussionState) { discussionState?.let { disc -> discussionName = disc.name } }
 
   LaunchedEffect(messages) {
@@ -281,13 +279,17 @@ fun DiscussionScreen(
                         }
                   },
                   navigationIcon = {
-                    IconButton(onClick = onBack) {
-                      Icon(
-                          Icons.AutoMirrored.Filled.ArrowBack,
-                          contentDescription = "Back",
-                          tint = MaterialTheme.colorScheme.onSurface,
-                          modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
-                    }
+                    IconButton(
+                        onClick = {
+                          viewModel.readDiscussionMessages(account, discussion)
+                          onBack()
+                        }) {
+                          Icon(
+                              Icons.AutoMirrored.Filled.ArrowBack,
+                              contentDescription = "Back",
+                              tint = MaterialTheme.colorScheme.onSurface,
+                              modifier = Modifier.testTag(NavigationTestTags.GO_BACK_BUTTON))
+                        }
                   },
                   actions = {
                     val icon =
