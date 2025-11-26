@@ -23,7 +23,6 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
-import com.github.meeplemeet.model.map.cluster.DistanceBasedClusterStrategy
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -863,20 +862,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         refreshContent()
 
         // Use actual simplified viewmodel for distance-based clustering strategy
-        val mapViewModel =
-            MapViewModel(
-                clusterManager =
-                    ClusterManager(
-                        DistanceBasedClusterStrategy(
-                            baseThresholdKm = 1.0,
-                            zoomToThreshold = { zoom -> if (zoom <= 10f) 1.0 else 0.1 })))
+        val mapViewModel = MapViewModel()
 
         mapViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(1500)
 
-        val initialZoom = 8f // Threshold = 1.0 km
-        val newZoom = 14f // Threshold = 0.1 km
+        val initialZoom = 10f // Threshold = 5 km
+        val newZoom = 18f // Threshold = 50 m
 
         mapViewModel.updateZoomLevel(initialZoom)
         delay(500)
