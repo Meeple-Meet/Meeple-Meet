@@ -2,8 +2,8 @@ package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
 
-import androidx.lifecycle.viewModelScope
 import android.content.Context
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.AuthUIState
 import com.github.meeplemeet.model.auth.AuthenticationRepository
