@@ -149,6 +149,7 @@ enum class MeepleMeetScreen(
   CreateSpaceRenter("Create Space Renter"),
   SpaceDetails("Space Renter Details"),
   EditSpaceRenter("Edit Space Renter"),
+  NotificationsTab("Notifications tab"),
   Friends("Friends"),
 }
 
