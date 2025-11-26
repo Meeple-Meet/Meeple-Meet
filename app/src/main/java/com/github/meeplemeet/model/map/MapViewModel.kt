@@ -59,7 +59,7 @@ data class MapUIState(
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
     val selectedClusterPreviews: List<Pair<GeoPinWithLocation, MarkerPreview>>? = null,
-    val selectedGeoPin: StorableGeoPin? = null,
+    val selectedPin: GeoPinWithLocation? = null,
     val isLoadingPreview: Boolean = false,
 
     // Internal cluster cache
@@ -371,13 +371,13 @@ class MapViewModel(
    */
   fun selectPin(pin: GeoPinWithLocation) {
     viewModelScope.launch {
-      _uiState.update { it.copy(isLoadingPreview = true) }
+      _uiState.update { it.copy(isLoadingPreview = true, selectedPin = pin) }
       try {
         val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
         _uiState.update {
           it.copy(
               selectedMarkerPreview = preview,
-              selectedGeoPin = pin.geoPin,
+              selectedPin = pin,
               errorMsg = null,
               isLoadingPreview = false)
         }
@@ -385,7 +385,7 @@ class MapViewModel(
         _uiState.update {
           it.copy(
               selectedMarkerPreview = null,
-              selectedGeoPin = null,
+              selectedPin = null,
               errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${e.message}",
               isLoadingPreview = false)
         }
@@ -395,7 +395,7 @@ class MapViewModel(
 
   /** Clears the current selection (both marker preview and geo-pin). */
   fun clearSelectedPin() {
-    _uiState.update { it.copy(selectedMarkerPreview = null, selectedGeoPin = null) }
+    _uiState.update { it.copy(selectedMarkerPreview = null, selectedPin = null) }
   }
 
   /**
@@ -441,7 +441,7 @@ class MapViewModel(
     _uiState.update {
       it.copy(
           selectedClusterPreviews = null,
-          selectedGeoPin = pin.geoPin,
+          selectedPin = pin,
           selectedMarkerPreview = preview,
           errorMsg = null)
     }

@@ -381,12 +381,12 @@ fun MapScreen(
             ModalBottomSheet(
                 sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
                   if (isLoading) {
-                    MarkerPreviewLoadingSheet(geoPin = uiState.selectedGeoPin!!)
+                    MarkerPreviewLoadingSheet(pin = uiState.selectedPin)
                   } else {
                     MarkerPreviewSheet(
                         preview = uiState.selectedMarkerPreview!!,
                         onClose = { viewModel.clearSelectedPin() },
-                        geoPin = uiState.selectedGeoPin!!,
+                        pin = uiState.selectedPin!!,
                         onRedirect = onRedirect)
                   }
                 }
@@ -834,10 +834,10 @@ private fun Context.openGoogleMapsDirections(lat: Double, lng: Double) {
  * Shows a centered text and a circular progress indicator. The text varies depending on the type of
  * the pin being loaded, or shows "Loading cluster..." if loading a cluster (geoPin is null).
  *
- * @param geoPin the [StorableGeoPin] for which the preview is loading
+ * @param pin the [GeoPinWithLocation] for which the preview is loading
  */
 @Composable
-private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin?) {
+private fun MarkerPreviewLoadingSheet(pin: GeoPinWithLocation?) {
   Column(
       modifier =
           Modifier.fillMaxWidth()
@@ -846,7 +846,7 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin?) {
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text =
-                when (geoPin?.type) {
+                when (pin?.geoPin?.type) {
                   PinType.SHOP -> "Loading shop..."
                   PinType.SPACE -> "Loading space..."
                   PinType.SESSION -> "Loading session..."
@@ -881,7 +881,7 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin?) {
 private fun MarkerPreviewSheet(
     preview: MarkerPreview,
     onClose: () -> Unit,
-    geoPin: StorableGeoPin,
+    pin: GeoPinWithLocation,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
   Column(
@@ -970,7 +970,7 @@ private fun MarkerPreviewSheet(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
           Button(
-              onClick = { onRedirect(geoPin) },
+              onClick = { onRedirect(pin.geoPin) },
               modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
                 Text(text = "View details")
               }
