@@ -879,7 +879,8 @@ class ImageRepositoryTests : FirestoreTests() {
     checkpoint("DiskStorageException when parent directory cannot be created") {
       runTest {
         // Attempt to create a file with an invalid parent path that cannot be created
-        // This is difficult to test in practice as mkdirs() typically succeeds on writable filesystems
+        // This is difficult to test in practice as mkdirs() typically succeeds on writable
+        // filesystems
         // However, we can test with a read-only parent if the filesystem supports it
         val readOnlyDir = File(context.cacheDir, "readonly_parent")
         readOnlyDir.mkdirs()
@@ -926,7 +927,8 @@ class ImageRepositoryTests : FirestoreTests() {
               imageRepository.saveAccountProfilePicture("test_io_error", context, testImagePath)
             }
 
-            assertTrue("Expected ImageProcessingException when file is unreadable", result.isFailure)
+            assertTrue(
+                "Expected ImageProcessingException when file is unreadable", result.isFailure)
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Exception should be ImageProcessingException or DiskStorageException",

@@ -182,6 +182,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         sessionRepository.getArchivedSessionByPhotoUrl("https://nonexistent.com/photo.webp")
     assertNull(foundSession)
   }
+
   @Test
   fun viewModel_getArchivedSessionByPhotoUrl_returnsSession() = runBlocking {
     // Archive a session with a photo URL
