@@ -3,6 +3,7 @@
 package com.github.meeplemeet.ui.account
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -565,6 +566,11 @@ private fun FriendsTabSwitcher(
               Modifier.weight(1f)
                   .fillMaxHeight()
                   .background(bgColor)
+                  .border(
+                      width = 0.dp,
+                      color = MaterialTheme.colorScheme.outline,
+                      shape = RectangleShape,
+                  )
                   .clickable { onTabSelected(tab) }
                   .testTag(tabTag),
           contentAlignment = Alignment.Center,
