@@ -110,6 +110,18 @@ class DiscussionRepository(
     return discussion
   }
 
+  /**
+   * Checks if a discussion preview is valid by verifying the discussion document exists.
+   *
+   * Used to clean up orphaned preview documents that reference deleted discussions. This prevents
+   * the UI from showing stale previews for non-existent discussions.
+   *
+   * @param discussionId The discussion ID to check
+   * @return true if the discussion document exists in Firestore, false otherwise
+   */
+  suspend fun previewIsValid(discussionId: String): Boolean =
+      collection.document(discussionId).get().await().exists()
+
   /** Retrieve a discussion document by ID. */
   suspend fun getDiscussion(id: String): Discussion {
     val snapshot = collection.document(id).get().await()

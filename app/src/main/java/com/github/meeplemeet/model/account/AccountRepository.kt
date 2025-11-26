@@ -60,6 +60,13 @@ class AccountRepository :
     /** Firestore field name for space renter IDs list */
     private const val FIELD_SPACE_RENTER_IDS = "spaceRenterIds"
   }
+  /**
+   * Returns a reference to the previews subcollection for a given account.
+   *
+   * @param uid The account ID whose previews subcollection to access
+   * @return A CollectionReference to the previews subcollection
+   */
+  private fun previews(uid: String) = collection.document(uid).collection(Account::previews.name)
 
   /**
    * Returns a reference to the relationships subcollection for a given account.
@@ -176,6 +183,20 @@ class AccountRepository :
   }
 
   /**
+   * Returns a reference to a specific discussion preview document for deletion.
+   *
+   * Used when cleaning up orphaned preview documents (previews that reference non-existent
+   * discussions). This ensures atomic deletion operations.
+   *
+   * @param accountId The account ID that owns the preview
+   * @param discussionId The discussion ID of the preview to delete
+   * @return A DocumentReference to the preview document
+   */
+  fun previewToDeleteRef(accountId: String, discussionId: String): DocumentReference {
+    return previews(accountId).document(discussionId)
+  }
+
+  /**
    * Retrieves an account and its associated discussion previews, relationships, and notifications
    * by ID.
    *
@@ -195,9 +216,7 @@ class AccountRepository :
     val snapshot = collection.document(id).get().await()
     val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
 
-    val previewsSnap =
-        if (getAllData) collection.document(id).collection(Account::previews.name).get().await()
-        else null
+    val previewsSnap = if (getAllData) previews(id).get().await() else null
     val previews = if (getAllData) extractPreviews(previewsSnap!!.documents) else emptyMap()
 
     val relationshipsSnap = if (getAllData) relationships(id).get().await() else null
