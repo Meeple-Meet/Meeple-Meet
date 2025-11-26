@@ -17,17 +17,6 @@ interface AccountViewModel {
   val scope: CoroutineScope
 
   /**
-   * Retrieves an account by its ID.
-   *
-   * @param id The account ID to retrieve
-   * @throws IllegalArgumentException if the ID is blank
-   */
-  fun getAccount(id: String) {
-    if (id.isBlank()) throw IllegalArgumentException("Account id cannot be blank")
-    scope.launch { RepositoryProvider.accounts.getAccount(id, false) }
-  }
-
-  /**
    * Retrieves an account by ID and provides it to a callback.
    *
    * This method is useful when you need to fetch account data without updating the current

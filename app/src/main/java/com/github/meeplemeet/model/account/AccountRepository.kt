@@ -1,4 +1,3 @@
-// Docs generated with Claude Code.
 package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
@@ -18,6 +17,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+
+private const val BUSINESSES_SUB_COLLECTION = "businesses"
 
 /**
  * Repository for managing user account data in Firestore.
@@ -43,7 +44,14 @@ import kotlinx.coroutines.tasks.await
  * In the [Account] runtime model, these relationships are loaded into a map keyed by the other
  * user's UID for efficient lookup
  */
-class AccountRepository : FirestoreRepository("accounts") {
+class AccountRepository :
+    FirestoreRepository(
+        "accounts",
+        listOf(
+            Account::previews.name,
+            Account::relationships.name,
+            Account::notifications.name,
+            BUSINESSES_SUB_COLLECTION)) {
   companion object {
     /** Firestore field name for relationship status */
     private const val FIELD_STATUS = "status"
@@ -80,7 +88,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @return A DocumentReference to the businesses document
    */
   private fun businessesDoc(uid: String) =
-      collection.document(uid).collection("businesses").document("ids")
+      collection.document(uid).collection(BUSINESSES_SUB_COLLECTION).document("ids")
 
   /**
    * Extracts discussion previews from a Firestore query snapshot.
@@ -188,7 +196,8 @@ class AccountRepository : FirestoreRepository("accounts") {
     val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
 
     val previewsSnap =
-        if (getAllData) collection.document(id).collection("previews").get().await() else null
+        if (getAllData) collection.document(id).collection(Account::previews.name).get().await()
+        else null
     val previews = if (getAllData) extractPreviews(previewsSnap!!.documents) else emptyMap()
 
     val relationshipsSnap = if (getAllData) relationships(id).get().await() else null
@@ -251,7 +260,7 @@ class AccountRepository : FirestoreRepository("accounts") {
    * @param id The account ID to delete
    */
   suspend fun deleteAccount(id: String) {
-    collection.document(id).delete().await()
+    fullyDeleteDocument(collection.document(id))
   }
 
   /**
