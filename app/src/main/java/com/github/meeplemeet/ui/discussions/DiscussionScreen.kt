@@ -335,7 +335,8 @@ fun DiscussionScreen(
 
                   // Check if the previous message is from the same sender
                   val prevMessage = messages.getOrNull(index - 1)
-                  prevMessage?.senderId == message.senderId && !showDateHeader
+                  val isFirstFromSender =
+                      prevMessage?.senderId != message.senderId || showDateHeader
 
                   when {
                     message.poll != null ->
@@ -361,10 +362,11 @@ fun DiscussionScreen(
                             isMine,
                             sender,
                             isLastFromSender,
+                            isFirstFromSender,
                             messages,
                             userCache,
                             account.uid)
-                    else -> ChatBubble(message, isMine, sender, isLastFromSender)
+                    else -> ChatBubble(message, isMine, sender, isLastFromSender, isFirstFromSender)
                   }
 
                   // Add spacing between messages
@@ -832,6 +834,7 @@ private fun PhotoBubble(
     isMine: Boolean,
     senderName: String,
     showProfilePicture: Boolean = true,
+    showSenderName: Boolean = true,
     allMessages: List<Message> = emptyList(),
     userCache: Map<String, Account> = emptyMap(),
     currentUserId: String = ""
@@ -878,7 +881,7 @@ private fun PhotoBubble(
                         horizontal = Dimensions.Spacing.small,
                         vertical = Dimensions.Spacing.small)) {
               Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                if (!isMine) {
+                if (!isMine && showSenderName) {
                   Text(
                       senderName,
                       style = MaterialTheme.typography.labelSmall,
@@ -1086,13 +1089,15 @@ fun FullscreenImageDialog(
  * @param isMine Whether the message was sent by the current user (aligns right).
  * @param senderName Display name of the sender (null for own messages).
  * @param showProfilePicture Whether to show the profile picture for this message.
+ * @param showSenderName Whether to show the sender name for this message.
  */
 @Composable
 private fun ChatBubble(
     message: Message,
     isMine: Boolean,
     senderName: String?,
-    showProfilePicture: Boolean = true
+    showProfilePicture: Boolean = true,
+    showSenderName: Boolean = true
 ) {
   Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
@@ -1138,7 +1143,7 @@ private fun ChatBubble(
                         horizontal = Dimensions.Spacing.large,
                         vertical = Dimensions.Spacing.medium)) {
               Column {
-                if (senderName != null && !isMine) {
+                if (senderName != null && !isMine && showSenderName) {
                   Text(
                       senderName,
                       style = MaterialTheme.typography.labelSmall,
