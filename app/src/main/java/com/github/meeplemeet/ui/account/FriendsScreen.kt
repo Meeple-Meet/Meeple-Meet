@@ -261,16 +261,13 @@ private fun Account.idsFor(status: RelationshipStatus): List<String> =
  * @param ids List of account IDs to load.
  * @param onResult Callback function to handle the loaded accounts.
  */
-private fun FriendsScreenViewModel.loadAccountsOrEmpty(
+private fun loadAccountsOrEmpty(
     ids: List<String>,
     context: Context,
+    viewModel: FriendsScreenViewModel,
     onResult: (List<Account>) -> Unit,
 ) {
-  if (ids.isEmpty()) {
-    onResult(emptyList())
-  } else {
-    getAccounts(ids, context, onResult)
-  }
+  if (ids.isEmpty()) onResult(emptyList()) else viewModel.getAccounts(ids, context, onResult)
 }
 
 /**
@@ -279,16 +276,10 @@ private fun FriendsScreenViewModel.loadAccountsOrEmpty(
  * @param current The current user's account.
  * @param other The other user's account to block or unblock.
  */
-private fun FriendsScreenViewModel.toggleBlock(
-    current: Account,
-    other: Account,
-) {
+private fun toggleBlock(current: Account, other: Account, viewModel: FriendsScreenViewModel) {
   val status = current.relationships[other.uid]
-  if (status.isBlocked) {
-    unblockUser(current, other)
-  } else {
-    blockUser(current, other)
-  }
+  if (status.isBlocked) viewModel.unblockUser(current, other)
+  else viewModel.blockUser(current, other)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -326,14 +317,14 @@ fun FriendsScreen(
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
   var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
 
-  LaunchedEffect(friendIds) { viewModel.loadAccountsOrEmpty(friendIds, context) { friends = it } }
+  LaunchedEffect(friendIds) { loadAccountsOrEmpty(friendIds, context, viewModel) { friends = it } }
 
   LaunchedEffect(sentRequestIds) {
-    viewModel.loadAccountsOrEmpty(sentRequestIds, context) { sentRequests = it }
+    loadAccountsOrEmpty(sentRequestIds, context, viewModel) { sentRequests = it }
   }
 
   LaunchedEffect(blockedIds) {
-    viewModel.loadAccountsOrEmpty(blockedIds, context) { blockedUsers = it }
+    loadAccountsOrEmpty(blockedIds, context, viewModel) { blockedUsers = it }
   }
 
   LaunchedEffect(trimmedQuery) { viewModel.searchByHandle(trimmedQuery) }
@@ -413,7 +404,7 @@ private fun FriendsManagementContent(
     FriendsSearchResultsDropdown(
         currentAccount = account,
         results = suggestions.filter { it.uid != account.uid },
-        onBlockToggle = { other -> viewModel.toggleBlock(account, other) },
+        onBlockToggle = { other -> toggleBlock(account, other, viewModel) },
         onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
         onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
         onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
@@ -424,7 +415,7 @@ private fun FriendsManagementContent(
         FriendsList(
             currentAccount = account,
             friends = lists.friends,
-            onBlockToggle = { friend -> viewModel.toggleBlock(account, friend) },
+            onBlockToggle = { friend -> toggleBlock(account, friend, viewModel) },
             onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
         )
       }
@@ -432,7 +423,7 @@ private fun FriendsManagementContent(
         SentRequestsList(
             currentAccount = account,
             sentRequests = lists.sentRequests,
-            onBlockToggle = { other -> viewModel.toggleBlock(account, other) },
+            onBlockToggle = { other -> toggleBlock(account, other, viewModel) },
             onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
         )
       }
