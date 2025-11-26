@@ -2,6 +2,7 @@
 // and finally completed by copilot
 package com.github.meeplemeet.ui.account
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,7 +52,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,7 +77,6 @@ import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.Dimensions
-import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TEST TAGS
@@ -215,12 +214,13 @@ private fun Account.idsFor(status: RelationshipStatus): List<String> =
  */
 private fun FriendsScreenViewModel.loadAccountsOrEmpty(
     ids: List<String>,
+    context: Context,
     onResult: (List<Account>) -> Unit,
 ) {
   if (ids.isEmpty()) {
     onResult(emptyList())
   } else {
-    getAccounts(ids, onResult)
+    getAccounts(ids, context, onResult)
   }
 }
 
@@ -261,6 +261,8 @@ fun FriendsScreen(
     account: Account,
     onBack: () -> Unit,
 ) {
+  val context = LocalContext.current
+
   val rawSuggestions by viewModel.handleSuggestions.collectAsStateWithLifecycle()
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -277,13 +279,15 @@ fun FriendsScreen(
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
   var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
 
-  LaunchedEffect(friendIds) { viewModel.loadAccountsOrEmpty(friendIds) { friends = it } }
+  LaunchedEffect(friendIds) { viewModel.loadAccountsOrEmpty(friendIds, context) { friends = it } }
 
   LaunchedEffect(sentRequestIds) {
-    viewModel.loadAccountsOrEmpty(sentRequestIds) { sentRequests = it }
+    viewModel.loadAccountsOrEmpty(sentRequestIds, context) { sentRequests = it }
   }
 
-  LaunchedEffect(blockedIds) { viewModel.loadAccountsOrEmpty(blockedIds) { blockedUsers = it } }
+  LaunchedEffect(blockedIds) {
+    viewModel.loadAccountsOrEmpty(blockedIds, context) { blockedUsers = it }
+  }
 
   LaunchedEffect(trimmedQuery) { viewModel.searchByHandle(trimmedQuery) }
 
@@ -748,18 +752,15 @@ private fun UserAvatar(
 
   val context = LocalContext.current
   val viewModel: FriendsScreenViewModel = viewModel()
-  val scope = rememberCoroutineScope()
 
   var avatarBytes by remember(account.uid) { mutableStateOf<ByteArray?>(null) }
 
   LaunchedEffect(account.uid) {
-    scope.launch {
-      viewModel.loadAccountProfilePicture(
-          accountId = account.uid,
-          context = context,
-      ) { bytes ->
-        avatarBytes = bytes
-      }
+    viewModel.loadAccountProfilePicture(
+        accountId = account.uid,
+        context = context,
+    ) { bytes ->
+      avatarBytes = bytes
     }
   }
 
