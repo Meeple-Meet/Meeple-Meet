@@ -228,7 +228,7 @@ private fun LocationAndDateInfo(location: String, date: String) {
           color = AppColors.textIconsFade,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
-          modifier = Modifier.weight(1f, fill = false))
+          modifier = Modifier.weight(Dimensions.Weight.full, fill = false))
       Text(text = " • $date", color = AppColors.textIconsFade)
     } else {
       Text(text = date, color = AppColors.textIconsFade)
@@ -258,7 +258,7 @@ private fun SessionImage(session: Session, modifier: Modifier = Modifier) {
     Box(
         modifier =
             modifier
-                .fillMaxWidth(0.7f)
+                .fillMaxWidth(Dimensions.Fractions.topBarDivider)
                 .aspectRatio(Dimensions.Fractions.topBarDivider)
                 .clip(RoundedCornerShape(Dimensions.CornerRadius.large))
                 .background(androidx.compose.ui.graphics.Color.Black),
