@@ -70,7 +70,7 @@ class NotificationsViewModel(
    * @param onDeleted callback upon repository failure (account does not exist)
    */
   fun getOtherAccountData(id: String, onResult: (Account) -> Unit, onDeleted: () -> Unit = {}) {
-    scope.launch {
+    viewModelScope.launch {
       val acc =
           try {
             accountRepository.getAccount(id, false)
@@ -121,81 +121,6 @@ class NotificationsViewModel(
             ByteArray(0)
           }
       onLoaded(bytes.takeIf { it.isNotEmpty() })
-    }
-  }
-
-  /**
-   * Checks if two accounts are the same user or if either has blocked the other.
-   *
-   * This helper method is used to prevent relationship operations between users who should not be
-   * able to interact (same user or blocked relationship).
-   *
-   * @param account The first account to check
-   * @param other The second account to check
-   * @return True if the accounts are the same user, or if either has blocked the other
-   */
-  private fun sameOrBlocked(account: Account, other: Account) =
-      account.uid == other.uid ||
-          account.relationships[other.uid] == RelationshipStatus.BLOCKED ||
-          other.relationships[account.uid] == RelationshipStatus.BLOCKED
-
-  /**
-   * Accepts a pending friend request, establishing a mutual friendship.
-   *
-   * This method validates that a friend request can be accepted before proceeding. It requires:
-   * - The current account has a Pending relationship status with the other user
-   * - The other user has a Sent relationship status with the current account
-   * - Neither user has blocked the other
-   * - The accounts are not the same user
-   *
-   * The validation ensures the relationship states are consistent with a valid friend request that
-   * can be accepted.
-   *
-   * If validation passes, the friendship is established asynchronously via the repository.
-   *
-   * @param account The account accepting the friend request
-   * @param notification The account whose friend request is being accepted
-   */
-  fun acceptFriendRequest(account: Account, notification: Notification) {
-    val other: Account
-    runBlocking { other = accountRepository.getAccount(notification.senderOrDiscussionId) }
-    val accountRels = account.relationships[other.uid]
-    val otherRels = other.relationships[account.uid]
-
-    if (sameOrBlocked(account, other) ||
-        accountRels != RelationshipStatus.PENDING ||
-        otherRels != RelationshipStatus.SENT)
-        return
-
-    viewModelScope.launch { accountRepository.acceptFriendRequest(account.uid, other.uid) }
-    executeNotification(account, notification)
-  }
-
-  /**
-   * Cancels or deny's a sent friend request from the current account to another user.
-   *
-   * This method validates that the operation is valid before proceeding. It prevents canceling in
-   * the following cases:
-   * - The accounts are the same user
-   * - Either user has blocked the other
-   *
-   * If validation passes, the relationship is reset asynchronously via the repository.
-   *
-   * @param account The account canceling the sent friend request
-   * @param other The account to whom the friend request was sent
-   */
-  fun rejectFriendRequest(account: Account, other: Account) {
-    if (sameOrBlocked(account, other)) return
-
-    viewModelScope.launch {
-      accountRepository.resetRelationship(account.uid, other.uid)
-      // Clear out previous notifications
-      account.notifications
-          .find { not -> not.senderOrDiscussionId == other.uid }
-          ?.let { not -> accountRepository.deleteNotification(account.uid, not.uid) }
-      other.notifications
-          .find { not -> not.senderOrDiscussionId == account.uid }
-          ?.let { not -> accountRepository.deleteNotification(other.uid, not.uid) }
     }
   }
 
