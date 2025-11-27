@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -88,8 +89,10 @@ fun SessionsOverviewScreen(
 
   /* --------------  NEW: toggle state  -------------- */
   var showHistory by remember { mutableStateOf(false) }
+  var popupSession by remember { mutableStateOf<Session?>(null) }
 
-  Scaffold(
+  Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
       topBar = {
         Column(Modifier.fillMaxWidth()) {
           /* 1. original top-bar (kept) */
@@ -127,28 +130,66 @@ fun SessionsOverviewScreen(
               if (pastSessions.isEmpty()) {
                 EmptySessionsListText(isHistory = true)
               } else {
-                HistoryGrid(sessions = pastSessions)
+                HistoryGrid(sessions = pastSessions, onSessionClick = { popupSession = it })
               }
             }
             sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
             else -> {
-              /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
-              LazyColumn(
-                  modifier = Modifier.fillMaxSize(),
-                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                    items(sessionMap.entries.toList(), key = { it.key }) { (id, session) ->
-                      SessionCard(
-                          session = session,
-                          viewModel = viewModel,
-                          modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
-                          onClick = { onSelectSession(id) })
+              val now = System.currentTimeMillis()
+              val futureSessions =
+                  sessionMap
+                      .filter { (_, session) -> session.date.toDate().time >= now }
+                      .toList()
+                      .sortedBy { (_, session) -> session.date.toDate().time }
+
+              if (futureSessions.isEmpty()) {
+                EmptySessionsListText(isHistory = false)
+              } else {
+                /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
+                      items(futureSessions, key = { it.first }) { (id, session) ->
+                        SessionCard(
+                            session = session,
+                            viewModel = viewModel,
+                            modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
+                            onClick = { onSelectSession(id) })
+                      }
                     }
-                  }
+              }
             }
           }
         }
       }
 }
+    if (popupSession != null) {
+      Box(
+          modifier =
+              Modifier.fillMaxSize()
+                  .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f))
+                  .clickable(
+                      enabled = true,
+                      indication = null,
+                      interactionSource =
+                          remember {
+                            androidx.compose.foundation.interaction.MutableInteractionSource()
+                          }) {
+                        popupSession = null
+                      }
+          )
+    }
+
+    popupSession?.let { session ->
+      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        com.github.meeplemeet.ui.components.SessionDetailsCard(
+            session = session,
+            viewModel = viewModel,
+            onClose = { popupSession = null },
+            modifier = Modifier.wrapContentSize().padding(Dimensions.Padding.extraLarge))
+      }
+    }
+  }
 
 /** Displays a centred label when the user has no upcoming sessions. */
 @Composable
@@ -357,14 +398,17 @@ private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory
  * @param sessions The list of past sessions to be displayed in the history gallery.
  */
 @Composable
-private fun HistoryGrid(sessions: List<Session>) {
+private fun HistoryGrid(sessions: List<Session>, onSessionClick: (Session) -> Unit) {
   LazyColumn(modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.medium)) {
     items(sessions.chunked(AMOUNT_OF_PICTURES_PER_ROW)) { row ->
       Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
             row.forEach { session ->
-              HistoryCard(session = session, modifier = Modifier.weight(Dimensions.Weight.full))
+              HistoryCard(
+                  session = session,
+                  modifier =
+                      Modifier.weight(Dimensions.Weight.full).clickable { onSessionClick(session) })
             }
 
             repeat(AMOUNT_OF_PICTURES_PER_ROW - row.size) {
@@ -434,7 +478,7 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
 }
 
 /**
- * Returns the URL of the image representing the given [session].
+ * Returns the URL of the image representing the given session.
  *
  * This function acts as a placeholder until the real session or game image retrieval logic is
  * implemented. All history cards currently use this placeholder image.
