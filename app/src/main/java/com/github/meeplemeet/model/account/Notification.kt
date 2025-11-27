@@ -103,7 +103,8 @@ data class Notification(
         val disc = RepositoryProvider.discussions.getDiscussion(senderOrDiscussionId)
         val currentParticipants = disc.session?.participants ?: emptyList()
         RepositoryProvider.sessions.updateSession(
-            senderOrDiscussionId, newParticipantList = currentParticipants + receiverId)
+            senderOrDiscussionId,
+            newParticipantList = (currentParticipants + receiverId).toSet().toList())
       }
     }
     executed = true

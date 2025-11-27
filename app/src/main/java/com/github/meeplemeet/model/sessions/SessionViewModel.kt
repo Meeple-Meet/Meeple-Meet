@@ -92,7 +92,7 @@ class SessionViewModel(
       if (user.notificationSettings == NotificationSettings.EVERYONE ||
           (user.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
               changeRequester.relationships[user.uid] == RelationshipStatus.FRIEND)) {
-        val updatedParticipants = currentParticipants + user.uid
+        val updatedParticipants = (currentParticipants + user.uid).toSet().toList()
         sessionRepository.updateSession(discussion.uid, null, null, null, null, updatedParticipants)
       } else {
         accountRepository.sendJoinSessionNotification(user.uid, discussion)
