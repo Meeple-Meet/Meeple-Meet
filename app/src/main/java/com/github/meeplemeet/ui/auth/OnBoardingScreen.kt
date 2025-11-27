@@ -1,4 +1,4 @@
-// AI helped generate some of this code
+// AI helped generate some of this code especially for magic numbers
 package com.github.meeplemeet.ui.auth
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -45,7 +45,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.discussions.Message
@@ -72,42 +71,6 @@ object OnBoardingTestTags {
   const val PAGER = "OnBoarding_Pager"
   const val DISCUSSION_PREVIEW_CARD = "DiscussionPreviewCard"
   const val CLOSE_DIALOG = "OnBoarding_CloseDialog"
-}
-
-// Local dimensions for OnBoarding screen
-private object OnBoardingDimensions {
-  val pageImageSize = 400.dp
-  val discussionCardMinHeight = 68.dp
-  val discussionCardMaxHeight = 84.dp
-  val discussionAvatarSize = Dimensions.IconSize.giant
-  val navigationButtonSize = 42.dp
-  val pageIndicatorSelected = Dimensions.Padding.large
-  val pageIndicatorUnselected = Dimensions.Padding.medium
-  val mapHeight = 300.dp
-  val mediumPadding = Dimensions.Padding.medium
-  val bigPadding = Dimensions.Padding.extraLarge
-  val largeWidth = Dimensions.ButtonSize.medium
-  val mapMarkerSize = Dimensions.IconSize.huge
-  val mapMarkerRadius = 14.dp
-  val mapMarkerPulseRadius = Dimensions.CornerRadius.round
-  val spacerSize = Dimensions.Padding.extraMedium
-  val IconSize = Dimensions.IconSize.medium
-  val mapLegendInternalIconSize = Dimensions.TextSize.tiny
-  val borderWidth = Dimensions.DividerThickness.standard
-  val strokeWidth = Dimensions.Padding.small
-  val dividerHorizontalPadding = 30.dp
-  val offsetX268 = 268.dp
-  val offsetY208 = 208.dp
-  val offsetX90 = 90.dp
-  val offsetY80 = 80.dp
-  val offsetX240 = 240.dp
-  val offsetY240 = 240.dp
-  val offsetX180 = 180.dp
-  val offsetY140 = 140.dp
-  val offsetX70 = 70.dp
-  val offsetY260 = 260.dp
-  val offsetX280 = 280.dp
-  val offsetY180 = 180.dp
 }
 
 object OnBoardingStrings {
@@ -141,7 +104,7 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
       modifier =
           Modifier.fillMaxSize()
               .background(AppColors.primary)
-              .padding(OnBoardingDimensions.mapMarkerPulseRadius)
+              .padding(Dimensions.CornerRadius.round)
               .pointerInput(pagerState.currentPage) {
                 // Block swipe gestures on page 1 if user hasn't interacted
                 if (pagerState.currentPage == 1 && !hasInteractedWithDiscussion.value) {
@@ -157,7 +120,7 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                   pagerState = pagerState,
                   pages = pages,
                   hasInteractedWithDiscussion = hasInteractedWithDiscussion,
-                  modifier = Modifier.weight(1f))
+                  modifier = Modifier.weight(Dimensions.Weight.full))
 
               NavigationControls(
                   pagerState = pagerState,
@@ -173,8 +136,8 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                     modifier =
                         Modifier.fillMaxWidth()
                             .padding(
-                                horizontal = OnBoardingDimensions.mapMarkerPulseRadius,
-                                vertical = OnBoardingDimensions.bigPadding)
+                                horizontal = Dimensions.CornerRadius.round,
+                                vertical = Dimensions.Padding.extraLarge)
                             .testTag("OnBoarding_EndButton")
                             .clickable(onClick = onFinished)) {
                       Text(text = OnBoardingStrings.SKIP)
@@ -189,8 +152,8 @@ private fun SkipButton(onSkip: () -> Unit, modifier: Modifier = Modifier) {
   Button(
       onClick = onSkip,
       colors = ButtonDefaults.buttonColors(containerColor = AppColors.primary),
-      contentPadding = PaddingValues(OnBoardingDimensions.pageIndicatorUnselected),
-      modifier = modifier.zIndex(1f).testTag(OnBoardingTestTags.SKIP_BUTTON)) {
+      contentPadding = PaddingValues(Dimensions.Padding.medium),
+      modifier = modifier.zIndex(Dimensions.Weight.full).testTag(OnBoardingTestTags.SKIP_BUTTON)) {
         Text(text = OnBoardingStrings.SKIP, color = AppColors.secondary)
       }
 }
@@ -248,11 +211,11 @@ fun DiscussionPreviewPage(
 
         Text(
             text = OnBoardingStrings.DISCUSSION_PREVIEW_DESCRIPTION,
-            fontSize = 16.sp,
-            color = AppColors.textIcons.copy(alpha = 0.65f),
-            modifier = Modifier.padding(horizontal = OnBoardingDimensions.mapMarkerPulseRadius))
+            fontSize = Dimensions.TextSize.subtitle,
+            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
+            modifier = Modifier.padding(horizontal = Dimensions.CornerRadius.round))
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
 
         DiscussionPreviewCard(
             onClick = {
@@ -260,7 +223,7 @@ fun DiscussionPreviewPage(
               hasInteractedWithDiscussion.value = true
             })
 
-        Spacer(modifier = Modifier.height(OnBoardingDimensions.spacerSize))
+        Spacer(modifier = Modifier.height(Dimensions.Padding.extraMedium))
 
         InteractionPrompt(hasInteracted = hasInteractedWithDiscussion.value)
 
@@ -276,18 +239,18 @@ private fun PageImage(imageRes: Int) {
       painter = painterResource(id = imageRes),
       contentDescription = null,
       modifier =
-          Modifier.size(OnBoardingDimensions.pageImageSize)
-              .padding(bottom = OnBoardingDimensions.mapMarkerPulseRadius))
+          Modifier.size(Dimensions.ContainerSize.pageImageSize)
+              .padding(bottom = Dimensions.CornerRadius.round))
 }
 
 @Composable
 private fun PageTitle(title: String, pageIndex: Int) {
   Text(
       text = title,
-      fontSize = 32.sp,
+      fontSize = Dimensions.TextSize.xLarge,
       fontWeight = FontWeight.Bold,
       modifier =
-          Modifier.padding(bottom = OnBoardingDimensions.pageIndicatorSelected)
+          Modifier.padding(bottom = Dimensions.Padding.large)
               .testTag("${OnBoardingTestTags.PAGE_TITLE}_$pageIndex"))
 }
 
@@ -295,9 +258,9 @@ private fun PageTitle(title: String, pageIndex: Int) {
 private fun PageDescription(description: String) {
   Text(
       text = description,
-      fontSize = 16.sp,
+      fontSize = Dimensions.TextSize.subtitle,
       color = AppColors.secondary,
-      modifier = Modifier.padding(horizontal = OnBoardingDimensions.mapMarkerPulseRadius))
+      modifier = Modifier.padding(horizontal = Dimensions.CornerRadius.round))
 }
 
 @Composable
@@ -309,22 +272,21 @@ fun DiscussionPreviewCard(onClick: () -> Unit) {
   Surface(
       modifier =
           Modifier.fillMaxWidth()
-              .padding(horizontal = OnBoardingDimensions.bigPadding)
+              .padding(horizontal = Dimensions.Padding.extraLarge)
               .heightIn(
-                  min = OnBoardingDimensions.discussionCardMinHeight,
-                  max = OnBoardingDimensions.discussionCardMaxHeight)
+                  min = Dimensions.ContainerSize.discussionCardMinHeight,
+                  max = Dimensions.ContainerSize.discussionCardMaxHeight)
               .focusRequester(focusRequester)
               .testTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD),
-      shape = RoundedCornerShape(OnBoardingDimensions.mapMarkerPulseRadius),
-      tonalElevation = OnBoardingDimensions.mediumPadding,
-      shadowElevation = OnBoardingDimensions.strokeWidth,
+      shape = RoundedCornerShape(Dimensions.CornerRadius.round),
+      tonalElevation = Dimensions.Padding.medium,
+      shadowElevation = Dimensions.Padding.small,
       color = AppColors.primary,
       onClick = onClick) {
         Row(
             modifier =
                 Modifier.padding(
-                        horizontal = OnBoardingDimensions.pageIndicatorSelected,
-                        vertical = OnBoardingDimensions.mediumPadding)
+                        horizontal = Dimensions.Padding.large, vertical = Dimensions.Padding.medium)
                     .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically) {
               DiscussionAvatar()
@@ -336,68 +298,69 @@ fun DiscussionPreviewCard(onClick: () -> Unit) {
 
 @Composable
 private fun RowScope.DiscussionAvatar() {
-  Box(modifier = Modifier.padding(end = OnBoardingDimensions.bigPadding)) {
+  Box(modifier = Modifier.padding(end = Dimensions.Padding.extraLarge)) {
     Surface(
         shape = CircleShape,
         color = AppColors.primary,
-        modifier = Modifier.size(OnBoardingDimensions.discussionAvatarSize),
-        tonalElevation = 0.dp) {
+        modifier = Modifier.size(Dimensions.IconSize.giant),
+        tonalElevation = Dimensions.Elevation.none) {
           Image(
               painter = painterResource(id = R.drawable.session_logo),
               contentDescription = "Avatar",
-              modifier = Modifier.padding(OnBoardingDimensions.mediumPadding))
+              modifier = Modifier.padding(Dimensions.Padding.medium))
         }
     Badge(
         containerColor = AppColors.focus,
         contentColor = Color.White,
         modifier = Modifier.align(Alignment.TopEnd)) {
-          Text(
-              "2",
-              fontSize = OnBoardingDimensions.mapLegendInternalIconSize,
-              fontWeight = FontWeight.Bold)
+          Text("2", fontSize = Dimensions.TextSize.tiny, fontWeight = FontWeight.Bold)
         }
   }
 }
 
 @Composable
 private fun RowScope.DiscussionInfo() {
-  Column(modifier = Modifier.weight(1f)) {
+  Column(modifier = Modifier.weight(Dimensions.Weight.full)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Text(
           text = OnBoardingStrings.BOARD_GAME_NIGHT,
           fontWeight = FontWeight.SemiBold,
-          fontSize = 13.sp,
+          fontSize = Dimensions.TextSize.medium,
           color = AppColors.textIcons)
-      Spacer(modifier = Modifier.width(6.dp))
+      Spacer(modifier = Modifier.width(Dimensions.Padding.mediumSmall))
       Text(
           text = "• 5 new",
           color = AppColors.primary,
           fontWeight = FontWeight.Medium,
-          fontSize = 10.sp)
+          fontSize = Dimensions.TextSize.small)
     }
-    Spacer(modifier = Modifier.height(3.dp))
+    Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
     Text(
         text = "\"Which Game should we play?\" – Alex",
         color = AppColors.textIconsFade,
-        fontSize = OnBoardingDimensions.mapLegendInternalIconSize,
-        maxLines = 1)
+        fontSize = Dimensions.TextSize.tiny,
+        maxLines = Dimensions.Numbers.singleLine)
   }
 }
 
 @Composable
 private fun DiscussionTimestamp() {
-  Spacer(modifier = Modifier.width(OnBoardingDimensions.spacerSize))
+  Spacer(modifier = Modifier.width(Dimensions.Padding.extraMedium))
   Column(horizontalAlignment = Alignment.End) {
-    Text(text = "21:01", fontSize = 9.sp, color = AppColors.secondary)
-    Spacer(modifier = Modifier.height(OnBoardingDimensions.strokeWidth))
+    Text(text = "21:01", fontSize = Dimensions.TextSize.tiny, color = AppColors.secondary)
+    Spacer(modifier = Modifier.height(Dimensions.Padding.small))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-      Text(text = "Tap", fontSize = 10.sp, color = AppColors.focus, fontWeight = FontWeight.Medium)
-      Spacer(modifier = Modifier.width(OnBoardingDimensions.strokeWidth))
+      Text(
+          text = "Tap",
+          fontSize = Dimensions.TextSize.small,
+          color = AppColors.focus,
+          fontWeight = FontWeight.Medium)
+      Spacer(modifier = Modifier.width(Dimensions.Padding.small))
       Icon(
           imageVector = Icons.Default.ArrowForward,
           contentDescription = "Tap to explore",
           tint = AppColors.focus,
-          modifier = Modifier.size(OnBoardingDimensions.pageIndicatorSelected))
+          modifier = Modifier.size(Dimensions.Padding.large))
     }
   }
 }
@@ -411,14 +374,14 @@ private fun InteractionPrompt(hasInteracted: Boolean) {
           } else {
             OnBoardingStrings.DISCUSSION_PREVIEW_JUMP
           },
-      fontSize = if (!hasInteracted) 14.sp else 15.sp,
+      fontSize = if (!hasInteracted) Dimensions.TextSize.standard else Dimensions.TextSize.body,
       color = if (!hasInteracted) AppColors.focus else AppColors.textIconsFade,
       fontWeight = if (!hasInteracted) FontWeight.Bold else FontWeight.Normal,
       modifier =
           Modifier.padding(
-              top = OnBoardingDimensions.mediumPadding,
-              start = OnBoardingDimensions.mapMarkerPulseRadius,
-              end = OnBoardingDimensions.mapMarkerPulseRadius))
+              top = Dimensions.Padding.medium,
+              start = Dimensions.CornerRadius.round,
+              end = Dimensions.CornerRadius.round))
 }
 
 @Composable
@@ -429,18 +392,16 @@ fun DiscussionDetailDialog(onDismiss: () -> Unit) {
       exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkOut()) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            modifier =
-                Modifier.fillMaxSize()
-                    .padding(vertical = OnBoardingDimensions.mapMarkerPulseRadius),
+            modifier = Modifier.fillMaxSize().padding(vertical = Dimensions.CornerRadius.round),
             containerColor = AppColors.secondary,
-            tonalElevation = 0.dp,
+            tonalElevation = Dimensions.Elevation.none,
             shape = MaterialTheme.shapes.large,
             title = null,
             icon = null,
             text = {
               Column(
-                  modifier = Modifier.fillMaxSize().padding(OnBoardingDimensions.bigPadding),
-                  verticalArrangement = Arrangement.spacedBy(OnBoardingDimensions.mediumPadding)) {
+                  modifier = Modifier.fillMaxSize().padding(Dimensions.Padding.extraLarge),
+                  verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
                     DialogHeader(onClose = onDismiss)
                     DialogInstructions()
                     DiscussionHeader()
@@ -456,7 +417,7 @@ fun DiscussionDetailDialog(onDismiss: () -> Unit) {
 @Composable
 private fun DialogHeader(onClose: () -> Unit) {
   Row(
-      modifier = Modifier.fillMaxWidth().padding(bottom = OnBoardingDimensions.mediumPadding),
+      modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium),
       verticalAlignment = Alignment.CenterVertically) {
         IconButton(
             onClick = onClose, modifier = Modifier.testTag(OnBoardingTestTags.CLOSE_DIALOG)) {
@@ -465,13 +426,13 @@ private fun DialogHeader(onClose: () -> Unit) {
                   contentDescription = "Close",
                   tint = Color.Black)
             }
-        Spacer(modifier = Modifier.width(OnBoardingDimensions.mediumPadding))
+        Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
         Text(
             "Session Creation",
-            fontSize = 20.sp,
+            fontSize = Dimensions.TextSize.largeHeading,
             fontWeight = FontWeight.Medium,
             color = AppColors.textIcons,
-            modifier = Modifier.weight(1f))
+            modifier = Modifier.weight(Dimensions.Weight.full))
       }
 }
 
@@ -481,15 +442,15 @@ private fun DialogInstructions() {
       modifier =
           Modifier.fillMaxWidth()
               .clickable { /* TODO */}
-              .padding(vertical = OnBoardingDimensions.strokeWidth),
+              .padding(vertical = Dimensions.Padding.small),
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             "Use the button next to the discussion's name to create or join a session",
-            fontSize = 12.sp,
+            fontSize = Dimensions.TextSize.small,
             color = AppColors.textIcons,
             textAlign = TextAlign.Center,
             modifier =
-                Modifier.padding(top = 2.dp, bottom = OnBoardingDimensions.strokeWidth)
+                Modifier.padding(top = Dimensions.Padding.tiny, bottom = Dimensions.Padding.small)
                     .align(Alignment.CenterHorizontally))
       }
 }
@@ -498,40 +459,40 @@ private fun DialogInstructions() {
 private fun DiscussionHeader() {
   Surface(
       color = AppColors.secondary,
-      shape = RoundedCornerShape(OnBoardingDimensions.bigPadding),
-      modifier = Modifier.fillMaxWidth().padding(bottom = OnBoardingDimensions.mediumPadding)) {
+      shape = RoundedCornerShape(Dimensions.Padding.extraLarge),
+      modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium)) {
         Column {
           Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier =
                   Modifier.padding(
-                          horizontal = OnBoardingDimensions.pageIndicatorSelected,
-                          vertical = OnBoardingDimensions.mediumPadding)
+                          horizontal = Dimensions.Padding.large,
+                          vertical = Dimensions.Padding.medium)
                       .fillMaxWidth()) {
                 Surface(
                     shape = CircleShape,
                     color = AppColors.primary,
-                    modifier = Modifier.size(OnBoardingDimensions.mapMarkerSize),
+                    modifier = Modifier.size(Dimensions.IconSize.huge),
                 ) {
                   Image(
                       painter = painterResource(id = R.drawable.google_logo),
                       contentDescription = "Discussion Avatar",
-                      modifier = Modifier.padding(OnBoardingDimensions.mediumPadding))
+                      modifier = Modifier.padding(Dimensions.Padding.medium))
                 }
-                Spacer(Modifier.width(OnBoardingDimensions.pageIndicatorSelected))
-                Column(modifier = Modifier.weight(1f)) {
+                Spacer(Modifier.width(Dimensions.Padding.large))
+                Column(modifier = Modifier.weight(Dimensions.Weight.full)) {
                   Text(
                       OnBoardingStrings.BOARD_GAME_NIGHT,
                       fontWeight = FontWeight.SemiBold,
-                      fontSize = 14.sp,
+                      fontSize = Dimensions.TextSize.standard,
                       color = AppColors.textIcons,
                       modifier = Modifier.testTag("DiscussionHeader_Title"))
                   Text(
                       OnBoardingStrings.FIVE_NEW_MESSAGES,
-                      fontSize = 10.sp,
+                      fontSize = Dimensions.TextSize.small,
                       color = AppColors.textIconsFade)
                 }
-                Spacer(modifier = Modifier.width(OnBoardingDimensions.spacerSize))
+                Spacer(modifier = Modifier.width(Dimensions.Padding.extraMedium))
                 Icon(
                     imageVector = Icons.Default.LibraryAdd,
                     contentDescription = "Session",
@@ -541,8 +502,8 @@ private fun DiscussionHeader() {
               modifier =
                   Modifier.fillMaxWidth()
                       .padding(
-                          horizontal = OnBoardingDimensions.dividerHorizontalPadding,
-                          vertical = OnBoardingDimensions.strokeWidth))
+                          horizontal = Dimensions.ContainerSize.dividerHorizontalPadding,
+                          vertical = Dimensions.Padding.small))
         }
       }
 }
@@ -558,7 +519,7 @@ private fun DialogMessages() {
               createdAt = com.google.firebase.Timestamp.now()),
       isMine = false,
       senderName = "Alex")
-  Spacer(Modifier.height(OnBoardingDimensions.mediumPadding))
+  Spacer(Modifier.height(Dimensions.Padding.medium))
 
   PollBubble(
       msgIndex = 0,
@@ -578,10 +539,9 @@ private fun DialogMessages() {
 private fun DialogFooter() {
   Text(
       "Tap on any discussion to see full details and join in!",
-      fontSize = 14.sp,
+      fontSize = Dimensions.TextSize.standard,
       color = AppColors.textIcons,
-      modifier =
-          Modifier.padding(bottom = OnBoardingDimensions.pageIndicatorSelected).fillMaxWidth())
+      modifier = Modifier.padding(bottom = Dimensions.Padding.large).fillMaxWidth())
 }
 
 @Composable
@@ -592,7 +552,7 @@ fun NavigationControls(
     onNavigate: (Int) -> Unit
 ) {
   Row(
-      modifier = Modifier.fillMaxWidth().padding(vertical = OnBoardingDimensions.bigPadding),
+      modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.extraLarge),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween) {
         BackButton(
@@ -615,7 +575,7 @@ fun NavigationControls(
 fun BackButton(canGoBack: Boolean, onClick: () -> Unit) {
   Box(
       modifier =
-          Modifier.size(OnBoardingDimensions.navigationButtonSize)
+          Modifier.size(Dimensions.ButtonSize.navigation)
               .then(
                   if (canGoBack) {
                     Modifier.background(color = AppColors.primary, shape = CircleShape)
@@ -639,14 +599,12 @@ private fun PageIndicators(pageCount: Int, currentPage: Int) {
   Row(verticalAlignment = Alignment.CenterVertically) {
     repeat(pageCount) { index ->
       val isSelected = currentPage == index
-      val targetSize =
-          if (isSelected) OnBoardingDimensions.pageIndicatorSelected
-          else OnBoardingDimensions.mediumPadding
+      val targetSize = if (isSelected) Dimensions.CornerRadius.large else Dimensions.Padding.medium
       val animatedSize by animateFloatAsState(targetValue = targetSize.value, label = "dot_size")
 
       Box(
           modifier =
-              Modifier.padding(horizontal = 3.dp)
+              Modifier.padding(horizontal = Dimensions.Spacing.small)
                   .size(animatedSize.dp)
                   .background(
                       color = if (isSelected) AppColors.textIconsFade else AppColors.secondary,
@@ -668,7 +626,7 @@ fun NextButton(
 
     Box(
         modifier =
-            Modifier.size(OnBoardingDimensions.navigationButtonSize)
+            Modifier.size(Dimensions.ButtonSize.navigation)
                 .background(
                     color = if (isEnabled) AppColors.primary else AppColors.secondary,
                     shape = CircleShape)
@@ -683,8 +641,7 @@ fun NextButton(
   } else {
     Box(
         modifier =
-            Modifier.size(OnBoardingDimensions.navigationButtonSize)
-                .testTag(OnBoardingTestTags.NEXT_BUTTON))
+            Modifier.size(Dimensions.ButtonSize.navigation).testTag(OnBoardingTestTags.NEXT_BUTTON))
   }
 }
 
@@ -699,13 +656,13 @@ fun MeepleMeetIntroPage() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
-        modifier = Modifier.fillMaxSize().padding(OnBoardingDimensions.mapMarkerPulseRadius)) {
+        modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge)) {
           PageImage(imageRes = logoRes)
           PageTitle(title = "Meeple Meet", pageIndex = 0)
-          Spacer(modifier = Modifier.height(OnBoardingDimensions.bigPadding))
+          Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
           Column(
               horizontalAlignment = Alignment.Start,
-              modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp)) {
+              modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.none)) {
                 IntroFeatureCard(
                     Icons.Default.Group,
                     "Connect with friends and chat about upcoming game sessions",
@@ -723,14 +680,14 @@ fun MeepleMeetIntroPage() {
                     "Discover rental spaces and venues for gaming events nearby",
                     tint = AppColors.textIconsFade)
               }
-          Spacer(modifier = Modifier.height(OnBoardingDimensions.mapMarkerPulseRadius))
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
           Text(
               text = OnBoardingStrings.MEEPLE_MEET_INTRO_DESCRIPTION,
-              fontSize = 16.sp,
+              fontSize = Dimensions.TextSize.subtitle,
               color = AppColors.secondary,
               textAlign = TextAlign.Center,
               modifier =
-                  Modifier.fillMaxWidth().padding(horizontal = OnBoardingDimensions.bigPadding))
+                  Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge))
         }
   }
 }
@@ -739,18 +696,19 @@ fun MeepleMeetIntroPage() {
 private fun IntroFeatureCard(icon: ImageVector, text: String, tint: Color = AppColors.textIcons) {
   Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier.fillMaxWidth().padding(vertical = OnBoardingDimensions.strokeWidth)) {
+      modifier =
+          Modifier.fillMaxWidth().padding(vertical = Dimensions.DividerThickness.strokeWidth)) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(28.dp))
-        Spacer(modifier = Modifier.width(OnBoardingDimensions.pageIndicatorSelected))
+            modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+        Spacer(modifier = Modifier.width(Dimensions.CornerRadius.large))
         Text(
             text = text,
-            fontSize = 16.sp,
+            fontSize = Dimensions.TextSize.subtitle,
             color = AppColors.textIcons,
-            modifier = Modifier.weight(1f))
+            modifier = Modifier.weight(Dimensions.Weight.full))
       }
 }
 
@@ -759,30 +717,30 @@ fun MapExplorationPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = OnBoardingDimensions.mediumPadding)) {
+      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
         PageTitle(title = "Explore Nearby", pageIndex = 2)
 
         Text(
             text = OnBoardingStrings.MAP_EXPLORATION_SUBTITLE,
-            fontSize = 14.sp,
-            color = AppColors.textIcons.copy(alpha = 0.65f),
+            fontSize = Dimensions.TextSize.standard,
+            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
-                    horizontal = OnBoardingDimensions.mapMarkerPulseRadius,
-                    vertical = OnBoardingDimensions.pageIndicatorSelected))
+                    horizontal = Dimensions.Spacing.xxxLarge,
+                    vertical = Dimensions.CornerRadius.large))
 
         // Map visualization with real map background
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .height(OnBoardingDimensions.mapHeight)
-                    .padding(horizontal = OnBoardingDimensions.bigPadding)
-                    .clip(RoundedCornerShape(OnBoardingDimensions.bigPadding))
+                    .height(Dimensions.ContainerSize.mapHeight)
+                    .padding(horizontal = Dimensions.Padding.extraLarge)
+                    .clip(RoundedCornerShape(Dimensions.Padding.extraLarge))
                     .border(
-                        width = OnBoardingDimensions.borderWidth,
+                        width = Dimensions.DividerThickness.medium,
                         color = AppColors.primary,
-                        shape = RoundedCornerShape(OnBoardingDimensions.bigPadding))) {
+                        shape = RoundedCornerShape(Dimensions.Padding.extraLarge))) {
               // Real map background image
               Image(
                   painter = painterResource(id = R.drawable.maps_logo),
@@ -792,32 +750,32 @@ fun MapExplorationPage() {
 
               // Session marker #1 (Red - Gaming Sessions)
               MapMarkerWithDrawable(
-                  offsetX = OnBoardingDimensions.offsetX90,
-                  offsetY = OnBoardingDimensions.offsetY80,
+                  offsetX = Dimensions.MapDimensions.offsetX90,
+                  offsetY = Dimensions.MapDimensions.offsetY80,
                   color = AppColors.focus,
                   iconResId = R.drawable.ic_dice,
                   label = "Game Session")
 
               // Shop location marker #1 (Purple - Buy Games)
               MapMarkerWithDrawable(
-                  offsetX = OnBoardingDimensions.offsetX240,
-                  offsetY = OnBoardingDimensions.offsetY240,
+                  offsetX = Dimensions.MapDimensions.offsetX240,
+                  offsetY = Dimensions.MapDimensions.offsetY240,
                   color = AppColors.neutral,
                   iconResId = R.drawable.ic_storefront,
                   label = "Board Game Shop")
 
               // Rental space marker #1 (Orange - Rent Space/Games)
               MapMarkerWithDrawable(
-                  offsetX = OnBoardingDimensions.offsetX180,
-                  offsetY = OnBoardingDimensions.offsetY140,
+                  offsetX = Dimensions.MapDimensions.offsetX180,
+                  offsetY = Dimensions.MapDimensions.offsetY140,
                   color = AppColors.focus,
                   iconResId = R.drawable.ic_table,
                   label = "Gaming Cafe")
 
               // Rental space marker #2 (Orange - Rent Space/Games)
               MapMarkerWithDrawable(
-                  offsetX = OnBoardingDimensions.offsetX70,
-                  offsetY = OnBoardingDimensions.offsetY260,
+                  offsetX = Dimensions.MapDimensions.offsetX70,
+                  offsetY = Dimensions.MapDimensions.offsetY260,
                   color = AppColors.negative,
                   iconResId = R.drawable.ic_table,
                   label = "Event Space")
@@ -826,40 +784,39 @@ fun MapExplorationPage() {
               Box(
                   modifier =
                       Modifier.offset(
-                              x = OnBoardingDimensions.offsetX280,
-                              y = OnBoardingDimensions.offsetY180)
-                          .size(OnBoardingDimensions.mapMarkerPulseRadius)) {
+                              x = Dimensions.MapDimensions.offsetX280,
+                              y = Dimensions.MapDimensions.offsetY180)
+                          .size(Dimensions.Spacing.xxxLarge)) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                       drawCircle(
                           color = Color(0xFF3B82F6),
-                          radius = OnBoardingDimensions.spacerSize.toPx(),
+                          radius = Dimensions.Padding.medium.toPx(),
                       )
                       drawCircle(
                           color = Color.White, // need white border even in dark mode
-                          radius = OnBoardingDimensions.spacerSize.toPx(),
-                          style = Stroke(width = 3.dp.toPx()))
+                          radius = Dimensions.Padding.medium.toPx(),
+                          style = Stroke(width = Dimensions.DividerThickness.strokeWidth.toPx()))
                     }
                   }
 
               // "You" label
               Text(
                   text = "You",
-                  fontSize = OnBoardingDimensions.mapLegendInternalIconSize,
+                  fontSize = Dimensions.TextSize.small,
                   fontWeight = FontWeight.Bold,
                   color = AppColors.neutral,
                   modifier =
                       Modifier.offset(
-                          x = OnBoardingDimensions.offsetX268, y = OnBoardingDimensions.offsetY208))
+                          x = Dimensions.MapDimensions.offsetX268,
+                          y = Dimensions.MapDimensions.offsetY208))
             }
 
-        Spacer(modifier = Modifier.height(OnBoardingDimensions.pageIndicatorSelected))
+        Spacer(modifier = Modifier.height(Dimensions.CornerRadius.large))
 
         // Legend
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = OnBoardingDimensions.mapMarkerPulseRadius),
-            verticalArrangement = Arrangement.spacedBy(OnBoardingDimensions.spacerSize)) {
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.xxxLarge),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
               MapLegendItemWithDrawable(
                   color = AppColors.negative,
                   iconResId = R.drawable.ic_dice,
@@ -877,15 +834,17 @@ fun MapExplorationPage() {
                   description = "Rent games or book venues for sessions")
             }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(Dimensions.Weight.full))
 
         Text(
             text = OnBoardingStrings.MAP_EXPLORATION_END_TEXT,
-            fontSize = 13.sp,
-            color = AppColors.textIcons.copy(alpha = 0.65f),
+            fontSize = Dimensions.TextSize.medium,
+            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
             textAlign = TextAlign.Center,
             modifier =
-                Modifier.padding(horizontal = 32.dp, vertical = OnBoardingDimensions.bigPadding))
+                Modifier.padding(
+                    horizontal = Dimensions.Spacing.xxxLarge,
+                    vertical = Dimensions.Padding.extraLarge))
       }
 }
 
@@ -899,20 +858,23 @@ private fun MapMarkerWithDrawable(
 ) {
   Box(
       modifier =
-          Modifier.offset(x = offsetX, y = offsetY).size(OnBoardingDimensions.mapMarkerSize)) {
+          Modifier.offset(x = offsetX, y = offsetY)
+              .size(
+                  Dimensions.IconSize.medium * Dimensions.Multipliers.double +
+                      Dimensions.Padding.medium)) {
         Canvas(modifier = Modifier.fillMaxSize()) {
           // Pulse effect
           drawCircle(
-              color = color.copy(alpha = 0.2f),
-              radius = OnBoardingDimensions.mapMarkerPulseRadius.toPx())
+              color = color.copy(alpha = Dimensions.Alpha.pulseEffect),
+              radius = Dimensions.Spacing.xxxLarge.toPx())
           // Main dot
-          drawCircle(color = color, radius = OnBoardingDimensions.mapMarkerRadius.toPx())
+          drawCircle(color = color, radius = Dimensions.MapDimensions.markerRadius.toPx())
         }
         Icon(
             painter = painterResource(id = iconResId),
             contentDescription = label,
             tint = Color.White,
-            modifier = Modifier.size(OnBoardingDimensions.IconSize).align(Alignment.Center))
+            modifier = Modifier.size(Dimensions.IconSize.small).align(Alignment.Center))
       }
 }
 
@@ -925,29 +887,30 @@ private fun MapLegendItemWithDrawable(
 ) {
   Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
     Box(
-        modifier = Modifier.size(OnBoardingDimensions.IconSize).background(color, CircleShape),
+        modifier = Modifier.size(Dimensions.IconSize.standard).background(color, CircleShape),
         contentAlignment = Alignment.Center) {
           Icon(
               painter = painterResource(id = iconResId),
               contentDescription = null,
               tint = Color.White,
-              modifier = Modifier.size(11.dp))
+              modifier = Modifier.size(Dimensions.IconSize.tiny))
         }
-    Spacer(modifier = Modifier.width(OnBoardingDimensions.mapMarkerRadius))
+    Spacer(modifier = Modifier.width(Dimensions.MapDimensions.markerRadius))
     Column {
       Text(
           text = title,
-          fontSize = 14.sp,
+          fontSize = Dimensions.TextSize.standard,
           fontWeight = FontWeight.SemiBold,
           color = AppColors.textIcons)
       Text(
           text = description,
-          fontSize = 12.sp,
-          color = AppColors.textIcons.copy(alpha = 0.65f),
-          lineHeight = 16.sp)
+          fontSize = Dimensions.TextSize.small,
+          color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
+          lineHeight = Dimensions.LineHeight.standard)
     }
   }
 }
+
 // ==================== SESSIONS PAGE ====================
 
 @Composable
@@ -955,25 +918,23 @@ fun SessionsPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = OnBoardingDimensions.mediumPadding)) {
+      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
         PageTitle(title = "Game Sessions", pageIndex = 3)
 
         Text(
             text = OnBoardingStrings.SESSION_PAGE_SUBTITLE,
-            fontSize = 14.sp,
-            color = AppColors.textIcons.copy(alpha = 0.65f),
+            fontSize = Dimensions.TextSize.standard,
+            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
-                    horizontal = OnBoardingDimensions.mapMarkerPulseRadius,
-                    vertical = OnBoardingDimensions.bigPadding))
+                    horizontal = Dimensions.Spacing.xxxLarge,
+                    vertical = Dimensions.Padding.extraLarge))
 
         // Session cards visualization
         Column(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = OnBoardingDimensions.bigPadding),
-            verticalArrangement =
-                Arrangement.spacedBy(OnBoardingDimensions.pageIndicatorSelected)) {
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.CornerRadius.large)) {
               SessionOverCard(
                   session =
                       Session(
@@ -1001,14 +962,12 @@ fun SessionsPage() {
                   modifier = Modifier.fillMaxWidth())
             }
 
-        Spacer(modifier = Modifier.height(OnBoardingDimensions.bigPadding))
+        Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
 
         // Features grid
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = OnBoardingDimensions.mapMarkerPulseRadius),
-            verticalArrangement = Arrangement.spacedBy(OnBoardingDimensions.spacerSize)) {
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.xxxLarge),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
               SessionFeatureItem(
                   icon = Icons.Default.CalendarToday,
                   text = "Schedule sessions with date, time, and location")
@@ -1031,9 +990,9 @@ private fun SessionFeatureItem(icon: ImageVector, text: String) {
         imageVector = icon,
         contentDescription = null,
         tint = AppColors.focus,
-        modifier = Modifier.size(20.dp))
-    Spacer(modifier = Modifier.width(OnBoardingDimensions.spacerSize))
-    Text(text = text, fontSize = 13.sp, color = AppColors.textIcons)
+        modifier = Modifier.size(Dimensions.IconSize.standard))
+    Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
+    Text(text = text, fontSize = Dimensions.TextSize.medium, color = AppColors.textIcons)
   }
 }
 
@@ -1044,24 +1003,22 @@ fun PostsPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier =
-          Modifier.fillMaxSize().padding(top = OnBoardingDimensions.pageIndicatorUnselected)) {
+      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
         PageTitle(title = "Community Posts", pageIndex = 4)
 
         Text(
             text = OnBoardingStrings.POST_PAGE_SUBTITLE,
-            fontSize = 14.sp,
-            color = AppColors.textIcons.copy(alpha = 0.65f),
+            fontSize = Dimensions.TextSize.standard,
+            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
-                    horizontal = OnBoardingDimensions.mapMarkerPulseRadius,
-                    vertical = OnBoardingDimensions.bigPadding))
+                    horizontal = Dimensions.Spacing.xxxLarge,
+                    vertical = Dimensions.Padding.extraLarge))
 
         // Post cards visualization
         Column(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = OnBoardingDimensions.bigPadding),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge),
         ) {
           FeedCard(
               authorName = "GameLover",
@@ -1078,29 +1035,29 @@ fun PostsPage() {
               firstTag = "monopoly")
         }
 
-        Spacer(modifier = Modifier.height(OnBoardingDimensions.bigPadding))
+        Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
 
         // Features grid
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = OnBoardingDimensions.mapMarkerPulseRadius),
-            verticalArrangement = Arrangement.spacedBy(OnBoardingDimensions.spacerSize)) {
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.xxxLarge),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
               PostFeatureItem(
                   icon = Icons.Default.Article, text = "Create threads about any board game topic")
               PostFeatureItem(
                   icon = Icons.Default.ThumbUp, text = "Like and interact with community posts")
             }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(Dimensions.Weight.full))
 
         Text(
             text = OnBoardingStrings.POSTS_PAGE_END_TEXT,
-            fontSize = 13.sp,
-            color = AppColors.textIcons.copy(alpha = 0.65f),
+            fontSize = Dimensions.TextSize.medium,
+            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
             textAlign = TextAlign.Center,
             modifier =
-                Modifier.padding(horizontal = 32.dp, vertical = OnBoardingDimensions.bigPadding))
+                Modifier.padding(
+                    horizontal = Dimensions.Spacing.xxxLarge,
+                    vertical = Dimensions.Padding.extraLarge))
       }
 }
 
@@ -1111,8 +1068,8 @@ private fun PostFeatureItem(icon: ImageVector, text: String) {
         imageVector = icon,
         contentDescription = null,
         tint = AppColors.focus,
-        modifier = Modifier.size(20.dp))
-    Spacer(modifier = Modifier.width(OnBoardingDimensions.spacerSize))
-    Text(text = text, fontSize = 13.sp, color = AppColors.textIcons)
+        modifier = Modifier.size(Dimensions.IconSize.standard))
+    Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
+    Text(text = text, fontSize = Dimensions.TextSize.medium, color = AppColors.textIcons)
   }
 }
