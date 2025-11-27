@@ -87,7 +87,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.launch
 
 object NotificationsTabTestTags {
   const val HEADER_TITLE = "header_title"
@@ -343,11 +342,10 @@ fun NotificationsTab(
         viewModel = viewModel,
         onDismiss = { sheetState = null },
         onAccept = {
-          scope.launch {
-            current.notification.execute()
-            viewModel.readNotification(account, current.notification)
-            sheetState = null
-          }
+          viewModel.executeNotification(account, current.notification)
+          viewModel.readNotification(account, current.notification)
+          viewModel.deleteNotification(account, current.notification)
+          sheetState = null
         },
         onDecline = {
           viewModel.deleteNotification(account, current.notification)
@@ -413,11 +411,10 @@ fun NotificationsTab(
                           notif = notif,
                           viewModel = viewModel,
                           onClick = {
-                            scope.launch {
-                              viewModel.preparePopupData(notif, context) { popupData ->
-                                sheetState = NotificationSheetState(notif, popupData)
-                              }
-                            }
+                            viewModel.preparePopupData(
+                                notif, account = account, context = context) { popupData ->
+                                  sheetState = NotificationSheetState(notif, popupData)
+                                }
                             viewModel.readNotification(account, notif)
                           },
                           onMarkRead = { viewModel.readNotification(account, notif) },
@@ -690,17 +687,21 @@ private fun NotificationRowContent(
         }
       }
       NotificationType.JOIN_DISCUSSION -> {
-        viewModel.getDiscussion(notif.senderOrDiscussionId) { disc ->
-          discussionName = disc.name
-          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
-        }
+        viewModel.getDiscussion(
+            notif.senderOrDiscussionId,
+            onResult = { disc ->
+              discussionName = disc.name
+              viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
+            })
       }
       NotificationType.JOIN_SESSION -> {
-        viewModel.getDiscussion(notif.senderOrDiscussionId) { disc ->
-          val session = disc.session
-          sessionName = session?.name ?: disc.name
-          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
-        }
+        viewModel.getDiscussion(
+            notif.senderOrDiscussionId,
+            onResult = { disc ->
+              val session = disc.session
+              sessionName = session?.name ?: disc.name
+              viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
+            })
       }
     }
   }
@@ -843,76 +844,86 @@ fun NotificationSheet(
   LaunchedEffect(notification.uid) {
     when (notification.type) {
       NotificationType.FRIEND_REQUEST -> {
-        viewModel.getOtherAccount(notification.senderOrDiscussionId) { acc ->
-          viewModel.loadAccountImage(notification.senderOrDiscussionId, context) { bytes ->
-            avatar = bytes
-          }
+        viewModel.getOtherAccountData(
+            notification.senderOrDiscussionId,
+            onResult = { acc ->
+              viewModel.loadAccountImage(notification.senderOrDiscussionId, context) { bytes ->
+                avatar = bytes
+              }
 
-          loadedData =
-              NotificationPopupData.FriendRequest(
-                  username = acc.name,
-                  handle = acc.handle,
-                  bio =
-                      if (!acc.description.isNullOrBlank()) acc.description!!
-                      else NotificationsTabUi.NotificationSheet.Content.NO_DESCRIPTION,
-                  avatar = avatar)
-        }
+              loadedData =
+                  NotificationPopupData.FriendRequest(
+                      username = acc.name,
+                      handle = acc.handle,
+                      bio =
+                          if (!acc.description.isNullOrBlank()) acc.description!!
+                          else NotificationsTabUi.NotificationSheet.Content.NO_DESCRIPTION,
+                      avatar = avatar)
+            })
       }
       NotificationType.JOIN_DISCUSSION -> {
-        viewModel.getDiscussion(notification.senderOrDiscussionId) { disc ->
-          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> icon = bytes }
+        viewModel.getDiscussion(
+            notification.senderOrDiscussionId,
+            onResult = { disc ->
+              viewModel.loadDiscussionImage(disc.uid, context) { bytes -> icon = bytes }
 
-          loadedData =
-              NotificationPopupData.Discussion(
-                  title = disc.name,
-                  participants = disc.participants.size,
-                  dateLabel =
-                      disc.createdAt
+              loadedData =
+                  NotificationPopupData.Discussion(
+                      title = disc.name,
+                      participants = disc.participants.size,
+                      dateLabel =
+                          disc.createdAt
+                              .toDate()
+                              .toInstant()
+                              .atZone(ZoneId.systemDefault())
+                              .toLocalDate()
+                              .format(
+                                  DateTimeFormatter.ofPattern(
+                                      NotificationsTabUi.NotificationSheet.Content.DATE_PATTERN)),
+                      description =
+                          disc.description.ifBlank {
+                            NotificationsTabUi.NotificationSheet.Content.NO_DESCRIPTION_DISCUSSION
+                          },
+                      icon = icon)
+            })
+      }
+      NotificationType.JOIN_SESSION -> {
+        viewModel.getDiscussion(
+            notification.senderOrDiscussionId,
+            onResult = { disc ->
+              viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatar = bytes }
+
+              val session = disc.session
+              if (session != null) {
+                viewModel.getGame(session.gameId) { game ->
+                  val dateTime =
+                      session.date
                           .toDate()
                           .toInstant()
                           .atZone(ZoneId.systemDefault())
-                          .toLocalDate()
-                          .format(
-                              DateTimeFormatter.ofPattern(
-                                  NotificationsTabUi.NotificationSheet.Content.DATE_PATTERN)),
-                  description =
-                      disc.description.ifBlank {
-                        NotificationsTabUi.NotificationSheet.Content.NO_DESCRIPTION_DISCUSSION
-                      },
-                  icon = icon)
-        }
-      }
-      NotificationType.JOIN_SESSION -> {
-        viewModel.getDiscussion(notification.senderOrDiscussionId) { disc ->
-          viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatar = bytes }
+                          .toLocalDateTime()
 
-          val session = disc.session
-          if (session != null) {
-            viewModel.getGame(session.gameId) { game ->
-              val dateTime =
-                  session.date.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+                  val dateLabel =
+                      dateTime.format(
+                          DateTimeFormatter.ofPattern(
+                              NotificationsTabUi.NotificationSheet.Content.SESSION_DATE_PATTERN))
+                  val timeLabel =
+                      dateTime.format(
+                          DateTimeFormatter.ofPattern(
+                              NotificationsTabUi.NotificationSheet.Content.SESSION_TIME_PATTERN))
 
-              val dateLabel =
-                  dateTime.format(
-                      DateTimeFormatter.ofPattern(
-                          NotificationsTabUi.NotificationSheet.Content.SESSION_DATE_PATTERN))
-              val timeLabel =
-                  dateTime.format(
-                      DateTimeFormatter.ofPattern(
-                          NotificationsTabUi.NotificationSheet.Content.SESSION_TIME_PATTERN))
-
-              loadedData =
-                  NotificationPopupData.Session(
-                      title = session.name,
-                      participants = session.participants.size,
-                      dateLabel = dateLabel,
-                      description =
-                          NotificationsTabUi.NotificationSheet.Content.sessionDescription(
-                              game.name, timeLabel, session.location.name),
-                      icon = avatar)
-            }
-          }
-        }
+                  loadedData =
+                      NotificationPopupData.Session(
+                          title = session.name,
+                          participants = session.participants.size,
+                          dateLabel = dateLabel,
+                          description =
+                              NotificationsTabUi.NotificationSheet.Content.sessionDescription(
+                                  game.name, timeLabel, session.location.name),
+                          icon = avatar)
+                }
+              }
+            })
       }
     }
   }
@@ -931,12 +942,7 @@ fun NotificationSheet(
                 meta =
                     NotificationsTabUi.NotificationSheet.Content.participantsMeta(
                         d.participants, d.dateLabel),
-                aboutLabel =
-                    if (d.title.contains(
-                        NotificationsTabUi.NotificationSheet.Content.DISCUSSION_KEYWORD,
-                        ignoreCase = true))
-                        NotificationsTabUi.NotificationSheet.Content.ABOUT_DISCUSSION
-                    else NotificationsTabUi.NotificationSheet.Content.ABOUT_SESSION,
+                aboutLabel = NotificationsTabUi.NotificationSheet.Content.ABOUT_DISCUSSION,
                 description = d.description,
                 previewCharLimit =
                     NotificationsTabUi.NotificationSheet.Content.DISCUSSION_PREVIEW_CHAR_LIMIT,
@@ -952,12 +958,7 @@ fun NotificationSheet(
                 meta =
                     NotificationsTabUi.NotificationSheet.Content.participantsMeta(
                         d.participants, d.dateLabel),
-                aboutLabel =
-                    if (d.title.contains(
-                        NotificationsTabUi.NotificationSheet.Content.DISCUSSION_KEYWORD,
-                        ignoreCase = true))
-                        NotificationsTabUi.NotificationSheet.Content.ABOUT_DISCUSSION
-                    else NotificationsTabUi.NotificationSheet.Content.ABOUT_SESSION,
+                aboutLabel = NotificationsTabUi.NotificationSheet.Content.ABOUT_SESSION,
                 description = d.description,
                 previewCharLimit =
                     NotificationsTabUi.NotificationSheet.Content.SESSION_PREVIEW_CHAR_LIMIT,

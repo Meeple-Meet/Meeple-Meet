@@ -31,7 +31,7 @@ class NotificationsViewModel(
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
     private val imageRepository: ImageRepository = RepositoryProvider.images,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-    private val gameRepository: GameRepository = RepositoryProvider.gamesApi
+    private val gameRepository: GameRepository = RepositoryProvider.games
 ) : CreateAccountViewModel(handlesRepository) {
 
   /**
@@ -39,11 +39,51 @@ class NotificationsViewModel(
    *
    * @param discussionId Discussion id to fetch data from
    * @param onResult callback for access to the fetched Discussion
+   * @param onDeleted callback upon repository failure (discussion does not exist)
    */
-  fun getDiscussion(discussionId: String, onResult: (Discussion) -> Unit) {
+  fun getDiscussion(
+      discussionId: String,
+      onResult: (Discussion) -> Unit,
+      onDeleted: () -> Unit = {}
+  ) {
     viewModelScope.launch {
-      val disc = discussionRepository.getDiscussion(discussionId)
-      onResult(disc)
+      val disc =
+          try {
+            discussionRepository.getDiscussion(discussionId)
+          } catch (_: Exception) {
+            null
+          }
+      if (disc != null) {
+        onResult(disc)
+      } else {
+        onDeleted()
+        return@launch
+      }
+    }
+  }
+
+  /**
+   * Used to fetch an account for it's data
+   *
+   * @param id Account id to fetch data from
+   * @param onResult callback upon repository success
+   * @param onDeleted callback upon repository failure (account does not exist)
+   */
+  fun getOtherAccountData(id: String, onResult: (Account) -> Unit, onDeleted: () -> Unit = {}) {
+    scope.launch {
+      val acc =
+          try {
+            accountRepository.getAccount(id, false)
+          } catch (_: Exception) {
+            null
+          }
+
+      if (acc != null) {
+        onResult(acc)
+      } else {
+        onDeleted()
+        return@launch
+      }
     }
   }
 
@@ -175,7 +215,7 @@ class NotificationsViewModel(
    * @param notification The notification to execute
    * @see Notification.execute for the specific actions performed by each notification type
    */
-  private fun executeNotification(account: Account, notification: Notification) {
+  fun executeNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
 
     viewModelScope.launch { notification.execute() }
@@ -221,68 +261,80 @@ class NotificationsViewModel(
    */
   fun preparePopupData(
       notif: Notification,
+      account: Account,
       context: Context,
       onReady: (NotificationPopupData) -> Unit
   ) {
     when (notif.type) {
       NotificationType.FRIEND_REQUEST -> {
-        getOtherAccount(notif.senderOrDiscussionId) { acc ->
-          loadAccountImage(acc.uid, context) { bytes ->
-            onReady(
-                NotificationPopupData.FriendRequest(
-                    username = acc.name,
-                    handle = acc.handle,
-                    bio = acc.description ?: "No description provided.",
-                    avatar = bytes))
-          }
-        }
+        getOtherAccountData(
+            notif.senderOrDiscussionId,
+            onResult = { acc ->
+              loadAccountImage(acc.uid, context) { bytes ->
+                onReady(
+                    NotificationPopupData.FriendRequest(
+                        username = acc.name,
+                        handle = acc.handle,
+                        bio = acc.description ?: "No description provided.",
+                        avatar = bytes))
+              }
+            },
+            onDeleted = { deleteNotification(account, notif) })
       }
       NotificationType.JOIN_DISCUSSION -> {
-        getDiscussion(notif.senderOrDiscussionId) { disc ->
-          loadDiscussionImage(disc.uid, context) { bytes ->
-            onReady(
-                NotificationPopupData.Discussion(
-                    title = disc.name,
-                    participants = disc.participants.size,
-                    dateLabel =
-                        "Created at" +
-                            disc.createdAt
-                                .toDate()
-                                .toInstant()
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                    description = disc.description,
-                    icon = bytes))
-          }
-        }
-      }
-      NotificationType.JOIN_SESSION -> {
-        getDiscussion(notif.senderOrDiscussionId) { disc ->
-          loadDiscussionImage(disc.uid, context) { bytes ->
-            val session = disc.session
-            if (session != null) {
-
-              getGame(session.gameId) { game ->
-                val dateTime =
-                    session.date
-                        .toDate()
-                        .toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDateTime()
-
+        getDiscussion(
+            notif.senderOrDiscussionId,
+            onResult = { disc ->
+              loadDiscussionImage(disc.uid, context) { bytes ->
                 onReady(
-                    NotificationPopupData.Session(
-                        title = session.name,
-                        participants = session.participants.size,
-                        dateLabel = dateTime.format(DateTimeFormatter.ofPattern("MMM d")),
-                        description =
-                            "Play ${game.name} at ${dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))} at ${session.location.name}.",
+                    NotificationPopupData.Discussion(
+                        title = disc.name,
+                        participants = disc.participants.size,
+                        dateLabel =
+                            "Created at" +
+                                disc.createdAt
+                                    .toDate()
+                                    .toInstant()
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                        description = disc.description,
                         icon = bytes))
               }
-            }
-          }
-        }
+            },
+            onDeleted = { deleteNotification(account, notif) })
+      }
+      NotificationType.JOIN_SESSION -> {
+        getDiscussion(
+            notif.senderOrDiscussionId,
+            onResult = { disc ->
+              loadDiscussionImage(disc.uid, context) { bytes ->
+                val session = disc.session
+                if (session != null) {
+
+                  getGame(session.gameId) { game ->
+                    val dateTime =
+                        session.date
+                            .toDate()
+                            .toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime()
+
+                    onReady(
+                        NotificationPopupData.Session(
+                            title = session.name,
+                            participants = session.participants.size,
+                            dateLabel = dateTime.format(DateTimeFormatter.ofPattern("MMM d")),
+                            description =
+                                "Play ${game.name} at ${dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))} at ${session.location.name}.",
+                            icon = bytes))
+                  }
+                } else {
+                  deleteNotification(account, notif)
+                }
+              }
+            },
+            onDeleted = { deleteNotification(account, notif) })
       }
     }
   }
