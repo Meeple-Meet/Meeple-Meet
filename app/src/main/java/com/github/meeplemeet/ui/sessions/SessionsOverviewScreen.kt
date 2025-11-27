@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -465,7 +466,7 @@ private fun HistoryGrid(sessions: List<Session>, onSessionClick: (Session) -> Un
  */
 @Composable
 private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
-  val url = getSessionPicture()
+  val url = getSessionPicture(session)
 
   Column(
       modifier =
@@ -485,11 +486,24 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
                 Modifier.fillMaxWidth()
                     .aspectRatio(selfieRatio)
                     .clip(MaterialTheme.shapes.medium)) {
-              Image(
-                  painter = rememberAsyncImagePainter(url),
-                  contentDescription = session.name,
-                  modifier = Modifier.fillMaxSize(),
-                  contentScale = ContentScale.Crop)
+              if (url != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(url),
+                    contentDescription = session.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop)
+              } else {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black),
+                    contentAlignment = Alignment.Center) {
+                      Icon(
+                          imageVector = Icons.Default.SentimentDissatisfied,
+                          contentDescription = null,
+                          tint = androidx.compose.ui.graphics.Color.Gray,
+                          modifier = Modifier.size(Dimensions.IconSize.large))
+                    }
+              }
             }
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
@@ -507,11 +521,11 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
 /**
  * Returns the URL of the image representing the given session.
  *
- * This function acts as a placeholder until the real session or game image retrieval logic is
- * implemented. All history cards currently use this placeholder image.
+ * If the session has a photoUrl, it is returned. Otherwise, null is returned.
  *
- * @return A placeholder URL pointing to a temporary session image.
+ * @param session The session to get the picture for.
+ * @return The URL of the session image or null.
  */
-private fun getSessionPicture(): String {
-  return "https://npr.brightspotcdn.com/dims4/default/389845d/2147483647/strip/true/crop/4373x3279+0+0/resize/880x660!/quality/90/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2Flegacy%2Fimages%2Fnews%2Fnpr%2F2020%2F07%2F887305543_2064699070.jpg"
+private fun getSessionPicture(session: Session): String? {
+  return session.photoUrl?.takeIf { it.isNotBlank() }
 }

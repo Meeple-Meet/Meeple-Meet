@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
@@ -28,8 +27,6 @@ import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.SimpleDateFormat
 import java.util.Locale
-
-private val CUSTOM_IMAGE_HEIGHT = 180.dp
 
 /**
  * Displays a detailed card for a session, including title, game, participants, location, date and
@@ -100,7 +97,8 @@ fun SessionDetailsCard(
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
-              SessionImage(session = session)
+              SessionImage(
+                  session = session, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
       }
 }
@@ -244,16 +242,31 @@ private fun LocationAndDateInfo(location: String, date: String) {
  * @param session Source of the image label/description.
  */
 @Composable
-private fun SessionImage(session: Session) {
-  val imageUrl =
-      "https://npr.brightspotcdn.com/dims4/default/389845d/2147483647/strip/true/crop/4373x3279+0+0/resize/880x660!/quality/90/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2Flegacy%2Fimages%2Fnews%2Fnpr%2F2020%2F07%2F887305543_2064699070.jpg"
+private fun SessionImage(session: Session, modifier: Modifier = Modifier) {
+  val imageUrl = session.photoUrl?.takeIf { it.isNotBlank() }
 
-  Image(
-      painter = rememberAsyncImagePainter(imageUrl),
-      contentDescription = session.name,
-      contentScale = ContentScale.Crop,
-      modifier =
-          Modifier.fillMaxWidth()
-              .heightIn(max = CUSTOM_IMAGE_HEIGHT)
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.large)))
+  if (imageUrl != null) {
+    Image(
+        painter = rememberAsyncImagePainter(imageUrl),
+        contentDescription = session.name,
+        contentScale = ContentScale.Crop,
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(max = Dimensions.ContainerSize.bottomSheetHeight)
+                .clip(RoundedCornerShape(Dimensions.CornerRadius.large)))
+  } else {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth(0.7f)
+                .aspectRatio(Dimensions.Fractions.topBarDivider)
+                .clip(RoundedCornerShape(Dimensions.CornerRadius.large))
+                .background(androidx.compose.ui.graphics.Color.Black),
+        contentAlignment = Alignment.Center) {
+          Text(
+              text = "No Image Uploaded",
+              color = AppColors.textIconsFade,
+              style = MaterialTheme.typography.bodyLarge)
+        }
+  }
 }
