@@ -8,10 +8,11 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
-import com.github.meeplemeet.model.shared.game.BggGameRepository
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.account.NotificationPopupData
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -243,7 +244,14 @@ class NotificationsViewModel(
                 NotificationPopupData.Discussion(
                     title = disc.name,
                     participants = disc.participants.size,
-                    dateLabel = disc.createdAt.toString(),
+                    dateLabel =
+                        "Created at" +
+                            disc.createdAt
+                                .toDate()
+                                .toInstant()
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
+                                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                     description = disc.description,
                     icon = bytes))
           }
@@ -256,13 +264,20 @@ class NotificationsViewModel(
             if (session != null) {
 
               getGame(session.gameId) { game ->
+                val dateTime =
+                    session.date
+                        .toDate()
+                        .toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime()
+
                 onReady(
                     NotificationPopupData.Session(
                         title = session.name,
                         participants = session.participants.size,
-                        dateLabel = session.date.toString(),
+                        dateLabel = dateTime.format(DateTimeFormatter.ofPattern("MMM d")),
                         description =
-                            "Play ${game?.name ?: "Unknown game"} at ${session.date} at ${session.location.name}",
+                            "Play ${game.name} at ${dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))} at ${session.location.name}.",
                         icon = bytes))
               }
             }

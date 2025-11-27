@@ -46,6 +46,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -65,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -81,12 +83,10 @@ import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
-import com.google.firebase.Timestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import kotlinx.coroutines.launch
 
 object NotificationsTabTestTags {
@@ -168,31 +168,31 @@ data class NotificationSheetState(
     val popupData: NotificationPopupData
 )
 
-fun Notification.toPopupData(): NotificationPopupData {
-  val dateLabel = sentAtLocalDateTime().format(DateTimeFormatter.ofPattern("MMM d"))
-  return when (type) {
-    NotificationType.FRIEND_REQUEST ->
-        NotificationPopupData.FriendRequest(
-            username = "User $senderOrDiscussionId",
-            handle = senderOrDiscussionId,
-            bio = "User $senderOrDiscussionId wants to add you as a friend.",
-            avatar = null)
-    NotificationType.JOIN_DISCUSSION ->
-        NotificationPopupData.Discussion(
-            title = "Discussion invitation",
-            participants = 0,
-            dateLabel = dateLabel,
-            description = "You've been invited to join discussion $senderOrDiscussionId.",
-            icon = null)
-    NotificationType.JOIN_SESSION ->
-        NotificationPopupData.Session(
-            title = "Session invitation",
-            participants = 0,
-            dateLabel = dateLabel,
-            description = "You've been invited to join session $senderOrDiscussionId.",
-            icon = null)
-  }
-}
+// fun Notification.toPopupData(): NotificationPopupData {
+//  val dateLabel = sentAtLocalDateTime().format(DateTimeFormatter.ofPattern("MMM d"))
+//  return when (type) {
+//    NotificationType.FRIEND_REQUEST ->
+//        NotificationPopupData.FriendRequest(
+//            username = "User $senderOrDiscussionId",
+//            handle = senderOrDiscussionId,
+//            bio = "User $senderOrDiscussionId wants to add you as a friend.",
+//            avatar = null)
+//    NotificationType.JOIN_DISCUSSION ->
+//        NotificationPopupData.Discussion(
+//            title = "Discussion invitation",
+//            participants = 0,
+//            dateLabel = dateLabel,
+//            description = "You've been invited to join discussion $senderOrDiscussionId.",
+//            icon = null)
+//    NotificationType.JOIN_SESSION ->
+//        NotificationPopupData.Session(
+//            title = "Session invitation",
+//            participants = 0,
+//            dateLabel = dateLabel,
+//            description = "You've been invited to join session $senderOrDiscussionId.",
+//            icon = null)
+//  }
+// }
 
 /* ---------------------------------------------------------
    MAIN SCREEN
@@ -248,7 +248,7 @@ fun NotificationsTab(
         })
   }
 
-  androidx.compose.material3.Scaffold(
+  Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
             colors =
@@ -277,36 +277,40 @@ fun NotificationsTab(
           if (filtered.isEmpty()) {
             EmptyNotificationState(filter = selectedFilter)
           } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 16.dp).testTag(NotificationsTabTestTags.NOTIFICATION_LIST)) {
-              grouped.forEachIndexed { index, section ->
-                if (index > 0) item { Spacer(Modifier.height(20.dp)) }
+            LazyColumn(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(top = 16.dp)
+                        .testTag(NotificationsTabTestTags.NOTIFICATION_LIST)) {
+                  grouped.forEachIndexed { index, section ->
+                    if (index > 0) item { Spacer(Modifier.height(20.dp)) }
 
-                item {
-                  Text(
-                      text = section.header,
-                      style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
-                      color = AppColors.textIcons,
-                      modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                }
+                    item {
+                      Text(
+                          text = section.header,
+                          style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                          color = AppColors.textIcons,
+                          modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    }
 
-                items(section.items, key = { it.uid }) { notif ->
-                  val context = LocalContext.current
-                  NotificationCard(
-                      notif = notif,
-                      viewModel = viewModel,
-                      onClick = {
-                        scope.launch {
-                          viewModel.preparePopupData(notif, context) { popupData ->
-                            sheetState = NotificationSheetState(notif, popupData)
-                          }
-                        }
-                        viewModel.readNotification(account, notif)
-                      },
-                      onMarkRead = { viewModel.readNotification(account, notif) },
-                      onDelete = { viewModel.deleteNotification(account, notif) })
+                    items(section.items, key = { it.uid }) { notif ->
+                      val context = LocalContext.current
+                      NotificationCard(
+                          notif = notif,
+                          viewModel = viewModel,
+                          onClick = {
+                            scope.launch {
+                              viewModel.preparePopupData(notif, context) { popupData ->
+                                sheetState = NotificationSheetState(notif, popupData)
+                              }
+                            }
+                            viewModel.readNotification(account, notif)
+                          },
+                          onMarkRead = { viewModel.readNotification(account, notif) },
+                          onDelete = { viewModel.deleteNotification(account, notif) })
+                    }
+                  }
                 }
-              }
-            }
           }
         }
       }
@@ -348,7 +352,8 @@ fun FilterRow(
               FilterChip(
                   text = filter.label,
                   selected = filter == selected,
-                  modifier = Modifier.testTag(NotificationsTabTestTags.FILTER_CHIP_PREFIX + filter.name),
+                  modifier =
+                      Modifier.testTag(NotificationsTabTestTags.FILTER_CHIP_PREFIX + filter.name),
                   onClick = { onSelected(filter) })
 
               Spacer(Modifier.width(16.dp))
@@ -393,7 +398,12 @@ fun FilterRow(
 }
 
 @Composable
-fun FilterChip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun FilterChip(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
   val border = if (selected) AppColors.neutral else AppColors.textIconsFade
 
   Box(
@@ -651,7 +661,16 @@ fun NotificationSheet(
               NotificationPopupData.Discussion(
                   title = disc.name,
                   participants = disc.participants.size,
-                  dateLabel = disc.createdAt.toString(),
+                  dateLabel =
+                      disc.createdAt
+                          .toDate()
+                          .toInstant()
+                          .atZone(ZoneId.systemDefault())
+                          .toLocalDate()
+                          .format(
+                              DateTimeFormatter.ofPattern(
+                                  "dd/MM/yyyy")), //   val dateLabel =
+                                                  // sentAtLocalDateTime().format(DateTimeFormatter.ofPattern("MMM d"))
                   description = disc.description.ifBlank { "No description provided." },
                   icon = icon)
         }
@@ -663,17 +682,16 @@ fun NotificationSheet(
           val session = disc.session
           if (session != null) {
             viewModel.getGame(session.gameId) { game ->
-              val gameName = game.name
-              val formattedDate = session.date.toString()
-              val formattedTime = session.date.toString()
+              val dateTime =
+                  session.date.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
 
               loadedData =
                   NotificationPopupData.Session(
                       title = session.name,
                       participants = session.participants.size,
-                      dateLabel = formattedDate,
+                      dateLabel = dateTime.format(DateTimeFormatter.ofPattern("MMM d")),
                       description =
-                          "Play $gameName at $formattedTime on $formattedDate at ${session.location.name}",
+                          "Play ${game.name} at ${dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))} at ${session.location.name}.",
                       icon = avatar)
             }
           }
@@ -802,7 +820,11 @@ fun NotificationSheetContent(
       Spacer(Modifier.width(12.dp))
 
       Column {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = AppColors.textIcons, modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_TITLE))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            color = AppColors.textIcons,
+            modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_TITLE))
         if (subtitle != null) {
           Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
         }
@@ -823,7 +845,10 @@ fun NotificationSheetContent(
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(bottom = 6.dp))
 
-    ExpandableText(text = description, previewCharLimit = previewCharLimit, modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_DESCRIPTION))
+    ExpandableText(
+        text = description,
+        previewCharLimit = previewCharLimit,
+        modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_DESCRIPTION))
 
     Spacer(Modifier.height(20.dp))
 
@@ -839,7 +864,7 @@ fun NotificationSheetContent(
 fun ExpandableText(text: String, previewCharLimit: Int = 160, modifier: Modifier = Modifier) {
   var expanded by remember { mutableStateOf(false) }
 
-  Column(modifier = modifier) {
+  Column(modifier = modifier.semantics(mergeDescendants = true) {}) {
     Text(
         if (expanded || text.length <= previewCharLimit) text
         else text.take(previewCharLimit) + "…",
