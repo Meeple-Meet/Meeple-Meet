@@ -435,7 +435,8 @@ fun PublicInfoActions(
                           modifier = Modifier.size(Dimensions.IconSize.extraLarge))
                     }
 
-                val notificationCount = account.notifications.size
+                val notificationCount = account.notifications.filter { !it.read }.size
+
                 if (notificationCount > 0) {
                   Box(
                       modifier =
