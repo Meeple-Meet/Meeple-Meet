@@ -181,7 +181,7 @@ private fun EmptyFeedListText() {
  * @param onClick Callback invoked when the card is tapped.
  */
 @Composable
-private fun FeedCard(
+public fun FeedCard(
     authorName: String,
     postTitle: String,
     commentCount: Int,
