@@ -171,13 +171,10 @@ class E2E_M2 : FirestoreTests() {
         .assertExists()
         .assertIsEnabled()
         .performClick()
-      // Skip the OnBoarding screen
-      composeTestRule
-          .onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON)
-          .assertExists()
-          .performClick()
+    // Skip the OnBoarding screen
+    composeTestRule.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
 
-      composeTestRule.waitForIdle()
+    composeTestRule.waitForIdle()
 
     // Backend convergence: wait for auth user, handle and shopOwner flag before proceeding
     runBlocking {
