@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -58,7 +57,6 @@ import com.github.meeplemeet.ui.discussions.PollBubble
 import com.github.meeplemeet.ui.posts.FeedCard
 import com.github.meeplemeet.ui.sessions.SessionOverCard
 import com.github.meeplemeet.ui.theme.AppColors
-import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.google.firebase.Timestamp
 import java.util.Date
@@ -251,7 +249,7 @@ fun DiscussionPreviewPage(
         Text(
             text = OnBoardingStrings.DISCUSSION_PREVIEW_DESCRIPTION,
             fontSize = 16.sp,
-            color = AppColors.secondary,
+            color = AppColors.textIcons.copy(alpha = 0.65f),
             modifier = Modifier.padding(horizontal = OnBoardingDimensions.mapMarkerPulseRadius))
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -345,7 +343,7 @@ private fun RowScope.DiscussionAvatar() {
         modifier = Modifier.size(OnBoardingDimensions.discussionAvatarSize),
         tonalElevation = 0.dp) {
           Image(
-              painter = painterResource(id = R.drawable.discussion_logo),
+              painter = painterResource(id = R.drawable.session_logo),
               contentDescription = "Avatar",
               modifier = Modifier.padding(OnBoardingDimensions.mediumPadding))
         }
@@ -690,32 +688,9 @@ fun NextButton(
   }
 }
 
-@Composable
-@Preview(showBackground = true)
-fun OnBoardPagePreview() {
-  AppTheme {
-    val sample =
-        OnBoardPage(
-            image = R.drawable.discussion_logo,
-            title = "Welcome",
-            description = "Discover events and meet new people.")
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize().padding(OnBoardingDimensions.mapMarkerPulseRadius)) {
-          Image(
-              painter = painterResource(id = R.drawable.discussion_logo),
-              contentDescription = null,
-              modifier = Modifier.size(300.dp))
-          Text(sample.title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-          Text(sample.description, color = AppColors.secondary)
-        }
-  }
-}
-
 val votes: Map<String, List<Int>> = mapOf("1" to listOf(0), "2" to emptyList())
-// --- MeepleMeetIntroPage composable ---
 
+// --- MeepleMeetIntroPage composable ---
 @Composable
 fun MeepleMeetIntroPage() {
   val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
@@ -790,7 +765,7 @@ fun MapExplorationPage() {
         Text(
             text = OnBoardingStrings.MAP_EXPLORATION_SUBTITLE,
             fontSize = 14.sp,
-            color = AppColors.secondary,
+            color = AppColors.textIcons.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
@@ -907,7 +882,7 @@ fun MapExplorationPage() {
         Text(
             text = OnBoardingStrings.MAP_EXPLORATION_END_TEXT,
             fontSize = 13.sp,
-            color = AppColors.secondary,
+            color = AppColors.textIcons.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(horizontal = 32.dp, vertical = OnBoardingDimensions.bigPadding))
@@ -965,49 +940,14 @@ private fun MapLegendItemWithDrawable(
           fontSize = 14.sp,
           fontWeight = FontWeight.SemiBold,
           color = AppColors.textIcons)
-      Text(text = description, fontSize = 12.sp, color = AppColors.secondary, lineHeight = 16.sp)
-    }
-  }
-}
-
-@Composable
-private fun MapLegendItem(color: Color, icon: ImageVector?, title: String, description: String) {
-  Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
-    Box(
-        modifier =
-            Modifier.size(OnBoardingDimensions.IconSize)
-                .background(
-                    color = if (icon == null) color else Color.Transparent, shape = CircleShape)
-                .border(
-                    width = if (icon == null) 2.dp else 0.dp,
-                    color = if (icon == null) Color.White else Color.Transparent,
-                    shape = CircleShape),
-        contentAlignment = Alignment.Center) {
-          if (icon != null) {
-            Box(
-                modifier =
-                    Modifier.size(OnBoardingDimensions.IconSize).background(color, CircleShape),
-                contentAlignment = Alignment.Center) {
-                  Icon(
-                      imageVector = icon,
-                      contentDescription = null,
-                      tint = Color.White,
-                      modifier = Modifier.size(11.dp))
-                }
-          }
-        }
-    Spacer(modifier = Modifier.width(OnBoardingDimensions.mapMarkerRadius))
-    Column {
       Text(
-          text = title,
-          fontSize = 14.sp,
-          fontWeight = FontWeight.SemiBold,
-          color = AppColors.textIcons)
-      Text(text = description, fontSize = 12.sp, color = AppColors.secondary, lineHeight = 16.sp)
+          text = description,
+          fontSize = 12.sp,
+          color = AppColors.textIcons.copy(alpha = 0.65f),
+          lineHeight = 16.sp)
     }
   }
 }
-
 // ==================== SESSIONS PAGE ====================
 
 @Composable
@@ -1021,7 +961,7 @@ fun SessionsPage() {
         Text(
             text = OnBoardingStrings.SESSION_PAGE_SUBTITLE,
             fontSize = 14.sp,
-            color = AppColors.secondary,
+            color = AppColors.textIcons.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
@@ -1111,7 +1051,7 @@ fun PostsPage() {
         Text(
             text = OnBoardingStrings.POST_PAGE_SUBTITLE,
             fontSize = 14.sp,
-            color = AppColors.secondary,
+            color = AppColors.textIcons.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
@@ -1157,7 +1097,7 @@ fun PostsPage() {
         Text(
             text = OnBoardingStrings.POSTS_PAGE_END_TEXT,
             fontSize = 13.sp,
-            color = AppColors.secondary,
+            color = AppColors.textIcons.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(horizontal = 32.dp, vertical = OnBoardingDimensions.bigPadding))
