@@ -283,6 +283,7 @@ fun MapScreen(
   // --- Map & query state ---
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
+  var isCameraCentered by remember { mutableStateOf(false) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
 
   // --- UI controls (filters & creation) ---
@@ -313,8 +314,6 @@ fun MapScreen(
    * Retrieves user location whenever:
    * - permission state changes, or
    * - lifecycle returns to RESUMED (i.e., app resumes).
-   *
-   * If location retrieval fails or permission denied, falls back to EPFL.
    */
   LaunchedEffect(permissionGranted, permissionChecked, lifecycleState) {
     if (!permissionChecked) return@LaunchedEffect
@@ -330,7 +329,7 @@ fun MapScreen(
           }
         } else null
 
-    userLocation = loc ?: DEFAULT_CENTER
+    userLocation = loc
     isLoadingLocation = false
   }
 
@@ -417,13 +416,17 @@ fun MapScreen(
         // --- Map rendering ---
         val cameraPositionState = rememberCameraPositionState()
 
-        /** Center the camera on user location when it changes (first load or refresh). */
-        LaunchedEffect(userLocation) {
-          userLocation?.let {
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(it.latitude, it.longitude), DEFAULT_ZOOM_LEVEL))
-          }
+        /** Centers the camera once location is resolved (real or fallback). */
+        LaunchedEffect(isLoadingLocation) {
+          if (isLoadingLocation || isCameraCentered) return@LaunchedEffect
+
+          val target =
+              userLocation?.let { LatLng(it.latitude, it.longitude) }
+                  ?: LatLng(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude)
+
+          cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
+
+          isCameraCentered = true
         }
 
         /**
