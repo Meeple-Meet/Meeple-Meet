@@ -2,7 +2,6 @@ package com.github.meeplemeet.end2end
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -12,7 +11,6 @@ import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
-import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.AuthUtils.signInUser
 import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
