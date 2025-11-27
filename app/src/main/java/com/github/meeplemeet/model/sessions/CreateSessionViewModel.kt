@@ -77,7 +77,12 @@ open class CreateSessionViewModel(
           }
 
       sessionRepository.updateSession(
-          discussion.uid, name, gameId, date, location, participantsToAdd.map { it.uid })
+          discussion.uid,
+          name,
+          gameId,
+          date,
+          location,
+          participantsToAdd.map { it.uid } + requester.uid)
 
       // Send a join request to the rest
       participants

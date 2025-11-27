@@ -563,6 +563,21 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
+   * Marks a notification as executed.
+   *
+   * Updates the executed status of a notification in the user's notifications subcollection.
+   *
+   * @param accountId The ID of the account that owns the notification
+   * @param notificationId The ID of the notification to mark as read
+   */
+  suspend fun executeNotification(accountId: String, notificationId: String) {
+    notifications(accountId)
+        .document(notificationId)
+        .update(NotificationNoUid::executed.name, true)
+        .await()
+  }
+
+  /**
    * Marks a notification as read.
    *
    * Updates the read status of a notification in the user's notifications subcollection.

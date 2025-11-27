@@ -224,7 +224,10 @@ class ProfileScreenViewModel(
   private fun executeNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
 
-    viewModelScope.launch { notification.execute() }
+    viewModelScope.launch {
+      notification.execute()
+      accountRepository.executeNotification(account.uid, notification.uid)
+    }
   }
 
   /**
