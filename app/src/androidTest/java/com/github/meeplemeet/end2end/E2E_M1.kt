@@ -60,6 +60,7 @@ class E2E_M1 : FirestoreTests() {
     val initialMessageFromAlice = "Hi Bob, welcome to our discussion!"
 
     // ===== PART 1: Create first account (Alice) =====
+    composeTestRule.waitForIdle()
     composeTestRule.signUpUser(user1Email, password, user1Handle, user1Name)
     composeTestRule.signOutWithBottomBar()
 

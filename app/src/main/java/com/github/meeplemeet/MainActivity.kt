@@ -408,7 +408,6 @@ fun MeepleMeetApp(
             },
             onClickNotifications = {
               navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
-            })
             },
             onDelete = {
               FirebaseProvider.auth.signOut()
