@@ -40,6 +40,7 @@ object Dimensions {
 
   // Icon sizes
   object IconSize {
+    val tiny: Dp = 11.dp
     val small: Dp = 16.dp
     val medium: Dp = 18.dp
     val standard: Dp = 20.dp
@@ -63,6 +64,7 @@ object Dimensions {
   object ButtonSize {
     val small: Dp = 32.dp
     val medium: Dp = 36.dp
+    val navigation: Dp = 42.dp
     val standard: Dp = 48.dp
   }
 
@@ -91,7 +93,7 @@ object Dimensions {
 
   // Text sizes
   object TextSize {
-    val tiny: TextUnit = 11.sp
+    val tiny: TextUnit = 9.sp
     val small: TextUnit = 12.sp
     val medium: TextUnit = 13.sp
     val standard: TextUnit = 14.sp
@@ -100,6 +102,7 @@ object Dimensions {
     val title: TextUnit = 17.sp
     val heading: TextUnit = 18.sp
     val largeHeading: TextUnit = 20.sp
+    val xLarge: TextUnit = 32.sp
     val extraLarge: TextUnit = 36.sp
     val displayMedium: TextUnit = 56.sp
   }
@@ -109,11 +112,17 @@ object Dimensions {
     val listIndent: TextUnit = 8.sp
   }
 
+  // Line height
+  object LineHeight {
+    val standard: TextUnit = 16.sp
+  }
+
   // Divider thickness
   object DividerThickness {
     val thin: Dp = 0.5.dp
     val standard: Dp = 1.dp
     val medium: Dp = 2.dp
+    val strokeWidth: Dp = 3.dp
     val thick: Dp = 8.dp
   }
 
@@ -123,6 +132,8 @@ object Dimensions {
     val fieldBoxWidth: Dp = 88.dp
     val inputFieldWidth: Dp = 80.dp
     val chipSize: Dp = 35.dp
+    val pagerDotSpacing: Dp = 3.dp
+    val pagerDotSmall: Dp = 6.dp
   }
 
   // List and container dimensions
@@ -134,6 +145,28 @@ object Dimensions {
     val iconButtonTouch: Dp = 40.dp
     val iconButtonSize: Dp = 48.dp
     val maxInputHeight: Dp = 120.dp
+    val discussionCardMinHeight: Dp = 68.dp
+    val discussionCardMaxHeight: Dp = 84.dp
+    val pageImageSize: Dp = 400.dp
+    val mapHeight: Dp = 300.dp
+    val dividerHorizontalPadding: Dp = 30.dp
+  }
+
+  // Map-specific dimensions
+  object MapDimensions {
+    val markerRadius: Dp = 14.dp
+    val offsetX268: Dp = 268.dp
+    val offsetY208: Dp = 208.dp
+    val offsetX90: Dp = 90.dp
+    val offsetY80: Dp = 80.dp
+    val offsetX240: Dp = 240.dp
+    val offsetY240: Dp = 240.dp
+    val offsetX180: Dp = 180.dp
+    val offsetY140: Dp = 140.dp
+    val offsetX70: Dp = 70.dp
+    val offsetY260: Dp = 260.dp
+    val offsetX280: Dp = 280.dp
+    val offsetY180: Dp = 180.dp
   }
 
   // Badge dimensions
@@ -181,8 +214,10 @@ object Dimensions {
   // Alpha values
   object Alpha {
     const val full: Float = 1f
+    const val opaque: Float = 0.65f
     const val editingBorder: Float = 1f
     const val readonlyBorder: Float = 0.3f
+    const val pulseEffect: Float = 0.2f
     const val dialogIconTranslucent: Float = 0.7f
     const val dialogOverlayDark: Float = 0.9f
     const val dialogOverlayTransparent: Float = 0.0f

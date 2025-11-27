@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
+import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -50,8 +51,21 @@ object AuthUtils {
     onNodeWithText("Username", substring = true).assertExists().performTextInput(username)
     onNodeWithText("Let's go!").assertExists().assertIsEnabled().performClick()
 
+    // Wait for OnBoarding screen to appear and skip it
+    waitUntil(timeoutMillis = 10_000) {
+      try {
+        onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists()
+        true
+      } catch (_: Throwable) {
+        false
+      }
+    }
+
+    onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
+    waitForIdle()
+
     // Wait for main app to load
-    waitUntil(timeoutMillis = 5_000) {
+    waitUntil(timeoutMillis = 10_000) {
       try {
         onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
             .fetchSemanticsNodes()

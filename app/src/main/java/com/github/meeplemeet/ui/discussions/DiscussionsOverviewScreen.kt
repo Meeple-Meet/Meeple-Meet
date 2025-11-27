@@ -227,7 +227,7 @@ private fun EmptyDiscussionsListText() {
  */
 @Composable
 @Preview(showBackground = true)
-private fun DiscussionCard(
+public fun DiscussionCard(
     modifier: Modifier = Modifier,
     discussionName: String = "Hello",
     lastMsg: String = "Hello world",

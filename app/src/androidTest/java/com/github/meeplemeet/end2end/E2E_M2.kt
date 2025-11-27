@@ -24,6 +24,7 @@ import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.ui.MapScreenTestTags
 import com.github.meeplemeet.ui.account.CreateAccountTestTags
+import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
@@ -170,6 +171,10 @@ class E2E_M2 : FirestoreTests() {
         .assertExists()
         .assertIsEnabled()
         .performClick()
+    // Skip the OnBoarding screen
+    composeTestRule.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
+
+    composeTestRule.waitForIdle()
 
     // Backend convergence: wait for auth user, handle and shopOwner flag before proceeding
     runBlocking {
