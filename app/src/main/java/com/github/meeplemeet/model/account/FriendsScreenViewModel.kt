@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.images.ImageRepository
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for the Friends screen.
@@ -27,6 +28,49 @@ class FriendsScreenViewModel(
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
     private val imageRepository: ImageRepository = RepositoryProvider.images,
 ) : CreateAccountViewModel(handlesRepository) {
+
+    private fun executeNotification(account: Account, notification: Notification) {
+        if (notification.receiverId != account.uid) return
+
+        viewModelScope.launch {
+            notification.execute()
+            // Only update the notification in Firestore if it exists in the account's notifications
+            if (account.notifications.any { it.uid == notification.uid }) {
+                accountRepository.executeNotification(account.uid, notification.uid)
+            }
+        }
+    }
+
+    /**
+     * Accepts a pending friend request, establishing a mutual friendship.
+     *
+     * This method validates that a friend request can be accepted before proceeding. It requires:
+     * - The current account has a Pending relationship status with the other user
+     * - The other user has a Sent relationship status with the current account
+     * - Neither user has blocked the other
+     * - The accounts are not the same user
+     *
+     * The validation ensures the relationship states are consistent with a valid friend request that
+     * can be accepted.
+     *
+     * If validation passes, the friendship is established asynchronously via the repository.
+     *
+     * @param account The account accepting the friend request
+     * @param notification The account whose friend request is being accepted
+     */
+    fun acceptFriendRequest(account: Account, notification: Notification) {
+        val other: Account
+        runBlocking { other = accountRepository.getAccount(notification.senderOrDiscussionId) }
+        val accountRels = account.relationships[other.uid]
+        val otherRels = other.relationships[account.uid]
+
+        if (sameOrBlocked(account, other) ||
+            accountRels != RelationshipStatus.PENDING ||
+            otherRels != RelationshipStatus.SENT)
+            return
+
+        executeNotification(account, notification)
+    }
 
   /**
    * Checks if two accounts are the same user or if either has blocked the other.

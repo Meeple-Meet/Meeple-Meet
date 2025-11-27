@@ -1,6 +1,7 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.utils.FirestoreTests
@@ -32,7 +33,7 @@ class RelationshipsTests : FirestoreTests() {
   private lateinit var alice: Account
   private lateinit var bob: Account
   private lateinit var charlie: Account
-  private lateinit var viewModel: ProfileScreenViewModel
+  private lateinit var viewModel: FriendsScreenViewModel
 
   @Before
   fun setup() {
@@ -47,7 +48,7 @@ class RelationshipsTests : FirestoreTests() {
           accountRepository.createAccount(
               "charlie_rel", "Charlie", email = "charlie_rel@example.com", photoUrl = null)
     }
-    viewModel = ProfileScreenViewModel(accountRepository)
+    viewModel = FriendsScreenViewModel(accountRepository)
   }
 
   // ==================== sendFriendRequest Tests ====================
