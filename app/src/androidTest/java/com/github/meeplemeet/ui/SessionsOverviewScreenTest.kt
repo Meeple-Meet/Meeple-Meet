@@ -54,7 +54,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
     val uid = "uid_" + UUID.randomUUID().toString().take(8)
     account = accountRepository.createAccount(uid, "Tester", "test@x.com", null)
 
-    // seed minimal game
     db.collection(GAMES_COLLECTION_PATH).document(testGameId).set(GameNoUid(name = "Chess")).await()
 
     capturedDiscussionId = ""
@@ -82,9 +81,10 @@ class SessionsOverviewScreenTest : FirestoreTests() {
         val discussion =
             discussionRepository.createDiscussion("Game Night", "Let's play", account.uid)
         val game = gameRepository.getGameById(testGameId)
+        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
         sessionRepository.createSession(
-            discussion.uid, "Chess Night", game.uid, Timestamp.now(), testLocation, account.uid)
-        delay(100) // snapshot
+            discussion.uid, "Chess Night", game.uid, futureDate, testLocation, account.uid)
+        delay(100)
         emptyText().assertDoesNotExist()
         sessionCard(discussion.uid).assertIsDisplayed()
       }
@@ -96,8 +96,9 @@ class SessionsOverviewScreenTest : FirestoreTests() {
         val discussion =
             discussionRepository.createDiscussion("Navigate Me", "Tap test", account.uid)
         val game = gameRepository.getGameById(testGameId)
+        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
         sessionRepository.createSession(
-            discussion.uid, "Tap Night", game.uid, Timestamp.now(), testLocation, account.uid)
+            discussion.uid, "Tap Night", game.uid, futureDate, testLocation, account.uid)
         delay(100)
         sessionCard(discussion.uid).performClick()
         assertEquals(discussion.uid, capturedDiscussionId)
@@ -110,8 +111,9 @@ class SessionsOverviewScreenTest : FirestoreTests() {
         val discussion =
             discussionRepository.createDiscussion("Delete Me", "Will vanish", account.uid)
         val game = gameRepository.getGameById(testGameId)
+        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 10000000))
         sessionRepository.createSession(
-            discussion.uid, "Vanish Night", game.uid, Timestamp.now(), testLocation, account.uid)
+            discussion.uid, "Vanish Night", game.uid, futureDate, testLocation, account.uid)
         delay(100)
         sessionCard(discussion.uid).assertIsDisplayed()
 
@@ -122,15 +124,36 @@ class SessionsOverviewScreenTest : FirestoreTests() {
     }
 
     /* 5. toggle history -> WIP shown ------------------------------------ */
-    checkpoint("Toggle History – WIP placeholder") {
+    checkpoint("Toggle History – shows history grid") {
       compose.onNodeWithText("History").performClick()
-      compose.onNodeWithText("WIP").assertIsDisplayed()
+    }
+
+    /* 6. click history card -> popup appears ---------------------------- */
+    checkpoint("Click history card – popup appears") {
+      runBlocking {
+        val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - 10000000))
+        val discussion =
+            discussionRepository.createDiscussion("Past Session", "Old times", account.uid)
+        val game = gameRepository.getGameById(testGameId)
+        sessionRepository.createSession(
+            discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
+        delay(100)
+
+        compose.onNodeWithText("Past Night").assertIsDisplayed()
+
+        compose.onNodeWithText("Past Night").performClick()
+
+        compose.onAllNodesWithText("Past Night").assertCountEquals(2)
+        compose.onNodeWithContentDescription("Close").assertIsDisplayed()
+
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithContentDescription("Close").assertDoesNotExist()
+      }
     }
   }
 
   @After
   fun tearDown(): Unit = runBlocking {
-    // clean-up game seed
     db.collection(GAMES_COLLECTION_PATH).document(testGameId).delete().await()
   }
 }
