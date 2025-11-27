@@ -269,8 +269,8 @@ object MainTabUi {
 fun MainTab(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
-    onFriendsClick: (account: Account) -> Unit,
-    onNotificationClick: (account: Account) -> Unit,
+    onFriendsClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -341,8 +341,8 @@ fun MainTab(
 fun PublicInfo(
     account: Account,
     viewModel: ProfileScreenViewModel,
-    onFriendsClick: (account: Account) -> Unit,
-    onNotificationClick: (account: Account) -> Unit,
+    onFriendsClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
   Box(
@@ -388,8 +388,8 @@ fun PublicInfo(
 fun PublicInfoActions(
     account: Account,
     viewModel: ProfileScreenViewModel,
-    onFriendsClick: (Account) -> Unit,
-    onNotificationClick: (Account) -> Unit,
+    onFriendsClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
   Column(
@@ -403,7 +403,7 @@ fun PublicInfoActions(
                   modifier =
                       Modifier.size(MainTabUi.ACTION_BUTTON_SIZE)
                           .testTag(PublicInfoTestTags.ACTION_FRIENDS),
-                  onClick = { onFriendsClick(account) },
+                  onClick = { onFriendsClick() },
                   shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                   contentPadding = PaddingValues(0.dp),
                   colors =
@@ -421,7 +421,7 @@ fun PublicInfoActions(
                 Button(
                     modifier =
                         Modifier.matchParentSize().testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
-                    onClick = { onNotificationClick(account) },
+                    onClick = { onNotificationClick() },
                     shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                     contentPadding = PaddingValues(0.dp),
                     colors =
@@ -435,7 +435,8 @@ fun PublicInfoActions(
                           modifier = Modifier.size(Dimensions.IconSize.extraLarge))
                     }
 
-                val notificationCount = account.notifications.size
+                val notificationCount = account.notifications.filter { !it.read }.size
+
                 if (notificationCount > 0) {
                   Box(
                       modifier =

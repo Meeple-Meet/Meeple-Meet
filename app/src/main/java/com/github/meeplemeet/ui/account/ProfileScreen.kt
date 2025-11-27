@@ -43,6 +43,7 @@ fun ProfileScreen(
     navigation: NavigationActions,
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
+    onClickNotifications: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -64,7 +65,7 @@ fun ProfileScreen(
                   viewModel = viewModel,
                   account = account,
                   onFriendsClick = {}, // define when implemented
-                  onNotificationClick = {}, // define when implemented
+                  onNotificationClick = onClickNotifications,
                   onSignOutOrDel = onSignOutOrDel,
                   onDelete = onDelete)
             }

@@ -48,6 +48,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.account.CreateAccountScreen
 import com.github.meeplemeet.ui.account.FriendsScreen
+import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.ProfileScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignUpScreen
@@ -405,10 +406,19 @@ fun MeepleMeetApp(
               navigationActions.navigateTo(MeepleMeetScreen.SignIn)
               signedOut = true
             },
+            onClickNotifications = {
+              navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
+            },
             onDelete = {
               FirebaseProvider.auth.signOut()
             }) // Sign out the user before deleting his account, avoiding an infinite loading screen
       } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+    }
+
+    composable(MeepleMeetScreen.NotificationsTab.name) {
+      account?.let {
+        NotificationsTab(account = account!!, onBack = { navigationActions.goBack() })
+      }
     }
 
     composable(MeepleMeetScreen.ShopDetails.name) {
