@@ -275,8 +275,7 @@ fun MainTab(
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit
 ) {
-  var pref by
-      remember(account.notificationSettings) { mutableStateOf(account.notificationSettings) }
+  var pref by remember { mutableStateOf(NotificationSettings.EVERYONE) }
   val focusManager = LocalFocusManager.current
   Column(
       modifier =
@@ -299,7 +298,10 @@ fun MainTab(
 
         NotificationSettingsSection(
             preference = pref,
-            onPreferenceChange = { viewModel.setAccountNotificationSettings(account, it) })
+            onPreferenceChange = {
+              pref = it
+              viewModel.setAccountNotificationSettings(account, it)
+            })
 
         Button(
             onClick = { showDelDialog = true },

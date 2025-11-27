@@ -106,6 +106,7 @@ data class Notification(
             senderOrDiscussionId, newParticipantList = currentParticipants + receiverId)
       }
     }
+    executed = true
   }
 
   /**

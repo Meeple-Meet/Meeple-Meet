@@ -67,6 +67,9 @@ open class CreateSessionViewModel(
   ) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
+    val participantsList = participants.toList().map { it.uid }
+    if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
+
     viewModelScope.launch {
       // Add all the participants that accept friend request from everyone or only there friends
       val participantsToAdd =
@@ -77,12 +80,7 @@ open class CreateSessionViewModel(
           }
 
       sessionRepository.updateSession(
-          discussion.uid,
-          name,
-          gameId,
-          date,
-          location,
-          participantsToAdd.map { it.uid } + requester.uid)
+          discussion.uid, name, gameId, date, location, participantsToAdd.map { it.uid })
 
       // Send a join request to the rest
       participants
