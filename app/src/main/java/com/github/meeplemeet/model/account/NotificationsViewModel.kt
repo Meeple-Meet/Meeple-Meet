@@ -14,7 +14,6 @@ import com.github.meeplemeet.ui.account.NotificationPopupData
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for managing user profile interactions and friend system operations.
