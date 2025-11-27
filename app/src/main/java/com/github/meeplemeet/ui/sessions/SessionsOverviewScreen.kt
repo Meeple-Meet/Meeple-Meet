@@ -93,103 +93,102 @@ fun SessionsOverviewScreen(
 
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
-      topBar = {
-        Column(Modifier.fillMaxWidth()) {
-          /* 1. original top-bar (kept) */
-          CenterAlignedTopAppBar(
-              title = {
-                Text(
-                    text = MeepleMeetScreen.SessionsOverview.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-              })
+        topBar = {
+          Column(Modifier.fillMaxWidth()) {
+            /* 1. original top-bar (kept) */
+            CenterAlignedTopAppBar(
+                title = {
+                  Text(
+                      text = MeepleMeetScreen.SessionsOverview.title,
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = MaterialTheme.colorScheme.onPrimary,
+                      modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+                })
 
-          SessionToggle(
-              showHistory = showHistory,
-              onNext = { showHistory = false },
-              onHistory = { showHistory = true })
-        }
-      },
-      bottomBar = {
-        BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.SessionsOverview,
-            onTabSelected = { navigation.navigateTo(it) })
-      }) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-          when {
-            showHistory -> {
-              val now = System.currentTimeMillis()
+            SessionToggle(
+                showHistory = showHistory,
+                onNext = { showHistory = false },
+                onHistory = { showHistory = true })
+          }
+        },
+        bottomBar = {
+          BottomNavigationMenu(
+              currentScreen = MeepleMeetScreen.SessionsOverview,
+              onTabSelected = { navigation.navigateTo(it) })
+        }) { innerPadding ->
+          Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            when {
+              showHistory -> {
+                val now = System.currentTimeMillis()
 
-              val pastSessions =
-                  sessionMap
-                      .filter { (_, session) -> session.date.toDate().time < now }
-                      .values
-                      .sortedByDescending { it.date.toDate().time }
+                val pastSessions =
+                    sessionMap
+                        .filter { (_, session) -> session.date.toDate().time < now }
+                        .values
+                        .sortedByDescending { it.date.toDate().time }
 
-              if (pastSessions.isEmpty()) {
-                EmptySessionsListText(isHistory = true)
-              } else {
-                HistoryGrid(sessions = pastSessions, onSessionClick = { popupSession = it })
+                if (pastSessions.isEmpty()) {
+                  EmptySessionsListText(isHistory = true)
+                } else {
+                  HistoryGrid(sessions = pastSessions, onSessionClick = { popupSession = it })
+                }
               }
-            }
-            sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
-            else -> {
-              val now = System.currentTimeMillis()
-              val futureSessions =
-                  sessionMap
-                      .filter { (_, session) -> session.date.toDate().time >= now }
-                      .toList()
-                      .sortedBy { (_, session) -> session.date.toDate().time }
+              sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
+              else -> {
+                val now = System.currentTimeMillis()
+                val futureSessions =
+                    sessionMap
+                        .filter { (_, session) -> session.date.toDate().time >= now }
+                        .toList()
+                        .sortedBy { (_, session) -> session.date.toDate().time }
 
-              if (futureSessions.isEmpty()) {
-                EmptySessionsListText(isHistory = false)
-              } else {
-                /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                      items(futureSessions, key = { it.first }) { (id, session) ->
-                        SessionCard(
-                            session = session,
-                            viewModel = viewModel,
-                            modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
-                            onClick = { onSelectSession(id) })
+                if (futureSessions.isEmpty()) {
+                  EmptySessionsListText(isHistory = false)
+                } else {
+                  /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
+                  LazyColumn(
+                      modifier = Modifier.fillMaxSize(),
+                      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
+                        items(futureSessions, key = { it.first }) { (id, session) ->
+                          SessionCard(
+                              session = session,
+                              viewModel = viewModel,
+                              modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
+                              onClick = { onSelectSession(id) })
+                        }
                       }
-                    }
+                }
               }
             }
           }
         }
-      }
-}
-    if (popupSession != null) {
-      Box(
-          modifier =
-              Modifier.fillMaxSize()
-                  .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f))
-                  .clickable(
-                      enabled = true,
-                      indication = null,
-                      interactionSource =
-                          remember {
-                            androidx.compose.foundation.interaction.MutableInteractionSource()
-                          }) {
-                        popupSession = null
-                      }
-          )
-    }
+  }
+  if (popupSession != null) {
+    Box(
+        modifier =
+            Modifier.fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f))
+                .clickable(
+                    enabled = true,
+                    indication = null,
+                    interactionSource =
+                        remember {
+                          androidx.compose.foundation.interaction.MutableInteractionSource()
+                        }) {
+                      popupSession = null
+                    })
+  }
 
-    popupSession?.let { session ->
-      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        com.github.meeplemeet.ui.components.SessionDetailsCard(
-            session = session,
-            viewModel = viewModel,
-            onClose = { popupSession = null },
-            modifier = Modifier.wrapContentSize().padding(Dimensions.Padding.extraLarge))
-      }
+  popupSession?.let { session ->
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      com.github.meeplemeet.ui.components.SessionDetailsCard(
+          session = session,
+          viewModel = viewModel,
+          onClose = { popupSession = null },
+          modifier = Modifier.wrapContentSize().padding(Dimensions.Padding.extraLarge))
     }
   }
+}
 
 /** Displays a centred label when the user has no upcoming sessions. */
 @Composable
