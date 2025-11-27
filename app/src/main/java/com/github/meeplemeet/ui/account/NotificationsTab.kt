@@ -91,6 +91,15 @@ import kotlinx.coroutines.launch
 
 object NotificationsTabTestTags {
   const val HEADER_TITLE = "header_title"
+  const val FILTER_CHIP_PREFIX = "filter_chip_"
+  const val EMPTY_STATE_TEXT = "empty_state_text"
+  const val NOTIFICATION_LIST = "notification_list"
+  const val NOTIFICATION_ITEM_PREFIX = "notification_item_"
+  const val SHEET_TITLE = "sheet_title"
+  const val SHEET_DESCRIPTION = "sheet_description"
+  const val SHEET_ACCEPT_BUTTON = "sheet_accept_button"
+  const val SHEET_DECLINE_BUTTON = "sheet_decline_button"
+  const val UNREAD_DOT_PREFIX = "unread_dot_"
 }
 
 /* ---------------------------------------------------------
@@ -201,8 +210,7 @@ fun NotificationsTab(
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
 
-  val notifications: List<Notification> =
-      account.notifications.ifEmpty { stubBackendNotifications(account.uid) }
+  val notifications: List<Notification> = account.notifications
 
   val filtered =
       when (selectedFilter) {
@@ -269,7 +277,7 @@ fun NotificationsTab(
           if (filtered.isEmpty()) {
             EmptyNotificationState(filter = selectedFilter)
           } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 16.dp).testTag(NotificationsTabTestTags.NOTIFICATION_LIST)) {
               grouped.forEachIndexed { index, section ->
                 if (index > 0) item { Spacer(Modifier.height(20.dp)) }
 
@@ -340,6 +348,7 @@ fun FilterRow(
               FilterChip(
                   text = filter.label,
                   selected = filter == selected,
+                  modifier = Modifier.testTag(NotificationsTabTestTags.FILTER_CHIP_PREFIX + filter.name),
                   onClick = { onSelected(filter) })
 
               Spacer(Modifier.width(16.dp))
@@ -384,12 +393,13 @@ fun FilterRow(
 }
 
 @Composable
-fun FilterChip(text: String, selected: Boolean, onClick: () -> Unit) {
+fun FilterChip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
   val border = if (selected) AppColors.neutral else AppColors.textIconsFade
 
   Box(
       modifier =
-          Modifier.clip(RoundedCornerShape(4.dp))
+          modifier
+              .clip(RoundedCornerShape(4.dp))
               .border(if (selected) 2.dp else 1.dp, border, RoundedCornerShape(16.dp))
               .clickable { onClick() }
               .padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -526,6 +536,7 @@ private fun NotificationRowContent(
   Row(
       modifier =
           Modifier.fillMaxWidth()
+              .testTag(NotificationsTabTestTags.NOTIFICATION_ITEM_PREFIX + notif.uid)
               .background(AppColors.primary)
               .clickable { onClick() }
               .padding(horizontal = 12.dp, vertical = 10.dp)) {
@@ -535,7 +546,8 @@ private fun NotificationRowContent(
                   Modifier.padding(top = 12.dp)
                       .size(18.dp)
                       .clip(RoundedCornerShape(50))
-                      .background(AppColors.negative))
+                      .background(AppColors.negative)
+                      .testTag(NotificationsTabTestTags.UNREAD_DOT_PREFIX + notif.uid))
         }
 
         Spacer(Modifier.width(12.dp))
@@ -735,6 +747,7 @@ fun BottomSheetButtons(onDecline: () -> Unit, onAccept: () -> Unit) {
                     containerColor = AppColors.negative, contentColor = AppColors.textIcons),
             shape = RoundedCornerShape(8.dp),
             elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
+            modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_DECLINE_BUTTON),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)) {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Close, null)
@@ -749,6 +762,7 @@ fun BottomSheetButtons(onDecline: () -> Unit, onAccept: () -> Unit) {
                     containerColor = AppColors.affirmative, contentColor = AppColors.textIcons),
             shape = RoundedCornerShape(12.dp),
             elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
+            modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_ACCEPT_BUTTON),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)) {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Check, null)
@@ -788,7 +802,7 @@ fun NotificationSheetContent(
       Spacer(Modifier.width(12.dp))
 
       Column {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = AppColors.textIcons)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = AppColors.textIcons, modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_TITLE))
         if (subtitle != null) {
           Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = AppColors.textIcons)
         }
@@ -809,7 +823,7 @@ fun NotificationSheetContent(
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(bottom = 6.dp))
 
-    ExpandableText(text = description, previewCharLimit = previewCharLimit)
+    ExpandableText(text = description, previewCharLimit = previewCharLimit, modifier = Modifier.testTag(NotificationsTabTestTags.SHEET_DESCRIPTION))
 
     Spacer(Modifier.height(20.dp))
 
@@ -822,10 +836,10 @@ fun NotificationSheetContent(
 --------------------------------------------------------- */
 
 @Composable
-fun ExpandableText(text: String, previewCharLimit: Int = 160) {
+fun ExpandableText(text: String, previewCharLimit: Int = 160, modifier: Modifier = Modifier) {
   var expanded by remember { mutableStateOf(false) }
 
-  Column {
+  Column(modifier = modifier) {
     Text(
         if (expanded || text.length <= previewCharLimit) text
         else text.take(previewCharLimit) + "…",
@@ -885,55 +899,7 @@ fun EmptyNotificationState(filter: NotificationFilter, modifier: Modifier = Modi
         Text(
             text = message,
             color = AppColors.textIconsFade,
-            style = MaterialTheme.typography.bodyLarge)
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(NotificationsTabTestTags.EMPTY_STATE_TEXT))
       }
-}
-
-/* ---------------------------------------------------------
-   STUB BACKEND DATA
---------------------------------------------------------- */
-
-fun stubBackendNotifications(receiverId: String): List<Notification> {
-  val now = System.currentTimeMillis()
-  return listOf(
-      Notification(
-          uid = "n1",
-          senderOrDiscussionId = "user_abc",
-          receiverId = receiverId,
-          read = false,
-          type = NotificationType.FRIEND_REQUEST,
-          sentAt = Timestamp(Date(now - 60 * 60 * 1000)) // 1h ago
-          ),
-      Notification(
-          uid = "n2",
-          senderOrDiscussionId = "disc_jan_game",
-          receiverId = receiverId,
-          read = true,
-          type = NotificationType.JOIN_DISCUSSION,
-          sentAt = Timestamp(Date(now - 2 * 60 * 60 * 1000)) // 2h ago
-          ),
-      Notification(
-          uid = "n3",
-          senderOrDiscussionId = "session_fri_night",
-          receiverId = receiverId,
-          read = false,
-          type = NotificationType.JOIN_SESSION,
-          sentAt = Timestamp(Date(now - 5 * 60 * 60 * 1000)) // 5h ago
-          ),
-      Notification(
-          uid = "n4",
-          senderOrDiscussionId = "user_xyz",
-          receiverId = receiverId,
-          read = true,
-          type = NotificationType.FRIEND_REQUEST,
-          sentAt = Timestamp(Date(now - 26 * 60 * 60 * 1000)) // 26h ago
-          ),
-      Notification(
-          uid = "n5",
-          senderOrDiscussionId = "disc_strategy",
-          receiverId = receiverId,
-          read = false,
-          type = NotificationType.JOIN_DISCUSSION,
-          sentAt = Timestamp(Date(now - 48 * 60 * 60 * 1000)) // 2 days ago
-          ))
 }

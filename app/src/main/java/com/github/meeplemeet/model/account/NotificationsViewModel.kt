@@ -10,6 +10,7 @@ import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.shared.game.BggGameRepository
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.account.NotificationPopupData
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -29,7 +30,7 @@ class NotificationsViewModel(
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
     private val imageRepository: ImageRepository = RepositoryProvider.images,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-    private val gameRepository: BggGameRepository = RepositoryProvider.gamesApi
+    private val gameRepository: GameRepository = RepositoryProvider.gamesApi
 ) : CreateAccountViewModel(handlesRepository) {
 
   /**
