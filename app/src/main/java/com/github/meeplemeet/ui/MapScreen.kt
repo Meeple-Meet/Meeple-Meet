@@ -12,6 +12,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location as AndroidLocation
 import android.net.Uri
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
@@ -77,6 +78,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -116,7 +118,11 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -208,6 +214,7 @@ object ClusterConfig {
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
+private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val DEFAULT_MARKER_SCALE = 1.5f
@@ -332,6 +339,32 @@ fun MapScreen(
 
     userLocation = loc
     isLoadingLocation = false
+  }
+
+  // --- Continuous location updates ---
+  DisposableEffect(permissionGranted) {
+    if (permissionGranted) {
+      val locationRequest =
+          LocationRequest.Builder(
+                  Priority.PRIORITY_BALANCED_POWER_ACCURACY, DEFAULT_LOCATION_UPDATE_INTERVAL_MS)
+              .build()
+
+      val callback =
+          object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+              result.lastLocation?.let { loc ->
+                userLocation = Location(loc.latitude, loc.longitude, "User Location")
+              }
+            }
+          }
+
+      fusedClient.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
+
+      onDispose { fusedClient.removeLocationUpdates(callback) }
+    } else {
+      userLocation = null
+      onDispose {}
+    }
   }
 
   /** Starts Firestore geo query once location is resolved (real or fallback). */
