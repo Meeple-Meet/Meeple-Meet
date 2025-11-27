@@ -337,7 +337,6 @@ class NotificationsTabTest : FirestoreTests() {
         }
       }
 
-      Thread.sleep(5000)
       sheetTitle().assertTextContains(discussion.name)
       sheetDescription().assertTextContains(discussion.description)
       sheetAcceptButton().assertIsDisplayed()
@@ -362,7 +361,6 @@ class NotificationsTabTest : FirestoreTests() {
       }
 
       sheetTitle().assertTextContains(session.name)
-      Thread.sleep(5000)
       sheetAcceptButton().assertIsDisplayed()
       sheetDeclineButton().assertIsDisplayed()
 
