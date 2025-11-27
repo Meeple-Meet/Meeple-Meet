@@ -485,7 +485,7 @@ fun MeepleMeetApp(
                   description = "Discover events and meet new people."),
               OnBoardPage(
                   image = R.drawable.discussion_logo,
-                  title = "Disucssions",
+                  title = "Discussions",
                   description = "Host your own gatherings easily."),
               OnBoardPage(
                   image = R.drawable.discussion_logo,
@@ -498,7 +498,8 @@ fun MeepleMeetApp(
               OnBoardPage(
                   image = R.drawable.discussion_logo,
                   title = "Posts",
-                  description = "Share with the community"))
+                  description = "Share with the community"),
+              OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
       OnBoardingScreen(
           pages = pages,
           onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
