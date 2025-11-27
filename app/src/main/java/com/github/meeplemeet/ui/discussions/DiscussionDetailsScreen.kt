@@ -478,7 +478,6 @@ fun DiscussionDetailsScreen(
                         onDismiss = { dropdownExpanded = false },
                         onFocusChanged = { isInputFocused = it },
                         onSelect = { newAccount ->
-                          selectedMembers.add(newAccount)
                           viewModel.addUserToDiscussion(discussion, account, newAccount)
                           searchQuery = ""
                           dropdownExpanded = false

@@ -123,6 +123,22 @@ interface AccountViewModel {
   }
 
   /**
+   * Updates the notification privacy settings of an account.
+   *
+   * This method allows users to control who can send them notifications such as discussion
+   * invitations or session invitations. The setting can be configured to accept notifications from
+   * everyone, only friends, or no one.
+   *
+   * @param account The account to update
+   * @param notificationSettings The new notification privacy setting
+   */
+  fun setAccountNotificationSettings(account: Account, notificationSettings: NotificationSettings) {
+    scope.launch {
+      RepositoryProvider.accounts.setAccountNotificationSettings(account.uid, notificationSettings)
+    }
+  }
+
+  /**
    * Update account roles.
    *
    * @param account Account to update its roles

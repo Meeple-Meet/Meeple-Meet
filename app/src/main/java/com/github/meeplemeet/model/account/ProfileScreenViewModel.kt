@@ -110,7 +110,6 @@ class ProfileScreenViewModel(
         otherRels != RelationshipStatus.SENT)
         return
 
-    viewModelScope.launch { accountRepository.acceptFriendRequest(account.uid, other.uid) }
     executeNotification(account, notification)
   }
 
@@ -224,7 +223,13 @@ class ProfileScreenViewModel(
   private fun executeNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
 
-    viewModelScope.launch { notification.execute() }
+    viewModelScope.launch {
+      notification.execute()
+      // Only update the notification in Firestore if it exists in the account's notifications
+      if (account.notifications.any { it.uid == notification.uid }) {
+        accountRepository.executeNotification(account.uid, notification.uid)
+      }
+    }
   }
 
   /**

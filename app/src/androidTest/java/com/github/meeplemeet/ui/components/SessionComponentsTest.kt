@@ -61,7 +61,8 @@ class SessionComponentsTest : FirestoreTests() {
     Locale.setDefault(Locale.US)
 
     // Initialize real repositories and view model
-    createSessionViewModel = CreateSessionViewModel(sessionRepository, gameRepository)
+    createSessionViewModel =
+        CreateSessionViewModel(accountRepository, sessionRepository, gameRepository)
   }
 
   @After

@@ -29,6 +29,27 @@ enum class RelationshipStatus {
 }
 
 /**
+ * Defines the notification privacy settings for an account.
+ *
+ * This enum controls who can send notifications to a user, such as discussion invitations or
+ * session invitations. It allows users to manage their notification preferences and privacy.
+ */
+@Serializable
+enum class NotificationSettings {
+  /** All requests to join discussion/sessions are auto accepted */
+  EVERYONE,
+
+  /**
+   * All requests to join discussion/sessions are auto accepted for friends, a notification is sent
+   * for non friends
+   */
+  FRIENDS_ONLY,
+
+  /** No requests to join discussion/sessions are auto accepted, a notification is sent each time */
+  NO_ONE
+}
+
+/**
  * Represents a relationship between the current user and another user.
  *
  * This data class pairs a user's UID with the status of their relationship to the current account.
@@ -70,6 +91,8 @@ data class Relationship(
  *   friend requests, discussion invitations, and session invitations. Each notification contains
  *   metadata about the event and can be executed to perform the associated action (e.g., accepting
  *   a friend request).
+ * @property notificationSettings The privacy settings controlling who can send notifications to
+ *   this account. Determines whether all users, only friends, or no users can send invitations.
  */
 data class Account(
     val uid: String,
@@ -82,7 +105,8 @@ data class Account(
     var shopOwner: Boolean = false,
     var spaceRenter: Boolean = false,
     val relationships: Map<String, RelationshipStatus> = emptyMap(),
-    val notifications: List<Notification> = emptyList()
+    val notifications: List<Notification> = emptyList(),
+    val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
 )
 
 /**
@@ -99,6 +123,8 @@ data class Account(
  * @property description User's self-description or bio. Null if not provided.
  * @property shopOwner Indicates whether this account owns a board game shop. Defaults to false.
  * @property spaceRenter Indicates whether this account rents out gaming spaces. Defaults to false.
+ * @property notificationSettings The privacy settings controlling who can send notifications.
+ *   Defaults to EVERYONE.
  */
 @Serializable
 data class AccountNoUid(
@@ -108,7 +134,8 @@ data class AccountNoUid(
     val photoUrl: String? = null,
     val description: String? = null,
     val shopOwner: Boolean = false,
-    val spaceRenter: Boolean = false
+    val spaceRenter: Boolean = false,
+    val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
 )
 
 /**
@@ -134,20 +161,17 @@ fun fromNoUid(
     previews: Map<String, DiscussionPreviewNoUid> = emptyMap(),
     relationships: List<Relationship> = emptyList(),
     notifications: List<Notification> = emptyList()
-): Account {
-  // Convert relationship list to map for efficient lookup
-  val mappedRelationships = relationships.associate { it.uid to it.status }
-
-  return Account(
-      id,
-      accountNoUid.handle,
-      accountNoUid.name,
-      email = accountNoUid.email,
-      previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
-      photoUrl = accountNoUid.photoUrl,
-      description = accountNoUid.description,
-      shopOwner = accountNoUid.shopOwner,
-      spaceRenter = accountNoUid.spaceRenter,
-      relationships = mappedRelationships,
-      notifications = notifications)
-}
+): Account =
+    Account(
+        uid = id,
+        handle = accountNoUid.handle,
+        name = accountNoUid.name,
+        email = accountNoUid.email,
+        previews = previews.mapValues { (uid, preview) -> fromNoUid(uid, preview) },
+        photoUrl = accountNoUid.photoUrl,
+        description = accountNoUid.description,
+        shopOwner = accountNoUid.shopOwner,
+        spaceRenter = accountNoUid.spaceRenter,
+        relationships = relationships.associate { it.uid to it.status },
+        notifications = notifications,
+        notificationSettings = accountNoUid.notificationSettings)

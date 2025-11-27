@@ -101,8 +101,10 @@ data class Notification(
       }
       NotificationType.JOIN_SESSION -> {
         val disc = RepositoryProvider.discussions.getDiscussion(senderOrDiscussionId)
+        val currentParticipants = disc.session?.participants ?: emptyList()
         RepositoryProvider.sessions.updateSession(
-            senderOrDiscussionId, newParticipantList = disc.participants + receiverId)
+            senderOrDiscussionId,
+            newParticipantList = (currentParticipants + receiverId).toSet().toList())
       }
     }
     executed = true

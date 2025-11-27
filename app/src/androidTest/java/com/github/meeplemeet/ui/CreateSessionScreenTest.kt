@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
@@ -45,6 +46,7 @@ class CreateSessionScreenTest {
   // Repos / VMs
   private lateinit var discussionRepository: DiscussionRepository
   private lateinit var viewModel: DiscussionViewModel
+  private lateinit var accountRepo: AccountRepository
   private lateinit var sessionRepo: SessionRepository
   private lateinit var fakeGameRepo: FakeGameRepository
   private lateinit var sessionVM: SessionViewModel
@@ -104,9 +106,10 @@ class CreateSessionScreenTest {
   }
 
   private inner class TestCreateSessionViewModel(
+      accountRepository: com.github.meeplemeet.model.account.AccountRepository,
       sessionRepository: SessionRepository,
       gameRepository: GameRepository
-  ) : CreateSessionViewModel(sessionRepository, gameRepository) {
+  ) : CreateSessionViewModel(accountRepository, sessionRepository, gameRepository) {
     // Delegate getAccounts to the mocked DiscussionViewModel
     override fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
       viewModel.getAccounts(uids, onResult)
@@ -151,10 +154,11 @@ class CreateSessionScreenTest {
           cb(accounts)
         }
 
+    accountRepo = mockk(relaxed = true)
     sessionRepo = mockk(relaxed = true)
     fakeGameRepo = FakeGameRepository()
-    sessionVM = SessionViewModel(sessionRepository = sessionRepo)
-    createSessionVM = TestCreateSessionViewModel(sessionRepo, fakeGameRepo)
+    sessionVM = SessionViewModel(accountRepository = accountRepo, sessionRepository = sessionRepo)
+    createSessionVM = TestCreateSessionViewModel(accountRepo, sessionRepo, fakeGameRepo)
   }
 
   private class ComposeOnceHarness(

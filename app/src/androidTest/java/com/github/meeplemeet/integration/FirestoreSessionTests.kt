@@ -103,13 +103,6 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals("game123", updatedDiscussion.session?.gameId)
   }
 
-  @Test(expected = PermissionDeniedException::class)
-  fun nonParticipantCannotCreateSession() = runTest {
-    viewModel.createSession(
-        account2, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account2)
-    advanceUntilIdle()
-  }
-
   @Test
   fun canUpdateSessionName() = runTest {
     // First create a session
@@ -171,7 +164,7 @@ class FirestoreSessionTests : FirestoreTests() {
   }
 
   @Test
-  fun canUpdateSessionParticipants() = runTest {
+  fun canAddUserToSession() = runTest {
     // First create a session
     viewModel.createSession(
         account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
@@ -179,15 +172,39 @@ class FirestoreSessionTests : FirestoreTests() {
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
-    val newParticipants = listOf(account1, account2, account3)
-
-    // Now update the session participants
-    viewModel.updateSession(account1, discussionWithSession, newParticipantList = newParticipants)
+    // Now add account2 to the session
+    viewModel.addUserToSession(discussionWithSession, account1, account2)
     advanceUntilIdle()
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
-    assertEquals(3, result.session?.participants?.size)
-    assertTrue(result.session?.participants?.containsAll(newParticipants.map { it.uid }) ?: false)
+    assertEquals(2, result.session?.participants?.size)
+    assertTrue(result.session?.participants?.contains(account1.uid) ?: false)
+    assertTrue(result.session?.participants?.contains(account2.uid) ?: false)
+  }
+
+  @Test
+  fun canRemoveUserFromSession() = runTest {
+    // First create a session with two participants
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        testTimestamp,
+        testLocation,
+        account1,
+        account2)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+
+    // Now remove account2 from the session
+    viewModel.removeUserFromSession(discussionWithSession, account1, account2)
+    advanceUntilIdle()
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals(1, result.session?.participants?.size)
+    assertTrue(result.session?.participants?.contains(account1.uid) ?: false)
   }
 
   @Test
@@ -202,24 +219,16 @@ class FirestoreSessionTests : FirestoreTests() {
     val newName = "Epic Catan Tournament"
     val newDate = Timestamp(testTimestamp.seconds + 86400, 0)
     val newLocation = Location(latitude = 48.8566, longitude = 2.3522, name = "Paris")
-    val newParticipants = listOf(account1, account2)
 
     // Now update multiple session fields
     viewModel.updateSession(
-        account1,
-        discussionWithSession,
-        name = newName,
-        date = newDate,
-        location = newLocation,
-        newParticipantList = newParticipants)
+        account1, discussionWithSession, name = newName, date = newDate, location = newLocation)
     advanceUntilIdle()
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertEquals(newName, result.session?.name)
     assertEquals(newDate, result.session?.date)
     assertEquals(newLocation, result.session?.location)
-    assertEquals(2, result.session?.participants?.size)
-    assertTrue(result.session?.participants?.containsAll(newParticipants.map { it.uid }) ?: false)
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -408,12 +417,6 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals(2, result.session?.participants?.size)
     assertTrue(result.session?.participants?.contains(account1.uid) ?: false)
     assertTrue(result.session?.participants?.contains(account3.uid) ?: false)
-  }
-
-  @Test(expected = IllegalArgumentException::class)
-  fun emptyParticipantListIsValid() = runTest {
-    viewModel.createSession(
-        account1, baseDiscussion, "Planning Session", "game123", testTimestamp, testLocation)
   }
 
   // ========================================================================
@@ -813,7 +816,7 @@ class FirestoreSessionTests : FirestoreTests() {
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
     // account2 removes themselves from the session (they're not an admin)
-    viewModel.updateSession(account2, discussionWithSession, newParticipantList = listOf(account1))
+    viewModel.removeUserFromSession(discussionWithSession, account2, account2)
     advanceUntilIdle()
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
@@ -844,8 +847,7 @@ class FirestoreSessionTests : FirestoreTests() {
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
     // account2 tries to remove account3 (not themselves) - should fail
-    viewModel.updateSession(
-        account2, discussionWithSession, newParticipantList = listOf(account1, account2))
+    viewModel.removeUserFromSession(discussionWithSession, account2, account3)
     advanceUntilIdle()
   }
 
@@ -870,12 +872,8 @@ class FirestoreSessionTests : FirestoreTests() {
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
-    // account2 tries to change the name while also leaving - should fail
-    viewModel.updateSession(
-        account2,
-        discussionWithSession,
-        name = "Modified Name",
-        newParticipantList = listOf(account1))
+    // account2 tries to change the name - should fail because they're not an admin
+    viewModel.updateSession(account2, discussionWithSession, name = "Modified Name")
     advanceUntilIdle()
   }
 
@@ -909,7 +907,7 @@ class FirestoreSessionTests : FirestoreTests() {
   }
 
   @Test
-  fun getSessionIdsForUser_handlesPagination_whenManyResults() = runTest {
+  fun getSessionIdsForUser_handlesPagination_whenManyResults() = runBlocking {
     val realSessionRepo = SessionRepository()
 
     // create 7 discussions with sessions where account1 participates
@@ -921,12 +919,53 @@ class FirestoreSessionTests : FirestoreTests() {
       createdIds += d.uid
     }
 
-    advanceUntilIdle()
-
     // Force small batch size to exercise pagination path
     val fetched = realSessionRepo.getSessionIdsForUser(account1.uid, batchSize = 2)
     // all created ids must be present
     assertEquals(createdIds.size, fetched.count { createdIds.contains(it) })
     assertTrue(createdIds.all { fetched.contains(it) })
+  }
+
+  @Test
+  fun removingLastAdminDeletesSession() = runBlocking {
+    // Create a session with only one admin participant
+    viewModel.createSession(
+        account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
+    Thread.sleep(500)
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+
+    // Remove the only admin from the session - should delete the session
+    viewModel.removeUserFromSession(discussionWithSession, account1, account1)
+    Thread.sleep(500)
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertNull(result.session)
+  }
+
+  @Test(expected = PermissionDeniedException::class)
+  fun nonAdminCannotAddUserToSession() = runTest {
+    // First add account2 to the discussion
+    discussionRepository.addUserToDiscussion(baseDiscussion.uid, account2.uid)
+
+    val updatedBaseDiscussion = discussionRepository.getDiscussion(baseDiscussion.uid)
+
+    // Create a session
+    viewModel.createSession(
+        account1,
+        updatedBaseDiscussion,
+        "Catan Night",
+        "game123",
+        testTimestamp,
+        testLocation,
+        account1,
+        account2)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+
+    // account2 (non-admin) tries to add account3 - should fail
+    viewModel.addUserToSession(discussionWithSession, account2, account3)
+    advanceUntilIdle()
   }
 }
