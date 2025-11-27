@@ -36,13 +36,16 @@ enum class RelationshipStatus {
  */
 @Serializable
 enum class NotificationSettings {
-  /** Accept notifications from all users, regardless of relationship status. */
+  /** All requests to join discussion/sessions are auto accepted */
   EVERYONE,
 
-  /** Only accept notifications from users who are friends (RelationshipStatus.FRIEND). */
+  /**
+   * All requests to join discussion/sessions are auto accepted for friends, a notification is sent
+   * for non friends
+   */
   FRIENDS_ONLY,
 
-  /** Do not accept any notifications from other users. */
+  /** No requests to join discussion/sessions are auto accepted, a notification is sent each time */
   NO_ONE
 }
 
