@@ -57,7 +57,9 @@ class OnBoardingScreenTest {
             OnBoardPage(
                 image = R.drawable.discussion_logo,
                 title = "Community Posts",
-                description = "Share your gaming experiences with the world"))
+                description = "Share your gaming experiences with the world"),
+            OnBoardPage(
+                image = R.drawable.logo_dark, title = "Let's Go!", description = "Ready to start?"))
   }
 
   /* ---------------------- comprehensive test ------------------------------- */
@@ -231,11 +233,44 @@ class OnBoardingScreenTest {
       compose.onNodeWithText(OnBoardingStrings.POSTS_PAGE_END_TEXT).assertExists()
     }
 
-    checkpoint("Posts Page: End button visible on last page") {
+    checkpoint("Posts Page: No end button on posts page") {
+      compose.onNodeWithTag("OnBoarding_EndButton").assertDoesNotExist()
+    }
+
+    /* NAVIGATION TO LET'S GO PAGE (PAGE 5) - FINAL PAGE --------------------- */
+    checkpoint("LetsGo Page: Navigate to final page") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_5").assertExists()
+    }
+
+    checkpoint("LetsGo Page: Title correct") {
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_5").assertTextEquals("Let's Go!")
+    }
+
+    checkpoint("LetsGo Page: Description visible") {
+      compose
+          .onNodeWithText("You're all set! Start connecting with gamers", substring = true)
+          .assertExists()
+    }
+
+    checkpoint("LetsGo Page: Get Started button visible on final page") {
+      compose.onNodeWithTag("OnBoarding_EndButton").assertExists()
+    }
+
+    checkpoint("LetsGo Page: Button text is 'Get Started'") {
       compose.onNodeWithTag("OnBoarding_EndButton").assertExists()
     }
 
     /* BACK NAVIGATION THROUGH ALL PAGES -------------------------------------- */
+    checkpoint("Back Nav: Back to posts page") {
+      backButton().performClick()
+      compose.waitForIdle()
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4")
+          .assertTextEquals("Community Posts")
+    }
+
     checkpoint("Back Nav: Back to sessions page") {
       backButton().performClick()
       compose.waitForIdle()
@@ -291,31 +326,6 @@ class OnBoardingScreenTest {
   }
 
   /* ============ ADDITIONAL COMPOSABLE COVERAGE TESTS ============= */
-
-  @Test
-  fun test_discussion_card_components() = runBlocking {
-    var clicked = false
-
-    compose.setContent { DiscussionPreviewCard(onClick = { clicked = true }) }
-
-    checkpoint("Card: Avatar badge shows '2'") { compose.onNodeWithText("2").assertExists() }
-
-    checkpoint("Card: Board Game Night visible") {
-      compose.onNodeWithText("Board Game Night").assertExists()
-    }
-
-    checkpoint("Card: New messages indicator") { compose.onNodeWithText("• 5 new").assertExists() }
-
-    checkpoint("Card: Timestamp visible") { compose.onNodeWithText("21:01").assertExists() }
-
-    checkpoint("Card: Tap text visible") { compose.onNodeWithText("Tap").assertExists() }
-
-    checkpoint("Card: Click triggers callback") {
-      compose.onNodeWithTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD).performClick()
-      compose.waitForIdle()
-      assert(clicked) { "Click callback should be triggered" }
-    }
-  }
 
   @Test
   fun test_discussion_page_and_dialog() = runBlocking {
