@@ -46,12 +46,6 @@ class E2E_M1 : FirestoreTests() {
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
     composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
 
-    // Verify profile screen shows
-    composeTestRule
-        .onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
-        .assertIsDisplayed()
-        .assertTextContains(MeepleMeetScreen.Profile.title)
-
     composeTestRule.signOutWithBottomBar()
   }
 

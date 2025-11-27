@@ -102,11 +102,9 @@ object PublicInfoTestTags {
   // ------------------------------------------------------------
   // SECTION 2 — Action Buttons
   // ------------------------------------------------------------
-  const val ACTIONS_CONTAINER = "public_info_actions"
-
   const val ACTION_FRIENDS = "action_friends"
   const val ACTION_NOTIFICATIONS = "action_notifications"
-  const val ACTION_LOGOUT = "action_logout"
+  const val ACTION_LOGOUT = "Logout Button"
 
   // ------------------------------------------------------------
   // SECTION 3 — Inputs
