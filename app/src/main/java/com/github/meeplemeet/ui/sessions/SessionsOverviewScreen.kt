@@ -173,39 +173,14 @@ private fun EmptySessionsListText() {
  * @param onClick Invoked when the card is tapped.
  */
 @Composable
-private fun SessionCard(
+public fun SessionOverCard(
     session: Session,
-    viewModel: SessionOverviewViewModel,
+    gameName: String,
+    participantText: String,
+    date: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-  val date =
-      remember(session.date) {
-        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
-      }
-
-  /* ---------  resolve names via the callback  --------- */
-  val names = remember { mutableStateListOf<String>() }
-
-  LaunchedEffect(session.participants) {
-    names.clear()
-    viewModel.getAccounts(session.participants) { it.forEach { acc -> names += acc.name } }
-  }
-  /* ----------------------------------------------------- */
-
-  val participantText =
-      when {
-        names.size < session.participants.size -> "Loading…"
-        names.isEmpty() -> "No participants"
-        names.size == 1 -> names.first()
-        names.size == 2 -> names.joinToString(", ")
-        else -> {
-          val firstTwo = names.take(2).joinToString(", ")
-          "$firstTwo and ${names.size - 2} more"
-        }
-      }
-
-  /* ----------  UI identical to before  ---------- */
   Column(modifier = modifier) {
     Row(
         modifier =
@@ -226,16 +201,6 @@ private fun SessionCard(
                     color = AppColors.textIcons,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis)
-                val gameName by
-                    produceState(
-                        key1 = session.gameId,
-                        initialValue = session.gameId // fallback: show id while loading
-                        ) {
-                          val name =
-                              if (session.gameId == LABEL_UNKNOWN_GAME) null
-                              else viewModel.getGameNameByGameId(session.gameId)
-                          value = name ?: "No game selected" // suspend call
-                    }
                 Text(
                     text = gameName,
                     style = MaterialTheme.typography.bodySmall,
@@ -279,6 +244,66 @@ private fun SessionCard(
 
     HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
+}
+
+@Composable
+public fun SessionCard(
+    session: Session,
+    viewModel: SessionOverviewViewModel,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+  val date =
+      remember(session.date) {
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
+      }
+
+  /* ---------  resolve names via the callback  --------- */
+  val names = remember { mutableStateListOf<String>() }
+
+  LaunchedEffect(session.participants) {
+    names.clear()
+    session.participants.forEach { id ->
+      if (id.isBlank()) {
+        names += "Unknown"
+      } else {
+        viewModel.getOtherAccount(id) { acc ->
+          names += acc.name // re-composition happens on each addition
+        }
+      }
+    }
+  }
+  /* ----------------------------------------------------- */
+
+  val participantText =
+      when {
+        names.size < session.participants.size -> "Loading…"
+        names.isEmpty() -> "No participants"
+        names.size == 1 -> names.first()
+        names.size == 2 -> names.joinToString(", ")
+        else -> {
+          val firstTwo = names.take(2).joinToString(", ")
+          "$firstTwo and ${names.size - 2} more"
+        }
+      }
+
+  val gameName by
+      produceState(
+          key1 = session.gameId, initialValue = session.gameId // fallback: show id while loading
+          ) {
+            val name =
+                if (session.gameId == LABEL_UNKNOWN_GAME) null
+                else viewModel.getGameNameByGameId(session.gameId)
+            value = name ?: "No game selected" // suspend call
+      }
+
+  SessionOverCard(
+      session = session,
+      gameName = gameName,
+      participantText = participantText,
+      date = date,
+      modifier = modifier,
+      onClick = onClick)
 }
 
 /**
