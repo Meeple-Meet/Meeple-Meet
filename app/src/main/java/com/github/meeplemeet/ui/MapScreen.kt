@@ -12,6 +12,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location as AndroidLocation
 import android.net.Uri
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
@@ -77,6 +78,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -116,7 +118,11 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -208,6 +214,7 @@ object ClusterConfig {
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
+private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val DEFAULT_MARKER_SCALE = 1.5f
@@ -283,6 +290,8 @@ fun MapScreen(
   // --- Map & query state ---
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
+  var isCameraCentered by remember { mutableStateOf(false) }
+  var isQueryLaunched by remember { mutableStateOf(false) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
 
   // --- UI controls (filters & creation) ---
@@ -313,8 +322,6 @@ fun MapScreen(
    * Retrieves user location whenever:
    * - permission state changes, or
    * - lifecycle returns to RESUMED (i.e., app resumes).
-   *
-   * If location retrieval fails or permission denied, falls back to EPFL.
    */
   LaunchedEffect(permissionGranted, permissionChecked, lifecycleState) {
     if (!permissionChecked) return@LaunchedEffect
@@ -330,19 +337,46 @@ fun MapScreen(
           }
         } else null
 
-    userLocation = loc ?: DEFAULT_CENTER
+    userLocation = loc
     isLoadingLocation = false
   }
 
-  /**
-   * Starts the Firestore geo query once a valid user location is obtained. Runs only once to avoid
-   * restarting the query unnecessarily.
-   */
-  LaunchedEffect(userLocation) {
-    if (userLocation == null) return@LaunchedEffect
+  // --- Continuous location updates ---
+  DisposableEffect(permissionGranted) {
+    if (permissionGranted) {
+      val locationRequest =
+          LocationRequest.Builder(
+                  Priority.PRIORITY_BALANCED_POWER_ACCURACY, DEFAULT_LOCATION_UPDATE_INTERVAL_MS)
+              .build()
+
+      val callback =
+          object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+              result.lastLocation?.let { loc ->
+                userLocation = Location(loc.latitude, loc.longitude, "User Location")
+              }
+            }
+          }
+
+      fusedClient.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
+
+      onDispose { fusedClient.removeLocationUpdates(callback) }
+    } else {
+      userLocation = null
+      onDispose {}
+    }
+  }
+
+  /** Starts Firestore geo query once location is resolved (real or fallback). */
+  LaunchedEffect(isLoadingLocation) {
+    if (isLoadingLocation || isQueryLaunched) return@LaunchedEffect
 
     viewModel.startGeoQuery(
-        center = userLocation!!, currentUserId = account.uid, radiusKm = DEFAULT_RADIUS_KM)
+        center = userLocation ?: DEFAULT_CENTER,
+        currentUserId = account.uid,
+        radiusKm = DEFAULT_RADIUS_KM)
+
+    isQueryLaunched = true
   }
 
   /** Updates the ViewModel filters whenever the set of included pin types changes. */
@@ -417,13 +451,17 @@ fun MapScreen(
         // --- Map rendering ---
         val cameraPositionState = rememberCameraPositionState()
 
-        /** Center the camera on user location when it changes (first load or refresh). */
-        LaunchedEffect(userLocation) {
-          userLocation?.let {
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(it.latitude, it.longitude), DEFAULT_ZOOM_LEVEL))
-          }
+        /** Centers the camera once location is resolved (real or fallback). */
+        LaunchedEffect(isLoadingLocation) {
+          if (isLoadingLocation || isCameraCentered) return@LaunchedEffect
+
+          val target =
+              userLocation?.let { LatLng(it.latitude, it.longitude) }
+                  ?: LatLng(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude)
+
+          cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
+
+          isCameraCentered = true
         }
 
         /**
