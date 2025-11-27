@@ -21,18 +21,18 @@ class OnBoardingScreenTest {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* ---------------- semantic helpers ---------------- */
-  private fun skipButton() = compose.onNodeWithTag(OnBoardingTestTags.SkipButton)
+  private fun skipButton() = compose.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON)
 
-  private fun nextButton() = compose.onNodeWithTag(OnBoardingTestTags.NextButton)
+  private fun nextButton() = compose.onNodeWithTag(OnBoardingTestTags.NEXT_BUTTON)
 
-  private fun backButton() = compose.onNodeWithTag(OnBoardingTestTags.BackButton)
+  private fun backButton() = compose.onNodeWithTag(OnBoardingTestTags.BACK_BUTTON)
 
   private fun pagerDots() =
-      compose.onAllNodesWithTag(OnBoardingTestTags.PagerDot, useUnmergedTree = true)
+      compose.onAllNodesWithTag(OnBoardingTestTags.PAGER_DOT, useUnmergedTree = true)
 
-  private fun discussionCard() = compose.onNodeWithTag(OnBoardingTestTags.DiscussionPreviewCard)
+  private fun discussionCard() = compose.onNodeWithTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD)
 
-  private fun closeDialogButton() = compose.onNodeWithTag(OnBoardingTestTags.CloseDialog)
+  private fun closeDialogButton() = compose.onNodeWithTag(OnBoardingTestTags.CLOSE_DIALOG)
 
   /* ------------------------- setup ---------------------------- */
   private lateinit var pages: List<OnBoardPage>
@@ -41,18 +41,23 @@ class OnBoardingScreenTest {
   fun setup() {
     pages =
         listOf(
+            OnBoardPage(image = R.drawable.logo_dark, title = "Meeple Meet", description = ""),
             OnBoardPage(
-                image = R.drawable.logo_discussion,
-                title = "Welcome",
-                description = "Discover events and meet new people."),
-            OnBoardPage(
-                image = android.R.drawable.ic_menu_camera,
+                image = R.drawable.discussion_logo,
                 title = "Discussions",
                 description = "Host your own gatherings easily."),
             OnBoardPage(
                 image = android.R.drawable.ic_menu_compass,
-                title = "Explore",
-                description = "Find activities near you."))
+                title = "Explore Nearby",
+                description = "Find board game shops and rental spaces near you"),
+            OnBoardPage(
+                image = R.drawable.discussion_logo,
+                title = "Game Sessions",
+                description = "Organize and join gaming meetups with friends"),
+            OnBoardPage(
+                image = R.drawable.discussion_logo,
+                title = "Community Posts",
+                description = "Share your gaming experiences with the world"))
   }
 
   /* ---------------------- comprehensive test ------------------------------- */
@@ -67,7 +72,7 @@ class OnBoardingScreenTest {
     checkpoint("Initial: Skip button visible") { skipButton().assertExists() }
 
     checkpoint("Initial: First page title visible") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_0").assertTextEquals("Meeple Meet")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_0").assertTextEquals("Meeple Meet")
     }
 
     checkpoint("Initial: Next button visible") { nextButton().assertExists() }
@@ -76,15 +81,23 @@ class OnBoardingScreenTest {
 
     checkpoint("Initial: Pager dots correct count") { pagerDots().assertCountEquals(pages.size) }
 
+    checkpoint("Initial: Intro page features visible") {
+      compose
+          .onNodeWithText(
+              "Connect with friends and chat about upcoming game sessions", substring = true)
+          .assertExists()
+      compose.onNodeWithText("Share posts and join discussions", substring = true).assertExists()
+    }
+
     /* NAVIGATION TO SECOND PAGE ---------------------------------------------- */
     checkpoint("Nav: First page allows swipe") {
-      compose.onNodeWithTag(OnBoardingTestTags.Pager).performTouchInput { swipeLeft() }
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_1").assertExists()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
     }
 
     checkpoint("Nav: Second page title correct") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_1").assertTextEquals("Discussions")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertTextEquals("Discussions")
     }
 
     /* DISCUSSION CARD AND INTERACTION LOGIC ---------------------------------- */
@@ -101,17 +114,17 @@ class OnBoardingScreenTest {
 
     checkpoint("Discussion: Swipe blocked before interaction") {
       // Attempt to swipe - should stay on page 1
-      compose.onNodeWithTag(OnBoardingTestTags.Pager).performTouchInput { swipeLeft() }
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_1").assertExists()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
     }
 
     checkpoint("Discussion: Multiple swipe attempts still blocked") {
       repeat(2) {
-        compose.onNodeWithTag(OnBoardingTestTags.Pager).performTouchInput { swipeLeft() }
+        compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
         compose.waitForIdle()
       }
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_1").assertExists()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
     }
 
     /* OPEN AND CLOSE DIALOG -------------------------------------------------- */
@@ -135,22 +148,110 @@ class OnBoardingScreenTest {
       compose.onNodeWithText("Jump into the conversation and never miss a meetup!").assertExists()
     }
 
-    /* NAVIGATION AFTER INTERACTION ------------------------------------------- */
-    checkpoint("After Interaction: Swipe now works") {
-      compose.onNodeWithTag(OnBoardingTestTags.Pager).performTouchInput { swipeLeft() }
+    /* NAVIGATION TO MAP EXPLORATION PAGE (PAGE 2) ---------------------------- */
+    checkpoint("Map Page: Navigate to map exploration") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_2").assertExists()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertExists()
     }
 
-    checkpoint("After Interaction: Third page title correct") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_2").assertTextEquals("Explore")
+    checkpoint("Map Page: Title correct") {
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Explore Nearby")
     }
 
-    /* BACK NAVIGATION -------------------------------------------------------- */
-    checkpoint("Back Nav: Back to second page") {
+    checkpoint("Map Page: Subtitle visible") {
+      compose.onNodeWithText(OnBoardingStrings.MAP_EXPLORATION_SUBTITLE).assertExists()
+    }
+
+    checkpoint("Map Page: Legend items visible") {
+      compose.onNodeWithText("Gaming Sessions").assertExists()
+      compose.onNodeWithText("Game Shops").assertExists()
+      compose.onNodeWithText("Rental Spaces").assertExists()
+    }
+
+    checkpoint("Map Page: Legend descriptions visible") {
+      compose.onNodeWithText("Active locations where people are playing").assertExists()
+      compose.onNodeWithText("Buy board games with prices and stock info").assertExists()
+      compose.onNodeWithText("Rent games or book venues for sessions").assertExists()
+    }
+
+    checkpoint("Map Page: End text visible") {
+      compose.onNodeWithText(OnBoardingStrings.MAP_EXPLORATION_END_TEXT).assertExists()
+    }
+
+    checkpoint("Map Page: You marker label visible") {
+      compose.onNodeWithText("You").assertExists()
+    }
+
+    /* NAVIGATION TO SESSIONS PAGE (PAGE 3) ----------------------------------- */
+    checkpoint("Sessions Page: Navigate to sessions") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertExists()
+    }
+
+    checkpoint("Sessions Page: Title correct") {
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertTextEquals("Game Sessions")
+    }
+
+    checkpoint("Sessions Page: Subtitle visible") {
+      compose.onNodeWithText(OnBoardingStrings.SESSION_PAGE_SUBTITLE).assertExists()
+    }
+
+    checkpoint("Sessions Page: Feature items visible") {
+      compose.onNodeWithText("Schedule sessions with date, time, and location").assertExists()
+      compose.onNodeWithText("Link sessions to specific games you want to play").assertExists()
+      compose.onNodeWithText("Invite friends and manage member list").assertExists()
+      compose.onNodeWithText("View your session history and upcoming events").assertExists()
+    }
+
+    /* NAVIGATION TO POSTS PAGE (PAGE 4) -------------------------------------- */
+    checkpoint("Posts Page: Navigate to posts") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4").assertExists()
+    }
+
+    checkpoint("Posts Page: Title correct") {
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4")
+          .assertTextEquals("Community Posts")
+    }
+
+    checkpoint("Posts Page: Subtitle visible") {
+      compose.onNodeWithText(OnBoardingStrings.POST_PAGE_SUBTITLE).assertExists()
+    }
+
+    checkpoint("Posts Page: Feature items visible") {
+      compose.onNodeWithText("Create threads about any board game topic").assertExists()
+      compose.onNodeWithText("Like and interact with community posts").assertExists()
+    }
+
+    checkpoint("Posts Page: End text visible") {
+      compose.onNodeWithText(OnBoardingStrings.POSTS_PAGE_END_TEXT).assertExists()
+    }
+
+    checkpoint("Posts Page: End button visible on last page") {
+      compose.onNodeWithTag("OnBoarding_EndButton").assertExists()
+    }
+
+    /* BACK NAVIGATION THROUGH ALL PAGES -------------------------------------- */
+    checkpoint("Back Nav: Back to sessions page") {
       backButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_1").assertTextEquals("Discussions")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertTextEquals("Game Sessions")
+    }
+
+    checkpoint("Back Nav: Back to map page") {
+      backButton().performClick()
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Explore Nearby")
+    }
+
+    checkpoint("Back Nav: Back to discussion page") {
+      backButton().performClick()
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertTextEquals("Discussions")
     }
 
     checkpoint("Back Nav: Discussion card still present") { discussionCard().assertExists() }
@@ -158,32 +259,32 @@ class OnBoardingScreenTest {
     checkpoint("Back Nav: Can navigate forward again") {
       nextButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_2").assertTextEquals("Explore")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Explore Nearby")
     }
 
-    checkpoint("Back Nav: Back to second page again") {
+    checkpoint("Back Nav: Back to discussion again") {
       backButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_1").assertExists()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
     }
 
     checkpoint("Back Nav: Back to first page") {
       backButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PageTitle}_0").assertTextEquals("Meeple Meet")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_0").assertTextEquals("Meeple Meet")
     }
 
     /* SKIP BUTTON VISIBILITY ------------------------------------------------- */
     checkpoint("Skip: Visible on first page") { skipButton().assertExists() }
 
     checkpoint("Skip: Visible on second page") {
-      compose.onNodeWithTag(OnBoardingTestTags.Pager).performTouchInput { swipeLeft() }
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
       skipButton().assertExists()
     }
 
     checkpoint("Skip: Visible on third page") {
-      compose.onNodeWithTag(OnBoardingTestTags.Pager).performTouchInput { swipeLeft() }
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
       skipButton().assertExists()
     }
@@ -210,7 +311,7 @@ class OnBoardingScreenTest {
     checkpoint("Card: Tap text visible") { compose.onNodeWithText("Tap").assertExists() }
 
     checkpoint("Card: Click triggers callback") {
-      compose.onNodeWithTag(OnBoardingTestTags.DiscussionPreviewCard).performClick()
+      compose.onNodeWithTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD).performClick()
       compose.waitForIdle()
       assert(clicked) { "Click callback should be triggered" }
     }
@@ -220,7 +321,7 @@ class OnBoardingScreenTest {
   fun test_discussion_page_and_dialog() = runBlocking {
     val testPage =
         OnBoardPage(
-            image = R.drawable.logo_discussion,
+            image = R.drawable.discussion_logo,
             title = "Discussions",
             description = "Join discussions")
     val hasInteracted = mutableStateOf(false)
@@ -279,7 +380,7 @@ class OnBoardingScreenTest {
       val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
       NavigationControls(
           pagerState = pagerState,
-          pages = pages,
+          pages = pages.take(3),
           hasInteractedWithDiscussion = true,
           onNavigate = { page ->
             if (page < 1) backNavigated = true
@@ -313,18 +414,18 @@ class OnBoardingScreenTest {
     var skipCalled = false
     val testPage =
         OnBoardPage(
-            image = R.drawable.logo_discussion,
+            image = R.drawable.discussion_logo,
             title = "Test Page",
             description = "Test description")
     val testPages =
         listOf(
             testPage,
             OnBoardPage(
-                image = R.drawable.logo_discussion,
+                image = R.drawable.discussion_logo,
                 title = "Second Page",
                 description = "Second page description"),
             OnBoardPage(
-                image = R.drawable.logo_discussion,
+                image = R.drawable.discussion_logo,
                 title = "Third Page",
                 description = "Third page description"))
 
