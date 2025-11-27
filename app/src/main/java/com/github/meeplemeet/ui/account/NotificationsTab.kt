@@ -311,8 +311,6 @@ fun NotificationsTab(
     viewModel: NotificationsViewModel = viewModel(),
     onBack: () -> Unit
 ) {
-  val scope = rememberCoroutineScope()
-
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
 
@@ -1134,8 +1132,8 @@ fun NotificationSheetContent(
 @Composable
 fun ExpandableText(
     text: String,
-    previewCharLimit: Int = NotificationsTabUi.ExpandableText.DEFAULT_PREVIEW_CHAR_LIMIT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    previewCharLimit: Int = NotificationsTabUi.ExpandableText.DEFAULT_PREVIEW_CHAR_LIMIT
 ) {
   var expanded by remember { mutableStateOf(false) }
 
