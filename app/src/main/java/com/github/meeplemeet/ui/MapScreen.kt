@@ -472,7 +472,8 @@ fun MapScreen(
                       .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
               properties =
-                  MapProperties(mapStyleOptions = mapStyleOptions, isMyLocationEnabled = true)) {
+                  MapProperties(
+                      mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted)) {
                 val clusters = viewModel.getClusters()
 
                 clusters
