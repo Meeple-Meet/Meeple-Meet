@@ -244,7 +244,7 @@ fun MeepleMeetApp(
       if (account != null) {
         CreateAccountScreen(
             account!!,
-            onCreate = { navigationActions.navigateOutOfAuthGraph() },
+            onCreate = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
             onBack = {
               viewModel.signOut()
               FirebaseProvider.auth.signOut()
@@ -259,7 +259,9 @@ fun MeepleMeetApp(
       DiscussionsOverviewScreen(
           account!!,
           navigationActions,
-          onClickAddDiscussion = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
+          onClickAddDiscussion = {
+            navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
+          },
           onSelectDiscussion = {
             discussionId = it.uid
             navigationActions.navigateTo(MeepleMeetScreen.Discussion)
@@ -478,25 +480,29 @@ fun MeepleMeetApp(
       val pages =
           listOf(
               OnBoardPage(
-                  image = R.drawable.logo_discussion,
-                  title = "Discussions",
+                  image = R.drawable.discussion_logo,
+                  title = "Welcome to MeepleMeet",
                   description = "Discover events and meet new people."),
               OnBoardPage(
-                  image = R.drawable.logo_discussion,
-                  title = "Create",
+                  image = R.drawable.discussion_logo,
+                  title = "Disucssions",
                   description = "Host your own gatherings easily."),
               OnBoardPage(
-                  image = R.drawable.logo_discussion,
+                  image = R.drawable.discussion_logo,
                   title = "Explore",
-                  description = "Find activities near you."))
+                  description = "Find activities near you."),
+              OnBoardPage(
+                  image = R.drawable.session_logo,
+                  title = "Sessions",
+                  description = "Organize gaming meetups"),
+              OnBoardPage(
+                  image = R.drawable.discussion_logo,
+                  title = "Posts",
+                  description = "Share with the community"))
       OnBoardingScreen(
           pages = pages,
-          onSkip = { /* navigate to SignIn */
-            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          },
-          onFinished = { /* navigate to SignIn */
-            navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          })
+          onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+          onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
     }
   }
 }
