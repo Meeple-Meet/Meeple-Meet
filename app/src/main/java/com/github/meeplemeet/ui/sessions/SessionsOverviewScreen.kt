@@ -230,7 +230,7 @@ private fun EmptySessionsListText(isHistory: Boolean = true) {
  * @param onClick Invoked when the card is tapped.
  */
 @Composable
-public fun SessionOverCard(
+fun SessionOverCard(
     session: Session,
     gameName: String,
     participantText: String,
@@ -304,7 +304,7 @@ public fun SessionOverCard(
 }
 
 @Composable
-public fun SessionCard(
+fun SessionCard(
     session: Session,
     viewModel: SessionOverviewViewModel,
     modifier: Modifier = Modifier,
