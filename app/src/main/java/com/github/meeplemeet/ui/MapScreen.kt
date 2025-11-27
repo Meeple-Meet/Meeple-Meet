@@ -284,6 +284,7 @@ fun MapScreen(
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
   var isCameraCentered by remember { mutableStateOf(false) }
+  var isQueryLaunched by remember { mutableStateOf(false) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
 
   // --- UI controls (filters & creation) ---
@@ -333,15 +334,16 @@ fun MapScreen(
     isLoadingLocation = false
   }
 
-  /**
-   * Starts the Firestore geo query once a valid user location is obtained. Runs only once to avoid
-   * restarting the query unnecessarily.
-   */
-  LaunchedEffect(userLocation) {
-    if (userLocation == null) return@LaunchedEffect
+  /** Starts Firestore geo query once location is resolved (real or fallback). */
+  LaunchedEffect(isLoadingLocation) {
+    if (isLoadingLocation || isQueryLaunched) return@LaunchedEffect
 
     viewModel.startGeoQuery(
-        center = userLocation!!, currentUserId = account.uid, radiusKm = DEFAULT_RADIUS_KM)
+        center = userLocation ?: DEFAULT_CENTER,
+        currentUserId = account.uid,
+        radiusKm = DEFAULT_RADIUS_KM)
+
+    isQueryLaunched = true
   }
 
   /** Updates the ViewModel filters whenever the set of included pin types changes. */
