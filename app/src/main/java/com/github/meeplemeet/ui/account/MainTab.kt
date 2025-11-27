@@ -530,50 +530,48 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
         var showErrors by remember { mutableStateOf(false) }
         val errorHandle = showErrors && errorMsg.isNotBlank() && handle != account.handle
 
-
-          FocusableInputField(
-              value = handle,
-              modifier =
-                  Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE)
-                      .padding(bottom = Dimensions.Padding.medium),
-              onValueChange = {
-                  handle = it
-                  if (it.isNotBlank()) {
-                      showErrors = true
-                      viewModel.checkHandleAvailable(it)
-                  } else {
-                      showErrors = false
-                  }
-              },
-              label = { Text(text = MainTabUi.PublicInfo.HANDLE_INPUT_FIELD) },
-              leadingIcon = {
-                  Text(
-                      text = MainTabUi.PublicInfo.HANDLE_PREFIX,
-                      style = MaterialTheme.typography.bodyLarge,
-                      color = AppColors.textIcons,
-                      modifier = Modifier.padding(start = Dimensions.Padding.medium)
-                  )
-              },
-              singleLine = true,
-              isError = errorHandle,
-              onFocusChanged = { focused ->
-                  if (!focused && !errorHandle) viewModel.setAccountHandle(
-                      account,
-                      newHandle = handle
-                  )
-              })
-
-          if (errorHandle) {
+        FocusableInputField(
+            value = handle,
+            modifier =
+                Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE)
+                    .padding(bottom = Dimensions.Padding.medium),
+            onValueChange = {
+              handle = it
+              if (it.isNotBlank()) {
+                showErrors = true
+                viewModel.checkHandleAvailable(it)
+              } else {
+                showErrors = false
+              }
+            },
+            label = { Text(text = MainTabUi.PublicInfo.HANDLE_INPUT_FIELD) },
+            leadingIcon = {
               Text(
-                  text = errorMsg,
-                  color = AppColors.negative,
-                  style = MaterialTheme.typography.bodySmall,
-                  textAlign = TextAlign.Center,
-                  modifier =
-                      Modifier.padding(top = Dimensions.Padding.small, start = Dimensions.Padding.large, end = Dimensions.Padding.large, bottom = Dimensions.Padding.small)
-                          .testTag(PublicInfoTestTags.ERROR_HANDLE)
-              )
-      }
+                  text = MainTabUi.PublicInfo.HANDLE_PREFIX,
+                  style = MaterialTheme.typography.bodyLarge,
+                  color = AppColors.textIcons,
+                  modifier = Modifier.padding(start = Dimensions.Padding.medium))
+            },
+            singleLine = true,
+            isError = errorHandle,
+            onFocusChanged = { focused ->
+              if (!focused && !errorHandle) viewModel.setAccountHandle(account, newHandle = handle)
+            })
+
+        if (errorHandle) {
+          Text(
+              text = errorMsg,
+              color = AppColors.negative,
+              style = MaterialTheme.typography.bodySmall,
+              textAlign = TextAlign.Center,
+              modifier =
+                  Modifier.padding(
+                          top = Dimensions.Padding.small,
+                          start = Dimensions.Padding.large,
+                          end = Dimensions.Padding.large,
+                          bottom = Dimensions.Padding.small)
+                      .testTag(PublicInfoTestTags.ERROR_HANDLE))
+        }
 
         // DESCRIPTION
         FocusableInputField(
