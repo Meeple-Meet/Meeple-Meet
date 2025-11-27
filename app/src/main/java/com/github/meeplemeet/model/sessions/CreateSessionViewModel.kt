@@ -4,7 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.account.NotificationSettings
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.shared.SearchViewModel
 import com.github.meeplemeet.model.shared.game.Game
@@ -17,6 +20,7 @@ import kotlinx.coroutines.launch
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
 
 open class CreateSessionViewModel(
+    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
     gameRepository: GameRepository = RepositoryProvider.games
 ) : SearchViewModel(gameRepository), AccountViewModel {
@@ -38,6 +42,11 @@ open class CreateSessionViewModel(
    * Requires admin privileges (requester must be a discussion participant). Updates the discussion
    * state flow upon successful creation.
    *
+   * This method respects the notification settings of each participant:
+   * - Participants with EVERYONE setting are added directly to the session
+   * - Participants with FRIENDS_ONLY setting are added only if they are friends with the requester
+   * - Participants who don't meet these criteria receive a join notification instead
+   *
    * @param requester The account requesting to create the session
    * @param discussion The discussion to add the session to
    * @param name The name of the session
@@ -58,12 +67,22 @@ open class CreateSessionViewModel(
   ) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    val participantsList = participants.toList().map { it.uid }
-    if (participantsList.isEmpty()) throw IllegalArgumentException("No Participants")
-
     viewModelScope.launch {
+      // Add all the participants that accept friend request from everyone or only there friends
+      val participantsToAdd =
+          participants.filter { account ->
+            account.notificationSettings == NotificationSettings.EVERYONE ||
+                account.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
+                    requester.relationships[account.uid] == RelationshipStatus.FRIEND
+          }
+
       sessionRepository.updateSession(
-          discussion.uid, name, gameId, date, location, participantsList)
+          discussion.uid, name, gameId, date, location, participantsToAdd.map { it.uid })
+
+      // Send a join request to the rest
+      participants
+          .filterNot { participantsToAdd.contains(it) }
+          .forEach { accountRepository.sendJoinSessionNotification(it.uid, discussion) }
     }
   }
 

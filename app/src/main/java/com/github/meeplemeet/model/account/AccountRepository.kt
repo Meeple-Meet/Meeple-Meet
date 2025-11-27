@@ -246,6 +246,26 @@ class AccountRepository : FirestoreRepository("accounts") {
   }
 
   /**
+   * Updates the notification privacy settings of an account.
+   *
+   * Controls who can send notifications (discussion invitations, session invitations) to this
+   * account. This setting determines whether the user accepts notifications from everyone, only
+   * friends, or no one.
+   *
+   * @param id The account ID to update
+   * @param notificationSettings The new notification privacy setting
+   */
+  suspend fun setAccountNotificationSettings(
+      id: String,
+      notificationSettings: NotificationSettings
+  ) {
+    collection
+        .document(id)
+        .update(AccountNoUid::notificationSettings.name, notificationSettings)
+        .await()
+  }
+
+  /**
    * Updates the description of an account.
    *
    * @param id Id of the account to update

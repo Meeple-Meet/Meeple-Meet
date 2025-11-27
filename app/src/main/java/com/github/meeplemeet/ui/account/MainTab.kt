@@ -67,6 +67,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.FocusableInputField
@@ -269,12 +270,13 @@ object MainTabUi {
 fun MainTab(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
-    onFriendsClick: (account: Account) -> Unit,
-    onNotificationClick: (account: Account) -> Unit,
+    onFriendsClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit
 ) {
-
+  var pref by
+      remember(account.notificationSettings) { mutableStateOf(account.notificationSettings) }
   val focusManager = LocalFocusManager.current
   Column(
       modifier =
@@ -284,7 +286,6 @@ fun MainTab(
               .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge),
       horizontalAlignment = Alignment.CenterHorizontally) {
-        var pref by remember { mutableStateOf(NotificationPreference.EVERYONE) }
         var showDelDialog by remember { mutableStateOf(false) }
 
         PublicInfo(
@@ -296,7 +297,9 @@ fun MainTab(
 
         PrivateInfo(account = account, viewModel = viewModel)
 
-        NotificationSettingsSection(preference = pref, onPreferenceChange = { pref = it })
+        NotificationSettingsSection(
+            preference = pref,
+            onPreferenceChange = { viewModel.setAccountNotificationSettings(account, it) })
 
         Button(
             onClick = { showDelDialog = true },
@@ -341,8 +344,8 @@ fun MainTab(
 fun PublicInfo(
     account: Account,
     viewModel: ProfileScreenViewModel,
-    onFriendsClick: (account: Account) -> Unit,
-    onNotificationClick: (account: Account) -> Unit,
+    onFriendsClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
   Box(
@@ -388,8 +391,8 @@ fun PublicInfo(
 fun PublicInfoActions(
     account: Account,
     viewModel: ProfileScreenViewModel,
-    onFriendsClick: (Account) -> Unit,
-    onNotificationClick: (Account) -> Unit,
+    onFriendsClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
   Column(
@@ -403,7 +406,7 @@ fun PublicInfoActions(
                   modifier =
                       Modifier.size(MainTabUi.ACTION_BUTTON_SIZE)
                           .testTag(PublicInfoTestTags.ACTION_FRIENDS),
-                  onClick = { onFriendsClick(account) },
+                  onClick = onFriendsClick,
                   shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                   contentPadding = PaddingValues(0.dp),
                   colors =
@@ -421,7 +424,7 @@ fun PublicInfoActions(
                 Button(
                     modifier =
                         Modifier.matchParentSize().testTag(PublicInfoTestTags.ACTION_NOTIFICATIONS),
-                    onClick = { onNotificationClick(account) },
+                    onClick = onNotificationClick,
                     shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
                     contentPadding = PaddingValues(0.dp),
                     colors =
@@ -1165,11 +1168,6 @@ private fun RemoveCatalogDialog(
 //////////////////////////////////////////////////////////////////////////////////////
 // NOTIFICATION SETTINGS SECTION
 /////////////////////////////////////////////////////////////////////////////////////
-enum class NotificationPreference {
-  EVERYONE,
-  FRIENDS_ONLY,
-  NO_ONE
-}
 
 /**
  * Handles the notification settings section
@@ -1179,8 +1177,8 @@ enum class NotificationPreference {
  */
 @Composable
 fun NotificationSettingsSection(
-    preference: NotificationPreference,
-    onPreferenceChange: (NotificationPreference) -> Unit
+    preference: NotificationSettings,
+    onPreferenceChange: (NotificationSettings) -> Unit
 ) {
   Column(
       modifier =
@@ -1198,20 +1196,20 @@ fun NotificationSettingsSection(
         NotificationOptionRow(
             modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_EVERYONE),
             label = MainTabUi.NotificationsSection.OPT_EVERY,
-            selected = preference == NotificationPreference.EVERYONE,
-            onClick = { onPreferenceChange(NotificationPreference.EVERYONE) })
+            selected = preference == NotificationSettings.EVERYONE,
+            onClick = { onPreferenceChange(NotificationSettings.EVERYONE) })
 
         NotificationOptionRow(
             modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_FRIENDS),
             label = MainTabUi.NotificationsSection.OPT_FRIENDS,
-            selected = preference == NotificationPreference.FRIENDS_ONLY,
-            onClick = { onPreferenceChange(NotificationPreference.FRIENDS_ONLY) })
+            selected = preference == NotificationSettings.FRIENDS_ONLY,
+            onClick = { onPreferenceChange(NotificationSettings.FRIENDS_ONLY) })
 
         NotificationOptionRow(
             modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_NONE),
             label = MainTabUi.NotificationsSection.OPT_NONE,
-            selected = preference == NotificationPreference.NO_ONE,
-            onClick = { onPreferenceChange(NotificationPreference.NO_ONE) })
+            selected = preference == NotificationSettings.NO_ONE,
+            onClick = { onPreferenceChange(NotificationSettings.NO_ONE) })
       }
 }
 

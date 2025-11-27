@@ -406,8 +406,11 @@ fun MeepleMeetApp(
               signedOut = true
             },
             onDelete = {
+              // Sign out the user before deleting his account, avoiding an infinite loading screen
               FirebaseProvider.auth.signOut()
-            }) // Sign out the user before deleting his account, avoiding an infinite loading screen
+            },
+            onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
+            onNotificationClick = {})
       } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
     }
 

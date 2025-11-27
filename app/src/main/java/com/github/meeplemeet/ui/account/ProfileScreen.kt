@@ -44,7 +44,9 @@ fun ProfileScreen(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
     onSignOutOrDel: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onFriendClick: () -> Unit,
+    onNotificationClick: () -> Unit,
 ) {
   // Refresh email verification status when the profile is shown
   LaunchedEffect(account.uid) { viewModel.refreshEmailVerificationStatus() }
@@ -63,8 +65,8 @@ fun ProfileScreen(
               MainTab(
                   viewModel = viewModel,
                   account = account,
-                  onFriendsClick = {}, // define when implemented
-                  onNotificationClick = {}, // define when implemented
+                  onFriendsClick = onFriendClick, // define when implemented
+                  onNotificationClick = onNotificationClick, // define when implemented
                   onSignOutOrDel = onSignOutOrDel,
                   onDelete = onDelete)
             }
