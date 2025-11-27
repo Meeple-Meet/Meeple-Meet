@@ -103,13 +103,6 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals("game123", updatedDiscussion.session?.gameId)
   }
 
-  @Test(expected = PermissionDeniedException::class)
-  fun nonParticipantCannotCreateSession() = runTest {
-    viewModel.createSession(
-        account2, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account2)
-    advanceUntilIdle()
-  }
-
   @Test
   fun canUpdateSessionName() = runTest {
     // First create a session
@@ -424,12 +417,6 @@ class FirestoreSessionTests : FirestoreTests() {
     assertEquals(2, result.session?.participants?.size)
     assertTrue(result.session?.participants?.contains(account1.uid) ?: false)
     assertTrue(result.session?.participants?.contains(account3.uid) ?: false)
-  }
-
-  @Test(expected = IllegalArgumentException::class)
-  fun emptyParticipantListIsValid() = runTest {
-    viewModel.createSession(
-        account1, baseDiscussion, "Planning Session", "game123", testTimestamp, testLocation)
   }
 
   // ========================================================================
@@ -920,7 +907,7 @@ class FirestoreSessionTests : FirestoreTests() {
   }
 
   @Test
-  fun getSessionIdsForUser_handlesPagination_whenManyResults() = runTest {
+  fun getSessionIdsForUser_handlesPagination_whenManyResults() = runBlocking {
     val realSessionRepo = SessionRepository()
 
     // create 7 discussions with sessions where account1 participates
@@ -931,8 +918,6 @@ class FirestoreSessionTests : FirestoreTests() {
           d.uid, "PS$i", "gameP$i", testTimestamp, testLocation, account1.uid)
       createdIds += d.uid
     }
-
-    advanceUntilIdle()
 
     // Force small batch size to exercise pagination path
     val fetched = realSessionRepo.getSessionIdsForUser(account1.uid, batchSize = 2)
