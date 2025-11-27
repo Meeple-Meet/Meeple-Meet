@@ -43,7 +43,6 @@ fun ProfileScreen(
     navigation: NavigationActions,
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
-    onClickNotifications: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit,
     onFriendClick: () -> Unit,
@@ -66,8 +65,8 @@ fun ProfileScreen(
               MainTab(
                   viewModel = viewModel,
                   account = account,
-                  onFriendsClick = onFriendClick, // define when implemented
-                  onNotificationClick = onNotificationClick, // define when implemented
+                  onFriendsClick = onFriendClick,
+                  onNotificationClick = onNotificationClick,
                   onSignOutOrDel = onSignOutOrDel,
                   onDelete = onDelete)
             }
