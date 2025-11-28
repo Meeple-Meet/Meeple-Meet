@@ -432,10 +432,10 @@ class DiscussionRepository(
    * @see sendMessageToDiscussion for creating new messages
    */
   suspend fun editMessage(
+      discussion: Discussion,
+      sender: Account,
       messageId: String,
       newMessageContent: String,
-      discussion: Discussion,
-      sender: Account
   ) {
     val message = getLastMessage(discussion.uid)
     val isLast =
@@ -476,7 +476,7 @@ class DiscussionRepository(
    * @see editMessage for modifying message content instead of deleting
    * @see messagesCollection for accessing the messages subcollection
    */
-  suspend fun deleteMessage(messageId: String, discussionId: String) {
+  suspend fun deleteMessage(discussionId: String, messageId: String) {
     messagesCollection(discussionId).document(messageId).delete().await()
   }
 

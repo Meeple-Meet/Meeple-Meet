@@ -7,6 +7,7 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.images.ImageRepository
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 const val SUGGESTIONS_LIMIT = 30
+const val EDIT_MESSAGE_MAX_THRESHOLD = 2 * 60 * 60 * 1000L
 
 /**
  * ViewModel for managing discussion messaging and real-time updates.
@@ -31,7 +33,7 @@ const val SUGGESTIONS_LIMIT = 30
  * - **Unread tracking**: Automatic unread count management
  *
  * ## Photo Messaging Flow
- * 1. User selects/captures photo → cached via [ImageFileUtils]
+ * 1. User selects/captures photo → cached via [com.github.meeplemeet.model.images.ImageFileUtils]
  * 2. [sendMessageWithPhoto] uploads to Firebase Storage via [ImageRepository]
  * 3. Creates message with photoUrl via [DiscussionRepository]
  * 4. All participants' previews are updated with "📷 Photo" text
@@ -59,9 +61,81 @@ class DiscussionViewModel(
     if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
 
     viewModelScope.launch {
-      readDiscussionMessages(sender, discussion)
       discussionRepository.sendMessageToDiscussion(discussion, sender, cleaned)
     }
+  }
+
+  /**
+   * Edit a message's content in a discussion.
+   *
+   * Validates that the sender is the original message author, checks the time threshold, trims
+   * whitespace, and updates the message content asynchronously. The operation is executed in
+   * viewModelScope.
+   *
+   * ## Validation
+   * - Sender must be the original message author
+   * - Message must be within the edit time threshold (2 hours)
+   * - Content cannot be blank (after trimming)
+   * - Trailing whitespace is automatically removed
+   *
+   * ## Time Threshold
+   * Messages can only be edited within [EDIT_MESSAGE_MAX_THRESHOLD] (2 hours) of their creation.
+   * This prevents editing old messages that may have already been read and acted upon by other
+   * participants.
+   *
+   * ## Behavior
+   * - **Last message**: Updates message and all participants' previews
+   * - **Earlier message**: Updates message content and marks as edited
+   *
+   * @param discussion The discussion containing the message.
+   * @param message The message to edit (must belong to sender).
+   * @param sender The account editing the message.
+   * @param newContent The new text content for the message.
+   * @throws IllegalArgumentException if sender is not the message author or content is blank
+   * @see DiscussionRepository.editMessage for detailed behavior
+   * @see EDIT_MESSAGE_MAX_THRESHOLD for the time limit
+   */
+  fun editMessage(discussion: Discussion, message: Message, sender: Account, newContent: String) {
+    if (message.senderId != sender.uid)
+        throw IllegalArgumentException("Can not edit someone else's message")
+
+    if (Timestamp.now().toDate().time >
+        message.createdAt.toDate().time + EDIT_MESSAGE_MAX_THRESHOLD) {
+      // condition met
+    }
+
+    val cleaned = newContent.trimEnd()
+    if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
+
+    viewModelScope.launch {
+      discussionRepository.editMessage(discussion, sender, message.uid, cleaned)
+    }
+  }
+
+  /**
+   * Delete a message from a discussion.
+   *
+   * Validates that the sender is the original message author and removes the message document
+   * asynchronously. The operation is executed in viewModelScope.
+   *
+   * ## Important Notes
+   * - Only the message author can delete their own messages
+   * - If the deleted message is the most recent one, the preview will still show its content until
+   *   a new message is sent
+   * - The message document is permanently deleted and cannot be recovered
+   * - Photo attachments in Firebase Storage are NOT automatically deleted
+   *
+   * @param discussion The discussion containing the message.
+   * @param message The message to delete (must belong to sender).
+   * @param sender The account deleting the message.
+   * @throws IllegalArgumentException if sender is not the message author
+   * @see DiscussionRepository.deleteMessage for low-level deletion
+   */
+  fun deleteMessage(discussion: Discussion, message: Message, sender: Account) {
+    if (message.senderId != sender.uid)
+        throw IllegalArgumentException("Can not delete someone else's message")
+
+    viewModelScope.launch { discussionRepository.deleteMessage(discussion.uid, message.uid) }
   }
 
   /**
@@ -94,8 +168,10 @@ class DiscussionViewModel(
    * @param localPath Absolute file path to the local image (typically in app cache directory).
    * @throws IllegalArgumentException if localPath is blank
    * @throws IllegalStateException if photo upload fails to return a download URL
-   * @see ImageFileUtils.cacheUriToFile for preparing gallery photos
-   * @see ImageFileUtils.saveBitmapToCache for preparing camera photos
+   * @see com.github.meeplemeet.model.images.ImageFileUtils.cacheUriToFile for preparing gallery
+   *   photos
+   * @see com.github.meeplemeet.model.images.ImageFileUtils.saveBitmapToCache for preparing camera
+   *   photos
    * @see ImageRepository.saveDiscussionPhotoMessages for photo upload
    * @see DiscussionRepository.sendPhotoMessageToDiscussion for message creation
    */
