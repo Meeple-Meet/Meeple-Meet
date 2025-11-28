@@ -29,10 +29,10 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
  *   have been loaded and cached for offline viewing.
  */
 data class OfflineMode(
-    val accounts: Map<String, Pair<Account, Map<String, Any>>>,
-    val discussions: Map<String, Pair<Discussion, List<Message>>>,
-    val posts: Map<String, Pair<Post, Boolean>>,
-    val shopsToAdd: Map<String, Pair<Shop, Map<String, Any>>>,
-    val spaceRentersToAdd: Map<String, Pair<SpaceRenter, Map<String, Any>>>,
-    val loadedPins: Map<String, GeoPinWithLocation>
+    val accounts: Map<String, Pair<Account, Map<String, Any>>> = emptyMap(),
+    val discussions: Map<String, Pair<Discussion, List<Message>>> = emptyMap(),
+    val posts: Map<String, Pair<Post, Boolean>> = emptyMap(),
+    val shopsToAdd: Map<String, Pair<Shop, Map<String, Any>>> = emptyMap(),
+    val spaceRentersToAdd: Map<String, Pair<SpaceRenter, Map<String, Any>>> = emptyMap(),
+    val loadedPins: Map<String, GeoPinWithLocation> = emptyMap(),
 )
