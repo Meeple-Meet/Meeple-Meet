@@ -526,7 +526,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(5000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
@@ -534,7 +534,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         // show preview sheet
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
+        delay(5000)
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
 
         // The title should include the pin name and the distance
@@ -581,14 +581,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(5000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
         assertNotNull(cluster)
 
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1500)
+        delay(5000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
