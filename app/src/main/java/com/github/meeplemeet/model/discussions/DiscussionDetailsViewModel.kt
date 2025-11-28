@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.CreateAccountViewModel
+import com.github.meeplemeet.model.account.NotificationSettings
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.images.ImageRepository
 import kotlinx.coroutines.launch
 
@@ -19,11 +22,12 @@ private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform t
  * participants, and handling admin permissions. It extends [CreateAccountViewModel] to provide
  * account management functionality.
  *
- * @property repository Repository for discussion operations
+ * @property discussionRepository Repository for discussion operations
  * @property imageRepository Repository for image operations
  */
 class DiscussionDetailsViewModel(
-    private val repository: DiscussionRepository = RepositoryProvider.discussions,
+    private val accountRepository: AccountRepository = RepositoryProvider.accounts,
+    private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
     private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : CreateAccountViewModel() {
   /**
@@ -56,7 +60,7 @@ class DiscussionDetailsViewModel(
 
     viewModelScope.launch {
       /*_discussion.value =*/
-      repository.setDiscussionName(
+      discussionRepository.setDiscussionName(
           discussion.uid,
           name.ifBlank { "Discussion with: ${discussion.participants.joinToString(", ")}" })
     }
@@ -78,7 +82,9 @@ class DiscussionDetailsViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    viewModelScope.launch { repository.setDiscussionDescription(discussion.uid, description) }
+    viewModelScope.launch {
+      discussionRepository.setDiscussionDescription(discussion.uid, description)
+    }
   }
 
   /**
@@ -97,7 +103,7 @@ class DiscussionDetailsViewModel(
     if (discussion.creatorId != changeRequester.uid)
         throw PermissionDeniedException("Only discussion owner can perform this operation")
 
-    viewModelScope.launch { repository.deleteDiscussion(context, discussion) }
+    viewModelScope.launch { discussionRepository.deleteDiscussion(context, discussion) }
   }
 
   /**
@@ -115,7 +121,13 @@ class DiscussionDetailsViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    viewModelScope.launch { repository.addUserToDiscussion(discussion.uid, user.uid) }
+    viewModelScope.launch {
+      if (user.notificationSettings == NotificationSettings.EVERYONE ||
+          (user.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
+              changeRequester.relationships[user.uid] == RelationshipStatus.FRIEND))
+          discussionRepository.addUserToDiscussion(discussion.uid, user.uid)
+      else accountRepository.sendJoinDiscussionNotification(user.uid, discussion)
+    }
   }
 
   /**
@@ -137,7 +149,8 @@ class DiscussionDetailsViewModel(
         throw PermissionDeniedException("Cannot remove the owner of this discussion")
 
     viewModelScope.launch {
-      repository.removeUserFromDiscussion(discussion, user.uid, discussion.creatorId == user.uid)
+      discussionRepository.removeUserFromDiscussion(
+          discussion, user.uid, discussion.creatorId == user.uid)
     }
   }
 
@@ -153,7 +166,7 @@ class DiscussionDetailsViewModel(
     if (!isAdmin(changeRequester, discussion))
         throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    viewModelScope.launch { repository.addAdminToDiscussion(discussion, admin.uid) }
+    viewModelScope.launch { discussionRepository.addAdminToDiscussion(discussion, admin.uid) }
   }
 
   /**
@@ -173,7 +186,7 @@ class DiscussionDetailsViewModel(
     if (discussion.creatorId == admin.uid)
         throw PermissionDeniedException("Cannot demote the owner of this discussion")
 
-    viewModelScope.launch { repository.removeAdminFromDiscussion(discussion, admin.uid) }
+    viewModelScope.launch { discussionRepository.removeAdminFromDiscussion(discussion, admin.uid) }
   }
 
   /**
@@ -227,7 +240,7 @@ class DiscussionDetailsViewModel(
     viewModelScope.launch {
       val downloadUrl =
           imageRepository.saveDiscussionProfilePicture(context, discussion.uid, localPath)
-      repository.setDiscussionProfilePictureUrl(discussion.uid, downloadUrl)
+      discussionRepository.setDiscussionProfilePictureUrl(discussion.uid, downloadUrl)
     }
   }
 }

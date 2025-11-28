@@ -274,6 +274,56 @@ class AccountRepository :
   }
 
   /**
+   * Updates the notification privacy settings of an account.
+   *
+   * Controls who can send notifications (discussion invitations, session invitations) to this
+   * account. This setting determines whether the user accepts notifications from everyone, only
+   * friends, or no one.
+   *
+   * @param id The account ID to update
+   * @param notificationSettings The new notification privacy setting
+   */
+  suspend fun setAccountNotificationSettings(
+      id: String,
+      notificationSettings: NotificationSettings
+  ) {
+    collection
+        .document(id)
+        .update(AccountNoUid::notificationSettings.name, notificationSettings)
+        .await()
+  }
+
+  /**
+   * Updates the description of an account.
+   *
+   * @param id Id of the account to update
+   * @param description The new description value
+   */
+  suspend fun setAccountDescription(id: String, description: String) {
+    collection.document(id).update(Account::description.name, description).await()
+  }
+
+  /**
+   * Updates the photo URL of an account.
+   *
+   * @param id Id of the account to update
+   * @param photoUrl The new photo URL value
+   */
+  suspend fun setAccountPhotoUrl(id: String, photoUrl: String) {
+    collection.document(id).update(Account::photoUrl.name, photoUrl).await()
+  }
+
+  /**
+   * Updates the email of an account.
+   *
+   * @param id Id of the account to update
+   * @param email The new email value
+   */
+  suspend fun setAccountEmail(id: String, email: String) {
+    collection.document(id).update(Account::email.name, email).await()
+  }
+
+  /**
    * Deletes an account document from Firestore.
    *
    * @param id The account ID to delete
@@ -538,6 +588,21 @@ class AccountRepository :
    */
   suspend fun sendJoinSessionNotification(receiverId: String, discussion: Discussion) {
     sendNotification(receiverId, discussion.uid, NotificationType.JOIN_SESSION)
+  }
+
+  /**
+   * Marks a notification as executed.
+   *
+   * Updates the executed status of a notification in the user's notifications subcollection.
+   *
+   * @param accountId The ID of the account that owns the notification
+   * @param notificationId The ID of the notification to mark as read
+   */
+  suspend fun executeNotification(accountId: String, notificationId: String) {
+    notifications(accountId)
+        .document(notificationId)
+        .update(NotificationNoUid::executed.name, true)
+        .await()
   }
 
   /**

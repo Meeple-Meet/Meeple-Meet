@@ -260,6 +260,50 @@ class FirestoreRepositoryTests : FirestoreTests() {
     assertEquals(account.uid, updated.uid)
   }
 
+  @Test
+  fun setAccountRoleUpdatesRoles() = runBlocking {
+    accountRepository.setAccountRole(testAccount1.uid, isShopOwner = true, isSpaceRenter = true)
+    val updated = accountRepository.getAccount(testAccount1.uid)
+    assertTrue(updated.shopOwner)
+    assertTrue(updated.spaceRenter)
+
+    accountRepository.setAccountRole(testAccount1.uid, isShopOwner = false, isSpaceRenter = null)
+    val updated2 = accountRepository.getAccount(testAccount1.uid)
+    assertFalse(updated2.shopOwner)
+    assertTrue(updated2.spaceRenter)
+  }
+
+  @Test
+  fun setAccountDescriptionUpdatesDescription() = runBlocking {
+    accountRepository.setAccountDescription(testAccount1.uid, "New description")
+    val updated = accountRepository.getAccount(testAccount1.uid)
+    assertEquals("New description", updated.description)
+  }
+
+  @Test
+  fun setAccountPhotoUrlUpdatesPhotoUrl() = runBlocking {
+    accountRepository.setAccountPhotoUrl(testAccount1.uid, "https://example.com/photo.jpg")
+    val updated = accountRepository.getAccount(testAccount1.uid)
+    assertEquals("https://example.com/photo.jpg", updated.photoUrl)
+  }
+
+  @Test
+  fun setAccountEmailUpdatesEmail() = runBlocking {
+    accountRepository.setAccountEmail(testAccount1.uid, "newemail@example.com")
+    val updated = accountRepository.getAccount(testAccount1.uid)
+    assertEquals("newemail@example.com", updated.email)
+  }
+
+  @Test
+  fun setAccountNotificationSettingsUpdatesSettings() = runBlocking {
+    accountRepository.setAccountNotificationSettings(
+        testAccount1.uid, com.github.meeplemeet.model.account.NotificationSettings.FRIENDS_ONLY)
+    val updated = accountRepository.getAccount(testAccount1.uid)
+    assertEquals(
+        com.github.meeplemeet.model.account.NotificationSettings.FRIENDS_ONLY,
+        updated.notificationSettings)
+  }
+
   @Test(expected = AccountNotFoundException::class)
   fun deleteAccountRemovesAccount() = runTest {
     val account =

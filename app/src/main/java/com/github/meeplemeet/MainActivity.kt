@@ -47,6 +47,8 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
 import com.github.meeplemeet.ui.account.CreateAccountScreen
+import com.github.meeplemeet.ui.account.FriendsScreen
+import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.ProfileScreen
 import com.github.meeplemeet.ui.auth.OnBoardPage
 import com.github.meeplemeet.ui.auth.OnBoardingScreen
@@ -402,11 +404,25 @@ fun MeepleMeetApp(
         ProfileScreen(
             navigation = navigationActions,
             account = account!!,
-            onSignOut = {
+            onSignOutOrDel = {
               navigationActions.navigateTo(MeepleMeetScreen.SignIn)
               signedOut = true
+            },
+            onDelete = {
+              // Sign out the user before deleting his account, avoiding an infinite loading screen
+              FirebaseProvider.auth.signOut()
+            },
+            onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
+            onNotificationClick = {
+              navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
             })
       } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+    }
+
+    composable(MeepleMeetScreen.NotificationsTab.name) {
+      account?.let {
+        NotificationsTab(account = account!!, onBack = { navigationActions.goBack() })
+      }
     }
 
     composable(MeepleMeetScreen.ShopDetails.name) {
@@ -504,6 +520,14 @@ fun MeepleMeetApp(
           pages = pages,
           onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
           onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
+    }
+    composable(MeepleMeetScreen.Friends.name) {
+      account?.let { currentAccount ->
+        FriendsScreen(
+            account = currentAccount,
+            onBack = { navigationActions.goBack() },
+        )
+      } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
     }
   }
 }

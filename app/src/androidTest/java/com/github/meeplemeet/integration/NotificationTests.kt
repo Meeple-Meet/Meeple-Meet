@@ -2,7 +2,7 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationType
-import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
@@ -36,7 +36,7 @@ class NotificationTests : FirestoreTests() {
   private lateinit var alice: Account
   private lateinit var bob: Account
   private lateinit var charlie: Account
-  private lateinit var viewModel: ProfileScreenViewModel
+  private lateinit var viewModel: NotificationsViewModel
 
   @Before
   fun setup() {
@@ -54,7 +54,7 @@ class NotificationTests : FirestoreTests() {
       // Clean up any existing relationships and notifications from previous tests
       cleanupRelationshipsAndNotifications()
     }
-    viewModel = ProfileScreenViewModel(accountRepository)
+    viewModel = NotificationsViewModel(accountRepository)
   }
 
   /**

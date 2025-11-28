@@ -240,8 +240,7 @@ fun SessionDetailsScreen(
                     name = form.title,
                     gameId = gameUIState.fetchedGame?.uid ?: session.gameId,
                     date = toTimestamp(form.date, form.time),
-                    location = locationUi.selectedLocation ?: session.location,
-                    newParticipantList = form.participants.ifEmpty { emptyList() })
+                    location = locationUi.selectedLocation ?: session.location)
               }
               onBack()
             },
@@ -263,17 +262,8 @@ fun SessionDetailsScreen(
               horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
                 OutlinedButton(
                     onClick = {
-                      val updatedParticipants =
-                          form.participants.filterNot { it.uid == account.uid }
-                      discussion.let { disc ->
-                        if (updatedParticipants.isNotEmpty())
-                            viewModel.updateSession(
-                                requester = account,
-                                discussion = disc,
-                                newParticipantList = updatedParticipants)
-                        else viewModel.deleteSession(account, disc)
-                        onBack()
-                      }
+                      viewModel.removeUserFromSession(discussion, account, account)
+                      onBack()
                     },
                     shape = CircleShape,
                     border = BorderStroke(Dimensions.DividerThickness.medium, AppColors.negative),
@@ -331,14 +321,9 @@ fun SessionDetailsScreen(
                   game = game,
                   onRemoveParticipant = { p ->
                     form = form.copy(participants = form.participants.filterNot { it.uid == p.uid })
-                    viewModel.updateSession(
-                        account, discussion, newParticipantList = form.participants)
+                    viewModel.removeUserFromSession(discussion, account, p)
                   },
-                  onAddParticipant = { p ->
-                    form = form.copy(participants = form.participants + p)
-                    viewModel.updateSession(
-                        account, discussion, newParticipantList = form.participants)
-                  },
+                  onAddParticipant = { viewModel.addUserToSession(discussion, account, it) },
                   discussion = discussion,
                   viewModel = viewModel,
                   onFocusChanged = { isInputFocused = it })
