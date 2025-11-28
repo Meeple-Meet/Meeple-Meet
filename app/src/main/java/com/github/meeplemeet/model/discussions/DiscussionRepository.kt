@@ -380,7 +380,9 @@ class DiscussionRepository(
     val messageNoUid = MessageNoUid(sender.uid, content, timestamp)
 
     // Add message to subcollection
-    val messageRef = messagesCollection(discussion.uid).document(editUid)
+    val messageRef =
+        if (editUid.isEmpty()) messagesCollection(discussion.uid).document()
+        else messagesCollection(discussion.uid).document(editUid)
     batch.set(messageRef, messageNoUid)
 
     // Update previews for all participants
