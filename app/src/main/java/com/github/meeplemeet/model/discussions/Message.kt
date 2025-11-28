@@ -64,7 +64,8 @@ data class Message(
     val content: String,
     val createdAt: Timestamp,
     val poll: Poll? = null,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    val edited: Boolean = false,
 ) {
   init {
     require(poll == null || photoUrl == null) { "A message cannot contain both a poll and a photo" }
@@ -89,7 +90,8 @@ data class MessageNoUid(
     val content: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val poll: Poll? = null,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    val edited: Boolean = false,
 ) {
   init {
     require(poll == null || photoUrl == null) { "A message cannot contain both a poll and a photo" }
@@ -107,7 +109,12 @@ data class MessageNoUid(
  */
 fun toNoUid(message: Message): MessageNoUid =
     MessageNoUid(
-        message.senderId, message.content, message.createdAt, message.poll, message.photoUrl)
+        message.senderId,
+        message.content,
+        message.createdAt,
+        message.poll,
+        message.photoUrl,
+        message.edited)
 
 /**
  * Reconstructs a full [Message] object from its Firestore representation.
@@ -126,4 +133,5 @@ fun fromNoUid(id: String, messageNoUid: MessageNoUid): Message =
         messageNoUid.content,
         messageNoUid.createdAt,
         messageNoUid.poll,
-        messageNoUid.photoUrl)
+        messageNoUid.photoUrl,
+        messageNoUid.edited)
