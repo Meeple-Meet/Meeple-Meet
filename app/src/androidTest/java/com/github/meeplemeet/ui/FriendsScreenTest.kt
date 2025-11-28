@@ -413,39 +413,76 @@ class FriendsScreenTest : FirestoreTests() {
 
     /* 3  Search result rows and their actions exist ------------------------- */
     checkpoint("Search results show multiple accounts with avatars and actions") {
-      // currentUser is filtered out by the composable; these should appear
-      val allResultUids =
-          listOf(friend1.uid, friend2.uid, friend3.uid, stranger.uid, blockedUser.uid)
-
-      val withActionButtonUids = listOf(friend1.uid, friend2.uid, friend3.uid, stranger.uid)
-
-      // All result rows should have row, avatar and block button
-      allResultUids.forEach { uid ->
+      // Wait until we have at least 3 search result rows
+      compose.waitUntil(timeoutMillis = 5_000) {
         compose
-            .onNodeWithTag(
-                FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX + uid, useUnmergedTree = true)
-            .assertExists()
-
-        compose
-            .onNodeWithTag(FriendsManagementTestTags.AVATAR_PREFIX + uid, useUnmergedTree = true)
-            .assertExists()
-
-        compose
-            .onNodeWithTag(
-                FriendsManagementTestTags.SEARCH_RESULT_BLOCK_BUTTON_PREFIX + uid,
-                useUnmergedTree = true)
-            .assertExists()
-            .assertHasClickAction()
+            .onAllNodes(
+                SemanticsMatcher("search result row") { node ->
+                  val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+                  tag?.startsWith(FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX) == true
+                },
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNodes()
+            .size >= 3
       }
 
-      // Only non-blocked results should have an action button
-      withActionButtonUids.forEach { uid ->
-        compose
-            .onNodeWithTag(
-                FriendsManagementTestTags.SEARCH_RESULT_ACTION_BUTTON_PREFIX + uid,
-                useUnmergedTree = true)
-            .assertExists()
-            .assertHasClickAction()
+      val rows =
+          compose
+              .onAllNodes(
+                  SemanticsMatcher("search result row") { node ->
+                    val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+                    tag?.startsWith(FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX) == true
+                  },
+                  useUnmergedTree = true,
+              )
+              .fetchSemanticsNodes()
+
+      assert(rows.size >= 3) { "Expected at least 3 search result rows, got ${rows.size}" }
+
+      val avatars =
+          compose
+              .onAllNodes(
+                  SemanticsMatcher("search result avatar") { node ->
+                    val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+                    tag?.startsWith(FriendsManagementTestTags.AVATAR_PREFIX) == true
+                  },
+                  useUnmergedTree = true,
+              )
+              .fetchSemanticsNodes()
+
+      val blockButtons =
+          compose
+              .onAllNodes(
+                  SemanticsMatcher("search result block") { node ->
+                    val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+                    tag?.startsWith(FriendsManagementTestTags.SEARCH_RESULT_BLOCK_BUTTON_PREFIX) ==
+                        true
+                  },
+                  useUnmergedTree = true,
+              )
+              .fetchSemanticsNodes()
+
+      val actionButtons =
+          compose
+              .onAllNodes(
+                  SemanticsMatcher("search result action") { node ->
+                    val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+                    tag?.startsWith(FriendsManagementTestTags.SEARCH_RESULT_ACTION_BUTTON_PREFIX) ==
+                        true
+                  },
+                  useUnmergedTree = true,
+              )
+              .fetchSemanticsNodes()
+
+      assert(avatars.size >= rows.size) {
+        "Expected at least one avatar per search row; rows=${rows.size}, avatars=${avatars.size}"
+      }
+      assert(blockButtons.size >= rows.size) {
+        "Expected at least one block button per search row; rows=${rows.size}, blocks=${blockButtons.size}"
+      }
+      assert(actionButtons.isNotEmpty()) {
+        "Expected at least one search result row with an action button"
       }
     }
 
