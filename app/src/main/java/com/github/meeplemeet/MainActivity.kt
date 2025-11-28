@@ -50,6 +50,8 @@ import com.github.meeplemeet.ui.account.CreateAccountScreen
 import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.ProfileScreen
+import com.github.meeplemeet.ui.auth.OnBoardPage
+import com.github.meeplemeet.ui.auth.OnBoardingScreen
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignUpScreen
 import com.github.meeplemeet.ui.discussions.CreateDiscussionScreen
@@ -244,7 +246,7 @@ fun MeepleMeetApp(
       if (account != null) {
         CreateAccountScreen(
             account!!,
-            onCreate = { navigationActions.navigateOutOfAuthGraph() },
+            onCreate = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
             onBack = {
               viewModel.signOut()
               FirebaseProvider.auth.signOut()
@@ -487,6 +489,37 @@ fun MeepleMeetApp(
       } else {
         LoadingScreen()
       }
+    }
+
+    // OnBoarding Screen
+    composable(MeepleMeetScreen.OnBoarding.name) {
+      val pages =
+          listOf(
+              OnBoardPage(
+                  image = R.drawable.discussion_logo,
+                  title = "Welcome to MeepleMeet",
+                  description = "Discover events and meet new people."),
+              OnBoardPage(
+                  image = R.drawable.discussion_logo,
+                  title = "Discussions",
+                  description = "Host your own gatherings easily."),
+              OnBoardPage(
+                  image = R.drawable.discussion_logo,
+                  title = "Explore",
+                  description = "Find activities near you."),
+              OnBoardPage(
+                  image = R.drawable.session_logo,
+                  title = "Sessions",
+                  description = "Organize gaming meetups"),
+              OnBoardPage(
+                  image = R.drawable.discussion_logo,
+                  title = "Posts",
+                  description = "Share with the community"),
+              OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
+      OnBoardingScreen(
+          pages = pages,
+          onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+          onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
     }
     composable(MeepleMeetScreen.Friends.name) {
       account?.let { currentAccount ->

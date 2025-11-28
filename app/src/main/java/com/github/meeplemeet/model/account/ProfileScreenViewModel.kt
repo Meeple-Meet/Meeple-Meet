@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for managing user profile interactions and friend system operations.
@@ -37,12 +36,13 @@ class ProfileScreenViewModel(
   // Public read-only state flow that UI components can observe for state changes
   val uiState: StateFlow<AuthUIState> = _uiState
 
-    /**
-     * Changes the account profile picture
-     * @param account User to change it's profile picture
-     * @param context Context of call
-     * @param localPath Path to photo
-     */
+  /**
+   * Changes the account profile picture
+   *
+   * @param account User to change it's profile picture
+   * @param context Context of call
+   * @param localPath Path to photo
+   */
   fun setAccountPhoto(account: Account, context: Context, localPath: String) {
     viewModelScope.launch {
       val downloadUrl =
@@ -51,11 +51,12 @@ class ProfileScreenViewModel(
     }
   }
 
-    /**
-     * Removes the account profile picture
-     * @param account User to remove it's profile picture
-     * @param context Context of call
-     */
+  /**
+   * Removes the account profile picture
+   *
+   * @param account User to remove it's profile picture
+   * @param context Context of call
+   */
   fun removeAccountPhoto(account: Account, context: Context) {
     viewModelScope.launch {
       imageRepository.deleteAccountProfilePicture(account.uid, context)

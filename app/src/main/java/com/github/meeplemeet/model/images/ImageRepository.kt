@@ -99,6 +99,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
   private fun discussionProfilePath(id: String) = "${discussionBasePath(id)}/profile.webp"
 
+  private fun sessionPhotoPath(id: String) = "${discussionBasePath(id)}/session.webp"
+
   private fun discussionMessagesDir(id: String) = "${discussionBasePath(id)}/messages"
 
   private fun discussionMessagePath(id: String) =
@@ -107,6 +109,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   private fun shopPath(id: String) = "${RepositoryProvider.shops.collectionName}/$id"
 
   private fun spaceRenterPath(id: String) = "${RepositoryProvider.spaceRenters.collectionName}/$id"
+
+  private fun cachePath(context: Context, storagePath: String) = "${context.cacheDir}/$storagePath"
 
   private fun normalizePath(candidate: String, expectedPrefix: String): String {
     val path =
@@ -206,6 +210,140 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    */
   suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray =
       loadImage(context, discussionProfilePath(discussionId))
+
+  /**
+   * Saves a session photo to Firebase Storage and local cache.
+   *
+   * Session photos are stored at a fixed path `discussions/{discussionId}/session/photo.webp`. This
+   * operation requires admin privileges in the discussion (enforced by caller).
+   *
+   * ## Usage
+   * Typically called by [SessionViewModel.saveSessionPhoto], which handles permission checks and
+   * updates the session document with the returned photo URL.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion containing the session
+   * @param inputPath Absolute path to the source image file (from gallery or camera)
+   * @return The public HTTPS download URL of the saved session photo
+   * @throws ImageProcessingException if image encoding fails
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
+   * @see SessionViewModel.saveSessionPhoto for high-level API
+   * @see loadSessionPhoto to retrieve the session photo
+   * @see deleteSessionPhoto to delete the session photo
+   */
+  suspend fun saveSessionPhoto(context: Context, discussionId: String, inputPath: String): String =
+      saveImage(context, inputPath, sessionPhotoPath(discussionId))
+
+  /**
+   * Deletes the session photo from both cache and Firebase Storage.
+   *
+   * Removes the session photo stored at `discussions/{discussionId}/session/photo.webp`. This
+   * operation requires admin privileges in the discussion (enforced by caller).
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion containing the session
+   * @throws DiskStorageException if disk delete fails
+   * @throws RemoteStorageException if Firebase Storage delete fails
+   * @see SessionViewModel.deleteSessionPhoto for high-level API
+   * @see saveSessionPhoto to upload a session photo
+   */
+  suspend fun deleteSessionPhoto(context: Context, discussionId: String) =
+      deleteImages(context, sessionPhotoPath(discussionId))
+
+  /**
+   * Loads the session photo from cache or Firebase Storage.
+   *
+   * Checks local cache first; on cache miss, downloads from Firebase Storage and caches locally.
+   * The image is returned as a byte array in WebP format.
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The unique identifier for the discussion containing the session
+   * @return The image as a byte array in WebP format
+   * @throws DiskStorageException if disk read fails
+   * @throws RemoteStorageException if Firebase Storage download fails or session photo doesn't
+   *   exist
+   * @see SessionViewModel.loadSessionPhoto for high-level API
+   * @see saveSessionPhoto to upload a session photo
+   */
+  suspend fun loadSessionPhoto(context: Context, discussionId: String): ByteArray =
+      loadImage(context, sessionPhotoPath(discussionId))
+
+  /**
+   * Moves a session photo to the archived sessions storage location.
+   *
+   * This operation:
+   * 1. Downloads the current session photo
+   * 2. Uploads it to the new location: `archived_sessions/{newUuid}.webp`
+   * 3. Deletes the original photo
+   *
+   * @param context Android context for accessing cache directory
+   * @param discussionId The ID of the discussion containing the session
+   * @param newUuid The new UUID for the archived session
+   * @return The download URL of the moved photo
+   */
+  suspend fun moveSessionPhoto(context: Context, discussionId: String, newUuid: String): String {
+    val oldPath = sessionPhotoPath(discussionId)
+    val newPath = "archived_sessions/${newUuid}.webp"
+
+    // 1. Download the current photo
+    val bytes = loadImage(context, oldPath)
+
+    // 2. Upload to new location (and cache locally)
+    val newUrl = saveImage(context, bytes, newPath)
+
+    // 3. Delete the old photo
+    deleteSessionPhoto(context, discussionId)
+
+    return newUrl
+  }
+
+  /**
+   * Helper to save bytes directly, used by moveSessionPhoto. This is a variation of saveImage that
+   * takes bytes instead of file path.
+   *
+   * @param context Android context for accessing cache directory
+   * @param bytes The image data as a byte array
+   * @param storagePath Storage path (used for both local cache and Firebase Storage)
+   * @return The public HTTPS download URL of the saved image
+   */
+  private suspend fun saveImage(context: Context, bytes: ByteArray, storagePath: String): String {
+    // Save to disk
+    try {
+      withContext(dispatcher) {
+        val diskPath = cachePath(context, storagePath)
+        val parentDir = File(diskPath).parentFile
+
+        // Check if parent directory can be created
+        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+          throw DiskStorageException("Failed to create directory: ${parentDir.absolutePath}")
+        }
+
+        // Ensure sufficient storage space
+        ensureStorageSpace(context, bytes.size.toLong())
+
+        FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
+      }
+    } catch (e: DiskStorageException) {
+      throw e
+    } catch (e: IOException) {
+      throw DiskStorageException("Failed to write image to disk at $storagePath", e)
+    } catch (e: SecurityException) {
+      throw DiskStorageException("Permission denied writing to $storagePath", e)
+    }
+
+    // Upload to Firebase Storage
+    try {
+      val ref = storage.reference.child(storagePath)
+      ref.putBytes(bytes).await()
+      return toHttps(ref.downloadUrl.await().toString())
+    } catch (e: StorageException) {
+      throw RemoteStorageException(
+          "Firebase Storage upload failed for $storagePath: ${e.errorCode}", e)
+    } catch (e: Exception) {
+      throw RemoteStorageException("Failed to upload image to Firebase Storage at $storagePath", e)
+    }
+  }
 
   /**
    * Saves discussion message photos to Firebase Storage under unique names and returns their URLs.
@@ -431,41 +569,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
           throw ImageProcessingException("Failed to encode image at $inputPath", e)
         }
 
-    // Save to disk
-    try {
-      withContext(dispatcher) {
-        val diskPath = "${context.cacheDir}/$storagePath"
-        val parentDir = File(diskPath).parentFile
-
-        // Check if parent directory can be created
-        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
-          throw DiskStorageException("Failed to create directory: ${parentDir.absolutePath}")
-        }
-
-        // Ensure sufficient storage space (uses StorageManager on O+ to clear cache if needed)
-        ensureStorageSpace(context, bytes.size.toLong())
-
-        FileOutputStream(diskPath).use { fos -> fos.write(bytes) }
-      }
-    } catch (e: DiskStorageException) {
-      throw e
-    } catch (e: IOException) {
-      throw DiskStorageException("Failed to write image to disk at $storagePath", e)
-    } catch (e: SecurityException) {
-      throw DiskStorageException("Permission denied writing to $storagePath", e)
-    }
-
-    // Upload to Firebase Storage
-    try {
-      val ref = storage.reference.child(storagePath)
-      ref.putBytes(bytes).await()
-      return toHttps(ref.downloadUrl.await().toString())
-    } catch (e: StorageException) {
-      throw RemoteStorageException(
-          "Firebase Storage upload failed for $storagePath: ${e.errorCode}", e)
-    } catch (e: Exception) {
-      throw RemoteStorageException("Failed to upload image to Firebase Storage at $storagePath", e)
-    }
+    return saveImage(context, bytes, storagePath)
   }
 
   /**
@@ -653,7 +757,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     try {
       withContext(dispatcher) {
         storagePaths.forEach { storagePath ->
-          val diskPath = "${context.cacheDir}/$storagePath"
+          val diskPath = cachePath(context, storagePath)
           val file = File(diskPath)
           if (file.exists() && !file.delete()) {
             throw DiskStorageException("Failed to delete cached image at $storagePath")

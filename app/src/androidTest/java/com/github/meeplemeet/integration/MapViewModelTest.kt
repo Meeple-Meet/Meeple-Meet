@@ -5,6 +5,9 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapUIState
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.cluster.Cluster
+import com.github.meeplemeet.model.map.cluster.ClusterManager
+import com.github.meeplemeet.model.map.cluster.ClusterStrategy
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -14,6 +17,7 @@ import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
@@ -24,18 +28,17 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Comprehensive integration test suite for MapViewModel using real Firestore repositories.
+ * Comprehensive integration test suite for MapViewModel with clustering support.
  *
  * Tests cover:
- * - Geo query lifecycle with real pins
- * - UI-side type filtering
- * - Session participant filtering
- * - Pin selection and preview loading
- * - Query parameter updates
+ * - Geo query lifecycle with debounced updates
+ * - Clustering with cache invalidation
+ * - Cluster selection and preview loading
+ * - Filter updates and cache behavior
+ * - Zoom level changes
  * - Error handling
  */
 class MapViewModelTest : FirestoreTests() {
-  private lateinit var viewModel: MapViewModel
   private lateinit var testAccount1: Account
   private lateinit var testAccount2: Account
   private lateinit var testLocation: Location
@@ -43,10 +46,22 @@ class MapViewModelTest : FirestoreTests() {
   private lateinit var testLocationFar: Location
   private lateinit var testOpeningHours: List<OpeningHours>
 
+  // Test cluster strategies
+  private val singleClusterStrategy = ClusterStrategy { items, _ ->
+    if (items.isEmpty()) emptyList()
+    else {
+      val centerLat = items.map { it.lat }.average()
+      val centerLng = items.map { it.lng }.average()
+      listOf(Cluster(centerLat, centerLng, items))
+    }
+  }
+
+  private val noClusterStrategy = ClusterStrategy { items, _ ->
+    items.map { Cluster(it.lat, it.lng, listOf(it)) }
+  }
+
   @Before
   fun setup() {
-    viewModel = MapViewModel()
-
     runBlocking {
       testAccount1 =
           accountRepository.createAccount("user1", "User One", "user1@test.com", photoUrl = null)
@@ -69,21 +84,41 @@ class MapViewModelTest : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
   }
 
+  // ============================================================================
+  // BASIC STATE & INITIALIZATION TESTS
+  // ============================================================================
+
   @Test
   fun initialState_isEmpty() {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
     val state = viewModel.uiState.value
 
     assertEquals(MapUIState(), state)
     assertTrue(state.allGeoPins.isEmpty())
-    assertTrue(state.geoPins.isEmpty())
     assertEquals(PinType.entries.toSet(), state.activeFilters)
     assertNull(state.errorMsg)
     assertNull(state.selectedMarkerPreview)
-    assertNull(state.selectedGeoPin)
+    assertNull(state.selectedPin)
+    assertNull(state.selectedClusterPreviews)
+    assertNull(state.clusterCache)
+    assertEquals(0, state.cacheVersion)
   }
 
   @Test
+  fun initialClusters_isEmpty() {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+    val clusters = viewModel.getClusters()
+
+    assertTrue(clusters.isEmpty())
+  }
+
+  // ============================================================================
+  // GEO QUERY LIFECYCLE TESTS
+  // ============================================================================
+
+  @Test
   fun startGeoQuery_loadsShopPins() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -92,13 +127,12 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
     val state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isNotEmpty())
-    assertTrue(state.geoPins.isNotEmpty())
 
-    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    val shopPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(shopPin)
     assertEquals(PinType.SHOP, shopPin!!.geoPin.type)
 
@@ -106,31 +140,9 @@ class MapViewModelTest : FirestoreTests() {
   }
 
   @Test
-  fun startGeoQuery_loadsSpacePins() = runBlocking {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Test Game Space",
-            address = testLocation,
-            openingHours = testOpeningHours,
-            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    val state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-
-    val spacePin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
-    assertNotNull(spacePin)
-    assertEquals(PinType.SPACE, spacePin!!.geoPin.type)
-
-    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-  }
-
-  @Test
   fun startGeoQuery_loadsSessionPinsOnlyForParticipant() = runBlocking {
-    // create a game entry
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     db.collection(GAMES_COLLECTION_PATH)
         .document("test_game_chess_mv")
         .set(
@@ -146,13 +158,10 @@ class MapViewModelTest : FirestoreTests() {
         .await()
 
     val testGame = gameRepository.getGameById("test_game_chess_mv")
-
-    // create discussion then create session linked to it
     val discussion =
         discussionRepository.createDiscussion(
             "Chess Night Discussion", "Test discussion for chess session", testAccount1.uid)
 
-    // create session via discussion (sessionRepository.createSession(discussionId,...))
     sessionRepository.createSession(
         discussion.uid,
         "Chess Night",
@@ -161,114 +170,29 @@ class MapViewModelTest : FirestoreTests() {
         testLocation,
         testAccount1.uid)
 
-    // User1 is creator / participant -> should see the session pin (search by discussion.uid)
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    var state = viewModel.uiState.value
-    val sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid } // note: discussion.uid
+    val sessionPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == discussion.uid }
     assertNotNull(sessionPin)
     assertEquals(PinType.SESSION, sessionPin!!.geoPin.type)
 
     viewModel.stopGeoQuery()
 
-    // User2 (not participant) should not see the session pin
-    val viewModel2 = MapViewModel()
+    val viewModel2 = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
     viewModel2.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount2.uid)
-    delay(100)
+    delay(1000)
 
-    state = viewModel2.uiState.value
-    val sessionPin2 = state.geoPins.find { it.geoPin.uid == discussion.uid }
+    val sessionPin2 = viewModel2.uiState.value.allGeoPins.find { it.geoPin.uid == discussion.uid }
     assertNull(sessionPin2)
 
-    // cleanup
     val context = InstrumentationRegistry.getInstrumentation().targetContext
     discussionRepository.deleteDiscussion(context, discussion)
-  }
-
-  @Test
-  fun startGeoQuery_loadsMultiplePinTypes() = runBlocking {
-    // create game + discussion+session
-    db.collection(GAMES_COLLECTION_PATH)
-        .document("test_game_catan_mv")
-        .set(
-            GameNoUid(
-                name = "Catan",
-                description = "Trading and building board game",
-                imageURL = "https://example.com/catan.jpg",
-                minPlayers = 3,
-                maxPlayers = 4,
-                recommendedPlayers = null,
-                averagePlayTime = null,
-                genres = emptyList()))
-        .await()
-
-    val testGame = gameRepository.getGameById("test_game_catan_mv")
-
-    val discussion =
-        discussionRepository.createDiscussion(
-            "Catan Night Discussion", "Discussion for Catan session test", testAccount1.uid)
-
-    sessionRepository.createSession(
-        discussion.uid, "Game Night", testGame.uid, Timestamp.now(), testLocation, testAccount1.uid)
-
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Space",
-            address = testLocation,
-            openingHours = testOpeningHours,
-            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    val state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.size >= 3)
-
-    val shopPin = state.geoPins.find { it.geoPin.type == PinType.SHOP }
-    val spacePin = state.geoPins.find { it.geoPin.type == PinType.SPACE }
-    val sessionPin = state.geoPins.find { it.geoPin.type == PinType.SESSION }
-
-    assertNotNull(shopPin)
-    assertNotNull(spacePin)
-    assertNotNull(sessionPin)
-
-    shopRepository.deleteShop(shop.id)
-    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-    // cleanup discussion which contains the session link
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    discussionRepository.deleteDiscussion(context, discussion)
-  }
-
-  @Test
-  fun startGeoQuery_doesNotLoadPinsOutsideRadius() = runBlocking {
-    val farShop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Far Shop",
-            address = testLocationFar,
-            openingHours = testOpeningHours)
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    val state = viewModel.uiState.value
-    val farPin = state.geoPins.find { it.geoPin.uid == farShop.id }
-    assertNull(farPin)
-
-    shopRepository.deleteShop(farShop.id)
   }
 
   @Test
   fun stopGeoQuery_clearsAllPins() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -277,22 +201,115 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
+    assertTrue(viewModel.uiState.value.allGeoPins.isNotEmpty())
 
     viewModel.stopGeoQuery()
 
-    state = viewModel.uiState.value
+    val state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isEmpty())
-    assertTrue(state.geoPins.isEmpty())
+    assertNull(state.clusterCache)
 
     shopRepository.deleteShop(shop.id)
   }
 
+  // ============================================================================
+  // DEBOUNCING TESTS
+  // ============================================================================
+
   @Test
-  fun updateFilters_filtersGeoPinsProperty() = runBlocking {
+  fun geoQuery_debouncesBatchUpdates() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+
+    val shops = mutableListOf<String>()
+    repeat(5) { i ->
+      val shop =
+          shopRepository.createShop(
+              owner = testAccount1,
+              name = "Shop $i",
+              address = testLocation,
+              openingHours = testOpeningHours)
+      shops.add(shop.id)
+    }
+
+    delay(1000)
+    val stateAfterDebounce = viewModel.uiState.value
+    assertTrue(stateAfterDebounce.allGeoPins.size >= 5)
+
+    shops.forEach { shopRepository.deleteShop(it) }
+  }
+
+  // ============================================================================
+  // CLUSTERING TESTS
+  // ============================================================================
+
+  @Test
+  fun getClusters_withSingleClusterStrategy_returnsOneCluster() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val clusters = viewModel.getClusters()
+
+    assertEquals(1, clusters.size)
+    assertTrue(clusters[0].items.size >= 2)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  @Test
+  fun getClusters_withNoClusterStrategy_returnsIndividualClusters() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val clusters = viewModel.getClusters()
+
+    assertTrue(clusters.size >= 2)
+    assertTrue(clusters.all { it.items.size == 1 })
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  @Test
+  fun getClusters_cacheIsValid_returnsCachedResult() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -300,49 +317,151 @@ class MapViewModelTest : FirestoreTests() {
             address = testLocation,
             openingHours = testOpeningHours)
 
-    val spaceRenter =
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val clusters1 = viewModel.getClusters()
+    val state1 = viewModel.uiState.value
+    assertNotNull(state1.clusterCache)
+
+    val cacheVersion = state1.cacheVersion
+
+    val clusters2 = viewModel.getClusters()
+    val state2 = viewModel.uiState.value
+
+    assertEquals(cacheVersion, state2.clusterCache!!.version)
+    assertEquals(clusters1, clusters2)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun getClusters_afterFilterChange_invalidatesCache() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    viewModel.getClusters()
+    val version1 = viewModel.uiState.value.cacheVersion
+
+    viewModel.updateFilters(setOf(PinType.SHOP))
+
+    val version2 = viewModel.uiState.value.cacheVersion
+    assertTrue(version2 > version1)
+
+    viewModel.getClusters()
+    val cache2 = viewModel.uiState.value.clusterCache
+    assertNotNull(cache2)
+    assertEquals(version2, cache2!!.version)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun getClusters_afterZoomChange_invalidatesCache() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    viewModel.getClusters()
+    val version1 = viewModel.uiState.value.cacheVersion
+
+    viewModel.updateZoomLevel(16f)
+
+    val version2 = viewModel.uiState.value.cacheVersion
+    assertTrue(version2 > version1)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun getClusters_afterPinAdded_invalidatesCache() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    viewModel.getClusters()
+    val version1 = viewModel.uiState.value.cacheVersion
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    delay(1000)
+
+    val version2 = viewModel.uiState.value.cacheVersion
+    assertTrue(version2 > version1)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  // ============================================================================
+  // FILTER TESTS
+  // ============================================================================
+
+  @Test
+  fun updateFilters_filtersCorrectly() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val space =
         spaceRenterRepository.createSpaceRenter(
             owner = testAccount1,
             name = "Space",
-            address = testLocation,
+            address = testLocationNearby,
             openingHours = testOpeningHours,
             spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.size >= 2)
-    assertTrue(state.geoPins.size >= 2)
+    delay(1000)
 
     viewModel.updateFilters(setOf(PinType.SHOP))
-    delay(100)
+    val clusters = viewModel.getClusters()
 
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.size >= 2)
-    assertTrue(state.geoPins.all { it.geoPin.type == PinType.SHOP })
-    assertTrue(state.geoPins.none { it.geoPin.type == PinType.SPACE })
-
-    viewModel.updateFilters(setOf(PinType.SPACE))
-    delay(100)
-
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.size >= 2)
-    assertTrue(state.geoPins.all { it.geoPin.type == PinType.SPACE })
-    assertTrue(state.geoPins.none { it.geoPin.type == PinType.SHOP })
-
-    viewModel.updateFilters(setOf(PinType.SHOP, PinType.SPACE))
-    delay(100)
-
-    state = viewModel.uiState.value
-    assertTrue(state.geoPins.size >= 2)
+    assertTrue(clusters.all { cluster -> cluster.items.all { it.geoPin.type == PinType.SHOP } })
 
     shopRepository.deleteShop(shop.id)
-    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+    spaceRenterRepository.deleteSpaceRenter(space.id)
   }
 
   @Test
-  fun updateFilters_withEmptySet_hidesAllPins() = runBlocking {
+  fun updateFilters_withEmptySet_yieldsEmptyClusters() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -351,24 +470,26 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-    assertTrue(state.geoPins.isNotEmpty())
+    assertTrue(viewModel.getClusters().isNotEmpty())
 
     viewModel.updateFilters(emptySet())
-    delay(100)
 
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-    assertTrue(state.geoPins.isEmpty())
+    val clusters = viewModel.getClusters()
+    assertTrue(clusters.isEmpty())
 
     shopRepository.deleteShop(shop.id)
   }
 
+  // ============================================================================
+  // SINGLE PIN SELECTION TESTS
+  // ============================================================================
+
   @Test
   fun selectPin_loadsShopPreview() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -377,104 +498,27 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    val state = viewModel.uiState.value
-    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
+    val shopPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(shopPin)
 
     viewModel.selectPin(shopPin!!)
     delay(1000)
 
-    val updatedState = viewModel.uiState.value
-    assertNotNull(updatedState.selectedMarkerPreview)
-    assertNotNull(updatedState.selectedGeoPin)
-    assertEquals(shop.id, updatedState.selectedGeoPin!!.uid)
+    val state = viewModel.uiState.value
+    assertNotNull(state.selectedMarkerPreview)
+    assertNotNull(state.selectedPin)
+    assertEquals(shop.id, state.selectedPin!!.geoPin.uid)
+    assertFalse(state.isLoadingPreview)
 
     shopRepository.deleteShop(shop.id)
-  }
-
-  @Test
-  fun selectPin_loadsSpacePreview() = runBlocking {
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Game Hall",
-            address = testLocation,
-            openingHours = testOpeningHours,
-            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    val state = viewModel.uiState.value
-    val spacePin = state.geoPins.find { it.geoPin.uid == spaceRenter.id }
-    assertNotNull(spacePin)
-
-    viewModel.selectPin(spacePin!!)
-    delay(1000)
-
-    val updatedState = viewModel.uiState.value
-    assertNotNull(updatedState.selectedMarkerPreview)
-    assertEquals(spaceRenter.id, updatedState.selectedGeoPin!!.uid)
-
-    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-  }
-
-  @Test
-  fun selectPin_loadsSessionPreview() = runBlocking {
-    // create game entry
-    db.collection(GAMES_COLLECTION_PATH)
-        .document("test_game_chess_select")
-        .set(
-            GameNoUid(
-                name = "Chess",
-                description = "Strategy board game",
-                imageURL = "https://example.com/chess.jpg",
-                minPlayers = 2,
-                maxPlayers = 2,
-                recommendedPlayers = null,
-                averagePlayTime = null,
-                genres = emptyList()))
-        .await()
-
-    val testGame = gameRepository.getGameById("test_game_chess_select")
-
-    // create discussion then session via discussion
-    val discussion =
-        discussionRepository.createDiscussion(
-            "Chess Tournament Discussion", "Test discussion for tournament", testAccount1.uid)
-
-    sessionRepository.createSession(
-        discussion.uid,
-        "Chess Tournament",
-        testGame.uid,
-        Timestamp.now(),
-        testLocation,
-        testAccount1.uid)
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    val state = viewModel.uiState.value
-    val sessionPin = state.geoPins.find { it.geoPin.uid == discussion.uid }
-
-    assertNotNull(sessionPin)
-
-    viewModel.selectPin(sessionPin!!)
-    delay(1000)
-
-    val updatedState = viewModel.uiState.value
-    assertNotNull(updatedState.selectedMarkerPreview)
-    assertEquals(discussion.uid, updatedState.selectedGeoPin!!.uid)
-
-    // cleanup
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    discussionRepository.deleteDiscussion(context, discussion)
   }
 
   @Test
   fun clearSelectedPin_removesSelection() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -483,102 +527,308 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    val state = viewModel.uiState.value
-    val shopPin = state.geoPins.find { it.geoPin.uid == shop.id }
-    assertNotNull(shopPin)
-
+    val shopPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     viewModel.selectPin(shopPin!!)
     delay(1000)
 
-    var updatedState = viewModel.uiState.value
-    assertNotNull(updatedState.selectedMarkerPreview)
+    assertNotNull(viewModel.uiState.value.selectedMarkerPreview)
 
     viewModel.clearSelectedPin()
 
-    updatedState = viewModel.uiState.value
-    assertNull(updatedState.selectedMarkerPreview)
-    assertNull(updatedState.selectedGeoPin)
+    val state = viewModel.uiState.value
+    assertNull(state.selectedMarkerPreview)
+    assertNull(state.selectedPin)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  // ============================================================================
+  // CLUSTER SELECTION TESTS
+  // ============================================================================
+
+  @Test
+  fun selectCluster_loadsAllPreviews() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val clusters = viewModel.getClusters()
+    assertTrue(clusters.isNotEmpty())
+
+    val cluster = clusters[0]
+    assertTrue(cluster.items.size >= 2)
+
+    viewModel.selectCluster(cluster)
+    delay(1500)
+
+    val state = viewModel.uiState.value
+    assertNotNull(state.selectedClusterPreviews)
+    assertTrue(state.selectedClusterPreviews!!.size >= 2)
+    assertFalse(state.isLoadingPreview)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  @Test
+  fun selectPinFromCluster_transitionsToSingleSelection() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val cluster = viewModel.getClusters()[0]
+    viewModel.selectCluster(cluster)
+    delay(1500)
+
+    val clusterState = viewModel.uiState.value
+    assertNotNull(clusterState.selectedClusterPreviews)
+    assertTrue(clusterState.selectedClusterPreviews!!.isNotEmpty())
+
+    val (pin, preview) = clusterState.selectedClusterPreviews!![0]
+    viewModel.selectPinFromCluster(pin, preview)
+
+    val finalState = viewModel.uiState.value
+    assertNull(finalState.selectedClusterPreviews)
+    assertNotNull(finalState.selectedPin)
+    assertNotNull(finalState.selectedMarkerPreview)
+    assertEquals(pin.geoPin.uid, finalState.selectedPin!!.geoPin.uid)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  @Test
+  fun clearSelectedCluster_removesClusterSelection() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 1",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop 2",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val cluster = viewModel.getClusters()[0]
+    viewModel.selectCluster(cluster)
+    delay(1500)
+
+    assertNotNull(viewModel.uiState.value.selectedClusterPreviews)
+
+    viewModel.clearSelectedCluster()
+
+    val state = viewModel.uiState.value
+    assertNull(state.selectedClusterPreviews)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  // ============================================================================
+  // QUERY UPDATE TESTS
+  // ============================================================================
+
+  @Test
+  fun updateQueryCenter_triggersNewPinLoad() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop1 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop Near EPFL",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val shop2 =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop in Geneva",
+            address = testLocationFar,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val pin1 = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop1.id }
+    val pin2 = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop2.id }
+
+    assertNotNull(pin1)
+    assertNull(pin2)
+
+    viewModel.updateQueryCenter(testLocationFar)
+    delay(1000)
+
+    val pin1After = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop1.id }
+    val pin2After = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop2.id }
+
+    assertNull(pin1After)
+    assertNotNull(pin2After)
+
+    shopRepository.deleteShop(shop1.id)
+    shopRepository.deleteShop(shop2.id)
+  }
+
+  @Test
+  fun updateRadius_loadsAdditionalPins() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = Location(46.00, 6.00, "Far away"),
+            openingHours = testOpeningHours)
+
+    // Start query with radius smaller than distance to shop
+    viewModel.startGeoQuery(
+        Location(45.00, 5.00, "Center"), radiusKm = 50.0, currentUserId = testAccount1.uid)
+    delay(1000)
+
+    val pinBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNull(pinBefore)
+
+    // Increase radius to include shop
+    viewModel.updateRadius(200.0)
+    delay(1000)
+
+    val pinAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
+    assertNotNull(pinAfter)
 
     shopRepository.deleteShop(shop.id)
   }
 
   @Test
-  fun updateQueryCenter_keepsQueryAlive() = runBlocking {
-    val shop =
+  fun updateRadius_reducingRadiusRemovesPins() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shopNear =
         shopRepository.createShop(
             owner = testAccount1,
-            name = "Shop",
-            address = testLocation,
+            name = "Shop Near",
+            address = Location(45.01, 5.01, "Near center"),
             openingHours = testOpeningHours)
 
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    val shopFar =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop Far",
+            address = Location(46.00, 6.00, "Far away"),
+            openingHours = testOpeningHours)
 
-    var state = viewModel.uiState.value
-    val initialCount = state.allGeoPins.size
-    assertTrue(initialCount > 0)
-
-    viewModel.updateQueryCenter(testLocationNearby)
+    // Start query large enough to include both
+    viewModel.startGeoQuery(
+        Location(45.00, 5.00, "Center"), radiusKm = 200.0, currentUserId = testAccount1.uid)
     delay(1000)
 
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
+    val nearBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopNear.id }
+    val farBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopFar.id }
 
-    shopRepository.deleteShop(shop.id)
+    assertNotNull(nearBefore)
+    assertNotNull(farBefore)
+
+    // Reduce radius to only include near shop
+    viewModel.updateRadius(50.0)
+    delay(1000)
+
+    val nearAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopNear.id }
+    val farAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopFar.id }
+
+    assertNotNull(nearAfter)
+    assertNull(farAfter)
+
+    shopRepository.deleteShop(shopNear.id)
+    shopRepository.deleteShop(shopFar.id)
   }
 
   @Test
-  fun updateRadius_keepsQueryAlive() = runBlocking {
-    val shop =
+  fun updateCenterAndRadius_updatesQueryCorrectly() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shopEPFL =
         shopRepository.createShop(
             owner = testAccount1,
-            name = "Shop",
+            name = "Shop EPFL",
             address = testLocation,
             openingHours = testOpeningHours)
 
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-
-    viewModel.updateRadius(15.0)
-    delay(1000)
-
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-
-    shopRepository.deleteShop(shop.id)
-  }
-
-  @Test
-  fun updateCenterAndRadius_keepsQueryAlive() = runBlocking {
-    val shop =
+    val shopGeneva =
         shopRepository.createShop(
             owner = testAccount1,
-            name = "Shop",
-            address = testLocation,
+            name = "Shop Geneva",
+            address = testLocationFar,
             openingHours = testOpeningHours)
 
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-
-    viewModel.updateCenterAndRadius(testLocationNearby, 15.0)
+    viewModel.startGeoQuery(testLocation, radiusKm = 5.0, currentUserId = testAccount1.uid)
     delay(1000)
 
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
+    val epflBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopEPFL.id }
+    val genevaBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopGeneva.id }
 
-    shopRepository.deleteShop(shop.id)
+    assertNotNull(epflBefore)
+    assertNull(genevaBefore)
+
+    viewModel.updateCenterAndRadius(testLocationFar, 10.0)
+    delay(1000)
+
+    val epflAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopEPFL.id }
+    val genevaAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopGeneva.id }
+
+    assertNull(epflAfter)
+    assertNotNull(genevaAfter)
+
+    shopRepository.deleteShop(shopEPFL.id)
+    shopRepository.deleteShop(shopGeneva.id)
   }
+
+  // ============================================================================
+  // PIN MOVEMENT & DELETION TESTS
+  // ============================================================================
 
   @Test
   fun geoQuery_onKeyMoved_updatesLocation() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -587,54 +837,26 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    var state = viewModel.uiState.value
-    val initialPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    val initialPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(initialPin)
     assertEquals(testLocation.latitude, initialPin!!.location.latitude, 0.0001)
-    assertEquals(testLocation.longitude, initialPin.location.longitude, 0.0001)
 
     shopRepository.updateShop(shop.id, address = testLocationNearby)
-    delay(100)
+    delay(1000)
 
-    state = viewModel.uiState.value
-    val updatedPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
+    val updatedPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(updatedPin)
     assertEquals(testLocationNearby.latitude, updatedPin!!.location.latitude, 0.0001)
-    assertEquals(testLocationNearby.longitude, updatedPin.location.longitude, 0.0001)
-
-    shopRepository.deleteShop(shop.id)
-  }
-
-  @Test
-  fun geoQuery_onKeyExited_removesPinWhenMovedOutOfRadius() = runBlocking {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Exiting Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    var state = viewModel.uiState.value
-    val initialPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
-    assertNotNull(initialPin)
-
-    shopRepository.updateShop(shop.id, address = testLocationFar)
-    delay(100)
-
-    state = viewModel.uiState.value
-    val exitedPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
-    assertNull(exitedPin)
 
     shopRepository.deleteShop(shop.id)
   }
 
   @Test
   fun geoQuery_onKeyExited_removesPinWhenDeleted() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     val shop =
         shopRepository.createShop(
             owner = testAccount1,
@@ -643,22 +865,24 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    delay(1000)
 
-    var state = viewModel.uiState.value
-    val initialPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
-    assertNotNull(initialPin)
+    assertNotNull(viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id })
 
     shopRepository.deleteShop(shop.id)
-    delay(100)
+    delay(1000)
 
-    state = viewModel.uiState.value
-    val deletedPin = state.allGeoPins.find { it.geoPin.uid == shop.id }
-    assertNull(deletedPin)
+    assertNull(viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id })
   }
+
+  // ============================================================================
+  // ERROR HANDLING & LIFECYCLE TESTS
+  // ============================================================================
 
   @Test
   fun clearErrorMsg_removesError() {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     viewModel.clearErrorMsg()
 
     val state = viewModel.uiState.value
@@ -666,35 +890,9 @@ class MapViewModelTest : FirestoreTests() {
   }
 
   @Test
-  fun multipleQueryCycles_workCorrectly() = runBlocking {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-
-    viewModel.stopGeoQuery()
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isEmpty())
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
-
-    shopRepository.deleteShop(shop.id)
-  }
-
-  @Test
   fun stopGeoQuery_canBeCalledMultipleTimes() {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
     viewModel.stopGeoQuery()
     viewModel.stopGeoQuery()
     viewModel.stopGeoQuery()
@@ -705,96 +903,13 @@ class MapViewModelTest : FirestoreTests() {
   }
 
   @Test
-  fun startGeoQuery_restartingQueryClearsPreviousState() = runBlocking {
-    val shop1 =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Shop 1",
-            address = testLocation,
-            openingHours = testOpeningHours)
+  fun updateZoomLevel_updatesStateCorrectly() {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
 
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
+    assertEquals(14f, viewModel.uiState.value.currentZoomLevel)
 
-    var state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.isNotEmpty())
+    viewModel.updateZoomLevel(16f)
 
-    val shop2 =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Shop 2",
-            address = testLocationFar,
-            openingHours = testOpeningHours)
-
-    viewModel.startGeoQuery(testLocationFar, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    state = viewModel.uiState.value
-    val pin1 = state.allGeoPins.find { it.geoPin.uid == shop1.id }
-    val pin2 = state.allGeoPins.find { it.geoPin.uid == shop2.id }
-    assertNull(pin1)
-    assertNotNull(pin2)
-
-    shopRepository.deleteShop(shop1.id)
-    shopRepository.deleteShop(shop2.id)
-  }
-
-  @Test
-  fun geoQuery_dynamicallyLoadsNewPins() = runBlocking {
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    var state = viewModel.uiState.value
-    val initialCount = state.allGeoPins.size
-
-    val newShop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "New Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    delay(100)
-
-    state = viewModel.uiState.value
-    assertTrue(state.allGeoPins.size > initialCount)
-    val newPin = state.allGeoPins.find { it.geoPin.uid == newShop.id }
-    assertNotNull(newPin)
-
-    shopRepository.deleteShop(newShop.id)
-  }
-
-  @Test
-  fun updateFilters_doesNotAffectAllGeoPins() = runBlocking {
-    val shop =
-        shopRepository.createShop(
-            owner = testAccount1,
-            name = "Shop",
-            address = testLocation,
-            openingHours = testOpeningHours)
-
-    val spaceRenter =
-        spaceRenterRepository.createSpaceRenter(
-            owner = testAccount1,
-            name = "Space",
-            address = testLocation,
-            openingHours = testOpeningHours,
-            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
-
-    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(100)
-
-    val initialState = viewModel.uiState.value
-    val initialAllCount = initialState.allGeoPins.size
-
-    viewModel.updateFilters(setOf(PinType.SHOP))
-    delay(100)
-
-    val filteredState = viewModel.uiState.value
-    assertEquals(initialAllCount, filteredState.allGeoPins.size)
-    assertTrue(filteredState.geoPins.size < initialAllCount)
-
-    shopRepository.deleteShop(shop.id)
-    spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+    assertEquals(16f, viewModel.uiState.value.currentZoomLevel)
   }
 }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.tasks.await
 
 private const val PHOTO_MESSAGE_PREVIEW = "📷 Photo"
 private const val FIELD_CREATED_AT = "createdAt"
+private const val MESSAGES_SUB_COLLECTION = "messages"
 
 /**
  * Repository for managing discussion data in Firestore.
@@ -63,7 +64,7 @@ private const val FIELD_CREATED_AT = "createdAt"
 class DiscussionRepository(
     accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val imageRepository: ImageRepository = RepositoryProvider.images
-) : FirestoreRepository("discussions") {
+) : FirestoreRepository("discussions", listOf(MESSAGES_SUB_COLLECTION)) {
   private val accounts = accountRepository.collection
 
   /**
@@ -78,7 +79,7 @@ class DiscussionRepository(
    * @return CollectionReference to `discussions/{discussionId}/messages`
    */
   private fun messagesCollection(discussionId: String) =
-      collection.document(discussionId).collection("messages")
+      collection.document(discussionId).collection(MESSAGES_SUB_COLLECTION)
 
   /** Create a new discussion and store an empty preview for the creator. */
   suspend fun createDiscussion(
@@ -108,6 +109,18 @@ class DiscussionRepository(
 
     return discussion
   }
+
+  /**
+   * Checks if a discussion preview is valid by verifying the discussion document exists.
+   *
+   * Used to clean up orphaned preview documents that reference deleted discussions. This prevents
+   * the UI from showing stale previews for non-existent discussions.
+   *
+   * @param discussionId The discussion ID to check
+   * @return true if the discussion document exists in Firestore, false otherwise
+   */
+  suspend fun previewIsValid(discussionId: String): Boolean =
+      collection.document(discussionId).get().await().exists()
 
   /** Retrieve a discussion document by ID. */
   suspend fun getDiscussion(id: String): Discussion {
@@ -176,7 +189,7 @@ class DiscussionRepository(
 
     // Delete Firestore documents
     val batch = db.batch()
-    batch.delete(collection.document(discussion.uid))
+    fullyDeleteDocument(collection.document(discussion.uid))
     discussion.participants.forEach { id ->
       val ref = accounts.document(id).collection(Account::previews.name).document(discussion.uid)
       batch.delete(ref)

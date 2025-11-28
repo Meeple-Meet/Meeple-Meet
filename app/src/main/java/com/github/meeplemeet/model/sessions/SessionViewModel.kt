@@ -1,5 +1,7 @@
 package com.github.meeplemeet.model.sessions
+// AI was used in this file
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -8,6 +10,7 @@ import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
@@ -26,6 +29,7 @@ private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform t
 class SessionViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
+    private val imageRepository: ImageRepository = ImageRepository()
 ) : CreateSessionViewModel() {
   /**
    * Checks if an account has admin privileges for a discussion.
@@ -147,5 +151,67 @@ class SessionViewModel(
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch { sessionRepository.deleteSession(discussion.uid) }
+  }
+
+  /**
+   * Saves a photo to the session and updates the session document.
+   *
+   * Requires admin privileges (requester must be a discussion admin). The photo is uploaded to
+   * Firebase Storage at `discussions/{discussionId}/session/photo.webp` and the returned URL is
+   * stored in the session's photoUrl field.
+   *
+   * @param requester The account requesting to save the photo
+   * @param discussion The discussion containing the session
+   * @param context Android context for accessing cache directory
+   * @param inputPath Absolute path to the source image file (from gallery or camera)
+   * @throws PermissionDeniedException if requester is not a discussion admin
+   */
+  fun saveSessionPhoto(
+      requester: Account,
+      discussion: Discussion,
+      context: Context,
+      inputPath: String
+  ) {
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
+
+    viewModelScope.launch {
+      val photoUrl = imageRepository.saveSessionPhoto(context, discussion.uid, inputPath)
+      sessionRepository.updateSession(discussion.uid, photoUrl = photoUrl)
+    }
+  }
+
+  /**
+   * Deletes the photo from the session and updates the session document.
+   *
+   * Requires admin privileges (requester must be a discussion admin). The photo is deleted from
+   * Firebase Storage and local cache, and the session's photoUrl field is set to null.
+   *
+   * @param requester The account requesting to delete the photo
+   * @param discussion The discussion containing the session
+   * @param context Android context for accessing cache directory
+   * @throws PermissionDeniedException if requester is not a discussion admin
+   */
+  fun deleteSessionPhoto(requester: Account, discussion: Discussion, context: Context) {
+    if (!isAdmin(requester, discussion))
+        throw PermissionDeniedException("Only discussion admins can perform this operation")
+
+    viewModelScope.launch {
+      imageRepository.deleteSessionPhoto(context, discussion.uid)
+      sessionRepository.updateSession(discussion.uid, photoUrl = "")
+    }
+  }
+
+  /**
+   * Loads the session photo from cache or Firebase Storage.
+   *
+   * This is a read operation and does not require admin privileges. The photo is returned as a byte
+   * array in WebP format.
+   *
+   * @param discussion The discussion containing the session
+   * @param context Android context for accessing cache directory
+   * @return The image as a byte array in WebP format
+   */
+  suspend fun loadSessionPhoto(discussion: Discussion, context: Context): ByteArray {
+    return imageRepository.loadSessionPhoto(context, discussion.uid)
   }
 }

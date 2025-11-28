@@ -4,10 +4,15 @@ package com.github.meeplemeet.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.location.Location as AndroidLocation
+import android.net.Uri
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
@@ -18,6 +23,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +39,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,6 +52,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -68,6 +78,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,10 +90,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
@@ -92,6 +106,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.map.GeoPinWithLocation
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType
@@ -103,7 +118,11 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -114,7 +133,12 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlin.math.asin
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
@@ -136,14 +160,63 @@ object MapScreenTestTags {
   const val PREVIEW_DATE = "previewDate"
   const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
+  const val PREVIEW_NAVIGATE_BUTTON = "previewNavigateButton"
+  const val CLUSTER_SHEET = "clusterSheet"
 
   fun getTestTagForPin(pinId: String) = "mapPin_$pinId"
+
+  fun getTestTagForCluster(pos: LatLng) = "mapCluster_${pos.latitude}_${pos.longitude}"
+
+  fun getTestTagForClusterItem(pinId: String) = "clusterItem_$pinId"
+}
+
+/**
+ * Configuration object for cluster marker visuals on the map.
+ *
+ * Provides thresholds and colors for cluster sizes, allowing consistent coloring of cluster icons
+ * depending on how many pins are grouped together.
+ */
+object ClusterConfig {
+  private val startColor = Color(0xFF4CAF50) // Green
+  private val midColor = Color(0xFFFFC107) // Amber
+  private val endColor = Color(0xFFE53935) // Red
+
+  private const val SMALL_CLUSTER_THRESHOLD = 5
+  private const val MEDIUM_CLUSTER_THRESHOLD = 15
+
+  private const val BACKGROUND_ALPHA = 0.85f
+
+  /** Returns a gradient-based color depending on cluster size. */
+  fun getColorForSize(size: Int): Color {
+    val normalized =
+        when {
+          size <= SMALL_CLUSTER_THRESHOLD -> 0f
+          size <= MEDIUM_CLUSTER_THRESHOLD ->
+              (size - SMALL_CLUSTER_THRESHOLD).toFloat() /
+                  (MEDIUM_CLUSTER_THRESHOLD - SMALL_CLUSTER_THRESHOLD)
+          else -> 1f
+        }
+
+    // Interpolate:
+    val color =
+        if (normalized < 0.5f) {
+          val t = normalized / 0.5f
+          lerp(startColor, midColor, t)
+        } else {
+          val t = (normalized - 0.5f) / 0.5f
+          lerp(midColor, endColor, t)
+        }
+
+    return color.copy(alpha = BACKGROUND_ALPHA)
+  }
 }
 
 private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
+private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
+private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val DEFAULT_MARKER_SCALE = 1.5f
 private const val DEFAULT_MARKER_BACKGROUND_ALPHA = 1.0f
 private const val RGB_MAX_ALPHA = 255
@@ -217,6 +290,8 @@ fun MapScreen(
   // --- Map & query state ---
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
+  var isCameraCentered by remember { mutableStateOf(false) }
+  var isQueryLaunched by remember { mutableStateOf(false) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
 
   // --- UI controls (filters & creation) ---
@@ -247,8 +322,6 @@ fun MapScreen(
    * Retrieves user location whenever:
    * - permission state changes, or
    * - lifecycle returns to RESUMED (i.e., app resumes).
-   *
-   * If location retrieval fails or permission denied, falls back to EPFL.
    */
   LaunchedEffect(permissionGranted, permissionChecked, lifecycleState) {
     if (!permissionChecked) return@LaunchedEffect
@@ -264,19 +337,46 @@ fun MapScreen(
           }
         } else null
 
-    userLocation = loc ?: DEFAULT_CENTER
+    userLocation = loc
     isLoadingLocation = false
   }
 
-  /**
-   * Starts the Firestore geo query once a valid user location is obtained. Runs only once to avoid
-   * restarting the query unnecessarily.
-   */
-  LaunchedEffect(userLocation) {
-    if (userLocation == null) return@LaunchedEffect
+  // --- Continuous location updates ---
+  DisposableEffect(permissionGranted) {
+    if (permissionGranted) {
+      val locationRequest =
+          LocationRequest.Builder(
+                  Priority.PRIORITY_BALANCED_POWER_ACCURACY, DEFAULT_LOCATION_UPDATE_INTERVAL_MS)
+              .build()
+
+      val callback =
+          object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+              result.lastLocation?.let { loc ->
+                userLocation = Location(loc.latitude, loc.longitude, "User Location")
+              }
+            }
+          }
+
+      fusedClient.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
+
+      onDispose { fusedClient.removeLocationUpdates(callback) }
+    } else {
+      userLocation = null
+      onDispose {}
+    }
+  }
+
+  /** Starts Firestore geo query once location is resolved (real or fallback). */
+  LaunchedEffect(isLoadingLocation) {
+    if (isLoadingLocation || isQueryLaunched) return@LaunchedEffect
 
     viewModel.startGeoQuery(
-        center = userLocation!!, currentUserId = account.uid, radiusKm = DEFAULT_RADIUS_KM)
+        center = userLocation ?: DEFAULT_CENTER,
+        currentUserId = account.uid,
+        radiusKm = DEFAULT_RADIUS_KM)
+
+    isQueryLaunched = true
   }
 
   /** Updates the ViewModel filters whenever the set of included pin types changes. */
@@ -307,47 +407,85 @@ fun MapScreen(
           return@Scaffold
         }
 
-        // --- Marker preview bottom sheet ---
-        uiState.selectedGeoPin?.let { geoPin ->
-          ModalBottomSheet(
-              sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
-                when {
-                  uiState.isLoadingPreview -> {
-                    MarkerPreviewLoadingSheet(geoPin = geoPin)
-                  }
-                  uiState.selectedMarkerPreview != null -> {
+        // --- Cluster bottom sheet OR Marker preview bottom sheet ---
+        // If a marker preview is selected we show the marker preview sheet (priority).
+        // Otherwise if selectedClusterPreviews is non-null we show cluster sheet.
+
+        val markerPreview = uiState.selectedMarkerPreview
+        val clusterPreviews = uiState.selectedClusterPreviews
+        val isLoading = uiState.isLoadingPreview
+
+        when {
+          markerPreview != null -> {
+            ModalBottomSheet(
+                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
+                  if (isLoading) {
+                    MarkerPreviewLoadingSheet(pin = uiState.selectedPin)
+                  } else {
                     MarkerPreviewSheet(
                         preview = uiState.selectedMarkerPreview!!,
                         onClose = { viewModel.clearSelectedPin() },
-                        geoPin = uiState.selectedGeoPin!!,
+                        pin = uiState.selectedPin!!,
+                        userLocation = userLocation,
                         onRedirect = onRedirect)
                   }
                 }
-              }
+          }
+          clusterPreviews != null -> {
+            ModalBottomSheet(
+                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedCluster() }) {
+                  if (isLoading) {
+                    MarkerPreviewLoadingSheet(null)
+                  } else {
+                    ClusterPreviewSheet(
+                        clusterPreviews = clusterPreviews,
+                        userLocation = userLocation,
+                        onSelectPreview = { geoPin, preview ->
+                          viewModel.selectPinFromCluster(geoPin, preview)
+                        })
+                  }
+                }
+          }
         }
 
         // --- Map rendering ---
         val cameraPositionState = rememberCameraPositionState()
 
-        /** Center the camera on user location when it changes (first load or refresh). */
-        LaunchedEffect(userLocation) {
-          userLocation?.let {
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(it.latitude, it.longitude), DEFAULT_ZOOM_LEVEL))
-          }
+        /** Centers the camera once location is resolved (real or fallback). */
+        LaunchedEffect(isLoadingLocation) {
+          if (isLoadingLocation || isCameraCentered) return@LaunchedEffect
+
+          val target =
+              userLocation?.let { LatLng(it.latitude, it.longitude) }
+                  ?: LatLng(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude)
+
+          cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
+
+          isCameraCentered = true
         }
 
         /**
-         * Watches camera movement and updates Firestore query center after a short debounce.
-         * Ensures live results around current map area.
+         * Watches camera updates and reacts to movement & zoom changes. When the map center
+         * changes, updates the Firestore query center after a short debounce. When the zoom level
+         * changes, updates the ViewModel so clustering can recompute with the right threshold. Both
+         * flows are collected concurrently via `launch` to avoid blocking.
          */
         LaunchedEffect(cameraPositionState) {
-          snapshotFlow { cameraPositionState.position.target }
-              .debounce(CAMERA_CENTER_DEBOUNCE_MS)
-              .collect { latLng ->
-                viewModel.updateQueryCenter(Location(latLng.latitude, latLng.longitude))
-              }
+          // Update query center when map moves
+          launch {
+            snapshotFlow { cameraPositionState.position.target }
+                .debounce(CAMERA_CENTER_DEBOUNCE_MS)
+                .collect { latLng ->
+                  viewModel.updateQueryCenter(Location(latLng.latitude, latLng.longitude))
+                }
+          }
+
+          // Update zoom level for clustering when zoom changes
+          launch {
+            snapshotFlow { cameraPositionState.position.zoom }
+                .debounce(CAMERA_ZOOM_DEBOUNCE_MS)
+                .collect { zoom -> viewModel.updateZoomLevel(zoom) }
+          }
         }
 
         // --- Google Map content ---
@@ -360,6 +498,7 @@ fun MapScreen(
                 null
               }
 
+          // Prepare marker icons for different pin types
           val shopIcon = rememberMarkerIcon(resId = R.drawable.ic_storefront)
           val spaceIcon = rememberMarkerIcon(resId = R.drawable.ic_table)
           val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
@@ -371,36 +510,50 @@ fun MapScreen(
                       .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
               properties =
-                  MapProperties(mapStyleOptions = mapStyleOptions, isMyLocationEnabled = true)) {
-                val pinPriority = listOf(PinType.SESSION, PinType.SHOP, PinType.SPACE)
+                  MapProperties(
+                      mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted)) {
+                val clusters = viewModel.getClusters()
 
-                val uniquePins =
-                    uiState.geoPins
-                        .groupBy { it.location }
-                        .mapValues { (_, pins) ->
-                          pins.minByOrNull { pinPriority.indexOf(it.geoPin.type) }!!
-                        }
-                        .values
+                clusters
+                    .filter { it.items.isNotEmpty() }
+                    .forEach { cluster ->
+                      val size = cluster.items.size
+                      val pos = LatLng(cluster.centerLat, cluster.centerLng)
 
-                uniquePins.forEach { gp ->
-                  val pos = LatLng(gp.location.latitude, gp.location.longitude)
-                  val icon =
-                      when (gp.geoPin.type) {
-                        PinType.SHOP -> shopIcon
-                        PinType.SPACE -> spaceIcon
-                        PinType.SESSION -> sessionIcon
+                      if (size == 1) {
+                        // Single pin, show the appropriate marker icon
+                        val gp = cluster.items.first()
+                        val icon =
+                            when (gp.geoPin.type) {
+                              PinType.SHOP -> shopIcon
+                              PinType.SPACE -> spaceIcon
+                              PinType.SESSION -> sessionIcon
+                            }
+                        Marker(
+                            state = MarkerState(pos),
+                            title = gp.geoPin.uid,
+                            snippet = gp.geoPin.type.name,
+                            onClick = {
+                              viewModel.selectPin(gp) // Open preview for this pin
+                              true
+                            },
+                            icon = icon,
+                            tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
+                      } else {
+                        // Cluster with multiple pins, create a cluster icon
+                        val clusterIcon = rememberClusterIcon(size = size)
+                        Marker(
+                            state = MarkerState(pos),
+                            title = "Cluster ($size)",
+                            snippet = "$size items",
+                            onClick = {
+                              viewModel.selectCluster(cluster) // Open cluster sheet
+                              true
+                            },
+                            icon = clusterIcon,
+                            tag = MapScreenTestTags.getTestTagForCluster(pos))
                       }
-                  Marker(
-                      state = MarkerState(pos),
-                      title = gp.geoPin.uid,
-                      snippet = gp.geoPin.type.name,
-                      onClick = {
-                        viewModel.selectPin(gp)
-                        true
-                      },
-                      icon = icon,
-                      tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
-                }
+                    }
               }
 
           // --- FILTER BUTTON + vertical list of filter chips (top-start) ---
@@ -655,9 +808,11 @@ fun MapScreen(
         }
       }
 
-  /** Controls bottom sheet visibility based on whether a marker preview is available. */
-  LaunchedEffect(uiState.selectedMarkerPreview) {
-    if (uiState.selectedMarkerPreview != null) {
+  /** Controls bottom sheet visibility based on any selection (marker or cluster). */
+  LaunchedEffect(uiState.selectedMarkerPreview, uiState.selectedClusterPreviews) {
+    val shouldShow =
+        uiState.selectedMarkerPreview != null || uiState.selectedClusterPreviews != null
+    if (shouldShow) {
       coroutineScope.launch { sheetState.show() }
     } else {
       if (sheetState.isVisible) {
@@ -703,15 +858,77 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
 }
 
 /**
+ * Opens Google Maps in navigation mode toward a given latitude/longitude.
+ *
+ * This uses the `google.navigation:` URI scheme to directly launch turn-by-turn navigation if
+ * Google Maps is installed. If the Maps app is not available, the call is safely ignored.
+ *
+ * @param lat The destination latitude.
+ * @param lng The destination longitude.
+ */
+private fun Context.openGoogleMapsDirections(lat: Double, lng: Double) {
+  val uri = Uri.parse("google.navigation:q=$lat,$lng")
+  val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") }
+  if (intent.resolveActivity(packageManager) != null) {
+    startActivity(intent)
+  }
+}
+
+/**
+ * Calculates the distance between two geographic coordinates using the Haversine formula.
+ *
+ * @param lat1 Latitude of the first point in degrees.
+ * @param lng1 Longitude of the first point in degrees.
+ * @param lat2 Latitude of the second point in degrees.
+ * @param lng2 Longitude of the second point in degrees.
+ * @return Distance between the two points in kilometers.
+ */
+private fun distanceKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+  val r = 6371.0 // Earth radius
+  val dLat = Math.toRadians(lat2 - lat1)
+  val dLng = Math.toRadians(lng2 - lng1)
+  val lat1 = Math.toRadians(lat1)
+  val lat2 = Math.toRadians(lat2)
+
+  val haversine = sin(dLat / 2).pow(2.0) + sin(dLng / 2).pow(2.0) * cos(lat1) * cos(lat2)
+  return 2 * r * asin(sqrt(haversine))
+}
+
+/**
+ * Extension function for GeoPinWithLocation to compute the distance to a given location.
+ *
+ * @param location Target location.
+ * @return Distance to the target location in kilometers.
+ */
+private fun GeoPinWithLocation.distanceTo(location: Location): Double {
+  return distanceKm(
+      this.location.latitude, this.location.longitude, location.latitude, location.longitude)
+}
+
+/**
+ * Returns a user-friendly string representation of the distance from this GeoPinWithLocation to the
+ * specified location.
+ *
+ * Distances below 1 km are shown in meters, otherwise in kilometers with 1 decimal.
+ *
+ * @param location Target location.
+ * @return Distance as a formatted string, e.g., "500 m" or "2.3 km".
+ */
+private fun GeoPinWithLocation.distanceToString(location: Location): String {
+  val km = distanceTo(location)
+  return if (km < 1.0) "${(km * 1000).toInt()} m" else String.format("%.1f km", km)
+}
+
+/**
  * Displays a simple loading sheet while fetching marker preview data.
  *
  * Shows a centered text and a circular progress indicator. The text varies depending on the type of
- * the pin being loaded.
+ * the pin being loaded, or shows "Loading cluster..." if loading a cluster (geoPin is null).
  *
- * @param geoPin the [StorableGeoPin] for which the preview is loading
+ * @param pin the [GeoPinWithLocation] for which the preview is loading
  */
 @Composable
-private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
+private fun MarkerPreviewLoadingSheet(pin: GeoPinWithLocation?) {
   Column(
       modifier =
           Modifier.fillMaxWidth()
@@ -720,10 +937,11 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text =
-                when (geoPin.type) {
+                when (pin?.geoPin?.type) {
                   PinType.SHOP -> "Loading shop..."
                   PinType.SPACE -> "Loading space..."
                   PinType.SESSION -> "Loading session..."
+                  null -> "Loading cluster..."
                 },
             style = MaterialTheme.typography.titleMedium)
 
@@ -745,23 +963,32 @@ private fun MarkerPreviewLoadingSheet(geoPin: StorableGeoPin) {
  *     - Address with location icon
  *     - Date with calendar icon
  *
- * The sheet includes a close icon in the top-right corner.
+ * The sheet includes:
+ * - A close button (top-right)
+ * - A "View details" button
+ * - A "Navigate" button opening Google Maps directions
  */
 @Composable
 private fun MarkerPreviewSheet(
     preview: MarkerPreview,
     onClose: () -> Unit,
-    geoPin: StorableGeoPin,
+    pin: GeoPinWithLocation,
+    userLocation: Location?,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
+  val context = LocalContext.current
+
   Column(
       modifier =
           Modifier.fillMaxWidth()
               .padding(Dimensions.Padding.extraLarge)
               .testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
         Box(modifier = Modifier.fillMaxWidth()) {
+          val title =
+              if (userLocation != null) "${preview.name} — ${pin.distanceToString(userLocation)}"
+              else preview.name
           Text(
-              text = preview.name,
+              text = title,
               style = MaterialTheme.typography.titleLarge,
               modifier =
                   Modifier.align(Alignment.CenterStart).testTag(MapScreenTestTags.PREVIEW_TITLE))
@@ -838,13 +1065,119 @@ private fun MarkerPreviewSheet(
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        Button(
-            onClick = { onRedirect(geoPin) },
-            modifier =
-                Modifier.align(Alignment.End)
-                    .testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
-              Text(text = "View details")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+          Button(
+              onClick = { onRedirect(pin.geoPin) },
+              modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON)) {
+                Text(text = "View details")
+              }
+
+          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+          Button(
+              onClick = {
+                context.openGoogleMapsDirections(pin.location.latitude, pin.location.longitude)
+              },
+              modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_NAVIGATE_BUTTON)) {
+                Text(text = "Go To")
+              }
+        }
+      }
+}
+
+/**
+ * Displays a list of multiple marker previews as a cluster sheet.
+ *
+ * @param clusterPreviews list of geo pins with their preview data
+ * @param onSelectPreview callback when a cluster item is selected
+ */
+@Composable
+private fun ClusterPreviewSheet(
+    clusterPreviews: List<Pair<GeoPinWithLocation, MarkerPreview>>,
+    userLocation: Location?,
+    onSelectPreview: (GeoPinWithLocation, MarkerPreview) -> Unit
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(Dimensions.Padding.large)
+              .testTag(MapScreenTestTags.CLUSTER_SHEET)) {
+        Text(text = "Multiple locations", style = MaterialTheme.typography.titleLarge)
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+          items(clusterPreviews) { (pin, preview) ->
+            ClusterPreviewItem(
+                preview = preview,
+                pin = pin,
+                userLocation = userLocation,
+                onClick = { onSelectPreview(pin, preview) },
+                testTag = MapScreenTestTags.getTestTagForClusterItem(pin.geoPin.uid))
+          }
+        }
+      }
+}
+
+/**
+ * Single item in a cluster preview list.
+ *
+ * Displays icon based on pin type, name, and game if session.
+ *
+ * @param preview marker preview data
+ * @param onClick callback when the item is clicked
+ * @param testTag UI testing tag
+ */
+@Composable
+private fun ClusterPreviewItem(
+    preview: MarkerPreview,
+    pin: GeoPinWithLocation,
+    userLocation: Location?,
+    onClick: () -> Unit,
+    testTag: String
+) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable { onClick() }
+              .padding(Dimensions.Padding.medium)
+              .testTag(testTag),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          val icon =
+              when (preview) {
+                is MarkerPreview.ShopMarkerPreview -> Icons.Default.Storefront
+                is MarkerPreview.SpaceMarkerPreview -> Icons.Default.TableRestaurant
+                is MarkerPreview.SessionMarkerPreview -> Icons.Default.SportsEsports
+              }
+
+          Icon(
+              imageVector = icon,
+              contentDescription = null,
+              modifier = Modifier.size(Dimensions.IconSize.large))
+
+          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+          Column {
+            Text(text = preview.name, style = MaterialTheme.typography.bodyLarge)
+
+            if (preview is MarkerPreview.SessionMarkerPreview) {
+              Text(
+                  text = preview.game,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+          }
+        }
+
+        // Distance added to the end
+        userLocation?.let {
+          Text(
+              text = pin.distanceToString(it),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
       }
 }
 
@@ -897,6 +1230,63 @@ private fun rememberMarkerIcon(
     drawable.setTint(tint.toArgb())
     drawable.setBounds(0, 0, width, height)
     drawable.draw(canvas)
+
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+  }
+}
+
+/**
+ * Creates a custom Google Maps cluster icon with the cluster size displayed.
+ *
+ * The icon is a circle whose color depends on the cluster size (small/medium/large), and the size
+ * number is drawn centered in white text.
+ *
+ * @param size number of items in the cluster
+ * @param diameterDp diameter of the cluster icon in dp (default is 32dp)
+ * @return a [BitmapDescriptor] usable as a Google Maps marker icon
+ */
+@Composable
+private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescriptor {
+  val density = LocalDensity.current
+
+  return remember(size, diameterDp) {
+    val diameterPx = with(density) { diameterDp.dp.toPx() }.toInt()
+    val radius = diameterPx / 2f
+
+    // Create a bitmap
+    val bitmap = createBitmap(diameterPx, diameterPx)
+    val canvas = Canvas(bitmap)
+
+    // Background circle
+    val paint =
+        Paint().apply {
+          isAntiAlias = true
+          color = ClusterConfig.getColorForSize(size).toArgb()
+          style = Paint.Style.FILL
+        }
+    canvas.drawCircle(radius, radius, radius, paint)
+
+    // Draw auto-sized text (size number)
+    val digits = size.toString().length
+    val textFactor =
+        when (digits) {
+          1 -> 0.50f
+          2 -> 0.40f
+          3 -> 0.32f
+          else -> 0.28f
+        }
+
+    val textPaint =
+        Paint().apply {
+          color = Color.White.toArgb()
+          textSize = diameterPx * textFactor
+          textAlign = Paint.Align.CENTER
+          typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+          isAntiAlias = true
+        }
+
+    val textY = radius - (textPaint.descent() + textPaint.ascent()) / 2
+    canvas.drawText(size.toString(), radius, textY, textPaint)
 
     BitmapDescriptorFactory.fromBitmap(bitmap)
   }

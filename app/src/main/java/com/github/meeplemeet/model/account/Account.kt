@@ -93,6 +93,8 @@ data class Relationship(
  *   a friend request).
  * @property notificationSettings The privacy settings controlling who can send notifications to
  *   this account. Determines whether all users, only friends, or no users can send invitations.
+ * @property pastSessionIds List of UUIDs representing sessions that have been archived for this
+ *   user.
  */
 data class Account(
     val uid: String,
@@ -107,6 +109,7 @@ data class Account(
     val relationships: Map<String, RelationshipStatus> = emptyMap(),
     val notifications: List<Notification> = emptyList(),
     val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
+    val pastSessionIds: List<String> = emptyList()
 )
 
 /**
@@ -136,6 +139,7 @@ data class AccountNoUid(
     val shopOwner: Boolean = false,
     val spaceRenter: Boolean = false,
     val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
+    val pastSessionIds: List<String> = emptyList()
 )
 
 /**
@@ -174,4 +178,5 @@ fun fromNoUid(
         spaceRenter = accountNoUid.spaceRenter,
         relationships = relationships.associate { it.uid to it.status },
         notifications = notifications,
-        notificationSettings = accountNoUid.notificationSettings)
+        notificationSettings = accountNoUid.notificationSettings,
+        pastSessionIds = accountNoUid.pastSessionIds)

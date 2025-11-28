@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -67,7 +68,7 @@ import kotlinx.coroutines.delay
 const val DEFAULT_DISCUSSION_NAME = "Discussion"
 const val NO_DISCUSSIONS_DEFAULT_TEXT = "No discussions yet"
 
-private const val MAXLINE = 1
+private const val MAX_LINE = 1
 
 object DiscussionOverviewTestTags {
   const val ADD_DISCUSSION_BUTTON = "Add Discussion"
@@ -98,6 +99,7 @@ fun DiscussionsOverviewScreen(
       remember(account.previews) {
         account.previews.values.sortedByDescending { it.lastMessageAt.toDate() }
       }
+  LaunchedEffect(account.previews) { viewModel.validatePreviews(account) }
 
   Scaffold(
       floatingActionButton = {
@@ -225,7 +227,7 @@ private fun EmptyDiscussionsListText() {
  */
 @Composable
 @Preview(showBackground = true)
-private fun DiscussionCard(
+public fun DiscussionCard(
     modifier: Modifier = Modifier,
     discussionName: String = "Hello",
     lastMsg: String = "Hello world",
@@ -262,7 +264,7 @@ private fun DiscussionCard(
                     fontSize = Dimensions.TextSize.title,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = if (unreadMsgCount > 0) FontWeight.SemiBold else FontWeight.Normal,
-                    maxLines = MAXLINE,
+                    maxLines = MAX_LINE,
                     overflow = TextOverflow.Ellipsis)
 
                 Text(
@@ -270,7 +272,7 @@ private fun DiscussionCard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = Dimensions.TextSize.body,
                     color = MessagingColors.secondaryText,
-                    maxLines = MAXLINE,
+                    maxLines = MAX_LINE,
                     overflow = TextOverflow.Ellipsis)
               }
 
