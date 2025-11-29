@@ -533,7 +533,6 @@ fun MapScreen(
               cameraPositionState = cameraPositionState,
               properties =
                   MapProperties(
-                      mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted)) {
                       mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted),
               uiSettings =
                   MapUiSettings(myLocationButtonEnabled = false, zoomControlsEnabled = false)) {
@@ -719,6 +718,7 @@ fun MapScreen(
                 }
           }
 
+          // --- Add button (top-right) ---
           if (account.shopOwner || account.spaceRenter) {
             FloatingActionButton(
                 onClick = {
@@ -735,8 +735,8 @@ fun MapScreen(
                 modifier =
                     Modifier.testTag(MapScreenTestTags.ADD_FAB)
                         .align(Alignment.TopEnd)
-                        .padding(
-                            top = Dimensions.Padding.medium, end = Dimensions.Padding.medium)) {
+                        .padding(top = Dimensions.Padding.medium, end = Dimensions.Padding.medium)
+                        .size(Dimensions.ButtonSize.standard)) {
                   Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
                 }
           }
