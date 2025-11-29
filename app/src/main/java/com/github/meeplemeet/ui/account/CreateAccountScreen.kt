@@ -336,6 +336,7 @@ fun CreateAccountScreen(
                       Modifier.fillMaxWidth().padding(bottom = CreateAccountScreenUi.mediumPadding))
 
               RoleCheckBox(
+                  online = true,
                   isChecked = isShopChecked,
                   onCheckedChange = { checked: Boolean -> isShopChecked = checked },
                   label = "Sell items",
@@ -343,6 +344,7 @@ fun CreateAccountScreen(
                   testTag = CreateAccountTestTags.CHECKBOX_OWNER)
 
               RoleCheckBox(
+                  online = true,
                   isChecked = isSpaceRented,
                   onCheckedChange = { checked: Boolean -> isSpaceRented = checked },
                   label = "Rent out spaces",
@@ -363,6 +365,7 @@ fun CreateAccountScreen(
  */
 @Composable
 fun RoleCheckBox(
+    online: Boolean,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     label: String,
@@ -373,6 +376,7 @@ fun RoleCheckBox(
       verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }) {
         Checkbox(
+            enabled = online,
             checked = isChecked,
             modifier = Modifier.testTag(testTag),
             onCheckedChange = onCheckedChange,

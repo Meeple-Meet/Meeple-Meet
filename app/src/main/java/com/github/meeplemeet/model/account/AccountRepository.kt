@@ -377,6 +377,16 @@ class AccountRepository :
   }
 
   /**
+   * Updates an account document from it's offline changes.
+   *
+   * @param id The account ID to update
+   * @param changes The changes made offline
+   */
+  suspend fun updateAccount(id: String, changes: Map<String, Any>) {
+    collection.document(id).update(changes).await()
+  }
+
+  /**
    * Adds a shop ID to the account's owned shops list.
    *
    * @param accountId The account ID to add the shop to

@@ -289,4 +289,31 @@ object OfflineModeManager {
 
     onResult(merged)
   }
+
+  /**
+   * Records a change to an account property in the offline cache.
+   *
+   * This function tracks pending changes to account properties that will be synchronized later. If
+   * the account is not already in the cache, it is added. Changes are accumulated in a map keyed by
+   * property name.
+   *
+   * ## Use Cases
+   * - Recording user profile edits while offline
+   * - Tracking pending updates before synchronization
+   * - Maintaining change history for conflict resolution
+   *
+   * ## Thread Safety
+   * Updates to the offline mode state flow are thread-safe.
+   *
+   * @param account The account being modified
+   * @param property The name of the property being changed (e.g., "username", "bio")
+   * @param newValue The new value for the property
+   */
+  fun setAccountChange(account: Account, property: String, newValue: Any) {
+    val state = _offlineModeFlow.value.accounts
+    val (existingAccount, existingChanges) = state[account.uid] ?: return
+    val updatedChanges = existingChanges.toMutableMap().apply { put(property, newValue) }
+    state[account.uid] = existingAccount to updatedChanges
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = state)
+  }
 }

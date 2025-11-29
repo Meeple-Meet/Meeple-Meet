@@ -70,6 +70,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -276,7 +277,14 @@ fun MainTab(
     onDelete: () -> Unit
 ) {
   var pref by remember { mutableStateOf(NotificationSettings.EVERYONE) }
+  val online by OfflineModeManager.hasInternetConnection.collectAsState()
+  val cache by OfflineModeManager.offlineModeFlow.collectAsState()
   val focusManager = LocalFocusManager.current
+
+  LaunchedEffect(online) {
+    if (online) viewModel.updateAccount(account, cache.accounts[account.uid]!!.second)
+  }
+
   Column(
       modifier =
           Modifier.fillMaxSize()
@@ -290,20 +298,26 @@ fun MainTab(
         PublicInfo(
             account = account,
             viewModel = viewModel,
+            online = online,
             onFriendsClick = onFriendsClick,
             onNotificationClick = onNotificationClick,
             onSignOut = onSignOutOrDel)
 
-        PrivateInfo(account = account, viewModel = viewModel)
+        PrivateInfo(account = account, viewModel = viewModel, online)
 
         NotificationSettingsSection(
             preference = pref,
             onPreferenceChange = {
               pref = it
-              viewModel.setAccountNotificationSettings(account, it)
+
+              if (online) viewModel.setAccountNotificationSettings(account, it)
+              else
+                  OfflineModeManager.setAccountChange(
+                      account, Account::notificationSettings.name, it)
             })
 
         Button(
+            enabled = online,
             onClick = { showDelDialog = true },
             shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
             elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
@@ -346,6 +360,7 @@ fun MainTab(
 fun PublicInfo(
     account: Account,
     viewModel: ProfileScreenViewModel,
+    online: Boolean,
     onFriendsClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onSignOut: () -> Unit
@@ -363,7 +378,7 @@ fun PublicInfo(
               Row(
                   modifier = Modifier.fillMaxWidth().padding(start = Dimensions.Padding.xLarge),
                   verticalAlignment = Alignment.CenterVertically) {
-                    DisplayAvatar(viewModel, account)
+                    DisplayAvatar(viewModel, account, online)
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -375,7 +390,7 @@ fun PublicInfo(
                         onSignOut = onSignOut)
                   }
 
-              PublicInfoInputs(account = account, viewModel = viewModel)
+              PublicInfoInputs(account = account, viewModel = viewModel, online = online)
             }
       }
 }
@@ -491,7 +506,7 @@ fun PublicInfoActions(
  * @param viewModel viewmodel used by this screen
  */
 @Composable
-fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
+fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
   var name by remember { mutableStateOf(account.name) }
   var desc by remember { mutableStateOf(account.description ?: "") }
 
@@ -510,7 +525,8 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
             isError = nameError,
             onFocusChanged = { focused ->
               if (!focused && !nameError) {
-                viewModel.setAccountName(account, name)
+                if (online) viewModel.setAccountName(account, name)
+                else OfflineModeManager.setAccountChange(account, Account::name.name, name)
               }
             })
 
@@ -535,6 +551,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
         val errorHandle = showErrors && errorMsg.isNotBlank() && handle != account.handle
 
         FocusableInputField(
+            enabled = online,
             value = handle,
             modifier =
                 Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE)
@@ -587,7 +604,10 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
             onValueChange = { desc = it },
             singleLine = false,
             onFocusChanged = { focused ->
-              if (!focused) viewModel.setAccountDescription(account, newDescription = desc)
+              if (!focused) {
+                if (online) viewModel.setAccountDescription(account, newDescription = desc)
+                else OfflineModeManager.setAccountChange(account, Account::description.name, desc)
+              }
             })
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
@@ -601,22 +621,17 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
  * @param account Current user
  */
 @Composable
-fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
+fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: Boolean) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   var showChooser by remember { mutableStateOf(false) }
-  var isSending by remember { mutableStateOf(false) }
   var showPermissionDenied by remember { mutableStateOf(false) }
 
   // --- Upload function ---
   val setPhoto: suspend (String) -> Unit = { path ->
-    isSending = true
     try {
-
       viewModel.setAccountPhoto(account, context, path)
-    } finally {
-      isSending = false
-    }
+    } catch (_: Exception) {}
   }
 
   // --- Camera launcher ---
@@ -655,7 +670,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   Box(
       modifier =
           Modifier.size(MainTabUi.AVATAR_SIZE)
-              .clickable { showChooser = true }
+              .clickable { if (online) showChooser = true }
               .testTag(PublicInfoTestTags.AVATAR_CONTAINER),
       contentAlignment = Alignment.TopEnd) {
         if (account.photoUrl.isNullOrBlank()) {
@@ -811,7 +826,7 @@ fun AvatarChooserDialog(
  * @param viewModel viewmodel used by this screen
  */
 @Composable
-fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
+fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
 
   val uiState by viewModel.uiState.collectAsState()
 
@@ -854,7 +869,7 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
                   })
 
               // ROLES SECTION
-              RolesSection(account = account, viewModel = viewModel)
+              RolesSection(account = account, viewModel = viewModel, online = online)
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
             }
       }
@@ -1018,7 +1033,7 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
+fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
 
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }
@@ -1042,6 +1057,7 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
       }
 
   RoleCheckBox(
+      online = online,
       isChecked = isShopChecked,
       onCheckedChange = { checked ->
         if (!checked) {
@@ -1057,6 +1073,7 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
       testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
 
   RoleCheckBox(
+      online = online,
       isChecked = isSpaceRented,
       onCheckedChange = { checked ->
         if (!checked) {
