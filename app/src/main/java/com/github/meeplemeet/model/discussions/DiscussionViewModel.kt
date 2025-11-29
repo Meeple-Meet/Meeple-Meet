@@ -100,9 +100,9 @@ class DiscussionViewModel(
         throw IllegalArgumentException("Can not edit someone else's message")
 
     if (Timestamp.now().toDate().time >
-        message.createdAt.toDate().time + EDIT_MESSAGE_MAX_THRESHOLD) {
-      // condition met
-    }
+        message.createdAt.toDate().time + EDIT_MESSAGE_MAX_THRESHOLD)
+        throw IllegalArgumentException(
+            "Can not edit a message after ${EDIT_MESSAGE_MAX_THRESHOLD}ms it has been created")
 
     val cleaned = newContent.trimEnd()
     if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
