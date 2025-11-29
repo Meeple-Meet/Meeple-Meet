@@ -282,7 +282,8 @@ fun MainTab(
   val focusManager = LocalFocusManager.current
 
   LaunchedEffect(online) {
-    if (online) viewModel.updateAccount(account, cache.accounts[account.uid]!!.second)
+    if (online && cache.accounts[account.uid] != null)
+        viewModel.updateAccount(account, cache.accounts[account.uid]!!.second)
   }
 
   Column(
