@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -153,14 +154,15 @@ fun CreateSessionScreen(
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
   var isInputFocused by remember { mutableStateOf(false) }
   // Helper to show error messages in a snackbar
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
-    viewModel.getAccounts(discussion.participants) { fetched ->
-      form = form.copy(participants = (fetched + account).distinctBy { it.uid })
+    viewModel.getAccounts(discussion.participants, context) { fetched ->
+      form = form.copy(participants = (fetched.filterNotNull() + account).distinctBy { it.uid })
     }
 
     // If a game query was already entered, trigger search

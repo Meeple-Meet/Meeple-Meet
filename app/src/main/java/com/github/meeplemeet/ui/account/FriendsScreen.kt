@@ -307,7 +307,7 @@ private fun loadAccountsOrEmpty(
     ids: List<String>,
     context: Context,
     viewModel: FriendsScreenViewModel,
-    onResult: (List<Account>) -> Unit,
+    onResult: (List<Account?>) -> Unit,
 ) {
   if (ids.isEmpty()) onResult(emptyList()) else viewModel.getAccounts(ids, context, onResult)
 }
@@ -359,14 +359,26 @@ fun FriendsScreen(
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
   var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
 
-  LaunchedEffect(friendIds) { loadAccountsOrEmpty(friendIds, context, viewModel) { friends = it } }
+  LaunchedEffect(account.uid) {
+    viewModel.getAccounts(account.relationships.keys.toList(), context) { list ->
+      val f = mutableListOf<Account>()
+      val s = mutableListOf<Account>()
+      val b = mutableListOf<Account>()
 
-  LaunchedEffect(sentRequestIds) {
-    loadAccountsOrEmpty(sentRequestIds, context, viewModel) { sentRequests = it }
-  }
+      for (acc in list) {
+        if (acc == null) continue
+        when (account.relationships[acc.uid]) {
+          RelationshipStatus.FRIEND -> f.add(acc)
+          RelationshipStatus.SENT -> s.add(acc)
+          RelationshipStatus.BLOCKED -> b.add(acc)
+          else -> {}
+        }
+      }
 
-  LaunchedEffect(blockedIds) {
-    loadAccountsOrEmpty(blockedIds, context, viewModel) { blockedUsers = it }
+      friends = f
+      sentRequests = s
+      blockedUsers = b
+    }
   }
 
   LaunchedEffect(trimmedQuery) { viewModel.searchByHandle(trimmedQuery) }
