@@ -136,6 +136,8 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
 import kotlin.math.asin
 import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.log10
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
@@ -147,6 +149,8 @@ import kotlinx.coroutines.tasks.await
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
+  const val SCALE_BAR = "scaleBar"
+  const val SCALE_BAR_DISTANCE = "scaleBarDistance"
   const val ADD_FAB = "addFab"
   const val ADD_CHOOSE_DIALOG = "chooseAddDialog"
   const val FILTER_BUTTON = "filterButton"
@@ -1292,4 +1296,65 @@ private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescript
 
     BitmapDescriptorFactory.fromBitmap(bitmap)
   }
+}
+
+/**
+ * Displays a map scale bar (metric only).
+ * - Metric label (m/km) shown below the bar
+ * - Values rounded to human-friendly steps (1, 2, 5 × 10^n)
+ * - Design: horizontal line ending with a single downward tick at the left end (no upward tick).
+ * - Transparent background so the map remains fully visible.
+ */
+@Composable
+private fun MapScaleBar(latitude: Double, zoomLevel: Float, barWidthPx: Int = 100) {
+  val metersPerPixel = 156543.03392 * cos(latitude * Math.PI / 180) / (1 shl zoomLevel.toInt())
+  val rawDistanceMeters = metersPerPixel * barWidthPx
+  val distanceMeters = roundDistance(rawDistanceMeters)
+
+  val metricLabel =
+      if (distanceMeters >= 1000) "${(distanceMeters / 1000).toInt()} km"
+      else "${distanceMeters.toInt()} m"
+
+  Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier = Modifier.testTag(MapScreenTestTags.SCALE_BAR)) {
+        // Horizontal bar with downward tick at the left end
+        Box {
+          // Main horizontal line
+          Box(Modifier.width(barWidthPx.dp).height(2.dp).background(AppColors.textIcons))
+          // Downward tick aligned to the left end of the line
+          Box(
+              Modifier.align(Alignment.BottomStart)
+                  .height(8.dp)
+                  .width(2.dp)
+                  .background(AppColors.textIcons))
+        }
+
+        Spacer(Modifier.height(2.dp))
+        Text(
+            metricLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = AppColors.textIcons,
+            modifier = Modifier.testTag(MapScreenTestTags.SCALE_BAR_DISTANCE))
+      }
+}
+
+/**
+ * Rounds a raw distance in meters to a human-friendly value.
+ *
+ * Uses steps 1, 2, or 5 multiplied by powers of 10 (e.g., 3200 m → 5 km; 180 m → 200 m).
+ *
+ * @param meters Raw distance in meters
+ * @return Rounded distance in meters
+ */
+private fun roundDistance(meters: Double): Double {
+  val pow10 = 10.0.pow(floor(log10(meters)))
+  val normalized = meters / pow10
+  val rounded =
+      when {
+        normalized < 2 -> 1.0
+        normalized < 5 -> 2.0
+        else -> 5.0
+      }
+  return rounded * pow10
 }
