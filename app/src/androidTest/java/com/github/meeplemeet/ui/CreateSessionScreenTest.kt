@@ -5,6 +5,7 @@ package com.github.meeplemeet.ui
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.espresso.Espresso
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.discussions.Discussion
@@ -21,6 +22,7 @@ import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionCreationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
+import com.google.api.Context
 import com.google.firebase.Timestamp
 import io.mockk.*
 import java.lang.reflect.Method
@@ -111,8 +113,12 @@ class CreateSessionScreenTest {
       gameRepository: GameRepository
   ) : CreateSessionViewModel(accountRepository, sessionRepository, gameRepository) {
     // Delegate getAccounts to the mocked DiscussionViewModel
-    override fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
-      viewModel.getAccounts(uids, onResult)
+    override fun getAccounts(
+        uids: List<String>,
+        context: android.content.Context,
+        onResult: (List<Account?>) -> Unit
+    ) {
+      viewModel.getAccounts(uids, context, onResult)
     }
   }
 
@@ -137,10 +143,10 @@ class CreateSessionScreenTest {
     injectedDiscussionFlow = MutableStateFlow(baseDiscussion)
     map[discussionId] = injectedDiscussionFlow
 
-    every { viewModel.getAccounts(any(), any()) } answers
+    every { viewModel.getAccounts(any(), any(), any()) } answers
         {
           val disc = firstArg<List<String>>()
-          val cb = secondArg<(List<Account>) -> Unit>()
+          val cb = thirdArg<(List<Account?>) -> Unit>()
           val accounts =
               disc.distinct().mapNotNull { uid ->
                 when (uid) {
@@ -251,6 +257,7 @@ class CreateSessionScreenTest {
       titleInput().performTextInput("Friday Night Board Game Jam")
       gameInput().performTextInput("Root")
       locationInput().performTextInput("Table A1")
+      Espresso.closeSoftKeyboard()
       createBtn().assertIsNotEnabled()
     }
 
@@ -265,7 +272,7 @@ class CreateSessionScreenTest {
       }
 
       checkpoint("initial_load_fetches_participants_once") {
-        verify(atLeast = 1) { viewModel.getAccounts(any(), any()) }
+        verify(atLeast = 1) { viewModel.getAccounts(any(), any(), any()) }
       }
     }
 
