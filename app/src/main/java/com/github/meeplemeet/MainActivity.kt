@@ -83,6 +83,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import okhttp3.OkHttpClient
 
@@ -173,6 +174,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onDestroy() {
     KeyboardUtils.detach(this)
+    OfflineModeManager.scope.cancel() // Prevent leaks
     super.onDestroy()
   }
 }
