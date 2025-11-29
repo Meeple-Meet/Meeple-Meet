@@ -9,30 +9,32 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 
 /**
- * Represents the offline mode state for the application, storing all data that needs to be
- * synchronized when the device goes back online.
+ * Represents the offline mode state for the application, caching data for offline access.
  *
- * This data class holds pending changes made while offline, including new or modified entities that
- * should be uploaded to the backend once connectivity is restored.
+ * This data class holds cached entities that have been loaded from the repository, allowing the
+ * application to function with limited connectivity. LinkedHashMaps are used to maintain insertion
+ * order, enabling LRU-style cache eviction when size limits are enforced.
  *
  * @property accounts Map of account IDs to pairs of Account objects and their associated metadata.
- *   The metadata map contains additional information needed for synchronization.
- * @property discussions Map of discussion IDs to pairs of Discussion objects and their associated
- *   pending messages.
- * @property posts Map of post IDs to Post objects representing posts created (true) or modified
- *   offline (false).
- * @property shopsToAdd Map of shop IDs to pairs of Shop objects and their associated metadata,
- *   representing shops to be created or updated when online.
+ *   LinkedHashMap maintains insertion order for potential cache eviction.
+ * @property discussions Map of discussion IDs to pairs of Discussion objects and their cached
+ *   messages. LinkedHashMap maintains insertion order for potential cache eviction.
+ * @property posts Map of post IDs to pairs of Post objects and a boolean flag. LinkedHashMap
+ *   maintains insertion order for potential cache eviction.
+ * @property shopsToAdd Map of shop IDs to pairs of Shop objects and their associated metadata.
+ *   LinkedHashMap maintains insertion order for potential cache eviction.
  * @property spaceRentersToAdd Map of space renter IDs to pairs of SpaceRenter objects and their
- *   associated metadata, representing space renters to be created or updated when online.
+ *   associated metadata. LinkedHashMap maintains insertion order for potential cache eviction.
  * @property loadedPins Map of pin IDs to GeoPinWithLocation objects, representing map pins that
- *   have been loaded and cached for offline viewing.
+ *   have been loaded and cached for offline viewing. LinkedHashMap maintains insertion order for
+ *   potential cache eviction.
  */
 data class OfflineMode(
-    val accounts: Map<String, Pair<Account, Map<String, Any>>> = emptyMap(),
-    val discussions: Map<String, Pair<Discussion, List<Message>>> = emptyMap(),
-    val posts: Map<String, Pair<Post, Boolean>> = emptyMap(),
-    val shopsToAdd: Map<String, Pair<Shop, Map<String, Any>>> = emptyMap(),
-    val spaceRentersToAdd: Map<String, Pair<SpaceRenter, Map<String, Any>>> = emptyMap(),
-    val loadedPins: Map<String, GeoPinWithLocation> = emptyMap(),
+    val accounts: LinkedHashMap<String, Pair<Account, Map<String, Any>>> = LinkedHashMap(),
+    val discussions: LinkedHashMap<String, Pair<Discussion, List<Message>>> = LinkedHashMap(),
+    val posts: LinkedHashMap<String, Pair<Post, Boolean>> = LinkedHashMap(),
+    val shopsToAdd: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> = LinkedHashMap(),
+    val spaceRentersToAdd: LinkedHashMap<String, Pair<SpaceRenter, Map<String, Any>>> =
+        LinkedHashMap(),
+    val loadedPins: LinkedHashMap<String, GeoPinWithLocation> = LinkedHashMap(),
 )

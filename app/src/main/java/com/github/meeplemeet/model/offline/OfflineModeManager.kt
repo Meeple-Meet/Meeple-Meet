@@ -5,6 +5,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
+ * Caps the size of a LinkedHashMap by removing the oldest entries until the size is at or below the
+ * maximum.
+ *
+ * This function enforces a maximum size constraint on a LinkedHashMap by removing entries in
+ * insertion order (oldest first) until the map size is within the specified limit. LinkedHashMap
+ * maintains insertion order, so the first entries are the oldest.
+ *
+ * @param T The type of values stored in the map
+ * @param map The LinkedHashMap to cap
+ * @param max The maximum number of entries to retain
+ * @return A new Map containing the remaining entries after capping
+ */
+private fun <T> cap(map: LinkedHashMap<String, T>, max: Int): Map<String, T> {
+  while (map.size > max) {
+    val oldestKey = map.entries.first().key
+    map.remove(oldestKey)
+  }
+
+  return map.toMap()
+}
+
+/**
  * Singleton manager for offline mode state across the application.
  *
  * This object provides a centralized, reactive way to manage offline data including accounts,
