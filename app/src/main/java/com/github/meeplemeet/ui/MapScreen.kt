@@ -145,6 +145,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -225,6 +227,7 @@ private const val DEFAULT_ZOOM_LEVEL = 14f
 private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
+private const val SCALE_BAR_HIDE_MS = 3000L
 private const val DEFAULT_MARKER_SCALE = 1.5f
 private const val DEFAULT_MARKER_BACKGROUND_ALPHA = 1.0f
 private const val RGB_MAX_ALPHA = 255
@@ -511,6 +514,20 @@ fun MapScreen(
           val spaceIcon = rememberMarkerIcon(resId = R.drawable.ic_table)
           val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
 
+          // State for scale bar visibility and recenter button
+          var showScaleBar by remember { mutableStateOf(false) }
+          var scaleBarJob: Job? by remember { mutableStateOf(null) }
+          val currentZoom = cameraPositionState.position.zoom
+
+          LaunchedEffect(currentZoom) {
+            showScaleBar = true
+            scaleBarJob?.cancel()
+            scaleBarJob = launch {
+              delay(SCALE_BAR_HIDE_MS)
+              showScaleBar = false
+            }
+          }
+
           GoogleMap(
               modifier = Modifier.fillMaxSize().testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
@@ -660,7 +677,24 @@ fun MapScreen(
                     }
               }
 
-          // --- Add button for shop/space owners ---
+          // --- Scale bar (bottom-right, left RECENTER button, appears on zoom) ---
+          AnimatedVisibility(
+              visible = showScaleBar,
+              enter = fadeIn(),
+              exit = fadeOut(),
+              modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                      .padding(
+                          end =
+                              Dimensions.Padding.medium
+                                  .plus(Dimensions.ButtonSize.standard)
+                                  .plus(Dimensions.Padding.small),
+                          bottom = Dimensions.Padding.medium)) {
+                MapScaleBar(
+                    latitude = cameraPositionState.position.target.latitude,
+                    zoomLevel = currentZoom)
+              }
+
           // --- Recenter button (bottom-right) ---
           if (permissionGranted && userLocation != null) {
             FloatingActionButton(
