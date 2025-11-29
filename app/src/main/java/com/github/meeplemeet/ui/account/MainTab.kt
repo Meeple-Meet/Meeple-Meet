@@ -271,13 +271,13 @@ object MainTabUi {
 fun MainTab(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
+    online: Boolean,
     onFriendsClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit
 ) {
   var pref by remember { mutableStateOf(NotificationSettings.EVERYONE) }
-  val online by OfflineModeManager.hasInternetConnection.collectAsState()
   val cache by OfflineModeManager.offlineModeFlow.collectAsState()
   val focusManager = LocalFocusManager.current
 
@@ -855,6 +855,7 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel, online: Boo
 
               // EMAIL SECTION
               EmailSection(
+                  online = online,
                   email = email,
                   isVerified = isVerified,
                   onEmailChange = { newEmail -> email = newEmail },
@@ -886,6 +887,7 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel, online: Boo
  */
 @Composable
 fun EmailSection(
+    online: Boolean,
     email: String,
     isVerified: Boolean,
     onEmailChange: (String) -> Unit,
@@ -911,6 +913,7 @@ fun EmailSection(
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically) {
                 FocusableInputField(
+                    enabled = online,
                     label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
                     value = email,
                     onValueChange = { new ->
@@ -923,6 +926,7 @@ fun EmailSection(
                     trailingIcon = {
                       if (!isVerified && !emailError) {
                         IconButton(
+                            enabled = online,
                             modifier =
                                 Modifier.padding(top = Dimensions.Padding.small)
                                     .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),

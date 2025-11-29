@@ -130,6 +130,11 @@ object OfflineModeManager {
             _hasInternetConnection.value = valid
           }
 
+          override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+            val valid = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            _hasInternetConnection.value = valid
+          }
+
           override fun onLost(network: Network) {
             _hasInternetConnection.value = false
           }

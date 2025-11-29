@@ -35,6 +35,7 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.BggGameRepository
@@ -189,7 +190,7 @@ fun MeepleMeetApp(
   var accountId by remember { mutableStateOf(FirebaseProvider.auth.currentUser?.uid ?: "") }
   val accountFlow =
       remember(accountId, signedOut) {
-        if (!signedOut) viewModel.accountFlow(accountId) else MutableStateFlow(null)
+        if (!signedOut) viewModel.accountFlow(accountId, context) else MutableStateFlow(null)
       }
   val account by accountFlow.collectAsStateWithLifecycle()
 
@@ -206,6 +207,8 @@ fun MeepleMeetApp(
 
   var spaceId by remember { mutableStateOf("") }
   var spaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
+
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
 
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
@@ -405,6 +408,7 @@ fun MeepleMeetApp(
         ProfileScreen(
             navigation = navigationActions,
             account = account!!,
+            online = online,
             onSignOutOrDel = {
               navigationActions.navigateTo(MeepleMeetScreen.SignIn)
               signedOut = true

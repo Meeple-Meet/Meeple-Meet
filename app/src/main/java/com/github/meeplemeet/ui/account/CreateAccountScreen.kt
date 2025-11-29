@@ -374,7 +374,7 @@ fun RoleCheckBox(
 ) {
   Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }) {
+      modifier = Modifier.fillMaxWidth().clickable { if (online) onCheckedChange(!isChecked) }) {
         Checkbox(
             enabled = online,
             checked = isChecked,
