@@ -5,7 +5,6 @@ import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 const val BLANK_ACCOUNT_ID_ERROR = "Account id cannot be blank"
@@ -33,17 +32,7 @@ interface AccountViewModel {
    */
   fun getAccount(id: String, context: Context, onResult: (Account?) -> Unit) {
     require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
-    scope.launch {
-      OfflineModeManager.loadAccount(id) {
-        onResult(it)
-
-        if (it != null) {
-          scope.launch(Dispatchers.IO) {
-            runCatching { RepositoryProvider.images.loadAccountProfilePicture(id, context) }
-          }
-        }
-      }
-    }
+    scope.launch { OfflineModeManager.loadAccount(id, context) { onResult(it) } }
   }
 
   /**
@@ -53,20 +42,7 @@ interface AccountViewModel {
    * @param onResult Callback that receives the list of retrieved accounts
    */
   fun getAccounts(uids: List<String>, context: Context, onResult: (List<Account?>) -> Unit) {
-    scope.launch {
-      OfflineModeManager.loadAccounts(uids) {
-        onResult(it)
-
-        scope.launch(Dispatchers.IO) {
-          it.forEach { account ->
-            if (account != null)
-                runCatching {
-                  RepositoryProvider.images.loadAccountProfilePicture(account.uid, context)
-                }
-          }
-        }
-      }
-    }
+    scope.launch { OfflineModeManager.loadAccounts(uids, context, scope) { onResult(it) } }
   }
 
   /**
