@@ -133,6 +133,7 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import java.util.Locale
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.min
@@ -916,7 +917,8 @@ private fun GeoPinWithLocation.distanceTo(location: Location): Double {
  */
 private fun GeoPinWithLocation.distanceToString(location: Location): String {
   val km = distanceTo(location)
-  return if (km < 1.0) "${(km * 1000).toInt()} m" else String.format("%.1f km", km)
+  return if (km < 1.0) "${(km * 1000).toInt()} m"
+  else String.format(Locale.getDefault(), "%.1f km", km)
 }
 
 /**
