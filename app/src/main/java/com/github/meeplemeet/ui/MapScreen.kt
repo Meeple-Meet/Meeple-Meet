@@ -11,7 +11,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location as AndroidLocation
-import android.net.Uri
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -100,6 +99,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -867,7 +867,7 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
  * @param lng The destination longitude.
  */
 private fun Context.openGoogleMapsDirections(lat: Double, lng: Double) {
-  val uri = Uri.parse("google.navigation:q=$lat,$lng")
+  val uri = "google.navigation:q=$lat,$lng".toUri()
   val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") }
   if (intent.resolveActivity(packageManager) != null) {
     startActivity(intent)
