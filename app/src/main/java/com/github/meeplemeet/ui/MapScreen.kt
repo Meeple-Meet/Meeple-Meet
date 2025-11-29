@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TableRestaurant
@@ -130,6 +131,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -149,6 +151,7 @@ import kotlinx.coroutines.tasks.await
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
+  const val RECENTER_BUTTON = "recenterButton"
   const val SCALE_BAR = "scaleBar"
   const val SCALE_BAR_DISTANCE = "scaleBarDistance"
   const val ADD_FAB = "addFab"
@@ -494,7 +497,7 @@ fun MapScreen(
         }
 
         // --- Google Map content ---
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
           val isDarkTheme = isSystemInDarkTheme()
           val mapStyleOptions =
               if (isDarkTheme) {
@@ -509,14 +512,14 @@ fun MapScreen(
           val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
 
           GoogleMap(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(innerPadding)
-                      .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
+              modifier = Modifier.fillMaxSize().testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
               properties =
                   MapProperties(
                       mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted)) {
+                      mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted),
+              uiSettings =
+                  MapUiSettings(myLocationButtonEnabled = false, zoomControlsEnabled = false)) {
                 val clusters = viewModel.getClusters()
 
                 clusters
@@ -658,6 +661,30 @@ fun MapScreen(
               }
 
           // --- Add button for shop/space owners ---
+          // --- Recenter button (bottom-right) ---
+          if (permissionGranted && userLocation != null) {
+            FloatingActionButton(
+                onClick = {
+                  coroutineScope.launch {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(userLocation!!.latitude, userLocation!!.longitude),
+                            DEFAULT_ZOOM_LEVEL))
+                  }
+                },
+                containerColor = AppColors.neutral,
+                contentColor = AppColors.textIcons,
+                shape = CircleShape,
+                modifier =
+                    Modifier.testTag(MapScreenTestTags.RECENTER_BUTTON)
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = Dimensions.Padding.medium, bottom = Dimensions.Padding.medium)
+                        .size(Dimensions.ButtonSize.standard)) {
+                  Icon(Icons.Default.MyLocation, contentDescription = "Recenter")
+                }
+          }
+
           if (account.shopOwner || account.spaceRenter) {
             FloatingActionButton(
                 onClick = {
