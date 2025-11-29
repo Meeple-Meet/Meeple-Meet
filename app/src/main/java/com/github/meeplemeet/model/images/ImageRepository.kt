@@ -156,6 +156,22 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
       deleteImages(context, accountPath(accountId))
 
   /**
+   * Deletes the account profile picture from local cache only (does not delete from Firebase
+   * Storage).
+   *
+   * This method is useful for cache eviction scenarios where the remote image should be preserved
+   * but local storage needs to be freed. Used by [OfflineModeManager] when evicting old cached
+   * accounts.
+   *
+   * @param accountId The unique identifier for the account
+   * @param context Android context for accessing cache directory
+   * @throws DiskStorageException if disk delete fails
+   * @see deleteAccountProfilePicture to delete from both cache and Firebase Storage
+   */
+  suspend fun deleteLocalAccountProfilePicture(accountId: String, context: Context) =
+      deleteLocalImages(context, accountPath(accountId))
+
+  /**
    * Loads an account profile picture from cache or Firebase Storage.
    *
    * @param accountId The unique identifier for the account
@@ -299,13 +315,29 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   }
 
   /**
-   * Helper to save bytes directly, used by moveSessionPhoto. This is a variation of saveImage that
-   * takes bytes instead of file path.
+   * Helper to save raw image bytes directly to both local cache and Firebase Storage.
+   *
+   * This is a lower-level variant of [saveImage] that accepts pre-processed bytes instead of a file
+   * path. Used internally by [moveSessionPhoto] when relocating already-processed images.
+   *
+   * ## Storage Process
+   * 1. Creates parent directory if needed
+   * 2. Checks available storage space using StorageManager
+   * 3. Writes bytes to local cache
+   * 4. Uploads to Firebase Storage
+   * 5. Returns HTTPS download URL (upgraded from HTTP if needed)
+   *
+   * ## Error Handling
+   * - Throws [DiskStorageException] for file system errors
+   * - Throws [RemoteStorageException] for Firebase Storage errors
+   * - Both local and remote saves must succeed
    *
    * @param context Android context for accessing cache directory
-   * @param bytes The image data as a byte array
+   * @param bytes The image data as a byte array (already in WebP format)
    * @param storagePath Storage path (used for both local cache and Firebase Storage)
    * @return The public HTTPS download URL of the saved image
+   * @throws DiskStorageException if disk write fails
+   * @throws RemoteStorageException if Firebase Storage upload fails
    */
   private suspend fun saveImage(context: Context, bytes: ByteArray, storagePath: String): String {
     // Save to disk
@@ -574,15 +606,28 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
   /**
    * Loads an image from local cache if available, otherwise downloads from Firebase Storage.
-   * Downloaded images are automatically cached for future use.
+   *
+   * ## Caching Strategy
+   * 1. **Cache hit**: Reads directly from local cache directory
+   * 2. **Cache miss**: Downloads from Firebase Storage using streaming for memory efficiency
+   * 3. **Automatic caching**: Downloaded images are cached locally if sufficient disk space
+   *
+   * ## Memory Optimization
+   * Uses streaming to avoid loading entire images into memory during downloads. When caching is
+   * feasible (>10MB free space), streams directly to disk. Otherwise, streams to memory to return
+   * the result.
+   *
+   * ## Download Behavior
+   * - Checks disk space before caching (minimum 10MB required)
+   * - Uses 8KB buffer for streaming operations
+   * - Falls back to in-memory streaming if caching fails
+   * - Cleans up partial files if caching fails mid-stream
    *
    * @param context Android context for accessing cache directory
    * @param path Storage path (used for both local cache and Firebase Storage)
-   * @return The image as a byte array
+   * @return The image as a byte array in WebP format
    * @throws DiskStorageException if disk read/write fails
    * @throws RemoteStorageException if Firebase Storage download fails
-   *
-   * New version with streamin generated with Claude
    */
   private suspend fun loadImage(context: Context, path: String): ByteArray {
     val diskPath = "${context.cacheDir}/$path"
@@ -744,14 +789,56 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   }
 
   /**
-   * Deletes one or more images from cache and Firebase Storage.
+   * Deletes one or more images from both local cache and Firebase Storage.
+   *
+   * This method performs complete deletion from both storage tiers. For cache-only deletion (e.g.,
+   * during cache eviction), use [deleteLocalImages] instead.
+   *
+   * ## Deletion Process
+   * 1. Deletes from local cache directory
+   * 2. Deletes from Firebase Storage in parallel (for multiple images)
    *
    * @param context Android context for accessing cache directory
-   * @param storagePaths Storage paths or download URLs
+   * @param storagePaths Storage paths or download URLs to delete
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
+   * @see deleteLocalImages for cache-only deletion
    */
   private suspend fun deleteImages(context: Context, vararg storagePaths: String) {
+    if (storagePaths.isEmpty()) return
+
+    deleteLocalImages(context, *storagePaths)
+
+    try {
+      coroutineScope {
+        storagePaths
+            .map { path -> async { storage.reference.child(path).delete().await() } }
+            .awaitAll()
+      }
+    } catch (e: StorageException) {
+      throw RemoteStorageException("Firebase Storage delete failed for images: ${e.errorCode}", e)
+    } catch (e: Exception) {
+      throw RemoteStorageException("Failed to delete images", e)
+    }
+  }
+
+  /**
+   * Deletes one or more images from local cache only (does not delete from Firebase Storage).
+   *
+   * This method is useful for cache eviction scenarios where remote images should be preserved but
+   * local storage needs to be freed. Used internally by cache management operations.
+   *
+   * ## Use Cases
+   * - Cache eviction when storage is low
+   * - Cleaning up old cached accounts ([deleteLocalAccountProfilePicture])
+   * - Removing temporary cached data
+   *
+   * @param context Android context for accessing cache directory
+   * @param storagePaths Storage paths to delete from local cache
+   * @throws DiskStorageException if disk delete fails
+   * @see deleteImages for complete deletion from both cache and Firebase Storage
+   */
+  private suspend fun deleteLocalImages(context: Context, vararg storagePaths: String) {
     if (storagePaths.isEmpty()) return
 
     try {
@@ -769,21 +856,24 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     } catch (e: SecurityException) {
       throw DiskStorageException("Permission denied deleting images", e)
     }
-
-    try {
-      coroutineScope {
-        storagePaths
-            .map { path -> async { storage.reference.child(path).delete().await() } }
-            .awaitAll()
-      }
-    } catch (e: StorageException) {
-      throw RemoteStorageException("Firebase Storage delete failed for images: ${e.errorCode}", e)
-    } catch (e: Exception) {
-      throw RemoteStorageException("Failed to delete images", e)
-    }
   }
 
-  /** Deletes an entire directory (cache + Firebase Storage) under a given prefix. */
+  /**
+   * Deletes an entire directory and all its contents from both cache and Firebase Storage.
+   *
+   * Recursively removes all files under the given path prefix from both local cache and Firebase
+   * Storage. Used for bulk deletions like removing all shop photos or discussion message photos.
+   *
+   * ## Recursive Deletion
+   * - Deletes all files in the directory
+   * - Recursively deletes all subdirectories
+   * - Removes the directory itself
+   *
+   * @param context Android context for accessing cache directory
+   * @param parentPath Parent directory path to delete
+   * @throws DiskStorageException if local directory deletion fails
+   * @throws RemoteStorageException if Firebase Storage deletion fails
+   */
   private suspend fun deleteDirectory(context: Context, parentPath: String) {
     try {
       withContext(dispatcher) {
@@ -808,6 +898,19 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     }
   }
 
+  /**
+   * Recursively deletes a directory and all its contents from Firebase Storage.
+   *
+   * Uses parallel deletion for optimal performance when removing directories with many files.
+   * Recursively traverses subdirectories and deletes all items.
+   *
+   * ## Performance
+   * - Parallel deletion of all items at each directory level
+   * - Concurrent recursive deletion of subdirectories
+   *
+   * @param root StorageReference to the directory to delete
+   * @throws StorageException if Firebase Storage operations fail
+   */
   private suspend fun deleteRemoteDirectory(root: StorageReference) {
     val listResult = root.listAll().await()
     coroutineScope {
