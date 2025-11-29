@@ -1,11 +1,14 @@
 package com.github.meeplemeet.model.offline
 
+import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.account.Account
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Caps the size of a LinkedHashMap by removing the oldest entries until the size is at or below the
@@ -75,5 +78,68 @@ object OfflineModeManager {
    */
   fun clearOfflineMode() {
     _offlineModeFlow.value = OfflineMode()
+  }
+
+  /**
+   * Retrieves an account by UID, first checking the offline cache, then fetching from repository if
+   * needed.
+   *
+   * This function checks the cached offline data first. If the account is found in cache, it
+   * returns immediately. Otherwise, it attempts to fetch from the repository. If the fetch fails,
+   * null is returned.
+   *
+   * @param uid The unique identifier of the account to retrieve
+   * @param onResult Callback invoked with the Account if found, or null if not found or an error
+   *   occurs
+   */
+  fun getAccount(uid: String, onResult: (Account?) -> Unit) {
+    val cached = _offlineModeFlow.value.accounts[uid]
+
+    scope.launch(Dispatchers.Main) {
+      if (cached != null) {
+        onResult(cached.first)
+        return@launch
+      }
+
+      onResult(RepositoryProvider.accounts.getAccountSafe(uid, false))
+    }
+  }
+
+  /**
+   * Retrieves multiple accounts by their UIDs, optimizing by fetching only missing accounts from
+   * the repository.
+   *
+   * This function efficiently retrieves multiple accounts by:
+   * 1. Checking the offline cache for each UID
+   * 2. Identifying which accounts are missing from cache
+   * 3. Fetching only the missing accounts from the repository in a batch
+   * 4. Merging cached and fetched results in the original order
+   *
+   * If any fetch fails, the corresponding position will contain null in the result list. The result
+   * list will always have the same size and order as the input UIDs list.
+   *
+   * @param uids List of unique identifiers of the accounts to retrieve
+   * @param onResult Callback invoked with a list of Accounts (or null for missing/failed accounts)
+   *   in the same order as the input UIDs
+   */
+  fun getAccounts(uids: List<String>, onResult: (List<Account?>) -> Unit) {
+    scope.launch(Dispatchers.Main) {
+      val state = _offlineModeFlow.value.accounts
+
+      val cached = uids.map { uid -> state[uid]?.first }
+      val missingIndices = cached.withIndex().filter { it.value == null }.map { it.index }
+      val missingUids = missingIndices.map { uids[it] }
+
+      val fetched: List<Account?> =
+          if (missingUids.isEmpty()) emptyList()
+          else RepositoryProvider.accounts.getAccountsSafe(missingUids, false)
+
+      val merged = MutableList<Account?>(uids.size) { null }
+
+      for ((i, account) in cached.withIndex()) merged[i] = account
+      for ((offset, value) in missingIndices.withIndex()) merged[value] = fetched.getOrNull(offset)
+
+      onResult(merged)
+    }
   }
 }
