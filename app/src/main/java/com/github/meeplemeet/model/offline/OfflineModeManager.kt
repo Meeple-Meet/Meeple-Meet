@@ -1,10 +1,16 @@
 package com.github.meeplemeet.model.offline
 
+import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+const val MAX_CACHED_ACCOUNTS = 100
 
 /**
  * Caps the size of a LinkedHashMap by removing the oldest entries until the size is at or below the
@@ -85,7 +91,7 @@ object OfflineModeManager {
    * @param onResult Callback invoked with the Account if found, or null if not found or an error
    *   occurs
    */
-  suspend fun loadAccount(uid: String, onResult: (Account?) -> Unit) {
+  suspend fun loadAccount(uid: String, context: Context, onResult: (Account?) -> Unit) {
     val state = _offlineModeFlow.value.accounts
     val cached = state[uid]?.first
 
@@ -96,9 +102,9 @@ object OfflineModeManager {
 
     val fetched = RepositoryProvider.accounts.getAccountSafe(uid, false)
     if (fetched != null) {
-      val updated = state.toMutableMap()
-      updated[uid] = fetched to emptyMap()
-      _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = updated)
+      state[uid] = fetched to emptyMap()
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = state)
+      runCatching { RepositoryProvider.images.loadAccountProfilePicture(uid, context) }
     }
 
     onResult(fetched)
@@ -121,7 +127,12 @@ object OfflineModeManager {
    * @param onResult Callback invoked with a list of Accounts (or null for missing/failed accounts)
    *   in the same order as the input UIDs
    */
-  suspend fun loadAccounts(uids: List<String>, onResult: (List<Account?>) -> Unit) {
+  suspend fun loadAccounts(
+      uids: List<String>,
+      context: Context,
+      scope: CoroutineScope,
+      onResult: (List<Account?>) -> Unit
+  ) {
     val state = _offlineModeFlow.value.accounts
 
     val cached = uids.map { uid -> state[uid]?.first }
@@ -138,12 +149,20 @@ object OfflineModeManager {
       merged[value] = fetched.getOrNull(offset)
     }
 
-    val updated = state.toMutableMap()
     for ((i, uid) in uids.withIndex()) {
       val acc = merged[i]
-      if (acc != null) updated[uid] = acc to emptyMap()
+      if (acc != null) state[uid] = acc to emptyMap()
     }
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = updated)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = state)
+
+    scope.launch(Dispatchers.IO) {
+      merged.forEach { account ->
+        if (account != null)
+            runCatching {
+              RepositoryProvider.images.loadAccountProfilePicture(account.uid, context)
+            }
+      }
+    }
 
     onResult(merged)
   }
