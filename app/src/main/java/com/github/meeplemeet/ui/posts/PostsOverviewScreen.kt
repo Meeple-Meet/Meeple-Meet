@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +72,7 @@ fun PostsOverviewScreen(
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
+  val context = LocalContext.current
   val posts by viewModel.posts.collectAsState()
   val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
 
@@ -122,7 +124,9 @@ fun PostsOverviewScreen(
 
                   val authorName by
                       produceState<String?>(key1 = post.authorId, initialValue = null) {
-                        viewModel.getOtherAccount(post.authorId) { acc -> value = acc.name }
+                        viewModel.getAccount(post.authorId, context) { acc ->
+                          value = acc?.name ?: "Unknown"
+                        }
                       }
 
                   FeedCard(

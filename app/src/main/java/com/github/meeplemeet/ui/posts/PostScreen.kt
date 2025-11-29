@@ -45,6 +45,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -179,6 +180,7 @@ fun PostScreen(
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
 
   var topComment by rememberSaveable { mutableStateOf("") }
@@ -236,7 +238,9 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    accountViewModel.getAccounts(toFetch) { it.forEach { acc -> userCache[acc.uid] = acc } }
+    accountViewModel.getAccounts(toFetch, context) {
+      it.forEach { acc -> if (acc != null) userCache[acc.uid] = acc }
+    }
   }
 
   Scaffold(

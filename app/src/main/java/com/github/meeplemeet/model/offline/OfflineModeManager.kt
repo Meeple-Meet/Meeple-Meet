@@ -2,13 +2,9 @@ package com.github.meeplemeet.model.offline
 
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Caps the size of a LinkedHashMap by removing the oldest entries until the size is at or below the
@@ -59,9 +55,6 @@ private fun <T> cap(map: LinkedHashMap<String, T>, max: Int): Map<String, T> {
  */
 object OfflineModeManager {
   private val _offlineModeFlow = MutableStateFlow(OfflineMode())
-  private val job = SupervisorJob()
-  /** Coroutine scope to run async jobs */
-  val scope = CoroutineScope(Dispatchers.Default + job)
 
   /**
    * StateFlow of the current offline mode data. Observers will be notified of any changes.
@@ -92,17 +85,23 @@ object OfflineModeManager {
    * @param onResult Callback invoked with the Account if found, or null if not found or an error
    *   occurs
    */
-  fun getAccount(uid: String, onResult: (Account?) -> Unit) {
-    val cached = _offlineModeFlow.value.accounts[uid]
+  suspend fun loadAccount(uid: String, onResult: (Account?) -> Unit) {
+    val state = _offlineModeFlow.value.accounts
+    val cached = state[uid]?.first
 
-    scope.launch(Dispatchers.Main) {
-      if (cached != null) {
-        onResult(cached.first)
-        return@launch
-      }
-
-      onResult(RepositoryProvider.accounts.getAccountSafe(uid, false))
+    if (cached != null) {
+      onResult(cached)
+      return
     }
+
+    val fetched = RepositoryProvider.accounts.getAccountSafe(uid, false)
+    if (fetched != null) {
+      val updated = state.toMutableMap()
+      updated[uid] = fetched to emptyMap()
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = updated)
+    }
+
+    onResult(fetched)
   }
 
   /**
@@ -122,24 +121,30 @@ object OfflineModeManager {
    * @param onResult Callback invoked with a list of Accounts (or null for missing/failed accounts)
    *   in the same order as the input UIDs
    */
-  fun getAccounts(uids: List<String>, onResult: (List<Account?>) -> Unit) {
-    scope.launch(Dispatchers.Main) {
-      val state = _offlineModeFlow.value.accounts
+  suspend fun loadAccounts(uids: List<String>, onResult: (List<Account?>) -> Unit) {
+    val state = _offlineModeFlow.value.accounts
 
-      val cached = uids.map { uid -> state[uid]?.first }
-      val missingIndices = cached.withIndex().filter { it.value == null }.map { it.index }
-      val missingUids = missingIndices.map { uids[it] }
+    val cached = uids.map { uid -> state[uid]?.first }
+    val missingIndices = cached.withIndex().filter { it.value == null }.map { it.index }
+    val missingUids = missingIndices.map { uids[it] }
 
-      val fetched: List<Account?> =
-          if (missingUids.isEmpty()) emptyList()
-          else RepositoryProvider.accounts.getAccountsSafe(missingUids, false)
+    val fetched: List<Account?> =
+        if (missingUids.isEmpty()) emptyList()
+        else RepositoryProvider.accounts.getAccountsSafe(missingUids, false)
 
-      val merged = MutableList<Account?>(uids.size) { null }
-
-      for ((i, account) in cached.withIndex()) merged[i] = account
-      for ((offset, value) in missingIndices.withIndex()) merged[value] = fetched.getOrNull(offset)
-
-      onResult(merged)
+    val merged = MutableList<Account?>(uids.size) { null }
+    for ((i, account) in cached.withIndex()) merged[i] = account
+    for ((offset, value) in missingIndices.withIndex()) {
+      merged[value] = fetched.getOrNull(offset)
     }
+
+    val updated = state.toMutableMap()
+    for ((i, uid) in uids.withIndex()) {
+      val acc = merged[i]
+      if (acc != null) updated[uid] = acc to emptyMap()
+    }
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = updated)
+
+    onResult(merged)
   }
 }

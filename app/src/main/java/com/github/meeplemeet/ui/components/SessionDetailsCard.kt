@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.rememberAsyncImagePainter
@@ -44,6 +45,7 @@ fun SessionDetailsCard(
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {}
 ) {
+  val context = LocalContext.current
   val date =
       remember(session.date) {
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
@@ -54,7 +56,7 @@ fun SessionDetailsCard(
     names.clear()
     session.participants.forEach { id ->
       if (id.isBlank()) names += "Unknown"
-      else viewModel.getOtherAccount(id) { acc -> names += acc.name }
+      else viewModel.getAccount(id, context) { it?.let { names += it.name } }
     }
   }
 
