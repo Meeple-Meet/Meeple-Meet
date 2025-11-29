@@ -1,5 +1,8 @@
 package com.github.meeplemeet.model.offline
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,6 +56,9 @@ private fun <T> cap(map: LinkedHashMap<String, T>, max: Int): Map<String, T> {
  */
 object OfflineModeManager {
   private val _offlineModeFlow = MutableStateFlow(OfflineMode())
+  private val job = SupervisorJob()
+  /** Coroutine scope to run async jobs */
+  val scope = CoroutineScope(Dispatchers.Default + job)
 
   /**
    * StateFlow of the current offline mode data. Observers will be notified of any changes.
