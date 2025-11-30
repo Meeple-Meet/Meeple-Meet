@@ -222,4 +222,12 @@ class SpaceRenterRepository(
           .awaitAll()
     }
   }
+
+    suspend fun getSpaceRenterSafe(renterId: String): SpaceRenter? {
+        return try {
+                getSpaceRenter(renterId)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
