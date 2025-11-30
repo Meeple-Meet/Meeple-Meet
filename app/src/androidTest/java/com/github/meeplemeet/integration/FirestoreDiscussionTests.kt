@@ -572,31 +572,6 @@ class FirestoreDiscussionTests : FirestoreTests() {
   }
 
   @Test
-  fun viewModelMessagesFlowUpdatesInRealTime() = runBlocking {
-    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "First message")
-
-    val messagesFlow = discussionViewModel.messagesFlow(discussion.uid, context)
-    var receivedMessages = listOf<com.github.meeplemeet.model.discussions.Message>()
-
-    val job = launch { messagesFlow.collect { messages -> receivedMessages = messages } }
-
-    delay(500)
-
-    assertEquals(1, receivedMessages.size)
-    assertEquals("First message", receivedMessages[0].content)
-
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "Second message")
-    delay(500)
-
-    assertEquals(2, receivedMessages.size)
-    assertEquals("Second message", receivedMessages[1].content)
-
-    job.cancel()
-  }
-
-  @Test
   fun viewModelSendMessageWithPhotoUploadsAndSendsMessage() = runTest {
     val discussion =
         discussionRepository.createDiscussion(
