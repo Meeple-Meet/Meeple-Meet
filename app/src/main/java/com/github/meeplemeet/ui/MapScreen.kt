@@ -137,6 +137,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.floor
@@ -223,7 +224,6 @@ object ClusterConfig {
   }
 }
 
-private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
 private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
@@ -236,8 +236,8 @@ private const val RGB_MAX_ALPHA = 255
 
 /**
  * MapScreen displays an interactive Google Map centered on the user's location (if granted) or
- * defaults to EPFL. It dynamically loads pins (shops, spaces, sessions) from Firestore through the
- * [MapViewModel].
+ * falls back to an approximate default location. It dynamically loads pins (shops, spaces,
+ * sessions) from Firestore through the [MapViewModel].
  *
  * Main responsibilities:
  * - Request location permissions (fine or coarse)
@@ -382,7 +382,7 @@ fun MapScreen(
   if (!isLoadingLocation) {
     DisposableEffect(Unit) {
       viewModel.startGeoQuery(
-          center = userLocation ?: DEFAULT_CENTER,
+          center = userLocation ?: getApproximateLocationFromTimezone(),
           currentUserId = account.uid,
           radiusKm = DEFAULT_RADIUS_KM)
       onDispose {}
@@ -466,7 +466,9 @@ fun MapScreen(
           DisposableEffect(Unit) {
             val target =
                 userLocation?.let { LatLng(it.latitude, it.longitude) }
-                    ?: LatLng(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude)
+                    ?: LatLng(
+                        getApproximateLocationFromTimezone().latitude,
+                        getApproximateLocationFromTimezone().longitude)
 
             cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
 
@@ -1442,4 +1444,38 @@ private fun StaticVerticalMapMenu(
               }
         }
       }
+}
+
+/**
+ * Estimates a fallback geographic location based on the device timezone.
+ *
+ * Provides broad continental centers (e.g., Europe, Asia) or regional defaults for America (East
+ * Coast, West Coast, Central). Used when user location permission is denied, so the map can still
+ * be initialized.
+ *
+ * @return Approximate [Location] for the current timezone
+ */
+private fun getApproximateLocationFromTimezone(): Location {
+  val timeZone = TimeZone.getDefault().id
+
+  return when {
+    timeZone.startsWith("Europe/") -> {
+      Location(50.0, 10.0, "Europe")
+    }
+    timeZone.startsWith("America/") -> {
+      when {
+        timeZone.contains("New_York") || timeZone.contains("Toronto") ->
+            Location(40.0, -75.0, "East Coast")
+        timeZone.contains("Los_Angeles") || timeZone.contains("Vancouver") ->
+            Location(37.0, -120.0, "West Coast")
+        timeZone.contains("Chicago") || timeZone.contains("Mexico") ->
+            Location(35.0, -95.0, "Central")
+        else -> Location(40.0, -100.0, "Americas")
+      }
+    }
+    timeZone.startsWith("Asia/") -> Location(35.0, 105.0, "Asia")
+    timeZone.startsWith("Africa/") -> Location(0.0, 20.0, "Africa")
+    timeZone.startsWith("Australia/") -> Location(-25.0, 135.0, "Australia")
+    else -> Location(0.0, 0.0, "World")
+  }
 }
