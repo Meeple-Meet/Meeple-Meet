@@ -17,8 +17,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,12 +34,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -88,7 +90,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
@@ -156,6 +157,7 @@ object MapScreenTestTags {
   const val RECENTER_BUTTON = "recenterButton"
   const val SCALE_BAR = "scaleBar"
   const val SCALE_BAR_DISTANCE = "scaleBarDistance"
+  const val BUTTON_MENU = "mapMenu"
   const val ADD_FAB = "addFab"
   const val ADD_CHOOSE_DIALOG = "chooseAddDialog"
   const val FILTER_BUTTON = "filterButton"
@@ -499,8 +501,10 @@ fun MapScreen(
           }
         }
 
-        // --- Google Map content ---
+        // --- Main map + buttons ---
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+
+          // --- Google Map content ---
           val isDarkTheme = isSystemInDarkTheme()
           val mapStyleOptions =
               if (isDarkTheme) {
@@ -580,167 +584,100 @@ fun MapScreen(
                     }
               }
 
-          // --- FILTER BUTTON + vertical list of filter chips (top-start) ---
-          Box(
+          StaticVerticalMapMenu(
               modifier =
                   Modifier.align(Alignment.TopStart)
-                      .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium)
-                      .wrapContentSize()) {
-                // Main filter FAB
-                FloatingActionButton(
-                    onClick = { showFilterButtons = !showFilterButtons },
-                    containerColor = AppColors.neutral,
-                    contentColor = AppColors.textIcons,
-                    shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-                    modifier =
-                        Modifier.testTag(MapScreenTestTags.FILTER_BUTTON)
-                            .size(Dimensions.ButtonSize.standard)) {
-                      Icon(Icons.Default.FilterList, contentDescription = "Filter pins")
-                    }
+                      .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium),
+              showCreateButton = account.shopOwner || account.spaceRenter,
+              onToggleFilters = { showFilterButtons = !showFilterButtons },
+              onAddClick = {
+                when (account.shopOwner to account.spaceRenter) {
+                  true to true -> showCreateDialog = true
+                  true to false -> onFABCLick(PinType.SHOP)
+                  false to true -> onFABCLick(PinType.SPACE)
+                  else -> {}
+                }
+              })
 
-                // Panel with FilterChips
-                AnimatedVisibility(
-                    visible = showFilterButtons,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopStart)) {
-                      Surface(
+          // --- Panel with FilterChips ---
+          AnimatedVisibility(
+              visible = showFilterButtons,
+              enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+              exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+              modifier =
+                  Modifier.align(Alignment.TopStart)
+                      .offset(
+                          x =
+                              Dimensions.Padding.medium +
+                                  Dimensions.ButtonSize.standard +
+                                  Dimensions.Spacing.medium,
+                          y = Dimensions.Padding.medium)) {
+                Surface(
+                    modifier =
+                        Modifier.padding(0.dp)
+                            .widthIn(
+                                max =
+                                    Dimensions.ComponentWidth.spaceLabelWidth.plus(
+                                        Dimensions.Padding.extraMedium))
+                            .wrapContentHeight(),
+                    tonalElevation = Dimensions.Elevation.high,
+                    shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+                    color = AppColors.primary.copy(alpha = 0.95f)) {
+                      Column(
                           modifier =
-                              Modifier.padding(top = Dimensions.Padding.giant)
-                                  .widthIn(
-                                      max =
-                                          Dimensions.ComponentWidth.spaceLabelWidth.plus(
-                                              Dimensions.Padding.extraMedium))
-                                  .wrapContentHeight()
-                                  .background(AppColors.primary)
-                                  .shadow(
-                                      Dimensions.Elevation.floating,
-                                      RoundedCornerShape(Dimensions.CornerRadius.large)),
-                          tonalElevation = Dimensions.Elevation.high,
-                          shape = RoundedCornerShape(Dimensions.CornerRadius.large),
-                          color = AppColors.primary.copy(alpha = 0.95f)) {
-                            Column(
-                                modifier =
-                                    Modifier.padding(
-                                        horizontal = Dimensions.Padding.medium,
-                                        vertical = Dimensions.Padding.mediumSmall),
-                                verticalArrangement =
-                                    Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                                  PinType.entries.forEach { type ->
-                                    val selected = includeTypes.contains(type)
-                                    FilterChip(
-                                        selected = selected,
-                                        onClick = {
-                                          includeTypes =
-                                              if (selected) includeTypes - type
-                                              else includeTypes + type
-                                        },
-                                        label = {
-                                          Text(
-                                              text =
-                                                  type.name.lowercase().replaceFirstChar {
-                                                    it.uppercaseChar()
-                                                  },
-                                              color = AppColors.textIcons,
-                                              style = MaterialTheme.typography.labelLarge)
-                                        },
-                                        leadingIcon = {
-                                          Checkbox(
-                                              checked = selected,
-                                              onCheckedChange = null,
-                                              modifier = Modifier.size(Dimensions.IconSize.medium))
-                                        },
-                                        colors =
-                                            SelectableChipColors(
-                                                containerColor = AppColors.primary,
-                                                leadingIconColor = Color.Transparent,
-                                                trailingIconColor = Color.Transparent,
-                                                disabledContainerColor = Color.Transparent,
-                                                disabledLabelColor = Color.Transparent,
-                                                disabledLeadingIconColor = Color.Transparent,
-                                                disabledTrailingIconColor = Color.Transparent,
-                                                disabledSelectedContainerColor = Color.Transparent,
-                                                selectedLabelColor = Color.Transparent,
-                                                selectedLeadingIconColor = Color.Transparent,
-                                                selectedTrailingIconColor = Color.Transparent,
-                                                labelColor = AppColors.textIcons,
-                                                selectedContainerColor = Color.Transparent),
-                                        modifier =
-                                            Modifier.testTag(pinTypeTestTag(type))
-                                                .height(Dimensions.Padding.huge)
-                                                .background(AppColors.primary)
-                                                .fillMaxWidth())
-                                  }
-                                }
+                              Modifier.padding(
+                                  horizontal = Dimensions.Padding.medium,
+                                  vertical = Dimensions.Padding.mediumSmall),
+                          verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                            PinType.entries.forEach { type ->
+                              val selected = includeTypes.contains(type)
+                              FilterChip(
+                                  selected = selected,
+                                  onClick = {
+                                    includeTypes =
+                                        if (selected) includeTypes - type else includeTypes + type
+                                  },
+                                  label = {
+                                    Text(
+                                        text =
+                                            type.name.lowercase().replaceFirstChar {
+                                              it.uppercaseChar()
+                                            },
+                                        color = AppColors.textIcons,
+                                        style = MaterialTheme.typography.labelLarge)
+                                  },
+                                  leadingIcon = {
+                                    Checkbox(
+                                        checked = selected,
+                                        onCheckedChange = null,
+                                        modifier = Modifier.size(Dimensions.IconSize.medium))
+                                  },
+                                  colors =
+                                      SelectableChipColors(
+                                          containerColor = AppColors.primary,
+                                          leadingIconColor = Color.Transparent,
+                                          trailingIconColor = Color.Transparent,
+                                          disabledContainerColor = Color.Transparent,
+                                          disabledLabelColor = Color.Transparent,
+                                          disabledLeadingIconColor = Color.Transparent,
+                                          disabledTrailingIconColor = Color.Transparent,
+                                          disabledSelectedContainerColor = Color.Transparent,
+                                          selectedLabelColor = Color.Transparent,
+                                          selectedLeadingIconColor = Color.Transparent,
+                                          selectedTrailingIconColor = Color.Transparent,
+                                          labelColor = AppColors.textIcons,
+                                          selectedContainerColor = Color.Transparent),
+                                  modifier =
+                                      Modifier.testTag(pinTypeTestTag(type))
+                                          .height(Dimensions.Padding.huge)
+                                          .background(AppColors.primary)
+                                          .fillMaxWidth())
+                            }
                           }
                     }
               }
 
-          // --- Scale bar (bottom-right, left RECENTER button, appears on zoom) ---
-          AnimatedVisibility(
-              visible = showScaleBar,
-              enter = fadeIn(),
-              exit = fadeOut(),
-              modifier =
-                  Modifier.align(Alignment.BottomEnd)
-                      .padding(
-                          end =
-                              Dimensions.Padding.medium
-                                  .plus(Dimensions.ButtonSize.standard)
-                                  .plus(Dimensions.Padding.small),
-                          bottom = Dimensions.Padding.medium)) {
-                MapScaleBar(
-                    latitude = cameraPositionState.position.target.latitude,
-                    zoomLevel = currentZoom)
-              }
-
-          // --- Recenter button (bottom-right) ---
-          if (permissionGranted && userLocation != null) {
-            FloatingActionButton(
-                onClick = {
-                  coroutineScope.launch {
-                    cameraPositionState.animate(
-                        CameraUpdateFactory.newLatLngZoom(
-                            LatLng(userLocation!!.latitude, userLocation!!.longitude),
-                            DEFAULT_ZOOM_LEVEL))
-                  }
-                },
-                containerColor = AppColors.neutral,
-                contentColor = AppColors.textIcons,
-                shape = CircleShape,
-                modifier =
-                    Modifier.testTag(MapScreenTestTags.RECENTER_BUTTON)
-                        .align(Alignment.BottomEnd)
-                        .padding(
-                            end = Dimensions.Padding.medium, bottom = Dimensions.Padding.medium)
-                        .size(Dimensions.ButtonSize.standard)) {
-                  Icon(Icons.Default.MyLocation, contentDescription = "Recenter")
-                }
-          }
-
-          // --- Add button (top-right) ---
-          if (account.shopOwner || account.spaceRenter) {
-            FloatingActionButton(
-                onClick = {
-                  when (account.shopOwner to account.spaceRenter) {
-                    true to true -> showCreateDialog = true
-                    true to false -> onFABCLick(PinType.SHOP)
-                    false to true -> onFABCLick(PinType.SPACE)
-                    else -> {}
-                  }
-                },
-                contentColor = AppColors.textIcons,
-                containerColor = AppColors.neutral,
-                shape = CircleShape,
-                modifier =
-                    Modifier.testTag(MapScreenTestTags.ADD_FAB)
-                        .align(Alignment.TopEnd)
-                        .padding(top = Dimensions.Padding.medium, end = Dimensions.Padding.medium)
-                        .size(Dimensions.ButtonSize.standard)) {
-                  Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
-                }
-          }
-
+          // --- Dialog for business creation if ambiguous ---
           if (showCreateDialog) {
             Dialog(
                 onDismissRequest = {
@@ -869,6 +806,48 @@ fun MapScreen(
                               Spacer(Modifier.height(Dimensions.Spacing.medium))
                             }
                       }
+                }
+          }
+
+          // --- Scale bar (bottom-right, left RECENTER button, appears on zoom) ---
+          AnimatedVisibility(
+              visible = showScaleBar,
+              enter = fadeIn(),
+              exit = fadeOut(),
+              modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                      .padding(
+                          end =
+                              Dimensions.Padding.medium
+                                  .plus(Dimensions.ButtonSize.standard)
+                                  .plus(Dimensions.Padding.small),
+                          bottom = Dimensions.Padding.medium)) {
+                MapScaleBar(
+                    latitude = cameraPositionState.position.target.latitude,
+                    zoomLevel = currentZoom)
+              }
+
+          // --- Recenter button (bottom-right) ---
+          if (permissionGranted && userLocation != null) {
+            FloatingActionButton(
+                onClick = {
+                  coroutineScope.launch {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(userLocation!!.latitude, userLocation!!.longitude),
+                            DEFAULT_ZOOM_LEVEL))
+                  }
+                },
+                containerColor = AppColors.neutral,
+                contentColor = AppColors.textIcons,
+                shape = CircleShape,
+                modifier =
+                    Modifier.testTag(MapScreenTestTags.RECENTER_BUTTON)
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = Dimensions.Padding.medium, bottom = Dimensions.Padding.medium)
+                        .size(Dimensions.ButtonSize.standard)) {
+                  Icon(Icons.Default.MyLocation, contentDescription = "Recenter")
                 }
           }
         }
