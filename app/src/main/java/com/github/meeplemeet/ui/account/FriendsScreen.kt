@@ -75,6 +75,7 @@ import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.Dimensions
+import okhttp3.internal.toImmutableList
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TEST TAGS
@@ -351,10 +352,6 @@ fun FriendsScreen(
   val trimmedQuery = remember(searchQuery) { searchQuery.trim() }
   val isSearching = trimmedQuery.isNotBlank()
 
-  val friendIds = remember(account.relationships) { account.idsFor(RelationshipStatus.FRIEND) }
-  val sentRequestIds = remember(account.relationships) { account.idsFor(RelationshipStatus.SENT) }
-  val blockedIds = remember(account.relationships) { account.idsFor(RelationshipStatus.BLOCKED) }
-
   var friends by remember { mutableStateOf<List<Account>>(emptyList()) }
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
   var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -365,19 +362,19 @@ fun FriendsScreen(
       val s = mutableListOf<Account>()
       val b = mutableListOf<Account>()
 
-      for (acc in list) {
-        if (acc == null) continue
-        when (account.relationships[acc.uid]) {
-          RelationshipStatus.FRIEND -> f.add(acc)
-          RelationshipStatus.SENT -> s.add(acc)
-          RelationshipStatus.BLOCKED -> b.add(acc)
-          else -> {}
-        }
+      val buckets =
+          mapOf(
+              RelationshipStatus.FRIEND to f,
+              RelationshipStatus.SENT to s,
+              RelationshipStatus.BLOCKED to b)
+
+      list.asSequence().filterNotNull().forEach { acc ->
+        buckets[account.relationships[acc.uid]]?.add(acc)
       }
 
-      friends = f
-      sentRequests = s
-      blockedUsers = b
+      friends = f.toImmutableList()
+      sentRequests = s.toImmutableList()
+      blockedUsers = b.toImmutableList()
     }
   }
 

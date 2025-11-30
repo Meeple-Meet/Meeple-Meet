@@ -531,7 +531,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel, online
               }
             })
 
-        if (nameError) {
+        RenderIf(nameError) {
           Text(
               text = MainTabUi.PublicInfo.NAME_INPUT_FIELD_ERR,
               color = AppColors.negative,
@@ -559,12 +559,8 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel, online
                     .padding(bottom = Dimensions.Padding.medium),
             onValueChange = {
               handle = it
-              if (it.isNotBlank()) {
-                showErrors = true
-                viewModel.checkHandleAvailable(it)
-              } else {
-                showErrors = false
-              }
+              showErrors = it.isNotBlank()
+              if (showErrors) viewModel.checkHandleAvailable(it)
             },
             label = { Text(text = MainTabUi.PublicInfo.HANDLE_INPUT_FIELD) },
             leadingIcon = {
@@ -580,7 +576,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel, online
               if (!focused && !errorHandle) viewModel.setAccountHandle(account, newHandle = handle)
             })
 
-        if (errorHandle) {
+        RenderIf(errorHandle) {
           Text(
               text = errorMsg,
               color = AppColors.negative,
@@ -604,11 +600,10 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel, online
             value = desc,
             onValueChange = { desc = it },
             singleLine = false,
-            onFocusChanged = { focused ->
-              if (!focused) {
-                if (online) viewModel.setAccountDescription(account, newDescription = desc)
-                else OfflineModeManager.setAccountChange(account, Account::description.name, desc)
-              }
+            onFocusChanged = {
+              if (it) return@FocusableInputField
+              if (online) viewModel.setAccountDescription(account, newDescription = desc)
+              else OfflineModeManager.setAccountChange(account, Account::description.name, desc)
             })
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
@@ -629,16 +624,14 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
   var showPermissionDenied by remember { mutableStateOf(false) }
 
   // --- Upload function ---
-  val setPhoto: suspend (String) -> Unit = { path ->
-    try {
-      viewModel.setAccountPhoto(account, context, path)
-    } catch (_: Exception) {}
+  val setPhoto: suspend (String) -> Unit = {
+    runCatching { viewModel.setAccountPhoto(account, context, it) }
   }
 
   // --- Camera launcher ---
   val cameraLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        if (bitmap != null) {
+        bitmap?.let {
           scope.launch {
             val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
             setPhoto(path)
@@ -659,7 +652,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
   // --- Gallery launcher ---
   val galleryLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
+        uri?.let {
           scope.launch {
             val path = ImageFileUtils.cacheUriToFile(context, uri)
             setPhoto(path)
@@ -711,7 +704,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
       }
 
   // --- Chooser dialog ---
-  if (showChooser) {
+  RenderIf(showChooser) {
     AvatarChooserDialog(
         onDismiss = { showChooser = false },
         onCamera = {
@@ -731,7 +724,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
   }
 
   // --- Permission denied ---
-  if (showPermissionDenied) {
+  RenderIf(showPermissionDenied) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_DIALOG),
@@ -1148,7 +1141,7 @@ private fun RemoveCatalogDialog(
         RoleAction.SpaceOff -> MainTabUi.PrivateInfo.ROLE_ACTION_SPACE
       }
 
-  if (visible) {
+  RenderIf(visible) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(PrivateInfoTestTags.ROLE_DIALOG),
@@ -1275,7 +1268,7 @@ private fun NotificationOptionRow(
  */
 @Composable
 fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
-  if (show) {
+  RenderIf(show) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(DeleteAccSectionTestTags.POPUP),
@@ -1309,4 +1302,9 @@ fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Un
               }
         })
   }
+}
+
+@Composable
+fun RenderIf(condition: Boolean, composable: @Composable () -> Unit) {
+  if (condition) composable()
 }

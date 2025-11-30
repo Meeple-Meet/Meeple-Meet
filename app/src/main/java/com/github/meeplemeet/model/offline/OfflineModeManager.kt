@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.internal.toImmutableMap
 
 /**
  * Maximum number of accounts to cache in offline mode.
@@ -99,6 +100,8 @@ object OfflineModeManager {
 
   /** StateFlow indicating whether the device currently has a valid internet connection. */
   val hasInternetConnection: StateFlow<Boolean> = _hasInternetConnection
+
+  var dispatcher = Dispatchers.IO
 
   /**
    * Starts monitoring network connectivity changes.
@@ -276,7 +279,7 @@ object OfflineModeManager {
     _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = capped)
 
     // Step 5: Asynchronously download profile pictures for all accounts
-    scope.launch(Dispatchers.IO) {
+    scope.launch(dispatcher) {
       merged.forEach { account ->
         if (account != null)
             runCatching {
@@ -317,7 +320,8 @@ object OfflineModeManager {
   fun setAccountChange(account: Account, property: String, newValue: Any) {
     val state = _offlineModeFlow.value.accounts
     val (existingAccount, existingChanges) = state[account.uid] ?: return
-    val updatedChanges = existingChanges.toMutableMap().apply { put(property, newValue) }
+    val updatedChanges =
+        existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
     state[account.uid] = existingAccount to updatedChanges
     _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = state)
   }
