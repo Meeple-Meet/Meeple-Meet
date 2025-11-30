@@ -678,7 +678,7 @@ private fun NotificationRowContent(
   LaunchedEffect(notif.uid) {
     when (notif.type) {
       NotificationType.FRIEND_REQUEST -> {
-        viewModel.getOtherAccount(notif.senderOrDiscussionId) { acc ->
+        viewModel.getAccount(notif.senderOrDiscussionId, context) { acc ->
           friend = acc
           viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
         }

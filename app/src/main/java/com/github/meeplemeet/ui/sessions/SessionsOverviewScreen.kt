@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -310,6 +311,7 @@ fun SessionCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+  val context = LocalContext.current
   val date =
       remember(session.date) {
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
@@ -320,14 +322,8 @@ fun SessionCard(
 
   LaunchedEffect(session.participants) {
     names.clear()
-    session.participants.forEach { id ->
-      if (id.isBlank()) {
-        names += "Unknown"
-      } else {
-        viewModel.getOtherAccount(id) { acc ->
-          names += acc.name // re-composition happens on each addition
-        }
-      }
+    viewModel.getAccounts(session.participants.toSet().toList(), context) {
+      it.forEach { account -> names += account?.name ?: "Unknown" }
     }
   }
   /* ----------------------------------------------------- */

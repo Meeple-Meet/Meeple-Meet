@@ -3,6 +3,7 @@ package com.github.meeplemeet.model.account
 
 import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -20,38 +21,6 @@ interface AccountViewModel {
   val scope: CoroutineScope
 
   /**
-   * Retrieves an account by its ID.
-   *
-   * @param id The account ID to retrieve
-   * @throws IllegalArgumentException if the ID is blank
-   */
-  fun getAccount(id: String) {
-    require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
-    scope.launch { RepositoryProvider.accounts.getAccount(id, false) }
-  }
-
-  /**
-   * Retrieves multiple accounts by their IDs and provides them to a callback.
-   *
-   * Additionally, this method preloads each account's profile picture in the provided context.
-   *
-   * @param uids List of account IDs to retrieve
-   * @param context Context used for loading profile pictures
-   * @param onResult Callback that receives the list of retrieved accounts
-   */
-  fun getAccounts(uids: List<String>, context: Context, onResult: (List<Account>) -> Unit) {
-    scope.launch {
-      val accounts = RepositoryProvider.accounts.getAccounts(uids)
-      onResult(accounts)
-      accounts.forEach { account ->
-        launch {
-          runCatching { RepositoryProvider.images.loadAccountProfilePicture(account.uid, context) }
-        }
-      }
-    }
-  }
-
-  /**
    * Retrieves an account by ID and provides it to a callback.
    *
    * This method is useful when you need to fetch account data without updating the current
@@ -61,25 +30,9 @@ interface AccountViewModel {
    * @param onResult Callback that receives the retrieved account
    * @throws IllegalArgumentException if the ID is blank
    */
-  fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
+  fun getAccount(id: String, context: Context, onResult: (Account?) -> Unit) {
     require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
-    scope.launch { onResult(RepositoryProvider.accounts.getAccount(id, false)) }
-  }
-
-  /**
-   * Retrieves an account by ID and provides it to a callback, preloading its profile picture.
-   *
-   * @param id The account ID to retrieve
-   * @param context Context used for loading the profile picture
-   * @param onResult Callback that receives the retrieved account
-   */
-  fun getOtherAccount(id: String, context: Context, onResult: (Account) -> Unit) {
-    require(id.isNotBlank()) { BLANK_ACCOUNT_ID_ERROR }
-    scope.launch {
-      val account = RepositoryProvider.accounts.getAccount(id, false)
-      onResult(account)
-      runCatching { RepositoryProvider.images.loadAccountProfilePicture(account.uid, context) }
-    }
+    scope.launch { OfflineModeManager.loadAccount(id, context) { onResult(it) } }
   }
 
   /**
@@ -88,8 +41,8 @@ interface AccountViewModel {
    * @param uids List of account IDs to retrieve
    * @param onResult Callback that receives the list of retrieved accounts
    */
-  fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
-    scope.launch { onResult(RepositoryProvider.accounts.getAccounts(uids)) }
+  fun getAccounts(uids: List<String>, context: Context, onResult: (List<Account?>) -> Unit) {
+    scope.launch { OfflineModeManager.loadAccounts(uids, context, scope) { onResult(it) } }
   }
 
   /**
@@ -196,5 +149,15 @@ interface AccountViewModel {
       // Delete the account
       RepositoryProvider.accounts.deleteAccount(account.uid)
     }
+  }
+
+  /**
+   * Updates an account document from it's offline changes.
+   *
+   * @param account The account to update
+   * @param changes The changes made offline
+   */
+  fun updateAccount(account: Account, changes: Map<String, Any>) {
+    scope.launch { RepositoryProvider.accounts.updateAccount(account.uid, changes) }
   }
 }

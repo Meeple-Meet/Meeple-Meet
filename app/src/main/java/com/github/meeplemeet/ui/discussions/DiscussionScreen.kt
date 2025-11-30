@@ -228,13 +228,15 @@ fun DiscussionScreen(
   LaunchedEffect(discussionState) { discussionState?.let { disc -> discussionName = disc.name } }
 
   LaunchedEffect(messages) {
-    messages.forEach { msg ->
-      if (!userCache.containsKey(msg.senderId) && msg.senderId != account.uid) {
-        try {
-          viewModel.getOtherAccount(msg.senderId) { acct -> userCache[msg.senderId] = acct }
-        } catch (_: Exception) {}
-      }
-    }
+    messages
+        .map { it.senderId }
+        .toSet()
+        .toList()
+        .let {
+          viewModel.getAccounts(it, context) { accounts ->
+            accounts.forEach { account -> if (account != null) userCache[account.uid] = account }
+          }
+        }
   }
 
   LaunchedEffect(messages.size) {

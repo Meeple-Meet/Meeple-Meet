@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,6 +96,7 @@ fun DiscussionsOverviewScreen(
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
+  val context = LocalContext.current
   val discussionPreviewsSorted =
       remember(account.previews) {
         account.previews.values.sortedByDescending { it.lastMessageAt.toDate() }
@@ -153,7 +155,9 @@ fun DiscussionsOverviewScreen(
                           key1 = senderId,
                           initialValue = if (isMe) DiscussionCommons.YOU_SENDER_NAME else null) {
                             if (senderId.isNotBlank() && !isMe) {
-                              viewModel.getOtherAccount(senderId) { acc -> value = acc.name }
+                              viewModel.getAccount(senderId, context) { acc ->
+                                value = acc?.name ?: "Unknown"
+                              }
                             }
                           }
 
