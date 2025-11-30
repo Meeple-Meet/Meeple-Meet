@@ -20,9 +20,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -122,13 +119,22 @@ fun ShopScreen(
     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
   }
   val images by viewModel.photos.collectAsStateWithLifecycle()
-  // Trigger loading of shop data when shopId changes
-  LaunchedEffect(shopId) { viewModel.getShop(shopId, context) }
+
+  val context = LocalContext.current
+
   // Holds the cached image file paths
   val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
+
+  // Initial load when shopId changes
+  LaunchedEffect(shopId) { viewModel.getShop(shopId, context) }
+
+  // Convert images to cached file paths
+  // Update whenever images change (which happens after reload)
   LaunchedEffect(images) {
-    val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
-    cachedImagePathsState.value = paths
+    if (images.isNotEmpty()) {
+      val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
+      cachedImagePathsState.value = paths
+    }
   }
 
   var popupGame by remember { mutableStateOf<Game?>(null) }
@@ -234,8 +240,6 @@ fun ShopDetails(
             ImageCarousel(
                 photoCollectionUrl = photoCollectionUrl,
                 maxNumberOfImages = photoCollectionUrl.size,
-                onAdd = { _, _ -> },
-                onRemove = { _ -> },
                 editable = false)
           }
         }
