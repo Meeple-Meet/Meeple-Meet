@@ -16,30 +16,24 @@ import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableMap
 
 /**
- * Maximum number of accounts to cache in offline mode.
+ * Caps the size of a LinkedHashMap by removing the least recently used entries until the size is at
+ * or below the maximum.
  *
- * When this limit is exceeded, the oldest accounts (in insertion order) are evicted from the cache
- * and their profile pictures are deleted from local storage to free up space.
- */
-const val MAX_CACHED_ACCOUNTS = 100
-
-/**
- * Caps the size of a LinkedHashMap by removing the oldest entries until the size is at or below the
- * maximum.
- *
- * This function enforces a maximum size constraint on a LinkedHashMap by removing entries in
- * insertion order (oldest first) until the map size is within the specified limit. LinkedHashMap
- * maintains insertion order, so the first entries are the oldest.
+ * This function enforces a maximum size constraint on a LinkedHashMap by removing entries in access
+ * order (least recently used first) until the map size is within the specified limit. LinkedHashMap
+ * with accessOrder=true maintains LRU ordering, so the first entries are the least recently
+ * accessed.
  *
  * ## Eviction Strategy
- * Uses LRU-like behavior: oldest inserted entries are evicted first. This is suitable for caching
- * scenarios where recently added items are more likely to be accessed.
+ * Uses true LRU (Least Recently Used) behavior: entries that haven't been accessed recently are
+ * evicted first. This is optimal for caching scenarios where recently accessed items are more
+ * likely to be accessed again.
  *
  * ## Thread Safety
  * This function modifies the input map in place. Callers must ensure thread-safe access.
  *
  * @param T The type of values stored in the map
- * @param map The LinkedHashMap to cap (modified in place)
+ * @param map The LinkedHashMap to cap (modified in place, must have accessOrder=true)
  * @param max The maximum number of entries to retain
  * @return Pair of (the modified map, list of removed values for cleanup)
  */
@@ -191,8 +185,9 @@ object OfflineModeManager {
 
     val fetched = RepositoryProvider.accounts.getAccountSafe(uid, false)
     if (fetched != null) {
-      state[uid] = fetched to emptyMap()
-      val (capped, removed) = cap(state, MAX_CACHED_ACCOUNTS)
+      // Create new map to avoid mutating StateFlow's internal state
+      val newState = LinkedHashMap(state).apply { this[uid] = fetched to emptyMap() }
+      val (capped, removed) = cap(newState, MAX_CACHED_ACCOUNTS)
       _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = capped)
       runCatching {
         RepositoryProvider.images.loadAccountProfilePicture(uid, context)
@@ -270,12 +265,14 @@ object OfflineModeManager {
       merged[value] = fetched.getOrNull(offset)
     }
 
-    // Step 4: Update cache with fetched accounts and apply capping
-    for ((i, uid) in uids.withIndex()) {
-      val acc = merged[i]
-      if (acc != null) state[uid] = acc to emptyMap()
+    // Step 4: Update cache with ONLY newly fetched accounts and apply capping
+    // Create new map to avoid mutating StateFlow's internal state
+    val newState = LinkedHashMap(state)
+    for ((offset, idx) in missingIndices.withIndex()) {
+      val acc = fetched.getOrNull(offset)
+      if (acc != null) newState[uids[idx]] = acc to emptyMap()
     }
-    val (capped, removed) = cap(state, MAX_CACHED_ACCOUNTS)
+    val (capped, removed) = cap(newState, MAX_CACHED_ACCOUNTS)
     _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = capped)
 
     // Step 5: Asynchronously download profile pictures for all accounts
@@ -322,7 +319,9 @@ object OfflineModeManager {
     val (existingAccount, existingChanges) = state[account.uid] ?: return
     val updatedChanges =
         existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
-    state[account.uid] = existingAccount to updatedChanges
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = state)
+    // Create new map to avoid mutating StateFlow's internal state
+    val newState = LinkedHashMap(state)
+    newState[account.uid] = existingAccount to updatedChanges
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = newState)
   }
 }
