@@ -24,12 +24,14 @@ import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.ConfirmationDialog
 import com.github.meeplemeet.ui.components.EditableImageCarousel
+import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
+import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.theme.Dimensions
 
 /* ================================================================================================
@@ -126,6 +128,13 @@ fun ShopDetailsScreen(
 
   LaunchedEffect(shop) { viewModel.initialize(shop) }
 
+  // Automatically initialize the selected location if not already set
+  LaunchedEffect(shop.address) {
+    if (locationUi.selectedLocation == null && shop.address != Location()) {
+      viewModel.setLocation(shop.address)
+    }
+  }
+
   EditShopContent(
       shop = shop,
       onBack = onBack,
@@ -216,6 +225,15 @@ fun EditShopContent(
         photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
     }
   var showDeleteDialog by remember { mutableStateOf(false) }
+
+  LaunchedEffect(locationUi.locationQuery) {
+    val sel = locationUi.selectedLocation
+    if (sel != null && locationUi.locationQuery != sel.name) {
+      val typed = locationUi.locationQuery
+      viewModel.clearLocationSearch()
+      if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
+    }
+  }
 
   val hasOpeningHours by
       remember(state.week) { derivedStateOf { state.week.any { it.hours.isNotEmpty() } } }
