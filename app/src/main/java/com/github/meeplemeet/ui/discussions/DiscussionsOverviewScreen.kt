@@ -97,12 +97,12 @@ fun DiscussionsOverviewScreen(
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
+  val context = LocalContext.current
+  val offline by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
   val discussionPreviewsSorted =
       remember(account.previews) {
         account.previews.values.sortedByDescending { it.lastMessageAt.toDate() }
       }
-  val context = LocalContext.current
-  val offline by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   LaunchedEffect(account.previews) { viewModel.validatePreviews(account) }
 
@@ -164,7 +164,9 @@ fun DiscussionsOverviewScreen(
                           key1 = senderId,
                           initialValue = if (isMe) DiscussionCommons.YOU_SENDER_NAME else null) {
                             if (senderId.isNotBlank() && !isMe) {
-                              viewModel.getOtherAccount(senderId) { acc -> value = acc.name }
+                              viewModel.getAccount(senderId, context) { acc ->
+                                value = acc?.name ?: "Unknown"
+                              }
                             }
                           }
 

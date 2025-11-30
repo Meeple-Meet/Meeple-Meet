@@ -240,6 +240,7 @@ class MainTabComposableTest : FirestoreTests() {
     compose.setContent {
       AppTheme {
         MainTab(
+            online = true,
             viewModel = profileVM,
             account = accountState.value,
             onFriendsClick = { friendsClicked = true },

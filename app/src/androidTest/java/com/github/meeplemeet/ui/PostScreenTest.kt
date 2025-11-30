@@ -2,6 +2,7 @@
 // and user combinations instructions. Improvements were then added by hand.
 package com.github.meeplemeet.ui
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -63,9 +64,9 @@ class PostScreenTest {
 
     private val accounts = mutableMapOf(marco.uid to marco, alex.uid to alex, dany.uid to dany)
 
-    override fun getOtherAccount(uid: String, onResult: (Account) -> Unit) {
-      if (uid.isBlank()) return
-      accounts[uid]?.let { onResult(it) }
+    override fun getAccount(id: String, context: Context, onResult: (Account?) -> Unit) {
+      if (id.isBlank()) return
+      accounts[id]?.let { onResult(it) }
     }
 
     fun addAccount(account: Account) {

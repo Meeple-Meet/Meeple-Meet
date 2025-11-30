@@ -75,6 +75,7 @@ import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.Dimensions
+import okhttp3.internal.toImmutableList
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TEST TAGS
@@ -307,7 +308,7 @@ private fun loadAccountsOrEmpty(
     ids: List<String>,
     context: Context,
     viewModel: FriendsScreenViewModel,
-    onResult: (List<Account>) -> Unit,
+    onResult: (List<Account?>) -> Unit,
 ) {
   if (ids.isEmpty()) onResult(emptyList()) else viewModel.getAccounts(ids, context, onResult)
 }
@@ -351,22 +352,30 @@ fun FriendsScreen(
   val trimmedQuery = remember(searchQuery) { searchQuery.trim() }
   val isSearching = trimmedQuery.isNotBlank()
 
-  val friendIds = remember(account.relationships) { account.idsFor(RelationshipStatus.FRIEND) }
-  val sentRequestIds = remember(account.relationships) { account.idsFor(RelationshipStatus.SENT) }
-  val blockedIds = remember(account.relationships) { account.idsFor(RelationshipStatus.BLOCKED) }
-
   var friends by remember { mutableStateOf<List<Account>>(emptyList()) }
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
   var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
 
-  LaunchedEffect(friendIds) { loadAccountsOrEmpty(friendIds, context, viewModel) { friends = it } }
+  LaunchedEffect(account.uid) {
+    viewModel.getAccounts(account.relationships.keys.toList(), context) { list ->
+      val f = mutableListOf<Account>()
+      val s = mutableListOf<Account>()
+      val b = mutableListOf<Account>()
 
-  LaunchedEffect(sentRequestIds) {
-    loadAccountsOrEmpty(sentRequestIds, context, viewModel) { sentRequests = it }
-  }
+      val buckets =
+          mapOf(
+              RelationshipStatus.FRIEND to f,
+              RelationshipStatus.SENT to s,
+              RelationshipStatus.BLOCKED to b)
 
-  LaunchedEffect(blockedIds) {
-    loadAccountsOrEmpty(blockedIds, context, viewModel) { blockedUsers = it }
+      list.asSequence().filterNotNull().forEach { acc ->
+        buckets[account.relationships[acc.uid]]?.add(acc)
+      }
+
+      friends = f.toImmutableList()
+      sentRequests = s.toImmutableList()
+      blockedUsers = b.toImmutableList()
+    }
   }
 
   LaunchedEffect(trimmedQuery) { viewModel.searchByHandle(trimmedQuery) }

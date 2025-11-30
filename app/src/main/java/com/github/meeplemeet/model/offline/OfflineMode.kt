@@ -10,6 +10,14 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 
 const val MAX_CACHED_DISCUSSIONS = 50
 
+/**
+ * Maximum number of accounts to cache in offline mode.
+ *
+ * When this limit is exceeded, the oldest accounts (in insertion order) are evicted from the cache
+ * and their profile pictures are deleted from local storage to free up space.
+ */
+const val MAX_CACHED_ACCOUNTS = 50
+
 const val LOAD_FACTOR = 0.9f
 
 /**
@@ -35,8 +43,8 @@ const val LOAD_FACTOR = 0.9f
  */
 data class OfflineMode(
     val accounts: LinkedHashMap<String, Pair<Account, Map<String, Any>>> =
-        LinkedHashMap(16, LOAD_FACTOR, true),
-    val discussions: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>> =
+        LinkedHashMap(MAX_CACHED_ACCOUNTS, LOAD_FACTOR, true),
+    val discussions: LinkedHashMap<String, Pair<Discussion, List<Message>>> =
         LinkedHashMap(MAX_CACHED_DISCUSSIONS, LOAD_FACTOR, true),
     val posts: LinkedHashMap<String, Pair<Post, Boolean>> = LinkedHashMap(16, LOAD_FACTOR, true),
     val shopsToAdd: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> =
