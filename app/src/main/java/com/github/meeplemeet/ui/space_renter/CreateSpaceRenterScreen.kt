@@ -105,6 +105,7 @@ fun CreateSpaceRenterScreen(
       onCreated = onCreated,
       onCreate = { renter ->
         viewModel.createSpaceRenter(
+            context = context,
             owner = owner,
             name = renter.name,
             phone = renter.phone,
@@ -113,8 +114,7 @@ fun CreateSpaceRenterScreen(
             address = renter.address,
             openingHours = renter.openingHours,
             spaces = renter.spaces,
-            photoCollectionUrl = renter.photoCollectionUrl,
-            context = context)
+            photoCollectionUrl = renter.photoCollectionUrl)
       },
       locationUi = locationUi,
       viewModel = viewModel)
@@ -137,7 +137,7 @@ internal fun AddSpaceRenterContent(
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
-  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
+  var photoCollectionUrl by remember { mutableStateOf(emptyList<String>()) }
   var name by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -178,6 +178,7 @@ internal fun AddSpaceRenterContent(
     email = ""
     phone = ""
     link = ""
+    photoCollectionUrl = emptyList()
     viewModel.clearLocationSearch()
     week = emptyWeek()
     editingDay = null

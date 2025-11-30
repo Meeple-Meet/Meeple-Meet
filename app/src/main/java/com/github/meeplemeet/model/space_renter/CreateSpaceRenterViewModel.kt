@@ -2,11 +2,10 @@
 
 package com.github.meeplemeet.model.space_renter
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
-import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -21,6 +20,7 @@ import kotlinx.coroutines.withContext
  * all required fields are properly provided.
  *
  * @property repository The repository used for space renter operations.
+ * @property imageRepository The repository used for image operations.
  */
 class CreateSpaceRenterViewModel(
     private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
@@ -97,20 +97,18 @@ class CreateSpaceRenterViewModel(
             if (photoCollectionUrl.isNotEmpty()) {
               try {
                 // Upload photos to Firebase Storage and get download URLs
-                withContext(NonCancellable) {
-                  imageRepository.saveSpaceRenterPhotos(
-                      context, created.id, *photoCollectionUrl.toTypedArray())
-                }
+                val urls =
+                    withContext(NonCancellable) {
+                      imageRepository.saveSpaceRenterPhotos(
+                          context, created.id, *photoCollectionUrl.toTypedArray())
+                    }
+                urls
               } catch (e: Exception) {
-                // Log and continue with empty list so the renter exists even if uploads fail.
-                Log.e(
-                    "upload", "Image upload failed for space renter ${created.id}: ${e.message}", e)
-                emptyList<String>()
+                throw Exception("Photo upload failed: ${e.message}", e)
               }
             } else {
-              emptyList()
+              emptyList<String>()
             }
-
         // Update the document with Firebase Storage download URLs
         if (uploadedUrls.isNotEmpty()) {
           try {
@@ -118,17 +116,11 @@ class CreateSpaceRenterViewModel(
               repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
             }
           } catch (e: Exception) {
-            // Updating should not crash the app; log and continue.
-            Log.e(
-                "upload",
-                "Failed to update space renter ${created.id} with photo URLs: ${e.message}",
-                e)
+            throw Exception("Failed to save photo URLs: ${e.message}", e)
           }
         }
       } catch (e: Exception) {
-        // Catch any unexpected exception from repository.createSpaceRenter and fail gracefully.
-        Log.e("upload", "Failed to create space renter: ${e.message}", e)
-        // Re-throw if you want the caller to handle it; otherwise swallow to avoid crash.
+        throw Exception("Failed to create space renter: ${e.message}", e)
       }
     } else {
             // OFFLINE: Queue for later creation
