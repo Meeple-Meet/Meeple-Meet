@@ -8,6 +8,8 @@ import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 
+const val LOAD_FACTOR = 0.9f
+
 /**
  * Maximum number of accounts to cache in offline mode.
  *
