@@ -1419,3 +1419,51 @@ private fun roundDistance(meters: Double): Double {
       }
   return rounded * pow10
 }
+
+/**
+ * Static vertical menu for map controls.
+ *
+ * Displays filter and add buttons stacked vertically.
+ *
+ * @param modifier Modifier for the menu container
+ * @param showCreateButton Whether to show the create/add button
+ * @param onToggleFilters Callback when filter button is clicked
+ * @param onAddClick Callback when add button is clicked
+ */
+@Composable
+private fun StaticVerticalMapMenu(
+    modifier: Modifier = Modifier,
+    showCreateButton: Boolean,
+    onToggleFilters: () -> Unit,
+    onAddClick: () -> Unit
+) {
+  Column(
+      modifier = modifier.testTag(MapScreenTestTags.BUTTON_MENU),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+        // Filter button - circular
+        FloatingActionButton(
+            onClick = onToggleFilters,
+            containerColor = AppColors.neutral,
+            contentColor = AppColors.textIcons,
+            shape = CircleShape,
+            modifier =
+                Modifier.testTag(MapScreenTestTags.FILTER_BUTTON)
+                    .size(Dimensions.ButtonSize.standard)) {
+              Icon(Icons.Default.FilterList, contentDescription = "Filter pins")
+            }
+
+        // Add button (visible only for owners/renters)
+        if (showCreateButton) {
+          FloatingActionButton(
+              onClick = onAddClick,
+              containerColor = AppColors.neutral,
+              contentColor = AppColors.textIcons,
+              shape = CircleShape,
+              modifier =
+                  Modifier.testTag(MapScreenTestTags.ADD_FAB)
+                      .size(Dimensions.ButtonSize.standard)) {
+                Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
+              }
+        }
+      }
+}
