@@ -791,26 +791,6 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     (cachedBytes + remoteBytes).awaitAll()
   }
 
-  private suspend fun deleteLocalImages(context: Context, vararg storagePaths: String) {
-    if (storagePaths.isEmpty()) return
-
-    try {
-      withContext(dispatcher) {
-        storagePaths.forEach { storagePath ->
-          val diskPath = cachePath(context, storagePath)
-          val file = File(diskPath)
-          if (file.exists() && !file.delete()) {
-            throw DiskStorageException("Failed to delete cached image at $storagePath")
-          }
-        }
-      }
-    } catch (e: DiskStorageException) {
-      throw e
-    } catch (e: SecurityException) {
-      throw DiskStorageException("Permission denied deleting images", e)
-    }
-  }
-
   /**
    * Deletes one or more images from both local cache and Firebase Storage.
    *

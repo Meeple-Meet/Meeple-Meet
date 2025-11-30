@@ -10,7 +10,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.discussions.DiscussionScreen
 import com.github.meeplemeet.ui.discussions.DiscussionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -28,10 +27,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class DiscussionScreenIntegrationTest : FirestoreTests() {
-  companion object {
-    private var offlineModeStarted = false
-  }
-
   @get:Rule val composeTestRule = createComposeRule()
 
   private lateinit var viewModel: DiscussionViewModel
@@ -48,7 +43,6 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
   @Before
   fun setup() = runBlocking {
-    ensureOfflineModeIsReady()
     viewModel = DiscussionViewModel()
     backPressed = false
 
@@ -84,21 +78,6 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
     currentUser = accountRepository.getAccount(currentUser.uid)
     otherUser = accountRepository.getAccount(otherUser.uid)
-  }
-
-  private suspend fun ensureOfflineModeIsReady() {
-    if (!offlineModeStarted) {
-      val instrumentation = InstrumentationRegistry.getInstrumentation()
-      val context = instrumentation.targetContext
-      instrumentation.runOnMainSync { OfflineModeManager.start(context) }
-      offlineModeStarted = true
-    }
-
-    val timeoutAt = System.currentTimeMillis() + 5_000
-    while (!OfflineModeManager.hasInternetConnection.value &&
-        System.currentTimeMillis() < timeoutAt) {
-      delay(100)
-    }
   }
 
   @After

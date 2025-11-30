@@ -184,11 +184,14 @@ fun DiscussionScreen(
   val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val networkMonitorStarted by
+      OfflineModeManager.networkMonitorStarted.collectAsStateWithLifecycle()
+  val effectiveOnline = online || !networkMonitorStarted
   val offlineMode by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
-  LaunchedEffect(online) {
+  LaunchedEffect(effectiveOnline) {
     val state = offlineMode.discussions[discussion.uid]
-    if (online && state != null) {
+    if (effectiveOnline && state != null) {
       state.third.forEach {
         if (it.photoUrl != null)
             viewModel.sendMessageWithPhoto(discussion, account, it.content, context, it.photoUrl)
@@ -208,7 +211,8 @@ fun DiscussionScreen(
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
-      if (online) viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
+      if (effectiveOnline)
+          viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
       else
           OfflineModeManager.sendPendingMessage(
               discussion.uid, Message(content = messageText, photoUrl = path))
@@ -539,7 +543,7 @@ fun DiscussionScreen(
                                   CreatePollDialog(
                                       onDismiss = { showPollDialog = false },
                                       onCreate = { question, options, allowMultiple ->
-                                        if (online)
+                                        if (effectiveOnline)
                                             viewModel.createPoll(
                                                 discussion = discussion,
                                                 creatorId = account.uid,
@@ -595,7 +599,7 @@ fun DiscussionScreen(
                                 if (messageText.isNotBlank() && !isSending) {
                                   isSending = true
                                   try {
-                                    if (online)
+                                    if (effectiveOnline)
                                         viewModel.sendMessageToDiscussion(
                                             discussion, account, messageText)
                                     else

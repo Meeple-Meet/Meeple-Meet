@@ -9,6 +9,7 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.Message
+import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,6 +98,12 @@ object OfflineModeManager {
   /** StateFlow indicating whether the device currently has a valid internet connection. */
   val hasInternetConnection: StateFlow<Boolean> = _hasInternetConnection
 
+  /** Tracks whether network monitoring has been started at least once. */
+  private val _networkMonitorStarted = MutableStateFlow(false)
+
+  /** StateFlow exposing whether network monitoring has been initialized. */
+  val networkMonitorStarted: StateFlow<Boolean> = _networkMonitorStarted.asStateFlow()
+
   var dispatcher = Dispatchers.IO
 
   /**
@@ -138,6 +145,7 @@ object OfflineModeManager {
             _hasInternetConnection.value = false
           }
         })
+    _networkMonitorStarted.value = true
   }
 
   /**
@@ -289,8 +297,8 @@ object OfflineModeManager {
       }
 
       // Clean up profile pictures for evicted accounts
-      removed.forEach { (account, _) ->
-        runCatching {
+      runCatching {
+        removed.forEach { (account, _) ->
           RepositoryProvider.images.deleteLocalAccountProfilePicture(account.uid, context)
         }
       }

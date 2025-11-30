@@ -288,13 +288,16 @@ class DiscussionViewModel(
           offlineMode.discussions[discussionId]?.second
         }
 
-    return combine(OfflineModeManager.hasInternetConnection, cachedMessagesFlow) { isOnline, cached
-          ->
-          Pair(isOnline, cached)
-        }
-        .flatMapLatest { (isOnline, cachedMessages) ->
-          val hasCachedMessages = !cachedMessages.isNullOrEmpty()
-          if (isOnline || !hasCachedMessages) {
+    return combine(
+            OfflineModeManager.hasInternetConnection,
+            OfflineModeManager.networkMonitorStarted,
+            cachedMessagesFlow) { isOnline, monitorStarted, cached ->
+              Triple(isOnline, monitorStarted, cached)
+            }
+        .flatMapLatest { (isOnline, monitorStarted, cachedMessages) ->
+          val cacheAvailable = !cachedMessages.isNullOrEmpty()
+          val treatAsOnline = isOnline || !monitorStarted
+          if (treatAsOnline || !cacheAvailable) {
             discussionRepository.listenMessages(discussionId).onEach { messages ->
               OfflineModeManager.cacheDiscussionMessages(discussionId, messages)
             }
