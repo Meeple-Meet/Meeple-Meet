@@ -22,6 +22,7 @@ import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
+import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
@@ -189,7 +190,7 @@ fun AddShopContent(
             email: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>,
+            stock: List<Pair<ShopScreenDefaults.Game, Int>>,
             photoUrls: List<String>) -> String,
     gameUi: GameUIState,
     locationUi: LocationUIState,
@@ -205,7 +206,7 @@ fun AddShopContent(
           onSetGame = viewModel::setGame)
   val hasOpeningHours by
       remember(state.week) { derivedStateOf { state.week.any { it.hours.isNotEmpty() } } }
-
+    var photoCollectionUrl by remember { mutableStateOf(emptyList<String>()) }
   // Sync addressText with locationUi.locationQuery when typing
   LaunchedEffect(locationUi.locationQuery) {
     val sel = locationUi.selectedLocation
