@@ -23,6 +23,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
@@ -204,8 +205,8 @@ fun AddShopContent(
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
+  var photoCollectionUrl by remember { mutableStateOf(emptyList<String>()) }
   var shopName by rememberSaveable { mutableStateOf("") }
-  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
   var email by rememberSaveable { mutableStateOf("") }
   var addressText by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -219,6 +220,15 @@ fun AddShopContent(
   var showGameDialog by remember { mutableStateOf(false) }
   var qty by rememberSaveable { mutableIntStateOf(1) }
   var stock by remember { mutableStateOf(initialStock) }
+
+  LaunchedEffect(locationUi.locationQuery) {
+    val sel = locationUi.selectedLocation
+    if (sel != null && locationUi.locationQuery != sel.name) {
+      val typed = locationUi.locationQuery
+      viewModel.clearLocationSearch()
+      if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
+    }
+  }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
@@ -244,6 +254,7 @@ fun AddShopContent(
     addressText = ""
     phone = ""
     link = ""
+    photoCollectionUrl = emptyList()
     week = emptyWeek()
     editingDay = null
     showHoursDialog = false
@@ -317,20 +328,7 @@ fun AddShopContent(
                       ImageCarousel(
                           photoCollectionUrl = photoCollectionUrl,
                           maxNumberOfImages = maxNumberOfImages,
-                          onAdd = { path, index ->
-                            photoCollectionUrl =
-                                if (index < photoCollectionUrl.size &&
-                                    photoCollectionUrl[index].isNotEmpty()) {
-                                  photoCollectionUrl.mapIndexed { i, old ->
-                                    if (i == index) path else old
-                                  }
-                                } else {
-                                  photoCollectionUrl + path
-                                }
-                          },
-                          onRemove = { url ->
-                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                          },
+                          onStateChange = { photoCollectionUrl = it },
                           editable = true)
                     }
                     item {
