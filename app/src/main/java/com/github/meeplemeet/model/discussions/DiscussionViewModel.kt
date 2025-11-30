@@ -279,23 +279,27 @@ class DiscussionViewModel(
   fun messagesFlow(discussionId: String, context: Context): StateFlow<List<Message>> {
     if (discussionId.isBlank()) return MutableStateFlow(emptyList())
 
-    // Combine online status and discussion ID to determine source
-    return combine(OfflineModeManager.hasInternetConnection, flowOf(discussionId)) {
-            isOnline,
-            discId ->
-          Pair(isOnline, discId)
+    if (!OfflineModeManager.offlineModeFlow.value.discussions.containsKey(discussionId)) {
+      viewModelScope.launch { OfflineModeManager.loadDiscussion(discussionId, context) { _ -> } }
+    }
+
+    val cachedMessagesFlow =
+        OfflineModeManager.offlineModeFlow.map { offlineMode ->
+          offlineMode.discussions[discussionId]?.second
         }
-        .flatMapLatest { (isOnline, discId) ->
-          if (isOnline) {
-            // Online: listen to repository and cache updates
-            discussionRepository.listenMessages(discId).onEach { messages ->
-              OfflineModeManager.cacheDiscussionMessages(discId, messages)
+
+    return combine(OfflineModeManager.hasInternetConnection, cachedMessagesFlow) { isOnline, cached
+          ->
+          Pair(isOnline, cached)
+        }
+        .flatMapLatest { (isOnline, cachedMessages) ->
+          val hasCachedMessages = !cachedMessages.isNullOrEmpty()
+          if (isOnline || !hasCachedMessages) {
+            discussionRepository.listenMessages(discussionId).onEach { messages ->
+              OfflineModeManager.cacheDiscussionMessages(discussionId, messages)
             }
           } else {
-            // Offline: return cached messages
-            OfflineModeManager.offlineModeFlow.map { offlineMode ->
-              offlineMode.discussions[discId]?.second ?: emptyList()
-            }
+            flowOf(cachedMessages!!)
           }
         }
         .stateIn(
