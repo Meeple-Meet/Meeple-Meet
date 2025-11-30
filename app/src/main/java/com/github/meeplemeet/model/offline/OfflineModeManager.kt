@@ -10,15 +10,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Caps the size of a LinkedHashMap by removing the oldest entries until the size is at or below the
- * maximum.
+ * Caps the size of a LinkedHashMap by removing the least recently used entries until the size is at
+ * or below the maximum.
  *
- * This function enforces a maximum size constraint on a LinkedHashMap by removing entries in
- * insertion order (oldest first) until the map size is within the specified limit. LinkedHashMap
- * maintains insertion order, so the first entries are the oldest.
+ * This function enforces a maximum size constraint on a LinkedHashMap by removing entries in access
+ * order (least recently used first) until the map size is within the specified limit. LinkedHashMap
+ * with accessOrder=true maintains LRU ordering, so the first entries are the least recently
+ * accessed.
+ *
+ * ## Eviction Strategy
+ * Uses true LRU (Least Recently Used) behavior: entries that haven't been accessed recently are
+ * evicted first. This is optimal for caching scenarios where recently accessed items are more
+ * likely to be accessed again.
+ *
+ * ## Thread Safety
+ * This function modifies the input map in place. Callers must ensure thread-safe access.
  *
  * @param T The type of values stored in the map
- * @param map The LinkedHashMap to cap
+ * @param map The LinkedHashMap to cap (modified in place, must have accessOrder=true)
  * @param max The maximum number of entries to retain
  * @return A new Map containing the remaining entries after capping
  */
