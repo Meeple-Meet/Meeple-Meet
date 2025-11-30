@@ -64,7 +64,7 @@ class SpaceRenterViewModel(
     if (id.isBlank()) throw IllegalArgumentException("SpaceRenter ID cannot be blank")
 
     currentSpaceRenterId = id
-      
+
 
     viewModelScope.launch {
         OfflineModeManager.loadSpaceRenter(id) { spaceRenter -> _spaceRenter.value = spaceRenter }
@@ -75,4 +75,9 @@ class SpaceRenterViewModel(
         }
         }
   }
+
+  fun clearCache() {
+    _spaceRenter.value = null
+    _photos.value = emptyList()
   }
+}
