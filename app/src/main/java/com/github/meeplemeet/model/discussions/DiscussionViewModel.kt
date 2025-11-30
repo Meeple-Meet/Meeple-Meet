@@ -31,7 +31,7 @@ const val SUGGESTIONS_LIMIT = 30
  * - **Unread tracking**: Automatic unread count management
  *
  * ## Photo Messaging Flow
- * 1. User selects/captures photo → cached via [ImageFileUtils]
+ * 1. User selects/captures photo → cached via [com.github.meeplemeet.model.images.ImageFileUtils]
  * 2. [sendMessageWithPhoto] uploads to Firebase Storage via [ImageRepository]
  * 3. Creates message with photoUrl via [DiscussionRepository]
  * 4. All participants' previews are updated with "📷 Photo" text
@@ -94,8 +94,10 @@ class DiscussionViewModel(
    * @param localPath Absolute file path to the local image (typically in app cache directory).
    * @throws IllegalArgumentException if localPath is blank
    * @throws IllegalStateException if photo upload fails to return a download URL
-   * @see ImageFileUtils.cacheUriToFile for preparing gallery photos
-   * @see ImageFileUtils.saveBitmapToCache for preparing camera photos
+   * @see com.github.meeplemeet.model.images.ImageFileUtils.cacheUriToFile for preparing gallery
+   *   photos
+   * @see com.github.meeplemeet.model.images.ImageFileUtils.saveBitmapToCache for preparing camera
+   *   photos
    * @see ImageRepository.saveDiscussionPhotoMessages for photo upload
    * @see DiscussionRepository.sendPhotoMessageToDiscussion for message creation
    */
@@ -232,27 +234,6 @@ class DiscussionViewModel(
       optionIndex: Int
   ) = viewModelScope.launch { removeVoteFromPoll(discussionId, messageId, voter, optionIndex) }
 
-  // Holds a [StateFlow] of discussion documents keyed by discussion ID.
-  private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
-
-  /**
-   * Real-time flow of a discussion document.
-   *
-   * Emits a new [Discussion] on every snapshot change, or `null` if the discussion does not exist
-   * yet.
-   */
-  fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
-    if (discussionId.isBlank()) return MutableStateFlow(null)
-    return discussionFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenDiscussion(discussionId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
-    }
-  }
-
   // Holds a [StateFlow] of messages keyed by discussion ID.
   private val messagesFlows = mutableMapOf<String, StateFlow<List<Message>>>()
 
@@ -282,7 +263,6 @@ class DiscussionViewModel(
    *
    * @param discussionId The discussion UID to listen to. Returns empty flow if blank.
    * @return StateFlow emitting lists of messages ordered by createdAt.
-   * @see discussionFlow for discussion metadata updates
    * @see DiscussionRepository.listenMessages for underlying listener
    */
   fun messagesFlow(discussionId: String): StateFlow<List<Message>> {

@@ -178,7 +178,6 @@ fun DiscussionScreen(
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
   var isSending by remember { mutableStateOf(false) }
-  var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
@@ -222,10 +221,7 @@ fun DiscussionScreen(
         }
       }
 
-  val discussionState by viewModel.discussionFlow(discussion.uid).collectAsState()
   val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
-
-  LaunchedEffect(discussionState) { discussionState?.let { disc -> discussionName = disc.name } }
 
   LaunchedEffect(messages) {
     messages.forEach { msg ->
@@ -270,7 +266,7 @@ fun DiscussionScreen(
                               backgroundColor = AppColors.neutral)
                           Spacer(Modifier.width(Dimensions.Spacing.large))
                           Text(
-                              text = discussionName,
+                              text = discussion.name,
                               style = MaterialTheme.typography.titleMedium,
                               fontSize = Dimensions.TextSize.heading,
                               fontWeight = FontWeight.SemiBold,

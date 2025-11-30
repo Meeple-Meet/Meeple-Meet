@@ -5,6 +5,9 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.Message
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,13 +34,17 @@ import kotlinx.coroutines.flow.asStateFlow
  * @param max The maximum number of entries to retain
  * @return A new Map containing the remaining entries after capping
  */
-private fun <T> cap(map: LinkedHashMap<String, T>, max: Int): LinkedHashMap<String, T> {
+private fun <T> cap(
+    map: LinkedHashMap<String, T>,
+    max: Int
+): Pair<LinkedHashMap<String, T>, List<T>> {
+  val removed = mutableListOf<T?>()
   while (map.size > max) {
     val oldestKey = map.entries.first().key
-    map.remove(oldestKey)
+    removed.add(map.remove(oldestKey))
   }
 
-  return map
+  return Pair(map, removed.filterNotNull().toList())
 }
 
 /**
@@ -133,5 +140,124 @@ object OfflineModeManager {
    */
   fun clearOfflineMode() {
     _offlineModeFlow.value = OfflineMode()
+  }
+
+  /**
+   * Updates the discussion cache with new data and manages cache size limits.
+   *
+   * This internal function updates the cached discussion data and enforces the maximum cache size
+   * by removing the oldest discussions when the limit is exceeded. It also handles cleanup of
+   * associated profile pictures for removed discussions.
+   *
+   * @param state The current cache state (LinkedHashMap maintaining insertion order)
+   * @param context Android context for image operations
+   * @param discussion The discussion to cache
+   * @param messages The list of messages for this discussion
+   * @param pendingMessages The list of pending (unsent) messages for this discussion
+   */
+  private suspend fun updateDiscussionCache(
+      state: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>>,
+      context: Context,
+      discussion: Discussion,
+      messages: List<Message>,
+      pendingMessages: List<Message>
+  ) {
+    state[discussion.uid] = Triple(discussion, messages, pendingMessages)
+    val (capped, removed) = cap(state, MAX_CACHED_DISCUSSIONS)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(discussions = capped)
+    runCatching {
+      RepositoryProvider.images.loadAccountProfilePicture(discussion.uid, context)
+      removed.forEach { (disc, _) ->
+        RepositoryProvider.images.deleteLocalDiscussionProfilePicture(context, disc.uid)
+      }
+    }
+  }
+
+  /**
+   * Loads a discussion from cache or fetches it from the repository if not cached.
+   *
+   * This function first checks if the discussion is already in the offline cache. If found, it
+   * immediately returns the cached version via the callback. Otherwise, it fetches the discussion
+   * from the repository, adds it to the cache, and returns the fetched result.
+   *
+   * @param uid The unique identifier of the discussion to load
+   * @param context Android context for image operations during caching
+   * @param onResult Callback function invoked with the loaded Discussion (or null if not found)
+   */
+  suspend fun loadDiscussion(uid: String, context: Context, onResult: (Discussion?) -> Unit) {
+    if (uid.isBlank()) return
+
+    val state = _offlineModeFlow.value.discussions
+    val cached = state[uid]?.first
+
+    if (cached != null) {
+      onResult(cached)
+      return
+    }
+
+    val fetched = RepositoryProvider.discussions.getDiscussionSafe(uid)
+    addDiscussionToCache(fetched, context)
+
+    onResult(fetched)
+  }
+
+  /**
+   * Adds a discussion to the offline cache if not already present.
+   *
+   * This function checks if the discussion is already cached and, if not, adds it to the cache with
+   * empty message lists. If the discussion is null or already cached, the function returns without
+   * making changes.
+   *
+   * @param discussion The discussion to add to the cache (null values are ignored)
+   * @param context Android context for image operations during caching
+   */
+  suspend fun addDiscussionToCache(discussion: Discussion?, context: Context) {
+    if (discussion == null) return
+
+    val state = _offlineModeFlow.value.discussions
+    val cached = state[discussion.uid]?.first
+
+    if (cached != null) return
+    updateDiscussionCache(state, context, discussion, emptyList(), emptyList())
+  }
+
+  /**
+   * Updates the cached messages for a discussion.
+   *
+   * This function updates the message list for an already cached discussion. If the discussion is
+   * not in the cache, this function returns without making changes. Pending messages are preserved
+   * during the update.
+   *
+   * @param uid The unique identifier of the discussion
+   * @param messages The updated list of messages to cache for this discussion
+   * @param context Android context for image operations during cache updates
+   */
+  suspend fun cacheDiscussionMessages(uid: String, messages: List<Message>, context: Context) {
+    val state = _offlineModeFlow.value.discussions
+    val cached = state[uid]
+
+    if (cached == null) return
+
+    updateDiscussionCache(state, context, cached.first, messages, cached.third)
+  }
+
+  /**
+   * Adds a pending message to the cache for later synchronization.
+   *
+   * This function adds a message to the pending messages list for a cached discussion. Pending
+   * messages represent messages that have been created locally but not yet sent to the server. If
+   * the discussion is not in the cache, this function returns without making changes.
+   *
+   * @param uid The unique identifier of the discussion
+   * @param message The message to add to the pending messages list
+   * @param context Android context for image operations during cache updates
+   */
+  suspend fun sendPendingMessage(uid: String, message: Message, context: Context) {
+    val state = _offlineModeFlow.value.discussions
+    val cached = state[uid]
+
+    if (cached == null) return
+
+    updateDiscussionCache(state, context, cached.first, cached.second, cached.third + message)
   }
 }

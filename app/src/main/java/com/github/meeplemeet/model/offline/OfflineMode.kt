@@ -8,6 +8,8 @@ import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 
+const val MAX_CACHED_DISCUSSIONS = 10
+
 const val LOAD_FACTOR = 0.9f
 
 /**
@@ -34,8 +36,8 @@ const val LOAD_FACTOR = 0.9f
 data class OfflineMode(
     val accounts: LinkedHashMap<String, Pair<Account, Map<String, Any>>> =
         LinkedHashMap(16, LOAD_FACTOR, true),
-    val discussions: LinkedHashMap<String, Pair<Discussion, List<Message>>> =
-        LinkedHashMap(16, LOAD_FACTOR, true),
+    val discussions: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>> =
+        LinkedHashMap(MAX_CACHED_DISCUSSIONS, LOAD_FACTOR, true),
     val posts: LinkedHashMap<String, Pair<Post, Boolean>> = LinkedHashMap(16, LOAD_FACTOR, true),
     val shopsToAdd: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> =
         LinkedHashMap(16, LOAD_FACTOR, true),
