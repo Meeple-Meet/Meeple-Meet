@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -133,6 +134,7 @@ fun EditSpaceRenterScreen(
     viewModel: EditSpaceRenterViewModel = viewModel()
 ) {
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
   val currentSpaceRenter by viewModel.currentSpaceRenter.collectAsStateWithLifecycle()
 
   // Initialize ViewModel with the space renter
@@ -160,6 +162,7 @@ fun EditSpaceRenterScreen(
       onUpdated = onUpdated,
       onUpdateSpaceRenter = { updated ->
         viewModel.updateSpaceRenter(
+            context = context,
             spaceRenter = updated,
             requester = owner,
             owner = updated.owner,
