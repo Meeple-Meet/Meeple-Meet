@@ -7,10 +7,17 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -234,26 +241,26 @@ class DiscussionViewModel(
       optionIndex: Int
   ) = viewModelScope.launch { removeVoteFromPoll(discussionId, messageId, voter, optionIndex) }
 
-  // Holds a [StateFlow] of messages keyed by discussion ID.
-  private val messagesFlows = mutableMapOf<String, StateFlow<List<Message>>>()
-
   /**
-   * Real-time flow of messages in a discussion.
+   * Real-time flow of messages in a discussion with offline caching support.
    *
-   * Returns a StateFlow that emits the complete list of messages whenever the messages
-   * subcollection changes. Messages are ordered by creation time (oldest first). The flow is shared
-   * across all collectors for the same discussion ID.
+   * Returns a StateFlow that emits the list of messages for the given discussion. The behavior
+   * depends on network connectivity:
+   * - **Online**: Fetches messages from repository and caches them automatically
+   * - **Offline**: Returns cached messages from OfflineModeManager
    *
-   * ## Flow Characteristics
-   * - **Sharing**: WhileSubscribed with 0ms timeout (stops when no collectors)
-   * - **Initial value**: Empty list
-   * - **Updates**: Full message list on any change (add, update, delete)
-   * - **Caching**: One flow instance per discussion ID
+   * Messages are ordered by creation time (oldest first).
+   *
+   * ## Offline Caching
+   * - **Cache source**: OfflineModeManager.offlineModeFlow
+   * - **Auto-caching**: New messages are automatically cached when online
+   * - **Cache updates**: Triggered when discussionId changes
    *
    * ## Usage in Composables
    *
    * ```kotlin
-   * val messages by viewModel.messagesFlow(discussionId).collectAsState()
+   * val context = LocalContext.current
+   * val messages by viewModel.messagesFlow(discussionId, context).collectAsState()
    * LazyColumn {
    *   items(messages) { message ->
    *     MessageBubble(message)
@@ -262,18 +269,42 @@ class DiscussionViewModel(
    * ```
    *
    * @param discussionId The discussion UID to listen to. Returns empty flow if blank.
+   * @param context Android context for image caching operations (required for caching).
    * @return StateFlow emitting lists of messages ordered by createdAt.
    * @see DiscussionRepository.listenMessages for underlying listener
+   * @see OfflineModeManager.cacheDiscussionMessages for cache updates
+   * @see OfflineModeManager.hasInternetConnection for connectivity status
    */
-  fun messagesFlow(discussionId: String): StateFlow<List<Message>> {
+  @OptIn(ExperimentalCoroutinesApi::class)
+  fun messagesFlow(discussionId: String, context: Context): StateFlow<List<Message>> {
     if (discussionId.isBlank()) return MutableStateFlow(emptyList())
-    return messagesFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenMessages(discussionId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = emptyList())
-    }
+
+    // Combine online status and discussion ID to determine source
+    return combine(OfflineModeManager.hasInternetConnection, flowOf(discussionId)) {
+            isOnline,
+            discId ->
+          Pair(isOnline, discId)
+        }
+        .flatMapLatest { (isOnline, discId) ->
+          if (isOnline) {
+            // Online: listen to repository and cache updates
+            discussionRepository.listenMessages(discId).onEach { messages ->
+              viewModelScope.launch {
+                OfflineModeManager.cacheDiscussionMessages(discId, messages, context)
+              }
+            }
+          } else {
+            // Offline: return cached messages
+            OfflineModeManager.offlineModeFlow.map { offlineMode ->
+              offlineMode.discussions[discId]?.second ?: emptyList()
+            }
+          }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+            initialValue =
+                OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.second
+                    ?: emptyList())
   }
 }

@@ -51,6 +51,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
@@ -221,7 +222,7 @@ fun DiscussionScreen(
         }
       }
 
-  val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
+  val messages by viewModel.messagesFlow(discussion.uid, context).collectAsStateWithLifecycle()
 
   LaunchedEffect(messages) {
     messages.forEach { msg ->

@@ -8,9 +8,11 @@ import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -36,7 +38,6 @@ class MainActivityViewModel(
    * user signs out.
    */
   override fun signOut() {
-    discussionFlows.clear()
     accountFlows.clear()
     super.signOut()
   }
@@ -67,14 +68,16 @@ class MainActivityViewModel(
     }
   }
 
-  // Holds cached [StateFlow]s of discussions keyed by discussion ID to avoid duplicate listeners.
-  private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
-
   /**
-   * Returns a real-time flow of discussion data for the specified discussion ID.
+   * Returns a real-time flow of discussion data for the specified discussion ID with offline
+   * support.
    *
-   * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
-   * flow emits updated discussion data whenever changes occur in Firestore.
+   * The flow automatically switches between online and offline modes:
+   * - **Online:** Emits real-time updates from Firestore
+   * - **Offline:** Emits data from the offline cache loaded via [OfflineModeManager]
+   *
+   * The discussion is automatically loaded into the offline cache when first accessed, enabling
+   * offline viewing later.
    *
    * @param discussionId The ID of the discussion to observe
    * @return A [StateFlow] that emits the discussion or null if the discussion doesn't exist or ID
@@ -82,13 +85,22 @@ class MainActivityViewModel(
    */
   fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
     if (discussionId.isBlank()) return MutableStateFlow(null)
-    return discussionFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenDiscussion(discussionId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
-    }
+
+    // Combine online/offline state with live data and cached data
+    return combine(
+            OfflineModeManager.hasInternetConnection,
+            discussionRepository.listenDiscussion(discussionId),
+            OfflineModeManager.offlineModeFlow) { isOnline, liveDiscussion, offlineMode ->
+              if (isOnline) {
+                liveDiscussion
+              } else {
+                offlineMode.discussions[discussionId]?.first
+              }
+            }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+            initialValue =
+                OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.first)
   }
 }

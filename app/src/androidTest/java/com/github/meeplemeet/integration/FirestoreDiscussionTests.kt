@@ -577,7 +577,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     discussionRepository.sendMessageToDiscussion(discussion, account1, "First message")
 
-    val messagesFlow = discussionViewModel.messagesFlow(discussion.uid)
+    val messagesFlow = discussionViewModel.messagesFlow(discussion.uid, context)
     var receivedMessages = listOf<com.github.meeplemeet.model.discussions.Message>()
 
     val job = launch { messagesFlow.collect { messages -> receivedMessages = messages } }

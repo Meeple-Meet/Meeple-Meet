@@ -8,7 +8,7 @@ import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 
-const val MAX_CACHED_DISCUSSIONS = 10
+const val MAX_CACHED_DISCUSSIONS = 50
 
 const val LOAD_FACTOR = 0.9f
 
