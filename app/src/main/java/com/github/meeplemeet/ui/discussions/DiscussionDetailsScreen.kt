@@ -38,12 +38,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.PhotoDialogBottomBar
@@ -212,9 +214,11 @@ fun DiscussionDetailsScreen(
     }
   }
 
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+
   /** Live search effect */
   LaunchedEffect(searchQuery) {
-    if (searchQuery.isBlank()) {
+    if (searchQuery.isBlank() || !online) {
       searchResults = emptyList()
       dropdownExpanded = false
       return@LaunchedEffect
@@ -229,383 +233,374 @@ fun DiscussionDetailsScreen(
     }
   }
 
-  discussion.let { d ->
-    val isAdmin = d.admins.contains(account.uid) || d.creatorId == account.uid
+  val isAdmin = discussion.admins.contains(account.uid) || discussion.creatorId == account.uid
 
-    /** --- Name + Description --- */
-    var newName by remember { mutableStateOf(d.name) }
-    var newDesc by remember { mutableStateOf(d.description) }
+  /** --- Name + Description --- */
+  var newName by remember { mutableStateOf(discussion.name) }
+  var newDesc by remember { mutableStateOf(discussion.description) }
 
-    Scaffold(
-        topBar = {
-          TopBarWithDivider(
-              text = TEXT_GROUP_INFO,
-              /**
-               * Save Name and Description on back — this is the only time the DB is updated here
-               */
-              onReturn = {
-                if (discussion.admins.contains(account.uid)) {
-                  viewModel.setDiscussionName(
-                      discussion = d, name = newName, changeRequester = account)
-                  viewModel.setDiscussionDescription(
-                      discussion = d, description = newDesc, changeRequester = account)
-                }
-                onBack()
-              })
-        },
-        bottomBar = {
-          val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
-          if (!(shouldHide && isInputFocused)) {
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(
-                            start = Dimensions.Spacing.xxxLarge,
-                            end = Dimensions.Spacing.xxxLarge,
-                            bottom =
-                                Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
-                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-                  /** The actual leave operation happens only after the confirmation dialog */
-                  /** Leave button is always enabled */
-                  OutlinedButton(
-                      onClick = { showLeaveDialog = true },
-                      enabled = true,
-                      colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
-                      modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
-                        Text(TEXT_LEAVE, color = AppColors.textIcons)
+  Scaffold(
+      topBar = {
+        TopBarWithDivider(
+            text = TEXT_GROUP_INFO,
+            /** Save Name and Description on back — this is the only time the DB is updated here */
+            onReturn = {
+              if (online && discussion.admins.contains(account.uid)) {
+                viewModel.setDiscussionName(
+                    discussion = discussion, name = newName, changeRequester = account)
+                viewModel.setDiscussionDescription(
+                    discussion = discussion, description = newDesc, changeRequester = account)
+              }
+              onBack()
+            })
+      },
+      bottomBar = {
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .padding(
+                          start = Dimensions.Spacing.xxxLarge,
+                          end = Dimensions.Spacing.xxxLarge,
+                          bottom = Dimensions.Padding.xxLarge.plus(Dimensions.Spacing.extraSmall)),
+              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+                /** The actual leave operation happens only after the confirmation dialog */
+                /** Leave button is always enabled */
+                OutlinedButton(
+                    onClick = { showLeaveDialog = true },
+                    enabled = online,
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
+                    modifier = Modifier.weight(1f).testTag(UITestTags.LEAVE_BUTTON)) {
+                      Text(TEXT_LEAVE, color = AppColors.textIcons)
+                    }
+
+                /** The actual deletion happens only after the confirmation dialog */
+                /** Delete button only if not member */
+                if (discussion.creatorId == account.uid)
+                    OutlinedButton(
+                        onClick = { if (isAdmin) showDeleteDialog = true },
+                        enabled = isAdmin && online,
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative),
+                        modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
+                          Icon(
+                              imageVector = Icons.Default.Delete,
+                              contentDescription = null,
+                              tint = AppColors.textIcons)
+                          Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                          Text(TEXT_DELETE, color = AppColors.textIcons)
+                        }
+              }
+        }
+      }) { padding ->
+
+        /** --- Main Content --- */
+        Column(
+            modifier =
+                modifier
+                    .padding(padding)
+                    .padding(Dimensions.Spacing.extraLarge)
+                    .verticalScroll(scrollState)
+                    .pointerInput(Unit) {
+                      detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+
+              /** --- Discussion Icon/Profile Picture --- */
+              Box(
+                  modifier =
+                      Modifier.align(Alignment.CenterHorizontally)
+                          .size(Dimensions.IconSize.massive.times(Dimensions.Multipliers.double))
+                          .clip(CircleShape)
+                          .clickable(enabled = isAdmin) {
+                            if (isAdmin && online) showImageSourceMenu = true
+                          }
+                          .testTag(UITestTags.PROFILE_PICTURE)) {
+                    if (discussion.profilePictureUrl != null) {
+                      AsyncImage(
+                          model = discussion.profilePictureUrl,
+                          contentDescription = "Discussion Profile Picture",
+                          modifier = Modifier.fillMaxSize(),
+                          contentScale = ContentScale.Crop)
+                    } else {
+                      Icon(
+                          imageVector = Icons.Default.AccountCircle,
+                          contentDescription = "Icon",
+                          modifier = Modifier.fillMaxSize(),
+                          tint = AppColors.textIcons)
+                    }
+                  }
+
+              /** --- Fullscreen Profile Picture Dialog --- */
+              if (showImageSourceMenu) {
+                ProfilePictureDialog(
+                    discussionName = newName,
+                    profilePictureUrl = discussion.profilePictureUrl,
+                    onDismiss = { showImageSourceMenu = false },
+                    onTakePhoto = {
+                      showImageSourceMenu = false
+                      val permission = Manifest.permission.CAMERA
+                      if (ContextCompat.checkSelfPermission(context, permission) ==
+                          PackageManager.PERMISSION_GRANTED) {
+                        cameraLauncher.launch(null)
+                      } else {
+                        cameraPermissionLauncher.launch(permission)
                       }
+                    },
+                    onChooseFromGallery = {
+                      showImageSourceMenu = false
+                      galleryLauncher.launch("image/*")
+                    })
+              }
 
-                  /** The actual deletion happens only after the confirmation dialog */
-                  /** Delete button only if not member */
-                  if (discussion.creatorId == account.uid)
-                      OutlinedButton(
-                          onClick = { if (isAdmin) showDeleteDialog = true },
-                          enabled = isAdmin,
-                          colors =
-                              ButtonDefaults.outlinedButtonColors(
-                                  contentColor = AppColors.negative),
-                          modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
+              /** --- Discussion Name --- */
+              /** These ensure only admins can edit the name field */
+              FocusableInputField(
+                  value = newName,
+                  onValueChange = { newName = it },
+                  readOnly = !isAdmin,
+                  enabled = isAdmin && online,
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .padding(horizontal = Dimensions.Spacing.extraMedium)
+                          .onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(UITestTags.DISCUSSION_NAME),
+                  colors =
+                      TextFieldDefaults.colors(
+                          focusedContainerColor = AppColors.primary,
+                          unfocusedContainerColor = AppColors.primary,
+                          disabledContainerColor = AppColors.primary,
+                          disabledTextColor = AppColors.textIcons,
+                          focusedIndicatorColor = AppColors.textIcons,
+                          unfocusedIndicatorColor = AppColors.textIconsFade,
+                          cursorColor = AppColors.textIcons,
+                          focusedTextColor = AppColors.textIcons,
+                          unfocusedTextColor = AppColors.textIcons),
+                  singleLine = true,
+                  /**
+                   * To make the text centered, we use an invisible leading icon to offset the
+                   * trailing icon
+                   */
+                  leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = Color.Transparent // Make it invisible
+                        )
+                  },
+                  /** Trailing edit icon only if admin */
+                  trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = TEXT_EDIT,
+                        tint = if (isAdmin && online) AppColors.textIcons else Color.Transparent)
+                  },
+                  textStyle =
+                      LocalTextStyle.current.copy(
+                          fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                          textAlign = TextAlign.Center,
+                      ),
+              )
+
+              /** --- Discussion Description --- */
+              Text(
+                  text = TEXT_DESCRIPTION,
+                  style =
+                      MaterialTheme.typography.titleLarge.copy(
+                          textDecoration = TextDecoration.Underline),
+                  modifier =
+                      Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.extraMedium),
+                  color = AppColors.textIcons)
+
+              /** --- Description TextField --- */
+              FocusableInputField(
+                  value = newDesc,
+                  onValueChange = { newDesc = it },
+                  readOnly = !isAdmin,
+                  enabled = isAdmin && online,
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .padding(
+                              start = Dimensions.Spacing.none, end = Dimensions.Padding.mediumSmall)
+                          .onFocusChanged { isInputFocused = it.isFocused }
+                          .testTag(UITestTags.DISCUSSION_DESCRIPTION),
+                  /** Makes the textField look like a line */
+                  colors =
+                      TextFieldDefaults.colors(
+                          focusedContainerColor = AppColors.primary,
+                          unfocusedContainerColor = AppColors.primary,
+                          disabledContainerColor = AppColors.primary,
+                          disabledTextColor = AppColors.textIcons,
+                          focusedIndicatorColor = AppColors.textIcons,
+                          unfocusedIndicatorColor = AppColors.textIconsFade,
+                          cursorColor = AppColors.textIcons,
+                          focusedTextColor = AppColors.textIcons,
+                          unfocusedTextColor = AppColors.textIcons),
+                  singleLine = false,
+                  minLines = 5,
+                  maxLines = 5,
+                  /**
+                   * To make the text left-aligned, we use an invisible leading icon to offset the
+                   * trailing icon
+                   */
+                  trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = TEXT_EDIT,
+                        modifier = Modifier,
+                        tint = if (isAdmin && online) AppColors.textIcons else Color.Transparent)
+                  },
+                  textStyle =
+                      LocalTextStyle.current.copy(
+                          fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                          textAlign = TextAlign.Start),
+              )
+
+              /** Row for search and member selection */
+              if (isAdmin && online)
+                  MemberSearchField(
+                      searchQuery = searchQuery,
+                      onQueryChange = { searchQuery = it },
+                      searchResults = searchResults,
+                      isSearching = isSearching,
+                      dropdownExpanded = dropdownExpanded,
+                      onDismiss = { dropdownExpanded = false },
+                      onFocusChanged = { isInputFocused = it },
+                      onSelect = { newAccount ->
+                        viewModel.addUserToDiscussion(discussion, account, newAccount)
+                        searchQuery = ""
+                        dropdownExpanded = false
+                      })
+
+              /** --- Members List --- */
+              MemberList(
+                  selectedMembers = selectedMembers,
+                  isMember = !isAdmin && online,
+                  modifier = Modifier.align(Alignment.CenterHorizontally),
+                  viewModel = viewModel,
+                  currentAccount = account,
+                  discussion = discussion)
+
+              /** --- Delete Discussion (confirm dialog) --- */
+              if (showDeleteDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    modifier = Modifier.testTag(UITestTags.DELETE_DISCUSSION_DISPLAY),
+                    containerColor = AppColors.primary,
+                    title = {
+                      Row(
+                          verticalAlignment = Alignment.CenterVertically,
+                          modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = null,
-                                tint = AppColors.textIcons)
-                            Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                            Text(TEXT_DELETE, color = AppColors.textIcons)
+                                tint = AppColors.negative,
+                                modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+                            Spacer(modifier = Modifier.width(Dimensions.Spacing.extraMedium))
+                            Text(
+                                TEXT_DELETE_DISCUSSION,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.textIcons)
                           }
-                }
-          }
-        }) { padding ->
-
-          /** --- Main Content --- */
-          Column(
-              modifier =
-                  modifier
-                      .padding(padding)
-                      .padding(Dimensions.Spacing.extraLarge)
-                      .verticalScroll(scrollState)
-                      .pointerInput(Unit) {
-                        detectTapGestures(onTap = { focusManager.clearFocus() })
-                      },
-              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-
-                /** --- Discussion Icon/Profile Picture --- */
-                Box(
-                    modifier =
-                        Modifier.align(Alignment.CenterHorizontally)
-                            .size(Dimensions.IconSize.massive.times(Dimensions.Multipliers.double))
-                            .clip(CircleShape)
-                            .clickable(enabled = isAdmin) {
-                              if (isAdmin) showImageSourceMenu = true
-                            }
-                            .testTag(UITestTags.PROFILE_PICTURE)) {
-                      if (discussion.profilePictureUrl != null) {
-                        AsyncImage(
-                            model = discussion.profilePictureUrl,
-                            contentDescription = "Discussion Profile Picture",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop)
-                      } else {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Icon",
-                            modifier = Modifier.fillMaxSize(),
-                            tint = AppColors.textIcons)
-                      }
-                    }
-
-                /** --- Fullscreen Profile Picture Dialog --- */
-                if (showImageSourceMenu) {
-                  ProfilePictureDialog(
-                      discussionName = newName,
-                      profilePictureUrl = discussion.profilePictureUrl,
-                      onDismiss = { showImageSourceMenu = false },
-                      onTakePhoto = {
-                        showImageSourceMenu = false
-                        val permission = Manifest.permission.CAMERA
-                        if (ContextCompat.checkSelfPermission(context, permission) ==
-                            PackageManager.PERMISSION_GRANTED) {
-                          cameraLauncher.launch(null)
-                        } else {
-                          cameraPermissionLauncher.launch(permission)
-                        }
-                      },
-                      onChooseFromGallery = {
-                        showImageSourceMenu = false
-                        galleryLauncher.launch("image/*")
-                      })
-                }
-
-                /** --- Discussion Name --- */
-                /** These ensure only admins can edit the name field */
-                FocusableInputField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    readOnly = !isAdmin,
-                    enabled = isAdmin,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = Dimensions.Spacing.extraMedium)
-                            .onFocusChanged { isInputFocused = it.isFocused }
-                            .testTag(UITestTags.DISCUSSION_NAME),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = AppColors.primary,
-                            unfocusedContainerColor = AppColors.primary,
-                            disabledContainerColor = AppColors.primary,
-                            disabledTextColor = AppColors.textIcons,
-                            focusedIndicatorColor = AppColors.textIcons,
-                            unfocusedIndicatorColor = AppColors.textIconsFade,
-                            cursorColor = AppColors.textIcons,
-                            focusedTextColor = AppColors.textIcons,
-                            unfocusedTextColor = AppColors.textIcons),
-                    singleLine = true,
-                    /**
-                     * To make the text centered, we use an invisible leading icon to offset the
-                     * trailing icon
-                     */
-                    leadingIcon = {
-                      Icon(
-                          imageVector = Icons.Default.Edit,
-                          contentDescription = null,
-                          tint = Color.Transparent // Make it invisible
-                          )
                     },
-                    /** Trailing edit icon only if admin */
-                    trailingIcon = {
-                      Icon(
-                          imageVector = Icons.Default.Edit,
-                          contentDescription = TEXT_EDIT,
-                          tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
+                    text = {
+                      Text(
+                          "Are you sure you want to delete ${discussion.name}? This action cannot be undone.",
+                          style = MaterialTheme.typography.bodyMedium,
+                          color = AppColors.textIcons)
                     },
-                    textStyle =
-                        LocalTextStyle.current.copy(
-                            fontSize = MaterialTheme.typography.bodyLarge.fontSize,
-                            textAlign = TextAlign.Center,
-                        ),
-                )
-
-                /** --- Discussion Description --- */
-                Text(
-                    text = TEXT_DESCRIPTION,
-                    style =
-                        MaterialTheme.typography.titleLarge.copy(
-                            textDecoration = TextDecoration.Underline),
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = Dimensions.Spacing.extraMedium),
-                    color = AppColors.textIcons)
-
-                /** --- Description TextField --- */
-                FocusableInputField(
-                    value = newDesc,
-                    onValueChange = { newDesc = it },
-                    readOnly = !isAdmin,
-                    enabled = isAdmin,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                start = Dimensions.Spacing.none,
-                                end = Dimensions.Padding.mediumSmall)
-                            .onFocusChanged { isInputFocused = it.isFocused }
-                            .testTag(UITestTags.DISCUSSION_DESCRIPTION),
-                    /** Makes the textField look like a line */
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = AppColors.primary,
-                            unfocusedContainerColor = AppColors.primary,
-                            disabledContainerColor = AppColors.primary,
-                            disabledTextColor = AppColors.textIcons,
-                            focusedIndicatorColor = AppColors.textIcons,
-                            unfocusedIndicatorColor = AppColors.textIconsFade,
-                            cursorColor = AppColors.textIcons,
-                            focusedTextColor = AppColors.textIcons,
-                            unfocusedTextColor = AppColors.textIcons),
-                    singleLine = false,
-                    minLines = 5,
-                    maxLines = 5,
-                    /**
-                     * To make the text left-aligned, we use an invisible leading icon to offset the
-                     * trailing icon
-                     */
-                    trailingIcon = {
-                      Icon(
-                          imageVector = Icons.Default.Edit,
-                          contentDescription = TEXT_EDIT,
-                          modifier = Modifier,
-                          tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
+                    confirmButton = {
+                      Button(
+                          /** Only owner can delete */
+                          onClick = {
+                            coroutineScope.launch {
+                              viewModel.deleteDiscussion(context, discussion, account)
+                              onDelete()
+                            }
+                            showDeleteDialog = false
+                          },
+                          colors =
+                              ButtonDefaults.buttonColors(
+                                  containerColor = AppColors.negative,
+                                  contentColor = AppColors.textIcons),
+                          modifier =
+                              Modifier.testTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON)) {
+                            Text(TEXT_DELETE_CONFIRM, fontWeight = FontWeight.SemiBold)
+                          }
                     },
-                    textStyle =
-                        LocalTextStyle.current.copy(
-                            fontSize = MaterialTheme.typography.bodyLarge.fontSize,
-                            textAlign = TextAlign.Start),
-                )
-
-                /** Row for search and member selection */
-                if (isAdmin)
-                    MemberSearchField(
-                        searchQuery = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        searchResults = searchResults,
-                        isSearching = isSearching,
-                        dropdownExpanded = dropdownExpanded,
-                        onDismiss = { dropdownExpanded = false },
-                        onFocusChanged = { isInputFocused = it },
-                        onSelect = { newAccount ->
-                          viewModel.addUserToDiscussion(discussion, account, newAccount)
-                          searchQuery = ""
-                          dropdownExpanded = false
-                        })
-
-                /** --- Members List --- */
-                MemberList(
-                    selectedMembers = selectedMembers,
-                    isMember = !isAdmin,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    viewModel = viewModel,
-                    currentAccount = account,
-                    discussion = d)
-
-                /** --- Delete Discussion (confirm dialog) --- */
-                if (showDeleteDialog) {
-                  AlertDialog(
-                      onDismissRequest = { showDeleteDialog = false },
-                      modifier = Modifier.testTag(UITestTags.DELETE_DISCUSSION_DISPLAY),
-                      containerColor = AppColors.primary,
-                      title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
-                              Icon(
-                                  imageVector = Icons.Default.Delete,
-                                  contentDescription = null,
-                                  tint = AppColors.negative,
-                                  modifier = Modifier.size(Dimensions.IconSize.extraLarge))
-                              Spacer(modifier = Modifier.width(Dimensions.Spacing.extraMedium))
-                              Text(
-                                  TEXT_DELETE_DISCUSSION,
-                                  style = MaterialTheme.typography.titleLarge,
-                                  fontWeight = FontWeight.Bold,
-                                  color = AppColors.textIcons)
-                            }
-                      },
-                      text = {
-                        Text(
-                            "Are you sure you want to delete ${d.name}? This action cannot be undone.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AppColors.textIcons)
-                      },
-                      confirmButton = {
-                        Button(
-                            /** Only owner can delete */
-                            onClick = {
-                              coroutineScope.launch {
-                                viewModel.deleteDiscussion(context, d, account)
-                                onDelete()
-                              }
-                              showDeleteDialog = false
-                            },
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = AppColors.negative,
-                                    contentColor = AppColors.textIcons),
-                            modifier =
-                                Modifier.testTag(UITestTags.DELETE_DISCUSSION_CONFIRM_BUTTON)) {
-                              Text(TEXT_DELETE_CONFIRM, fontWeight = FontWeight.SemiBold)
-                            }
-                      },
-                      dismissButton = {
-                        OutlinedButton(
-                            onClick = { showDeleteDialog = false },
-                            colors =
-                                ButtonDefaults.outlinedButtonColors(
-                                    contentColor = AppColors.textIconsFade)) {
-                              Text("Cancel", fontWeight = FontWeight.Medium)
-                            }
-                      })
-                }
-                /** --- Leave Discussion (confirm dialog) --- */
-                if (showLeaveDialog) {
-                  AlertDialog(
-                      onDismissRequest = { showLeaveDialog = false },
-                      modifier = Modifier.testTag(UITestTags.LEAVE_DISCUSSION_DISPLAY),
-                      containerColor = AppColors.primary,
-                      title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
-                              Icon(
-                                  imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                  contentDescription = null,
-                                  tint = AppColors.affirmative,
-                                  modifier = Modifier.size(Dimensions.IconSize.extraLarge))
-                              Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
-                              Text(
-                                  TEXT_LEAVE_DISCUSSION,
-                                  style = MaterialTheme.typography.titleLarge,
-                                  fontWeight = FontWeight.Bold,
-                                  color = AppColors.textIcons)
-                            }
-                      },
-                      text = {
-                        Text(
-                            "Are you sure you want to leave ${d.name}? You will no longer see messages or members.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AppColors.textIcons)
-                      },
-                      confirmButton = {
-                        Button(
-                            /** Everyone can leave */
-                            onClick = {
-                              coroutineScope.launch {
-
-                                /** leave discussion */
-                                viewModel.removeUserFromDiscussion(d, account, account)
-                                onLeave()
-                              }
-                              showLeaveDialog = false
-                            },
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = AppColors.affirmative,
-                                    contentColor = AppColors.textIcons),
-                            modifier =
-                                Modifier.testTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON)) {
-                              Text(TEXT_LEAVE, fontWeight = FontWeight.SemiBold)
-                            }
-                      },
-                      dismissButton = {
-                        OutlinedButton(
-                            onClick = { showLeaveDialog = false },
-                            colors =
-                                ButtonDefaults.outlinedButtonColors(
-                                    contentColor = AppColors.textIconsFade)) {
-                              Text("Cancel", fontWeight = FontWeight.Medium)
-                            }
-                      })
-                }
+                    dismissButton = {
+                      OutlinedButton(
+                          onClick = { showDeleteDialog = false },
+                          colors =
+                              ButtonDefaults.outlinedButtonColors(
+                                  contentColor = AppColors.textIconsFade)) {
+                            Text("Cancel", fontWeight = FontWeight.Medium)
+                          }
+                    })
               }
-        }
-  }
+              /** --- Leave Discussion (confirm dialog) --- */
+              if (showLeaveDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLeaveDialog = false },
+                    modifier = Modifier.testTag(UITestTags.LEAVE_DISCUSSION_DISPLAY),
+                    containerColor = AppColors.primary,
+                    title = {
+                      Row(
+                          verticalAlignment = Alignment.CenterVertically,
+                          modifier = Modifier.padding(bottom = Dimensions.Spacing.medium)) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = null,
+                                tint = AppColors.affirmative,
+                                modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+                            Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+                            Text(
+                                TEXT_LEAVE_DISCUSSION,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.textIcons)
+                          }
+                    },
+                    text = {
+                      Text(
+                          "Are you sure you want to leave ${discussion.name}? You will no longer see messages or members.",
+                          style = MaterialTheme.typography.bodyMedium,
+                          color = AppColors.textIcons)
+                    },
+                    confirmButton = {
+                      Button(
+                          /** Everyone can leave */
+                          onClick = {
+                            coroutineScope.launch {
+
+                              /** leave discussion */
+                              viewModel.removeUserFromDiscussion(discussion, account, account)
+                              onLeave()
+                            }
+                            showLeaveDialog = false
+                          },
+                          colors =
+                              ButtonDefaults.buttonColors(
+                                  containerColor = AppColors.affirmative,
+                                  contentColor = AppColors.textIcons),
+                          modifier = Modifier.testTag(UITestTags.LEAVE_DISCUSSION_CONFIRM_BUTTON)) {
+                            Text(TEXT_LEAVE, fontWeight = FontWeight.SemiBold)
+                          }
+                    },
+                    dismissButton = {
+                      OutlinedButton(
+                          onClick = { showLeaveDialog = false },
+                          colors =
+                              ButtonDefaults.outlinedButtonColors(
+                                  contentColor = AppColors.textIconsFade)) {
+                            Text("Cancel", fontWeight = FontWeight.Medium)
+                          }
+                    })
+              }
+            }
+      }
 }
 
 /**

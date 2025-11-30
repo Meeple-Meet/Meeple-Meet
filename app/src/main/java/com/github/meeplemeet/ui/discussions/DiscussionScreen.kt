@@ -60,6 +60,7 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -182,11 +183,35 @@ fun DiscussionScreen(
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val offlineMode by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
+
+  LaunchedEffect(online) {
+    val state = offlineMode.discussions[discussion.uid]
+    if (online && state != null) {
+      state.third.forEach {
+        if (it.photoUrl != null)
+            viewModel.sendMessageWithPhoto(discussion, account, it.content, context, it.photoUrl)
+        else if (it.poll != null)
+            viewModel.createPoll(
+                discussion,
+                account.uid,
+                it.poll.question,
+                it.poll.options,
+                it.poll.allowMultipleVotes)
+        else viewModel.sendMessageToDiscussion(discussion, account, it.content)
+      }
+      offlineMode.discussions[discussion.uid] = Triple(state.first, state.second, emptyList())
+    }
+  }
 
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
-      viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
+      if (online) viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
+      else
+          OfflineModeManager.sendPendingMessage(
+              discussion.uid, Message(content = messageText, photoUrl = path))
       messageText = ""
     } catch (e: Exception) {
       snackbarHostState.showSnackbar(
@@ -512,12 +537,23 @@ fun DiscussionScreen(
                                   CreatePollDialog(
                                       onDismiss = { showPollDialog = false },
                                       onCreate = { question, options, allowMultiple ->
-                                        viewModel.createPoll(
-                                            discussion = discussion,
-                                            creatorId = account.uid,
-                                            question = question,
-                                            options = options,
-                                            allowMultipleVotes = allowMultiple)
+                                        if (online)
+                                            viewModel.createPoll(
+                                                discussion = discussion,
+                                                creatorId = account.uid,
+                                                question = question,
+                                                options = options,
+                                                allowMultipleVotes = allowMultiple)
+                                        else
+                                            OfflineModeManager.sendPendingMessage(
+                                                discussion.uid,
+                                                Message(
+                                                    content = question,
+                                                    poll =
+                                                        Poll(
+                                                            question,
+                                                            options,
+                                                            allowMultipleVotes = allowMultiple)))
                                         showPollDialog = false
                                       })
                                 }
@@ -555,20 +591,24 @@ fun DiscussionScreen(
                           FloatingActionButton(
                               onClick = {
                                 if (messageText.isNotBlank() && !isSending) {
-                                  scope.launch {
-                                    isSending = true
-                                    try {
-                                      viewModel.sendMessageToDiscussion(
-                                          discussion, account, messageText)
-                                      messageText = ""
-                                    } catch (e: Exception) {
+                                  isSending = true
+                                  try {
+                                    if (online)
+                                        viewModel.sendMessageToDiscussion(
+                                            discussion, account, messageText)
+                                    else
+                                        OfflineModeManager.sendPendingMessage(
+                                            discussion.uid, Message(content = messageText))
+                                    messageText = ""
+                                  } catch (e: Exception) {
+                                    scope.launch {
                                       snackbarHostState.showSnackbar(
                                           message =
                                               "Failed to send message: ${e.message ?: "Unknown error"}",
                                           duration = SnackbarDuration.Long)
-                                    } finally {
-                                      isSending = false
                                     }
+                                  } finally {
+                                    isSending = false
                                   }
                                 }
                               },

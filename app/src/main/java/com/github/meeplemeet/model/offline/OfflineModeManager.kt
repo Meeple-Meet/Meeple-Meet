@@ -150,14 +150,12 @@ object OfflineModeManager {
    * associated profile pictures for removed discussions.
    *
    * @param state The current cache state (LinkedHashMap maintaining access order)
-   * @param context Android context for image operations
    * @param discussion The discussion to cache
    * @param messages The list of messages for this discussion
    * @param pendingMessages The list of pending (unsent) messages for this discussion
    */
-  private suspend fun updateDiscussionCache(
+  private fun updateDiscussionCache(
       state: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>>,
-      context: Context,
       discussion: Discussion,
       messages: List<Message>,
       pendingMessages: List<Message>
@@ -167,14 +165,7 @@ object OfflineModeManager {
         LinkedHashMap(state).apply {
           this[discussion.uid] = Triple(discussion, messages, pendingMessages)
         }
-    val (capped, removed) = cap(newState, MAX_CACHED_DISCUSSIONS)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(discussions = capped)
-    runCatching {
-      RepositoryProvider.images.loadAccountProfilePicture(discussion.uid, context)
-      removed.forEach { (disc, _) ->
-        RepositoryProvider.images.deleteLocalDiscussionProfilePicture(context, disc.uid)
-      }
-    }
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(discussions = newState)
   }
 
   /**
@@ -222,7 +213,20 @@ object OfflineModeManager {
     val cached = state[discussion.uid]?.first
 
     if (cached != null) return
-    updateDiscussionCache(state, context, discussion, emptyList(), emptyList())
+
+    // Create new map to avoid mutating StateFlow's internal state
+    val newState =
+        LinkedHashMap(state).apply {
+          this[discussion.uid] = Triple(discussion, emptyList(), emptyList())
+        }
+    val (capped, removed) = cap(newState, MAX_CACHED_DISCUSSIONS)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(discussions = capped)
+    runCatching {
+      RepositoryProvider.images.loadAccountProfilePicture(discussion.uid, context)
+      removed.forEach { (disc, _) ->
+        RepositoryProvider.images.deleteLocalDiscussionProfilePicture(context, disc.uid)
+      }
+    }
   }
 
   /**
@@ -234,15 +238,14 @@ object OfflineModeManager {
    *
    * @param uid The unique identifier of the discussion
    * @param messages The updated list of messages to cache for this discussion
-   * @param context Android context for image operations during cache updates
    */
-  suspend fun cacheDiscussionMessages(uid: String, messages: List<Message>, context: Context) {
+  fun cacheDiscussionMessages(uid: String, messages: List<Message>) {
     val state = _offlineModeFlow.value.discussions
     val cached = state[uid]
 
     if (cached == null) return
 
-    updateDiscussionCache(state, context, cached.first, messages, cached.third)
+    updateDiscussionCache(state, cached.first, messages, cached.third)
   }
 
   /**
@@ -254,14 +257,13 @@ object OfflineModeManager {
    *
    * @param uid The unique identifier of the discussion
    * @param message The message to add to the pending messages list
-   * @param context Android context for image operations during cache updates
    */
-  suspend fun sendPendingMessage(uid: String, message: Message, context: Context) {
+  fun sendPendingMessage(uid: String, message: Message) {
     val state = _offlineModeFlow.value.discussions
     val cached = state[uid]
 
     if (cached == null) return
 
-    updateDiscussionCache(state, context, cached.first, cached.second, cached.third + message)
+    updateDiscussionCache(state, cached.first, cached.second, cached.third + message)
   }
 }

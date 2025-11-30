@@ -289,9 +289,7 @@ class DiscussionViewModel(
           if (isOnline) {
             // Online: listen to repository and cache updates
             discussionRepository.listenMessages(discId).onEach { messages ->
-              viewModelScope.launch {
-                OfflineModeManager.cacheDiscussionMessages(discId, messages, context)
-              }
+              OfflineModeManager.cacheDiscussionMessages(discId, messages)
             }
           } else {
             // Offline: return cached messages
