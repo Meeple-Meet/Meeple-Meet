@@ -149,7 +149,7 @@ object OfflineModeManager {
    * by removing the oldest discussions when the limit is exceeded. It also handles cleanup of
    * associated profile pictures for removed discussions.
    *
-   * @param state The current cache state (LinkedHashMap maintaining insertion order)
+   * @param state The current cache state (LinkedHashMap maintaining access order)
    * @param context Android context for image operations
    * @param discussion The discussion to cache
    * @param messages The list of messages for this discussion
@@ -162,8 +162,12 @@ object OfflineModeManager {
       messages: List<Message>,
       pendingMessages: List<Message>
   ) {
-    state[discussion.uid] = Triple(discussion, messages, pendingMessages)
-    val (capped, removed) = cap(state, MAX_CACHED_DISCUSSIONS)
+    // Create new map to avoid mutating StateFlow's internal state
+    val newState =
+        LinkedHashMap(state).apply {
+          this[discussion.uid] = Triple(discussion, messages, pendingMessages)
+        }
+    val (capped, removed) = cap(newState, MAX_CACHED_DISCUSSIONS)
     _offlineModeFlow.value = _offlineModeFlow.value.copy(discussions = capped)
     runCatching {
       RepositoryProvider.images.loadAccountProfilePicture(discussion.uid, context)
