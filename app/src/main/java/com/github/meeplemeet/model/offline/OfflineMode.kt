@@ -18,6 +18,8 @@ const val MAX_CACHED_DISCUSSIONS = 50
  * and their profile pictures are deleted from local storage to free up space.
  */
 const val MAX_CACHED_ACCOUNTS = 50
+const val MAX_CACHED_SHOPS = 20
+const val MAX_CACHED_SPACE_RENTERS = 20
 
 /**
  * Maximum number of posts to cache in offline mode.
