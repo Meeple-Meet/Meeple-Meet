@@ -34,9 +34,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -119,26 +116,23 @@ fun ShopScreen(
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
+  val images by viewModel.photos.collectAsStateWithLifecycle()
 
   val context = LocalContext.current
-  val lifecycleOwner = LocalLifecycleOwner.current
-  DisposableEffect(lifecycleOwner, shopId) {
-    val observer = LifecycleEventObserver { _, event ->
-      if (event == Lifecycle.Event.ON_RESUME) {
-        viewModel.getShop(shopId, context)
-      }
-    }
-    lifecycleOwner.lifecycle.addObserver(observer)
-    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-  }
-  val images by viewModel.photos.collectAsStateWithLifecycle()
-  // Trigger loading of shop data when shopId changes
-  LaunchedEffect(shopId) { viewModel.getShop(shopId, context) }
+
   // Holds the cached image file paths
   val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
+
+  // Initial load when shopId changes
+  LaunchedEffect(shopId) { viewModel.getShop(shopId, context) }
+
+  // Convert images to cached file paths
+  // Update whenever images change (which happens after reload)
   LaunchedEffect(images) {
-    val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
-    cachedImagePathsState.value = paths
+    if (images.isNotEmpty()) {
+      val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
+      cachedImagePathsState.value = paths
+    }
   }
 
   var popupGame by remember { mutableStateOf<Game?>(null) }
@@ -231,8 +225,6 @@ fun ShopDetails(
             ImageCarousel(
                 photoCollectionUrl = photoCollectionUrl,
                 maxNumberOfImages = photoCollectionUrl.size,
-                onAdd = { _, _ -> },
-                onRemove = { _ -> },
                 editable = false)
           }
         }
@@ -242,7 +234,7 @@ fun ShopDetails(
               name = shop.name,
               address = shop.address.name,
               email = shop.email,
-              phone = shop.email,
+              phone = shop.phone,
               website = shop.website)
         }
 
@@ -262,7 +254,6 @@ fun ShopDetails(
         }
       }
 }
-
 // -------------------- GAME ITEM --------------------
 
 /**

@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
  * This ViewModel retrieves and exposes a shop through a [StateFlow] for UI observation.
  *
  * @property repository The repository used for shop operations.
+ * @property imageRepository The repository used for image operations.
  */
 class ShopViewModel(
     private val repository: ShopRepository = RepositoryProvider.shops,
@@ -52,12 +53,13 @@ class ShopViewModel(
   }
 
   /**
-   * Retrieves a shop by its ID from Firestore.
+   * Retrieves a shop by its ID from Firestore and loads its photos.
    *
    * This operation is performed asynchronously in the viewModelScope. Upon successful retrieval,
-   * the shop is emitted through [shop].
+   * the shop is emitted through [shop] and photos are loaded and emitted through [photos].
    *
    * @param id The unique identifier of the shop to retrieve.
+   * @param context The Android context for image operations.
    * @throws IllegalArgumentException if the shop ID is blank.
    */
   fun getShop(id: String, context: android.content.Context) {
@@ -83,5 +85,15 @@ class ShopViewModel(
    */
   suspend fun getShopByOwnerId(ownerId: String): Shop? {
     return repository.getShopByOwnerId(ownerId)
+  }
+
+  /**
+   * Clears the cached shop and photo data.
+   *
+   * This resets both the shop state and photos state to their initial empty values.
+   */
+  fun clearCache() {
+    _shop.value = null
+    _photos.value = emptyList()
   }
 }
