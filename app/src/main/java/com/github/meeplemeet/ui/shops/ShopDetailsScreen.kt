@@ -30,7 +30,6 @@ import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.ConfirmationDialog
 import com.github.meeplemeet.ui.components.EditableGameItem
-import com.github.meeplemeet.ui.components.EditableImageCarousel
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
@@ -38,6 +37,7 @@ import com.github.meeplemeet.ui.components.RequiredInfoSection
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
+import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
@@ -141,6 +141,13 @@ fun ShopDetailsScreen(
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
   val context = LocalContext.current
+
+  // Automatically initialize the selected location if not already set
+  LaunchedEffect(shop.address) {
+    if (locationUi.selectedLocation == null && shop.address != Location()) {
+      viewModel.setLocation(shop.address)
+    }
+  }
 
   EditShopContent(
       shop = shop,
@@ -262,6 +269,15 @@ fun EditShopContent(
   var stock by remember(shop) { mutableStateOf(shop.gameCollection) }
 
   var showDeleteDialog by remember { mutableStateOf(false) }
+
+  LaunchedEffect(locationUi.locationQuery) {
+    val sel = locationUi.selectedLocation
+    if (sel != null && locationUi.locationQuery != sel.name) {
+      val typed = locationUi.locationQuery
+      viewModel.clearLocationSearch()
+      if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
+    }
+  }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
