@@ -134,16 +134,19 @@ fun SpaceRenterScreen(
   val spaceState by viewModel.spaceRenter.collectAsStateWithLifecycle()
   val context = LocalContext.current
   val images by viewModel.photos.collectAsStateWithLifecycle()
+
   // Holds the cached image file paths
   val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
+
+  var selectedIndex by remember { mutableStateOf<Int?>(null) }
+
+  // Initial load when spaceId changes
+  LaunchedEffect(spaceId) { viewModel.getSpaceRenter(spaceId, context) }
+
   LaunchedEffect(images) {
     val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
     cachedImagePathsState.value = paths
   }
-
-  // Trigger loading of space renter data when spaceId changes
-  LaunchedEffect(spaceId) { viewModel.getSpaceRenter(spaceId, context = context) }
-  var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
   Scaffold(
       topBar = {
@@ -174,7 +177,6 @@ fun SpaceRenterScreen(
     spaceState?.let { space ->
       SpaceRenterDetails(
           spaceRenter = space,
-          photoCollectionUrl = cachedImagePathsState.value,
           selectedIndex = selectedIndex,
           onSelect = { selectedIndex = it },
           modifier = Modifier.padding(innerPadding).fillMaxSize())
