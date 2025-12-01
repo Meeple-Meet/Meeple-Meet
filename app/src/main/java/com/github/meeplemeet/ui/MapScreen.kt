@@ -235,7 +235,7 @@ private object MapScaleBarDefaults {
 
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
-private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
+private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 5_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val SCALE_BAR_HIDE_MS = 3000L
