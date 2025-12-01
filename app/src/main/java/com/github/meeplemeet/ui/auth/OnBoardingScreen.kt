@@ -14,9 +14,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Forum
@@ -499,7 +499,7 @@ private fun DialogMessages() {
               uid = "1",
               senderId = "Alex",
               content = "Hey! Are we playing Catan tonight?",
-              createdAt = com.google.firebase.Timestamp.now()),
+              createdAt = Timestamp.now()),
       senderAccount = senderAccount,
       currentAccount = currentAccount)
   Spacer(Modifier.height(Dimensions.Padding.medium))
@@ -586,7 +586,7 @@ fun BackButton(canGoBack: Boolean, onClick: () -> Unit) {
       contentAlignment = Alignment.Center) {
         if (canGoBack) {
           Icon(
-              imageVector = Icons.Default.ArrowBack,
+              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
               contentDescription = "Back",
               tint = AppColors.textIcons)
         }
@@ -1088,7 +1088,8 @@ fun PostsPage() {
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.xxxLarge),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
               PostFeatureItem(
-                  icon = Icons.Default.Article, text = "Create threads about any board game topic")
+                  icon = Icons.AutoMirrored.Filled.Article,
+                  text = "Create threads about any board game topic")
               PostFeatureItem(
                   icon = Icons.Default.ThumbUp, text = "Like and interact with community posts")
             }

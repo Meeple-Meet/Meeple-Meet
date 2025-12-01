@@ -601,6 +601,34 @@ fun DiscussionScreen(
 }
 
 /**
+ * Profile picture for message bubbles.
+ *
+ * @param showProfilePicture Whether to show the profile picture or a spacer.
+ * @param profilePictureUrl URL of the profile picture.
+ * @param isMine Whether this is the current user's message (affects background color and spacer
+ *   position).
+ */
+@Composable
+private fun MessageProfilePicture(
+    showProfilePicture: Boolean,
+    profilePictureUrl: String?,
+    isMine: Boolean
+) {
+  if (isMine) Spacer(Modifier.width(Dimensions.Spacing.small))
+
+  if (showProfilePicture) {
+    ProfilePicture(
+        profilePictureUrl = profilePictureUrl,
+        size = Dimensions.AvatarSize.small,
+        backgroundColor = if (isMine) AppColors.focus else AppColors.neutral)
+  } else {
+    Spacer(Modifier.width(Dimensions.AvatarSize.small))
+  }
+
+  if (!isMine) Spacer(Modifier.width(Dimensions.Spacing.small))
+}
+
+/**
  * Visual bubble for a poll message.
  *
  * @param msgIndex Position inside the message list (used for test tags).
@@ -632,18 +660,7 @@ fun PollBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        // Profile picture for received messages (on the left)
-        if (!isMine) {
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = profilePictureUrl,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.neutral)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-        }
+        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
 
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
 
@@ -823,18 +840,7 @@ fun PollBubble(
               }
         }
 
-        // Profile picture for sent messages (on the right)
-        if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = profilePictureUrl,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.focus)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-        }
+        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
       }
 }
 
@@ -858,17 +864,7 @@ private fun PhotoBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        if (!isMine) {
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = profilePictureUrl,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.neutral)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-        }
+        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
 
         Box(
             modifier =
@@ -936,17 +932,7 @@ private fun PhotoBubble(
               }
             }
 
-        if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = profilePictureUrl,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.focus)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-        }
+        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
       }
 
   if (showFullImage) {
@@ -1122,18 +1108,7 @@ fun ChatBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        // Profile picture for received messages (on the left)
-        if (!isMine) {
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = profilePictureUrl,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.neutral)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-        }
+        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
 
         // Message bubble
         Box(
@@ -1192,18 +1167,7 @@ fun ChatBubble(
               }
             }
 
-        // Profile picture for sent messages (on the right)
-        if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = profilePictureUrl,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.focus)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-        }
+        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
       }
 }
 
