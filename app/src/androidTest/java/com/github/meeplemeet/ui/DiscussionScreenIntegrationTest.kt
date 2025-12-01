@@ -529,6 +529,132 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
       }
     }
 
+    checkpoint("message_edit_and_delete_smoke") {
+      // Make sure we're on the text discussion
+      currentDiscussionState.value = testDiscussion
+      composeTestRule.waitForIdle()
+
+      val sendField = composeTestRule.onNodeWithTag(DiscussionTestTags.INPUT_FIELD)
+      val sendBtn = composeTestRule.onNodeWithTag(DiscussionTestTags.SEND_BUTTON)
+
+      /* ------------------------------------------------------------------
+       * 1. create a new message to edit
+       * ------------------------------------------------------------------ */
+      val originalText = "Message to be edited"
+      sendField.performTextReplacement(originalText)
+      sendBtn.performClick()
+
+      composeTestRule.waitUntil(10_000) {
+        composeTestRule
+            .onAllNodesWithText(originalText, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+
+      /* ------------------------------------------------------------------
+       * 2. open message options popup for that message
+       * ------------------------------------------------------------------ */
+      checkpoint("long_press_opens_message_options_for_own_message") {
+        val msgNode = composeTestRule.onAllNodesWithText(originalText, useUnmergedTree = true)[0]
+
+        msgNode.performTouchInput { longClick(center) }
+
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.MESSAGE_OPTIONS_CARD, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.MESSAGE_OPTIONS_ROOT, useUnmergedTree = true)
+            .assertExists()
+
+        // For a fresh text message, "Edit" must be available
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.MESSAGE_EDIT_BUTTON, useUnmergedTree = true)
+            .assertExists()
+      }
+
+      /* ------------------------------------------------------------------
+       * 3. edit the message and verify content is updated
+       * ------------------------------------------------------------------ */
+      val editedText = "Message after edit"
+
+      checkpoint("editing_message_updates_text") {
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.MESSAGE_EDIT_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        // Text field should be pre-filled with original content
+        sendField.assertTextContains(originalText)
+
+        // Replace with new content and send
+        sendField.performTextReplacement(editedText)
+        sendBtn.performClick()
+
+        // Wait for new text to appear in the UI
+        composeTestRule.waitUntil(10_000) {
+          composeTestRule
+              .onAllNodesWithText(editedText, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Old text should no longer be visible
+        composeTestRule
+            .onAllNodesWithText(originalText, useUnmergedTree = true)
+            .assertCountEquals(0)
+      }
+
+      /* ------------------------------------------------------------------
+       * 4. create a second message and delete it
+       * ------------------------------------------------------------------ */
+      val deleteText = "Message to be deleted"
+      sendField.performTextReplacement(deleteText)
+      sendBtn.performClick()
+
+      composeTestRule.waitUntil(10_000) {
+        composeTestRule
+            .onAllNodesWithText(deleteText, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+
+      checkpoint("deleting_message_removes_it_from_ui_and_repository") {
+        val deleteNode = composeTestRule.onAllNodesWithText(deleteText, useUnmergedTree = true)[0]
+
+        deleteNode.performTouchInput { longClick(center) }
+
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.MESSAGE_OPTIONS_CARD, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.MESSAGE_DELETE_BUTTON, useUnmergedTree = true)
+            .assertExists()
+
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.MESSAGE_DELETE_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        // Wait until the message disappears from the UI
+        composeTestRule.waitUntil(10_000) {
+          composeTestRule
+              .onAllNodesWithText(deleteText, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isEmpty()
+        }
+
+        // And verify it no longer exists in the repository
+        val repoMessages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
+        assertTrue(repoMessages.none { it.content == deleteText })
+      }
+    }
+
     // Cleanup photo discussions
     runBlocking {
       val context = InstrumentationRegistry.getInstrumentation().targetContext
