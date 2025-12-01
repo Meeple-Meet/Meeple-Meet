@@ -653,6 +653,86 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         val repoMessages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
         assertTrue(repoMessages.none { it.content == deleteText })
       }
+
+      /* ------------------------------------------------------------------
+       * 5. create a poll message (non-editable) and delete it
+       *    → covers delete-only behavior used for polls & photos
+       * ------------------------------------------------------------------ */
+      val pollQuestion = "Poll that will be deleted"
+
+      checkpoint("deleting_non_editable_poll_shows_only_delete_and_removes_message") {
+        // Open attachment menu
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        // Choose the poll option
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION, useUnmergedTree = true)
+            .performClick()
+
+        // Fill question
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD, useUnmergedTree = true)
+            .performTextInput(pollQuestion)
+
+        // There are at least two option fields by default; fill them
+        val optionNodes =
+            composeTestRule.onAllNodesWithTag(
+                DiscussionTestTags.OPTION_TEXT_FIELD, useUnmergedTree = true)
+
+        optionNodes[0].performTextInput("Yes")
+        optionNodes[1].performTextInput("No")
+
+        // Create poll
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM, useUnmergedTree = true)
+            .performClick()
+
+        // Wait for poll bubble to appear
+        composeTestRule.waitUntil(10_000) {
+          composeTestRule
+              .onAllNodesWithText(pollQuestion, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Long-press the poll question to open the message options popup
+        val pollNode = composeTestRule.onAllNodesWithText(pollQuestion, useUnmergedTree = true)[0]
+
+        pollNode.performTouchInput { longClick(center) }
+
+        // Wait for the message options card
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.MESSAGE_OPTIONS_CARD, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Non-editable message (poll / photo) → edit button must NOT be shown
+        composeTestRule
+            .onAllNodesWithTag(DiscussionTestTags.MESSAGE_EDIT_BUTTON, useUnmergedTree = true)
+            .assertCountEquals(0)
+
+        // Delete button must be present and clickable
+        composeTestRule
+            .onNodeWithTag(DiscussionTestTags.MESSAGE_DELETE_BUTTON, useUnmergedTree = true)
+            .assertExists()
+            .performClick()
+
+        // Wait until the poll disappears from the UI
+        composeTestRule.waitUntil(10_000) {
+          composeTestRule
+              .onAllNodesWithText(pollQuestion, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isEmpty()
+        }
+
+        // And verify it no longer exists in the repository
+        val repoMessages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
+        assertTrue(repoMessages.none { it.poll?.question == pollQuestion })
+      }
     }
 
     // Cleanup photo discussions

@@ -393,37 +393,87 @@ fun DiscussionScreen(
                     val baseItemModifier = Modifier.fillMaxWidth().blur(itemBlurRadius)
 
                     when {
-                      message.poll != null ->
-                          Box(modifier = baseItemModifier) {
-                            PollBubble(
-                                msgIndex = index,
-                                poll = message.poll,
-                                authorName = sender,
-                                currentUserId = account.uid,
-                                onVote = { optionIndex, isRemoving ->
-                                  if (isRemoving) {
-                                    viewModel.removeVoteFromPollAsync(
-                                        discussion.uid, message.uid, account, optionIndex)
-                                  } else {
-                                    viewModel.voteOnPollAsync(
-                                        discussion.uid, message.uid, account, optionIndex)
-                                  }
-                                },
-                                createdAt = message.createdAt.toDate(),
-                                showProfilePicture = isLastFromSender)
-                          }
-                      message.photoUrl != null ->
-                          Box(modifier = baseItemModifier) {
-                            PhotoBubble(
-                                message,
-                                isMine,
-                                sender,
-                                isLastFromSender,
-                                isFirstFromSender,
-                                messages,
-                                userCache,
-                                account.uid)
-                          }
+                      message.poll != null -> {
+                        val longPressModifier =
+                            if (isMine) {
+                              Modifier.combinedClickable(
+                                  interactionSource = remember { MutableInteractionSource() },
+                                  indication = null,
+                                  onClick = {},
+                                  onLongClick = {
+                                    selectedMessageForActions = message
+                                    selectedMessageAnchor = messageAnchors[message.uid]
+                                  })
+                            } else {
+                              Modifier
+                            }
+
+                        Box(
+                            modifier =
+                                baseItemModifier.then(longPressModifier).onGloballyPositioned {
+                                    coords ->
+                                  val pos: Offset = coords.positionInRoot()
+                                  val height = coords.size.height
+                                  val top = pos.y.toInt()
+                                  val bottom = top + height
+                                  val centerY = top + height / 2
+                                  messageAnchors[message.uid] = MessageAnchor(top, bottom, centerY)
+                                }) {
+                              PollBubble(
+                                  msgIndex = index,
+                                  poll = message.poll,
+                                  authorName = sender,
+                                  currentUserId = account.uid,
+                                  onVote = { optionIndex, isRemoving ->
+                                    if (isRemoving) {
+                                      viewModel.removeVoteFromPollAsync(
+                                          discussion.uid, message.uid, account, optionIndex)
+                                    } else {
+                                      viewModel.voteOnPollAsync(
+                                          discussion.uid, message.uid, account, optionIndex)
+                                    }
+                                  },
+                                  createdAt = message.createdAt.toDate(),
+                                  showProfilePicture = isLastFromSender)
+                            }
+                      }
+                      message.photoUrl != null -> {
+                        val longPressModifier =
+                            if (isMine) {
+                              Modifier.combinedClickable(
+                                  interactionSource = remember { MutableInteractionSource() },
+                                  indication = null,
+                                  onClick = {},
+                                  onLongClick = {
+                                    selectedMessageForActions = message
+                                    selectedMessageAnchor = messageAnchors[message.uid]
+                                  })
+                            } else {
+                              Modifier
+                            }
+
+                        Box(
+                            modifier =
+                                baseItemModifier.then(longPressModifier).onGloballyPositioned {
+                                    coords ->
+                                  val pos: Offset = coords.positionInRoot()
+                                  val height = coords.size.height
+                                  val top = pos.y.toInt()
+                                  val bottom = top + height
+                                  val centerY = top + height / 2
+                                  messageAnchors[message.uid] = MessageAnchor(top, bottom, centerY)
+                                }) {
+                              PhotoBubble(
+                                  message = message,
+                                  isMine = isMine,
+                                  senderName = sender,
+                                  showProfilePicture = isLastFromSender,
+                                  showSenderName = isFirstFromSender,
+                                  allMessages = messages,
+                                  userCache = userCache,
+                                  currentUserId = account.uid)
+                            }
+                      }
                       else -> {
                         val longPressModifier =
                             if (isMine) {
@@ -451,7 +501,11 @@ fun DiscussionScreen(
                                   messageAnchors[message.uid] = MessageAnchor(top, bottom, centerY)
                                 }) {
                               ChatBubble(
-                                  message, isMine, sender, isLastFromSender, isFirstFromSender)
+                                  message = message,
+                                  isMine = isMine,
+                                  senderName = sender,
+                                  showProfilePicture = isLastFromSender,
+                                  showSenderName = isFirstFromSender)
                             }
                       }
                     }
