@@ -176,6 +176,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {}
 
+  private fun refreshContent(account: Account? = null) {
+    composeRule.runOnUiThread {
+      account?.let { currentAccountState.value = it }
+      renderTrigger++
+    }
+    composeRule.waitForIdle()
+  }
+
   /**
    * Tests basic UI structure, FAB behavior, filters, and creation dialog. Uses no clustering
    * strategy to test individual pins.
@@ -1028,13 +1036,5 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         shopRepository.deleteShop(shop3.id)
       }
     }
-  }
-
-  private fun refreshContent(account: Account? = null) {
-    composeRule.runOnUiThread {
-      account?.let { currentAccountState.value = it }
-      renderTrigger++
-    }
-    composeRule.waitForIdle()
   }
 }

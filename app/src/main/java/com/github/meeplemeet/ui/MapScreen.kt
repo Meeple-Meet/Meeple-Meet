@@ -1455,7 +1455,7 @@ private fun StaticVerticalMapMenu(
  *
  * @return Approximate [Location] for the current timezone
  */
-private fun getApproximateLocationFromTimezone(): Location {
+internal fun getApproximateLocationFromTimezone(): Location {
   val timeZone = TimeZone.getDefault().id
 
   return when {
