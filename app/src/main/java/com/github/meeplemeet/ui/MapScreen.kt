@@ -130,6 +130,7 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -264,7 +265,9 @@ fun MapScreen(
     navigation: NavigationActions,
     account: Account,
     onFABCLick: (PinType) -> Unit,
-    onRedirect: (StorableGeoPin) -> Unit
+    onRedirect: (StorableGeoPin) -> Unit,
+    cameraPositionState: CameraPositionState = rememberCameraPositionState(),
+    forceNoPermission: Boolean = false
 ) {
   // --- State & helpers ---
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -315,18 +318,24 @@ fun MapScreen(
    * once at screen start.
    */
   LaunchedEffect(Unit) {
-    val fine =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-    val coarse =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-    when {
-      fine -> permissionGranted = true
-      coarse -> permissionGranted = true
-      else -> permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    if (forceNoPermission) {
+      // Bypass permission manager for testing purpose
+      permissionGranted = false
+      permissionChecked = true
+    } else {
+      val fine =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+              PackageManager.PERMISSION_GRANTED
+      val coarse =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+              PackageManager.PERMISSION_GRANTED
+      when {
+        fine -> permissionGranted = true
+        coarse -> permissionGranted = true
+        else -> permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+      }
+      permissionChecked = true
     }
-    permissionChecked = true
   }
 
   /**
@@ -459,8 +468,6 @@ fun MapScreen(
         }
 
         // --- Map rendering ---
-        val cameraPositionState = rememberCameraPositionState()
-
         /** Centers the camera once location is resolved (real or fallback). */
         if (!isLoadingLocation) {
           DisposableEffect(Unit) {
