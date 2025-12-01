@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.sessions.Session
@@ -486,6 +487,12 @@ private fun DiscussionHeader() {
 /** Composable for displaying example messages in the discussion dialog. */
 @Composable
 private fun DialogMessages() {
+  // Dummy accounts for preview purposes
+  val currentAccount =
+      Account(uid = "currentUser", name = "You", handle = "you", email = "you@example.com")
+  val senderAccount =
+      Account(uid = "Alex", name = "Alex", handle = "alex", email = "alex@example.com")
+
   ChatBubble(
       message =
           Message(
@@ -493,8 +500,8 @@ private fun DialogMessages() {
               senderId = "Alex",
               content = "Hey! Are we playing Catan tonight?",
               createdAt = com.google.firebase.Timestamp.now()),
-      isMine = false,
-      senderName = "Alex")
+      senderAccount = senderAccount,
+      currentAccount = currentAccount)
   Spacer(Modifier.height(Dimensions.Padding.medium))
 
   PollBubble(
@@ -507,6 +514,7 @@ private fun DialogMessages() {
               votes = votes),
       authorName = "Dany",
       currentUserId = "currentUser",
+      profilePictureUrl = null,
       createdAt = Date(),
       onVote = { x, _ -> x + 1 })
 }

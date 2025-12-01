@@ -318,8 +318,9 @@ fun DiscussionScreen(
               LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
                   val isMine = message.senderId == account.uid
+                  val senderAccount = userCache[message.senderId]
                   val sender =
-                      if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
+                      if (!isMine) senderAccount?.name ?: "Unknown"
                       else DiscussionCommons.YOU_SENDER_NAME
 
                   val showDateHeader =
@@ -348,6 +349,9 @@ fun DiscussionScreen(
                             poll = message.poll,
                             authorName = sender,
                             currentUserId = account.uid,
+                            profilePictureUrl =
+                                if (isMine) account.photoUrl
+                                else userCache[message.senderId]?.photoUrl,
                             onVote = { optionIndex, isRemoving ->
                               if (isRemoving) {
                                 viewModel.removeVoteFromPollAsync(
@@ -368,8 +372,10 @@ fun DiscussionScreen(
                             isFirstFromSender,
                             messages,
                             userCache,
-                            account.uid)
-                    else -> ChatBubble(message, isMine, sender, isLastFromSender, isFirstFromSender)
+                            account)
+                    else ->
+                        ChatBubble(
+                            message, senderAccount, account, isLastFromSender, isFirstFromSender)
                   }
 
                   // Add spacing between messages
@@ -601,6 +607,7 @@ fun DiscussionScreen(
  * @param poll The poll data.
  * @param authorName Display name of the creator.
  * @param currentUserId Id of the viewer (to show personal vote).
+ * @param profilePictureUrl URL of the sender's profile picture (null for default avatar).
  * @param createdAt Time-stamp shown under the card.
  * @param onVote Callback when an option is tapped (index, isRemoving).
  * @param showProfilePicture Whether to show the profile picture for this message.
@@ -611,6 +618,7 @@ fun PollBubble(
     poll: Poll,
     authorName: String,
     currentUserId: String,
+    profilePictureUrl: String?,
     createdAt: Date,
     onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit,
     showProfilePicture: Boolean = true
@@ -628,7 +636,7 @@ fun PollBubble(
         if (!isMine) {
           if (showProfilePicture) {
             ProfilePicture(
-                profilePictureUrl = null,
+                profilePictureUrl = profilePictureUrl,
                 size = Dimensions.AvatarSize.small,
                 backgroundColor = AppColors.neutral)
           } else {
@@ -820,7 +828,7 @@ fun PollBubble(
           Spacer(Modifier.width(Dimensions.Spacing.small))
           if (showProfilePicture) {
             ProfilePicture(
-                profilePictureUrl = null,
+                profilePictureUrl = profilePictureUrl,
                 size = Dimensions.AvatarSize.small,
                 backgroundColor = AppColors.focus)
           } else {
@@ -840,9 +848,12 @@ private fun PhotoBubble(
     showSenderName: Boolean = true,
     allMessages: List<Message> = emptyList(),
     userCache: Map<String, Account> = emptyMap(),
-    currentUserId: String = ""
+    currentAccount: Account
 ) {
   var showFullImage by remember { mutableStateOf(false) }
+  val profilePictureUrl =
+      if (isMine) currentAccount.photoUrl else userCache[message.senderId]?.photoUrl
+
   Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
@@ -850,7 +861,7 @@ private fun PhotoBubble(
         if (!isMine) {
           if (showProfilePicture) {
             ProfilePicture(
-                profilePictureUrl = null,
+                profilePictureUrl = profilePictureUrl,
                 size = Dimensions.AvatarSize.small,
                 backgroundColor = AppColors.neutral)
           } else {
@@ -929,7 +940,7 @@ private fun PhotoBubble(
           Spacer(Modifier.width(Dimensions.Spacing.small))
           if (showProfilePicture) {
             ProfilePicture(
-                profilePictureUrl = null,
+                profilePictureUrl = profilePictureUrl,
                 size = Dimensions.AvatarSize.small,
                 backgroundColor = AppColors.focus)
           } else {
@@ -948,7 +959,7 @@ private fun PhotoBubble(
         allPhotoMessages = allMessages,
         currentMessage = message,
         userCache = userCache,
-        currentUserId = currentUserId)
+        currentUserId = currentAccount.uid)
   }
 }
 
@@ -1089,19 +1100,24 @@ fun FullscreenImageDialog(
  * Ordinary chat message bubble (text only).
  *
  * @param message Content to render.
- * @param isMine Whether the message was sent by the current user (aligns right).
- * @param senderName Display name of the sender (null for own messages).
+ * @param senderAccount Account of the message sender (null if not cached or for own messages).
+ * @param currentAccount Current logged-in user's account.
  * @param showProfilePicture Whether to show the profile picture for this message.
  * @param showSenderName Whether to show the sender name for this message.
  */
 @Composable
 fun ChatBubble(
     message: Message,
-    isMine: Boolean,
-    senderName: String?,
+    senderAccount: Account?,
+    currentAccount: Account,
     showProfilePicture: Boolean = true,
     showSenderName: Boolean = true
 ) {
+  val isMine = message.senderId == currentAccount.uid
+  val senderName =
+      if (isMine) DiscussionCommons.YOU_SENDER_NAME else senderAccount?.name ?: "Unknown"
+  val profilePictureUrl = if (isMine) currentAccount.photoUrl else senderAccount?.photoUrl
+
   Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
@@ -1110,7 +1126,7 @@ fun ChatBubble(
         if (!isMine) {
           if (showProfilePicture) {
             ProfilePicture(
-                profilePictureUrl = null,
+                profilePictureUrl = profilePictureUrl,
                 size = Dimensions.AvatarSize.small,
                 backgroundColor = AppColors.neutral)
           } else {
@@ -1146,7 +1162,7 @@ fun ChatBubble(
                         horizontal = Dimensions.Spacing.large,
                         vertical = Dimensions.Spacing.medium)) {
               Column {
-                if (senderName != null && !isMine && showSenderName) {
+                if (!isMine && showSenderName) {
                   Text(
                       senderName,
                       style = MaterialTheme.typography.labelSmall,
@@ -1181,7 +1197,7 @@ fun ChatBubble(
           Spacer(Modifier.width(Dimensions.Spacing.small))
           if (showProfilePicture) {
             ProfilePicture(
-                profilePictureUrl = null,
+                profilePictureUrl = profilePictureUrl,
                 size = Dimensions.AvatarSize.small,
                 backgroundColor = AppColors.focus)
           } else {
