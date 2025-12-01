@@ -233,7 +233,8 @@ fun SessionDetailsScreen(
             text = SESSION_DETAILS_TITLE,
             onReturn = {
               // Only admins/owners can persist changes to the session on back navigation.
-              if (isCurrUserAdmin) {
+              // If validation fails, navigate back without saving changes.
+              if (isCurrUserAdmin && !isDateTimeInPast(form.date, form.time)) {
                 viewModel.updateSession(
                     requester = account,
                     discussion = discussion,
@@ -654,12 +655,24 @@ fun OrganizationSection(
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time field using the new TimeField composable
-        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          TimeField(
-              value = form.time.toString(),
-              onValueChange = { onFormChange(form.copy(time = it)) },
-              editable = editable,
-              modifier = Modifier.fillMaxWidth())
+        Column {
+          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+            TimeField(
+                value = form.time.toString(),
+                onValueChange = { onFormChange(form.copy(time = it)) },
+                editable = editable,
+                modifier = Modifier.fillMaxWidth())
+          }
+
+          // Show error if date/time is in the past (only for admins who can edit)
+          if (editable && isDateTimeInPast(form.date, form.time)) {
+            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+            Text(
+                text = "Cannot update session to a time in the past",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = Dimensions.Padding.medium))
+          }
         }
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
