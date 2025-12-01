@@ -225,6 +225,14 @@ object ClusterConfig {
   }
 }
 
+private object MapScaleBarDefaults {
+  const val BAR_WIDTH: Int = 100
+  val LINE_HEIGHT = 2.dp
+  val TICK_HEIGHT = 8.dp
+  val TICK_WIDTH = 2.dp
+  val LABEL_SPACING = 2.dp
+}
+
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
 private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
@@ -620,8 +628,7 @@ fun MapScreen(
                           y = Dimensions.Padding.medium)) {
                 Surface(
                     modifier =
-                        Modifier.padding(0.dp)
-                            .widthIn(
+                        Modifier.widthIn(
                                 max =
                                     Dimensions.ComponentWidth.spaceLabelWidth.plus(
                                         Dimensions.Padding.extraMedium))
@@ -1358,9 +1365,9 @@ private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescript
  * - Transparent background so the map remains fully visible.
  */
 @Composable
-private fun MapScaleBar(latitude: Double, zoomLevel: Float, barWidthPx: Int = 100) {
+private fun MapScaleBar(latitude: Double, zoomLevel: Float) {
   val metersPerPixel = 156543.03392 * cos(latitude * Math.PI / 180) / (1 shl zoomLevel.toInt())
-  val rawDistanceMeters = metersPerPixel * barWidthPx
+  val rawDistanceMeters = metersPerPixel * MapScaleBarDefaults.BAR_WIDTH
   val distanceMeters = roundDistance(rawDistanceMeters)
 
   val metricLabel =
@@ -1373,16 +1380,19 @@ private fun MapScaleBar(latitude: Double, zoomLevel: Float, barWidthPx: Int = 10
         // Horizontal bar with downward tick at the left end
         Box {
           // Main horizontal line
-          Box(Modifier.width(barWidthPx.dp).height(2.dp).background(AppColors.textIcons))
+          Box(
+              Modifier.width(MapScaleBarDefaults.BAR_WIDTH.dp)
+                  .height(MapScaleBarDefaults.LINE_HEIGHT)
+                  .background(AppColors.textIcons))
           // Downward tick aligned to the left end of the line
           Box(
               Modifier.align(Alignment.BottomStart)
-                  .height(8.dp)
-                  .width(2.dp)
+                  .height(MapScaleBarDefaults.TICK_HEIGHT)
+                  .width(MapScaleBarDefaults.TICK_WIDTH)
                   .background(AppColors.textIcons))
         }
 
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(MapScaleBarDefaults.LABEL_SPACING))
         Text(
             metricLabel,
             style = MaterialTheme.typography.labelSmall,
