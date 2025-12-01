@@ -14,9 +14,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Forum
@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.sessions.Session
@@ -486,15 +487,21 @@ private fun DiscussionHeader() {
 /** Composable for displaying example messages in the discussion dialog. */
 @Composable
 private fun DialogMessages() {
+  // Dummy accounts for preview purposes
+  val currentAccount =
+      Account(uid = "currentUser", name = "You", handle = "you", email = "you@example.com")
+  val senderAccount =
+      Account(uid = "Alex", name = "Alex", handle = "alex", email = "alex@example.com")
+
   ChatBubble(
       message =
           Message(
               uid = "1",
               senderId = "Alex",
               content = "Hey! Are we playing Catan tonight?",
-              createdAt = com.google.firebase.Timestamp.now()),
-      isMine = false,
-      senderName = "Alex")
+              createdAt = Timestamp.now()),
+      senderAccount = senderAccount,
+      currentAccount = currentAccount)
   Spacer(Modifier.height(Dimensions.Padding.medium))
 
   PollBubble(
@@ -507,6 +514,7 @@ private fun DialogMessages() {
               votes = votes),
       authorName = "Dany",
       currentUserId = "currentUser",
+      profilePictureUrl = null,
       createdAt = Date(),
       onVote = { x, _ -> x + 1 })
 }
@@ -578,7 +586,7 @@ fun BackButton(canGoBack: Boolean, onClick: () -> Unit) {
       contentAlignment = Alignment.Center) {
         if (canGoBack) {
           Icon(
-              imageVector = Icons.Default.ArrowBack,
+              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
               contentDescription = "Back",
               tint = AppColors.textIcons)
         }
@@ -1080,7 +1088,8 @@ fun PostsPage() {
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.xxxLarge),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
               PostFeatureItem(
-                  icon = Icons.Default.Article, text = "Create threads about any board game topic")
+                  icon = Icons.AutoMirrored.Filled.Article,
+                  text = "Create threads about any board game topic")
               PostFeatureItem(
                   icon = Icons.Default.ThumbUp, text = "Like and interact with community posts")
             }
