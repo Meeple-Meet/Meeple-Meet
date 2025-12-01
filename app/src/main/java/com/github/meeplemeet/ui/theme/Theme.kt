@@ -5,11 +5,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import kotlinx.serialization.Serializable
 
 /**
  * Different themes the app can be in LIGHT: Light theme DARK: Dark theme HIGH_CONTRAST: High
  * contrast theme (not implemented yet) SYSTEM_DEFAULT: Follow the system theme
  */
+@Serializable
 enum class ThemeMode {
   LIGHT,
   DARK,
