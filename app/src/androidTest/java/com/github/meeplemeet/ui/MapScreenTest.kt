@@ -218,6 +218,59 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).assertIsDisplayed()
     }
 
+    checkpoint("mapScreen_showsButtonMenu") {
+      composeRule.onNodeWithTag(MapScreenTestTags.BUTTON_MENU).assertIsDisplayed()
+    }
+
+    checkpoint("recenterButton_displayedWithPermission") {
+      composeRule.onNodeWithTag(MapScreenTestTags.RECENTER_BUTTON).assertIsDisplayed()
+      composeRule.onNodeWithTag(MapScreenTestTags.RECENTER_BUTTON).assertHasClickAction()
+    }
+
+    checkpoint("scaleBar_displaysOnZoomChange") {
+      composeRule.waitForIdle()
+      Thread.sleep(500)
+      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE).assertIsDisplayed()
+    }
+
+    checkpoint("scaleBar_hidesAfterDelay") {
+      runBlocking {
+        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+        delay(3500)
+        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
+      }
+    }
+
+    checkpoint("scaleBar_showsCorrectMetricUnits") {
+      composeRule.waitForIdle()
+      Thread.sleep(500)
+
+      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+      val distanceNode = composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE)
+      distanceNode.assertIsDisplayed()
+
+      try {
+        distanceNode.assertTextContains("m", substring = true)
+      } catch (_: AssertionError) {
+        distanceNode.assertTextContains("km", substring = true)
+      }
+    }
+
+    checkpoint("scaleBar_reappearsOnZoomChange") {
+      runBlocking {
+        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+
+        delay(3500)
+        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
+
+        viewModel.updateZoomLevel(16f)
+        delay(100)
+
+        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+      }
+    }
+
     checkpoint("fab_hiddenForRegularUser") {
       currentAccountState.value = regularAccount
       composeRule.waitForIdle()
