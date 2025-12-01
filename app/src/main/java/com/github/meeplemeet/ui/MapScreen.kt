@@ -312,6 +312,8 @@ fun MapScreen(
   // --- Map & query state ---
   var userLocation by remember { mutableStateOf<Location?>(null) }
   var isLoadingLocation by remember { mutableStateOf(true) }
+  var isCameraCentered by remember { mutableStateOf(false) }
+  var isQueryLaunched by remember { mutableStateOf(false) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
 
   // --- UI controls (filters & creation) ---
@@ -395,14 +397,15 @@ fun MapScreen(
   }
 
   /** Starts Firestore geo query once location is resolved (real or fallback). */
-  if (!isLoadingLocation) {
-    DisposableEffect(Unit) {
-      viewModel.startGeoQuery(
-          center = userLocation ?: getApproximateLocationFromTimezone(),
-          currentUserId = account.uid,
-          radiusKm = DEFAULT_RADIUS_KM)
-      onDispose {}
-    }
+  LaunchedEffect(isLoadingLocation) {
+    if (isLoadingLocation || isQueryLaunched) return@LaunchedEffect
+
+    viewModel.startGeoQuery(
+        center = userLocation ?: getApproximateLocationFromTimezone(),
+        currentUserId = account.uid,
+        radiusKm = DEFAULT_RADIUS_KM)
+
+    isQueryLaunched = true
   }
 
   /** Updates the ViewModel filters whenever the set of included pin types changes. */
@@ -476,18 +479,18 @@ fun MapScreen(
 
         // --- Map rendering ---
         /** Centers the camera once location is resolved (real or fallback). */
-        if (!isLoadingLocation) {
-          DisposableEffect(Unit) {
-            val target =
-                userLocation?.let { LatLng(it.latitude, it.longitude) }
-                    ?: LatLng(
-                        getApproximateLocationFromTimezone().latitude,
-                        getApproximateLocationFromTimezone().longitude)
+        LaunchedEffect(isLoadingLocation) {
+          if (isLoadingLocation || isCameraCentered) return@LaunchedEffect
 
-            cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
+          val target =
+              userLocation?.let { LatLng(it.latitude, it.longitude) }
+                  ?: LatLng(
+                      getApproximateLocationFromTimezone().latitude,
+                      getApproximateLocationFromTimezone().longitude)
 
-            onDispose {}
-          }
+          cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
+
+          isCameraCentered = true
         }
 
         /**
