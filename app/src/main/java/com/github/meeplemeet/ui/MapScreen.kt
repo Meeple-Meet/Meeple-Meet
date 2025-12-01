@@ -236,8 +236,6 @@ private object MapScaleBarDefaults {
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
 private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
-private const val LOCATION_RETRY_COUNT = 5
-private const val LOCATION_RETRY_DELAY = 100L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val SCALE_BAR_HIDE_MS = 3000L
@@ -360,7 +358,7 @@ fun MapScreen(
     val loc =
         if (permissionGranted) {
           try {
-            getUserLocationWithRetry(fusedClient)
+            getUserLocation(fusedClient)
           } catch (_: Exception) {
             null
           }
@@ -921,33 +919,6 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
   } catch (_: Exception) {
     null
   }
-}
-
-/**
- * Attempts to get user location with retry logic. If lastLocation is null (no GPS fix yet), waits
- * briefly for location updates.
- *
- * @param fusedClient the FusedLocationProviderClient
- * @return a [Location] or null if unable to get location within timeout
- */
-@SuppressLint("MissingPermission")
-private suspend fun getUserLocationWithRetry(
-    fusedClient: FusedLocationProviderClient,
-    maxRetries: Int = LOCATION_RETRY_COUNT,
-    delayMs: Long = LOCATION_RETRY_DELAY
-): Location? {
-  // First try: check last known location
-  var loc = getUserLocation(fusedClient)
-  if (loc != null) return loc
-
-  // If null, retry a few times with delay
-  repeat(maxRetries) { _ ->
-    delay(delayMs)
-    loc = getUserLocation(fusedClient)
-    if (loc != null) return loc
-  }
-
-  return null
 }
 
 /**
