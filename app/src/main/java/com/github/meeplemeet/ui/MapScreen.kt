@@ -824,9 +824,15 @@ fun MapScreen(
                   Modifier.align(Alignment.BottomEnd)
                       .padding(
                           end =
-                              Dimensions.Padding.medium
-                                  .plus(Dimensions.ButtonSize.standard)
-                                  .plus(Dimensions.Padding.small),
+                              if (permissionGranted && userLocation != null) {
+                                // Shift scale bar to the left when recenter button is visible
+                                Dimensions.Padding.medium
+                                    .plus(Dimensions.ButtonSize.standard)
+                                    .plus(Dimensions.Padding.small)
+                              } else {
+                                // No recenter button → align scale bar directly at bottom-right
+                                Dimensions.Padding.medium
+                              },
                           bottom = Dimensions.Padding.medium)) {
                 MapScaleBar(
                     latitude = cameraPositionState.position.target.latitude,
