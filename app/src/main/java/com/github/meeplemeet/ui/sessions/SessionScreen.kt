@@ -113,7 +113,6 @@ object SessionDefaults {
   const val MEMBERS_SUFFIX = " members"
 
   const val NO_GAME_LABEL = "No game selected"
-  const val NO_LOCATION_LABEL = "Location not set"
   const val NO_PARTICIPANTS_LABEL = "No participants yet"
 
   const val LEAVE_LABEL = "Leave"
@@ -141,7 +140,7 @@ object SessionDefaults {
   object Scrollbar {
     val TRACK_WIDTH = 15.dp
     val TRACK_PADDING = Dimensions.Padding.tiny
-    const val MIN_ITEMS_FOR_SCROLLBAR = 8
+    const val MIN_ITEMS_FOR_SCROLLBAR = 6
     const val SCROLLBAR_ALPHA = 0.1f
 
     const val EPS = 0.001f
@@ -386,7 +385,7 @@ private fun SessionGameHeaderImage(game: Game?) {
             Modifier.fillMaxWidth()
                 .height(SessionDefaults.Layout.HEADER_IMAGE_HEIGHT)
                 .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center) {
           Icon(
               imageVector = Icons.Default.SportsEsports,
@@ -430,28 +429,28 @@ private fun SessionBasicInfoSection(
 
     Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
 
-    // Game row with info icon positioned right after the text
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Icon(
-          imageVector = Icons.Default.SportsEsports,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.tertiary,
-          modifier = Modifier.size(Dimensions.IconSize.large))
+    if (game != null) {
+      // Game row with info icon positioned right after the text
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(
+            imageVector = Icons.Default.SportsEsports,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.size(Dimensions.IconSize.large))
 
-      Spacer(Modifier.width(Dimensions.Spacing.large))
+        Spacer(Modifier.width(Dimensions.Spacing.large))
 
-      Text(
-          text = game?.name ?: SessionDefaults.NO_GAME_LABEL,
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onBackground,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          modifier = Modifier.weight(1f, fill = false))
+        Text(
+            text = game?.name ?: SessionDefaults.NO_GAME_LABEL,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false))
 
-      if (game != null) {
         Spacer(Modifier.width(Dimensions.Spacing.small))
         IconButton(onClick = onShowGameInfo, modifier = Modifier.size(Dimensions.IconSize.large)) {
           Icon(
@@ -476,15 +475,17 @@ private fun SessionBasicInfoSection(
         text = formatSessionTime(time),
     )
 
-    Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
+    val locationName = session.location.name
 
-    val locationName = session.location.name.ifBlank { SessionDefaults.NO_LOCATION_LABEL }
+    if (locationName.isNotBlank()) {
+      Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
 
-    SessionInfoRow(
-        icon = Icons.Default.LocationOn,
-        text = locationName,
-        maxLines = SessionDefaults.Location.MAX_LINES,
-    )
+      SessionInfoRow(
+          icon = Icons.Default.LocationOn,
+          text = locationName,
+          maxLines = SessionDefaults.Location.MAX_LINES,
+      )
+    }
   }
 }
 
@@ -618,7 +619,7 @@ private fun SessionParticipantRow(
                   horizontal = Dimensions.Padding.extraMedium, vertical = Dimensions.Padding.small),
       verticalAlignment = Alignment.CenterVertically,
   ) {
-    SessionParticipantAvatar(name = account.name)
+    SessionParticipantAvatar(account = account)
 
     Spacer(Modifier.width(Dimensions.Spacing.large))
 
@@ -643,27 +644,38 @@ private fun SessionParticipantRow(
 /**
  * Composable function to display a participant's avatar.
  *
- * @param name The participant's name.
+ * @param account The participant's account.
  */
 @Composable
-private fun SessionParticipantAvatar(name: String) {
+private fun SessionParticipantAvatar(account: Account) {
   val initial =
-      remember(name) {
-        name.trim().firstOrNull()?.uppercase()
+      remember(account.name) {
+        account.name.trim().firstOrNull()?.uppercase()
             ?: SessionDefaults.USER_NAME_MISSING_AVATAR_PLACEHOLDER
       }
+
+  val hasPhoto = !account.photoUrl.isNullOrBlank()
 
   Box(
       modifier =
           Modifier.size(Dimensions.AvatarSize.medium)
               .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.surfaceVariant),
+              .background(MaterialTheme.colorScheme.surface),
       contentAlignment = Alignment.Center) {
-        Text(
-            text = initial,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.inversePrimary)
+        if (hasPhoto) {
+          AsyncImage(
+              model = account.photoUrl,
+              contentDescription = "Profile picture of ${account.name}",
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize(),
+          )
+        } else {
+          Text(
+              text = initial,
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.tertiary)
+        }
       }
 }
 
@@ -747,7 +759,7 @@ private fun SessionParticipantsScrollbar(
               Modifier.fillMaxWidth()
                   .weight(thumbWeight)
                   .clip(CircleShape)
-                  .background(MaterialTheme.colorScheme.background)
+                  .background(MaterialTheme.colorScheme.surface)
                   .testTag(SessionViewerTestTags.SCROLLBAR_THUMB),
       )
       Spacer(modifier = Modifier.weight(bottomWeight))
