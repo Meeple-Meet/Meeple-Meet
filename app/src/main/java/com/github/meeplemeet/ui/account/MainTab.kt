@@ -24,8 +24,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -112,6 +114,7 @@ object PublicInfoTestTags {
   // ------------------------------------------------------------
   const val ACTION_FRIENDS = "action_friends"
   const val ACTION_NOTIFICATIONS = "action_notifications"
+    const val NOTIF_COUNT = "notif_count"
   const val ACTION_LOGOUT = "Logout Button"
 
   // ------------------------------------------------------------
@@ -142,6 +145,7 @@ object PrivateInfoTestTags {
   // ------------------------------------------------------------
   const val PRIVATE_INFO = "private_info_root"
   const val PRIVATE_INFO_TITLE = "private_info_title"
+    const val COLLAPSABLE = "collapsable"
 
   // ------------------------------------------------------------
   // EMAIL SECTION
@@ -190,6 +194,14 @@ object DeleteAccSectionTestTags {
   const val POPUP = "delete_acc_popup"
   const val CONFIRM = "delete_acc_popup_confirm"
   const val CANCEL = "delete_acc_popup_cancel"
+}
+
+object ProfileNavigationTestTags {
+  const val SETTINGS_ROW_PREFERENCES = "settings_row_preferences"
+  const val SETTINGS_ROW_NOTIFICATIONS = "settings_row_notifications"
+  const val SETTINGS_ROW_BUSINESSES = "settings_row_businesses"
+  const val SETTINGS_ROW_EMAIL = "settings_row_email"
+  const val SUB_PAGE_BACK_BUTTON = "sub_page_back_button"
 }
 
 object MainTabUi {
@@ -391,10 +403,11 @@ fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account) {
     else Text(text = "You have no businesses yet.")
     // TODO: Implement business management HERE
   }
-}
+}   
 
 /**
  * Helper function to know the user's roles
+ *
  * @param account user to examine his roles
  */
 private fun hasNoRoles(account: Account): Boolean {
@@ -425,7 +438,10 @@ fun MainTabContent(
   var showDelDialog by remember { mutableStateOf(false) }
 
   Column(
-      modifier = Modifier.padding(Dimensions.Padding.xxLarge),
+      modifier =
+          Modifier.padding(Dimensions.Padding.xxLarge)
+              .verticalScroll(rememberScrollState())
+              .testTag("main_tab_content_scroll"),
       horizontalAlignment = Alignment.CenterHorizontally) {
         Box(modifier = Modifier.fillMaxWidth().testTag(PublicInfoTestTags.PUBLIC_INFO)) {
           Column(
@@ -456,7 +472,8 @@ fun MainTabContent(
         SettingsRow(
             icon = Icons.Default.Palette,
             label = "Preferences",
-            onClick = { onNavigate(ProfilePage.Preferences) })
+            onClick = { onNavigate(ProfilePage.Preferences) },
+            modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_PREFERENCES))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
@@ -466,7 +483,8 @@ fun MainTabContent(
         SettingsRow(
             icon = Icons.Outlined.NotificationsNone,
             label = "Manage Notifications",
-            onClick = { onNavigate(ProfilePage.NotificationSettings) })
+            onClick = { onNavigate(ProfilePage.NotificationSettings) },
+            modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_NOTIFICATIONS))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
@@ -476,7 +494,8 @@ fun MainTabContent(
         SettingsRow(
             icon = Icons.Default.Store,
             label = "Manage your Businesses",
-            onClick = { onNavigate(ProfilePage.Businesses) })
+            onClick = { onNavigate(ProfilePage.Businesses) },
+            modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
@@ -486,7 +505,8 @@ fun MainTabContent(
         SettingsRow(
             icon = Icons.Default.Email,
             label = "Manage your Email",
-            onClick = { onNavigate(ProfilePage.Email) })
+            onClick = { onNavigate(ProfilePage.Email) },
+            modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
@@ -524,10 +544,16 @@ fun MainTabContent(
 }
 
 @Composable
-fun SettingsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+fun SettingsRow(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
   Row(
       modifier =
-          Modifier.fillMaxWidth()
+          modifier
+              .fillMaxWidth()
               .clickable(onClick = onClick)
               .padding(vertical = 14.dp, horizontal = 8.dp),
       verticalAlignment = Alignment.CenterVertically) {
@@ -542,7 +568,10 @@ fun SettingsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
 fun SubPageScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
   Column(Modifier.fillMaxSize().padding(16.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+      IconButton(
+          onClick = onBack, modifier = Modifier.testTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          }
       Text(title, style = MaterialTheme.typography.headlineSmall)
     }
 
@@ -624,7 +653,8 @@ fun PublicInfoActions(
                           Modifier.size(Dimensions.IconSize.large)
                               .align(Alignment.TopEnd)
                               .offset(MainTabUi.OFFSET_X, MainTabUi.OFFSET_Y)
-                              .background(AppColors.negative, CircleShape),
+                              .background(AppColors.negative, CircleShape).testTag(
+                                  PublicInfoTestTags.NOTIF_COUNT),
                       contentAlignment = Alignment.Center) {
                         Text(
                             text =
@@ -1142,7 +1172,8 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
               Modifier.background(
                       color = AppColors.textIconsFade,
                       shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-                  .padding(horizontal = Dimensions.Padding.extraLarge, vertical = 6.dp)) {
+                  .padding(horizontal = Dimensions.Padding.extraLarge, vertical = 6.dp).testTag(
+                      PrivateInfoTestTags.EMAIL_TOAST)) {
             Text(
                 text = data.message,
                 color = AppColors.primary,
@@ -1181,7 +1212,7 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
               text = MainTabUi.PrivateInfo.ROLES_TITLE,
               style = MaterialTheme.typography.bodyLarge,
               fontSize = Dimensions.TextSize.largeHeading,
-              modifier = Modifier.weight(1f))
+              modifier = Modifier.weight(1f).testTag(PrivateInfoTestTags.COLLAPSABLE))
 
           Icon(
               imageVector = Icons.Default.ChevronRight,

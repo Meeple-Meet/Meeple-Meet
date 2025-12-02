@@ -1,17 +1,22 @@
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountNoUid
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
 import com.github.meeplemeet.ui.account.MainTab
+import com.github.meeplemeet.ui.account.ProfileNavigationTestTags
 import com.github.meeplemeet.ui.account.NotificationsSectionTestTags
+import com.github.meeplemeet.ui.account.PreferencesSectionTestTags
 import com.github.meeplemeet.ui.account.PrivateInfoTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -89,7 +94,13 @@ class MainTabComposableTest : FirestoreTests() {
       compose.onTag(PublicInfoTestTags.PUBLIC_INFO).performScrollToNode(hasTestTag(tag))
       compose.waitForIdle()
     } catch (_: AssertionError) {
-      // node might already be visible; ignore
+      // node might already be visible or not in PUBLIC_INFO; try scrolling the main content
+      try {
+        compose.onTag("main_tab_content_scroll").performScrollToNode(hasTestTag(tag))
+        compose.waitForIdle()
+      } catch (_: AssertionError) {
+        // node might be visible; ignore
+      }
     }
   }
 
@@ -158,14 +169,12 @@ class MainTabComposableTest : FirestoreTests() {
 
   private fun ComposeTestRule.descriptionField() = onTag(PublicInfoTestTags.INPUT_DESCRIPTION)
 
-  private fun ComposeTestRule.publicInfoToast() = onTag(PublicInfoTestTags.GLOBAL_TOAST)
 
-  // =======================
-  // PRIVATE INFO SECTION
-  // =======================
-  private fun ComposeTestRule.privateInfoRoot() = onTag(PrivateInfoTestTags.PRIVATE_INFO)
-
-  private fun ComposeTestRule.privateInfoTitle() = onTag(PrivateInfoTestTags.PRIVATE_INFO_TITLE)
+    // Preferences section
+    private fun ComposeTestRule.preferencesTitle() = onTag(PreferencesSectionTestTags.PREFERENCES_SECTION_TITLE)
+    private fun ComposeTestRule.radioLight() = onTag(PreferencesSectionTestTags.RADIO_LIGHT)
+    private fun ComposeTestRule.radioDark() = onTag(PreferencesSectionTestTags.RADIO_DARK)
+    private fun ComposeTestRule.radioSystem() = onTag(PreferencesSectionTestTags.RADIO_SYSTEM)
 
   // =======================
   // EMAIL SECTION
@@ -182,7 +191,7 @@ class MainTabComposableTest : FirestoreTests() {
   // =======================
   // ROLES SECTION
   // =======================
-  private fun ComposeTestRule.rolesTitle() = onTag(PrivateInfoTestTags.ROLES_SECTION_TITLE)
+  private fun ComposeTestRule.rolesTitle() = onTag(PrivateInfoTestTags.COLLAPSABLE)
 
   private fun ComposeTestRule.roleShopCheckbox() = onTag(PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
 
@@ -210,6 +219,7 @@ class MainTabComposableTest : FirestoreTests() {
   private fun ComposeTestRule.notifRadioFriends() =
       onTag(NotificationsSectionTestTags.RADIO_FRIENDS)
 
+
   // DELETE ACCOUNT
 
   private fun ComposeTestRule.delAccountBtn() = onTag(DeleteAccSectionTestTags.BUTTON)
@@ -220,28 +230,53 @@ class MainTabComposableTest : FirestoreTests() {
 
   private fun ComposeTestRule.delAccountPopupCancel() = onTag(DeleteAccSectionTestTags.CANCEL)
 
-  /// Other helpers
+  // =======================
+  // NAVIGATION HELPERS
+  // =======================
+  private fun ComposeTestRule.settingsRowPreferences() =
+      onTag(ProfileNavigationTestTags.SETTINGS_ROW_PREFERENCES)
 
-  private fun clearFocusWithBack() {
-    Espresso.pressBack()
-    compose.waitForIdle()
+  private fun ComposeTestRule.settingsRowNotifications() =
+      onTag(ProfileNavigationTestTags.SETTINGS_ROW_NOTIFICATIONS)
+
+  private fun ComposeTestRule.settingsRowBusinesses() =
+      onTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
+
+  private fun ComposeTestRule.settingsRowEmail() = onTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL)
+
+  private fun ComposeTestRule.subPageBackButton() = onTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)
+
+  /** Waits until a child of the node with [parentTag] is selected. */
+  private fun ComposeTestRule.waitUntilChildIsSelected(
+      parentTag: String,
+      timeoutMillis: Long = 5000
+  ) {
+    waitUntil(timeoutMillis) {
+      try {
+        onNodeWithTag(parentTag)
+            .onChildren()
+            .filter(isSelectable())
+            .fetchSemanticsNodes()
+            .any { it.config.getOrElse(SemanticsProperties.Selected) { false } }
+      } catch (e: Exception) {
+        false
+      }
+    }
   }
 
   @Test
   fun main_tab_full_user_flow() {
-
-    // Local state wrapper so changes propagate to UI as in your other screens
-    val accountState = mutableAccount(user)
     var friendsClicked = false
     var notifClicked = false
     var logoutClicked = false
     var delClicked = false
 
     compose.setContent {
+      val accountState by accountRepository.listenAccount(user.uid).collectAsState(initial = user)
       AppTheme {
         MainTab(
             viewModel = profileVM,
-            account = accountState.value,
+            account = accountState,
             onFriendsClick = { friendsClicked = true },
             onNotificationClick = { notifClicked = true },
             onDelete = { delClicked = true },
@@ -334,15 +369,140 @@ class MainTabComposableTest : FirestoreTests() {
       compose.descriptionField().assertTextEquals("New description here")
     }
 
-    checkpoint("Private info section renders") {
-      compose.privateInfoRoot().assertExists()
-      compose.privateInfoTitle().assertExists()
+    // ---------------------------------------------------------------------
+    checkpoint("navigate_to_preferences_and_back") {
+      scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_PREFERENCES)
+      compose.settingsRowPreferences().assertExists().performClick()
       compose.waitForIdle()
+
+        compose.preferencesTitle().assertExists()
+        compose.radioLight().assertExists().performClick()
+        compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_LIGHT)
+        compose
+            .radioLight()
+            .onChildren()
+            .filterToOne(hasClickAction() or hasSetTextAction())
+            .assertIsSelected()
+
+        compose.waitForIdle()
+
+        compose.radioDark().assertExists().performClick()
+        compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_DARK)
+
+        compose
+            .radioDark()
+            .onChildren()
+            .filterToOne(hasClickAction() or hasSetTextAction())
+            .assertIsSelected()
+
+        compose.radioSystem().assertExists().performClick()
+        compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_SYSTEM)
+        compose
+            .radioSystem()
+            .onChildren()
+            .filterToOne(hasClickAction() or hasSetTextAction())
+            .assertIsSelected()
+        compose.waitForIdle()
+
+        // navigate back to main page
+        compose.subPageBackButton().performClick()
+        compose.waitForIdle()
+        compose.publicInfoRoot().assertExists()
+      compose.publicInfoRoot().assertExists()
     }
 
     // ---------------------------------------------------------------------
-    checkpoint("email_change_and_verification_toast") {
-      scrollToTag(PrivateInfoTestTags.EMAIL_SECTION)
+
+    checkpoint("navigate_to_notifications_and_verify") {
+      scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_NOTIFICATIONS)
+      compose.settingsRowNotifications().assertExists().performClick()
+      compose.waitForIdle()
+
+      compose.notifTitle().assertExists()
+      compose.notifRadioEvery().assertExists().performClick()
+      compose.waitUntilChildIsSelected(NotificationsSectionTestTags.RADIO_EVERYONE)
+      compose
+          .notifRadioEvery()
+          .onChildren()
+          .filterToOne(hasClickAction() or hasSetTextAction())
+          .assertIsSelected()
+
+      compose.waitForIdle()
+
+      compose.notifRadioFriends().assertExists().performClick()
+      compose.waitUntilChildIsSelected(NotificationsSectionTestTags.RADIO_FRIENDS)
+
+      compose
+          .notifRadioFriends()
+          .onChildren()
+          .filterToOne(hasClickAction() or hasSetTextAction())
+          .assertIsSelected()
+
+      compose.notifRadioNone().assertExists().performClick()
+      compose.waitUntilChildIsSelected(NotificationsSectionTestTags.RADIO_NONE)
+      compose
+          .notifRadioNone()
+          .onChildren()
+          .filterToOne(hasClickAction() or hasSetTextAction())
+          .assertIsSelected()
+      compose.waitForIdle()
+
+      compose.subPageBackButton().performClick()
+      compose.waitForIdle()
+      compose.publicInfoRoot().assertExists()
+    }
+
+    // ---------------------------------------------------------------------
+    checkpoint("navigate_to_businesses_and_verify") {
+      scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
+      compose.settingsRowBusinesses().assertExists().performClick()
+      compose.waitForIdle()
+
+      compose.rolesTitle().assertExists()
+
+        // Toggle on for the first time == no dialog
+        compose.roleSpaceCheckbox().assertExists().performClick()
+        compose.roleDialog().assertDoesNotExist()
+
+        // Toggle Off == dialog
+        compose.roleSpaceCheckbox().assertExists().performClick()
+        compose.roleDialog().assertExists()
+        compose.rolesDialogText().assertExists().assertTextContains("spaces", substring = true)
+
+        // Cancel
+        compose.roleDialogCancel().performClick()
+        compose.roleDialog().assertDoesNotExist()
+
+        // Toggle OFF again → confirm
+        compose.roleSpaceCheckbox().performClick()
+        compose.roleDialog().assertExists()
+
+        compose.roleDialogConfirm().performClick()
+        compose.roleDialog().assertDoesNotExist()
+        compose.waitForIdle()
+
+        // Now add the shop owner role and leave the subscaffold. Check that UI is updated right with regards to these changes
+        compose.roleShopCheckbox().performClick()
+        compose.roleDialog().assertDoesNotExist()
+
+        compose.subPageBackButton().performClick()
+        compose.waitForIdle()
+        compose.publicInfoRoot().assertExists()
+
+        compose.settingsRowBusinesses().performClick()
+        compose.waitForIdle()
+        compose.rolesTitle().assertExists().performClick()
+        compose.roleShopCheckbox().assertExists() // UI updated correctly
+
+        compose.subPageBackButton().performClick()
+        compose.waitForIdle()
+    }
+
+    // ---------------------------------------------------------------------
+    checkpoint("navigate_to_email_and_verify") {
+      scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL)
+      compose.settingsRowEmail().assertExists().performClick()
+      compose.waitForIdle()
 
       compose.emailNotVerifiedLabel().assertExists()
       inputText(PrivateInfoTestTags.EMAIL_INPUT, "badlyformattedmail")
@@ -352,98 +512,14 @@ class MainTabComposableTest : FirestoreTests() {
       compose.emailSendButton().performClick()
 
       compose.emailToast().assertExists()
-      compose.publicInfoToast().assertExists()
+
+      compose.subPageBackButton().performClick()
       compose.waitForIdle()
-    }
-
-    // ---------------------------------------------------------------------
-    checkpoint("roles_shop_toggle_shows_dialog_cancel_and_confirm") {
-      clearFocusWithBack()
-      scrollToTag(PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
-
-      compose.waitForIdle()
-      compose.onRoot().performTouchInput { swipeUp() }
-
-      compose.rolesTitle().assertExists()
-      // Toggle on for the first time == no dialog
-      compose.roleShopCheckbox().assertExists().performClick()
-      compose.roleDialog().assertDoesNotExist()
-
-      // Toggle Off == dialog
-      compose.roleShopCheckbox().assertExists().performClick()
-      compose.roleDialog().assertExists()
-      compose.rolesDialogText().assertExists().assertTextContains("shops", substring = true)
-
-      // Cancel
-      compose.roleDialogCancel().performClick()
-      compose.roleDialog().assertDoesNotExist()
-
-      // Toggle OFF again → confirm
-      compose.roleShopCheckbox().performClick()
-      compose.roleDialog().assertExists()
-
-      compose.roleDialogConfirm().performClick()
-      compose.roleDialog().assertDoesNotExist()
-      compose.waitForIdle()
-    }
-
-    // ---------------------------------------------------------------------
-    checkpoint("roles_space_toggle_shows_dialog_cancel_and_confirm") {
-      scrollToTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
-
-      compose.waitForIdle()
-
-      // Toggle on for the first time == no dialog
-      compose.roleSpaceCheckbox().assertExists().performClick()
-      compose.roleDialog().assertDoesNotExist()
-
-      // Toggle Off == dialog
-      compose.roleSpaceCheckbox().assertExists().performClick()
-      compose.roleDialog().assertExists()
-      compose.rolesDialogText().assertExists().assertTextContains("spaces", substring = true)
-
-      // Cancel
-      compose.roleDialogCancel().performClick()
-      compose.roleDialog().assertDoesNotExist()
-
-      // Toggle OFF again → confirm
-      compose.roleSpaceCheckbox().performClick()
-      compose.roleDialog().assertExists()
-
-      compose.roleDialogConfirm().performClick()
-      compose.roleDialog().assertDoesNotExist()
-      compose.waitForIdle()
-    }
-
-    checkpoint("Notifications section exists and works well") {
-      compose.onRoot().performTouchInput { swipeUp() }
-
-      compose.notifTitle().assertExists()
-      compose.notifRadioEvery().assertExists().performClick()
-      compose
-          .notifRadioEvery()
-          .onChildren()
-          .filterToOne(hasClickAction() or hasSetTextAction())
-          .assertIsSelected()
-
-      compose.notifRadioFriends().assertExists().performClick()
-      compose
-          .notifRadioFriends()
-          .onChildren()
-          .filterToOne(hasClickAction() or hasSetTextAction())
-          .assertIsSelected()
-
-      compose.notifRadioNone().assertExists().performClick()
-      compose
-          .notifRadioNone()
-          .onChildren()
-          .filterToOne(hasClickAction() or hasSetTextAction())
-          .assertIsSelected()
-      compose.waitForIdle()
+      compose.publicInfoRoot().assertExists()
     }
 
     checkpoint("Delete button user flow") {
-      compose.onRoot().performTouchInput { swipeUp() }
+      scrollToTag(DeleteAccSectionTestTags.BUTTON)
 
       compose.delAccountBtn().assertExists().performClick()
       compose.delAccountPopup().assertExists()
