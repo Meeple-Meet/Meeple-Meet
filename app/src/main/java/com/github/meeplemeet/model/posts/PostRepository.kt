@@ -24,8 +24,10 @@ private const val COMMENTS_COLLECTION_PATH = "comments"
  * @property db The Firestore database instance to use for operations.
  */
 class PostRepository : FirestoreRepository("posts") {
-  private fun newCommentUUID(postId: String): String =
-      collection.document(postId).collection(COMMENTS_COLLECTION_PATH).document().id
+  private fun comments(postId: String) =
+      collection.document(postId).collection(COMMENTS_COLLECTION_PATH)
+
+  private fun newCommentUUID(postId: String) = comments(postId).document().id
 
   /**
    * Creates a new post in Firestore.
@@ -53,6 +55,31 @@ class PostRepository : FirestoreRepository("posts") {
 
     batch.commit().await()
     return post
+  }
+
+  /**
+   * Edits an existing post in Firestore.
+   *
+   * Updates one or more fields of the specified post. Any parameter set to null will not be
+   * updated.
+   *
+   * @param postId The ID of the post to edit.
+   * @param newTitle Optional new title for the post.
+   * @param newBody Optional new content/body for the post.
+   * @param newTags Optional new list of tags for the post.
+   */
+  suspend fun editPost(
+      postId: String,
+      newTitle: String? = null,
+      newBody: String? = null,
+      newTags: List<String>? = null
+  ) {
+    val updates = mutableMapOf<String, Any>()
+    newTitle?.let { updates[Post::title.name] = newTitle }
+    newBody?.let { updates[Post::body.name] = newBody }
+    newTags?.let { updates[Post::tags.name] = newTags }
+
+    collection.document(postId).update(updates).await()
   }
 
   /**
@@ -94,17 +121,25 @@ class PostRepository : FirestoreRepository("posts") {
             timestamp = Timestamp.now(),
             authorId = authorId,
             parentId = parentId)
-    collection
-        .document(postId)
-        .collection(COMMENTS_COLLECTION_PATH)
-        .document(commentId)
-        .set(comment)
-        .await()
+    comments(postId).document(commentId).set(comment).await()
     collection
         .document(postId)
         .update(PostNoUid::commentCount.name, FieldValue.increment(1))
         .await()
     return commentId
+  }
+
+  /**
+   * Edits an existing comment in Firestore.
+   *
+   * Updates the text content of the specified comment within a post.
+   *
+   * @param postId The ID of the post containing the comment.
+   * @param commentId The ID of the comment to edit.
+   * @param newText The new text content for the comment.
+   */
+  suspend fun editComment(postId: String, commentId: String, newText: String) {
+    comments(postId).document(commentId).update(Comment::text.name, newText).await()
   }
 
   /**
