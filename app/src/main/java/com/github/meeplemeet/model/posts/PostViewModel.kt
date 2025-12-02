@@ -55,15 +55,15 @@ class PostViewModel(private val repository: PostRepository = RepositoryProvider.
     if (post.authorId != author.uid)
         throw PermissionDeniedException("Another users post cannot be edited")
 
-    if (Timestamp.now().toDate().time > post.timestamp.toDate().time + EDIT_MAX_THRESHOLD)
-        throw IllegalArgumentException(
-            "Can not edit a post after ${EDIT_MAX_THRESHOLD}ms it has been created")
+    require(Timestamp.now().toDate().time <= post.timestamp.toDate().time + EDIT_MAX_THRESHOLD) {
+      "Can not edit a post after ${EDIT_MAX_THRESHOLD}ms it has been created"
+    }
 
-    if (newTitle != null && newTitle.isBlank())
-        throw IllegalArgumentException("Cannot create a post with an empty title")
+    require(!(newTitle != null && newTitle.isBlank())) {
+      "Cannot create a post with an empty title"
+    }
 
-    if (newBody != null && newBody.isBlank())
-        throw IllegalArgumentException("Cannot create a post with an empty body")
+    require(!(newBody != null && newBody.isBlank())) { "Cannot create a post with an empty body" }
 
     viewModelScope.launch { repository.editPost(post.id, newTitle, newBody, newTags) }
   }
@@ -123,11 +123,11 @@ class PostViewModel(private val repository: PostRepository = RepositoryProvider.
     if (comment.authorId != author.uid)
         throw PermissionDeniedException("Another users post cannot be edited")
 
-    if (Timestamp.now().toDate().time > post.timestamp.toDate().time + EDIT_MAX_THRESHOLD)
-        throw IllegalArgumentException(
-            "Can not edit a post after ${EDIT_MAX_THRESHOLD}ms it has been created")
+    require(Timestamp.now().toDate().time <= post.timestamp.toDate().time + EDIT_MAX_THRESHOLD) {
+      "Can not edit a post after ${EDIT_MAX_THRESHOLD}ms it has been created"
+    }
 
-    if (newText.isBlank()) throw IllegalArgumentException("Cannot send a blank comment")
+    require(!(newText.isBlank())) { "Cannot send a blank comment" }
 
     viewModelScope.launch { repository.editComment(post.id, comment.id, newText) }
   }
