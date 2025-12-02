@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 const val SUGGESTIONS_LIMIT = 30
-const val EDIT_MESSAGE_MAX_THRESHOLD = 2 * 60 * 60 * 1000L
+const val EDIT_MAX_THRESHOLD = 2 * 60 * 60 * 1000L
 
 /**
  * ViewModel for managing discussion messaging and real-time updates.
@@ -79,8 +79,8 @@ class DiscussionViewModel(
    * - Trailing whitespace is automatically removed
    *
    * ## Time Threshold
-   * Messages can only be edited within [EDIT_MESSAGE_MAX_THRESHOLD] (2 hours) of their creation.
-   * This prevents editing old messages that may have already been read and acted upon by other
+   * Messages can only be edited within [EDIT_MAX_THRESHOLD] (2 hours) of their creation. This
+   * prevents editing old messages that may have already been read and acted upon by other
    * participants.
    *
    * ## Behavior
@@ -93,16 +93,15 @@ class DiscussionViewModel(
    * @param newContent The new text content for the message.
    * @throws IllegalArgumentException if sender is not the message author or content is blank
    * @see DiscussionRepository.editMessage for detailed behavior
-   * @see EDIT_MESSAGE_MAX_THRESHOLD for the time limit
+   * @see EDIT_MAX_THRESHOLD for the time limit
    */
   fun editMessage(discussion: Discussion, message: Message, sender: Account, newContent: String) {
     if (message.senderId != sender.uid)
         throw IllegalArgumentException("Can not edit someone else's message")
 
-    if (Timestamp.now().toDate().time >
-        message.createdAt.toDate().time + EDIT_MESSAGE_MAX_THRESHOLD)
-        throw IllegalArgumentException(
-            "Can not edit a message after ${EDIT_MESSAGE_MAX_THRESHOLD}ms it has been created")
+    require(Timestamp.now().toDate().time <= message.createdAt.toDate().time + EDIT_MAX_THRESHOLD) {
+      "Can not edit a message after ${EDIT_MAX_THRESHOLD}ms it has been created"
+    }
 
     val cleaned = newContent.trimEnd()
     if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
