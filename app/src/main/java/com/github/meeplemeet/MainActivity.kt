@@ -490,7 +490,8 @@ fun MeepleMeetApp(
             owner = account!!,
             spaceRenter = spaceRenter!!,
             onBack = { navigationActions.goBack() },
-            onUpdated = { navigationActions.goBack() })
+            onUpdated = { navigationActions.goBack() },
+            online = online)
       } else {
         LoadingScreen()
       }

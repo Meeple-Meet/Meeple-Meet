@@ -301,10 +301,10 @@ object OfflineModeManager {
    *   in the same order as the input UIDs
    */
   suspend fun loadAccounts(
-    uids: List<String>,
-    context: Context,
-    scope: CoroutineScope,
-    onResult: (List<Account?>) -> Unit
+      uids: List<String>,
+      context: Context,
+      scope: CoroutineScope,
+      onResult: (List<Account?>) -> Unit
   ) {
     val state = _offlineModeFlow.value.accounts
 
@@ -315,8 +315,8 @@ object OfflineModeManager {
 
     // Step 2: Batch fetch missing accounts from repository
     val fetched: List<Account?> =
-      if (missingUids.isEmpty()) emptyList()
-      else RepositoryProvider.accounts.getAccountsSafe(missingUids, false)
+        if (missingUids.isEmpty()) emptyList()
+        else RepositoryProvider.accounts.getAccountsSafe(missingUids, false)
 
     // Step 3: Merge cached and fetched results in original order
     val merged = MutableList<Account?>(uids.size) { null }
@@ -339,9 +339,9 @@ object OfflineModeManager {
     scope.launch(dispatcher) {
       merged.forEach { account ->
         if (account != null)
-          runCatching {
-            RepositoryProvider.images.loadAccountProfilePicture(account.uid, context)
-          }
+            runCatching {
+              RepositoryProvider.images.loadAccountProfilePicture(account.uid, context)
+            }
       }
 
       // Clean up profile pictures for evicted accounts
@@ -378,21 +378,23 @@ object OfflineModeManager {
     val state = _offlineModeFlow.value.accounts
     val (existingAccount, existingChanges) = state[account.uid] ?: return
     val updatedChanges =
-      existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
+        existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
     // Create new map to avoid mutating StateFlow's internal state
     val newState = LinkedHashMap(state)
     newState[account.uid] = existingAccount to updatedChanges
     _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = newState)
   }
-// ==================== Shop Functions ====================
+  // ==================== Shop Functions ====================
   /**
-   * Retrieves a shop by ID, first checking the offline cache, then fetching from repository if needed.
+   * Retrieves a shop by ID, first checking the offline cache, then fetching from repository if
+   * needed.
    *
    * Similar to loadAccount, implements a two-tier loading strategy with cache-first approach.
    * Images are NOT cached or loaded - image handling should be disabled in UI when offline.
    *
    * @param shopId The unique identifier of the shop to retrieve
-   * @param onResult Callback invoked with the Shop if found, or null if not found or an error occurs
+   * @param onResult Callback invoked with the Shop if found, or null if not found or an error
+   *   occurs
    */
   suspend fun loadShop(shopId: String, onResult: (Shop?) -> Unit) {
     val state = _offlineModeFlow.value.shopsToAdd
@@ -425,7 +427,8 @@ object OfflineModeManager {
   fun setShopChange(shop: Shop, property: String, newValue: Any) {
     val state = _offlineModeFlow.value.shopsToAdd
     val (existingShop, existingChanges) = state[shop.id] ?: (shop to emptyMap())
-    val updatedChanges = existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
+    val updatedChanges =
+        existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
 
     val newState = LinkedHashMap(state)
     newState[shop.id] = existingShop to updatedChanges
@@ -433,11 +436,11 @@ object OfflineModeManager {
   }
 
   /**
-   * Adds a new shop to the offline cache for later synchronization.
-   * Used when creating a shop while offline.
+   * Adds a new shop to the offline cache for later synchronization. Used when creating a shop while
+   * offline.
    *
-   * Note: Shop creation should ideally be blocked in UI when offline since images cannot be uploaded.
-   * This is provided for edge cases where text-only shop data needs to be queued.
+   * Note: Shop creation should ideally be blocked in UI when offline since images cannot be
+   * uploaded. This is provided for edge cases where text-only shop data needs to be queued.
    *
    * @param shop The shop to add
    */
@@ -449,8 +452,8 @@ object OfflineModeManager {
   }
 
   /**
-   * Removes a shop from the offline cache.
-   * Used when deleting a shop or after successful synchronization.
+   * Removes a shop from the offline cache. Used when deleting a shop or after successful
+   * synchronization.
    *
    * @param shopId The ID of the shop to remove
    */
@@ -474,10 +477,11 @@ object OfflineModeManager {
     _offlineModeFlow.value = _offlineModeFlow.value.copy(shopsToAdd = newState)
   }
 
-// ==================== Space Renter Functions ====================
+  // ==================== Space Renter Functions ====================
 
   /**
-   * Retrieves a space renter by ID, first checking the offline cache, then fetching from repository if needed.
+   * Retrieves a space renter by ID, first checking the offline cache, then fetching from repository
+   * if needed.
    *
    * Images are NOT cached or loaded - image handling should be disabled in UI when offline.
    *
@@ -515,7 +519,8 @@ object OfflineModeManager {
   fun setSpaceRenterChange(renter: SpaceRenter, property: String, newValue: Any) {
     val state = _offlineModeFlow.value.spaceRentersToAdd
     val (existingRenter, existingChanges) = state[renter.id] ?: (renter to emptyMap())
-    val updatedChanges = existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
+    val updatedChanges =
+        existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
 
     val newState = LinkedHashMap(state)
     newState[renter.id] = existingRenter to updatedChanges
@@ -523,11 +528,11 @@ object OfflineModeManager {
   }
 
   /**
-   * Adds a new space renter to the offline cache for later synchronization.
-   * Used when creating a space renter while offline.
+   * Adds a new space renter to the offline cache for later synchronization. Used when creating a
+   * space renter while offline.
    *
-   * Note: Space renter creation should ideally be blocked in UI when offline since images cannot be uploaded.
-   * This is provided for edge cases where text-only data needs to be queued.
+   * Note: Space renter creation should ideally be blocked in UI when offline since images cannot be
+   * uploaded. This is provided for edge cases where text-only data needs to be queued.
    *
    * @param renter The space renter to add
    */
@@ -539,8 +544,8 @@ object OfflineModeManager {
   }
 
   /**
-   * Removes a space renter from the offline cache.
-   * Used when deleting a space renter or after successful synchronization.
+   * Removes a space renter from the offline cache. Used when deleting a space renter or after
+   * successful synchronization.
    *
    * @param renterId The ID of the space renter to remove
    */
@@ -551,7 +556,7 @@ object OfflineModeManager {
     _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRentersToAdd = newState)
   }
 
-// ==================== Synchronization Helpers ====================
+  // ==================== Synchronization Helpers ====================
 
   /**
    * Retrieves all pending changes for shops that need to be synchronized.
@@ -559,9 +564,7 @@ object OfflineModeManager {
    * @return List of pairs containing the shop and its pending changes map
    */
   fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
-    return _offlineModeFlow.value.shopsToAdd.values
-      .filter { it.second.isNotEmpty() }
-      .toList()
+    return _offlineModeFlow.value.shopsToAdd.values.filter { it.second.isNotEmpty() }.toList()
   }
 
   /**
@@ -571,8 +574,8 @@ object OfflineModeManager {
    */
   fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
     return _offlineModeFlow.value.spaceRentersToAdd.values
-      .filter { it.second.isNotEmpty() }
-      .toList()
+        .filter { it.second.isNotEmpty() }
+        .toList()
   }
 
   /**
