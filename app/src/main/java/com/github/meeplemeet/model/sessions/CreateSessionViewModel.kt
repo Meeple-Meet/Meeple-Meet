@@ -6,26 +6,60 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.account.HandlesRepository
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.shared.DEBOUNCE_TIME_MS
 import com.github.meeplemeet.model.shared.SearchViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
 
+@OptIn(FlowPreview::class)
 open class CreateSessionViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
-    gameRepository: GameRepository = RepositoryProvider.games
+    gameRepository: GameRepository = RepositoryProvider.games,
+    private val handlesRepository: HandlesRepository = RepositoryProvider.handles
 ) : SearchViewModel(gameRepository), AccountViewModel {
   override val scope: CoroutineScope
     get() = this.viewModelScope
+
+  /** StateFlow containing account suggestions from handle searches. */
+  private val handleQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+  private val _handleSuggestions = MutableStateFlow<List<Account>>(emptyList())
+  val handleSuggestions: StateFlow<List<Account>> = _handleSuggestions
+
+  init {
+    viewModelScope.launch {
+      handleQueryFlow.debounce(DEBOUNCE_TIME_MS).collectLatest { prefix ->
+        if (prefix.isBlank()) {
+          _handleSuggestions.value = emptyList()
+          return@collectLatest
+        }
+
+        try {
+          handlesRepository.searchByHandle(prefix).collect { list ->
+            _handleSuggestions.value = list.take(30) // SUGGESTIONS_LIMIT
+          }
+        } catch (_: Exception) {
+          _handleSuggestions.value = emptyList()
+        }
+      }
+    }
+  }
 
   /**
    * Checks if an account has admin privileges for a discussion.
@@ -174,5 +208,21 @@ open class CreateSessionViewModel(
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     setGameQuery(query)
+  }
+
+  /**
+   * Searches for accounts by handle prefix.
+   *
+   * Updates handleSuggestions with matching accounts.
+   *
+   * @param prefix The handle prefix to search for
+   */
+  fun searchByHandle(prefix: String) {
+    if (prefix.isBlank()) {
+      _handleSuggestions.value = emptyList()
+      return
+    }
+
+    handleQueryFlow.tryEmit(prefix)
   }
 }
