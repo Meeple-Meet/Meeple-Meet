@@ -321,7 +321,6 @@ fun IconTextFieldNew(
     editable: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
-    textStyle: TextStyle = MaterialTheme.typography.bodySmall,
     modifier: Modifier
 ) {
   TextField(
@@ -333,7 +332,6 @@ fun IconTextFieldNew(
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-      textStyle = textStyle,
       colors =
           TextFieldDefaults.colors(
               // text
@@ -599,7 +597,10 @@ fun DatePickerDockedField(
         if (editable) {
           IconButton(
               onClick = { showDialogDate = true }, modifier = Modifier.testTag(testTagPick)) {
-                Icon(Icons.Default.CalendarToday, contentDescription = LABEL_DATE)
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = LABEL_DATE,
+                    tint = AppColors.neutral)
               }
         }
       },
@@ -710,7 +711,7 @@ fun TimePickerField(
           is24Hour = is24Hour,
           initialHour = value?.hour ?: Dimensions.Numbers.defaultTimeHour,
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
-  val text = value?.format(displayFormatter) ?: ""
+  val text = value?.format(displayFormatter) ?: LABEL_SELECT_TIME
 
   IconTextFieldNew(
       value = text,
@@ -721,7 +722,7 @@ fun TimePickerField(
         IconButton(
             onClick = { open = true },
             modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
-              Icon(Icons.Default.Timer, contentDescription = LABEL_TIME)
+              Icon(Icons.Default.Timer, contentDescription = LABEL_TIME, tint = AppColors.neutral)
             }
       },
       modifier = Modifier.fillMaxWidth(1f).testTag(SessionTestTags.TIME_FIELD))

@@ -741,7 +741,7 @@ fun UserChip(
   Surface(
       modifier = modifier,
       shape = appShapes.medium,
-      color = AppColors.secondary,
+      color = AppColors.primary,
       tonalElevation = Dimensions.Elevation.minimal,
       border = BorderStroke(Dimensions.DividerThickness.thin, AppColors.divider)) {
         Row(

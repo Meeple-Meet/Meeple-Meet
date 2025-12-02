@@ -35,8 +35,6 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
-import com.github.meeplemeet.ui.discussions.DEFAULT_SEARCH_ALPHA
-import com.github.meeplemeet.ui.discussions.MemberSearchField
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -172,12 +170,6 @@ fun CreateSessionScreen(
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
 
-  // Member search state
-  var memberSearchQuery by remember { mutableStateOf("") }
-  var memberSearchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
-  var isMemberSearching by remember { mutableStateOf(false) }
-  var memberDropdownExpanded by remember { mutableStateOf(false) }
-
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
@@ -195,26 +187,6 @@ fun CreateSessionScreen(
     if (form.proposedGameString.isNotBlank()) {
       runCatching { viewModel.setGameQuery(account, discussion, form.proposedGameString) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
-    }
-  }
-
-  // Handle member search
-  LaunchedEffect(memberSearchQuery) {
-    if (memberSearchQuery.isBlank()) {
-      memberSearchResults = emptyList()
-      memberDropdownExpanded = false
-      isMemberSearching = false
-      return@LaunchedEffect
-    }
-    isMemberSearching = true
-    viewModel.searchByHandle(memberSearchQuery)
-  }
-
-  LaunchedEffect(viewModel.handleSuggestions) {
-    viewModel.handleSuggestions.collect { list ->
-      memberSearchResults = list.filter { it.uid != account.uid && it !in form.participants }
-      memberDropdownExpanded = memberSearchResults.isNotEmpty() && memberSearchQuery.isNotBlank()
-      isMemberSearching = false
     }
   }
 
@@ -332,15 +304,7 @@ fun CreateSessionScreen(
                     form =
                         form.copy(
                             participants = form.participants.filterNot { it.uid == toRemove.uid })
-                  },
-                  memberSearchQuery = memberSearchQuery,
-                  onMemberSearchQueryChange = { memberSearchQuery = it },
-                  memberSearchResults = memberSearchResults,
-                  isMemberSearching = isMemberSearching,
-                  memberDropdownExpanded = memberDropdownExpanded,
-                  onMemberDropdownDismiss = { memberDropdownExpanded = false },
-                  onMemberFocusChanged = { isInputFocused = it },
-                  modifier = Modifier.testTag(SessionCreationTestTags.PARTICIPANTS_SECTION))
+                  })
             }
       }
 }
@@ -503,13 +467,6 @@ fun OrganisationSection(
  * @param onAdd Callback function to be invoked when a participant is added.
  * @param onRemove Callback function to be invoked when a participant is removed.
  * @param mainSectionTitle The title of the participants section.
- * @param memberSearchQuery Current member search query.
- * @param onMemberSearchQueryChange Callback when search query changes.
- * @param memberSearchResults List of search results.
- * @param isMemberSearching Whether a search is in progress.
- * @param memberDropdownExpanded Whether the dropdown is expanded.
- * @param onMemberDropdownDismiss Callback to dismiss the dropdown.
- * @param onMemberFocusChanged Callback when focus changes.
  * @param modifier Modifier for styling the composable.
  */
 @Composable
@@ -522,14 +479,7 @@ fun ParticipantsSection(
     maxPlayers: Int,
     onAdd: (Account) -> Unit,
     onRemove: (Account) -> Unit,
-    mainSectionTitle: String,
-    memberSearchQuery: String = "",
-    onMemberSearchQueryChange: (String) -> Unit = {},
-    memberSearchResults: List<Account> = emptyList(),
-    isMemberSearching: Boolean = false,
-    memberDropdownExpanded: Boolean = false,
-    onMemberDropdownDismiss: () -> Unit = {},
-    onMemberFocusChanged: (Boolean) -> Unit = {},
+    mainSectionTitle: String
 ) {
   SectionCard(
       modifier
@@ -561,34 +511,6 @@ fun ParticipantsSection(
 
         Spacer(Modifier.height(Dimensions.Spacing.medium))
 
-        // Member search field
-        MemberSearchField(
-            searchQuery = memberSearchQuery,
-            onQueryChange = onMemberSearchQueryChange,
-            searchResults = memberSearchResults,
-            isSearching = isMemberSearching,
-            dropdownExpanded = memberDropdownExpanded,
-            onDismiss = onMemberDropdownDismiss,
-            onFocusChanged = onMemberFocusChanged,
-            onSelect = { newAccount ->
-              onAdd(newAccount)
-              onMemberSearchQueryChange("")
-              onMemberDropdownDismiss()
-            })
-
-        Spacer(Modifier.height(Dimensions.Spacing.large))
-
-        HorizontalDivider(
-            modifier =
-                Modifier.fillMaxWidth(Dimensions.Fractions.topBarDivider)
-                    .padding(horizontal = Dimensions.Spacing.none)
-                    .align(Alignment.CenterHorizontally),
-            thickness = Dimensions.DividerThickness.standard,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = DEFAULT_SEARCH_ALPHA))
-
-        Spacer(Modifier.height(Dimensions.Spacing.large))
-
-        // All candidate chips
         UserChipsGrid(
             participants = allCandidates,
             onRemove = onRemove,
