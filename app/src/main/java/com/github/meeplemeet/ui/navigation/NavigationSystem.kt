@@ -151,7 +151,8 @@ enum class MeepleMeetScreen(
   EditSpaceRenter("Edit Space Renter"),
   NotificationsTab("Notifications tab"),
   Friends("Friends"),
-  OnBoarding("OnBoarding")
+  OnBoarding("OnBoarding"),
+  SessionViewer("Session Viewer"),
 }
 
 /**
