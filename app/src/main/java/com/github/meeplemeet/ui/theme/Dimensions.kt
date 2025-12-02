@@ -111,6 +111,9 @@ object Dimensions {
   // Blurring levels
   object Blurring {
     val none: Dp = 0.dp
+    val tiny: Dp = 1.dp
+    val extraSmall: Dp = 2.dp
+    val small: Dp = 4.dp
     val medium: Dp = 8.dp
   }
 
