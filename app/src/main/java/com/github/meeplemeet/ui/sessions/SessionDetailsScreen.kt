@@ -1,4 +1,5 @@
 package com.github.meeplemeet.ui.sessions
+//AI was used on this file
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke

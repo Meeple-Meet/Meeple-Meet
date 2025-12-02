@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.sessions
+//AI was used on this file
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
