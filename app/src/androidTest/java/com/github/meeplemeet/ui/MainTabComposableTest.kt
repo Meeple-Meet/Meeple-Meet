@@ -14,6 +14,7 @@ import com.github.meeplemeet.model.account.AccountNoUid
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
 import com.github.meeplemeet.ui.account.MainTab
+import com.github.meeplemeet.ui.account.MainTabTestTags
 import com.github.meeplemeet.ui.account.ProfileNavigationTestTags
 import com.github.meeplemeet.ui.account.NotificationsSectionTestTags
 import com.github.meeplemeet.ui.account.PreferencesSectionTestTags
@@ -96,7 +97,7 @@ class MainTabComposableTest : FirestoreTests() {
     } catch (_: AssertionError) {
       // node might already be visible or not in PUBLIC_INFO; try scrolling the main content
       try {
-        compose.onTag("main_tab_content_scroll").performScrollToNode(hasTestTag(tag))
+        compose.onTag(MainTabTestTags.CONTENT_SCROLL).performScrollToNode(hasTestTag(tag))
         compose.waitForIdle()
       } catch (_: AssertionError) {
         // node might be visible; ignore

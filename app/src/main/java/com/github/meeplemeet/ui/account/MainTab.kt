@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui.account
 
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -70,7 +69,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
@@ -85,6 +83,10 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+
+object MainTabTestTags {
+    const val CONTENT_SCROLL = "main_tab_content_scroll"
+}
 object PublicInfoTestTags {
 
   // ROOT
@@ -131,11 +133,6 @@ object PublicInfoTestTags {
 
   // DESCRIPTION
   const val INPUT_DESCRIPTION = "input_description"
-
-  // ------------------------------------------------------------
-  // TOAST (email verification toast inside EmailSection but triggered here)
-  // ------------------------------------------------------------
-  const val GLOBAL_TOAST = "global_toast"
 }
 
 object PrivateInfoTestTags {
@@ -143,8 +140,6 @@ object PrivateInfoTestTags {
   // ------------------------------------------------------------
   // PRIVATE INFO ROOT
   // ------------------------------------------------------------
-  const val PRIVATE_INFO = "private_info_root"
-  const val PRIVATE_INFO_TITLE = "private_info_title"
     const val COLLAPSABLE = "collapsable"
 
   // ------------------------------------------------------------
@@ -163,8 +158,6 @@ object PrivateInfoTestTags {
   // ------------------------------------------------------------
   // ROLES SECTION
   // ------------------------------------------------------------
-  const val ROLES_SECTION_TITLE = "roles_section_title"
-
   const val ROLE_SHOP_CHECKBOX = "role_checkbox_shop_owner"
   const val ROLE_SPACE_CHECKBOX = "role_checkbox_space_renter"
 
@@ -211,7 +204,7 @@ object MainTabUi {
   val AVATAR_SIZE = 130.dp
   val OFFSET_X = 4.dp
   val OFFSET_Y = (-4).dp
-  val MAX_NOTIF_COUNT = 9
+  const val MAX_NOTIF_COUNT = 9
 
   object Misc {
     const val DELETE_ACCOUNT = "Delete Account"
@@ -279,20 +272,46 @@ object MainTabUi {
     const val OPT_FRIENDS = "Accept notifications from friends only."
     const val OPT_NONE = "Accept notifications from no one."
   }
+
+    object SettingRows {
+        const val HEADER = "Settings"
+        const val PREFERENCES = "Preferences"
+        const val NOTIF = "Manage Notifications"
+        const val BUSINESSES = "Manage Your Businesses"
+        const val EMAIL = "Manage Your Email"
+    }
+
+    object PreferencesPage {
+        const val HEADER = "Theme"
+        const val OPT_LIGHT = "Light"
+        const val OPT_DARK = "Dark"
+        const val OPT_SYSTEM = "System Settings"
+    }
+
+    object Businesses {
+        const val HEADER = "Your Businesses"
+        const val TEXT_NO_ROLES = "You have no businesses. Select a role to get started!"
+        const val TEXT_ROLES_NO_BUSINESS = "You have no businesses yet."
+    }
 }
 
 sealed class ProfilePage {
   data object Main : ProfilePage()
-
   data object Preferences : ProfilePage()
-
   data object NotificationSettings : ProfilePage()
-
   data object Businesses : ProfilePage()
-
   data object Email : ProfilePage()
 }
 
+/**
+ * Main entry composable
+ * @param viewModel VM used by this screen
+ * @param account current user
+ * @param onFriendsClick callback upon clicking on the friend's button
+ * @param onNotificationClick callback upon clicking on notifications button
+ * @param onSignOutOrDel callback upon signing out/deleting account
+ * @param onDelete callback upon deleting account
+ */
 @Composable
 fun MainTab(
     viewModel: ProfileScreenViewModel,
@@ -354,31 +373,35 @@ fun MainTab(
   }
 }
 
+/**
+ * Handles the content of the preference sub-page
+ * @param preference User's theme preference
+ * @param onPreferenceChange callback upon preference change
+ */
 @Composable
 fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Unit) {
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
-        text = "Theme",
+        text = MainTabUi.PreferencesPage.HEADER,
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.testTag(PreferencesSectionTestTags.PREFERENCES_SECTION_TITLE))
 
     RadioOptionRow(
-        label = "Light",
+        label = MainTabUi.PreferencesPage.OPT_LIGHT,
         selected = preference == ThemeMode.LIGHT,
         modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_LIGHT),
         onClick = {
           onPreferenceChange(ThemeMode.LIGHT)
-          Log.d("Logging theme", preference.name)
         })
 
     RadioOptionRow(
-        label = "Dark",
+        label = MainTabUi.PreferencesPage.OPT_DARK,
         selected = preference == ThemeMode.DARK,
         modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_DARK),
         onClick = { onPreferenceChange(ThemeMode.DARK) })
 
     RadioOptionRow(
-        label = "System Settings",
+        label = MainTabUi.PreferencesPage.OPT_SYSTEM,
         selected = preference == ThemeMode.SYSTEM_DEFAULT,
         modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_SYSTEM),
         onClick = { onPreferenceChange(ThemeMode.SYSTEM_DEFAULT) })
@@ -393,14 +416,14 @@ fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account) {
         modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
         verticalAlignment = Alignment.CenterVertically) {
           Text(
-              text = "Your Businesses",
+              text = MainTabUi.Businesses.HEADER,
               style = MaterialTheme.typography.bodyLarge,
               fontSize = Dimensions.TextSize.largeHeading,
               modifier = Modifier.weight(1f))
         }
 
-    if (hasNoRoles(account)) Text(text = "You have no businesses. Select a role to get started!")
-    else Text(text = "You have no businesses yet.")
+    if (hasNoRoles(account)) Text(text = MainTabUi.Businesses.TEXT_NO_ROLES)
+    else Text(text = MainTabUi.Businesses.TEXT_ROLES_NO_BUSINESS)
     // TODO: Implement business management HERE
   }
 }   
@@ -416,7 +439,7 @@ private fun hasNoRoles(account: Account): Boolean {
 
 /**
  * Main tab of the profile screen. Displays all the account information that is important and
- * manageable by the user
+ * manageable by the user Also handles the navigation between the main and subpages
  *
  * @param viewModel the viewmodel used for this screen
  * @param account current user of the app
@@ -424,6 +447,7 @@ private fun hasNoRoles(account: Account): Boolean {
  * @param onNotificationClick callback to navigate to the notification's tab
  * @param onSignOutOrDel callback upon signing out
  * @param onDelete callback upon account deletion
+ * @param onNavigate callback upon navigation to a subpage
  */
 @Composable
 fun MainTabContent(
@@ -441,7 +465,7 @@ fun MainTabContent(
       modifier =
           Modifier.padding(Dimensions.Padding.xxLarge)
               .verticalScroll(rememberScrollState())
-              .testTag("main_tab_content_scroll"),
+              .testTag(MainTabTestTags.CONTENT_SCROLL),
       horizontalAlignment = Alignment.CenterHorizontally) {
         Box(modifier = Modifier.fillMaxWidth().testTag(PublicInfoTestTags.PUBLIC_INFO)) {
           Column(
@@ -467,50 +491,50 @@ fun MainTabContent(
         }
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
 
-        Text(text = "Settings", fontSize = 18.sp)
+        Text(text = MainTabUi.SettingRows.HEADER, fontSize = Dimensions.TextSize.heading)
 
         SettingsRow(
             icon = Icons.Default.Palette,
-            label = "Preferences",
+            label = MainTabUi.SettingRows.PREFERENCES,
             onClick = { onNavigate(ProfilePage.Preferences) },
             modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_PREFERENCES))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            thickness = 1.dp,
+            thickness = Dimensions.DividerThickness.standard,
             color = AppColors.textIcons.copy(alpha = 0.5f))
 
         SettingsRow(
             icon = Icons.Outlined.NotificationsNone,
-            label = "Manage Notifications",
+            label = MainTabUi.SettingRows.NOTIF,
             onClick = { onNavigate(ProfilePage.NotificationSettings) },
             modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_NOTIFICATIONS))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            thickness = 1.dp,
+            thickness = Dimensions.DividerThickness.standard,
             color = AppColors.textIcons.copy(alpha = 0.5f))
 
         SettingsRow(
             icon = Icons.Default.Store,
-            label = "Manage your Businesses",
+            label = MainTabUi.SettingRows.BUSINESSES,
             onClick = { onNavigate(ProfilePage.Businesses) },
             modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            thickness = 1.dp,
+            thickness = Dimensions.DividerThickness.standard,
             color = AppColors.textIcons.copy(alpha = 0.5f))
 
         SettingsRow(
             icon = Icons.Default.Email,
-            label = "Manage your Email",
+            label = MainTabUi.SettingRows.EMAIL,
             onClick = { onNavigate(ProfilePage.Email) },
             modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL))
 
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            thickness = 1.dp,
+            thickness = Dimensions.DividerThickness.standard,
             color = AppColors.textIcons.copy(alpha = 0.5f))
 
         Box(
@@ -543,6 +567,13 @@ fun MainTabContent(
       }
 }
 
+/**
+ * Composable used to display a settings row, they lead to the opening of a subpage
+ * @param icon Icon to display at the start of the row
+ * @param label Text to the right of the icon
+ * @param onClick callback upon clicking on the row
+ * @param modifier modifier applied to the composable (mainly used for testTags)
+ */
 @Composable
 fun SettingsRow(
     icon: ImageVector,
@@ -555,18 +586,25 @@ fun SettingsRow(
           modifier
               .fillMaxWidth()
               .clickable(onClick = onClick)
-              .padding(vertical = 14.dp, horizontal = 8.dp),
+              .padding(vertical = Dimensions.Padding.large, horizontal = Dimensions.Padding.medium),
       verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = AppColors.textIcons)
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(Dimensions.Padding.extraLarge))
         Text(label, color = AppColors.textIcons, modifier = Modifier.weight(1f))
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
       }
 }
 
+/**
+ * Handles sub-pages as it creates a fake "scaffold". The point is that it switches the
+ * page's content to only display what it's given and handles back navigation to the main tab of the screen
+ * @param title "Top bar" text
+ * @param onBack callback to return to the main page
+ * @param content Content of the subpage scaffold
+ */
 @Composable
 fun SubPageScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
-  Column(Modifier.fillMaxSize().padding(16.dp)) {
+  Column(Modifier.fillMaxSize().padding(Dimensions.Padding.extraLarge)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(
           onClick = onBack, modifier = Modifier.testTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)) {
@@ -575,7 +613,7 @@ fun SubPageScaffold(title: String, onBack: () -> Unit, content: @Composable () -
       Text(title, style = MaterialTheme.typography.headlineSmall)
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
 
     content()
   }
@@ -1172,7 +1210,7 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
               Modifier.background(
                       color = AppColors.textIconsFade,
                       shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-                  .padding(horizontal = Dimensions.Padding.extraLarge, vertical = 6.dp).testTag(
+                  .padding(horizontal = Dimensions.Padding.extraLarge, vertical = Dimensions.Padding.small).testTag(
                       PrivateInfoTestTags.EMAIL_TOAST)) {
             Text(
                 text = data.message,
@@ -1412,8 +1450,7 @@ fun RadioOptionRow(
       modifier =
           modifier
               .fillMaxWidth()
-              .clickable(onClick = onClick)
-              .padding(vertical = 0.dp, horizontal = 0.dp),
+              .clickable(onClick = onClick),
       verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = onClick)
         Spacer(Modifier.width(Dimensions.Spacing.medium))
