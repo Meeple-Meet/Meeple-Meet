@@ -1,5 +1,5 @@
 package com.github.meeplemeet.ui.sessions
-//AI was used on this file
+// AI was used on this file
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
@@ -64,7 +64,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
@@ -461,7 +460,7 @@ fun UserChipsGrid(
           .filter { m -> m.handle.contains(searchQuery, ignoreCase = true) }
 
   // Set up vertical scroll with a maximum height
-  val maxHeight = 300.dp
+  val maxHeight = Dimensions.ContainerSize.mapHeight
   val scrollState = rememberScrollState()
 
   Column(
