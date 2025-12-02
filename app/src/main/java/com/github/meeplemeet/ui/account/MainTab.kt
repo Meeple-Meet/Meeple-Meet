@@ -27,15 +27,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.AlertDialog
@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -241,11 +242,11 @@ object MainTabUi {
     const val EMAIL_INPUT_FIELD = "Email"
 
     const val TOAST_MSG = "Sent"
-    const val SEND_ICON_DESC = "Send verification meail"
+    const val SEND_ICON_DESC = "Resend Verification Email"
     const val VERIFIED_MSG = "Account Verified"
     const val UNVERIFIED_MSG = "Account not Verified"
     const val EMAIL_INVALID_MSG = "Invalid Email Format"
-    const val ROLES_TITLE = "I also want to:"
+    const val ROLES_TITLE = "Your Roles"
     const val SELL_ITEMS_LABEL = "Sell Items"
     const val SELL_ITEMS_DESC = "List your shop and games you sell"
 
@@ -343,44 +344,61 @@ fun MainTab(
 
 @Composable
 fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Unit) {
-  Column(
-      modifier =
-          Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-              .padding(Dimensions.Padding.xLarge)) {
-        Text(
-            text = "Theme",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.testTag(PreferencesSectionTestTags.PREFERENCES_SECTION_TITLE))
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = "Theme",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.testTag(PreferencesSectionTestTags.PREFERENCES_SECTION_TITLE))
 
-        RadioOptionRow(
-            label = "Light",
-            selected = preference == ThemeMode.LIGHT,
-            modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_LIGHT),
-            onClick = {
-              onPreferenceChange(ThemeMode.LIGHT)
-              Log.d("Logging theme", preference.name)
-            })
+    RadioOptionRow(
+        label = "Light",
+        selected = preference == ThemeMode.LIGHT,
+        modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_LIGHT),
+        onClick = {
+          onPreferenceChange(ThemeMode.LIGHT)
+          Log.d("Logging theme", preference.name)
+        })
 
-        RadioOptionRow(
-            label = "Dark",
-            selected = preference == ThemeMode.DARK,
-            modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_DARK),
-            onClick = { onPreferenceChange(ThemeMode.DARK) })
+    RadioOptionRow(
+        label = "Dark",
+        selected = preference == ThemeMode.DARK,
+        modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_DARK),
+        onClick = { onPreferenceChange(ThemeMode.DARK) })
 
-        RadioOptionRow(
-            label = "System Settings",
-            selected = preference == ThemeMode.SYSTEM_DEFAULT,
-            modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_SYSTEM),
-            onClick = { onPreferenceChange(ThemeMode.SYSTEM_DEFAULT) })
-      }
+    RadioOptionRow(
+        label = "System Settings",
+        selected = preference == ThemeMode.SYSTEM_DEFAULT,
+        modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_SYSTEM),
+        onClick = { onPreferenceChange(ThemeMode.SYSTEM_DEFAULT) })
+  }
 }
 
 @Composable
 fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account) {
   RolesSection(account = account, viewModel = viewModel)
+  Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = "Your Businesses",
+              style = MaterialTheme.typography.bodyLarge,
+              fontSize = Dimensions.TextSize.largeHeading,
+              modifier = Modifier.weight(1f))
+        }
 
-  // TODO: Implement business management here
+    if (hasNoRoles(account)) Text(text = "You have no businesses. Select a role to get started!")
+    else Text(text = "You have no businesses yet.")
+    // TODO: Implement business management HERE
+  }
+}
+
+/**
+ * Helper function to know the user's roles
+ * @param account user to examine his roles
+ */
+private fun hasNoRoles(account: Account): Boolean {
+  return !account.shopOwner && !account.spaceRenter
 }
 
 /**
@@ -404,19 +422,39 @@ fun MainTabContent(
     onDelete: () -> Unit,
     onNavigate: (ProfilePage) -> Unit
 ) {
-  var showDelDialog by mutableStateOf(false)
+  var showDelDialog by remember { mutableStateOf(false) }
 
   Column(
       modifier = Modifier.padding(Dimensions.Padding.xxLarge),
       horizontalAlignment = Alignment.CenterHorizontally) {
-        PublicInfo(account, viewModel, onFriendsClick, onNotificationClick, onSignOutOrDel)
+        Box(modifier = Modifier.fillMaxWidth().testTag(PublicInfoTestTags.PUBLIC_INFO)) {
+          Column(
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+              horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = Dimensions.Padding.xLarge),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      DisplayAvatar(viewModel, account)
 
+                      Spacer(modifier = Modifier.weight(1f))
+
+                      PublicInfoActions(
+                          account = account,
+                          viewModel = viewModel,
+                          onFriendsClick = onFriendsClick,
+                          onNotificationClick = onNotificationClick,
+                          onSignOut = onSignOutOrDel)
+                    }
+
+                PublicInfoInputs(account = account, viewModel = viewModel)
+              }
+        }
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
 
         Text(text = "Settings", fontSize = 18.sp)
 
         SettingsRow(
-            icon = Icons.Default.Settings,
+            icon = Icons.Default.Palette,
             label = "Preferences",
             onClick = { onNavigate(ProfilePage.Preferences) })
 
@@ -504,7 +542,7 @@ fun SettingsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
 fun SubPageScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
   Column(Modifier.fillMaxSize().padding(16.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+      IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
       Text(title, style = MaterialTheme.typography.headlineSmall)
     }
 
@@ -517,47 +555,6 @@ fun SubPageScaffold(title: String, onBack: () -> Unit, content: @Composable () -
 /////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC INFO SECTION
 //////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Public info section composable. One of 3 sections of the MainTab screen
- *
- * @param account Current user
- * @param viewModel viewModel used
- * @param onFriendsClick callback to navigate to the friend's tab
- * @param onNotificationClick callback to navigate to the notifications's tab
- * @param onSignOut callback to sign out
- */
-@Composable
-fun PublicInfo(
-    account: Account,
-    viewModel: ProfileScreenViewModel,
-    onFriendsClick: () -> Unit,
-    onNotificationClick: () -> Unit,
-    onSignOut: () -> Unit
-) {
-  Box(modifier = Modifier.fillMaxWidth().testTag(PublicInfoTestTags.PUBLIC_INFO)) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-          Row(
-              modifier = Modifier.fillMaxWidth().padding(start = Dimensions.Padding.xLarge),
-              verticalAlignment = Alignment.CenterVertically) {
-                DisplayAvatar(viewModel, account)
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                PublicInfoActions(
-                    account = account,
-                    viewModel = viewModel,
-                    onFriendsClick = onFriendsClick,
-                    onNotificationClick = onNotificationClick,
-                    onSignOut = onSignOut)
-              }
-
-          PublicInfoInputs(account = account, viewModel = viewModel)
-        }
-  }
-}
 
 /**
  * Composable representing all 3 buttons in the public info section
@@ -634,7 +631,7 @@ fun PublicInfoActions(
                                 if (notificationCount > MainTabUi.MAX_NOTIF_COUNT) "9+"
                                 else notificationCount.toString(),
                             color = AppColors.primary,
-                            fontSize = Dimensions.TextSize.tiny)
+                            fontSize = Dimensions.TextSize.small)
                       }
                 }
               }
@@ -1000,62 +997,6 @@ fun AvatarChooserDialog(
 /////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Second section of the MainTab's screen. This one handles information only the user has access to
- *
- * @param account Current user
- * @param viewModel viewmodel used by this screen
- */
-@Composable
-fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel) {
-
-  val uiState by viewModel.uiState.collectAsState()
-
-  var email by remember { mutableStateOf(account.email) }
-  val isVerified = uiState.isEmailVerified
-
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-              .background(AppColors.secondary)
-              .testTag(PrivateInfoTestTags.PRIVATE_INFO)) {
-        Column(
-            modifier = Modifier.padding(Dimensions.Padding.xxxLarge),
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-
-              // TITLE
-              Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = MainTabUi.PrivateInfo.TITLE,
-                    modifier = Modifier.testTag(PrivateInfoTestTags.PRIVATE_INFO_TITLE),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-              }
-
-              // EMAIL SECTION
-              EmailSection(
-                  email = email,
-                  isVerified = isVerified,
-                  onEmailChange = { newEmail -> email = newEmail },
-                  onFocusChanged = { focused ->
-                    if (!focused) {
-                      viewModel.setAccountEmail(account, email)
-                    }
-                  },
-                  onSendVerification = {
-                    viewModel.sendVerificationEmail()
-                    viewModel.refreshEmailVerificationStatus()
-                  })
-
-              // ROLES SECTION
-              RolesSection(account = account, viewModel = viewModel)
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-            }
-      }
-}
-
-/**
  * Handles everything related to the email field
  *
  * @param email email of the user
@@ -1078,79 +1019,89 @@ fun EmailSection(
 
   val emailError = showErrors && !isValidEmail(localEmail)
 
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-              .testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
-        Column {
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically) {
-                FocusableInputField(
-                    label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
-                    value = email,
-                    onValueChange = { new ->
-                      localEmail = new
-                      onEmailChange(new)
+  Box(modifier = Modifier.fillMaxWidth().testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically) {
+            FocusableInputField(
+                label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
+                value = email,
+                onValueChange = { new ->
+                  localEmail = new
+                  onEmailChange(new)
 
-                      showErrors = new.isNotBlank()
-                    },
-                    isError = emailError,
-                    trailingIcon = {
-                      if (!isVerified && !emailError) {
-                        IconButton(
-                            modifier =
-                                Modifier.padding(top = Dimensions.Padding.small)
-                                    .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
-                            onClick = {
-                              onSendVerification()
-                              toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
-                            }) {
-                              Icon(
-                                  imageVector = Icons.AutoMirrored.Filled.Send,
-                                  contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
-                                  tint = AppColors.textIcons)
-                            }
-                      }
-                    },
-                    onFocusChanged = { focused ->
-                      if (!focused && !emailError) {
-                        onFocusChanged(false)
-                      } else onFocusChanged(focused)
-                    },
-                    modifier =
-                        Modifier.weight(Dimensions.Weight.full)
-                            .testTag(PrivateInfoTestTags.EMAIL_INPUT))
-              }
-
-          Row {
-            if (emailError) {
-              Text(
-                  text = MainTabUi.PrivateInfo.EMAIL_INVALID_MSG,
-                  color = AppColors.negative,
-                  style = MaterialTheme.typography.bodySmall,
-                  modifier =
-                      Modifier.padding(
-                              start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
-                          .testTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL))
-            } else if (isVerified) {
-              Text(
-                  text = MainTabUi.PrivateInfo.VERIFIED_MSG,
-                  color = AppColors.affirmative,
-                  modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_VERIFIED_LABEL))
-            } else {
-              Text(
-                  text = MainTabUi.PrivateInfo.UNVERIFIED_MSG,
-                  color = AppColors.negative,
-                  modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL))
-            }
-
-            ToastHost(toast = toast, onToastFinished = { toast = null })
+                  showErrors = new.isNotBlank()
+                },
+                isError = emailError,
+                onFocusChanged = { focused ->
+                  if (!focused && !emailError) {
+                    onFocusChanged(false)
+                  } else onFocusChanged(focused)
+                },
+                modifier =
+                    Modifier.weight(Dimensions.Weight.full)
+                        .testTag(PrivateInfoTestTags.EMAIL_INPUT))
           }
+
+      Row(modifier = Modifier.fillMaxWidth()) {
+        if (emailError) {
+          Text(
+              text = MainTabUi.PrivateInfo.EMAIL_INVALID_MSG,
+              color = AppColors.negative,
+              style = MaterialTheme.typography.bodySmall,
+              modifier =
+                  Modifier.padding(
+                          start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
+                      .testTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL))
+        } else if (isVerified) {
+          Text(
+              text = MainTabUi.PrivateInfo.VERIFIED_MSG,
+              color = AppColors.affirmative,
+              modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_VERIFIED_LABEL))
+        } else {
+          Text(
+              text = MainTabUi.PrivateInfo.UNVERIFIED_MSG,
+              color = AppColors.negative,
+              modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL))
         }
       }
+
+      if (!isVerified && !emailError) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              Button(
+                  modifier =
+                      Modifier.padding(top = Dimensions.Padding.medium)
+                          .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
+                  shape = ButtonDefaults.shape,
+                  colors =
+                      ButtonColors(
+                          containerColor = AppColors.affirmative,
+                          disabledContainerColor = AppColors.affirmative,
+                          contentColor = AppColors.textIcons,
+                          disabledContentColor = AppColors.textIcons),
+                  onClick = {
+                    onSendVerification()
+                    toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
+                  }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null)
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                      Text(text = MainTabUi.PrivateInfo.SEND_ICON_DESC)
+                    }
+                  }
+              Box(
+                  modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small),
+                  contentAlignment = Alignment.Center) {
+                    ToastHost(toast = toast, onToastFinished = { toast = null })
+                  }
+            }
+      }
+    }
+  }
 }
 
 /** Helper function used to validate the user's email */
@@ -1165,39 +1116,37 @@ data class ToastData(
 /**
  * Handles the box of text that appears upon sending the verification email
  *
- * @param toast Toastdata
+ * @param toast Toast data
  * @param duration How long till the popup dissapears
  * @param onToastFinished What to do when the duration has elapsed
  */
 @Composable
 fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> Unit) {
-  Box(modifier = Modifier.fillMaxSize().testTag(PrivateInfoTestTags.EMAIL_TOAST)) {
-    toast?.let { data ->
-      var visible by remember(data.id) { mutableStateOf(true) }
+  toast?.let { data ->
+    var visible by remember(data.id) { mutableStateOf(true) }
 
-      LaunchedEffect(data.id) {
-        visible = true
-        delay(duration)
-        visible = false
-        onToastFinished()
-      }
+    LaunchedEffect(data.id) {
+      visible = true
+      delay(duration)
+      visible = false
+      onToastFinished()
+    }
 
-      AnimatedVisibility(
-          visible = visible,
-          enter = fadeIn() + scaleIn(),
-          exit = fadeOut() + scaleOut(),
-          modifier = Modifier.align(Alignment.BottomEnd).testTag(PublicInfoTestTags.GLOBAL_TOAST)) {
-            Box(
-                modifier =
-                    Modifier.background(
-                            color = AppColors.textIconsFade,
-                            shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-                        .padding(horizontal = Dimensions.Padding.extraLarge, vertical = 0.dp)) {
-                  Text(
-                      text = data.message,
-                      color = AppColors.primary,
-                      fontSize = Dimensions.TextSize.standard)
-                }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+    ) {
+      Box(
+          modifier =
+              Modifier.background(
+                      color = AppColors.textIconsFade,
+                      shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
+                  .padding(horizontal = Dimensions.Padding.extraLarge, vertical = 6.dp)) {
+            Text(
+                text = data.message,
+                color = AppColors.primary,
+                fontSize = Dimensions.TextSize.standard)
           }
     }
   }
@@ -1213,59 +1162,73 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
 @Composable
 fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
 
+  var expanded by remember { mutableStateOf(hasNoRoles(account)) }
+
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }
 
   var showDialog by remember { mutableStateOf(false) }
   var pendingAction by remember { mutableStateOf<RoleAction?>(null) }
 
-  Box(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.large),
-      contentAlignment = Alignment.CenterStart) {
-        Text(
-            text = MainTabUi.PrivateInfo.ROLES_TITLE,
-            style = MaterialTheme.typography.titleMedium,
-            fontSize = Dimensions.TextSize.largeHeading,
-            modifier =
-                Modifier.padding(top = Dimensions.Padding.small)
-                    .testTag(PrivateInfoTestTags.ROLES_SECTION_TITLE))
+  Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.large)) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = Dimensions.Padding.small),
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = MainTabUi.PrivateInfo.ROLES_TITLE,
+              style = MaterialTheme.typography.bodyLarge,
+              fontSize = Dimensions.TextSize.largeHeading,
+              modifier = Modifier.weight(1f))
+
+          Icon(
+              imageVector = Icons.Default.ChevronRight,
+              contentDescription = null,
+              modifier = Modifier.rotate(if (expanded) 270f else 90f))
+        }
+
+    AnimatedVisibility(visible = expanded) {
+      Column {
+        RoleCheckBox(
+            isChecked = isShopChecked,
+            onCheckedChange = { checked ->
+              if (!checked) {
+                pendingAction = RoleAction.ShopOff
+                showDialog = true
+              } else {
+                isShopChecked = true
+                viewModel.setAccountRole(account, isShopOwner = true, isSpaceRenter = isSpaceRented)
+              }
+            },
+            label = MainTabUi.PrivateInfo.SELL_ITEMS_LABEL,
+            description = MainTabUi.PrivateInfo.SELL_ITEMS_DESC,
+            testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
+
+        RoleCheckBox(
+            isChecked = isSpaceRented,
+            onCheckedChange = { checked ->
+              if (!checked) {
+                pendingAction = RoleAction.SpaceOff
+                showDialog = true
+              } else {
+                isSpaceRented = true
+                viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = true)
+              }
+            },
+            label = MainTabUi.PrivateInfo.RENT_SPACES_LABEL,
+            description = MainTabUi.PrivateInfo.RENT_SPACES_DESC,
+            testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
       }
+    }
+  }
 
-  RoleCheckBox(
-      isChecked = isShopChecked,
-      onCheckedChange = { checked ->
-        if (!checked) {
-          pendingAction = RoleAction.ShopOff
-          showDialog = true
-        } else {
-          isShopChecked = true
-          viewModel.setAccountRole(account, isShopOwner = true, isSpaceRenter = isSpaceRented)
-        }
-      },
-      label = MainTabUi.PrivateInfo.SELL_ITEMS_LABEL,
-      description = MainTabUi.PrivateInfo.SELL_ITEMS_DESC,
-      testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
-
-  RoleCheckBox(
-      isChecked = isSpaceRented,
-      onCheckedChange = { checked ->
-        if (!checked) {
-          pendingAction = RoleAction.SpaceOff
-          showDialog = true
-        } else {
-          isSpaceRented = true
-          viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = true)
-        }
-      },
-      label = MainTabUi.PrivateInfo.RENT_SPACES_LABEL,
-      description = MainTabUi.PrivateInfo.RENT_SPACES_DESC,
-      testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
-
-  // CONFIRMATION DIALOG
+  // Confirmation dialog
   if (showDialog && pendingAction != null) {
     RemoveCatalogDialog(
         visible = true,
-        action = pendingAction!!, // It's fine to use !! here as we check for null above
+        action = pendingAction!!,
         onConfirm = {
           when (pendingAction) {
             RoleAction.ShopOff -> {
@@ -1373,32 +1336,30 @@ fun NotificationSettingsSection(
     preference: NotificationSettings,
     onPreferenceChange: (NotificationSettings) -> Unit
 ) {
-  Column(
-      modifier =
-          Modifier.fillMaxWidth().clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))) {
-        Text(
-            text = MainTabUi.NotificationsSection.TITLE,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.testTag(NotificationsSectionTestTags.NOTIFICATION_SECTION_TITLE))
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = MainTabUi.NotificationsSection.TITLE,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.testTag(NotificationsSectionTestTags.NOTIFICATION_SECTION_TITLE))
 
-        RadioOptionRow(
-            label = MainTabUi.NotificationsSection.OPT_EVERY,
-            selected = preference == NotificationSettings.EVERYONE,
-            modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_EVERYONE),
-            onClick = { onPreferenceChange(NotificationSettings.EVERYONE) })
+    RadioOptionRow(
+        label = MainTabUi.NotificationsSection.OPT_EVERY,
+        selected = preference == NotificationSettings.EVERYONE,
+        modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_EVERYONE),
+        onClick = { onPreferenceChange(NotificationSettings.EVERYONE) })
 
-        RadioOptionRow(
-            label = MainTabUi.NotificationsSection.OPT_FRIENDS,
-            selected = preference == NotificationSettings.FRIENDS_ONLY,
-            modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_FRIENDS),
-            onClick = { onPreferenceChange(NotificationSettings.FRIENDS_ONLY) })
+    RadioOptionRow(
+        label = MainTabUi.NotificationsSection.OPT_FRIENDS,
+        selected = preference == NotificationSettings.FRIENDS_ONLY,
+        modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_FRIENDS),
+        onClick = { onPreferenceChange(NotificationSettings.FRIENDS_ONLY) })
 
-        RadioOptionRow(
-            label = MainTabUi.NotificationsSection.OPT_NONE,
-            selected = preference == NotificationSettings.NO_ONE,
-            modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_NONE),
-            onClick = { onPreferenceChange(NotificationSettings.NO_ONE) })
-      }
+    RadioOptionRow(
+        label = MainTabUi.NotificationsSection.OPT_NONE,
+        selected = preference == NotificationSettings.NO_ONE,
+        modifier = Modifier.testTag(NotificationsSectionTestTags.RADIO_NONE),
+        onClick = { onPreferenceChange(NotificationSettings.NO_ONE) })
+  }
 }
 
 /**
