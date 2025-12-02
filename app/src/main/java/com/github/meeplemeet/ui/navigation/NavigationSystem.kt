@@ -2,6 +2,7 @@ package com.github.meeplemeet.ui.navigation
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ChatBubbleOutline
@@ -13,16 +14,22 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavHostController
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.Dispatchers
@@ -193,7 +200,25 @@ fun BottomNavigationMenu(
                     val iconToUse =
                         if (screen == currentScreen) screen.iconSelected ?: screen.icon
                         else screen.icon
-                    iconToUse?.let { Icon(it, contentDescription = screen.title) }
+
+                    if (screen == MeepleMeetScreen.Profile) {
+                      val viewModel = LocalNavigationVM.current
+                      val unread by viewModel.unreadCount.collectAsState()
+                      BadgedBox(
+                          badge = {
+                            if (unread != 0) {
+                              Badge(modifier = Modifier.offset(y = (-Dimensions.Padding.small))) {
+                                Text(
+                                    if (unread > 9) "9+" else unread.toString(),
+                                    color = AppColors.textIcons)
+                              }
+                            }
+                          }) {
+                            Icon(iconToUse!!, contentDescription = screen.title)
+                          }
+                    } else {
+                      Icon(iconToUse!!, contentDescription = screen.title)
+                    }
                   },
                   selected = screen == currentScreen,
                   onClick = { onTabSelected(screen) },
