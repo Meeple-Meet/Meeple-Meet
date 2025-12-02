@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -55,7 +54,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -89,6 +91,7 @@ val EDITING_POPUP_WIDTH = 120.dp
 
 const val EDIT_MESSAGE_TEXT = "Edit"
 const val DELETE_MESSAGE_TEXT = "Delete"
+const val UNKNOWN_ERROR = "Unknown error"
 
 /** Test-tag constants for the Discussion screen and its poll sub-components. */
 object DiscussionTestTags {
@@ -203,7 +206,7 @@ fun DiscussionScreen(
     onCreateSessionClick: (Discussion) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
-  var messageText by remember { mutableStateOf("") }
+  var messageText by remember { mutableStateOf(TextFieldValue("")) }
   val listState = rememberLazyListState()
   var isSending by remember { mutableStateOf(false) }
   var discussionName by remember { mutableStateOf("Loading...") }
@@ -223,11 +226,11 @@ fun DiscussionScreen(
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
-      viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
-      messageText = ""
+      viewModel.sendMessageWithPhoto(discussion, account, messageText.text, context, path)
+      messageText = TextFieldValue("")
     } catch (e: Exception) {
       snackbarHostState.showSnackbar(
-          message = "Failed to send image: ${e.message ?: "Unknown error"}",
+          message = "Failed to send image: ${e.message ?: UNKNOWN_ERROR}",
           duration = SnackbarDuration.Long)
     } finally {
       isSending = false
@@ -390,123 +393,55 @@ fun DiscussionScreen(
                         } else {
                           Dimensions.Blurring.none
                         }
-                    val baseItemModifier = Modifier.fillMaxWidth().blur(itemBlurRadius)
 
-                    when {
-                      message.poll != null -> {
-                        val longPressModifier =
-                            if (isMine) {
-                              Modifier.combinedClickable(
-                                  interactionSource = remember { MutableInteractionSource() },
-                                  indication = null,
-                                  onClick = {},
-                                  onLongClick = {
-                                    selectedMessageForActions = message
-                                    selectedMessageAnchor = messageAnchors[message.uid]
-                                  })
-                            } else {
-                              Modifier
-                            }
-
-                        Box(
-                            modifier =
-                                baseItemModifier.then(longPressModifier).onGloballyPositioned {
-                                    coords ->
-                                  val pos: Offset = coords.positionInRoot()
-                                  val height = coords.size.height
-                                  val top = pos.y.toInt()
-                                  val bottom = top + height
-                                  val centerY = top + height / 2
-                                  messageAnchors[message.uid] = MessageAnchor(top, bottom, centerY)
-                                }) {
-                              PollBubble(
-                                  msgIndex = index,
-                                  poll = message.poll,
-                                  authorName = sender,
-                                  currentUserId = account.uid,
-                                  onVote = { optionIndex, isRemoving ->
-                                    if (isRemoving) {
-                                      viewModel.removeVoteFromPollAsync(
-                                          discussion.uid, message.uid, account, optionIndex)
-                                    } else {
-                                      viewModel.voteOnPollAsync(
-                                          discussion.uid, message.uid, account, optionIndex)
-                                    }
-                                  },
-                                  createdAt = message.createdAt.toDate(),
-                                  showProfilePicture = isLastFromSender)
-                            }
-                      }
-                      message.photoUrl != null -> {
-                        val longPressModifier =
-                            if (isMine) {
-                              Modifier.combinedClickable(
-                                  interactionSource = remember { MutableInteractionSource() },
-                                  indication = null,
-                                  onClick = {},
-                                  onLongClick = {
-                                    selectedMessageForActions = message
-                                    selectedMessageAnchor = messageAnchors[message.uid]
-                                  })
-                            } else {
-                              Modifier
-                            }
-
-                        Box(
-                            modifier =
-                                baseItemModifier.then(longPressModifier).onGloballyPositioned {
-                                    coords ->
-                                  val pos: Offset = coords.positionInRoot()
-                                  val height = coords.size.height
-                                  val top = pos.y.toInt()
-                                  val bottom = top + height
-                                  val centerY = top + height / 2
-                                  messageAnchors[message.uid] = MessageAnchor(top, bottom, centerY)
-                                }) {
-                              PhotoBubble(
-                                  message = message,
-                                  isMine = isMine,
-                                  senderName = sender,
-                                  showProfilePicture = isLastFromSender,
-                                  showSenderName = isFirstFromSender,
-                                  allMessages = messages,
-                                  userCache = userCache,
-                                  currentUserId = account.uid)
-                            }
-                      }
-                      else -> {
-                        val longPressModifier =
-                            if (isMine) {
-                              Modifier.combinedClickable(
-                                  interactionSource = remember { MutableInteractionSource() },
-                                  indication = null,
-                                  onClick = {},
-                                  onLongClick = {
-                                    selectedMessageForActions = message
-                                    selectedMessageAnchor = messageAnchors[message.uid]
-                                  })
-                            } else {
-                              Modifier
-                            }
-
-                        Box(
-                            modifier =
-                                baseItemModifier.then(longPressModifier).onGloballyPositioned {
-                                    coords ->
-                                  val pos: Offset = coords.positionInRoot()
-                                  val height = coords.size.height
-                                  val top = pos.y.toInt()
-                                  val bottom = top + height
-                                  val centerY = top + height / 2
-                                  messageAnchors[message.uid] = MessageAnchor(top, bottom, centerY)
-                                }) {
-                              ChatBubble(
-                                  message = message,
-                                  isMine = isMine,
-                                  senderName = sender,
-                                  showProfilePicture = isLastFromSender,
-                                  showSenderName = isFirstFromSender)
-                            }
+                    SelectableMessageContainer(
+                        message = message,
+                        isMine = isMine,
+                        blurRadius = itemBlurRadius,
+                        onAnchorChanged = { id, anchor -> messageAnchors[id] = anchor },
+                        onLongPress = { msg ->
+                          selectedMessageForActions = msg
+                          selectedMessageAnchor = messageAnchors[msg.uid]
+                        },
+                    ) {
+                      when {
+                        message.poll != null -> {
+                          PollBubble(
+                              msgIndex = index,
+                              poll = message.poll,
+                              authorName = sender,
+                              currentUserId = account.uid,
+                              onVote = { optionIndex, isRemoving ->
+                                if (isRemoving) {
+                                  viewModel.removeVoteFromPollAsync(
+                                      discussion.uid, message.uid, account, optionIndex)
+                                } else {
+                                  viewModel.voteOnPollAsync(
+                                      discussion.uid, message.uid, account, optionIndex)
+                                }
+                              },
+                              createdAt = message.createdAt.toDate(),
+                              showProfilePicture = isLastFromSender)
+                        }
+                        message.photoUrl != null -> {
+                          PhotoBubble(
+                              message = message,
+                              isMine = isMine,
+                              senderName = sender,
+                              showProfilePicture = isLastFromSender,
+                              showSenderName = isFirstFromSender,
+                              allMessages = messages,
+                              userCache = userCache,
+                              currentUserId = account.uid)
+                        }
+                        else -> {
+                          ChatBubble(
+                              message = message,
+                              isMine = isMine,
+                              senderName = sender,
+                              showProfilePicture = isLastFromSender,
+                              showSenderName = isFirstFromSender)
+                        }
                       }
                     }
 
@@ -544,7 +479,10 @@ fun DiscussionScreen(
                         selectedMessageForActions = null
                         selectedMessageAnchor = null
                         messageBeingEdited = actionMessage
-                        messageText = actionMessage.content
+
+                        val text = actionMessage.content
+                        messageText =
+                            TextFieldValue(text = text, selection = TextRange(text.length))
                       },
                       onDelete = {
                         selectedMessageForActions = null
@@ -554,8 +492,7 @@ fun DiscussionScreen(
                             viewModel.deleteMessage(discussion, actionMessage, account)
                           } catch (e: Exception) {
                             snackbarHostState.showSnackbar(
-                                message =
-                                    "Failed to delete message: ${e.message ?: "Unknown error"}",
+                                message = "Failed to delete message: ${e.message ?: UNKNOWN_ERROR}",
                                 duration = SnackbarDuration.Long)
                           }
                         }
@@ -711,8 +648,10 @@ fun DiscussionScreen(
 
                                 BasicTextField(
                                     value = messageText,
-                                    onValueChange = {
-                                      if (it.length <= MAX_MESSAGE_LENGTH) messageText = it
+                                    onValueChange = { newValue ->
+                                      if (newValue.text.length <= MAX_MESSAGE_LENGTH) {
+                                        messageText = newValue
+                                      }
                                     },
                                     modifier =
                                         Modifier.weight(1f)
@@ -725,7 +664,7 @@ fun DiscussionScreen(
                                     minLines = 1,
                                     maxLines = 5,
                                     decorationBox = { inner ->
-                                      if (messageText.isEmpty())
+                                      if (messageText.text.isEmpty())
                                           Text(
                                               "Message",
                                               style = MaterialTheme.typography.bodyMedium,
@@ -733,15 +672,16 @@ fun DiscussionScreen(
                                               color = MessagingColors.metadataText)
                                       inner()
                                     })
+
                                 CharacterCounter(
-                                    currentLength = messageText.length,
+                                    currentLength = messageText.text.length,
                                     maxLength = MAX_MESSAGE_LENGTH,
                                     testTag = DiscussionTestTags.CHAR_COUNTER)
                               }
 
                           FloatingActionButton(
                               onClick = {
-                                if (messageText.isNotBlank() && !isSending) {
+                                if (messageText.text.isNotBlank() && !isSending) {
                                   scope.launch {
                                     isSending = true
                                     try {
@@ -749,14 +689,14 @@ fun DiscussionScreen(
                                       if (editing != null) {
                                         // Editing an existing message
                                         viewModel.editMessage(
-                                            discussion, editing, account, messageText)
+                                            discussion, editing, account, messageText.text)
                                         messageBeingEdited = null
                                       } else {
                                         // Sending a brand new message
                                         viewModel.sendMessageToDiscussion(
-                                            discussion, account, messageText)
+                                            discussion, account, messageText.text)
                                       }
-                                      messageText = ""
+                                      messageText = TextFieldValue("") // clear field
                                     } catch (e: Exception) {
                                       snackbarHostState.showSnackbar(
                                           message =
@@ -1702,4 +1642,51 @@ fun MessageOptionsPopup(
       }
     }
   }
+}
+
+/**
+ * Container for a message that supports selection via long-press.
+ *
+ * @param message Message being displayed.
+ * @param isMine Whether the message was sent by the current user.
+ * @param blurRadius Blur radius to apply to the message content.
+ * @param onAnchorChanged Callback to report the message's anchor position.
+ * @param onLongPress Callback when the message is long-pressed.
+ * @param content Composable content of the message.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SelectableMessageContainer(
+    message: Message,
+    isMine: Boolean,
+    blurRadius: Dp,
+    onAnchorChanged: (String, MessageAnchor) -> Unit,
+    onLongPress: (Message) -> Unit,
+    content: @Composable () -> Unit,
+) {
+  val longPressModifier =
+      if (isMine) {
+        Modifier.combinedClickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {},
+            onLongClick = { onLongPress(message) })
+      } else {
+        Modifier
+      }
+
+  Box(
+      modifier =
+          Modifier.fillMaxWidth().blur(blurRadius).then(longPressModifier).onGloballyPositioned {
+              coords ->
+            val pos = coords.positionInRoot()
+            val height = coords.size.height
+            val top = pos.y.toInt()
+            val bottom = top + height
+            val centerY = top + height / 2
+            onAnchorChanged(
+                message.uid, MessageAnchor(top = top, bottom = bottom, centerY = centerY))
+          }) {
+        content()
+      }
 }
