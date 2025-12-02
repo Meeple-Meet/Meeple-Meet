@@ -2,6 +2,7 @@ package com.github.meeplemeet
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -83,7 +84,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /**
@@ -164,7 +169,10 @@ const val LOADING_SCREEN_TAG = "Loading Screen"
  * Make sure you have an Android emulator running or a physical device connected.
  */
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
+    // Simple coroutine scope for sync operations
+    val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     MapsInitializer.initialize(applicationContext)
     OfflineModeManager.start(applicationContext)
@@ -208,8 +216,24 @@ fun MeepleMeetApp(
   var spaceId by remember { mutableStateOf("") }
   var spaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
 
+
+
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
 
+    // ADD THIS: Track previous online state and sync when it changes from false to true
+    var wasOnline by remember { mutableStateOf(online) }
+    val activity = context as? MainActivity
+
+    LaunchedEffect(online) {
+        // Only sync when transitioning from offline to online
+        if (online && !wasOnline) {
+            Log.d("MeepleMeetApp", "Connection restored - triggering sync")
+            activity?.syncScope?.launch {
+                viewModel.syncAllPendingData()
+            }
+        }
+        wasOnline = online
+    }
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
     FirebaseProvider.auth.addAuthStateListener(listener)
