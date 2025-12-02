@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -112,7 +111,6 @@ object SessionDefaults {
   const val PARTICIPANTS_TITLE = "Participants"
   const val MEMBERS_SUFFIX = " members"
 
-  const val NO_GAME_LABEL = "No game selected"
   const val NO_PARTICIPANTS_LABEL = "No participants yet"
 
   const val LEAVE_LABEL = "Leave"
@@ -444,7 +442,7 @@ private fun SessionBasicInfoSection(
         Spacer(Modifier.width(Dimensions.Spacing.large))
 
         Text(
-            text = game?.name ?: SessionDefaults.NO_GAME_LABEL,
+            text = game.name,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
@@ -456,7 +454,7 @@ private fun SessionBasicInfoSection(
           Icon(
               imageVector = Icons.Default.Info,
               contentDescription = "Game details",
-              tint = MaterialTheme.colorScheme.onBackground)
+              tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
     }
@@ -616,12 +614,13 @@ private fun SessionParticipantRow(
       modifier =
           Modifier.fillMaxWidth()
               .padding(
-                  horizontal = Dimensions.Padding.extraMedium, vertical = Dimensions.Padding.small),
+                  horizontal = Dimensions.Padding.extraMedium,
+                  vertical = Dimensions.Padding.mediumSmall),
       verticalAlignment = Alignment.CenterVertically,
   ) {
     SessionParticipantAvatar(account = account)
 
-    Spacer(Modifier.width(Dimensions.Spacing.large))
+    Spacer(Modifier.width(Dimensions.Spacing.xxLarge))
 
     Column {
       Text(
@@ -825,9 +824,6 @@ object SessionPreviewMocks {
           photoUrl = "",
           handle = "")
 
-  // Mock Location (Inferred structure)
-  data class MockLocation(val name: String = "The Hexagon Cafe")
-
   // Mock Game
   val game =
       Game(
@@ -858,95 +854,6 @@ object SessionPreviewMocks {
 }
 
 // 2. COMPONENT PREVIEWS
-
-@Preview(showBackground = true, name = "Top Bar - Admin")
-@Composable
-private fun PreviewSessionTopBarAdmin() {
-  AppTheme {
-    SessionViewerTopBar(title = "Friday Night Catan", isAdmin = true, onBack = {}, onEditClick = {})
-  }
-}
-
-@Preview(showBackground = true, name = "Top Bar - Member")
-@Composable
-private fun PreviewSessionTopBarMember() {
-  AppTheme {
-    SessionViewerTopBar(title = "Regular Session", isAdmin = false, onBack = {}, onEditClick = {})
-  }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, name = "Basic Info Section")
-@Composable
-private fun PreviewBasicInfo() {
-  AppTheme {
-    // We need local dates for the preview helper
-    val date = LocalDate.now()
-    val time = LocalTime.of(19, 30)
-
-    SessionBasicInfoSection(
-        session = SessionPreviewMocks.session,
-        game = SessionPreviewMocks.game,
-        date = date,
-        time = time,
-        onShowGameInfo = {})
-  }
-}
-
-@Preview(showBackground = true, name = "Basic Info (No Game/Loc)")
-@Composable
-private fun PreviewBasicInfoEmpty() {
-  AppTheme {
-    val date = LocalDate.now()
-    val time = LocalTime.of(14, 0)
-
-    // Create a session with empty data
-    // Note: You might need to adjust this mocking based on your model's nullability
-    val emptySession =
-        SessionPreviewMocks.session.copy(
-            // Assuming your Location model allows empty names or you create a dummy one
-            // location = ...
-            )
-
-    SessionBasicInfoSection(
-        session = emptySession,
-        game = null, // No game loaded
-        date = date,
-        time = time,
-        onShowGameInfo = {})
-  }
-}
-
-@Preview(showBackground = true, name = "Participant Row")
-@Composable
-private fun PreviewParticipantRow() {
-  AppTheme {
-    Column {
-      SessionParticipantRow(account = SessionPreviewMocks.admin, isAdmin = true)
-      HorizontalDivider()
-      SessionParticipantRow(account = SessionPreviewMocks.user, isAdmin = false)
-    }
-  }
-}
-
-@Preview(showBackground = true, heightDp = 400, name = "Participants Section List")
-@Composable
-private fun PreviewParticipantsSection() {
-  AppTheme {
-    val participants =
-        List(30) { index ->
-          SessionPreviewMocks.user.copy(uid = "user$index", name = "Player $index")
-        }
-
-    SessionParticipantsSection(participants = participants, admins = listOf("user0", "user1"))
-  }
-}
-
-@Preview(showBackground = true, name = "Leave Button")
-@Composable
-private fun PreviewLeaveButton() {
-  AppTheme { SessionLeaveButton(onLeave = {}) }
-}
-
 @Composable
 private fun SessionViewerScreenPreview(
     account: Account,
