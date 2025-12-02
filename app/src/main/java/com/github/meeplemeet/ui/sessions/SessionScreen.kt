@@ -1,0 +1,1007 @@
+package com.github.meeplemeet.ui.sessions
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.sessions.Session
+import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.components.GameDetailsCard
+import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.ui.theme.Dimensions
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.TextStyle
+import java.util.Locale
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Test tags
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+object SessionViewerTestTags {
+  const val SCREEN_ROOT = "SESSION_VIEWER_SCREEN_ROOT"
+
+  const val TOP_BAR = "SESSION_VIEWER_TOP_BAR"
+  const val TOP_BAR_BACK = "SESSION_VIEWER_TOP_BAR_BACK"
+  const val TOP_BAR_EDIT = "SESSION_VIEWER_TOP_BAR_EDIT"
+
+  const val GAME_IMAGE = "SESSION_VIEWER_GAME_IMAGE"
+
+  const val BASIC_INFO_SECTION = "SESSION_VIEWER_BASIC_INFO"
+  const val PARTICIPANTS_SECTION = "SESSION_VIEWER_PARTICIPANTS_SECTION"
+
+  const val PARTICIPANTS_LIST = "SESSION_VIEWER_PARTICIPANTS_LIST"
+  const val SCROLLBAR_TRACK = "SESSION_VIEWER_SCROLLBAR_TRACK"
+  const val SCROLLBAR_THUMB = "SESSION_VIEWER_SCROLLBAR_THUMB"
+
+  const val LEAVE_BUTTON = "SESSION_VIEWER_LEAVE_BUTTON"
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Magic strings / numbers
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+object SessionDefaults {
+  const val BASIC_INFO_TITLE = "Basic Info"
+  const val PARTICIPANTS_TITLE = "Participants"
+  const val MEMBERS_SUFFIX = " members"
+
+  const val NO_GAME_LABEL = "No game selected"
+  const val NO_LOCATION_LABEL = "Location not set"
+  const val NO_PARTICIPANTS_LABEL = "No participants yet"
+
+  const val LEAVE_LABEL = "Leave"
+
+  const val NO_SESSION_TEXT = "No session available"
+  const val GAME_IMAGE_CONTENT_DESC = "Game image"
+
+  const val ADMIN_TEXT = "Admin"
+  const val MEMBER_TEXT = "Member"
+  const val USER_NAME_MISSING_AVATAR_PLACEHOLDER = "?"
+
+  object Layout {
+    val SCREEN_HORIZONTAL_PADDING = Dimensions.Spacing.extraLarge
+    val SCREEN_VERTICAL_PADDING = Dimensions.Spacing.medium
+    val SECTION_SPACING = Dimensions.Spacing.extraLarge
+    val BETWEEN_INFO_ITEMS = Dimensions.Spacing.large
+    val HEADER_IMAGE_HEIGHT = 180.dp
+    val PARTICIPANTS_LIST_HEIGHT = 250.dp
+  }
+
+  object Location {
+    const val MAX_LINES = 2
+  }
+
+  object Scrollbar {
+    val TRACK_WIDTH = 15.dp
+    val TRACK_PADDING = Dimensions.Padding.tiny
+    const val MIN_ITEMS_FOR_SCROLLBAR = 8
+    const val SCROLLBAR_ALPHA = 0.1f
+
+    const val EPS = 0.001f
+    const val MIN_SCROLLBAR_SIZE_PERCENTAGE = 0.15f
+    const val MAX_SCROLLBAR_SIZE_PERCENTAGE = 1f
+    const val MIN_COUNT_FOR_SCROLLBAR = 1
+  }
+}
+
+private data class ScrollMetrics(
+    val progress: Float,
+    val thumbFraction: Float,
+)
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Helpers
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Converts a Firebase Timestamp to LocalDate and LocalTime
+ *
+ * @param date The Firebase Timestamp to convert
+ * @return A Pair containing LocalDate and LocalTime
+ */
+private fun formatSessionDate(date: LocalDate): String {
+  val month = date.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+  val day = date.dayOfMonth
+  val suffix =
+      when {
+        day in 11..13 -> "th"
+        day % 10 == 1 -> "st"
+        day % 10 == 2 -> "nd"
+        day % 10 == 3 -> "rd"
+        else -> "th"
+      }
+  val yearPart = if (date.year == LocalDate.now().year) "" else ", ${date.year}"
+  return "$month $day$suffix$yearPart"
+}
+
+/**
+ * Formats a LocalTime to a 12-hour time string with AM/PM
+ *
+ * @param time The LocalTime to format
+ * @return A formatted time string
+ */
+private fun formatSessionTime(time: LocalTime): String {
+  val hour = time.hour
+  val minute = time.minute
+  val isAm = hour < 12
+  val hour12 =
+      when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+      }
+  val suffix = if (isAm) "AM" else "PM"
+  return "%d:%02d%s".format(hour12, minute, suffix)
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Main screen
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function to display the session screen.
+ *
+ * @param account The current user's account.
+ * @param discussion The discussion containing the session.
+ * @param onBack Callback for back navigation.
+ * @param onEditClick Callback for editing the session.
+ * @param viewModel The ViewModel for session data.
+ */
+@Composable
+fun SessionScreen(
+    account: Account,
+    discussion: Discussion,
+    onBack: () -> Unit,
+    onEditClick: () -> Unit,
+    viewModel: SessionViewModel = viewModel(key = discussion.uid),
+) {
+  val session: Session? = discussion.session
+
+  if (session == null) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      Text(
+          text = SessionDefaults.NO_SESSION_TEXT,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onBackground)
+    }
+    return
+  }
+
+  val (sessionDate, sessionTime) = timestampToLocal(session.date)
+
+  val gameUiState by viewModel.gameUIState.collectAsState()
+  var participants by remember { mutableStateOf<List<Account>>(emptyList()) }
+  var showGameDetails by remember { mutableStateOf(false) }
+
+  val isAdmin = discussion.admins.contains(account.uid)
+
+  LaunchedEffect(session.gameId) {
+    if (session.gameId.isNotBlank()) {
+      viewModel.getGameFromId(session.gameId)
+    }
+  }
+
+  LaunchedEffect(session.participants) {
+    participants =
+        if (session.participants.isNotEmpty()) {
+          RepositoryProvider.accounts.getAccounts(session.participants)
+        } else {
+          emptyList()
+        }
+  }
+
+  Scaffold(
+      topBar = {
+        SessionViewerTopBar(
+            title = session.name, isAdmin = isAdmin, onBack = onBack, onEditClick = onEditClick)
+      },
+      containerColor = MaterialTheme.colorScheme.background,
+      bottomBar = {
+        SessionLeaveButton(
+            onLeave = {
+              viewModel.removeUserFromSession(discussion, account, account)
+              onBack()
+            })
+      }) { innerPadding ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(
+                        horizontal = SessionDefaults.Layout.SCREEN_HORIZONTAL_PADDING,
+                        vertical = SessionDefaults.Layout.SCREEN_VERTICAL_PADDING)
+                    .testTag(SessionViewerTestTags.SCREEN_ROOT),
+            verticalArrangement = Arrangement.spacedBy(SessionDefaults.Layout.SECTION_SPACING)) {
+              SessionGameHeaderImage(game = gameUiState.fetchedGame)
+
+              SessionBasicInfoSection(
+                  session = session,
+                  game = gameUiState.fetchedGame,
+                  date = sessionDate,
+                  time = sessionTime,
+                  onShowGameInfo = { showGameDetails = true })
+
+              SessionParticipantsSection(participants = participants, admins = discussion.admins)
+            }
+
+        if (showGameDetails && gameUiState.fetchedGame != null) {
+          Dialog(onDismissRequest = { showGameDetails = false }) {
+            GameDetailsCard(game = gameUiState.fetchedGame!!, onClose = { showGameDetails = false })
+          }
+        }
+      }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Top bar
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function for the top app bar in the session viewer screen.
+ *
+ * @param title The title to display in the top bar.
+ * @param isAdmin Boolean indicating if the current user is an admin.
+ * @param onBack Callback for back navigation.
+ * @param onEditClick Callback for editing the session.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SessionViewerTopBar(
+    title: String,
+    isAdmin: Boolean,
+    onBack: () -> Unit,
+    onEditClick: () -> Unit,
+) {
+  CenterAlignedTopAppBar(
+      modifier = Modifier.testTag(SessionViewerTestTags.TOP_BAR),
+      colors =
+          TopAppBarDefaults.centerAlignedTopAppBarColors(
+              containerColor = MaterialTheme.colorScheme.background),
+      navigationIcon = {
+        IconButton(
+            onClick = onBack, modifier = Modifier.testTag(SessionViewerTestTags.TOP_BAR_BACK)) {
+              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+      },
+      title = {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis)
+      },
+      actions = {
+        if (isAdmin) {
+          IconButton(
+              onClick = onEditClick,
+              modifier = Modifier.testTag(SessionViewerTestTags.TOP_BAR_EDIT)) {
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit session")
+              }
+        }
+      })
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Header image
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function to display the session's game header image.
+ *
+ * @param game The game associated with the session.
+ */
+@Composable
+private fun SessionGameHeaderImage(game: Game?) {
+  val model = game?.imageURL.orEmpty()
+
+  // Always show something - either the image or a placeholder
+  if (model.isNotEmpty()) {
+    AsyncImage(
+        model = model,
+        contentDescription = game?.name ?: SessionDefaults.GAME_IMAGE_CONTENT_DESC,
+        contentScale = ContentScale.Crop,
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(SessionDefaults.Layout.HEADER_IMAGE_HEIGHT)
+                .clip(MaterialTheme.shapes.large)
+                .testTag(SessionViewerTestTags.GAME_IMAGE))
+  } else {
+    // Placeholder when no image is available
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(SessionDefaults.Layout.HEADER_IMAGE_HEIGHT)
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center) {
+          Icon(
+              imageVector = Icons.Default.SportsEsports,
+              contentDescription = "No game image",
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.size(Dimensions.IconSize.huge))
+        }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Basic info section
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function to display the basic information section of the session.
+ *
+ * @param session The session data.
+ * @param game The game associated with the session.
+ * @param date The date of the session.
+ * @param time The time of the session.
+ * @param onShowGameInfo Callback to show game details.
+ */
+@Composable
+private fun SessionBasicInfoSection(
+    session: Session,
+    game: Game?,
+    date: LocalDate,
+    time: LocalTime,
+    onShowGameInfo: () -> Unit,
+) {
+  Column(
+      modifier = Modifier.fillMaxWidth().testTag(SessionViewerTestTags.BASIC_INFO_SECTION),
+  ) {
+    Text(
+        text = SessionDefaults.BASIC_INFO_TITLE,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onBackground)
+
+    Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
+
+    // Game row with info icon positioned right after the text
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Icon(
+          imageVector = Icons.Default.SportsEsports,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.tertiary,
+          modifier = Modifier.size(Dimensions.IconSize.large))
+
+      Spacer(Modifier.width(Dimensions.Spacing.large))
+
+      Text(
+          text = game?.name ?: SessionDefaults.NO_GAME_LABEL,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onBackground,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.weight(1f, fill = false))
+
+      if (game != null) {
+        Spacer(Modifier.width(Dimensions.Spacing.small))
+        IconButton(onClick = onShowGameInfo, modifier = Modifier.size(Dimensions.IconSize.large)) {
+          Icon(
+              imageVector = Icons.Default.Info,
+              contentDescription = "Game details",
+              tint = MaterialTheme.colorScheme.onBackground)
+        }
+      }
+    }
+
+    Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
+
+    SessionInfoRow(
+        icon = Icons.Default.CalendarToday,
+        text = formatSessionDate(date),
+    )
+
+    Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
+
+    SessionInfoRow(
+        icon = Icons.Default.AccessTime,
+        text = formatSessionTime(time),
+    )
+
+    Spacer(Modifier.height(SessionDefaults.Layout.BETWEEN_INFO_ITEMS))
+
+    val locationName = session.location.name.ifBlank { SessionDefaults.NO_LOCATION_LABEL }
+
+    SessionInfoRow(
+        icon = Icons.Default.LocationOn,
+        text = locationName,
+        maxLines = SessionDefaults.Location.MAX_LINES,
+    )
+  }
+}
+
+/**
+ * Composable function to display a row of session information with an icon and text.
+ *
+ * @param icon The icon to display.
+ * @param text The text to display.
+ * @param maxLines The maximum number of lines for the text.
+ * @param trailing Optional trailing composable (e.g., button or icon).
+ */
+@Composable
+private fun SessionInfoRow(
+    icon: ImageVector,
+    text: String,
+    maxLines: Int = 1,
+    trailing: @Composable () -> Unit = {},
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.tertiary,
+        modifier = Modifier.size(Dimensions.IconSize.large))
+
+    Spacer(Modifier.width(Dimensions.Spacing.large))
+
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onBackground,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f))
+
+    trailing()
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Participants section
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function to display the participants section of the session.
+ *
+ * @param participants The list of participant accounts.
+ * @param admins The list of admin user IDs.
+ */
+@Composable
+private fun SessionParticipantsSection(
+    participants: List<Account>,
+    admins: List<String>,
+) {
+  val distinctParticipants = participants.distinctBy { it.uid }
+
+  Column(modifier = Modifier.fillMaxWidth().testTag(SessionViewerTestTags.PARTICIPANTS_SECTION)) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+          text = SessionDefaults.PARTICIPANTS_TITLE,
+          style = MaterialTheme.typography.titleMedium,
+          fontWeight = FontWeight.SemiBold,
+          color = MaterialTheme.colorScheme.onBackground)
+
+      Spacer(Modifier.weight(1f))
+
+      Text(
+          text = "${participants.size}${SessionDefaults.MEMBERS_SUFFIX}",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+    Spacer(Modifier.height(Dimensions.Spacing.large))
+
+    if (distinctParticipants.isEmpty()) {
+      Text(
+          text = SessionDefaults.NO_PARTICIPANTS_LABEL,
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant)
+      return
+    }
+
+    val listState = rememberLazyListState()
+
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(max = SessionDefaults.Layout.PARTICIPANTS_LIST_HEIGHT)
+                .testTag(SessionViewerTestTags.PARTICIPANTS_LIST)) {
+          LazyColumn(
+              state = listState,
+              modifier = Modifier.fillMaxSize(),
+          ) {
+            items(distinctParticipants, key = { it.uid }) { member ->
+              SessionParticipantRow(account = member, isAdmin = admins.contains(member.uid))
+            }
+          }
+
+          if (distinctParticipants.size >= SessionDefaults.Scrollbar.MIN_ITEMS_FOR_SCROLLBAR) {
+            SessionParticipantsScrollbar(
+                listState = listState,
+                itemCount = distinctParticipants.size,
+                modifier = Modifier.align(Alignment.CenterEnd))
+          }
+        }
+  }
+}
+
+/**
+ * Composable function to display a single participant row.
+ *
+ * @param account The participant's account.
+ * @param isAdmin Boolean indicating if the participant is an admin.
+ */
+@Composable
+private fun SessionParticipantRow(
+    account: Account,
+    isAdmin: Boolean,
+) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(
+                  horizontal = Dimensions.Padding.extraMedium, vertical = Dimensions.Padding.small),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    SessionParticipantAvatar(name = account.name)
+
+    Spacer(Modifier.width(Dimensions.Spacing.large))
+
+    Column {
+      Text(
+          text = if (isAdmin) SessionDefaults.ADMIN_TEXT else SessionDefaults.MEMBER_TEXT,
+          style = MaterialTheme.typography.labelSmall,
+          color =
+              if (isAdmin) MaterialTheme.colorScheme.tertiary
+              else MaterialTheme.colorScheme.onSurfaceVariant)
+
+      Text(
+          text = account.name,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onBackground,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis)
+    }
+  }
+}
+
+/**
+ * Composable function to display a participant's avatar.
+ *
+ * @param name The participant's name.
+ */
+@Composable
+private fun SessionParticipantAvatar(name: String) {
+  val initial =
+      remember(name) {
+        name.trim().firstOrNull()?.uppercase()
+            ?: SessionDefaults.USER_NAME_MISSING_AVATAR_PLACEHOLDER
+      }
+
+  Box(
+      modifier =
+          Modifier.size(Dimensions.AvatarSize.medium)
+              .clip(CircleShape)
+              .background(MaterialTheme.colorScheme.surfaceVariant),
+      contentAlignment = Alignment.Center) {
+        Text(
+            text = initial,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.inversePrimary)
+      }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Scrollbar
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function to display a custom scrollbar for the participants list.
+ *
+ * @param listState The state of the LazyColumn displaying participants.
+ * @param itemCount The total number of items in the list.
+ * @param modifier Modifier for styling the scrollbar.
+ */
+@Composable
+private fun SessionParticipantsScrollbar(
+    listState: LazyListState,
+    itemCount: Int,
+    modifier: Modifier = Modifier,
+) {
+  Box(
+      modifier =
+          modifier
+              .fillMaxHeight()
+              .width(SessionDefaults.Scrollbar.TRACK_WIDTH)
+              .padding(SessionDefaults.Scrollbar.TRACK_PADDING)
+              .clip(CircleShape)
+              .background(
+                  MaterialTheme.colorScheme.background.copy(
+                      alpha = SessionDefaults.Scrollbar.SCROLLBAR_ALPHA,
+                  ),
+              )
+              .testTag(SessionViewerTestTags.SCROLLBAR_TRACK),
+  ) {
+    val metrics by remember {
+      derivedStateOf {
+        val visibleItems =
+            listState.layoutInfo.visibleItemsInfo.size.coerceAtLeast(
+                SessionDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR,
+            )
+        val totalItems =
+            itemCount.coerceAtLeast(
+                SessionDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR,
+            )
+
+        val lastStartIndex =
+            (totalItems - visibleItems).coerceAtLeast(
+                SessionDefaults.Scrollbar.MIN_COUNT_FOR_SCROLLBAR,
+            )
+        val rawProgress =
+            if (totalItems <= visibleItems) 0f
+            else listState.firstVisibleItemIndex.toFloat() / lastStartIndex.toFloat()
+        val progress = rawProgress.coerceIn(0f, 1f)
+
+        val rawThumbFraction = visibleItems.toFloat() / totalItems.toFloat()
+        val thumbFraction =
+            rawThumbFraction.coerceIn(
+                SessionDefaults.Scrollbar.MIN_SCROLLBAR_SIZE_PERCENTAGE,
+                SessionDefaults.Scrollbar.MAX_SCROLLBAR_SIZE_PERCENTAGE,
+            )
+
+        ScrollMetrics(progress = progress, thumbFraction = thumbFraction)
+      }
+    }
+
+    val thumbFraction = metrics.thumbFraction
+    val remaining = 1f - thumbFraction
+
+    val rawTop = remaining * metrics.progress
+    val rawBottom = remaining * (1f - metrics.progress)
+
+    val topWeight = rawTop + SessionDefaults.Scrollbar.EPS
+    val bottomWeight = rawBottom + SessionDefaults.Scrollbar.EPS
+    val thumbWeight = thumbFraction + SessionDefaults.Scrollbar.EPS
+
+    Column(modifier = Modifier.fillMaxSize()) {
+      Spacer(modifier = Modifier.weight(topWeight))
+      Box(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .weight(thumbWeight)
+                  .clip(CircleShape)
+                  .background(MaterialTheme.colorScheme.background)
+                  .testTag(SessionViewerTestTags.SCROLLBAR_THUMB),
+      )
+      Spacer(modifier = Modifier.weight(bottomWeight))
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Leave button
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Composable function to display the leave session button.
+ *
+ * @param onLeave Callback for when the leave button is clicked.
+ */
+@Composable
+private fun SessionLeaveButton(onLeave: () -> Unit) {
+  Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    OutlinedButton(
+        onClick = onLeave,
+        shape = CircleShape,
+        border = BorderStroke(Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
+        modifier =
+            Modifier.wrapContentWidth()
+                .padding(vertical = Dimensions.Padding.extraMedium)
+                .testTag(SessionViewerTestTags.LEAVE_BUTTON),
+        colors =
+            ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+          Spacer(Modifier.width(Dimensions.Spacing.medium))
+          Text(SessionDefaults.LEAVE_LABEL, style = MaterialTheme.typography.bodyMedium)
+        }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * PREVIEWS
+ * Paste this at the bottom of com/github/meeplemeet/ui/sessions/SessionViewerScreen.kt
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+// 1. MOCK DATA HELPER
+// NOTE: Adjust the constructors below to match your actual Model definitions.
+object SessionPreviewMocks {
+  // Mock Account
+  val user =
+      Account(
+          uid = "user1",
+          name = "Alice Gamer",
+          email = "alice@example.com",
+          photoUrl = "",
+          handle = ""
+          // Add other required fields for Account
+          )
+
+  val admin =
+      Account(
+          uid = "admin1",
+          name = "Bob DungeonMaster",
+          email = "bob@example.com",
+          photoUrl = "",
+          handle = "")
+
+  // Mock Location (Inferred structure)
+  data class MockLocation(val name: String = "The Hexagon Cafe")
+
+  // Mock Game
+  val game =
+      Game(
+          uid = "game1",
+          name = "Catan",
+          imageURL = "https://example.com/catan.jpg",
+          description = "Trading and building",
+          minPlayers = 3,
+          maxPlayers = 4,
+          averagePlayTime = null,
+          recommendedPlayers = null,
+          minAge = null,
+          genres = emptyList()
+          // Add other required fields for Game
+          )
+
+  // Mock Session
+  // We use a dummy object if we can't instantiate the real Session easily,
+  // but here is a best-guess based on your code usage:
+  val session =
+      Session(
+          name = "Friday Night Catan",
+          gameId = "game1",
+          date = com.google.firebase.Timestamp.now(), // Assuming Firebase Timestamp
+          location = Location(name = "The Hexagon Cafe"), // Adjust this import/structure
+          participants = listOf("user1", "admin1"),
+      )
+}
+
+// 2. COMPONENT PREVIEWS
+
+@Preview(showBackground = true, name = "Top Bar - Admin")
+@Composable
+private fun PreviewSessionTopBarAdmin() {
+  AppTheme {
+    SessionViewerTopBar(title = "Friday Night Catan", isAdmin = true, onBack = {}, onEditClick = {})
+  }
+}
+
+@Preview(showBackground = true, name = "Top Bar - Member")
+@Composable
+private fun PreviewSessionTopBarMember() {
+  AppTheme {
+    SessionViewerTopBar(title = "Regular Session", isAdmin = false, onBack = {}, onEditClick = {})
+  }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, name = "Basic Info Section")
+@Composable
+private fun PreviewBasicInfo() {
+  AppTheme {
+    // We need local dates for the preview helper
+    val date = LocalDate.now()
+    val time = LocalTime.of(19, 30)
+
+    SessionBasicInfoSection(
+        session = SessionPreviewMocks.session,
+        game = SessionPreviewMocks.game,
+        date = date,
+        time = time,
+        onShowGameInfo = {})
+  }
+}
+
+@Preview(showBackground = true, name = "Basic Info (No Game/Loc)")
+@Composable
+private fun PreviewBasicInfoEmpty() {
+  AppTheme {
+    val date = LocalDate.now()
+    val time = LocalTime.of(14, 0)
+
+    // Create a session with empty data
+    // Note: You might need to adjust this mocking based on your model's nullability
+    val emptySession =
+        SessionPreviewMocks.session.copy(
+            // Assuming your Location model allows empty names or you create a dummy one
+            // location = ...
+            )
+
+    SessionBasicInfoSection(
+        session = emptySession,
+        game = null, // No game loaded
+        date = date,
+        time = time,
+        onShowGameInfo = {})
+  }
+}
+
+@Preview(showBackground = true, name = "Participant Row")
+@Composable
+private fun PreviewParticipantRow() {
+  AppTheme {
+    Column {
+      SessionParticipantRow(account = SessionPreviewMocks.admin, isAdmin = true)
+      HorizontalDivider()
+      SessionParticipantRow(account = SessionPreviewMocks.user, isAdmin = false)
+    }
+  }
+}
+
+@Preview(showBackground = true, heightDp = 400, name = "Participants Section List")
+@Composable
+private fun PreviewParticipantsSection() {
+  AppTheme {
+    val participants =
+        List(30) { index ->
+          SessionPreviewMocks.user.copy(uid = "user$index", name = "Player $index")
+        }
+
+    SessionParticipantsSection(participants = participants, admins = listOf("user0", "user1"))
+  }
+}
+
+@Preview(showBackground = true, name = "Leave Button")
+@Composable
+private fun PreviewLeaveButton() {
+  AppTheme { SessionLeaveButton(onLeave = {}) }
+}
+
+@Composable
+private fun SessionViewerScreenPreview(
+    account: Account,
+    session: Session,
+    game: Game?,
+    participants: List<Account>,
+    isAdmin: Boolean,
+    onBack: () -> Unit = {},
+    onEditClick: () -> Unit = {},
+) {
+  val (sessionDate, sessionTime) = timestampToLocal(session.date)
+
+  Scaffold(
+      topBar = {
+        SessionViewerTopBar(
+            title = session.name, isAdmin = isAdmin, onBack = onBack, onEditClick = onEditClick)
+      },
+      containerColor = MaterialTheme.colorScheme.background,
+      bottomBar = { SessionLeaveButton(onLeave = onBack) }) { innerPadding ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(
+                        horizontal = SessionDefaults.Layout.SCREEN_HORIZONTAL_PADDING,
+                        vertical = SessionDefaults.Layout.SCREEN_VERTICAL_PADDING),
+            verticalArrangement = Arrangement.spacedBy(SessionDefaults.Layout.SECTION_SPACING)) {
+              // ADD THIS LINE - it was missing!
+              SessionGameHeaderImage(game = game)
+
+              SessionBasicInfoSection(
+                  session = session,
+                  game = game,
+                  date = sessionDate,
+                  time = sessionTime,
+                  onShowGameInfo = {})
+              SessionParticipantsSection(
+                  participants = participants, admins = listOf("admin1", "admin2") // <-- IMPORTANT!
+                  )
+            }
+      }
+}
+
+@Preview(showBackground = true, name = "Full Screen Preview with placeholder")
+@Composable
+private fun PreviewFullScreenNoImage() {
+
+  // --- 1. Create two admins ---
+  val admin1 = SessionPreviewMocks.admin.copy(uid = "admin1", name = "Admin One")
+  val admin2 = SessionPreviewMocks.admin.copy(uid = "admin2", name = "Admin Two")
+
+  // --- 2. Create regular players ---
+  val otherPlayers =
+      List(6) { index -> SessionPreviewMocks.user.copy(uid = "user$index", name = "Player $index") }
+
+  // --- 3. Final participant list ---
+  val participants = listOf(admin1, admin2) + otherPlayers
+
+  // --- 4. Full-screen preview ---
+  AppTheme {
+    SessionViewerScreenPreview(
+        account = admin1,
+        session = SessionPreviewMocks.session,
+        game = SessionPreviewMocks.game.copy(imageURL = ""), // Show placeholder image
+        participants = participants,
+        isAdmin = true)
+  }
+}
