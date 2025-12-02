@@ -122,6 +122,25 @@ fun toTimestamp(
   }
 }
 
+/**
+ * Checks if the given date and time combination is in the past.
+ *
+ * @param date The date to check, or null.
+ * @param time The time to check, or null.
+ * @param zoneId The time zone to use for comparison (defaults to system default).
+ * @return true if the date/time is in the past, false otherwise (including if either is null).
+ */
+fun isDateTimeInPast(
+    date: LocalDate?,
+    time: LocalTime?,
+    zoneId: ZoneId = ZoneId.systemDefault()
+): Boolean {
+  if (date == null || time == null) return false
+  val selectedDateTime = date.atTime(time).atZone(zoneId)
+  val now = LocalDateTime.now(zoneId).atZone(zoneId)
+  return selectedDateTime.isBefore(now)
+}
+
 /* =======================================================================
  * Main screen
  * ======================================================================= */
@@ -193,7 +212,12 @@ fun CreateSessionScreen(
                       .testTag(SessionCreationTestTags.BUTTON_ROW),
               horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
                 // Whether form is ready for creation
-                val canCreate = form.title.isNotBlank() && form.date != null && form.time != null
+                val isDateTimeInPast = isDateTimeInPast(form.date, form.time)
+                val canCreate =
+                    form.title.isNotBlank() &&
+                        form.date != null &&
+                        form.time != null &&
+                        !isDateTimeInPast
 
                 // Reset form and go back on discard
                 DiscardButton(
@@ -422,8 +446,20 @@ fun OrganisationSection(
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Time picker for session time
-        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
+        Column {
+          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+            TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
+          }
+
+          // Show error if date/time is in the past
+          if (isDateTimeInPast(date, time)) {
+            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+            Text(
+                text = "Cannot create a session in the past",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = Dimensions.Padding.medium))
+          }
         }
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))

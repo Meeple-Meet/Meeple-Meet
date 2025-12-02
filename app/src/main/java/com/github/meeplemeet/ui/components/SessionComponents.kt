@@ -45,6 +45,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -550,7 +551,21 @@ fun AppDatePickerDialog(
     onDateSelected: (LocalDate) -> Unit,
     zoneId: ZoneId = ZoneId.systemDefault()
 ) {
-  val state = rememberDatePickerState(initialDisplayMode = DisplayMode.Picker)
+  // Create a SelectableDates object that only allows dates from today onwards
+  val selectableDates = remember {
+    object : SelectableDates {
+      override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+        val selectedDate =
+            Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.of("UTC")).toLocalDate()
+        val today = LocalDate.now(zoneId)
+        return !selectedDate.isBefore(today)
+      }
+    }
+  }
+
+  val state =
+      rememberDatePickerState(
+          initialDisplayMode = DisplayMode.Picker, selectableDates = selectableDates)
 
   DatePickerDialog(
       onDismissRequest = onDismiss,

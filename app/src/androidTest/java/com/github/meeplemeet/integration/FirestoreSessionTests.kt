@@ -186,14 +186,7 @@ class FirestoreSessionTests : FirestoreTests() {
   fun canRemoveUserFromSession() = runTest {
     // First create a session with two participants
     viewModel.createSession(
-        account1,
-        baseDiscussion,
-        "Catan Night",
-        "game123",
-        testTimestamp,
-        testLocation,
-        account1,
-        account2)
+        account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account2)
     advanceUntilIdle()
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
@@ -329,7 +322,7 @@ class FirestoreSessionTests : FirestoreTests() {
   @Test
   fun creatingSessionUpdatesDiscussionState() = runTest {
     viewModel.createSession(
-        account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
+        account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation)
     advanceUntilIdle()
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
@@ -408,7 +401,6 @@ class FirestoreSessionTests : FirestoreTests() {
         "game123",
         testTimestamp,
         testLocation,
-        account1,
         account3) // account3 not in discussion
     advanceUntilIdle()
 
@@ -803,14 +795,7 @@ class FirestoreSessionTests : FirestoreTests() {
   fun nonAdminCanLeaveSession() = runTest {
     // First create a session with two participants
     viewModel.createSession(
-        account1,
-        baseDiscussion,
-        "Catan Night",
-        "game123",
-        testTimestamp,
-        testLocation,
-        account1,
-        account2)
+        account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account2)
     advanceUntilIdle()
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)

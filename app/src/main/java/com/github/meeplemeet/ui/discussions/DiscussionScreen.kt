@@ -338,14 +338,16 @@ fun DiscussionScreen(
                         }
                   },
                   actions = {
+                    val isAdmin =
+                        discussion.admins.contains(account.uid) ||
+                            discussion.creatorId == account.uid
+                    val hasSession = discussion.session != null
+                    val inSession =
+                        hasSession && discussion.session!!.participants.contains(account.uid)
                     val icon =
                         when {
-                          discussion.session != null &&
-                              discussion.session.participants.contains(account.uid) ->
-                              Icons.Default.Games
-                          discussion.participants.size > 1 &&
-                              (discussion.admins.contains(account.uid) ||
-                                  discussion.creatorId == account.uid) -> Icons.Default.LibraryAdd
+                          !hasSession && isAdmin -> Icons.Default.LibraryAdd
+                          inSession -> Icons.Default.Games
                           else -> null
                         }
 

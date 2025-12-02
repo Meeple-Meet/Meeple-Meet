@@ -204,12 +204,6 @@ fun DiscussionDetailsScreen(
   LaunchedEffect(discussion.participants) {
     selectedMembers.clear()
     viewModel.getAccounts(discussion.participants) { accounts -> selectedMembers.addAll(accounts) }
-    /** Add current account only if not already present */
-    account.let {
-      if (selectedMembers.none { member -> member.uid == it.uid }) {
-        selectedMembers.add(it)
-      }
-    }
   }
 
   /** Live search effect */

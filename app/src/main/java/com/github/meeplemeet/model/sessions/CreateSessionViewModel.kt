@@ -76,13 +76,14 @@ open class CreateSessionViewModel(
                     requester.relationships[account.uid] == RelationshipStatus.FRIEND
           }
 
-      sessionRepository.updateSession(
+      sessionRepository.createSession(
           discussion.uid,
           name,
           gameId,
           date,
           location,
-          participantsToAdd.map { it.uid }.toSet().toList())
+          requester.uid,
+          *participantsToAdd.map { it.uid }.toTypedArray())
 
       // Send a join request to the rest
       participants
