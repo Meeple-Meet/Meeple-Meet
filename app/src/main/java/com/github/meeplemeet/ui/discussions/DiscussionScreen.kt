@@ -70,7 +70,7 @@ import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.discussions.EDIT_MESSAGE_MAX_THRESHOLD
+import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
@@ -466,7 +466,7 @@ fun DiscussionScreen(
                       actionMessage.senderId == account.uid &&
                           actionMessage.poll == null &&
                           actionMessage.photoUrl == null &&
-                          nowMs <= messageMs + EDIT_MESSAGE_MAX_THRESHOLD
+                          nowMs <= messageMs + EDIT_MAX_THRESHOLD
 
                   MessageOptionsPopup(
                       isEditable = isEditable,
