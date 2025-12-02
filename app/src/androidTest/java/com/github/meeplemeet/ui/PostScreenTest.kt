@@ -17,20 +17,20 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
-import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.ui.posts.COMMENT_TEXT_ZONE_PLACEHOLDER
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class PostScreenTest {
+class PostScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
@@ -75,7 +75,6 @@ class PostScreenTest {
   }
 
   /* ViewModels */
-  private lateinit var postRepo: PostRepository
   private lateinit var postVM: PostViewModel
   private lateinit var accountVM: FakeAccountViewModel
 
@@ -122,8 +121,8 @@ class PostScreenTest {
             comments = listOf(c1, c2))
     postByMarco = postByAlex.copy(id = "p2", authorId = marco.uid)
 
-    postRepo = PostRepository()
-    postVM = PostViewModel(postRepo)
+    // Use postRepository from FirestoreTests parent class
+    postVM = PostViewModel(postRepository)
     accountVM = FakeAccountViewModel()
   }
 

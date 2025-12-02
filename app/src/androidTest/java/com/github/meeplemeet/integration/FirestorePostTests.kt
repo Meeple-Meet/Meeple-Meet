@@ -16,7 +16,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotEquals
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,21 +25,10 @@ class FirestorePostTests : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
-  private lateinit var createVM: CreatePostViewModel
-  private lateinit var postVM: PostViewModel
-  private lateinit var overviewVM: PostOverviewViewModel
-
   private val testAccount1 =
       Account(uid = "user1", handle = "alice", name = "Alice", email = "alice@test.com")
   private val testAccount2 =
       Account(uid = "user2", handle = "bob", name = "Bob", email = "bob@test.com")
-
-  @Before
-  fun setup() {
-    createVM = CreatePostViewModel()
-    postVM = PostViewModel()
-    overviewVM = PostOverviewViewModel()
-  }
 
   @Test
   fun smoke_createAndDeletePost() = runTest {
@@ -185,16 +173,19 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun testCreatePostViewModelWithBlankTitle() = runBlocking {
+    val createVM = CreatePostViewModel()
     createVM.createPost("", "Content", testAccount1)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun testCreatePostViewModelWithBlankBody() = runBlocking {
+    val createVM = CreatePostViewModel()
     createVM.createPost("Title", "", testAccount1)
   }
 
   @Test
   fun testDeletePostAsAuthor() = runTest {
+    val postVM = PostViewModel()
     val post = postRepository.createPost("To Delete", "Content", testAccount1.uid)
     postVM.deletePost(testAccount1, post)
     advanceUntilIdle()
@@ -202,6 +193,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test(expected = PermissionDeniedException::class)
   fun testDeletePostAsNonAuthor() = runTest {
+    val postVM = PostViewModel()
     val post = postRepository.createPost("Protected Post", "Content", testAccount1.uid)
 
     postVM.deletePost(testAccount2, post)
@@ -209,6 +201,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test
   fun testAddCommentToPost() = runBlocking {
+    val postVM = PostViewModel()
     val post = postRepository.createPost("Post", "Content", testAccount1.uid)
     postVM.addComment(testAccount2, post, post.id, "VM Comment")
     delay(1000)
@@ -220,6 +213,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun testAddBlankComment() {
+    val postVM = PostViewModel()
     val post = runBlocking { postRepository.createPost("Post", "Content", testAccount1.uid) }
 
     postVM.addComment(testAccount2, post, post.id, "")
@@ -227,6 +221,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test
   fun testRemoveCommentAsAuthor() = runBlocking {
+    val postVM = PostViewModel()
     val post = postRepository.createPost("Post", "Content", testAccount1.uid)
     postRepository.addComment(post.id, "Comment", testAccount2.uid, post.id)
 
@@ -242,6 +237,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test(expected = PermissionDeniedException::class)
   fun testRemoveCommentAsNonAuthor() = runTest {
+    val postVM = PostViewModel()
     val post = postRepository.createPost("Post", "Content", testAccount1.uid)
     postRepository.addComment(post.id, "Comment", testAccount2.uid, post.id)
 
@@ -310,6 +306,7 @@ class FirestorePostTests : FirestoreTests() {
 
   @Test
   fun testGetPostsViewModelInitialState() = runTest {
+    val overviewVM = PostOverviewViewModel()
     // Verify initial state is empty list
     val initialPosts = overviewVM.posts.value
     assertTrue(initialPosts.isEmpty())

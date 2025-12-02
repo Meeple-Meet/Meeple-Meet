@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.offline
+// AI was used on this fille
 
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion

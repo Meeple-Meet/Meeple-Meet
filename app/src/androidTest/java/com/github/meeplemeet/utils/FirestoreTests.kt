@@ -10,6 +10,7 @@ import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
@@ -140,6 +141,9 @@ open class FirestoreTests {
       UiBehaviorConfig.hideBottomBarWhenInputFocused = false
       UiBehaviorConfig.clearFocusOnKeyboardHide = false
     }
+
+    // Set online mode for tests that expect Firestore interaction
+    OfflineModeManager.setInternetConnection(true)
 
     db = FirebaseProvider.db
     auth = FirebaseProvider.auth

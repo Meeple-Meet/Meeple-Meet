@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.offline
+// AI was used on this fille
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -101,6 +102,16 @@ object OfflineModeManager {
   val hasInternetConnection: StateFlow<Boolean> = _hasInternetConnection
 
   var dispatcher = Dispatchers.IO
+
+  /**
+   * Sets the internet connection state. For testing purposes only. In production, connection state
+   * is managed by the network callback in start().
+   *
+   * @param connected true if connected, false if offline
+   */
+  fun setInternetConnection(connected: Boolean) {
+    _hasInternetConnection.value = connected
+  }
 
   /**
    * Starts monitoring network connectivity changes.
