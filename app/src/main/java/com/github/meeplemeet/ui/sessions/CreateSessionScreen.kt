@@ -21,21 +21,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
+import com.github.meeplemeet.ui.discussions.DEFAULT_SEARCH_ALPHA
+import com.github.meeplemeet.ui.discussions.MemberSearchField
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
@@ -169,6 +172,12 @@ fun CreateSessionScreen(
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
 
+  // Member search state
+  var memberSearchQuery by remember { mutableStateOf("") }
+  var memberSearchResults by remember { mutableStateOf<List<Account>>(emptyList()) }
+  var isMemberSearching by remember { mutableStateOf(false) }
+  var memberDropdownExpanded by remember { mutableStateOf(false) }
+
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
@@ -186,6 +195,26 @@ fun CreateSessionScreen(
     if (form.proposedGameString.isNotBlank()) {
       runCatching { viewModel.setGameQuery(account, discussion, form.proposedGameString) }
           .onFailure { e -> showError(e.message ?: "Failed to run game search") }
+    }
+  }
+
+  // Handle member search
+  LaunchedEffect(memberSearchQuery) {
+    if (memberSearchQuery.isBlank()) {
+      memberSearchResults = emptyList()
+      memberDropdownExpanded = false
+      isMemberSearching = false
+      return@LaunchedEffect
+    }
+    isMemberSearching = true
+    viewModel.searchByHandle(memberSearchQuery)
+  }
+
+  LaunchedEffect(viewModel.handleSuggestions) {
+    viewModel.handleSuggestions.collect { list ->
+      memberSearchResults = list.filter { it.uid != account.uid && it !in form.participants }
+      memberDropdownExpanded = memberSearchResults.isNotEmpty() && memberSearchQuery.isNotBlank()
+      isMemberSearching = false
     }
   }
 
@@ -270,7 +299,7 @@ fun CreateSessionScreen(
                     .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .verticalScroll(rememberScrollState())
                     .testTag(SessionCreationTestTags.CONTENT_COLUMN),
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
 
               // Organisation section (title, game, date, time, location)
               OrganisationSection(
@@ -304,6 +333,13 @@ fun CreateSessionScreen(
                         form.copy(
                             participants = form.participants.filterNot { it.uid == toRemove.uid })
                   },
+                  memberSearchQuery = memberSearchQuery,
+                  onMemberSearchQueryChange = { memberSearchQuery = it },
+                  memberSearchResults = memberSearchResults,
+                  isMemberSearching = isMemberSearching,
+                  memberDropdownExpanded = memberDropdownExpanded,
+                  onMemberDropdownDismiss = { memberDropdownExpanded = false },
+                  onMemberFocusChanged = { isInputFocused = it },
                   modifier = Modifier.testTag(SessionCreationTestTags.PARTICIPANTS_SECTION))
             }
       }
@@ -413,15 +449,20 @@ fun OrganisationSection(
               MaterialTheme.colorScheme.background,
               MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
+        Text(text = "Basic Info", style = MaterialTheme.typography.titleMedium)
+
+        Spacer(Modifier.height(Dimensions.Spacing.small))
 
         // Title field for session name
-        IconTextField(
+        FocusableInputField(
             value = form.title,
             onValueChange = { onTitleChange(it) },
-            placeholder = TITLE_PLACEHOLDER,
-            editable = true,
+            label = { Text(text = TITLE_PLACEHOLDER) },
             leadingIcon = {
-              Icon(imageVector = Icons.Default.Edit, contentDescription = LABEL_EDIT_TITLE)
+              Icon(
+                  Icons.Default.Edit,
+                  contentDescription = LABEL_EDIT_TITLE,
+                  tint = MaterialTheme.colorScheme.onBackground)
             },
             modifier =
                 Modifier.fillMaxWidth()
@@ -435,38 +476,19 @@ fun OrganisationSection(
           SessionGameSearchBar(account, discussion, viewModel, gameUi.fetchedGame)
         }
 
-        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
+        Spacer(Modifier.height(Dimensions.Spacing.xLarge))
 
-        // Date picker for session date
-        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          DatePickerDockedField(
-              value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
-        }
+        Text(text = "Where & When", style = MaterialTheme.typography.titleMedium)
 
-        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
+        Spacer(Modifier.height(Dimensions.Spacing.small))
 
-        // Time picker for session time
-        Column {
-          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-            TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
-          }
-
-          // Show error if date/time is in the past
-          if (isDateTimeInPast(date, time)) {
-            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-            Text(
-                text = "Cannot create a session in the past",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = Dimensions.Padding.medium))
-          }
-        }
+        DateAndTimePicker(date, time, onDateChange, onFocusChanged, onTimeChange)
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Location search field with suggestions
         Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          SessionLocationSearchBar(account, discussion, viewModel)
+          SessionLocationSearchButton(account, discussion, viewModel)
         }
       }
 }
@@ -481,6 +503,13 @@ fun OrganisationSection(
  * @param onAdd Callback function to be invoked when a participant is added.
  * @param onRemove Callback function to be invoked when a participant is removed.
  * @param mainSectionTitle The title of the participants section.
+ * @param memberSearchQuery Current member search query.
+ * @param onMemberSearchQueryChange Callback when search query changes.
+ * @param memberSearchResults List of search results.
+ * @param isMemberSearching Whether a search is in progress.
+ * @param memberDropdownExpanded Whether the dropdown is expanded.
+ * @param onMemberDropdownDismiss Callback to dismiss the dropdown.
+ * @param onMemberFocusChanged Callback when focus changes.
  * @param modifier Modifier for styling the composable.
  */
 @Composable
@@ -494,6 +523,13 @@ fun ParticipantsSection(
     onAdd: (Account) -> Unit,
     onRemove: (Account) -> Unit,
     mainSectionTitle: String,
+    memberSearchQuery: String = "",
+    onMemberSearchQueryChange: (String) -> Unit = {},
+    memberSearchResults: List<Account> = emptyList(),
+    isMemberSearching: Boolean = false,
+    memberDropdownExpanded: Boolean = false,
+    onMemberDropdownDismiss: () -> Unit = {},
+    onMemberFocusChanged: (Boolean) -> Unit = {},
 ) {
   SectionCard(
       modifier
@@ -511,70 +547,45 @@ fun ParticipantsSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start,
         ) {
-          UnderlinedLabel("$mainSectionTitle:")
+          Column {
+            Text(mainSectionTitle, style = MaterialTheme.typography.titleMedium)
+            if (minPlayers > 0 && maxPlayers > 0)
+                Text(
+                    "Recommended: $minPlayers - $maxPlayers",
+                    fontStyle = FontStyle.Italic,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textIconsFade)
+          }
           Spacer(Modifier.width(Dimensions.Spacing.medium))
-          CountBubble(
-              count = selected.size,
-              modifier =
-                  Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.surface)
-                      .border(
-                          Dimensions.DividerThickness.standard,
-                          MaterialTheme.colorScheme.outline,
-                          CircleShape)
-                      .padding(
-                          horizontal = Dimensions.Padding.extraMedium,
-                          vertical = CountBubbleVerticalPadding))
         }
-        Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
 
-        // Slider row
-        if (minPlayers > 0 && maxPlayers > 0) {
-          Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-              modifier = Modifier.fillMaxWidth()) {
-                CountBubble(
-                    count = minPlayers,
-                    modifier =
-                        Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(
-                                Dimensions.DividerThickness.standard,
-                                MaterialTheme.colorScheme.outline,
-                                CircleShape)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraMedium,
-                                vertical = CountBubbleVerticalPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.medium))
 
-                DiscretePillSlider(
-                    range = (minPlayers - 1f)..(maxPlayers + 1f),
-                    values = minPlayers.toFloat()..maxPlayers.toFloat(),
-                    steps = (maxPlayers - minPlayers + 1).coerceAtLeast(0),
-                    modifier = Modifier.weight(1f),
-                    sliderModifier =
-                        Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraMedium,
-                                vertical = CountBubbleVerticalPadding))
+        // Member search field
+        MemberSearchField(
+            searchQuery = memberSearchQuery,
+            onQueryChange = onMemberSearchQueryChange,
+            searchResults = memberSearchResults,
+            isSearching = isMemberSearching,
+            dropdownExpanded = memberDropdownExpanded,
+            onDismiss = onMemberDropdownDismiss,
+            onFocusChanged = onMemberFocusChanged,
+            onSelect = { newAccount ->
+              onAdd(newAccount)
+              onMemberSearchQueryChange("")
+              onMemberDropdownDismiss()
+            })
 
-                CountBubble(
-                    count = maxPlayers,
-                    modifier =
-                        Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(
-                                Dimensions.DividerThickness.standard,
-                                MaterialTheme.colorScheme.outline,
-                                CircleShape)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraMedium,
-                                vertical = CountBubbleVerticalPadding))
-              }
-        }
+        Spacer(Modifier.height(Dimensions.Spacing.large))
+
+        HorizontalDivider(
+            modifier =
+                Modifier.fillMaxWidth(Dimensions.Fractions.topBarDivider)
+                    .padding(horizontal = Dimensions.Spacing.none)
+                    .align(Alignment.CenterHorizontally),
+            thickness = Dimensions.DividerThickness.standard,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = DEFAULT_SEARCH_ALPHA))
+
         Spacer(Modifier.height(Dimensions.Spacing.large))
 
         // All candidate chips

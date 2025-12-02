@@ -8,8 +8,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
@@ -35,14 +34,13 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
@@ -65,6 +63,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
@@ -100,6 +99,8 @@ import java.util.Calendar
 
 // Object holding test tags for UI testing purposes.
 object SessionTestTags {
+  const val LOCATION_PICKER_DIALOG = "location_picker_dialog"
+  const val LOCATION_PICKER_BUTTON = "location_picker_button"
   const val TITLE = "session_title"
   const val PROPOSED_GAME = "proposed_game"
   const val MIN_PLAYERS = "min_players"
@@ -336,7 +337,6 @@ fun SessionDetailsScreen(
  * Sub-components
  * ======================================================================= */
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ParticipantsSection(
     form: SessionForm,
@@ -429,7 +429,7 @@ fun ParticipantsSection(
 }
 
 /**
- * Component used to display the participants in a clean and flexible box Each chip shows a
+ * Component used to display the participants in a scrollable vertical list. Each chip shows a
  * participant name and optionally a remove button for admins.
  *
  * @param participants List of participants to display
@@ -438,7 +438,6 @@ fun ParticipantsSection(
  * @param account The current user that's viewing the session details
  * @param editable Whether the current user can edit (remove) participants
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UserChipsGrid(
     participants: List<Account>,
@@ -460,96 +459,84 @@ fun UserChipsGrid(
           .filter { m -> participants.none { it.uid == m.uid } }
           .filter { m -> m.handle.contains(searchQuery, ignoreCase = true) }
 
-  // Set up vertical scroll with a maximum height of 3 rows of chips.
-  val chipHeight = Dimensions.ButtonSize.medium
-  val chipSpacing = Dimensions.Spacing.medium
-  val maxRows = 3
-  val maxHeight = (chipHeight * maxRows) + (chipSpacing * (maxRows - 1))
+  // Set up vertical scroll with a maximum height
+  val maxHeight = 300.dp
   val scrollState = rememberScrollState()
 
-  Box(modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState)) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-        // Remove scrollable from here; vertical scroll applied to parent Box
-        modifier = Modifier.fillMaxWidth()) {
-          // Existing participant chips
-          participants.forEach { p ->
-            UserChip(
-                user = p,
-                modifier = Modifier.testTag(SessionTestTags.chipsTag(p.uid)),
-                onRemove = { if (editable) onRemove(p) },
-                account = account,
-                showRemoveBTN = editable)
-          }
+  Column(
+      modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+        // Existing participant chips - now full width rectangles
+        participants.forEach { p ->
+          UserChip(
+              user = p,
+              modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.chipsTag(p.uid)),
+              onRemove = { if (editable) onRemove(p) },
+              account = account,
+              showRemoveBTN = editable)
+        }
 
-          // "+" button: admins only, disappears when full
-          val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
-          if (canAdd) {
-            Box(
+        // "+" button: admins only, disappears when full
+        val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
+        if (canAdd) {
+          Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { showAddMenu = true },
                 modifier =
-                    Modifier.background(AppColors.primary)
-                        .padding(
-                            horizontal = Dimensions.Spacing.large,
-                            vertical =
-                                Dimensions.Padding
-                                    .mediumSmall) // mimic chip padding to vertically align elements
-                ) {
-                  IconButton(
-                      onClick = { showAddMenu = true },
+                    Modifier.fillMaxWidth()
+                        .height(Dimensions.ButtonSize.standard)
+                        .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON),
+                shape = appShapes.medium,
+                border = BorderStroke(Dimensions.DividerThickness.standard, AppColors.divider),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        containerColor = AppColors.primary, contentColor = AppColors.textIcons)) {
+                  Icon(
+                      imageVector = Icons.Default.Add,
+                      contentDescription = "Add participant",
+                      modifier = Modifier.size(Dimensions.IconSize.medium))
+                  Spacer(Modifier.width(Dimensions.Spacing.medium))
+                  Text("Add Participant", style = MaterialTheme.typography.bodyMedium)
+                }
+
+            DropdownMenu(
+                expanded = showAddMenu,
+                onDismissRequest = { showAddMenu = false },
+                modifier = Modifier.background(AppColors.primary).fillMaxWidth(0.9f)) {
+                  // Search (by handle only)
+                  FocusableInputField(
+                      value = searchQuery,
+                      onValueChange = { searchQuery = it },
+                      placeholder = { Text(PLACEHOLDER_SEARCH, color = AppColors.textIconsFade) },
+                      singleLine = true,
                       modifier =
-                          Modifier.size(Dimensions.Spacing.xxxLarge)
-                              .border(
-                                  Dimensions.DividerThickness.standard,
-                                  AppColors.divider,
-                                  CircleShape)
-                              .clip(CircleShape)
-                              .background(AppColors.primary)
-                              .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON)) {
-                        Text(BUTTON_ADD, color = AppColors.textIcons, fontWeight = FontWeight.Bold)
-                      }
+                          Modifier.padding(horizontal = Dimensions.Spacing.large)
+                              .fillMaxWidth()
+                              .onFocusChanged { onFocusChanged(it.isFocused) }
+                              .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
 
-                  DropdownMenu(
-                      expanded = showAddMenu,
-                      onDismissRequest = { showAddMenu = false },
-                      modifier = Modifier.background(AppColors.primary),
-                  ) {
-                    // Search (by handle only)
-                    FocusableInputField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text(PLACEHOLDER_SEARCH, color = AppColors.textIconsFade) },
-                        singleLine = true,
-                        modifier =
-                            Modifier.padding(horizontal = Dimensions.Spacing.large)
-                                .fillMaxWidth()
-                                .onFocusChanged { onFocusChanged(it.isFocused) }
-                                .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
+                  Spacer(Modifier.height(Dimensions.Spacing.small))
 
-                    Spacer(Modifier.height(Dimensions.Spacing.small))
-
-                    // Candidates list
-                    filteredCandidates.forEach { member ->
-                      DropdownMenuItem(
-                          onClick = {
-                            showAddMenu = false
-                            onAdd(member)
-                          },
-                          modifier =
-                              Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
-                          text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                              AvatarBubble(member.name)
-                              Spacer(Modifier.width(Dimensions.Spacing.large))
-                              Text(member.handle, color = AppColors.textIcons)
-                            }
-                          })
-                    }
+                  // Candidates list
+                  filteredCandidates.forEach { member ->
+                    DropdownMenuItem(
+                        onClick = {
+                          showAddMenu = false
+                          onAdd(member)
+                        },
+                        modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
+                        text = {
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                            AvatarBubble(member.name)
+                            Spacer(Modifier.width(Dimensions.Spacing.large))
+                            Text(member.handle, color = AppColors.textIcons)
+                          }
+                        })
                   }
                 }
           }
         }
-  }
+      }
 }
 
 @Composable
@@ -736,7 +723,7 @@ fun Title(
 }
 
 /**
- * Composable used for the individual UserChip
+ * Composable used for the individual UserChip - now a full-width rectangular item
  *
  * @param user User's account (needed for his name and handle)
  * @param onRemove Callback fn used to remove the user
@@ -751,43 +738,64 @@ fun UserChip(
     modifier: Modifier = Modifier,
     showRemoveBTN: Boolean = false
 ) {
-  InputChip(
-      selected = false,
-      onClick = {},
-      label = { Text(text = user.name, style = MaterialTheme.typography.bodySmall) },
-      avatar = {
-        Box(
-            modifier =
-                Modifier.size(Dimensions.IconSize.small.plus(Dimensions.Spacing.extraSmall))
-                    .clip(CircleShape)
-                    .background(Color.LightGray),
-            contentAlignment = Alignment.Center) {
-              Text(
-                  text = user.name.firstOrNull()?.toString() ?: "A",
-                  color = AppColors.focus,
-                  fontWeight = FontWeight.Bold)
-            }
-      },
-      trailingIcon = {
-        if (showRemoveBTN && account.handle != user.handle) {
-          IconButton(
-              onClick = onRemove,
-              modifier =
-                  Modifier.size(Dimensions.IconSize.medium)
-                      .testTag(SessionTestTags.removeParticipantTag(user.name))) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove participant",
-                    tint = AppColors.negative)
-              }
-        }
-      },
+  Surface(
       modifier = modifier,
-      colors =
-          InputChipDefaults.inputChipColors(
-              labelColor = AppColors.textIcons,
-          ),
-      shape = appShapes.extraLarge)
+      shape = appShapes.medium,
+      color = AppColors.secondary,
+      tonalElevation = Dimensions.Elevation.minimal,
+      border = BorderStroke(Dimensions.DividerThickness.thin, AppColors.divider)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+              // Avatar and name
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+                  modifier = Modifier.weight(1f)) {
+                    // Avatar
+                    Box(
+                        modifier =
+                            Modifier.size(Dimensions.AvatarSize.small)
+                                .clip(CircleShape)
+                                .background(Color.LightGray),
+                        contentAlignment = Alignment.Center) {
+                          Text(
+                              text = user.name.firstOrNull()?.toString() ?: "A",
+                              color = AppColors.focus,
+                              fontWeight = FontWeight.Bold,
+                              style = MaterialTheme.typography.bodyMedium)
+                        }
+
+                    // Name and handle
+                    Column {
+                      Text(
+                          text = user.name,
+                          style = MaterialTheme.typography.bodyMedium,
+                          color = AppColors.textIcons,
+                          fontWeight = FontWeight.Medium)
+                      Text(
+                          text = "@${user.handle}",
+                          style = MaterialTheme.typography.bodySmall,
+                          color = AppColors.textIconsFade)
+                    }
+                  }
+
+              // Remove button
+              if (showRemoveBTN && account.handle != user.handle) {
+                IconButton(
+                    onClick = onRemove,
+                    modifier =
+                        Modifier.size(Dimensions.IconSize.large)
+                            .testTag(SessionTestTags.removeParticipantTag(user.name))) {
+                      Icon(
+                          imageVector = Icons.Default.Close,
+                          contentDescription = "Remove participant",
+                          tint = AppColors.negative)
+                    }
+              }
+            }
+      }
 }
 
 /**

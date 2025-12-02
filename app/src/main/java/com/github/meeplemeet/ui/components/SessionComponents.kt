@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,9 +28,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
@@ -51,6 +55,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePickerDefaults
@@ -66,7 +71,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -87,6 +94,9 @@ import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_PICKER_BUTTON
+import com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_PICKER_DIALOG
+import com.github.meeplemeet.ui.sessions.isDateTimeInPast
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.Instant
@@ -121,6 +131,9 @@ object ComponentsTestTags {
 /** Common labels, placeholders, and button texts used across components. */
 private const val LABEL_DATE = "Date"
 private const val LABEL_TIME = "Time"
+private const val LABEL_SELECT_DATE = "Select a date"
+private const val LABEL_SELECT_TIME = "Select a time"
+private const val TEXT_SELECT_LOCATION = "Select a location"
 private const val LABEL_LOCATION = "Location"
 private const val PLACEHOLDER_LOCATION = "Enter an address"
 private const val PLACEHOLDER_SEARCH_GAMES = "Search games"
@@ -276,6 +289,70 @@ fun IconTextField(
               unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant,
               disabledIndicatorColor =
                   MaterialTheme.colorScheme.onBackground.copy(alpha = OUTLINE_DEFAULT_ALPHA),
+
+              // background
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent,
+              disabledContainerColor = Color.Transparent,
+
+              // cursor
+              cursorColor = MaterialTheme.colorScheme.onBackground,
+          ),
+  )
+}
+
+/**
+ * A text field with optional leading and trailing icons.
+ *
+ * @param value The current value of the text field.
+ * @param onValueChange Callback function to be invoked when the text field value changes.
+ * @param placeholder Placeholder text to be displayed when the text field is empty.
+ * @param editable Whether the text field is editable or read-only.
+ * @param leadingIcon Optional composable for the leading icon.
+ * @param trailingIcon Optional composable for the trailing icon.
+ * @param textStyle The style to be applied to the text inside the text field.
+ * @param modifier Modifier to be applied to the OutlinedTextField.
+ */
+@Composable
+fun IconTextFieldNew(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    editable: Boolean = true,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    textStyle: TextStyle = MaterialTheme.typography.bodySmall,
+    modifier: Modifier
+) {
+  TextField(
+      value = value,
+      onValueChange = { if (editable) onValueChange(it) },
+      modifier = modifier,
+      enabled = false,
+      readOnly = !editable,
+      leadingIcon = leadingIcon,
+      trailingIcon = trailingIcon,
+      placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+      textStyle = textStyle,
+      colors =
+          TextFieldDefaults.colors(
+              // text
+              focusedTextColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+              disabledTextColor = MaterialTheme.colorScheme.onBackground,
+
+              // icons
+              focusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              disabledLeadingIconColor = MaterialTheme.colorScheme.onBackground,
+              focusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+              unfocusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+              disabledTrailingIconColor = MaterialTheme.colorScheme.onBackground,
+
+              // indicator
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent,
 
               // background
               focusedContainerColor = Color.Transparent,
@@ -511,19 +588,18 @@ fun DatePickerDockedField(
     testTagDate: String = SessionTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
-  val text = value?.format(displayFormatter) ?: ""
+  val text = value?.format(displayFormatter) ?: LABEL_SELECT_DATE
 
-  IconTextField(
+  IconTextFieldNew(
       value = text,
       onValueChange = {},
       placeholder = label,
       editable = editable,
-      leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = LABEL_DATE) },
-      trailingIcon = {
+      leadingIcon = {
         if (editable) {
-          TextButton(
+          IconButton(
               onClick = { showDialogDate = true }, modifier = Modifier.testTag(testTagPick)) {
-                Text(BUTTON_PICK)
+                Icon(Icons.Default.CalendarToday, contentDescription = LABEL_DATE)
               }
         }
       },
@@ -636,23 +712,19 @@ fun TimePickerField(
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: ""
 
-  FocusableInputField(
+  IconTextFieldNew(
       value = text,
       onValueChange = { /* read-only; picker controls it */},
-      label = { Text(label) },
-      readOnly = true,
-      leadingIcon = { Icon(Icons.Default.Timer, contentDescription = LABEL_TIME) },
-      trailingIcon = {
-        TextButton(
+      placeholder = label,
+      editable = false,
+      leadingIcon = {
+        IconButton(
             onClick = { open = true },
             modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
-              Text(BUTTON_PICK)
+              Icon(Icons.Default.Timer, contentDescription = LABEL_TIME)
             }
       },
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(Dimensions.IconSize.giant)
-              .testTag(SessionTestTags.TIME_FIELD))
+      modifier = Modifier.fillMaxWidth(1f).testTag(SessionTestTags.TIME_FIELD))
 
   if (open) {
     AlertDialog(
@@ -755,21 +827,146 @@ fun TimePickerField(
   }
 }
 
+/**
+ * A combined date and time picker component.
+ *
+ * @param date The currently selected date.
+ * @param time The currently selected time.
+ * @param onDateChange Callback function to be invoked when a new date is selected.
+ * @param onFocusChanged Callback function to be invoked when the focus state changes.
+ * @param onTimeChange Callback function to be invoked when a new time is selected.
+ */
+@Composable
+fun DateAndTimePicker(
+    date: LocalDate?,
+    time: LocalTime?,
+    onDateChange: (LocalDate?) -> Unit,
+    onFocusChanged: (Boolean) -> Unit = {},
+    onTimeChange: (LocalTime?) -> Unit
+) {
+  Row(modifier = Modifier.fillMaxWidth().background(AppColors.secondary)) {
+    Box(Modifier.fillMaxWidth(0.5f).onFocusChanged { onFocusChanged(it.isFocused) }) {
+      DatePickerDockedField(
+          value = date, onValueChange = onDateChange, label = LABEL_SELECT_DATE, editable = true)
+    }
+
+    Column {
+      Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+        TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_SELECT_TIME)
+      }
+
+      // Show error if date/time is in the past
+      if (isDateTimeInPast(date, time)) {
+        Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+        Text(
+            text = "Cannot create a session in the past",
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = Dimensions.Padding.medium))
+      }
+    }
+  }
+}
+
+/**
+ * A button that opens a dialog to search and select a session location.
+ *
+ * @param account The user's account.
+ * @param discussion The discussion associated with the session.
+ * @param viewModel The CreateSessionViewModel for managing session state.
+ * @param buttonTestTag Test tag for the location picker button.
+ * @param dialogTestTag Test tag for the location picker dialog.
+ */
+@Composable
+fun SessionLocationSearchButton(
+    account: Account,
+    discussion: Discussion,
+    viewModel: CreateSessionViewModel,
+    buttonTestTag: String = LOCATION_PICKER_BUTTON,
+    dialogTestTag: String = LOCATION_PICKER_DIALOG
+) {
+  var showDialog by rememberSaveable { mutableStateOf(false) }
+  var selectedLocationLabel by rememberSaveable {
+    mutableStateOf(
+        discussion.session?.location?.name?.takeIf { it.isNotBlank() } ?: TEXT_SELECT_LOCATION)
+  }
+
+  Button(
+      onClick = { showDialog = true },
+      modifier =
+          Modifier.fillMaxWidth()
+              .heightIn(min = Dimensions.ContainerSize.timeFieldHeight)
+              .testTag(buttonTestTag),
+      colors = ButtonDefaults.buttonColors(containerColor = AppColors.secondary),
+      shape = RectangleShape,
+      contentPadding = PaddingValues(Dimensions.Padding.extraMedium)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location Pin")
+              Spacer(Modifier.width(Dimensions.Spacing.medium))
+              Text(
+                  text = selectedLocationLabel,
+                  style = MaterialTheme.typography.bodySmall,
+                  color = AppColors.textIcons,
+                  modifier = Modifier.weight(1f),
+                  maxLines = 6,
+                  softWrap = true)
+            }
+      }
+
+  if (showDialog) {
+    AlertDialog(
+        onDismissRequest = { showDialog = false },
+        modifier = Modifier.testTag(dialogTestTag),
+        containerColor = AppColors.primary,
+        title = { Text(LABEL_LOCATION, color = AppColors.textIcons) },
+        text = {
+          Column(modifier = Modifier.fillMaxWidth()) {
+            SessionLocationSearchBar(
+                account = account,
+                discussion = discussion,
+                viewModel = viewModel,
+                onLocationSelected = { location ->
+                  selectedLocationLabel = location.name.ifBlank { TEXT_SELECT_LOCATION }
+                })
+          }
+        },
+        confirmButton = { TextButton(onClick = { showDialog = false }) { Text(BUTTON_OK) } },
+        dismissButton = { TextButton(onClick = { showDialog = false }) { Text(BUTTON_CANCEL) } })
+  }
+}
+
+/**
+ * A search bar for selecting a session location.
+ *
+ * @param account The user's account.
+ * @param discussion The discussion associated with the session.
+ * @param viewModel The CreateSessionViewModel for managing session state.
+ * @param onLocationSelected Callback function invoked when a location is selected.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun SessionLocationSearchBar(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
+    onLocationSelected: (Location) -> Unit = {},
     inputFieldTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT,
     dropdownItemTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_ITEM
 ) {
   LocationSearchBar(
-      setLocation = { viewModel.setLocation(account, discussion, it) },
+      setLocation = { location ->
+        viewModel.setLocation(account, discussion, location)
+        onLocationSelected(location)
+      },
       setLocationQuery = { viewModel.setLocationQuery(account, discussion, it) },
-      discussion.session?.location ?: Location(),
-      viewModel,
-      inputFieldTestTag,
-      dropdownItemTestTag)
+      initial = discussion.session?.location ?: Location(),
+      viewModel = viewModel,
+      inputFieldTestTag = inputFieldTestTag,
+      dropdownItemTestTag = dropdownItemTestTag)
 }
 
 @Composable
