@@ -19,6 +19,7 @@ import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionCreationTestTags
+import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.google.firebase.Timestamp
@@ -82,8 +83,6 @@ class CreateSessionScreenTest {
 
   private fun gameInput() = allInputs()[1]
 
-  private fun locationInput() = allInputs()[2]
-
   private class FakeGameRepository : GameRepository {
     var throwOnSearch: Boolean = false
 
@@ -106,7 +105,7 @@ class CreateSessionScreenTest {
   }
 
   private inner class TestCreateSessionViewModel(
-      accountRepository: com.github.meeplemeet.model.account.AccountRepository,
+      accountRepository: AccountRepository,
       sessionRepository: SessionRepository,
       gameRepository: GameRepository
   ) : CreateSessionViewModel(accountRepository, sessionRepository, gameRepository) {
@@ -248,9 +247,24 @@ class CreateSessionScreenTest {
       harness.discussion.value = baseDiscussion.copy(participants = listOf(me.uid))
       compose.waitForIdle()
 
+      // Fill in title and game
       titleInput().performTextInput("Friday Night Board Game Jam")
       gameInput().performTextInput("Root")
-      locationInput().performTextInput("Table A1")
+
+      // Open location dialog and search for a location
+      compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_BUTTON).performClick()
+      compose.waitForIdle()
+      compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_DIALOG).assertIsDisplayed()
+      compose
+          .onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
+          .performTextInput("EPFL")
+      compose.waitForIdle()
+
+      // Close the dialog
+      compose.onNodeWithText("OK").performClick()
+      compose.waitForIdle()
+
+      // Button should still be disabled because date and time are not set
       createBtn().assertIsNotEnabled()
     }
 
@@ -261,7 +275,7 @@ class CreateSessionScreenTest {
       compose.onNodeWithTag(SessionCreationTestTags.GAME_SEARCH_ERROR).assertExists()
 
       checkpoint("organisation_section_shows_location_label") {
-        compose.onAllNodesWithText("Location").onFirst().assertExists()
+        compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_BUTTON).assertExists()
       }
 
       checkpoint("initial_load_fetches_participants_once") {

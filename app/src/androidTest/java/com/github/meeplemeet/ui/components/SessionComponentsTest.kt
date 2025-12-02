@@ -493,7 +493,7 @@ class SessionComponentsTest : FirestoreTests() {
     val initial = LocalDate.of(2025, 1, 5)
 
     var date by mutableStateOf<LocalDate?>(initial)
-    set {
+    set({
       Column {
         DatePickerDockedField(
             value = date,
@@ -510,7 +510,7 @@ class SessionComponentsTest : FirestoreTests() {
             label = "Read-only date",
             editable = false)
       }
-    }
+    })
 
     // Check initial date is displayed
     composeRule.onNodeWithText(initial.format(fmt)).assertExists()
@@ -527,7 +527,7 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.runOnUiThread { date = null }
     composeRule
         .onNodeWithTag(SessionTestTags.DATE_FIELD + "0", useUnmergedTree = true)
-        .assertTextEquals("")
+        .assertTextContains("Select a date")
   }
 
   fun timePicker_displays_and_opens_dialog() {
