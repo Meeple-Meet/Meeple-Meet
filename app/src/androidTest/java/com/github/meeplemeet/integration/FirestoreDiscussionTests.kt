@@ -689,7 +689,6 @@ class FirestoreDiscussionTests : FirestoreTests() {
     }
     runBlocking { OfflineModeManager.addDiscussionToCache(discussion, context) }
 
-    val photoPath = createTestImage("offline_pending_photo.jpg", 200, 200, Color.GREEN)
     val pollQuestion = "Offline poll question"
     val pollOptions = listOf("Option A", "Option B")
 
@@ -701,12 +700,8 @@ class FirestoreDiscussionTests : FirestoreTests() {
             senderId = account1.uid,
             content = pollQuestion,
             poll = Poll(question = pollQuestion, options = pollOptions, allowMultipleVotes = true)))
-    OfflineModeManager.sendPendingMessage(
-        discussion.uid,
-        Message(senderId = account1.uid, content = "Offline photo", photoUrl = photoPath))
 
     val scenario = ActivityScenario.launch(ComponentActivity::class.java)
-    val photoFile = File(photoPath)
     try {
       try {
         scenario.onActivity { activity ->
@@ -723,7 +718,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
         runBlocking {
           withTimeout(20_000) {
-            while (discussionRepository.getMessages(discussion.uid).size < 3) {
+            while (discussionRepository.getMessages(discussion.uid).size < 2) {
               delay(200)
             }
           }
@@ -733,7 +728,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
       }
 
       val messages = runBlocking { discussionRepository.getMessages(discussion.uid) }
-      assertEquals(3, messages.size)
+      assertEquals(2, messages.size)
 
       val textMessage = messages.firstOrNull { it.poll == null && it.photoUrl == null }
       assertEquals("Offline text message", textMessage?.content)
@@ -742,15 +737,10 @@ class FirestoreDiscussionTests : FirestoreTests() {
       assertEquals(pollQuestion, pollMessage?.poll?.question)
       assertTrue(pollMessage?.poll?.allowMultipleVotes == true)
 
-      val photoMessage = messages.firstOrNull { it.photoUrl != null }
-      assertEquals("Offline photo", photoMessage?.content)
-      assertTrue(!photoMessage?.photoUrl.isNullOrBlank())
-
       val pending =
           OfflineModeManager.offlineModeFlow.value.discussions[discussion.uid]?.third ?: emptyList()
       assertTrue(pending.isEmpty())
     } finally {
-      photoFile.delete()
       OfflineModeManager.clearOfflineMode()
     }
   }

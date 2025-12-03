@@ -34,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
@@ -193,9 +194,7 @@ fun DiscussionScreen(
     val state = offlineMode.discussions[discussion.uid]
     if (effectiveOnline && state != null) {
       state.third.forEach {
-        if (it.photoUrl != null)
-            viewModel.sendMessageWithPhoto(discussion, account, it.content, context, it.photoUrl)
-        else if (it.poll != null)
+        if (it.poll != null)
             viewModel.createPoll(
                 discussion,
                 account.uid,
@@ -211,11 +210,7 @@ fun DiscussionScreen(
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
-      if (effectiveOnline)
-          viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
-      else
-          OfflineModeManager.sendPendingMessage(
-              discussion.uid, Message(content = messageText, photoUrl = path))
+      viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
       messageText = ""
     } catch (e: Exception) {
       snackbarHostState.showSnackbar(
@@ -469,6 +464,7 @@ fun DiscussionScreen(
                                                         Modifier.padding(
                                                             Dimensions.Spacing.small)) {
                                                       IconButton(
+                                                          enabled = online,
                                                           onClick = {
                                                             showAttachmentMenu = false
                                                             val cameraPermissionGranted =
@@ -486,8 +482,14 @@ fun DiscussionScreen(
                                                           },
                                                           modifier =
                                                               Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_CAMERA_OPTION)) {
+                                                                      DiscussionTestTags
+                                                                          .ATTACHMENT_CAMERA_OPTION)
+                                                                  .alpha(
+                                                                      if (online)
+                                                                          Dimensions.Alpha.full
+                                                                      else
+                                                                          Dimensions.Alpha
+                                                                              .disabled)) {
                                                             Icon(
                                                                 Icons.Default.PhotoCamera,
                                                                 contentDescription = "Camera",
@@ -498,14 +500,21 @@ fun DiscussionScreen(
                                                                             .medium))
                                                           }
                                                       IconButton(
+                                                          enabled = online,
                                                           onClick = {
                                                             showAttachmentMenu = false
                                                             galleryLauncher.launch("image/*")
                                                           },
                                                           modifier =
                                                               Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_GALLERY_OPTION)) {
+                                                                      DiscussionTestTags
+                                                                          .ATTACHMENT_GALLERY_OPTION)
+                                                                  .alpha(
+                                                                      if (online)
+                                                                          Dimensions.Alpha.full
+                                                                      else
+                                                                          Dimensions.Alpha
+                                                                              .disabled)) {
                                                             Icon(
                                                                 Icons.Default.Image,
                                                                 contentDescription = "Gallery",
