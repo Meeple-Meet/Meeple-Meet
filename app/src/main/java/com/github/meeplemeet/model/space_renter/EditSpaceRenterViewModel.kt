@@ -85,22 +85,22 @@ class EditSpaceRenterViewModel(
       spaces: List<Space>? = null,
       photoCollectionUrl: List<String>? = null
   ) {
+    if (spaceRenter.owner.uid != requester.uid)
+        throw PermissionDeniedException(
+            "Only the space renter's owner can edit his own space renter")
+
+    if (name != null && name.isBlank())
+        throw IllegalArgumentException("SpaceRenter name cannot be blank")
+
+    if (openingHours != null) {
+      val uniqueByDay = openingHours.distinctBy { it.day }
+      if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
+    }
+
+    if (address != null && address == Location())
+        throw IllegalArgumentException("An address is required to create a space renter")
+
     viewModelScope.launch {
-      if (spaceRenter.owner.uid != requester.uid)
-          throw PermissionDeniedException(
-              "Only the space renter's owner can edit his own space renter")
-
-      if (name != null && name.isBlank())
-          throw IllegalArgumentException("SpaceRenter name cannot be blank")
-
-      if (openingHours != null) {
-        val uniqueByDay = openingHours.distinctBy { it.day }
-        if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
-      }
-
-      if (address != null && address == Location())
-          throw IllegalArgumentException("An address is required to create a space renter")
-
       val isOnline = OfflineModeManager.hasInternetConnection.first()
 
       withContext(OfflineModeManager.dispatcher) {
