@@ -3,6 +3,7 @@ package com.github.meeplemeet.model.sessions
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.shared.game.GameRepository
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,8 @@ import kotlinx.coroutines.launch
 class SessionOverviewViewModel(
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
     private val gameRepository: GameRepository = RepositoryProvider.games,
-    private val imageRepository: ImageRepository = RepositoryProvider.images
+    private val imageRepository: ImageRepository = RepositoryProvider.images,
+    private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions
 ) : CreateSessionViewModel() {
   suspend fun getGameNameByGameId(gameId: String): String? =
       kotlin.runCatching { gameRepository.getGameById(gameId).name }.getOrNull()
@@ -62,14 +64,38 @@ class SessionOverviewViewModel(
   }
 
   /**
-   * Retrieves all photo URLs from the archived sessions for a given account.
+   * Manually archives a session.
    *
-   * @param pastSessionIds List of archived session UUIDs from Account.pastSessionIds
-   * @return List of photo URLs from archived sessions
+   * @param context The context used for image operations.
+   * @param id The ID of the session to archive.
    */
-  fun getArchivedSessionPhotoUrls(userId: String, callback: (List<String>) -> Unit) {
+  fun archiveSession(context: Context, id: String) {
     viewModelScope.launch {
-      val result = sessionRepository.getArchivedSessionPhotoUrls(userId)
+      try {
+        val session = sessionRepository.getSession(id)
+        if (session != null) {
+          val newUuid = sessionRepository.newUUID()
+          var newUrl: String? = null
+          if (session.photoUrl != null) {
+            newUrl = imageRepository.moveSessionPhoto(context, id, newUuid)
+          }
+          sessionRepository.archiveSession(id, newUuid, newUrl)
+        }
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }
+  }
+
+  /**
+   * Retrieves all archived sessions for a given account.
+   *
+   * @param userId The user ID whose archived sessions should be retrieved
+   * @param callback Callback to receive the list of sessions
+   */
+  fun getArchivedSessions(userId: String, callback: (List<Session>) -> Unit) {
+    viewModelScope.launch {
+      val result = sessionRepository.getArchivedSessions(userId)
       callback(result)
     }
   }
@@ -85,5 +111,16 @@ class SessionOverviewViewModel(
       val result = sessionRepository.getArchivedSessionByPhotoUrl(photoUrl)
       callback(result)
     }
+  }
+
+  /**
+   * Checks if a user is an admin of the discussion associated with a session.
+   *
+   * @param discussionId The ID of the discussion
+   * @param userId The ID of the user
+   * @return True if the user is an admin, false otherwise
+   */
+  suspend fun isAdmin(discussionId: String, userId: String): Boolean {
+    return discussionRepository.getDiscussion(discussionId).admins.contains(userId)
   }
 }

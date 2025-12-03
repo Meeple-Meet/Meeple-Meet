@@ -1,13 +1,18 @@
 /** Documentation was generated using ChatGPT. */
 package com.github.meeplemeet.ui.sessions
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -15,8 +20,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.SentimentDissatisfied
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,21 +40,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
@@ -61,11 +75,22 @@ import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Timer
+import java.util.TimerTask
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
 const val NO_SESSIONS_HISTORY_TEXT = "No past sessions yet"
 const val AMOUNT_OF_PICTURES_PER_ROW = 3
 const val TITLE_MAX_LINES = 1
+
+object SessionsOverviewScreenTestTags {
+  const val TEST_TAG_ARCHIVE_BUTTON = "archiveButton"
+  const val TEST_TAG_NEXT_SESSIONS = "nextSessionsToggle"
+  const val TEST_TAG_HISTORY = "historyToggle"
+}
 /**
  * Main screen that lists gaming sessions for the logged-in user.
  * - Collects a real-time list of sessions via [SessionOverviewViewModel.sessionMapFlow].
@@ -91,6 +116,30 @@ fun SessionsOverviewScreen(
   /* --------------  NEW: toggle state  -------------- */
   var showHistory by remember { mutableStateOf(false) }
   var popupSession by remember { mutableStateOf<Session?>(null) }
+  var archivedSessions by remember { mutableStateOf<List<Session>>(emptyList()) }
+
+  // Fetch archived sessions when history tab is active
+  LaunchedEffect(showHistory, account) {
+    if (showHistory && account != null) {
+      viewModel.getArchivedSessions(account.uid) { sessions -> archivedSessions = sessions }
+    }
+  }
+
+  var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+  DisposableEffect(Unit) {
+    val timer = Timer()
+    val now = System.currentTimeMillis()
+    val delay = 60000L - (now % 60000L)
+    timer.schedule(
+        object : TimerTask() {
+          override fun run() {
+            currentTime = System.currentTimeMillis()
+          }
+        },
+        delay,
+        60000L)
+    onDispose { timer.cancel() }
+  }
 
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
@@ -120,40 +169,32 @@ fun SessionsOverviewScreen(
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when {
               showHistory -> {
-                val now = System.currentTimeMillis()
-
-                val pastSessions =
-                    sessionMap
-                        .filter { (_, session) -> session.date.toDate().time < now }
-                        .values
-                        .sortedByDescending { it.date.toDate().time }
-
-                if (pastSessions.isEmpty()) {
+                if (archivedSessions.isEmpty()) {
                   EmptySessionsListText(isHistory = true)
                 } else {
-                  HistoryGrid(sessions = pastSessions, onSessionClick = { popupSession = it })
+                  HistoryGrid(sessions = archivedSessions, onSessionClick = { popupSession = it })
                 }
               }
               sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
               else -> {
-                val now = System.currentTimeMillis()
-                val futureSessions =
-                    sessionMap
-                        .filter { (_, session) -> session.date.toDate().time >= now }
-                        .toList()
-                        .sortedBy { (_, session) -> session.date.toDate().time }
+                // Show all active sessions (future + past < 24h)
+                val activeSessions =
+                    sessionMap.toList().sortedBy { (_, session) -> session.date.toDate().time }
 
-                if (futureSessions.isEmpty()) {
+                if (activeSessions.isEmpty()) {
                   EmptySessionsListText(isHistory = false)
                 } else {
                   /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
                   LazyColumn(
                       modifier = Modifier.fillMaxSize(),
                       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                        items(futureSessions, key = { it.first }) { (id, session) ->
+                        items(activeSessions, key = { it.first }) { (id, session) ->
                           SessionCard(
+                              id = id,
                               session = session,
                               viewModel = viewModel,
+                              currentUserId = account?.uid ?: "",
+                              currentTime = currentTime,
                               modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
                               onClick = { onSelectSession(id) })
                         }
@@ -231,19 +272,36 @@ private fun EmptySessionsListText(isHistory: Boolean = true) {
  */
 @Composable
 fun SessionOverCard(
+    modifier: Modifier = Modifier,
     session: Session,
     gameName: String,
     participantText: String,
     date: String,
-    modifier: Modifier = Modifier,
+    currentTime: Long = System.currentTimeMillis(),
     onClick: () -> Unit = {}
 ) {
-  Column(modifier = modifier) {
+  val timeToArchive =
+      remember(session.date, currentTime) {
+        val archiveTime = session.date.toDate().time + 24 * 60 * 60 * 1000L
+        val diff = archiveTime - currentTime
+        if (diff > 0) {
+          if (diff <= 24 * 60 * 60 * 1000L) {
+            val hours = TimeUnit.MILLISECONDS.toHours(diff)
+            val minutes = TimeUnit.MILLISECONDS.toMinutes(diff) % 60
+            "Automatically archives in " +
+                if (hours > 0) "$hours h $minutes min" else "$minutes min"
+          } else {
+            ""
+          }
+        } else {
+          "Archiving..."
+        }
+      }
+
+  Column(modifier = modifier.clickable(onClick = onClick).background(AppColors.primary)) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .clickable(onClick = onClick)
-                .background(AppColors.primary)
                 .padding(
                     horizontal = Dimensions.Spacing.large, vertical = Dimensions.Spacing.large),
         horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
@@ -277,19 +335,21 @@ fun SessionOverCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                      Icon(imageVector = Icons.Default.Place, contentDescription = null)
-                      Text(
-                          text = session.location.name,
-                          style = MaterialTheme.typography.bodySmall,
-                          fontSize = Dimensions.TextSize.small,
-                          color = AppColors.textIconsFade,
-                          maxLines = 1,
-                          overflow = TextOverflow.Ellipsis,
-                          modifier = Modifier.weight(1f, fill = false))
-                      Text(
-                          text = "•",
-                          fontSize = Dimensions.TextSize.small,
-                          color = AppColors.textIconsFade)
+                      if (session.location.name.isNotBlank()) {
+                        Icon(imageVector = Icons.Default.Place, contentDescription = null)
+                        Text(
+                            text = session.location.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = Dimensions.TextSize.small,
+                            color = AppColors.textIconsFade,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false))
+                        Text(
+                            text = "•",
+                            fontSize = Dimensions.TextSize.small,
+                            color = AppColors.textIconsFade)
+                      }
                       Text(
                           text = date,
                           style = MaterialTheme.typography.bodySmall,
@@ -298,69 +358,151 @@ fun SessionOverCard(
                     }
               }
         }
+    // Time to archive text
+    if (timeToArchive.isNotBlank()) {
+      Row(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(end = Dimensions.Spacing.large, bottom = Dimensions.Spacing.small),
+          horizontalArrangement = Arrangement.End) {
+            Text(
+                text = timeToArchive,
+                style = MaterialTheme.typography.labelSmall,
+                color = AppColors.textIconsFade)
+          }
+    }
 
     HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionCard(
+    modifier: Modifier = Modifier,
+    id: String,
     session: Session,
     viewModel: SessionOverviewViewModel,
-    modifier: Modifier = Modifier,
+    currentUserId: String,
+    currentTime: Long = System.currentTimeMillis(),
     onClick: () -> Unit = {}
 ) {
-  val date =
-      remember(session.date) {
-        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
-      }
+  val context = LocalContext.current
+  val density = LocalDensity.current
+  val scope = rememberCoroutineScope()
 
-  /* ---------  resolve names via the callback  --------- */
-  val names = remember { mutableStateListOf<String>() }
-
-  LaunchedEffect(session.participants) {
-    names.clear()
-    session.participants.forEach { id ->
-      if (id.isBlank()) {
-        names += "Unknown"
-      } else {
-        viewModel.getOtherAccount(id) { acc ->
-          names += acc.name // re-composition happens on each addition
+  // Check if user is admin
+  val isAdmin by
+      produceState(initialValue = false, key1 = id, key2 = currentUserId) {
+        if (currentUserId.isNotBlank()) {
+          value = viewModel.isAdmin(id, currentUserId)
         }
       }
+
+  // Auto-archive check
+  LaunchedEffect(session.date) { viewModel.updateSession(context, id) }
+
+  val actionWidth = Dimensions.ComponentWidth.spaceLabelWidth
+  val actionWidthPx = with(density) { actionWidth.toPx() }
+  val offsetX = remember { Animatable(0f) }
+
+  Box(modifier = modifier.height(IntrinsicSize.Min)) {
+    // Background (Archive Button)
+    if (isAdmin) {
+      Box(
+          modifier =
+              Modifier.align(Alignment.CenterEnd)
+                  .width(actionWidth)
+                  .fillMaxHeight()
+                  .background(AppColors.neutral)
+                  .clickable {
+                    viewModel.archiveSession(context, id)
+                    scope.launch { offsetX.animateTo(0f) }
+                  }
+                  .testTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON),
+          contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Outlined.Archive,
+                contentDescription = "Archive",
+                tint = AppColors.primary,
+                modifier = Modifier.size(Dimensions.IconSize.xxLarge))
+          }
     }
-  }
-  /* ----------------------------------------------------- */
 
-  val participantText =
-      when {
-        names.size < session.participants.size -> "Loading…"
-        names.isEmpty() -> "No participants"
-        names.size == 1 -> names.first()
-        names.size == 2 -> names.joinToString(", ")
-        else -> {
-          val firstTwo = names.take(2).joinToString(", ")
-          "$firstTwo and ${names.size - 2} more"
+    // Foreground (Card)
+    Box(
+        modifier =
+            Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .draggable(
+                    enabled = isAdmin,
+                    orientation = Orientation.Horizontal,
+                    state =
+                        rememberDraggableState { delta ->
+                          scope.launch {
+                            val newOffset = (offsetX.value + delta).coerceIn(-actionWidthPx, 0f)
+                            offsetX.snapTo(newOffset)
+                          }
+                        },
+                    onDragStopped = {
+                      val targetOffset =
+                          if (offsetX.value < -actionWidthPx / 2) -actionWidthPx else 0f
+                      scope.launch { offsetX.animateTo(targetOffset) }
+                    })) {
+          val date =
+              remember(session.date) {
+                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(session.date.toDate())
+              }
+
+          /* ---------  resolve names via the callback  --------- */
+          val names = remember { mutableStateListOf<String>() }
+
+          LaunchedEffect(session.participants) {
+            names.clear()
+            session.participants.forEach { id ->
+              if (id.isBlank()) {
+                names += "Unknown"
+              } else {
+                viewModel.getOtherAccount(id) { acc ->
+                  names += acc.name // re-composition happens on each addition
+                }
+              }
+            }
+          }
+          /* ----------------------------------------------------- */
+
+          val participantText =
+              when {
+                names.size < session.participants.size -> "Loading…"
+                names.isEmpty() -> "No participants"
+                names.size == 1 -> names.first()
+                names.size == 2 -> names.joinToString(", ")
+                else -> {
+                  val firstTwo = names.take(2).joinToString(", ")
+                  "$firstTwo and ${names.size - 2} more"
+                }
+              }
+
+          val gameName by
+              produceState(
+                  key1 = session.gameId,
+                  initialValue = session.gameId // fallback: show id while loading
+                  ) {
+                    val name =
+                        if (session.gameId == LABEL_UNKNOWN_GAME) null
+                        else viewModel.getGameNameByGameId(session.gameId)
+                    value = name ?: "No game selected" // suspend call
+              }
+
+          SessionOverCard(
+              session = session,
+              gameName = gameName,
+              participantText = participantText,
+              date = date,
+              currentTime = currentTime,
+              modifier = Modifier.fillMaxWidth(),
+              onClick = onClick)
         }
-      }
-
-  val gameName by
-      produceState(
-          key1 = session.gameId, initialValue = session.gameId // fallback: show id while loading
-          ) {
-            val name =
-                if (session.gameId == LABEL_UNKNOWN_GAME) null
-                else viewModel.getGameNameByGameId(session.gameId)
-            value = name ?: "No game selected" // suspend call
-      }
-
-  SessionOverCard(
-      session = session,
-      gameName = gameName,
-      participantText = participantText,
-      date = date,
-      modifier = modifier,
-      onClick = onClick)
+  }
 }
 
 /**
@@ -385,7 +527,8 @@ private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory
             Modifier.weight(1f)
                 .fillMaxHeight()
                 .background(if (!showHistory) AppColors.primary else AppColors.divider)
-                .clickable { onNext() },
+                .clickable { onNext() }
+                .testTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS),
         contentAlignment = Alignment.Center) {
           Text(
               text = "Next sessions",
@@ -400,7 +543,8 @@ private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory
             Modifier.weight(1f)
                 .fillMaxHeight()
                 .background(if (showHistory) AppColors.primary else AppColors.divider)
-                .clickable { onHistory() },
+                .clickable { onHistory() }
+                .testTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY),
         contentAlignment = Alignment.Center) {
           Text(
               text = "History",
@@ -436,7 +580,9 @@ private fun HistoryGrid(sessions: List<Session>, onSessionClick: (Session) -> Un
               HistoryCard(
                   session = session,
                   modifier =
-                      Modifier.weight(Dimensions.Weight.full).clickable { onSessionClick(session) })
+                      Modifier.weight(Dimensions.Weight.full)
+                          .clickable { onSessionClick(session) }
+                          .testTag("historyCard_${session.gameId}"))
             }
 
             repeat(AMOUNT_OF_PICTURES_PER_ROW - row.size) {
