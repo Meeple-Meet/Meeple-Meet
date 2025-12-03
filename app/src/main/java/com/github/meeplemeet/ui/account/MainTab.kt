@@ -202,7 +202,7 @@ object ProfileNavigationTestTags {
 
 object MainTabUi {
   val ACTION_BUTTON_SIZE = 56.dp
-  val LOGOUT_BUTTON_W = 135.dp
+  val LOGOUT_BUTTON_W = 125.dp
   val LOGOUT_BUTTON_H = 46.dp
   val AVATAR_SIZE = 130.dp
   val OFFSET_X = 4.dp
