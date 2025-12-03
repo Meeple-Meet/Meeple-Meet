@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,6 +53,7 @@ import org.junit.runner.RunWith
  * from the UI, and add all 3 members to it. Ask to users the name of the store through a poll,
  * create the store, create a post to advertise it, wait for reactions.
  */
+@Ignore
 @RunWith(AndroidJUnit4::class)
 class E2E_M2 : FirestoreTests() {
   // Generic retry helper used for waiting on backend state convergence

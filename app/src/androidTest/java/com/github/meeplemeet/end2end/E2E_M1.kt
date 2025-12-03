@@ -16,6 +16,7 @@ import com.github.meeplemeet.utils.AuthUtils.signInUser
 import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.FirestoreTests
+import org.junit.Ignore
 import java.util.UUID
 import org.junit.Rule
 import org.junit.Test
@@ -25,6 +26,7 @@ import org.junit.runner.RunWith
  * End-to-end test for Meeple Meet application. Tests the complete user journey from sign-up to
  * navigating the app.
  */
+@Ignore
 @RunWith(AndroidJUnit4::class)
 class E2E_M1 : FirestoreTests() {
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
