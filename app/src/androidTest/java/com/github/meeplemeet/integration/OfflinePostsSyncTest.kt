@@ -65,7 +65,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
             authorId = "user456",
             tags = listOf("offline"))
 
-        delay(100)
+        delay(500)
 
         // Verify posts are queued
         val queuedPosts = OfflineModeManager.getQueuedPosts()
@@ -79,7 +79,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         // When: Come back online and sync
         OfflineModeManager.setInternetConnection(true)
         OfflineModeManager.syncQueuedPosts()
-        delay(1000) // Wait for sync
+        delay(1500) // Wait for sync
 
         // Then: Posts are uploaded to Firestore
         val allPosts = postRepository.getPosts()
@@ -119,7 +119,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
             postRepository.createPost(
                 title = "Test Post", content = "For offline comments", authorId = "user123")
         createdPostId = post.id
-        delay(500)
+        delay(1000)
       }
     }
 
@@ -132,7 +132,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         OfflineModeManager.setInternetConnection(true)
         val postWithData = postRepository.getPost(createdPostId)
         OfflineModeManager.cachePosts(listOf(postWithData))
-        delay(500)
+        delay(1000)
 
         // Now go offline
         OfflineModeManager.setInternetConnection(false)
@@ -150,7 +150,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
             authorId = "user789",
             parentId = createdPostId)
 
-        delay(100)
+        delay(500)
 
         // Verify comments are added with temp IDs
         val cachedPosts = OfflineModeManager.getCachedPosts()
@@ -168,7 +168,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         OfflineModeManager.setInternetConnection(true)
 
         OfflineModeManager.syncOfflineComments()
-        delay(1000) // Wait for sync
+        delay(1500) // Wait for sync
 
         // Then: Comments are synced to Firestore
         val syncedPost = postRepository.getPost(createdPostId)
@@ -211,12 +211,12 @@ class OfflinePostsSyncTest : FirestoreTests() {
             postRepository.addComment(
                 postId = post.id, text = "Parent comment", authorId = "user456", parentId = post.id)
 
-        delay(500)
+        delay(1000)
 
         // Fetch and cache the post with parent comment
         val postWithComment = postRepository.getPost(post.id)
         OfflineModeManager.cachePosts(listOf(postWithComment))
-        delay(500)
+        delay(1000)
       }
     }
 
@@ -238,7 +238,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
             authorId = "user789",
             parentId = parentComment.id)
 
-        delay(100)
+        delay(500)
 
         // Verify reply is nested under parent
         val updatedPost = OfflineModeManager.getCachedPosts().find { it.id == createdPostId }
@@ -255,7 +255,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         OfflineModeManager.setInternetConnection(true)
 
         OfflineModeManager.syncOfflineComments()
-        delay(1000)
+        delay(1500)
 
         // Then: Nested structure is preserved in Firestore
         val syncedPost = postRepository.getPost(createdPostId)
@@ -291,12 +291,12 @@ class OfflinePostsSyncTest : FirestoreTests() {
 
         // Add level 1 comment online
         val level1Id = postRepository.addComment(post.id, "Level 1", "user2", post.id)
-        delay(200)
+        delay(500)
 
         // Fetch and cache post
         val postWithL1 = postRepository.getPost(post.id)
         OfflineModeManager.cachePosts(listOf(postWithL1))
-        delay(500)
+        delay(1000)
       }
     }
 
@@ -313,7 +313,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
 
         // Add level 2 reply offline
         OfflineModeManager.addComment(cachedPost.id, "Level 2 offline", "user3", level1Comment.id)
-        delay(50)
+        delay(500)
 
         // Get updated post with level 2
         val postWithL2 = OfflineModeManager.getCachedPosts().find { it.id == createdPostId }
@@ -322,7 +322,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
 
         // Add level 3 reply offline
         OfflineModeManager.addComment(cachedPost.id, "Level 3 offline", "user4", level2Comment.id)
-        delay(50)
+        delay(500)
 
         // Verify 3-level nesting locally
         val finalPost = OfflineModeManager.getCachedPosts().find { it.id == createdPostId }
@@ -339,7 +339,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         OfflineModeManager.setInternetConnection(true)
 
         OfflineModeManager.syncOfflineComments()
-        delay(1000)
+        delay(1500)
 
         // Then: All nesting levels preserved
         val syncedPost = postRepository.getPost(createdPostId)
@@ -363,7 +363,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         // Given: Offline with queued posts
         OfflineModeManager.setInternetConnection(false)
         OfflineModeManager.createPost("Offline Post", "Body", "user1")
-        delay(100)
+        delay(500)
 
         assertEquals(1, OfflineModeManager.getQueuedPosts().size)
       }
@@ -373,7 +373,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
       runBlocking {
         // When: Try to sync while offline
         OfflineModeManager.syncQueuedPosts()
-        delay(100)
+        delay(500)
 
         // Then: Posts remain queued (not synced)
         assertEquals(1, OfflineModeManager.getQueuedPosts().size)
@@ -395,11 +395,11 @@ class OfflinePostsSyncTest : FirestoreTests() {
         // Fetch and cache it
         val postData = postRepository.getPost(post.id)
         OfflineModeManager.cachePosts(listOf(postData))
-        delay(500)
+        delay(1000)
 
         OfflineModeManager.setInternetConnection(false)
         OfflineModeManager.addComment(post.id, "Offline comment", "user2", post.id)
-        delay(100)
+        delay(500)
 
         val cachedPosts = OfflineModeManager.getCachedPosts()
         assertTrue("No cached posts", cachedPosts.isNotEmpty())
@@ -413,7 +413,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
       runBlocking {
         // When: Try to sync while offline
         OfflineModeManager.syncOfflineComments()
-        delay(100)
+        delay(500)
 
         // Then: Comments remain cached (not synced)
         val cachedPosts = OfflineModeManager.getCachedPosts()
