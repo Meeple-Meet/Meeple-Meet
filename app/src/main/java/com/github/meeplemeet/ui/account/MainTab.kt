@@ -509,7 +509,10 @@ fun MainTabContent(
         }
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
 
-        Text(text = MainTabUi.SettingRows.HEADER, fontSize = Dimensions.TextSize.heading)
+        Text(
+            text = MainTabUi.SettingRows.HEADER,
+            fontSize = Dimensions.TextSize.heading,
+            modifier = Modifier.fillMaxWidth())
 
         SettingsRow(
             icon = Icons.Default.Palette,
