@@ -53,6 +53,9 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
   @Before
   fun setup() {
     runBlocking {
+      // Force online mode for tests
+      com.github.meeplemeet.model.offline.OfflineModeManager.setNetworkStatusForTesting(true)
+
       vm = EditSpaceRenterViewModel()
       owner =
           accountRepository.createAccount(
