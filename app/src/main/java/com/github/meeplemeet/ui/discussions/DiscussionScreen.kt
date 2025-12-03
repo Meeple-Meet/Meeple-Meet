@@ -90,6 +90,7 @@ const val MAX_MESSAGE_LENGTH: Int = 4096
 const val CHAR_COUNTER_THRESHOLD: Int = 100
 const val CHAR_COUNTER_WARNING_THRESHOLD: Int = 20
 val EDITING_POPUP_WIDTH = 120.dp
+val EDITING_POPUP_HEIGHT = 80.dp
 const val UNSELECTED_BACKGROUND_ALPHA = 0.45f
 
 const val EDIT_MESSAGE_TEXT = "Edit"
@@ -366,6 +367,7 @@ fun DiscussionScreen(
                     }
                   })
 
+              // Messages area + overlay + popup
               Box(
                   modifier =
                       Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { coords ->
@@ -376,6 +378,7 @@ fun DiscussionScreen(
                     val anchor = selectedMessageAnchor
                     val hasSelection = actionMessage != null && anchor != null
 
+                    // Messages list
                     LazyColumn(
                         state = listState,
                         modifier =
@@ -459,19 +462,20 @@ fun DiscussionScreen(
                               }
                             }
 
-                            if (!isLastFromSender) {
-                              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                            } else {
-                              Spacer(Modifier.height(Dimensions.Spacing.small))
-                            }
+                            Spacer(
+                                Modifier.height(
+                                    if (isLastFromSender) Dimensions.Spacing.small
+                                    else Dimensions.Spacing.extraSmall))
                           }
                         }
 
+                    // Selected message overlay
                     if (hasSelection) {
                       val overlayAnchor = anchor!!
                       val relativeOffsetY = overlayAnchor.top - messagesContainerTopPx
 
                       Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                        // Scrim
                         Box(
                             modifier =
                                 Modifier.matchParentSize()
@@ -484,31 +488,29 @@ fun DiscussionScreen(
                                         interactionSource =
                                             remember { MutableInteractionSource() }) {})
 
-                        Box(
-                            modifier =
-                                Modifier.fillMaxWidth().offset {
-                                  IntOffset(x = 0, y = relativeOffsetY)
-                                }) {
-                              val message = actionMessage!!
-                              val isMineOverlay = message.senderId == account.uid
-                              val senderOverlay =
-                                  if (!isMineOverlay) userCache[message.senderId]?.name ?: "Unknown"
-                                  else DiscussionCommons.YOU_SENDER_NAME
+                        val message = actionMessage!!
+                        val isMineOverlay = message.senderId == account.uid
+                        val senderOverlay =
+                            if (!isMineOverlay) userCache[message.senderId]?.name ?: "Unknown"
+                            else DiscussionCommons.YOU_SENDER_NAME
 
-                              val msgIndex = messages.indexOfFirst { it.uid == message.uid }
-                              if (msgIndex >= 0) {
-                                val prevMessageOverlay = messages.getOrNull(msgIndex - 1)
-                                val nextMessageOverlay = messages.getOrNull(msgIndex + 1)
-                                val showDateHeaderOverlay =
-                                    shouldShowDateHeader(
-                                        current = message.createdAt.toDate(),
-                                        previous = prevMessageOverlay?.createdAt?.toDate())
-                                val isLastFromSenderOverlay =
-                                    nextMessageOverlay?.senderId != message.senderId
-                                val isFirstFromSenderOverlay =
-                                    prevMessageOverlay?.senderId != message.senderId ||
-                                        showDateHeaderOverlay
+                        val msgIndex = messages.indexOfFirst { it.uid == message.uid }
+                        if (msgIndex >= 0) {
+                          val prevMessageOverlay = messages.getOrNull(msgIndex - 1)
+                          val nextMessageOverlay = messages.getOrNull(msgIndex + 1)
+                          val showDateHeaderOverlay =
+                              shouldShowDateHeader(
+                                  current = message.createdAt.toDate(),
+                                  previous = prevMessageOverlay?.createdAt?.toDate())
+                          val isLastFromSenderOverlay =
+                              nextMessageOverlay?.senderId != message.senderId
+                          val isFirstFromSenderOverlay =
+                              prevMessageOverlay?.senderId != message.senderId ||
+                                  showDateHeaderOverlay
 
+                          Box(
+                              modifier =
+                                  Modifier.offset { IntOffset(x = 0, y = relativeOffsetY) }) {
                                 when {
                                   message.poll != null -> {
                                     PollBubble(
@@ -549,10 +551,11 @@ fun DiscussionScreen(
                                   }
                                 }
                               }
-                            }
+                        }
                       }
                     }
 
+                    // Options popup
                     if (actionMessage != null && anchor != null) {
                       val nowMs = System.currentTimeMillis()
                       val messageMs = actionMessage.createdAt.toDate().time
@@ -598,6 +601,7 @@ fun DiscussionScreen(
                     }
                   }
 
+              // Bottom input bar
               var showAttachmentMenu by remember { mutableStateOf(false) }
               var showPollDialog by remember { mutableStateOf(false) }
 
@@ -662,13 +666,13 @@ fun DiscussionScreen(
                                                       IconButton(
                                                           onClick = {
                                                             showAttachmentMenu = false
-                                                            val cameraPermissionGranted =
+                                                            val granted =
                                                                 ContextCompat.checkSelfPermission(
                                                                     context,
                                                                     Manifest.permission.CAMERA) ==
                                                                     PackageManager
                                                                         .PERMISSION_GRANTED
-                                                            if (cameraPermissionGranted) {
+                                                            if (granted) {
                                                               cameraLauncher.launch(null)
                                                             } else {
                                                               cameraPermissionLauncher.launch(
@@ -762,12 +766,13 @@ fun DiscussionScreen(
                                     minLines = 1,
                                     maxLines = 5,
                                     decorationBox = { inner ->
-                                      if (messageText.text.isEmpty())
-                                          Text(
-                                              "Message",
-                                              style = MaterialTheme.typography.bodyMedium,
-                                              fontSize = Dimensions.TextSize.body,
-                                              color = MessagingColors.metadataText)
+                                      if (messageText.text.isEmpty()) {
+                                        Text(
+                                            "Message",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontSize = Dimensions.TextSize.body,
+                                            color = MessagingColors.metadataText)
+                                      }
                                       inner()
                                     })
 
@@ -796,7 +801,7 @@ fun DiscussionScreen(
                                     } catch (e: Exception) {
                                       snackbarHostState.showSnackbar(
                                           message =
-                                              "Failed to send message: ${e.message ?: "Unknown error"}",
+                                              "Failed to send message: ${e.message ?: UNKNOWN_ERROR}",
                                           duration = SnackbarDuration.Long)
                                     } finally {
                                       isSending = false
@@ -1647,7 +1652,7 @@ fun MessageOptionsPopup(
   val rightMarginPx = rowPaddingPx + avatarSizePx + bubbleAvatarSpacingPx
 
   val fallbackWidthPx = with(density) { EDITING_POPUP_WIDTH.toPx().toInt() }
-  val fallbackHeightPx = with(density) { 80.dp.toPx().toInt() }
+  val fallbackHeightPx = with(density) { EDITING_POPUP_HEIGHT.toPx().toInt() }
 
   var menuSize by remember { mutableStateOf(IntSize.Zero) }
   val menuWidthPx = if (menuSize.width > 0) menuSize.width else fallbackWidthPx
