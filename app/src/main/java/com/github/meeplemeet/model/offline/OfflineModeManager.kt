@@ -189,6 +189,15 @@ object OfflineModeManager {
   }
 
   /**
+   * Forces the network connection status for testing purposes.
+   *
+   * @param isConnected The desired connection status.
+   */
+  fun setNetworkStatusForTesting(isConnected: Boolean) {
+    _hasInternetConnection.value = isConnected
+  }
+
+  /**
    * Clears all offline mode data by resetting to empty maps.
    *
    * This is useful when exiting offline mode or when the user logs out.

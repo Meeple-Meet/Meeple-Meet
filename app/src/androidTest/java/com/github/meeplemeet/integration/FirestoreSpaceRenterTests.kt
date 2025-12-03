@@ -3,6 +3,7 @@ package com.github.meeplemeet.integration
 import com.github.meeplemeet.model.LocationSearchException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
@@ -40,6 +41,9 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     createSpaceRenterViewModel = CreateSpaceRenterViewModel(spaceRenterRepository)
     spaceRenterViewModel = SpaceRenterViewModel(spaceRenterRepository)
     editSpaceRenterViewModel = EditSpaceRenterViewModel(spaceRenterRepository)
+
+    // Force online mode for tests
+    OfflineModeManager.setNetworkStatusForTesting(true)
 
     runBlocking {
       // Create test accounts
