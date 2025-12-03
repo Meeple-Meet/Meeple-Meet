@@ -742,8 +742,7 @@ fun UserChip(
       modifier = modifier,
       shape = appShapes.medium,
       color = AppColors.primary,
-      tonalElevation = Dimensions.Elevation.minimal,
-      border = BorderStroke(Dimensions.DividerThickness.thin, AppColors.divider)) {
+      tonalElevation = Dimensions.Elevation.minimal) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
             verticalAlignment = Alignment.CenterVertically,

@@ -7,6 +7,7 @@
 package com.github.meeplemeet.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
@@ -73,13 +76,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -131,8 +134,6 @@ object ComponentsTestTags {
 /** Common labels, placeholders, and button texts used across components. */
 private const val LABEL_DATE = "Date"
 private const val LABEL_TIME = "Time"
-private const val LABEL_SELECT_DATE = "Select a date"
-private const val LABEL_SELECT_TIME = "Select a time"
 private const val TEXT_SELECT_LOCATION = "Select a location"
 private const val LABEL_LOCATION = "Location"
 private const val PLACEHOLDER_LOCATION = "Enter an address"
@@ -329,6 +330,9 @@ fun IconTextFieldNew(
       modifier = modifier,
       enabled = false,
       readOnly = !editable,
+      singleLine = true,
+      textStyle = TextStyle(fontSize = Dimensions.TextSize.body),
+      shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
       placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
@@ -586,25 +590,26 @@ fun DatePickerDockedField(
     testTagDate: String = SessionTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
-  val text = value?.format(displayFormatter) ?: LABEL_SELECT_DATE
+  val text = value?.format(displayFormatter) ?: LABEL_DATE
 
-  IconTextFieldNew(
-      value = text,
-      onValueChange = {},
-      placeholder = label,
-      editable = editable,
-      leadingIcon = {
-        if (editable) {
-          IconButton(
-              onClick = { showDialogDate = true }, modifier = Modifier.testTag(testTagPick)) {
-                Icon(
-                    Icons.Default.CalendarToday,
-                    contentDescription = LABEL_DATE,
-                    tint = AppColors.neutral)
-              }
-        }
-      },
-      modifier = Modifier.fillMaxWidth().testTag(testTagDate))
+  Box(modifier = Modifier.testTag(testTagDate)) {
+    IconTextFieldNew(
+        value = text,
+        onValueChange = {},
+        placeholder = label,
+        editable = editable,
+        leadingIcon = {
+          Icon(
+              Icons.Default.CalendarToday,
+              contentDescription = LABEL_DATE,
+              tint = AppColors.neutral)
+        },
+        trailingIcon = {
+          Icon(
+              Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIconsFade)
+        },
+        modifier = Modifier.fillMaxWidth().clickable { showDialogDate = true }.testTag(testTagPick))
+  }
 
   if (showDialogDate) {
     AppDatePickerDialog(
@@ -711,21 +716,26 @@ fun TimePickerField(
           is24Hour = is24Hour,
           initialHour = value?.hour ?: Dimensions.Numbers.defaultTimeHour,
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
-  val text = value?.format(displayFormatter) ?: LABEL_SELECT_TIME
+  val text = value?.format(displayFormatter) ?: LABEL_TIME
 
-  IconTextFieldNew(
-      value = text,
-      onValueChange = { /* read-only; picker controls it */},
-      placeholder = label,
-      editable = false,
-      leadingIcon = {
-        IconButton(
-            onClick = { open = true },
-            modifier = Modifier.testTag(SessionTestTags.TIME_PICK_BUTTON)) {
-              Icon(Icons.Default.Timer, contentDescription = LABEL_TIME, tint = AppColors.neutral)
-            }
-      },
-      modifier = Modifier.fillMaxWidth(1f).testTag(SessionTestTags.TIME_FIELD))
+  Box(modifier = Modifier.testTag(SessionTestTags.TIME_FIELD)) {
+    IconTextFieldNew(
+        value = text,
+        onValueChange = { /* read-only; picker controls it */},
+        placeholder = label,
+        editable = false,
+        leadingIcon = {
+          Icon(Icons.Default.Timer, contentDescription = LABEL_TIME, tint = AppColors.neutral)
+        },
+        trailingIcon = {
+          Icon(
+              Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIconsFade)
+        },
+        modifier =
+            Modifier.fillMaxWidth(1f)
+                .clickable { open = true }
+                .testTag(SessionTestTags.TIME_PICK_BUTTON))
+  }
 
   if (open) {
     AlertDialog(
@@ -845,28 +855,33 @@ fun DateAndTimePicker(
     onFocusChanged: (Boolean) -> Unit = {},
     onTimeChange: (LocalTime?) -> Unit
 ) {
-  Row(modifier = Modifier.fillMaxWidth().background(AppColors.secondary)) {
-    Box(Modifier.fillMaxWidth(0.5f).onFocusChanged { onFocusChanged(it.isFocused) }) {
-      DatePickerDockedField(
-          value = date, onValueChange = onDateChange, label = LABEL_SELECT_DATE, editable = true)
-    }
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .background(
+                  color = AppColors.secondary,
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium))) {
+        Box(Modifier.fillMaxWidth(0.55f).onFocusChanged { onFocusChanged(it.isFocused) }) {
+          DatePickerDockedField(
+              value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
+        }
 
-    Column {
-      Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-        TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_SELECT_TIME)
-      }
+        Column {
+          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+            TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
+          }
 
-      // Show error if date/time is in the past
-      if (isDateTimeInPast(date, time)) {
-        Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-        Text(
-            text = "Cannot create a session in the past",
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(start = Dimensions.Padding.medium))
+          // Show error if date/time is in the past
+          if (isDateTimeInPast(date, time)) {
+            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+            Text(
+                text = "Cannot create a session in the past",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = Dimensions.Padding.medium))
+          }
+        }
       }
-    }
-  }
 }
 
 /**
@@ -899,43 +914,59 @@ fun SessionLocationSearchButton(
               .heightIn(min = Dimensions.ContainerSize.timeFieldHeight)
               .testTag(buttonTestTag),
       colors = ButtonDefaults.buttonColors(containerColor = AppColors.secondary),
-      shape = RectangleShape,
+      shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
       contentPadding = PaddingValues(Dimensions.Padding.extraMedium)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start) {
-              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location Pin")
+              Icon(
+                  imageVector = Icons.Default.LocationOn,
+                  contentDescription = "Location Pin",
+                  tint = AppColors.neutral)
               Spacer(Modifier.width(Dimensions.Spacing.medium))
               Text(
                   text = selectedLocationLabel,
                   style = MaterialTheme.typography.bodySmall,
-                  color = AppColors.textIcons,
-                  modifier = Modifier.weight(1f),
-                  maxLines = 6,
-                  softWrap = true)
+                  color = AppColors.textIcons)
+              Spacer(Modifier.weight(1f))
+              Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null)
             }
       }
 
   if (showDialog) {
-    AlertDialog(
-        onDismissRequest = { showDialog = false },
-        modifier = Modifier.testTag(dialogTestTag),
-        containerColor = AppColors.primary,
-        title = { Text(LABEL_LOCATION, color = AppColors.textIcons) },
-        text = {
-          Column(modifier = Modifier.fillMaxWidth()) {
-            SessionLocationSearchBar(
-                account = account,
-                discussion = discussion,
-                viewModel = viewModel,
-                onLocationSelected = { location ->
-                  selectedLocationLabel = location.name.ifBlank { TEXT_SELECT_LOCATION }
-                })
+    Dialog(onDismissRequest = { showDialog = false }) {
+      Surface(
+          shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+          color = AppColors.primary,
+          modifier = Modifier.fillMaxWidth(1f).wrapContentHeight()) {
+            Column(modifier = Modifier.padding(Dimensions.Padding.extraMedium)) {
+              Text(
+                  LABEL_LOCATION,
+                  color = AppColors.textIcons,
+                  style = MaterialTheme.typography.titleMedium)
+
+              Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+              Box(modifier = Modifier.testTag(dialogTestTag)) {
+                SessionLocationSearchBar(
+                    account = account,
+                    discussion = discussion,
+                    viewModel = viewModel,
+                    onLocationSelected = { location ->
+                      selectedLocationLabel = location.name.ifBlank { TEXT_SELECT_LOCATION }
+                    })
+              }
+
+              Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { showDialog = false }) { Text(BUTTON_CANCEL) }
+                TextButton(onClick = { showDialog = false }) { Text(BUTTON_OK) }
+              }
+            }
           }
-        },
-        confirmButton = { TextButton(onClick = { showDialog = false }) { Text(BUTTON_OK) } },
-        dismissButton = { TextButton(onClick = { showDialog = false }) { Text(BUTTON_CANCEL) } })
+    }
   }
 }
 
