@@ -198,7 +198,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
       // Switch to valid renter for save test
       currentRenterState.value = validRenter
       compose.waitForIdle()
-
       // Make a change to enable the save button
       ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
 
@@ -210,6 +209,10 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
 
       // Save updates
       compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+      compose.waitForIdle()
+
+      // Give extra time for the callback to be invoked
+      Thread.sleep(500)
       compose.waitForIdle()
 
       assertTrue(updatedCalled)
