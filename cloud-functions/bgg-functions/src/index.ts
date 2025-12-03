@@ -8,12 +8,19 @@
  */
 
 import { setGlobalOptions } from "firebase-functions";
+import admin from "firebase-admin"
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import fetch from "node-fetch";
 import { XMLParser } from "fast-xml-parser";
 
 setGlobalOptions({ maxInstances: 10 });
+
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+const db = admin.firestore()
 
 // Test endpoint
 export const ping = onRequest((req, res) => {
@@ -27,6 +34,8 @@ const GAME_TTL_MS = 24 * 60 * 60 * 1000;
 const SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
 const GAME_CACHE_MAX = 1000;
 const SEARCH_CACHE_MAX = 100;
+const GAME_CACHE_COLLECTION = "gameCache";
+const SEARCH_CACHE_COLLECTION = "searchCache";
 
 // Simple L1 in-memory caches (non-persistent)
 type CacheEntry<T> = { value: T; expireAt: number };
@@ -57,6 +66,29 @@ function setToCache<T>(
         if (!firstKey) break;
         map.delete(firstKey);
     }
+}
+
+
+// L2 cache in-database (persistent)
+async function getFromL2Cache<T>(collection: string, key: string, ttlMs: number): Promise<T | null> {
+  const docRef = db.collection(collection).doc(key);
+  const doc = await docRef.get();
+  if (!doc.exists) return null;
+  const data = doc.data();
+  if (!data || !data.value || !data.updatedAt) return null;
+  if (Date.now() - data.updatedAt.toMillis() > ttlMs) {
+    await docRef.delete();
+    return null;
+  }
+  return data.value as T;
+}
+
+async function setToL2Cache<T>(collection: string, key: string, value: T) {
+  const docRef = db.collection(collection).doc(key);
+  await docRef.set({
+    value,
+    updatedAt: admin.firestore.Timestamp.now()
+  });
 }
 
 // --------------------
@@ -243,8 +275,9 @@ async function fetchWithAuth(url: string) {
  * Query: ids=1,2,3
  * Behaviour:
  *  - check L1 cache per id
- *  - if some ids missing -> single BGG call for missing ids
- *  - parse returned items, store each parsed game in L1 cache
+ *  - if some ids missing -> check L2 cache
+ *  - if still missing -> single BGG call for missing ids
+ *  - parse returned items, store each parsed game in L1 + L2 cache
  *  - return ordered array of games (only successfully parsed ones)
  */
 export const getGamesByIds = onRequest(
@@ -265,28 +298,44 @@ export const getGamesByIds = onRequest(
           : [String(idsParam)];
 
       const ids = rawIds.map((s) => s.trim()).filter(Boolean).slice(0, 20);
-      if (ids.length === 0) {
+      if (!ids.length) {
         res.status(400).json({ error: "No valid ids provided" });
         return;
       }
 
-		  // Check L1 cache
-		  const cachedById: Record<string, GameOut> = {}
-		  const missingIds: string[] = [];
-		  for (const id of ids) {
+      const cachedById: Record<string, GameOut> = {};
+      let missingIds: string[] = [];
+
+      // Check L1 cache
+      for (const id of ids) {
         const cached = getFromCache<GameOut>(gameCache, `game:${id}`);
-        if (cached) {
-          cachedById[id] = cached;
-        } else {
-          missingIds.push(id);
-        }
+        if (cached) cachedById[id] = cached;
+        else missingIds.push(id);
       }
 
-      logger.log("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
-
-      // If missing, call BGG once
+      // Check L2 cache
       if (missingIds.length > 0) {
-        const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join(",")}&type=boardgame&stats=1`;
+        const l2Results = await Promise.all(
+          missingIds.map((id) => getFromL2Cache<GameOut>(GAME_CACHE_COLLECTION, id, GAME_TTL_MS))
+        );
+        l2Results.forEach((g, idx) => {
+          if (g) {
+            cachedById[g.uid] = g;
+            setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX); // update L1
+            missingIds = missingIds.filter((id) => id !== g.uid);
+          }
+        });
+      }
+
+      logger.log("getGamesByIds", {
+        requested: ids.length,
+        cached: Object.keys(cachedById).length,
+        missing: missingIds.length,
+      });
+
+      // Fetch from BGG if still missing
+      if (missingIds.length > 0) {
+        const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${missingIds.join(",")}&type=boardgame&stats=1`;
         logger.log("getGamesByIds: fetching from BGG", { bggUrl, count: missingIds.length });
 
         const response = await fetchWithAuth(bggUrl);
@@ -300,43 +349,40 @@ export const getGamesByIds = onRequest(
         const xml = await response.text();
         const parsed = parser.parse(xml);
         let items = parsed?.items?.item ?? [];
-        if (!items) items = [];
         if (!Array.isArray(items)) items = [items];
 
-        const fetchedById: Record<string, GameOut> = {};
         for (const item of items) {
           try {
             const g = parseItemToGame(item);
-            fetchedById[g.uid] = g;
+            cachedById[g.uid] = g;
             // write to L1 cache
             setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX);
+            // write to L2 cache
+            await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g);
           } catch (e: any) {
             logger.warn("Ignored item during parse", { id: item?.["@id"], reason: e?.message });
           }
         }
-
-        // Merge cached + fetched
-        const ordered: GameOut[] = ids.map((id) => cachedById[id] ?? fetchedById[id]).filter(Boolean);
-        res.json(ordered);
-        return;
-      } else {
-        // all cached -> return ordered cached
-        const ordered: GameOut[] = ids.map((id) => cachedById[id]).filter(Boolean);
-        res.json(ordered);
-        return;
       }
+
+      // --- Return ordered results ---
+      const ordered = ids.map((id) => cachedById[id]).filter(Boolean);
+      res.json(ordered);
     } catch (err: any) {
       logger.error("getGamesByIds unexpected error", { err: err?.message ?? err });
       res.status(500).json({ error: "Internal server error", message: err?.message });
     }
-});
+  }
+);
+
 
 /**
  * searchGames
  * Query: query=..., maxResults=..., ignoreCase=true|false
  * Behaviour:
  *  - check L1 cache for query key (query normalized + ignoreCase + maxResults)
- *  - if miss -> fetch BGG search once, parse, rank, store in cache, return
+ *  - if miss -> check L2 cache
+ *  - if still miss -> fetch BGG search, parse, rank, store in caches
  */
 export const searchGames = onRequest(
   { secrets: ["BGG_API_TOKEN"] },
@@ -347,18 +393,33 @@ export const searchGames = onRequest(
         res.status(400).json({ error: "Missing query parameter 'query'" });
         return;
       }
+
       const maxResults = Math.min(Number(req.query.maxResults) || 20, 50);
       const ignoreCase = req.query.ignoreCase === "true";
 
       const cacheKey = `search:${queryParam.toLowerCase()}:${ignoreCase ? "i" : "s"}:max${maxResults}`;
-      const cached = getFromCache<GameSearchResult[]>(searchCache, cacheKey);
+
+      // Check L1 cache
+      let cached = getFromCache<GameSearchResult[]>(searchCache, cacheKey);
+
+      // Check L2 cache if miss
+      if (!cached) {
+        cached = await getFromL2Cache<GameSearchResult[]>(SEARCH_CACHE_COLLECTION, cacheKey, SEARCH_TTL_MS);
+        if (cached) {
+          logger.log("searchGames cache hit (L2)", { query: queryParam, cachedCount: cached.length });
+          setToCache(searchCache, cacheKey, cached, SEARCH_TTL_MS, SEARCH_CACHE_MAX);
+        }
+      }
+
       if (cached) {
-        logger.log("searchGames cache hit", { query: queryParam, cachedCount: cached.length });
+        logger.log("searchGames cache hit (L1/L2)", { query: queryParam });
         res.json(cached.slice(0, maxResults));
         return;
       }
+
       logger.log("searchGames cache miss", { query: queryParam });
 
+      // --- Fetch BGG ---
       const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(queryParam)}&type=boardgame`;
       logger.log("searchGames: fetching", { url });
 
@@ -373,7 +434,6 @@ export const searchGames = onRequest(
       const xml = await response.text();
       const parsed = parser.parse(xml);
       let items = parsed?.items?.item ?? [];
-      if (!items) items = [];
       if (!Array.isArray(items)) items = [items];
 
       const results: GameSearchResult[] = items
@@ -395,13 +455,16 @@ export const searchGames = onRequest(
 
       const ranked = rankSearchResults(results, queryParam, ignoreCase).slice(0, maxResults);
 
-      // write to search cache
+      // --- Write caches ---
       setToCache(searchCache, cacheKey, ranked, SEARCH_TTL_MS, SEARCH_CACHE_MAX);
+      await setToL2Cache(SEARCH_CACHE_COLLECTION, cacheKey, ranked);
 
       res.json(ranked);
+      return;
     } catch (err: any) {
       logger.error("searchGames unexpected error", { err: err?.message ?? err });
       res.status(500).json({ error: "Internal server error", message: err?.message });
+      return;
     }
   }
 );
