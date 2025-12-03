@@ -756,7 +756,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
                     .padding(bottom = Dimensions.Padding.medium)
                     .fillMaxWidth(),
             onValueChange = {
-              handle = it
+                if (it.length < 32) handle = it
               if (it.isNotBlank()) {
                 showErrors = true
                 viewModel.checkHandleAvailable(it)
@@ -802,7 +802,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
                     .padding(bottom = Dimensions.Padding.medium)
                     .fillMaxWidth(),
             value = name,
-            onValueChange = { name = it },
+            onValueChange = { if (it.length < 90) name = it },
             trailingIcon = {
               Icon(
                   imageVector = Icons.Default.Cancel,
