@@ -446,7 +446,7 @@ private fun SessionBasicInfoSection(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false))
 
-        Spacer(Modifier.width(Dimensions.Spacing.small))
+        Spacer(Modifier.width(Dimensions.Spacing.extraMedium))
         IconButton(onClick = onShowGameInfo, modifier = Modifier.size(Dimensions.IconSize.large)) {
           Icon(
               imageVector = Icons.Default.Info,
