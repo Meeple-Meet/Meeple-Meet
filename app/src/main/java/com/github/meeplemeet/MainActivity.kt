@@ -65,6 +65,7 @@ import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostsOverviewScreen
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
+import com.github.meeplemeet.ui.sessions.SessionScreen
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
@@ -528,6 +529,21 @@ fun MeepleMeetApp(
             onBack = { navigationActions.goBack() },
         )
       } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+    }
+
+    composable(MeepleMeetScreen.SessionViewer.name) {
+      if (discussion == null) {
+        LoadingScreen()
+      } else if (discussion!!.session != null &&
+          discussion!!.session!!.participants.contains(account!!.uid)) {
+        SessionScreen(
+            account = account!!,
+            discussion = discussion!!,
+            onBack = { navigationActions.goBack() },
+            onEditClick = { navigationActions.goBack() })
+      } else {
+        navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+      }
     }
   }
 }
