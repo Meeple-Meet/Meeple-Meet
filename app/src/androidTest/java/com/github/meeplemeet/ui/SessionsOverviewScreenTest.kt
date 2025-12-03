@@ -11,6 +11,7 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.sessions.NO_SESSIONS_DEFAULT_TEXT
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
+import com.github.meeplemeet.ui.sessions.SessionsOverviewScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -70,84 +71,159 @@ class SessionsOverviewScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun full_smoke_all_cases() = runBlocking {
+  fun full_smoke_all_cases() {
+    runBlocking {
 
-    /* 1. empty state ---------------------------------------------------- */
-    checkpoint("Initial empty state") { emptyText().assertIsDisplayed() }
+      /* 1. empty state ---------------------------------------------------- */
+      checkpoint("Initial empty state") { emptyText().assertIsDisplayed() }
 
-    /* 2. create session -> card appears --------------------------------- */
-    checkpoint("Create session – card appears") {
-      runBlocking {
-        val discussion =
-            discussionRepository.createDiscussion("Game Night", "Let's play", account.uid)
-        val game = gameRepository.getGameById(testGameId)
-        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
-        sessionRepository.createSession(
-            discussion.uid, "Chess Night", game.uid, futureDate, testLocation, account.uid)
-        delay(100)
-        emptyText().assertDoesNotExist()
-        sessionCard(discussion.uid).assertIsDisplayed()
+      /* 2. create session -> card appears --------------------------------- */
+      checkpoint("Create session – card appears") {
+        runBlocking {
+          val discussion =
+              discussionRepository.createDiscussion("Game Night", "Let's play", account.uid)
+          val game = gameRepository.getGameById(testGameId)
+          val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
+          sessionRepository.createSession(
+              discussion.uid, "Chess Night", game.uid, futureDate, testLocation, account.uid)
+          delay(100)
+          emptyText().assertDoesNotExist()
+          sessionCard(discussion.uid).assertIsDisplayed()
+        }
+      }
+
+      /* 3. tap card -> correct id passed to callback ----------------------- */
+      checkpoint("Tap card – correct discussion id emitted") {
+        runBlocking {
+          val discussion =
+              discussionRepository.createDiscussion("Navigate Me", "Tap test", account.uid)
+          val game = gameRepository.getGameById(testGameId)
+          val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
+          sessionRepository.createSession(
+              discussion.uid, "Tap Night", game.uid, futureDate, testLocation, account.uid)
+          delay(100)
+          sessionCard(discussion.uid).performClick()
+          assertEquals(discussion.uid, capturedDiscussionId)
+        }
+      }
+
+      /* 4. delete session -> card disappears ------------------------------- */
+      checkpoint("Delete session – card disappears") {
+        runBlocking {
+          val discussion =
+              discussionRepository.createDiscussion("Delete Me", "Will vanish", account.uid)
+          val game = gameRepository.getGameById(testGameId)
+          val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 10000000))
+          sessionRepository.createSession(
+              discussion.uid, "Vanish Night", game.uid, futureDate, testLocation, account.uid)
+          delay(100)
+          sessionCard(discussion.uid).assertIsDisplayed()
+
+          sessionRepository.deleteSession(discussion.uid)
+          delay(100)
+          sessionCard(discussion.uid).assertDoesNotExist()
+        }
+      }
+
+      /* 5. toggle history -> WIP shown ------------------------------------ */
+      checkpoint("Toggle History – shows history grid") {
+        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
+      }
+
+      /* 6. click history card -> popup appears ---------------------------- */
+      checkpoint("Click history card – popup appears") {
+        runBlocking {
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS)
+              .performClick()
+          delay(100)
+
+          val pastDate =
+              Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
+          val discussion =
+              discussionRepository.createDiscussion("Past Session", "Old times", account.uid)
+          val game = gameRepository.getGameById(testGameId)
+          sessionRepository.createSession(
+              discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
+
+          delay(1000)
+
+          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
+          compose.waitUntil(2000) { compose.onNodeWithText("Past Night").isDisplayed() }
+
+          compose.onNodeWithText("Past Night").performClick()
+
+          compose.onAllNodesWithText("Past Night").assertCountEquals(2)
+          compose.onNodeWithContentDescription("Close").assertIsDisplayed()
+
+          compose.onNodeWithContentDescription("Close").performClick()
+          compose.onNodeWithContentDescription("Close").assertDoesNotExist()
+        }
       }
     }
+  }
 
-    /* 3. tap card -> correct id passed to callback ----------------------- */
-    checkpoint("Tap card – correct discussion id emitted") {
+  @Test
+  fun archive_flow() {
+    checkpoint("Archive flow") {
       runBlocking {
+        /* 1. Create session that is passed but < 24h */
         val discussion =
-            discussionRepository.createDiscussion("Navigate Me", "Tap test", account.uid)
+            discussionRepository.createDiscussion("Archive Me", "Will be archived", account.uid)
         val game = gameRepository.getGameById(testGameId)
-        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
-        sessionRepository.createSession(
-            discussion.uid, "Tap Night", game.uid, futureDate, testLocation, account.uid)
-        delay(100)
-        sessionCard(discussion.uid).performClick()
-        assertEquals(discussion.uid, capturedDiscussionId)
-      }
-    }
 
-    /* 4. delete session -> card disappears ------------------------------- */
-    checkpoint("Delete session – card disappears") {
-      runBlocking {
-        val discussion =
-            discussionRepository.createDiscussion("Delete Me", "Will vanish", account.uid)
-        val game = gameRepository.getGameById(testGameId)
-        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 10000000))
+        val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - 3600000))
         sessionRepository.createSession(
-            discussion.uid, "Vanish Night", game.uid, futureDate, testLocation, account.uid)
-        delay(100)
+            discussion.uid, "Archive Night", game.uid, pastDate, testLocation, account.uid)
+
+        /* 2. Verify "Automatically archives in..." text */
+        compose.waitUntil {
+          compose.onNodeWithText("Automatically archives in", substring = true).isDisplayed()
+        }
+
+        /* 3. Verify archive button exists (creator is admin) */
         sessionCard(discussion.uid).assertIsDisplayed()
+        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).assertExists()
 
-        sessionRepository.deleteSession(discussion.uid)
-        delay(100)
+        /* 4. Click archive button */
+        sessionCard(discussion.uid).performTouchInput { swipeLeft() }
+        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).performClick()
+        delay(500)
+
+        /* 5. Verify session moved to history */
         sessionCard(discussion.uid).assertDoesNotExist()
+        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
+        compose.waitUntil(2000) { compose.onNodeWithText("Archive Night").isDisplayed() }
       }
     }
+  }
 
-    /* 5. toggle history -> WIP shown ------------------------------------ */
-    checkpoint("Toggle History – shows history grid") {
-      compose.onNodeWithText("History").performClick()
-    }
-
-    /* 6. click history card -> popup appears ---------------------------- */
-    checkpoint("Click history card – popup appears") {
+  @Test
+  fun admin_permissions() {
+    checkpoint("Admin permissions") {
       runBlocking {
-        val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - 10000000))
+        /* 1. Create session where current user is NOT admin */
+        val otherUid = "uid_" + UUID.randomUUID().toString().take(8)
+        accountRepository.createAccount(otherUid, "Other User", "other@x.com", null)
+
         val discussion =
-            discussionRepository.createDiscussion("Past Session", "Old times", account.uid)
+            discussionRepository.createDiscussion("Not Admin", "Cannot archive", otherUid)
+
+        discussionRepository.addUserToDiscussion(discussion.uid, account.uid)
+
         val game = gameRepository.getGameById(testGameId)
+        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
         sessionRepository.createSession(
-            discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
+            discussion.uid, "User Night", game.uid, futureDate, testLocation, otherUid, account.uid)
         delay(100)
 
-        compose.onNodeWithText("Past Night").assertIsDisplayed()
+        /* 2. Verify session card is displayed */
+        sessionCard(discussion.uid).assertIsDisplayed()
 
-        compose.onNodeWithText("Past Night").performClick()
-
-        compose.onAllNodesWithText("Past Night").assertCountEquals(2)
-        compose.onNodeWithContentDescription("Close").assertIsDisplayed()
-
-        compose.onNodeWithContentDescription("Close").performClick()
-        compose.onNodeWithContentDescription("Close").assertDoesNotExist()
+        /* 3. Verify archive button does NOT exist */
+        compose
+            .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
+            .assertDoesNotExist()
       }
     }
   }
