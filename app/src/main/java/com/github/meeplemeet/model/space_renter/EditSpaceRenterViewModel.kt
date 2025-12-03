@@ -2,6 +2,7 @@
 
 package com.github.meeplemeet.model.space_renter
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -9,7 +10,12 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for editing and deleting existing space renters.
@@ -23,6 +29,43 @@ import kotlinx.coroutines.launch
 class EditSpaceRenterViewModel(
     private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
 ) : SpaceRenterSearchViewModel() {
+  private val _currentSpaceRenter = MutableStateFlow<SpaceRenter?>(null)
+  val currentSpaceRenter: StateFlow<SpaceRenter?> = _currentSpaceRenter.asStateFlow()
+
+  /**
+   * Initializes the ViewModel with a space renter. Also loads it from cache/repository to ensure we
+   * have the latest data.
+   */
+  fun initialize(spaceRenter: SpaceRenter) {
+    _currentSpaceRenter.value = spaceRenter
+
+    // Load latest version from cache or repository
+    viewModelScope.launch {
+      OfflineModeManager.loadSpaceRenter(spaceRenter.id) { loaded ->
+        if (loaded != null) {
+          _currentSpaceRenter.value = loaded
+        }
+      }
+    }
+  }
+  /**
+   * Refreshes the space renter data from the repository. This can be called externally (e.g., after
+   * sync completes).
+   */
+  suspend fun refreshSpaceRenter(renterId: String) {
+    withContext(OfflineModeManager.dispatcher) {
+      val refreshed = spaceRenterRepository.getSpaceRenterSafe(renterId)
+      if (refreshed != null) {
+        Log.d(
+            "EditSpaceRenterVM",
+            "Refreshed space renter: ${refreshed.name}, spaces: ${refreshed.spaces.size}")
+        _currentSpaceRenter.value = refreshed
+        OfflineModeManager.updateSpaceRenterCache(refreshed)
+      } else {
+        Log.e("EditSpaceRenterVM", "Failed to refresh space renter")
+      }
+    }
+  }
 
   /**
    * Updates one or more fields of an existing space renter.
@@ -51,7 +94,7 @@ class EditSpaceRenterViewModel(
    * @throws IllegalArgumentException if the space renter name is blank, if not exactly 7 opening
    *   hours entries are provided, or if the address is not valid.
    */
-  fun updateSpaceRenter(
+  suspend fun updateSpaceRenter(
       spaceRenter: SpaceRenter,
       requester: Account,
       owner: Account? = null,
@@ -77,13 +120,15 @@ class EditSpaceRenterViewModel(
     }
 
     if (address != null && address == Location())
-        throw IllegalArgumentException("An address it required to create a space renter")
+        throw IllegalArgumentException("An address is required to create a space renter")
 
-    viewModelScope.launch {
-      val isOnline = OfflineModeManager.hasInternetConnection.value
+    val isOnline = OfflineModeManager.hasInternetConnection.first()
+    Log.d(
+        "EditSpaceRenterVM", "updateSpaceRenter - isOnline: $isOnline, renterId: ${spaceRenter.id}")
 
+    withContext(OfflineModeManager.dispatcher) {
       if (isOnline) {
-        // Online: update repository directly
+        Log.d("EditSpaceRenterVM", "Updating in Firestore...")
         spaceRenterRepository.updateSpaceRenter(
             spaceRenter.id,
             owner?.uid,
@@ -96,10 +141,24 @@ class EditSpaceRenterViewModel(
             spaces,
             photoCollectionUrl)
 
-        // Clear offline changes after successful update
+        Log.d("EditSpaceRenterVM", "Firestore update complete, fetching fresh data...")
+        val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
+        Log.d(
+            "EditSpaceRenterVM",
+            "Refreshed data: ${refreshed?.name}, spaces: ${refreshed?.spaces?.size}")
+
+        if (refreshed != null) {
+          // Update both cache and UI state
+          OfflineModeManager.updateSpaceRenterCache(refreshed)
+          _currentSpaceRenter.value = refreshed
+          Log.d("EditSpaceRenterVM", "Cache and UI state update CONFIRMED")
+        } else {
+          Log.e("EditSpaceRenterVM", "Failed to fetch refreshed data!")
+        }
+
         OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
       } else {
-        // Offline: store changes in OfflineModeManager
+        Log.d("EditSpaceRenterVM", "Storing changes offline...")
         val changes = mutableMapOf<String, Any>()
         if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
         if (name != null) changes[SpaceRenter::name.name] = name
@@ -109,18 +168,30 @@ class EditSpaceRenterViewModel(
         if (address != null) changes[SpaceRenter::address.name] = address
         if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
         if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
-        // remove this line when images are supported offline
-        // if (photoCollectionUrl != null) changes[SpaceRenter::photoCollectionUrl.name] =
-        // photoCollectionUrl
+        if (photoCollectionUrl != null)
+            changes[SpaceRenter::photoCollectionUrl.name] = photoCollectionUrl
 
-        // Store each change in offline cache
         changes.forEach { (property, value) ->
           OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
         }
+
+        // Apply optimistic update to UI
+        val optimisticUpdate =
+            spaceRenter.copy(
+                owner = owner ?: spaceRenter.owner,
+                name = name ?: spaceRenter.name,
+                phone = phone ?: spaceRenter.phone,
+                email = email ?: spaceRenter.email,
+                website = website ?: spaceRenter.website,
+                address = address ?: spaceRenter.address,
+                openingHours = openingHours ?: spaceRenter.openingHours,
+                spaces = spaces ?: spaceRenter.spaces,
+                photoCollectionUrl = photoCollectionUrl ?: spaceRenter.photoCollectionUrl)
+        _currentSpaceRenter.value = optimisticUpdate
+        Log.d("EditSpaceRenterVM", "Applied optimistic update to UI")
       }
     }
   }
-
   /**
    * Deletes a space renter from Firestore.
    *
@@ -139,7 +210,6 @@ class EditSpaceRenterViewModel(
 
     viewModelScope.launch {
       spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
-      // Remove from offline cache after deletion
       OfflineModeManager.removeSpaceRenter(spaceRenter.id)
     }
   }

@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.LocationUIState
@@ -133,9 +134,19 @@ fun EditSpaceRenterScreen(
     viewModel: EditSpaceRenterViewModel = viewModel()
 ) {
   val locationUi by viewModel.locationUIState.collectAsState()
+  val currentSpaceRenter by viewModel.currentSpaceRenter.collectAsStateWithLifecycle()
 
-  // Automatically initialize the selected location if not already set
-  // when the renter has an existing address.
+  // Initialize ViewModel with the space renter
+  LaunchedEffect(spaceRenter.id) { viewModel.initialize(spaceRenter) }
+
+  // Use currentSpaceRenter if available, otherwise fall back to parameter
+  val activeRenter = currentSpaceRenter ?: spaceRenter
+
+  LaunchedEffect(activeRenter.address) {
+    if (locationUi.selectedLocation == null && activeRenter.address != Location()) {
+      viewModel.setLocation(activeRenter.address)
+    }
+  }
   LaunchedEffect(spaceRenter.address) {
     if (locationUi.selectedLocation == null && spaceRenter.address != Location()) {
       viewModel.setLocation(spaceRenter.address)
@@ -145,7 +156,7 @@ fun EditSpaceRenterScreen(
   EditSpaceRenterContent(
       owner = owner,
       online = online,
-      initialRenter = spaceRenter,
+      initialRenter = activeRenter,
       onBack = onBack,
       onUpdated = onUpdated,
       onUpdateSpaceRenter = { updated ->
