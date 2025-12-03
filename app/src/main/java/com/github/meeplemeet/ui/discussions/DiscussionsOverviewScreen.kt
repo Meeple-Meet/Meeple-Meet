@@ -98,10 +98,14 @@ fun DiscussionsOverviewScreen(
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
   val context = LocalContext.current
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
   val offline by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
   val discussionPreviewsSorted =
-      remember(account.previews) {
-        account.previews.values.sortedByDescending { it.lastMessageAt.toDate() }
+      remember(account.previews, online, offline.discussions) {
+        val previews =
+            if (online) account.previews
+            else account.previews.filter { offline.discussions.contains(it.value.uid) }
+        previews.values.sortedByDescending { it.lastMessageAt.toDate() }
       }
 
   LaunchedEffect(account.previews) { viewModel.validatePreviews(account) }

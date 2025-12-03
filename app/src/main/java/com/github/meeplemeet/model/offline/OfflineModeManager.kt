@@ -186,7 +186,12 @@ object OfflineModeManager {
    * @param onResult Callback invoked with the Account if found, or null if not found or an error
    *   occurs
    */
-  suspend fun loadAccount(uid: String, context: Context, onResult: (Account?) -> Unit) {
+  suspend fun loadAccount(
+      uid: String,
+      context: Context,
+      loadAllData: Boolean = false,
+      onResult: (Account?) -> Unit
+  ) {
     val state = _offlineModeFlow.value.accounts
     val cached = state[uid]?.first
 
@@ -195,7 +200,7 @@ object OfflineModeManager {
       return
     }
 
-    val fetched = RepositoryProvider.accounts.getAccountSafe(uid, false)
+    val fetched = RepositoryProvider.accounts.getAccountSafe(uid, loadAllData)
     if (fetched != null) {
       // Create new map to avoid mutating StateFlow's internal state
       val newState = LinkedHashMap(state).apply { this[uid] = fetched to emptyMap() }

@@ -76,7 +76,7 @@ class MainActivityViewModel(
     viewModelScope.launch {
       OfflineModeManager.hasInternetConnection.collect {
         // Always use OfflineModeManager.loadAccount - it handles both cache and fetch
-        OfflineModeManager.loadAccount(accountId, context) { account ->
+        OfflineModeManager.loadAccount(accountId, context, true) { account ->
           accountDataFlow.value = account
         }
       }
