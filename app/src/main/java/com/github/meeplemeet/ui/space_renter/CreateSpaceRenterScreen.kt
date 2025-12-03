@@ -82,7 +82,7 @@ object AddSpaceRenterUi {
 fun CreateSpaceRenterScreen(
     owner: Account,
     online: Boolean,
-    userLocation: com.github.meeplemeet.model.shared.location.Location?,
+    userLocation: Location?,
     onBack: () -> Unit,
     onCreated: () -> Unit,
     viewModel: CreateSpaceRenterViewModel = viewModel()
