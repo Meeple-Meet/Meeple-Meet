@@ -159,20 +159,6 @@ class EditSpaceRenterViewModel(
         changes.forEach { (property, value) ->
           OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
         }
-
-        // Apply optimistic update to UI
-        val optimisticUpdate =
-            spaceRenter.copy(
-                owner = owner ?: spaceRenter.owner,
-                name = name ?: spaceRenter.name,
-                phone = phone ?: spaceRenter.phone,
-                email = email ?: spaceRenter.email,
-                website = website ?: spaceRenter.website,
-                address = address ?: spaceRenter.address,
-                openingHours = openingHours ?: spaceRenter.openingHours,
-                spaces = spaces ?: spaceRenter.spaces,
-                photoCollectionUrl = photoCollectionUrl ?: spaceRenter.photoCollectionUrl)
-        _currentSpaceRenter.value = optimisticUpdate
       }
     }
   }

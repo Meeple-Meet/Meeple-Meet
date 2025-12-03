@@ -518,6 +518,40 @@ object OfflineModeManager {
   }
 
   /**
+   * Applies pending changes to a SpaceRenter object.
+   *
+   * @param renter The base SpaceRenter object.
+   * @param changes The map of pending changes.
+   * @return The SpaceRenter with changes applied.
+   */
+  private fun applySpaceRenterChanges(renter: SpaceRenter, changes: Map<String, Any>): SpaceRenter {
+    if (changes.isEmpty()) return renter
+
+    var updated = renter
+    changes.forEach { (key, value) ->
+      when (key) {
+        "name" -> updated = updated.copy(name = value as String)
+        "phone" -> updated = updated.copy(phone = value as String)
+        "email" -> updated = updated.copy(email = value as String)
+        "website" -> updated = updated.copy(website = value as String)
+        "address" ->
+            updated =
+                updated.copy(
+                    address = value as com.github.meeplemeet.model.shared.location.Location)
+        "openingHours" ->
+            updated =
+                updated.copy(
+                    openingHours = value as List<com.github.meeplemeet.model.shops.OpeningHours>)
+        "spaces" ->
+            updated =
+                updated.copy(spaces = value as List<com.github.meeplemeet.model.space_renter.Space>)
+        "photoCollectionUrl" -> updated = updated.copy(photoCollectionUrl = value as List<String>)
+      }
+    }
+    return updated
+  }
+
+  /**
    * Records a change to a space renter property in the offline cache for later synchronization.
    *
    * This tracks edits made while offline. Changes will be synced when connection is restored.
@@ -532,8 +566,11 @@ object OfflineModeManager {
     val updatedChanges =
         existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
 
+    // Update the base object with the new change
+    val updatedRenter = applySpaceRenterChanges(existingRenter, mapOf(property to newValue))
+
     val newState = LinkedHashMap(state)
-    newState[renter.id] = existingRenter to updatedChanges
+    newState[renter.id] = updatedRenter to updatedChanges
     _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
