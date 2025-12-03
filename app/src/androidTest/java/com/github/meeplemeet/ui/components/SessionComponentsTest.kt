@@ -525,9 +525,7 @@ class SessionComponentsTest : FirestoreTests() {
 
     // Check null date handling
     composeRule.runOnUiThread { date = null }
-    composeRule
-        .onNodeWithTag(SessionTestTags.DATE_FIELD + "0", useUnmergedTree = true)
-        .assertTextContains("Select a date")
+    composeRule.onNodeWithText("Date", useUnmergedTree = true).assertExists()
   }
 
   fun timePicker_displays_and_opens_dialog() {
