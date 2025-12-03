@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableMap
 
@@ -397,7 +398,7 @@ object OfflineModeManager {
    *   occurs
    */
   suspend fun loadShop(shopId: String, onResult: (Shop?) -> Unit) {
-    val state = _offlineModeFlow.value.shopsToAdd
+    val state = _offlineModeFlow.value.shops
     val cached = state[shopId]?.first
 
     if (cached != null) {
@@ -409,7 +410,7 @@ object OfflineModeManager {
     if (fetched != null) {
       val newState = LinkedHashMap(state).apply { this[shopId] = fetched to emptyMap() }
       val (capped, _) = cap(newState, MAX_CACHED_SHOPS)
-      _offlineModeFlow.value = _offlineModeFlow.value.copy(shopsToAdd = capped)
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = capped)
     }
 
     onResult(fetched)
@@ -425,14 +426,14 @@ object OfflineModeManager {
    * @param newValue The new value for the property
    */
   fun setShopChange(shop: Shop, property: String, newValue: Any) {
-    val state = _offlineModeFlow.value.shopsToAdd
+    val state = _offlineModeFlow.value.shops
     val (existingShop, existingChanges) = state[shop.id] ?: (shop to emptyMap())
     val updatedChanges =
         existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
 
     val newState = LinkedHashMap(state)
     newState[shop.id] = existingShop to updatedChanges
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shopsToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
   }
 
   /**
@@ -445,10 +446,10 @@ object OfflineModeManager {
    * @param shop The shop to add
    */
   fun addPendingShop(shop: Shop) {
-    val state = _offlineModeFlow.value.shopsToAdd
+    val state = _offlineModeFlow.value.shops
     val newState = LinkedHashMap(state)
     newState[shop.id] = shop to mapOf("_pending_create" to true)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shopsToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
   }
 
   /**
@@ -458,10 +459,10 @@ object OfflineModeManager {
    * @param shopId The ID of the shop to remove
    */
   fun removeShop(shopId: String) {
-    val state = _offlineModeFlow.value.shopsToAdd
+    val state = _offlineModeFlow.value.shops
     val newState = LinkedHashMap(state)
     newState.remove(shopId)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shopsToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
   }
 
   /**
@@ -470,11 +471,11 @@ object OfflineModeManager {
    * @param shopId The ID of the shop whose changes were synchronized
    */
   fun clearShopChanges(shopId: String) {
-    val state = _offlineModeFlow.value.shopsToAdd
+    val state = _offlineModeFlow.value.shops
     val shop = state[shopId]?.first ?: return
     val newState = LinkedHashMap(state)
     newState[shopId] = shop to emptyMap()
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shopsToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
   }
 
   // ==================== Space Renter Functions ====================
@@ -489,7 +490,7 @@ object OfflineModeManager {
    * @param onResult Callback invoked with the SpaceRenter if found, or null otherwise
    */
   suspend fun loadSpaceRenter(renterId: String, onResult: (SpaceRenter?) -> Unit) {
-    val state = _offlineModeFlow.value.spaceRentersToAdd
+    val state = _offlineModeFlow.value.spaceRenters
     val cached = state[renterId]?.first
 
     if (cached != null) {
@@ -501,7 +502,7 @@ object OfflineModeManager {
     if (fetched != null) {
       val newState = LinkedHashMap(state).apply { this[renterId] = fetched to emptyMap() }
       val (capped, _) = cap(newState, MAX_CACHED_SPACE_RENTERS)
-      _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRentersToAdd = capped)
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = capped)
     }
 
     onResult(fetched)
@@ -517,14 +518,14 @@ object OfflineModeManager {
    * @param newValue The new value for the property
    */
   fun setSpaceRenterChange(renter: SpaceRenter, property: String, newValue: Any) {
-    val state = _offlineModeFlow.value.spaceRentersToAdd
+    val state = _offlineModeFlow.value.spaceRenters
     val (existingRenter, existingChanges) = state[renter.id] ?: (renter to emptyMap())
     val updatedChanges =
         existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
 
     val newState = LinkedHashMap(state)
     newState[renter.id] = existingRenter to updatedChanges
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRentersToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
   /**
@@ -537,10 +538,19 @@ object OfflineModeManager {
    * @param renter The space renter to add
    */
   fun addPendingSpaceRenter(renter: SpaceRenter) {
-    val state = _offlineModeFlow.value.spaceRentersToAdd
+    val state = _offlineModeFlow.value.spaceRenters
     val newState = LinkedHashMap(state)
     newState[renter.id] = renter to mapOf("_pending_create" to true)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRentersToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
+  }
+
+  suspend fun updateSpaceRenterCache(renter: SpaceRenter) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val newState = LinkedHashMap(state)
+    newState[renter.id] = renter to state[renter.id]?.second.orEmpty()
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
+    // Wait until the StateFlow has actually updated with this exact object
+    _offlineModeFlow.first { offlineMode -> offlineMode.spaceRenters[renter.id]?.first == renter }
   }
 
   /**
@@ -550,10 +560,10 @@ object OfflineModeManager {
    * @param renterId The ID of the space renter to remove
    */
   fun removeSpaceRenter(renterId: String) {
-    val state = _offlineModeFlow.value.spaceRentersToAdd
+    val state = _offlineModeFlow.value.spaceRenters
     val newState = LinkedHashMap(state)
     newState.remove(renterId)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRentersToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
   // ==================== Synchronization Helpers ====================
@@ -564,7 +574,7 @@ object OfflineModeManager {
    * @return List of pairs containing the shop and its pending changes map
    */
   fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
-    return _offlineModeFlow.value.shopsToAdd.values.filter { it.second.isNotEmpty() }.toList()
+    return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
   }
 
   /**
@@ -573,9 +583,7 @@ object OfflineModeManager {
    * @return List of pairs containing the space renter and its pending changes map
    */
   fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
-    return _offlineModeFlow.value.spaceRentersToAdd.values
-        .filter { it.second.isNotEmpty() }
-        .toList()
+    return _offlineModeFlow.value.spaceRenters.values.filter { it.second.isNotEmpty() }.toList()
   }
 
   /**
@@ -584,11 +592,11 @@ object OfflineModeManager {
    * @param renterId The ID of the space renter whose changes were synchronized
    */
   fun clearSpaceRenterChanges(renterId: String) {
-    val state = _offlineModeFlow.value.spaceRentersToAdd
+    val state = _offlineModeFlow.value.spaceRenters
     val renter = state[renterId]?.first ?: return
     val newState = LinkedHashMap(state)
     newState[renterId] = renter to emptyMap()
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRentersToAdd = newState)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
   // ==================== POST CACHING METHODS ====================
