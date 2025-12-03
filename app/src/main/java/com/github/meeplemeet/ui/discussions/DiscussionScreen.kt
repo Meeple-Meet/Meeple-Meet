@@ -470,9 +470,8 @@ fun DiscussionScreen(
                         }
 
                     // Selected message overlay
-                    if (hasSelection) {
-                      val overlayAnchor = anchor!!
-                      val relativeOffsetY = overlayAnchor.top - messagesContainerTopPx
+                    if (actionMessage != null && anchor != null) {
+                      val relativeOffsetY = anchor.top - messagesContainerTopPx
 
                       Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
                         // Scrim
@@ -488,51 +487,56 @@ fun DiscussionScreen(
                                         interactionSource =
                                             remember { MutableInteractionSource() }) {})
 
-                        val message = actionMessage!!
-                        val isMineOverlay = message.senderId == account.uid
+                        val isMineOverlay = actionMessage.senderId == account.uid
                         val senderOverlay =
-                            if (!isMineOverlay) userCache[message.senderId]?.name ?: "Unknown"
+                            if (!isMineOverlay) userCache[actionMessage.senderId]?.name ?: "Unknown"
                             else DiscussionCommons.YOU_SENDER_NAME
 
-                        val msgIndex = messages.indexOfFirst { it.uid == message.uid }
+                        val msgIndex = messages.indexOfFirst { it.uid == actionMessage.uid }
                         if (msgIndex >= 0) {
                           val prevMessageOverlay = messages.getOrNull(msgIndex - 1)
                           val nextMessageOverlay = messages.getOrNull(msgIndex + 1)
                           val showDateHeaderOverlay =
                               shouldShowDateHeader(
-                                  current = message.createdAt.toDate(),
+                                  current = actionMessage.createdAt.toDate(),
                                   previous = prevMessageOverlay?.createdAt?.toDate())
                           val isLastFromSenderOverlay =
-                              nextMessageOverlay?.senderId != message.senderId
+                              nextMessageOverlay?.senderId != actionMessage.senderId
                           val isFirstFromSenderOverlay =
-                              prevMessageOverlay?.senderId != message.senderId ||
+                              prevMessageOverlay?.senderId != actionMessage.senderId ||
                                   showDateHeaderOverlay
 
                           Box(
                               modifier =
                                   Modifier.offset { IntOffset(x = 0, y = relativeOffsetY) }) {
                                 when {
-                                  message.poll != null -> {
+                                  actionMessage.poll != null -> {
                                     PollBubble(
                                         msgIndex = msgIndex,
-                                        poll = message.poll,
+                                        poll = actionMessage.poll,
                                         authorName = senderOverlay,
                                         currentUserId = account.uid,
                                         onVote = { optionIndex, isRemoving ->
                                           if (isRemoving) {
                                             viewModel.removeVoteFromPollAsync(
-                                                discussion.uid, message.uid, account, optionIndex)
+                                                discussion.uid,
+                                                actionMessage.uid,
+                                                account,
+                                                optionIndex)
                                           } else {
                                             viewModel.voteOnPollAsync(
-                                                discussion.uid, message.uid, account, optionIndex)
+                                                discussion.uid,
+                                                actionMessage.uid,
+                                                account,
+                                                optionIndex)
                                           }
                                         },
-                                        createdAt = message.createdAt.toDate(),
+                                        createdAt = actionMessage.createdAt.toDate(),
                                         showProfilePicture = isLastFromSenderOverlay)
                                   }
-                                  message.photoUrl != null -> {
+                                  actionMessage.photoUrl != null -> {
                                     PhotoBubble(
-                                        message = message,
+                                        message = actionMessage,
                                         isMine = isMineOverlay,
                                         senderName = senderOverlay,
                                         showProfilePicture = isLastFromSenderOverlay,
@@ -543,7 +547,7 @@ fun DiscussionScreen(
                                   }
                                   else -> {
                                     ChatBubble(
-                                        message = message,
+                                        message = actionMessage,
                                         isMine = isMineOverlay,
                                         senderName = senderOverlay,
                                         showProfilePicture = isLastFromSenderOverlay,
