@@ -1137,4 +1137,96 @@ object OfflineModeManager {
 
     updateDiscussionCache(state, cached.first, cached.second, cached.third + message)
   }
+
+  // Add to OfflineModeManager object, after the existing helper functions
+
+  /**
+   * Syncs all pending space renter changes with Firestore.
+   * Should be called when internet connection is restored.
+   */
+  private suspend fun syncPendingSpaceRenters() {
+    val pendingChanges = getPendingSpaceRenterChanges()
+
+    if (pendingChanges.isEmpty()) return
+
+    pendingChanges.forEach { (renter, changes) ->
+      try {
+        if (changes.containsKey("_pending_create")) {
+          RepositoryProvider.spaceRenters.createSpaceRenter(
+            owner = renter.owner,
+            name = renter.name,
+            phone = renter.phone,
+            email = renter.email,
+            website = renter.website,
+            address = renter.address,
+            openingHours = renter.openingHours,
+            spaces = renter.spaces,
+            photoCollectionUrl = renter.photoCollectionUrl)
+
+          removeSpaceRenter(renter.id)
+        } else {
+          // Update Firestore
+          RepositoryProvider.spaceRenters.updateSpaceRenterOffline(renter.id, changes)
+
+          // Fetch the updated data from Firestore
+          val refreshed = RepositoryProvider.spaceRenters.getSpaceRenterSafe(renter.id)
+          if (refreshed != null) {
+            // Update the cache with fresh data
+            updateSpaceRenterCache(refreshed)
+          }
+
+          clearSpaceRenterChanges(renter.id)
+        }
+      } catch (e: Exception) {
+        // Log or handle error - silent failure for now
+      }
+    }
+  }
+
+  /**
+   * Syncs all pending shop changes with Firestore.
+   * Should be called when internet connection is restored.
+   */
+  private suspend fun syncPendingShops() {
+    val pendingChanges = getPendingShopChanges()
+
+    if (pendingChanges.isEmpty()) return
+
+    pendingChanges.forEach { (shop, changes) ->
+      try {
+        if (changes.containsKey("_pending_create")) {
+          val owner = RepositoryProvider.accounts.getAccountSafe(shop.owner.uid, false)
+
+          if (owner != null) {
+            RepositoryProvider.shops.createShop(
+              owner = owner,
+              name = shop.name,
+              phone = shop.phone,
+              email = shop.email,
+              website = shop.website,
+              address = shop.address,
+              openingHours = shop.openingHours,
+              gameCollection = shop.gameCollection,
+              photoCollectionUrl = shop.photoCollectionUrl)
+
+            removeShop(shop.id)
+          }
+        } else {
+          RepositoryProvider.shops.updateShopOffline(shop.id, changes)
+          clearShopChanges(shop.id)
+        }
+      } catch (e: Exception) {
+        // Log or handle error - silent failure for now
+      }
+    }
+  }
+
+  /**
+   * Syncs all pending offline data (shops and space renters) with Firestore.
+   * Call this when internet connection is restored.
+   */
+  suspend fun syncAllPendingData() {
+    syncPendingSpaceRenters()
+    syncPendingShops()
+  }
 }

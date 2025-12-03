@@ -230,7 +230,7 @@ fun MeepleMeetApp(
     // Only sync when transitioning from offline to online
     if (online && !wasOnline) {
       Log.d("MeepleMeetApp", "Connection restored - triggering sync")
-      activity?.syncScope?.launch { viewModel.syncPendingSpaceRenters() }
+      activity?.syncScope?.launch { viewModel.syncOfflineData() }
     }
     wasOnline = online
   }

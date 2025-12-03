@@ -138,77 +138,13 @@ class MainActivityViewModel(
             initialValue =
                 OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.first)
   }
-  /**
-   * Syncs all pending offline data with Firestore. Call this function when connection is restored.
-   */
-  /** Syncs all pending space renter creations. */
-  suspend fun syncPendingSpaceRenters() {
-    val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
-
-    if (pendingChanges.isEmpty()) return
-
-    pendingChanges.forEach { (renter, changes) ->
-      try {
-        if (changes.containsKey("_pending_create")) {
-          RepositoryProvider.spaceRenters.createSpaceRenter(
-              owner = renter.owner,
-              name = renter.name,
-              phone = renter.phone,
-              email = renter.email,
-              website = renter.website,
-              address = renter.address,
-              openingHours = renter.openingHours,
-              spaces = renter.spaces,
-              photoCollectionUrl = renter.photoCollectionUrl)
-
-          OfflineModeManager.removeSpaceRenter(renter.id)
-        } else {
-          // Update Firestore
-          spaceRenterRepository.updateSpaceRenterOffline(renter.id, changes)
-
-          // Fetch the updated data from Firestore
-          val refreshed = spaceRenterRepository.getSpaceRenterSafe(renter.id)
-          if (refreshed != null) {
-            // Update the cache with fresh data
-            OfflineModeManager.updateSpaceRenterCache(refreshed)
-          }
-
-          OfflineModeManager.clearSpaceRenterChanges(renter.id)
+    /**
+     * Syncs all pending offline data with Firestore.
+     * Call this function when connection is restored.
+     */
+    fun syncOfflineData() {
+        viewModelScope.launch {
+            OfflineModeManager.syncAllPendingData()
         }
-      } catch (e: Exception) {}
     }
-  }
-
-  /** Syncs all pending shop creations. */
-  private suspend fun syncPendingShops() {
-    val pendingChanges = OfflineModeManager.getPendingShopChanges()
-
-    if (pendingChanges.isEmpty()) return
-
-    pendingChanges.forEach { (shop, changes) ->
-      try {
-        if (changes.containsKey("_pending_create")) {
-          val owner = RepositoryProvider.accounts.getAccountSafe(shop.owner.uid, false)
-
-          if (owner != null) {
-            RepositoryProvider.shops.createShop(
-                owner = owner,
-                name = shop.name,
-                phone = shop.phone,
-                email = shop.email,
-                website = shop.website,
-                address = shop.address,
-                openingHours = shop.openingHours,
-                gameCollection = shop.gameCollection,
-                photoCollectionUrl = shop.photoCollectionUrl)
-
-            OfflineModeManager.removeShop(shop.id)
-          } else {}
-        } else {
-          shopRepository.updateShopOffline(shop.id, changes)
-          OfflineModeManager.clearShopChanges(shop.id)
-        }
-      } catch (e: Exception) {}
-    }
-  }
 }
