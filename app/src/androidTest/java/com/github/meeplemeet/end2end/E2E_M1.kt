@@ -16,8 +16,8 @@ import com.github.meeplemeet.utils.AuthUtils.signInUser
 import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.FirestoreTests
-import org.junit.Ignore
 import java.util.UUID
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
