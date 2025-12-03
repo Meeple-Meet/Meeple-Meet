@@ -406,6 +406,7 @@ fun NotificationsTab(
                       val context = LocalContext.current
                       NotificationCard(
                           notif = notif,
+                          account = account,
                           viewModel = viewModel,
                           onClick = {
                             viewModel.preparePopupData(
@@ -580,6 +581,7 @@ fun FilterChip(
 @Composable
 fun NotificationCard(
     notif: Notification,
+    account: Account,
     viewModel: NotificationsViewModel,
     onClick: () -> Unit,
     onMarkRead: () -> Unit,
@@ -604,7 +606,7 @@ fun NotificationCard(
   SwipeToDismiss(
       state = dismissState,
       background = { SwipeBackground(dismissState) },
-      dismissContent = { NotificationRowContent(notif, viewModel, onClick) },
+      dismissContent = { NotificationRowContent(notif, account, viewModel, onClick) },
       directions = setOf(DismissDirection.StartToEnd, DismissDirection.EndToStart),
       dismissThresholds = {
         when (it) {
@@ -659,12 +661,14 @@ private fun SwipeBackground(state: DismissState) {
  * Actual content of the notification
  *
  * @param notif Notification data
+ * @param account The current user account
  * @param viewModel VM used by this screen
  * @param onClick Callback upon click
  */
 @Composable
 private fun NotificationRowContent(
     notif: Notification,
+    account: Account,
     viewModel: NotificationsViewModel,
     onClick: () -> Unit
 ) {
@@ -678,10 +682,13 @@ private fun NotificationRowContent(
   LaunchedEffect(notif.uid) {
     when (notif.type) {
       NotificationType.FRIEND_REQUEST -> {
-        viewModel.getOtherAccount(notif.senderOrDiscussionId) { acc ->
-          friend = acc
-          viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
-        }
+        viewModel.getOtherAccountData(
+            notif.senderOrDiscussionId,
+            onResult = { acc ->
+              friend = acc
+              viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
+            },
+            onDeleted = { viewModel.deleteNotification(account, notif) })
       }
       NotificationType.JOIN_DISCUSSION -> {
         viewModel.getDiscussion(
@@ -689,16 +696,22 @@ private fun NotificationRowContent(
             onResult = { disc ->
               discussionName = disc.name
               viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
-            })
+            },
+            onDeleted = { viewModel.deleteNotification(account, notif) })
       }
       NotificationType.JOIN_SESSION -> {
         viewModel.getDiscussion(
             notif.senderOrDiscussionId,
             onResult = { disc ->
               val session = disc.session
-              sessionName = session?.name ?: disc.name
-              viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
-            })
+              if (session != null) {
+                sessionName = session.name
+                viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
+              } else {
+                viewModel.deleteNotification(account, notif)
+              }
+            },
+            onDeleted = { viewModel.deleteNotification(account, notif) })
       }
     }
   }
