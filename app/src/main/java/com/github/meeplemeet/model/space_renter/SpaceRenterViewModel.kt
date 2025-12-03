@@ -29,6 +29,24 @@ class SpaceRenterViewModel(
    */
   val spaceRenter: StateFlow<SpaceRenter?> = _spaceRenter
 
+  private var currentSpaceRenterId: String? = null
+
+  init {
+    // Observe the offline cache for changes to the current space renter
+    viewModelScope.launch {
+      OfflineModeManager.offlineModeFlow.collect { offlineMode ->
+        val renterId = spaceRenter.value?.id ?: currentSpaceRenterId
+        if (renterId != null) {
+          // Update the StateFlow when the cached space renter changes
+          val cached = offlineMode.spaceRenters[renterId]?.first
+          if (cached != null) {
+            _spaceRenter.value = cached
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Retrieves a space renter by its ID from Firestore.
    *
@@ -40,6 +58,8 @@ class SpaceRenterViewModel(
    */
   fun getSpaceRenter(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("SpaceRenter ID cannot be blank")
+
+    currentSpaceRenterId = id
 
     viewModelScope.launch {
       OfflineModeManager.loadSpaceRenter(id) { spaceRenter -> _spaceRenter.value = spaceRenter }
