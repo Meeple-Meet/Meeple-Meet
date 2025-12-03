@@ -151,7 +151,8 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
             owner = owner,
             onBack = { backCalled = true },
             onUpdated = { updatedCalled = true },
-            viewModel = vm)
+            viewModel = vm,
+            online = true,)
       }
     }
 
