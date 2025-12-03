@@ -304,13 +304,13 @@ fun PostScreen(
               sendEnabled = !isSending && topComment.isNotBlank() && post != null,
               onSend = {
                 val p = post ?: return@ComposerBar
-                val target = editTarget
-                val editing = target != null
 
                 scope.launch {
                   isSending = true
+                  val target = editTarget
+
                   try {
-                    if (editing && target != null) {
+                    if (target != null) {
                       val value = topComment.trim()
                       when (target) {
                         PostEditTarget.TITLE ->
@@ -323,11 +323,12 @@ fun PostScreen(
                       postViewModel.addComment(
                           author = account, post = p, parentId = p.id, text = topComment.trim())
                     }
+
                     topComment = ""
                     focusManager.clearFocus(force = true)
                   } catch (_: Throwable) {
                     snackbarHostState.showSnackbar(
-                        if (editing) ERROR_NOT_EDITED_POST else ERROR_NOT_SENT_COMMENT)
+                        if (target != null) ERROR_NOT_EDITED_POST else ERROR_NOT_SENT_COMMENT)
                   } finally {
                     isSending = false
                   }
