@@ -5,6 +5,7 @@ package com.github.meeplemeet.ui.sessions
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -55,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -62,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.RepositoryProvider
@@ -238,6 +242,7 @@ fun SessionScreen(
   val gameUiState by viewModel.gameUIState.collectAsState()
   var participants by remember { mutableStateOf<List<Account>>(emptyList()) }
   var showGameDetails by remember { mutableStateOf(false) }
+  var showGameImageFullscreen by remember { mutableStateOf(false) }
 
   val isAdmin = discussion.admins.contains(account.uid)
 
@@ -280,7 +285,10 @@ fun SessionScreen(
                         vertical = SessionDefaults.Layout.SCREEN_VERTICAL_PADDING)
                     .testTag(SessionViewerTestTags.SCREEN_ROOT),
             verticalArrangement = Arrangement.spacedBy(SessionDefaults.Layout.SECTION_SPACING)) {
-              SessionGameHeaderImage(game = gameUiState.fetchedGame)
+              SessionGameHeaderImage(
+                  game = gameUiState.fetchedGame,
+                  onImageClick = { showGameImageFullscreen = true },
+              )
 
               SessionBasicInfoSection(
                   session = session,
@@ -295,6 +303,28 @@ fun SessionScreen(
         if (showGameDetails && gameUiState.fetchedGame != null) {
           Dialog(onDismissRequest = { showGameDetails = false }) {
             GameDetailsCard(game = gameUiState.fetchedGame!!, onClose = { showGameDetails = false })
+          }
+        }
+
+        if (showGameImageFullscreen && gameUiState.fetchedGame != null) {
+          Dialog(
+              onDismissRequest = { showGameImageFullscreen = false },
+              properties = DialogProperties(usePlatformDefaultWidth = false),
+          ) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f)).clickable {
+                      showGameImageFullscreen = false
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+              AsyncImage(
+                  model = gameUiState.fetchedGame!!.imageURL,
+                  contentDescription = gameUiState.fetchedGame!!.name,
+                  contentScale = ContentScale.Fit,
+                  modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+              )
+            }
           }
         }
       }
@@ -362,16 +392,23 @@ private fun SessionViewerTopBar(
  * @param game The game associated with the session.
  */
 @Composable
-private fun SessionGameHeaderImage(game: Game?) {
+private fun SessionGameHeaderImage(
+    game: Game?,
+    onImageClick: (() -> Unit)? = null,
+) {
   val model = game?.imageURL.orEmpty()
 
   if (model.isNotEmpty()) {
+    val clickModifier =
+        if (onImageClick != null) Modifier.clickable(onClick = onImageClick) else Modifier
+
     AsyncImage(
         model = model,
         contentDescription = game?.name ?: SessionDefaults.GAME_IMAGE_CONTENT_DESC,
         contentScale = ContentScale.Crop,
         modifier =
-            Modifier.fillMaxWidth()
+            clickModifier
+                .fillMaxWidth()
                 .height(SessionDefaults.Layout.HEADER_IMAGE_HEIGHT)
                 .clip(MaterialTheme.shapes.large)
                 .testTag(SessionViewerTestTags.GAME_IMAGE))
