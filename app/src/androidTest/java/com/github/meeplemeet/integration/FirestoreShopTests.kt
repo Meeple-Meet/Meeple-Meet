@@ -821,11 +821,13 @@ class FirestoreShopTests : FirestoreTests() {
     // Load the shop through ViewModel
     shopViewModel.getShop(shop.id)
 
-    // Give it time to complete the async operation
-    delay(100)
-
-    // Verify the StateFlow was updated
-    val loadedShop = shopViewModel.shop.value
+    val loadedShop =
+        kotlinx.coroutines.withTimeout(5000) {
+          while (shopViewModel.shop.value == null) {
+            delay(100)
+          }
+          shopViewModel.shop.value!!
+        }
     assertNotNull(loadedShop)
     assertEquals(shop.id, loadedShop!!.id)
     assertEquals("Test Shop for ViewModel", loadedShop.name)
