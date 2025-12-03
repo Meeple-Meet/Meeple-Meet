@@ -52,6 +52,7 @@ open class FirestoreTests {
     var firestoreEmulatorLaunched = false
     var authEmulatorLaunched = false
     var storageEmulatorLaunched = false
+    var functionsEmulatorLaunched = false
 
     @BeforeClass
     @JvmStatic
@@ -67,6 +68,10 @@ open class FirestoreTests {
       if (!storageEmulatorLaunched) {
         storageEmulatorLaunched = true
         FirebaseStorage.getInstance().useEmulator("10.0.2.2", 9199)
+      }
+      if (!functionsEmulatorLaunched) {
+        functionsEmulatorLaunched = true
+        FirebaseStorage.getInstance().useEmulator("10.0.2.2", 5001)
       }
     }
   }
