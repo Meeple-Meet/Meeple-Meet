@@ -787,7 +787,7 @@ fun PublicInfoInputs(
                     .padding(bottom = Dimensions.Padding.medium)
                     .fillMaxWidth(),
             onValueChange = {
-                if (it.length < 32) handle = it
+              if (it.length < 32) handle = it
               if (it.isNotBlank()) {
                 showErrors = true
                 viewModel.checkHandleAvailable(it)
