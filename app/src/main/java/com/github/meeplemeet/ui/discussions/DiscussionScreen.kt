@@ -39,6 +39,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
@@ -378,87 +379,95 @@ fun DiscussionScreen(
                     val hasSelection = actionMessage != null && anchor != null
 
                     // Messages list
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                      itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message
-                        ->
-                        val isMine = message.senderId == account.uid
-                        val sender =
-                            if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
-                            else DiscussionCommons.YOU_SENDER_NAME
+                    LazyColumn(
+                        state = listState,
+                        modifier =
+                            Modifier.fillMaxSize().let { base ->
+                              if (hasSelection) base.blur(Dimensions.Blurring.tiny) else base
+                            }) {
+                          itemsIndexed(items = messages, key = { _, msg -> msg.uid }) {
+                              index,
+                              message ->
+                            val isMine = message.senderId == account.uid
+                            val sender =
+                                if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
+                                else DiscussionCommons.YOU_SENDER_NAME
 
-                        val showDateHeader =
-                            shouldShowDateHeader(
-                                current = message.createdAt.toDate(),
-                                previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
-                        if (showDateHeader) {
-                          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                          DateSeparator(date = message.createdAt.toDate())
-                          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                        }
-
-                        val nextMessage = messages.getOrNull(index + 1)
-                        val isLastFromSender = nextMessage?.senderId != message.senderId
-
-                        val prevMessage = messages.getOrNull(index - 1)
-                        val isFirstFromSender =
-                            prevMessage?.senderId != message.senderId || showDateHeader
-
-                        SelectableMessageContainer(
-                            message = message,
-                            isMine = isMine,
-                            onAnchorChanged = { id, anchorPos -> messageAnchors[id] = anchorPos },
-                            onLongPress = { msg ->
-                              selectedMessageForActions = msg
-                              selectedMessageAnchor = messageAnchors[msg.uid]
-                            },
-                        ) {
-                          when {
-                            message.poll != null -> {
-                              PollBubble(
-                                  msgIndex = index,
-                                  poll = message.poll,
-                                  authorName = sender,
-                                  currentUserId = account.uid,
-                                  onVote = { optionIndex, isRemoving ->
-                                    if (isRemoving) {
-                                      viewModel.removeVoteFromPollAsync(
-                                          discussion.uid, message.uid, account, optionIndex)
-                                    } else {
-                                      viewModel.voteOnPollAsync(
-                                          discussion.uid, message.uid, account, optionIndex)
-                                    }
-                                  },
-                                  createdAt = message.createdAt.toDate(),
-                                  showProfilePicture = isLastFromSender)
+                            val showDateHeader =
+                                shouldShowDateHeader(
+                                    current = message.createdAt.toDate(),
+                                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
+                            if (showDateHeader) {
+                              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+                              DateSeparator(date = message.createdAt.toDate())
+                              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
                             }
-                            message.photoUrl != null -> {
-                              PhotoBubble(
-                                  message = message,
-                                  isMine = isMine,
-                                  senderName = sender,
-                                  showProfilePicture = isLastFromSender,
-                                  showSenderName = isFirstFromSender,
-                                  allMessages = messages,
-                                  userCache = userCache,
-                                  currentUserId = account.uid)
+
+                            val nextMessage = messages.getOrNull(index + 1)
+                            val isLastFromSender = nextMessage?.senderId != message.senderId
+
+                            val prevMessage = messages.getOrNull(index - 1)
+                            val isFirstFromSender =
+                                prevMessage?.senderId != message.senderId || showDateHeader
+
+                            SelectableMessageContainer(
+                                message = message,
+                                isMine = isMine,
+                                onAnchorChanged = { id, anchorPos ->
+                                  messageAnchors[id] = anchorPos
+                                },
+                                onLongPress = { msg ->
+                                  selectedMessageForActions = msg
+                                  selectedMessageAnchor = messageAnchors[msg.uid]
+                                },
+                            ) {
+                              when {
+                                message.poll != null -> {
+                                  PollBubble(
+                                      msgIndex = index,
+                                      poll = message.poll,
+                                      authorName = sender,
+                                      currentUserId = account.uid,
+                                      onVote = { optionIndex, isRemoving ->
+                                        if (isRemoving) {
+                                          viewModel.removeVoteFromPollAsync(
+                                              discussion.uid, message.uid, account, optionIndex)
+                                        } else {
+                                          viewModel.voteOnPollAsync(
+                                              discussion.uid, message.uid, account, optionIndex)
+                                        }
+                                      },
+                                      createdAt = message.createdAt.toDate(),
+                                      showProfilePicture = isLastFromSender)
+                                }
+                                message.photoUrl != null -> {
+                                  PhotoBubble(
+                                      message = message,
+                                      isMine = isMine,
+                                      senderName = sender,
+                                      showProfilePicture = isLastFromSender,
+                                      showSenderName = isFirstFromSender,
+                                      allMessages = messages,
+                                      userCache = userCache,
+                                      currentUserId = account.uid)
+                                }
+                                else -> {
+                                  ChatBubble(
+                                      message = message,
+                                      isMine = isMine,
+                                      senderName = sender,
+                                      showProfilePicture = isLastFromSender,
+                                      showSenderName = isFirstFromSender)
+                                }
+                              }
                             }
-                            else -> {
-                              ChatBubble(
-                                  message = message,
-                                  isMine = isMine,
-                                  senderName = sender,
-                                  showProfilePicture = isLastFromSender,
-                                  showSenderName = isFirstFromSender)
-                            }
+
+                            Spacer(
+                                Modifier.height(
+                                    if (isLastFromSender) Dimensions.Spacing.small
+                                    else Dimensions.Spacing.extraSmall))
                           }
                         }
-
-                        Spacer(
-                            Modifier.height(
-                                if (isLastFromSender) Dimensions.Spacing.small
-                                else Dimensions.Spacing.extraSmall))
-                      }
-                    }
 
                     // Selected message overlay
                     if (hasSelection) {
