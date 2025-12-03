@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableMap
 
+const val PENDING_STRING = "_pending_create"
+
 /**
  * Caps the size of a LinkedHashMap by removing the least recently used entries until the size is at
  * or below the maximum.
@@ -457,7 +459,7 @@ object OfflineModeManager {
   fun addPendingShop(shop: Shop) {
     val state = _offlineModeFlow.value.shops
     val newState = LinkedHashMap(state)
-    newState[shop.id] = shop to mapOf("_pending_create" to true)
+    newState[shop.id] = shop to mapOf(PENDING_STRING to true)
     _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
   }
 
@@ -586,7 +588,7 @@ object OfflineModeManager {
   fun addPendingSpaceRenter(renter: SpaceRenter) {
     val state = _offlineModeFlow.value.spaceRenters
     val newState = LinkedHashMap(state)
-    newState[renter.id] = renter to mapOf("_pending_create" to true)
+    newState[renter.id] = renter to mapOf(PENDING_STRING to true)
     _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
@@ -1151,7 +1153,7 @@ object OfflineModeManager {
 
     pendingChanges.forEach { (renter, changes) ->
       try {
-        if (changes.containsKey("_pending_create")) {
+        if (changes.containsKey(PENDING_STRING)) {
           RepositoryProvider.spaceRenters.createSpaceRenter(
               owner = renter.owner,
               name = renter.name,
@@ -1194,7 +1196,7 @@ object OfflineModeManager {
 
     pendingChanges.forEach { (shop, changes) ->
       try {
-        if (changes.containsKey("_pending_create")) {
+        if (changes.containsKey(PENDING_STRING)) {
           val owner = RepositoryProvider.accounts.getAccountSafe(shop.owner.uid, false)
 
           if (owner != null) {
