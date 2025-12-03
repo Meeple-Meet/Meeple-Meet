@@ -1141,8 +1141,8 @@ object OfflineModeManager {
   // Add to OfflineModeManager object, after the existing helper functions
 
   /**
-   * Syncs all pending space renter changes with Firestore.
-   * Should be called when internet connection is restored.
+   * Syncs all pending space renter changes with Firestore. Should be called when internet
+   * connection is restored.
    */
   private suspend fun syncPendingSpaceRenters() {
     val pendingChanges = getPendingSpaceRenterChanges()
@@ -1153,15 +1153,15 @@ object OfflineModeManager {
       try {
         if (changes.containsKey("_pending_create")) {
           RepositoryProvider.spaceRenters.createSpaceRenter(
-            owner = renter.owner,
-            name = renter.name,
-            phone = renter.phone,
-            email = renter.email,
-            website = renter.website,
-            address = renter.address,
-            openingHours = renter.openingHours,
-            spaces = renter.spaces,
-            photoCollectionUrl = renter.photoCollectionUrl)
+              owner = renter.owner,
+              name = renter.name,
+              phone = renter.phone,
+              email = renter.email,
+              website = renter.website,
+              address = renter.address,
+              openingHours = renter.openingHours,
+              spaces = renter.spaces,
+              photoCollectionUrl = renter.photoCollectionUrl)
 
           removeSpaceRenter(renter.id)
         } else {
@@ -1184,8 +1184,8 @@ object OfflineModeManager {
   }
 
   /**
-   * Syncs all pending shop changes with Firestore.
-   * Should be called when internet connection is restored.
+   * Syncs all pending shop changes with Firestore. Should be called when internet connection is
+   * restored.
    */
   private suspend fun syncPendingShops() {
     val pendingChanges = getPendingShopChanges()
@@ -1199,15 +1199,15 @@ object OfflineModeManager {
 
           if (owner != null) {
             RepositoryProvider.shops.createShop(
-              owner = owner,
-              name = shop.name,
-              phone = shop.phone,
-              email = shop.email,
-              website = shop.website,
-              address = shop.address,
-              openingHours = shop.openingHours,
-              gameCollection = shop.gameCollection,
-              photoCollectionUrl = shop.photoCollectionUrl)
+                owner = owner,
+                name = shop.name,
+                phone = shop.phone,
+                email = shop.email,
+                website = shop.website,
+                address = shop.address,
+                openingHours = shop.openingHours,
+                gameCollection = shop.gameCollection,
+                photoCollectionUrl = shop.photoCollectionUrl)
 
             removeShop(shop.id)
           }
@@ -1222,8 +1222,8 @@ object OfflineModeManager {
   }
 
   /**
-   * Syncs all pending offline data (shops and space renters) with Firestore.
-   * Call this when internet connection is restored.
+   * Syncs all pending offline data (shops and space renters) with Firestore. Call this when
+   * internet connection is restored.
    */
   suspend fun syncAllPendingData() {
     syncPendingSpaceRenters()

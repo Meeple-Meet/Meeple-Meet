@@ -138,13 +138,10 @@ class MainActivityViewModel(
             initialValue =
                 OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.first)
   }
-    /**
-     * Syncs all pending offline data with Firestore.
-     * Call this function when connection is restored.
-     */
-    fun syncOfflineData() {
-        viewModelScope.launch {
-            OfflineModeManager.syncAllPendingData()
-        }
-    }
+  /**
+   * Syncs all pending offline data with Firestore. Call this function when connection is restored.
+   */
+  fun syncOfflineData() {
+    viewModelScope.launch { OfflineModeManager.syncAllPendingData() }
+  }
 }
