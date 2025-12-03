@@ -23,13 +23,14 @@ import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class PostScreenTest {
+class PostScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
@@ -67,10 +68,6 @@ class PostScreenTest {
       if (uid.isBlank()) return
       accounts[uid]?.let { onResult(it) }
     }
-
-    fun addAccount(account: Account) {
-      accounts[account.uid] = account
-    }
   }
 
   /* ViewModels */
@@ -83,24 +80,6 @@ class PostScreenTest {
 
   private fun findNodeByText() =
       compose.onNodeWithText(COMMENT_TEXT_ZONE_PLACEHOLDER, useUnmergedTree = true)
-
-  private fun settleAnimations() {
-    compose.mainClock.advanceTimeBy(700)
-    compose.waitForIdle()
-  }
-
-  private fun setContent(account: Account = marco, postId: String = "p1", onBack: () -> Unit = {}) {
-    compose.setContent {
-      AppTheme {
-        PostScreen(
-            account = account,
-            postId = postId,
-            postViewModel = postVM,
-            accountViewModel = accountVM,
-            onBack = onBack)
-      }
-    }
-  }
 
   @Before
   fun setup() {
