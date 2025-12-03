@@ -41,6 +41,9 @@ type GameSearchResult = {
   name: string;
 };
 
+// --------------------
+// XML Parser
+// --------------------
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@",
@@ -49,6 +52,9 @@ const parser = new XMLParser({
   removeNSPrefix: true,
 });
 
+// --------------------
+// Helpers
+// --------------------
 function safeText(node: any): string | null {
   if (node == null) return null;
   if (typeof node === "string") return node;
@@ -178,122 +184,138 @@ function rankSearchResults(
 }
 
 // --------------------
+// Fetch helper with Authorization
+// --------------------
+async function fetchWithAuth(url: string) {
+  const token = process.env.BGG_API_TOKEN
+  const headers: Record<string, string> = { "User-Agent": "MeepleMeet/1.0" };
+
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  return fetch(url, { headers });
+}
+
+// --------------------
 // Cloud Functions
 // --------------------
-export const getGamesByIds = onRequest(async (req, res) => {
-  try {
-    const idsParam = req.query.ids;
-    if (!idsParam) {
-      res.status(400).json({ error: "Missing query param 'ids'" });
-      return;
-    }
-
-    const rawIds: string[] =
-      typeof idsParam === "string"
-        ? idsParam.split(",")
-        : Array.isArray(idsParam)
-        ? idsParam.map(String)
-        : [String(idsParam)];
-
-    const ids = rawIds.map((s) => s.trim()).filter(Boolean).slice(0, 20);
-    if (ids.length === 0) {
-      res.status(400).json({ error: "No valid ids provided" });
-      return;
-    }
-
-    const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join(
-      ","
-    )}&type=boardgame&stats=1`;
-
-    logger.log("getGamesByIds: fetching", { bggUrl, count: ids.length });
-
-    const response = await fetch(bggUrl);
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      logger.error("BGG fetch failed", { status: response.status, body: text });
-      res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
-      return;
-    }
-
-    const xml = await response.text();
-    const parsed = parser.parse(xml);
-
-    let items = parsed?.items?.item ?? [];
-    if (!Array.isArray(items)) items = [items];
-
-    const games: GameOut[] = [];
-    for (const item of items) {
-      try {
-        const g = parseItemToGame(item);
-        games.push(g);
-      } catch (e: any) {
-        logger.warn("Ignored item during parse", { id: item?.["@id"], reason: e?.message });
+export const getGamesByIds = onRequest(
+  { secrets: ["BGG_API_TOKEN"] },
+  async (req, res) => {
+    try {
+      const idsParam = req.query.ids;
+      if (!idsParam) {
+        res.status(400).json({ error: "Missing query param 'ids'" });
+        return;
       }
-    }
 
-    res.json(games);
-  } catch (err: any) {
-    logger.error("getGamesByIds unexpected error", { err: err?.message ?? err });
-    res.status(500).json({ error: "Internal server error", message: err?.message });
-  }
+      const rawIds: string[] =
+        typeof idsParam === "string"
+          ? idsParam.split(",")
+          : Array.isArray(idsParam)
+          ? idsParam.map(String)
+          : [String(idsParam)];
+
+      const ids = rawIds.map((s) => s.trim()).filter(Boolean).slice(0, 20);
+      if (ids.length === 0) {
+        res.status(400).json({ error: "No valid ids provided" });
+        return;
+      }
+
+      const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join(
+        ","
+      )}&type=boardgame&stats=1`;
+
+      logger.log("getGamesByIds: fetching", { bggUrl, count: ids.length });
+
+      const response = await fetchWithAuth(bggUrl);
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        logger.error("BGG fetch failed", { status: response.status, body: text });
+        res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
+        return;
+      }
+
+      const xml = await response.text();
+      const parsed = parser.parse(xml);
+
+      let items = parsed?.items?.item ?? [];
+      if (!Array.isArray(items)) items = [items];
+
+      const games: GameOut[] = [];
+      for (const item of items) {
+        try {
+          const g = parseItemToGame(item);
+          games.push(g);
+        } catch (e: any) {
+          logger.warn("Ignored item during parse", { id: item?.["@id"], reason: e?.message });
+        }
+      }
+
+      res.json(games);
+    } catch (err: any) {
+      logger.error("getGamesByIds unexpected error", { err: err?.message ?? err });
+      res.status(500).json({ error: "Internal server error", message: err?.message });
+    }
 });
 
-export const searchGames = onRequest(async (req, res) => {
-  try {
-    const queryParam = req.query.query;
-    if (!queryParam || typeof queryParam !== "string") {
-      res.status(400).json({ error: "Missing query parameter 'query'" });
-      return;
+export const searchGames = onRequest(
+  { secrets: ["BGG_API_TOKEN"] },
+  async (req, res) => {
+    try {
+      const queryParam = req.query.query;
+      if (!queryParam || typeof queryParam !== "string") {
+        res.status(400).json({ error: "Missing query parameter 'query'" });
+        return;
+      }
+
+      const maxResults = Math.min(Number(req.query.maxResults) || 20, 50);
+      const ignoreCase = req.query.ignoreCase === "true";
+
+      const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(
+        queryParam
+      )}&type=boardgame`;
+
+      logger.log("searchGames: fetching", { url });
+
+      const response = await fetchWithAuth(url);
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        logger.error("BGG search failed", { status: response.status, body: text });
+        res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
+        return;
+      }
+
+      const xml = await response.text();
+      const parsed = parser.parse(xml);
+
+      let items = parsed?.items?.item ?? [];
+      if (!Array.isArray(items)) items = [items];
+
+      const results: GameSearchResult[] = items
+        .map((item: any) => {
+          try {
+            const id = item?.["@id"];
+            if (!id) return null;
+
+            let nameNode = item.name;
+            if (!nameNode) return null;
+            if (Array.isArray(nameNode))
+              nameNode = nameNode.find((n: any) => n["@type"] === "primary") ?? nameNode[0];
+            const name = nameNode?.["@value"] ?? null;
+            if (!name) return null;
+
+            return { id, name };
+          } catch {
+            return null;
+          }
+        })
+        .filter((r: GameSearchResult | null): r is GameSearchResult => r != null);
+
+      const ranked = rankSearchResults(results, queryParam, ignoreCase).slice(0, maxResults);
+
+      res.json(ranked);
+    } catch (err: any) {
+      logger.error("searchGames unexpected error", { err: err?.message ?? err });
+      res.status(500).json({ error: "Internal server error", message: err?.message });
     }
-
-    const maxResults = Math.min(Number(req.query.maxResults) || 20, 50);
-    const ignoreCase = req.query.ignoreCase === "true";
-
-    const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(
-      queryParam
-    )}&type=boardgame`;
-
-    logger.log("searchGames: fetching", { url });
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      logger.error("BGG search failed", { status: response.status, body: text });
-      res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
-      return;
-    }
-
-    const xml = await response.text();
-    const parsed = parser.parse(xml);
-
-    let items = parsed?.items?.item ?? [];
-    if (!Array.isArray(items)) items = [items];
-
-    const results: GameSearchResult[] = items
-      .map((item: any) => {
-        try {
-          const id = item?.["@id"];
-          if (!id) return null;
-
-          let nameNode = item.name;
-          if (!nameNode) return null;
-          if (Array.isArray(nameNode))
-            nameNode = nameNode.find((n: any) => n["@type"] === "primary") ?? nameNode[0];
-          const name = nameNode?.["@value"] ?? null;
-          if (!name) return null;
-
-          return { id, name };
-        } catch {
-          return null;
-        }
-      })
-      .filter((r: GameSearchResult | null): r is GameSearchResult => r != null);
-
-    const ranked = rankSearchResults(results, queryParam, ignoreCase).slice(0, maxResults);
-
-    res.json(ranked);
-  } catch (err: any) {
-    logger.error("searchGames unexpected error", { err: err?.message ?? err });
-    res.status(500).json({ error: "Internal server error", message: err?.message });
-  }
 });
