@@ -21,6 +21,45 @@ export const ping = onRequest((req, res) => {
 });
 
 // --------------------
+// Config cache
+// --------------------
+const GAME_TTL_MS = 24 * 60 * 60 * 1000;
+const SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
+const GAME_CACHE_MAX = 1000;
+const SEARCH_CACHE_MAX = 100;
+
+// Simple L1 in-memory caches (non-persistent)
+type CacheEntry<T> = { value: T; expireAt: number };
+const gameCache = new Map<string, CacheEntry<any>>();
+const searchCache = new Map<string, CacheEntry<any>>();
+
+function getFromCache<T>(map: Map<string, CacheEntry<T>>, key: string): T | null {
+    const e = map.get(key);
+    if (!e) return null;
+    if (Date.now() > e.expireAt) {
+        map.delete(key);
+        return null;
+    }
+    return e.value;
+}
+
+function setToCache<T>(
+  map: Map<string, CacheEntry<T>>,
+  key: string,
+  value: T,
+  ttlMs: number,
+  maxSize: number
+) {
+    map.set(key, { value, expireAt: Date.now() + ttlMs });
+    // LRU eviction
+    while (map.size > maxSize) {
+        const firstKey = map.keys().next().value;
+        if (!firstKey) break;
+        map.delete(firstKey);
+    }
+}
+
+// --------------------
 // BGG Types
 // --------------------
 type GameOut = {
@@ -198,6 +237,16 @@ async function fetchWithAuth(url: string) {
 // --------------------
 // Cloud Functions
 // --------------------
+
+/**
+ * getGamesByIds
+ * Query: ids=1,2,3
+ * Behaviour:
+ *  - check L1 cache per id
+ *  - if some ids missing -> single BGG call for missing ids
+ *  - parse returned items, store each parsed game in L1 cache
+ *  - return ordered array of games (only successfully parsed ones)
+ */
 export const getGamesByIds = onRequest(
   { secrets: ["BGG_API_TOKEN"] },
   async (req, res) => {
@@ -221,43 +270,74 @@ export const getGamesByIds = onRequest(
         return;
       }
 
-      const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join(
-        ","
-      )}&type=boardgame&stats=1`;
-
-      logger.log("getGamesByIds: fetching", { bggUrl, count: ids.length });
-
-      const response = await fetchWithAuth(bggUrl);
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        logger.error("BGG fetch failed", { status: response.status, body: text });
-        res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
-        return;
-      }
-
-      const xml = await response.text();
-      const parsed = parser.parse(xml);
-
-      let items = parsed?.items?.item ?? [];
-      if (!Array.isArray(items)) items = [items];
-
-      const games: GameOut[] = [];
-      for (const item of items) {
-        try {
-          const g = parseItemToGame(item);
-          games.push(g);
-        } catch (e: any) {
-          logger.warn("Ignored item during parse", { id: item?.["@id"], reason: e?.message });
+		  // Check L1 cache
+		  const cachedById: Record<string, GameOut> = {}
+		  const missingIds: string[] = [];
+		  for (const id of ids) {
+        const cached = getFromCache<GameOut>(gameCache, `game:${id}`);
+        if (cached) {
+          cachedById[id] = cached;
+        } else {
+          missingIds.push(id);
         }
       }
 
-      res.json(games);
+      logger.log("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
+
+      // If missing, call BGG once
+      if (missingIds.length > 0) {
+        const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${ids.join(",")}&type=boardgame&stats=1`;
+        logger.log("getGamesByIds: fetching from BGG", { bggUrl, count: missingIds.length });
+
+        const response = await fetchWithAuth(bggUrl);
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          logger.error("BGG fetch failed", { status: response.status, body: text });
+          res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
+          return;
+        }
+
+        const xml = await response.text();
+        const parsed = parser.parse(xml);
+        let items = parsed?.items?.item ?? [];
+        if (!items) items = [];
+        if (!Array.isArray(items)) items = [items];
+
+        const fetchedById: Record<string, GameOut> = {};
+        for (const item of items) {
+          try {
+            const g = parseItemToGame(item);
+            fetchedById[g.uid] = g;
+            // write to L1 cache
+            setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX);
+          } catch (e: any) {
+            logger.warn("Ignored item during parse", { id: item?.["@id"], reason: e?.message });
+          }
+        }
+
+        // Merge cached + fetched
+        const ordered: GameOut[] = ids.map((id) => cachedById[id] ?? fetchedById[id]).filter(Boolean);
+        res.json(ordered);
+        return;
+      } else {
+        // all cached -> return ordered cached
+        const ordered: GameOut[] = ids.map((id) => cachedById[id]).filter(Boolean);
+        res.json(ordered);
+        return;
+      }
     } catch (err: any) {
       logger.error("getGamesByIds unexpected error", { err: err?.message ?? err });
       res.status(500).json({ error: "Internal server error", message: err?.message });
     }
 });
 
+/**
+ * searchGames
+ * Query: query=..., maxResults=..., ignoreCase=true|false
+ * Behaviour:
+ *  - check L1 cache for query key (query normalized + ignoreCase + maxResults)
+ *  - if miss -> fetch BGG search once, parse, rank, store in cache, return
+ */
 export const searchGames = onRequest(
   { secrets: ["BGG_API_TOKEN"] },
   async (req, res) => {
@@ -267,14 +347,19 @@ export const searchGames = onRequest(
         res.status(400).json({ error: "Missing query parameter 'query'" });
         return;
       }
-
       const maxResults = Math.min(Number(req.query.maxResults) || 20, 50);
       const ignoreCase = req.query.ignoreCase === "true";
 
-      const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(
-        queryParam
-      )}&type=boardgame`;
+      const cacheKey = `search:${queryParam.toLowerCase()}:${ignoreCase ? "i" : "s"}:max${maxResults}`;
+      const cached = getFromCache<GameSearchResult[]>(searchCache, cacheKey);
+      if (cached) {
+        logger.log("searchGames cache hit", { query: queryParam, cachedCount: cached.length });
+        res.json(cached.slice(0, maxResults));
+        return;
+      }
+      logger.log("searchGames cache miss", { query: queryParam });
 
+      const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(queryParam)}&type=boardgame`;
       logger.log("searchGames: fetching", { url });
 
       const response = await fetchWithAuth(url);
@@ -287,8 +372,8 @@ export const searchGames = onRequest(
 
       const xml = await response.text();
       const parsed = parser.parse(xml);
-
       let items = parsed?.items?.item ?? [];
+      if (!items) items = [];
       if (!Array.isArray(items)) items = [items];
 
       const results: GameSearchResult[] = items
@@ -296,14 +381,11 @@ export const searchGames = onRequest(
           try {
             const id = item?.["@id"];
             if (!id) return null;
-
             let nameNode = item.name;
             if (!nameNode) return null;
-            if (Array.isArray(nameNode))
-              nameNode = nameNode.find((n: any) => n["@type"] === "primary") ?? nameNode[0];
+            if (Array.isArray(nameNode)) nameNode = nameNode.find((n: any) => n["@type"] === "primary") ?? nameNode[0];
             const name = nameNode?.["@value"] ?? null;
             if (!name) return null;
-
             return { id, name };
           } catch {
             return null;
@@ -313,9 +395,13 @@ export const searchGames = onRequest(
 
       const ranked = rankSearchResults(results, queryParam, ignoreCase).slice(0, maxResults);
 
+      // write to search cache
+      setToCache(searchCache, cacheKey, ranked, SEARCH_TTL_MS, SEARCH_CACHE_MAX);
+
       res.json(ranked);
     } catch (err: any) {
       logger.error("searchGames unexpected error", { err: err?.message ?? err });
       res.status(500).json({ error: "Internal server error", message: err?.message });
     }
-});
+  }
+);
