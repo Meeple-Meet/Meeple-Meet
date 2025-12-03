@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.space_renter
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -40,6 +41,8 @@ class SpaceRenterViewModel(
   fun getSpaceRenter(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("SpaceRenter ID cannot be blank")
 
-    viewModelScope.launch { _spaceRenter.value = repository.getSpaceRenter(id) }
+    viewModelScope.launch {
+      OfflineModeManager.loadSpaceRenter(id) { spaceRenter -> _spaceRenter.value = spaceRenter }
+    }
   }
 }

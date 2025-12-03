@@ -126,6 +126,7 @@ fun rememberSpaceRenterValidationState(
 @Composable
 fun EditSpaceRenterScreen(
     spaceRenter: SpaceRenter,
+    online: Boolean,
     owner: Account,
     onBack: () -> Unit,
     onUpdated: () -> Unit,
@@ -143,6 +144,7 @@ fun EditSpaceRenterScreen(
 
   EditSpaceRenterContent(
       owner = owner,
+      online = online,
       initialRenter = spaceRenter,
       onBack = onBack,
       onUpdated = onUpdated,
@@ -185,6 +187,7 @@ fun EditSpaceRenterScreen(
 @Composable
 internal fun EditSpaceRenterContent(
     owner: Account,
+    online: Boolean,
     initialRenter: SpaceRenter,
     onBack: () -> Unit,
     onUpdated: () -> Unit,
@@ -314,10 +317,16 @@ internal fun EditSpaceRenterContent(
                           horizontal = AddSpaceRenterUi.Dimensions.contentHPadding,
                           vertical = AddSpaceRenterUi.Dimensions.contentVPadding)) {
                     item {
-                      EditableImageCarousel(
-                          photoCollectionUrl = photoCollectionUrl,
-                          spacesCount = spaces.size,
-                          setPhotoCollectionUrl = { photoCollectionUrl = it })
+                      if (online) {
+                        EditableImageCarousel(
+                            photoCollectionUrl = photoCollectionUrl,
+                            spacesCount = spaces.size,
+                            setPhotoCollectionUrl = { photoCollectionUrl = it })
+                      } else
+                          ImageCarousel(
+                              photoCollectionUrl = photoCollectionUrl,
+                              maxNumberOfImages = spaces.size,
+                              editable = false)
                     }
                     // Required Info
                     item {

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.coroutines.launch
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
  * ViewModel for editing and deleting existing space renters.
  *
  * This ViewModel handles space renter updates and deletions with permission validation to ensure
- * only the space renter owner can perform these operations.
+ * only the space renter owner can perform these operations. It also handles offline mode by
+ * synchronizing pending changes when connectivity is restored.
  *
  * @property spaceRenterRepository The repository used for space renter operations.
  */
@@ -31,6 +33,8 @@ class EditSpaceRenterViewModel(
    * - If provided, the space renter name is not blank
    * - If provided, exactly 7 opening hours entries are included (one for each day of the week)
    * - If provided, the address is valid
+   *
+   * This function automatically handles both online and offline modes through OfflineModeManager.
    *
    * @param spaceRenter The space renter to update.
    * @param requester The account requesting the update.
@@ -76,17 +80,44 @@ class EditSpaceRenterViewModel(
         throw IllegalArgumentException("An address it required to create a space renter")
 
     viewModelScope.launch {
-      spaceRenterRepository.updateSpaceRenter(
-          spaceRenter.id,
-          owner?.uid,
-          name,
-          phone,
-          email,
-          website,
-          address,
-          openingHours,
-          spaces,
-          photoCollectionUrl)
+      val isOnline = OfflineModeManager.hasInternetConnection.value
+
+      if (isOnline) {
+        // Online: update repository directly
+        spaceRenterRepository.updateSpaceRenter(
+            spaceRenter.id,
+            owner?.uid,
+            name,
+            phone,
+            email,
+            website,
+            address,
+            openingHours,
+            spaces,
+            photoCollectionUrl)
+
+        // Clear offline changes after successful update
+        OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
+      } else {
+        // Offline: store changes in OfflineModeManager
+        val changes = mutableMapOf<String, Any>()
+        if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
+        if (name != null) changes[SpaceRenter::name.name] = name
+        if (phone != null) changes[SpaceRenter::phone.name] = phone
+        if (email != null) changes[SpaceRenter::email.name] = email
+        if (website != null) changes[SpaceRenter::website.name] = website
+        if (address != null) changes[SpaceRenter::address.name] = address
+        if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
+        if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
+        // remove this line when images are supported offline
+        // if (photoCollectionUrl != null) changes[SpaceRenter::photoCollectionUrl.name] =
+        // photoCollectionUrl
+
+        // Store each change in offline cache
+        changes.forEach { (property, value) ->
+          OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
+        }
+      }
     }
   }
 
@@ -106,6 +137,10 @@ class EditSpaceRenterViewModel(
         throw PermissionDeniedException(
             "Only the space renter's owner can delete his own space renter")
 
-    viewModelScope.launch { spaceRenterRepository.deleteSpaceRenter(spaceRenter.id) }
+    viewModelScope.launch {
+      spaceRenterRepository.deleteSpaceRenter(spaceRenter.id)
+      // Remove from offline cache after deletion
+      OfflineModeManager.removeSpaceRenter(spaceRenter.id)
+    }
   }
 }
