@@ -185,7 +185,13 @@ class PostScreenTest : FirestoreTests() {
     checkpoint("tags_display_correctly") {
       // Switch to Alex's post (has tags ["boardgames", "lausanne"])
       postIdState.value = postByAlex.id
-      compose.waitForIdle()
+
+      compose.waitUntil(timeoutMillis = 5_000) {
+        compose
+            .onAllNodesWithTag(PostTags.POST_BODY, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
 
       val screenNodes =
           compose.onAllNodesWithTag(PostTags.SCREEN, useUnmergedTree = true).fetchSemanticsNodes()
