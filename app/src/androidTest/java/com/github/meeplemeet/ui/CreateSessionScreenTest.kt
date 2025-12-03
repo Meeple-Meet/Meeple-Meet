@@ -8,7 +8,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -21,6 +20,7 @@ import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionCreationTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import io.mockk.*
 import java.lang.reflect.Method
@@ -35,7 +35,7 @@ import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 
-class CreateSessionScreenTest {
+class CreateSessionScreenTest : FirestoreTests() {
 
   @get:Rule(order = 0) val compose = createComposeRule()
   /* ---------- Checkpoint helper ---------- */
@@ -44,7 +44,6 @@ class CreateSessionScreenTest {
   fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   // Repos / VMs
-  private lateinit var discussionRepository: DiscussionRepository
   private lateinit var viewModel: DiscussionViewModel
   private lateinit var accountRepo: AccountRepository
   private lateinit var sessionRepo: SessionRepository

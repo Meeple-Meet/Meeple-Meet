@@ -23,13 +23,14 @@ import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class PostScreenTest {
+class PostScreenTest : FirestoreTests() {
 
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()

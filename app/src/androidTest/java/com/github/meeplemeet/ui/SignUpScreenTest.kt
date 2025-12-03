@@ -25,11 +25,12 @@ import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.auth.WEAK_PWD_TEXT
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class SignUpScreenTest {
+class SignUpScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
 
