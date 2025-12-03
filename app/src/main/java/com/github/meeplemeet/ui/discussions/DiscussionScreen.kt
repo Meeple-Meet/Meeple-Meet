@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -88,6 +90,7 @@ const val MAX_MESSAGE_LENGTH: Int = 4096
 const val CHAR_COUNTER_THRESHOLD: Int = 100
 const val CHAR_COUNTER_WARNING_THRESHOLD: Int = 20
 val EDITING_POPUP_WIDTH = 120.dp
+const val UNSELECTED_BACKGROUND_ALPHA = 0.45f
 
 const val EDIT_MESSAGE_TEXT = "Edit"
 const val DELETE_MESSAGE_TEXT = "Delete"
@@ -127,6 +130,7 @@ data class MessageAnchor(
     val top: Int,
     val bottom: Int,
     val centerY: Int,
+    val centerX: Int,
 )
 
 /**
@@ -465,82 +469,87 @@ fun DiscussionScreen(
 
                     if (hasSelection) {
                       val overlayAnchor = anchor!!
-                      val topOffsetDp =
-                          with(density) { (overlayAnchor.top - messagesContainerTopPx).toDp() }
+                      val relativeOffsetY = overlayAnchor.top - messagesContainerTopPx
 
-                      Box(
-                          modifier =
-                              Modifier.fillMaxSize()
-                                  .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f))
-                                  .clickable(
-                                      enabled = true,
-                                      indication = null,
-                                      interactionSource =
-                                          remember { MutableInteractionSource() }) {})
+                      Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                        Box(
+                            modifier =
+                                Modifier.matchParentSize()
+                                    .background(
+                                        MaterialTheme.colorScheme.scrim.copy(
+                                            alpha = UNSELECTED_BACKGROUND_ALPHA))
+                                    .clickable(
+                                        enabled = true,
+                                        indication = null,
+                                        interactionSource =
+                                            remember { MutableInteractionSource() }) {})
 
-                      Box(modifier = Modifier.fillMaxSize()) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(top = topOffsetDp)) {
-                          val message = actionMessage!!
-                          val isMineOverlay = message.senderId == account.uid
-                          val senderOverlay =
-                              if (!isMineOverlay) userCache[message.senderId]?.name ?: "Unknown"
-                              else DiscussionCommons.YOU_SENDER_NAME
+                        Box(
+                            modifier =
+                                Modifier.fillMaxWidth().offset {
+                                  IntOffset(x = 0, y = relativeOffsetY)
+                                }) {
+                              val message = actionMessage!!
+                              val isMineOverlay = message.senderId == account.uid
+                              val senderOverlay =
+                                  if (!isMineOverlay) userCache[message.senderId]?.name ?: "Unknown"
+                                  else DiscussionCommons.YOU_SENDER_NAME
 
-                          val msgIndex = messages.indexOfFirst { it.uid == message.uid }
-                          if (msgIndex >= 0) {
-                            val prevMessageOverlay = messages.getOrNull(msgIndex - 1)
-                            val nextMessageOverlay = messages.getOrNull(msgIndex + 1)
-                            val showDateHeaderOverlay =
-                                shouldShowDateHeader(
-                                    current = message.createdAt.toDate(),
-                                    previous = prevMessageOverlay?.createdAt?.toDate())
-                            val isLastFromSenderOverlay =
-                                nextMessageOverlay?.senderId != message.senderId
-                            val isFirstFromSenderOverlay =
-                                prevMessageOverlay?.senderId != message.senderId ||
-                                    showDateHeaderOverlay
+                              val msgIndex = messages.indexOfFirst { it.uid == message.uid }
+                              if (msgIndex >= 0) {
+                                val prevMessageOverlay = messages.getOrNull(msgIndex - 1)
+                                val nextMessageOverlay = messages.getOrNull(msgIndex + 1)
+                                val showDateHeaderOverlay =
+                                    shouldShowDateHeader(
+                                        current = message.createdAt.toDate(),
+                                        previous = prevMessageOverlay?.createdAt?.toDate())
+                                val isLastFromSenderOverlay =
+                                    nextMessageOverlay?.senderId != message.senderId
+                                val isFirstFromSenderOverlay =
+                                    prevMessageOverlay?.senderId != message.senderId ||
+                                        showDateHeaderOverlay
 
-                            when {
-                              message.poll != null -> {
-                                PollBubble(
-                                    msgIndex = msgIndex,
-                                    poll = message.poll,
-                                    authorName = senderOverlay,
-                                    currentUserId = account.uid,
-                                    onVote = { optionIndex, isRemoving ->
-                                      if (isRemoving) {
-                                        viewModel.removeVoteFromPollAsync(
-                                            discussion.uid, message.uid, account, optionIndex)
-                                      } else {
-                                        viewModel.voteOnPollAsync(
-                                            discussion.uid, message.uid, account, optionIndex)
-                                      }
-                                    },
-                                    createdAt = message.createdAt.toDate(),
-                                    showProfilePicture = isLastFromSenderOverlay)
-                              }
-                              message.photoUrl != null -> {
-                                PhotoBubble(
-                                    message = message,
-                                    isMine = isMineOverlay,
-                                    senderName = senderOverlay,
-                                    showProfilePicture = isLastFromSenderOverlay,
-                                    showSenderName = isFirstFromSenderOverlay,
-                                    allMessages = messages,
-                                    userCache = userCache,
-                                    currentUserId = account.uid)
-                              }
-                              else -> {
-                                ChatBubble(
-                                    message = message,
-                                    isMine = isMineOverlay,
-                                    senderName = senderOverlay,
-                                    showProfilePicture = isLastFromSenderOverlay,
-                                    showSenderName = isFirstFromSenderOverlay)
+                                when {
+                                  message.poll != null -> {
+                                    PollBubble(
+                                        msgIndex = msgIndex,
+                                        poll = message.poll,
+                                        authorName = senderOverlay,
+                                        currentUserId = account.uid,
+                                        onVote = { optionIndex, isRemoving ->
+                                          if (isRemoving) {
+                                            viewModel.removeVoteFromPollAsync(
+                                                discussion.uid, message.uid, account, optionIndex)
+                                          } else {
+                                            viewModel.voteOnPollAsync(
+                                                discussion.uid, message.uid, account, optionIndex)
+                                          }
+                                        },
+                                        createdAt = message.createdAt.toDate(),
+                                        showProfilePicture = isLastFromSenderOverlay)
+                                  }
+                                  message.photoUrl != null -> {
+                                    PhotoBubble(
+                                        message = message,
+                                        isMine = isMineOverlay,
+                                        senderName = senderOverlay,
+                                        showProfilePicture = isLastFromSenderOverlay,
+                                        showSenderName = isFirstFromSenderOverlay,
+                                        allMessages = messages,
+                                        userCache = userCache,
+                                        currentUserId = account.uid)
+                                  }
+                                  else -> {
+                                    ChatBubble(
+                                        message = message,
+                                        isMine = isMineOverlay,
+                                        senderName = senderOverlay,
+                                        showProfilePicture = isLastFromSenderOverlay,
+                                        showSenderName = isFirstFromSenderOverlay)
+                                  }
+                                }
                               }
                             }
-                          }
-                        }
                       }
                     }
 
@@ -1625,29 +1634,46 @@ fun MessageOptionsPopup(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+  val density = LocalDensity.current
+
+  // General margin from screen edges
+  val marginPx = with(density) { Dimensions.Spacing.medium.toPx().toInt() }
+
+  // Same horizontal layout as our own bubbles:
+  // Row padding + avatar size + spacing between bubble and avatar
+  val rowPaddingPx = with(density) { Dimensions.Spacing.small.toPx().toInt() }
+  val avatarSizePx = with(density) { Dimensions.AvatarSize.small.toPx().toInt() }
+  val bubbleAvatarSpacingPx = with(density) { Dimensions.Spacing.small.toPx().toInt() }
+  val rightMarginPx = rowPaddingPx + avatarSizePx + bubbleAvatarSpacingPx
+
+  val fallbackWidthPx = with(density) { EDITING_POPUP_WIDTH.toPx().toInt() }
+  val fallbackHeightPx = with(density) { 80.dp.toPx().toInt() }
+
+  var menuSize by remember { mutableStateOf(IntSize.Zero) }
+  val menuWidthPx = if (menuSize.width > 0) menuSize.width else fallbackWidthPx
+  val menuHeightPx = if (menuSize.height > 0) menuSize.height else fallbackHeightPx
+
+  val showBelow = anchor.centerY < screenHeightPx / 2
+
+  // ---- X: align to the right like our own bubbles -----------------------
+  val rawX = screenWidthPx - rightMarginPx - menuWidthPx
+  val maxX = screenWidthPx - marginPx - menuWidthPx
+  val x =
+      if (maxX <= marginPx) {
+        ((screenWidthPx - menuWidthPx) / 2).coerceAtLeast(0)
+      } else {
+        rawX.coerceIn(marginPx, maxX)
+      }
+
+  // ---- Y: just above / below the message bubble -------------------------
+  val rawY = if (showBelow) anchor.bottom + marginPx else anchor.top - menuHeightPx - marginPx
+
+  val maxY = screenHeightPx - marginPx - menuHeightPx
+  val y = rawY.coerceIn(marginPx, maxY)
+
   Popup(onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
-    val density = LocalDensity.current
-    val marginPx = with(density) { Dimensions.Spacing.medium.toPx().toInt() }
-    val menuWidthDp = EDITING_POPUP_WIDTH
-    val menuWidthPx = with(density) { menuWidthDp.toPx().toInt() }
-    val menuHeightEstimatePx = with(density) { Dimensions.Spacing.huge.toPx().toInt() }
-
-    val showBelow = anchor.centerY < screenHeightPx / 2
-
-    val y =
-        if (showBelow) {
-          // Just below the message
-          anchor.bottom + marginPx
-        } else {
-          // Just above the message
-          (anchor.top - menuHeightEstimatePx - marginPx).coerceAtLeast(marginPx)
-        }
-
-    val x = (screenWidthPx - menuWidthPx - marginPx).coerceAtLeast(marginPx)
-
     Box(modifier = Modifier.fillMaxSize().testTag(DiscussionTestTags.MESSAGE_OPTIONS_ROOT)) {
-
-      // Clickable scrim to dismiss when tapping outside
+      // Scrim – tap outside to dismiss
       Box(
           modifier =
               Modifier.matchParentSize().clickable(
@@ -1655,78 +1681,72 @@ fun MessageOptionsPopup(
                     onDismiss()
                   })
 
-      Box(modifier = Modifier.offset { IntOffset(x, y) }) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-              Surface(
-                  shape = RoundedCornerShape(Dimensions.CornerRadius.large),
-                  color = MessagingColors.messageBubbleOther,
-                  shadowElevation = Dimensions.Elevation.xxHigh,
-                  modifier =
-                      Modifier.widthIn(max = menuWidthDp)
-                          .testTag(DiscussionTestTags.MESSAGE_OPTIONS_CARD)) {
-                    Column {
-                      if (isEditable) {
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null) {
-                                          onEdit()
-                                        }
-                                    .padding(
-                                        horizontal = Dimensions.Spacing.large,
-                                        vertical = Dimensions.Spacing.medium)
-                                    .testTag(DiscussionTestTags.MESSAGE_EDIT_BUTTON),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement =
-                                Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-                              Icon(
-                                  imageVector = Icons.Filled.Edit,
-                                  contentDescription = "Edit message",
-                                  tint = AppColors.textIcons)
-                              Text(
-                                  text = EDIT_MESSAGE_TEXT,
-                                  style = MaterialTheme.typography.bodyMedium,
-                                  fontSize = Dimensions.TextSize.body,
-                                  color = AppColors.textIcons)
-                            }
-
-                        HorizontalDivider(
-                            thickness = Dimensions.DividerThickness.thin,
-                            color = MessagingColors.divider)
-                      }
-
-                      Row(
-                          modifier =
-                              Modifier.fillMaxWidth()
-                                  .clickable(
-                                      interactionSource = remember { MutableInteractionSource() },
-                                      indication = null) {
-                                        onDelete()
-                                      }
-                                  .padding(
-                                      horizontal = Dimensions.Spacing.large,
-                                      vertical = Dimensions.Spacing.medium)
-                                  .testTag(DiscussionTestTags.MESSAGE_DELETE_BUTTON),
-                          verticalAlignment = Alignment.CenterVertically,
-                          horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = "Delete message",
-                                tint = AppColors.negative)
-                            Text(
-                                text = DELETE_MESSAGE_TEXT,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontSize = Dimensions.TextSize.body,
-                                color = AppColors.textIcons)
-                          }
+      Surface(
+          shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+          color = MessagingColors.messageBubbleOther,
+          shadowElevation = Dimensions.Elevation.xxHigh,
+          modifier =
+              Modifier.offset { IntOffset(x, y) }
+                  .onGloballyPositioned { menuSize = it.size }
+                  .widthIn(max = EDITING_POPUP_WIDTH)
+                  .testTag(DiscussionTestTags.MESSAGE_OPTIONS_CARD)) {
+            Column {
+              if (isEditable) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null) {
+                                  onEdit()
+                                }
+                            .padding(
+                                horizontal = Dimensions.Spacing.large,
+                                vertical = Dimensions.Spacing.medium)
+                            .testTag(DiscussionTestTags.MESSAGE_EDIT_BUTTON),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                      Icon(
+                          imageVector = Icons.Filled.Edit,
+                          contentDescription = "Edit message",
+                          tint = AppColors.textIcons)
+                      Text(
+                          text = EDIT_MESSAGE_TEXT,
+                          style = MaterialTheme.typography.bodyMedium,
+                          fontSize = Dimensions.TextSize.body,
+                          color = AppColors.textIcons)
                     }
+
+                HorizontalDivider(
+                    thickness = Dimensions.DividerThickness.thin, color = MessagingColors.divider)
+              }
+
+              Row(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .clickable(
+                              interactionSource = remember { MutableInteractionSource() },
+                              indication = null) {
+                                onDelete()
+                              }
+                          .padding(
+                              horizontal = Dimensions.Spacing.large,
+                              vertical = Dimensions.Spacing.medium)
+                          .testTag(DiscussionTestTags.MESSAGE_DELETE_BUTTON),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Delete message",
+                        tint = AppColors.negative)
+                    Text(
+                        text = DELETE_MESSAGE_TEXT,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = Dimensions.TextSize.body,
+                        color = AppColors.textIcons)
                   }
             }
-      }
+          }
     }
   }
 }
@@ -1761,16 +1781,34 @@ private fun SelectableMessageContainer(
       }
 
   Box(
-      modifier =
-          Modifier.fillMaxWidth().then(longPressModifier).onPlaced { coords ->
-            val pos = coords.positionInRoot()
-            val height = coords.size.height
-            val top = pos.y.toInt()
-            val bottom = top + height
-            val centerY = top + height / 2
-            onAnchorChanged(
-                message.uid, MessageAnchor(top = top, bottom = bottom, centerY = centerY))
-          }) {
-        content()
-      }
+      modifier = Modifier.fillMaxWidth(),
+      contentAlignment = if (isMine) Alignment.CenterEnd else Alignment.CenterStart,
+  ) {
+    // This inner box has the same width/position as the bubble
+    Box(
+        modifier =
+            longPressModifier.onPlaced { coords ->
+              val pos = coords.positionInRoot()
+              val width = coords.size.width
+              val height = coords.size.height
+
+              val top = pos.y.toInt()
+              val bottom = top + height
+              val centerY = top + height / 2
+
+              val left = pos.x.toInt()
+              val centerX = left + width / 2
+
+              onAnchorChanged(
+                  message.uid,
+                  MessageAnchor(
+                      top = top,
+                      bottom = bottom,
+                      centerY = centerY,
+                      centerX = centerX,
+                  ))
+            }) {
+          content()
+        }
+  }
 }
