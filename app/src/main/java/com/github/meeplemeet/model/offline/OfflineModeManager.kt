@@ -157,6 +157,10 @@ object OfflineModeManager {
     _offlineModeFlow.value = OfflineMode()
   }
 
+  fun forceInternet() {
+    _hasInternetConnection.value = true
+  }
+
   // ---------------------- Accounts Methods ---------------------- //
 
   /**
