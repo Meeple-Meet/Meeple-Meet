@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.IOException
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 /**
@@ -102,6 +103,8 @@ class CloudBggGameRepository(
               jsonArray.getJSONObject(i).toGame()
             }
           }
+        } catch (e: JSONException) {
+          throw GameFetchException("Invalid JSON while fetching games: ${e.message}", e)
         } catch (e: IOException) {
           throw GameFetchException("Network error while fetching games: ${e.message}", e)
         }
