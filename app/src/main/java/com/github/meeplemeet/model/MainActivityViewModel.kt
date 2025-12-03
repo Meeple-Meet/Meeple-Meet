@@ -11,6 +11,8 @@ import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +34,8 @@ import kotlinx.coroutines.launch
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
 ) : AuthenticationViewModel() {
 
   /**
@@ -136,18 +140,8 @@ class MainActivityViewModel(
   /**
    * Syncs all pending offline data with Firestore. Call this function when connection is restored.
    */
-  suspend fun syncAllPendingData() {
-    try {
-      syncPendingSpaceRenters()
-      syncPendingShops()
-      Log.d("MainActivity", "Sync completed successfully")
-    } catch (e: Exception) {
-      Log.e("MainActivity", "Error during sync", e)
-    }
-  }
-
   /** Syncs all pending space renter creations. */
-  private suspend fun syncPendingSpaceRenters() {
+  suspend fun syncPendingSpaceRenters() {
     val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
 
     if (pendingChanges.isEmpty()) return
@@ -171,9 +165,18 @@ class MainActivityViewModel(
           OfflineModeManager.removeSpaceRenter(renter.id)
           Log.d("MainActivity", "✓ Created space renter: ${renter.name}")
         } else {
-          // Update logic for future implementation
+          // Update Firestore
+          spaceRenterRepository.updateSpaceRenterOffline(renter.id, changes)
+
+          // Fetch the updated data from Firestore
+          val refreshed = spaceRenterRepository.getSpaceRenterSafe(renter.id)
+          if (refreshed != null) {
+            // Update the cache with fresh data
+            OfflineModeManager.updateSpaceRenterCache(refreshed)
+            Log.d("MainActivity", "✓ Updated and refreshed space renter: ${renter.name}")
+          }
+
           OfflineModeManager.clearSpaceRenterChanges(renter.id)
-          Log.d("MainActivity", "✓ Updated space renter: ${renter.name}")
         }
       } catch (e: Exception) {
         Log.e("MainActivity", "✗ Failed to sync space renter ${renter.id}: ${e.message}")
@@ -212,6 +215,7 @@ class MainActivityViewModel(
             Log.e("MainActivity", "✗ Cannot sync - owner not found: ${shop.owner}")
           }
         } else {
+          shopRepository.updateShopOffline(shop.id, changes)
           OfflineModeManager.clearShopChanges(shop.id)
           Log.d("MainActivity", "✓ Updated shop: ${shop.name}")
         }
