@@ -347,6 +347,7 @@ internal fun EditSpaceRenterContent(
                           content = {
                             SpaceRenterRequiredInfoSection(
                                 spaceRenter = draftRenter,
+                                online = online,
                                 onSpaceName = { name = it },
                                 onEmail = { email = it },
                                 onPhone = { phone = it },
