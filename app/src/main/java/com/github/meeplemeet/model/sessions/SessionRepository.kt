@@ -168,7 +168,7 @@ class SessionRepository(
   /**
    * Checks if the session identified by [sessionId] has already passed.
    *
-   * A session is considered passed if the current time is more than 3 hours after the session's
+   * A session is considered passed if the current time is more than 24 hours after the session's
    * scheduled date and time.
    *
    * @param sessionId Firestore document id of the parent discussion containing the session.
@@ -177,9 +177,9 @@ class SessionRepository(
   suspend fun isSessionPassed(sessionId: String): Boolean {
     val session = getSession(sessionId) ?: return false
     val date = session.date
-    // Add 3 hours to the session time to account for session duration
-    val threeHoursInMillis = 3 * 60 * 60 * 1000L
-    return (date.toDate().time + threeHoursInMillis) < Timestamp.now().toDate().time
+    // Add 24 hours to the session time to account for session duration
+    val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
+    return (date.toDate().time + twentyFourHoursInMillis) < Timestamp.now().toDate().time
   }
 
   /**
@@ -269,6 +269,42 @@ class SessionRepository(
               snapshot.toObject(Session::class.java)?.photoUrl
             } catch (_: Exception) {
               null // Skip sessions that fail to load or don't exist
+            }
+          }
+        }
+        .awaitAll()
+        .filterNotNull()
+  }
+
+  /**
+   * Retrieves archived sessions with pagination support.
+   *
+   * @param userId The user ID whose archived sessions should be retrieved
+   * @param page Page number (0-indexed).
+   * @param pageSize Number of sessions to return per page.
+   * @return List of Session objects for the requested page.
+   */
+  suspend fun getArchivedSessions(
+      userId: String,
+      page: Int = 0,
+      pageSize: Int = 12
+  ): List<Session> = coroutineScope {
+    val pastSessionIds = RepositoryProvider.accounts.getAccount(userId).pastSessionIds
+
+    val startIndex = page * pageSize
+    if (startIndex >= pastSessionIds.size) return@coroutineScope emptyList()
+
+    val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
+    val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
+
+    sessionIdsForPage
+        .map { sessionId ->
+          async {
+            try {
+              val snapshot = collection.document(sessionId).get().await()
+              snapshot.toObject(Session::class.java)
+            } catch (_: Exception) {
+              null
             }
           }
         }
