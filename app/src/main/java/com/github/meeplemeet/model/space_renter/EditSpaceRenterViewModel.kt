@@ -1,5 +1,3 @@
-// Docs generated with Claude Code.
-
 package com.github.meeplemeet.model.space_renter
 
 import androidx.lifecycle.viewModelScope
@@ -48,20 +46,6 @@ class EditSpaceRenterViewModel(
     }
   }
   /**
-   * Refreshes the space renter data from the repository. This can be called externally (e.g., after
-   * sync completes).
-   */
-  suspend fun refreshSpaceRenter(renterId: String) {
-    withContext(OfflineModeManager.dispatcher) {
-      val refreshed = spaceRenterRepository.getSpaceRenterSafe(renterId)
-      if (refreshed != null) {
-        _currentSpaceRenter.value = refreshed
-        OfflineModeManager.updateSpaceRenterCache(refreshed)
-      } else {}
-    }
-  }
-
-  /**
    * Updates one or more fields of an existing space renter.
    *
    * This operation is performed asynchronously in the viewModelScope. Only the space renter owner
@@ -88,7 +72,7 @@ class EditSpaceRenterViewModel(
    * @throws IllegalArgumentException if the space renter name is blank, if not exactly 7 opening
    *   hours entries are provided, or if the address is not valid.
    */
-  suspend fun updateSpaceRenter(
+  fun updateSpaceRenter(
       spaceRenter: SpaceRenter,
       requester: Account,
       owner: Account? = null,
@@ -101,67 +85,68 @@ class EditSpaceRenterViewModel(
       spaces: List<Space>? = null,
       photoCollectionUrl: List<String>? = null
   ) {
-    if (spaceRenter.owner.uid != requester.uid)
-        throw PermissionDeniedException(
-            "Only the space renter's owner can edit his own space renter")
+    viewModelScope.launch {
+      if (spaceRenter.owner.uid != requester.uid)
+          throw PermissionDeniedException(
+              "Only the space renter's owner can edit his own space renter")
 
-    if (name != null && name.isBlank())
-        throw IllegalArgumentException("SpaceRenter name cannot be blank")
+      if (name != null && name.isBlank())
+          throw IllegalArgumentException("SpaceRenter name cannot be blank")
 
-    if (openingHours != null) {
-      val uniqueByDay = openingHours.distinctBy { it.day }
-      if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
-    }
+      if (openingHours != null) {
+        val uniqueByDay = openingHours.distinctBy { it.day }
+        if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
+      }
 
-    if (address != null && address == Location())
-        throw IllegalArgumentException("An address is required to create a space renter")
+      if (address != null && address == Location())
+          throw IllegalArgumentException("An address is required to create a space renter")
 
-    val isOnline = OfflineModeManager.hasInternetConnection.first()
+      val isOnline = OfflineModeManager.hasInternetConnection.first()
 
-    withContext(OfflineModeManager.dispatcher) {
-      if (isOnline) {
+      withContext(OfflineModeManager.dispatcher) {
+        if (isOnline) {
+          spaceRenterRepository.updateSpaceRenter(
+              spaceRenter.id,
+              owner?.uid,
+              name,
+              phone,
+              email,
+              website,
+              address,
+              openingHours,
+              spaces,
+              photoCollectionUrl)
 
-        spaceRenterRepository.updateSpaceRenter(
-            spaceRenter.id,
-            owner?.uid,
-            name,
-            phone,
-            email,
-            website,
-            address,
-            openingHours,
-            spaces,
-            photoCollectionUrl)
+          val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
 
-        val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
+          if (refreshed != null) {
+            // Update both cache and UI state
+            OfflineModeManager.updateSpaceRenterCache(refreshed)
+            _currentSpaceRenter.value = refreshed
+          }
 
-        if (refreshed != null) {
-          // Update both cache and UI state
-          OfflineModeManager.updateSpaceRenterCache(refreshed)
-          _currentSpaceRenter.value = refreshed
-        } else {}
+          OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
+        } else {
+          val changes = mutableMapOf<String, Any>()
+          if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
+          if (name != null) changes[SpaceRenter::name.name] = name
+          if (phone != null) changes[SpaceRenter::phone.name] = phone
+          if (email != null) changes[SpaceRenter::email.name] = email
+          if (website != null) changes[SpaceRenter::website.name] = website
+          if (address != null) changes[SpaceRenter::address.name] = address
+          if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
+          if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
+          if (photoCollectionUrl != null)
+              changes[SpaceRenter::photoCollectionUrl.name] = photoCollectionUrl
 
-        OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
-      } else {
-
-        val changes = mutableMapOf<String, Any>()
-        if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
-        if (name != null) changes[SpaceRenter::name.name] = name
-        if (phone != null) changes[SpaceRenter::phone.name] = phone
-        if (email != null) changes[SpaceRenter::email.name] = email
-        if (website != null) changes[SpaceRenter::website.name] = website
-        if (address != null) changes[SpaceRenter::address.name] = address
-        if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
-        if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
-        if (photoCollectionUrl != null)
-            changes[SpaceRenter::photoCollectionUrl.name] = photoCollectionUrl
-
-        changes.forEach { (property, value) ->
-          OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
+          changes.forEach { (property, value) ->
+            OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
+          }
         }
       }
     }
   }
+
   /**
    * Deletes a space renter from Firestore.
    *
