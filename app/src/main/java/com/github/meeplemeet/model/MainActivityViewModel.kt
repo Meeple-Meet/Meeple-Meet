@@ -2,7 +2,6 @@
 package com.github.meeplemeet.model
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
@@ -19,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+const val TAG = "MainActivityViewModel"
 
 /**
  * Main view model for the application that provides real-time data flows for accounts and
@@ -146,8 +147,6 @@ class MainActivityViewModel(
 
     if (pendingChanges.isEmpty()) return
 
-    Log.d("MainActivity", "Syncing ${pendingChanges.size} space renter(s)")
-
     pendingChanges.forEach { (renter, changes) ->
       try {
         if (changes.containsKey("_pending_create")) {
@@ -163,7 +162,6 @@ class MainActivityViewModel(
               photoCollectionUrl = renter.photoCollectionUrl)
 
           OfflineModeManager.removeSpaceRenter(renter.id)
-          Log.d("MainActivity", "✓ Created space renter: ${renter.name}")
         } else {
           // Update Firestore
           spaceRenterRepository.updateSpaceRenterOffline(renter.id, changes)
@@ -173,14 +171,11 @@ class MainActivityViewModel(
           if (refreshed != null) {
             // Update the cache with fresh data
             OfflineModeManager.updateSpaceRenterCache(refreshed)
-            Log.d("MainActivity", "✓ Updated and refreshed space renter: ${renter.name}")
           }
 
           OfflineModeManager.clearSpaceRenterChanges(renter.id)
         }
-      } catch (e: Exception) {
-        Log.e("MainActivity", "✗ Failed to sync space renter ${renter.id}: ${e.message}")
-      }
+      } catch (e: Exception) {}
     }
   }
 
@@ -189,8 +184,6 @@ class MainActivityViewModel(
     val pendingChanges = OfflineModeManager.getPendingShopChanges()
 
     if (pendingChanges.isEmpty()) return
-
-    Log.d("MainActivity", "Syncing ${pendingChanges.size} shop(s)")
 
     pendingChanges.forEach { (shop, changes) ->
       try {
@@ -210,18 +203,12 @@ class MainActivityViewModel(
                 photoCollectionUrl = shop.photoCollectionUrl)
 
             OfflineModeManager.removeShop(shop.id)
-            Log.d("MainActivity", "✓ Created shop: ${shop.name}")
-          } else {
-            Log.e("MainActivity", "✗ Cannot sync - owner not found: ${shop.owner}")
-          }
+          } else {}
         } else {
           shopRepository.updateShopOffline(shop.id, changes)
           OfflineModeManager.clearShopChanges(shop.id)
-          Log.d("MainActivity", "✓ Updated shop: ${shop.name}")
         }
-      } catch (e: Exception) {
-        Log.e("MainActivity", "✗ Failed to sync shop ${shop.id}: ${e.message}")
-      }
+      } catch (e: Exception) {}
     }
   }
 }

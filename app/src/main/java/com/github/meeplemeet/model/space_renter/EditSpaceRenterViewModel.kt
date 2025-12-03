@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.space_renter
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -56,14 +55,9 @@ class EditSpaceRenterViewModel(
     withContext(OfflineModeManager.dispatcher) {
       val refreshed = spaceRenterRepository.getSpaceRenterSafe(renterId)
       if (refreshed != null) {
-        Log.d(
-            "EditSpaceRenterVM",
-            "Refreshed space renter: ${refreshed.name}, spaces: ${refreshed.spaces.size}")
         _currentSpaceRenter.value = refreshed
         OfflineModeManager.updateSpaceRenterCache(refreshed)
-      } else {
-        Log.e("EditSpaceRenterVM", "Failed to refresh space renter")
-      }
+      } else {}
     }
   }
 
@@ -123,12 +117,10 @@ class EditSpaceRenterViewModel(
         throw IllegalArgumentException("An address is required to create a space renter")
 
     val isOnline = OfflineModeManager.hasInternetConnection.first()
-    Log.d(
-        "EditSpaceRenterVM", "updateSpaceRenter - isOnline: $isOnline, renterId: ${spaceRenter.id}")
 
     withContext(OfflineModeManager.dispatcher) {
       if (isOnline) {
-        Log.d("EditSpaceRenterVM", "Updating in Firestore...")
+
         spaceRenterRepository.updateSpaceRenter(
             spaceRenter.id,
             owner?.uid,
@@ -141,24 +133,17 @@ class EditSpaceRenterViewModel(
             spaces,
             photoCollectionUrl)
 
-        Log.d("EditSpaceRenterVM", "Firestore update complete, fetching fresh data...")
         val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
-        Log.d(
-            "EditSpaceRenterVM",
-            "Refreshed data: ${refreshed?.name}, spaces: ${refreshed?.spaces?.size}")
 
         if (refreshed != null) {
           // Update both cache and UI state
           OfflineModeManager.updateSpaceRenterCache(refreshed)
           _currentSpaceRenter.value = refreshed
-          Log.d("EditSpaceRenterVM", "Cache and UI state update CONFIRMED")
-        } else {
-          Log.e("EditSpaceRenterVM", "Failed to fetch refreshed data!")
-        }
+        } else {}
 
         OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
       } else {
-        Log.d("EditSpaceRenterVM", "Storing changes offline...")
+
         val changes = mutableMapOf<String, Any>()
         if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
         if (name != null) changes[SpaceRenter::name.name] = name
@@ -188,7 +173,6 @@ class EditSpaceRenterViewModel(
                 spaces = spaces ?: spaceRenter.spaces,
                 photoCollectionUrl = photoCollectionUrl ?: spaceRenter.photoCollectionUrl)
         _currentSpaceRenter.value = optimisticUpdate
-        Log.d("EditSpaceRenterVM", "Applied optimistic update to UI")
       }
     }
   }
