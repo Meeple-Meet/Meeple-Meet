@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -31,6 +32,8 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -85,6 +88,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var mockNavigation: NavigationActions
+  private lateinit var navVM: NavigationViewModel
 
   private lateinit var regularAccount: Account
   private lateinit var shopOwnerAccount: Account
@@ -124,6 +128,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     } catch (_: Exception) {}
 
     mockNavigation = mockk(relaxed = true)
+    navVM = NavigationViewModel()
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
 
@@ -194,17 +199,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = viewModel,
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = { type ->
-                fabClickCount++
-                lastFabClickType = type
-              },
-              onRedirect = { pin -> lastRedirect = pin.uid })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = viewModel,
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = { type ->
+                  fabClickCount++
+                  lastFabClickType = type
+                },
+                onRedirect = { pin -> lastRedirect = pin.uid })
+          }
         }
       }
     }
@@ -415,17 +422,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = noClusterViewModel,
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = { type ->
-                fabClickCount++
-                lastFabClickType = type
-              },
-              onRedirect = { pin -> lastRedirect = pin.uid })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = noClusterViewModel,
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = { type ->
+                  fabClickCount++
+                  lastFabClickType = type
+                },
+                onRedirect = { pin -> lastRedirect = pin.uid })
+          }
         }
       }
     }
@@ -735,17 +744,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = singleClusterViewModel,
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = { type ->
-                fabClickCount++
-                lastFabClickType = type
-              },
-              onRedirect = { pin -> lastRedirect = pin.uid })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = singleClusterViewModel,
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = { type ->
+                  fabClickCount++
+                  lastFabClickType = type
+                },
+                onRedirect = { pin -> lastRedirect = pin.uid })
+          }
         }
       }
     }

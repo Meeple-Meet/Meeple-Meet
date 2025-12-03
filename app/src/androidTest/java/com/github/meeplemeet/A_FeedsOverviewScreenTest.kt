@@ -1,5 +1,6 @@
 package com.github.meeplemeet
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -15,6 +16,8 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -44,6 +47,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   /* repos & VMs */
   private lateinit var postVm: PostOverviewViewModel
   private lateinit var firestoreVm: DiscussionViewModel
+  private lateinit var navVM: NavigationViewModel
 
   private lateinit var me: Account
   private lateinit var alice: Account
@@ -70,6 +74,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   @Before
   fun setup() = runBlocking {
     postVm = PostOverviewViewModel()
+    navVM = NavigationViewModel()
     firestoreVm = DiscussionViewModel()
 
     me = accountRepository.createAccount("meUID", "Me", "me@test.com", null)
@@ -88,12 +93,14 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   @Test
   fun full_smoke_all_cases() = runBlocking {
     compose.setContent {
-      AppTheme(themeMode = theme) {
-        PostsOverviewScreen(
-            viewModel = postVm,
-            navigation = nav,
-            onClickAddPost = { fabClicked = true },
-            onSelectPost = { clickedPost = it })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme(themeMode = theme) {
+          PostsOverviewScreen(
+              viewModel = postVm,
+              navigation = nav,
+              onClickAddPost = { fabClicked = true },
+              onSelectPost = { clickedPost = it })
+        }
       }
     }
 

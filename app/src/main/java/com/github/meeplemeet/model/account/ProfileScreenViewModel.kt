@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.auth.AuthUIState
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.coolDownErrMessage
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -136,6 +137,16 @@ class ProfileScreenViewModel(
         _uiState.update { it.copy(isLoading = false, errorMsg = failure.localizedMessage) }
       }
     }
+  }
+
+  /**
+   * Updates the theme preference of an account
+   *
+   * @param account The account ID to update
+   * @param theme The new theme preference
+   */
+  fun setAccountTheme(account: Account, theme: ThemeMode) {
+    viewModelScope.launch { RepositoryProvider.accounts.setAccountTheme(account.uid, theme) }
   }
 
   /**

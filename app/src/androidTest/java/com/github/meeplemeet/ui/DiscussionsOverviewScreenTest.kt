@@ -2,6 +2,7 @@
 // Tests were partially done using ChatGPT-5 Thinking Extended and partially done manually
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -9,6 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -34,6 +37,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   private lateinit var vm: DiscussionViewModel
   private lateinit var nav: NavigationActions
+  private lateinit var navVM: NavigationViewModel
 
   private lateinit var me: Account
   private lateinit var bob: Account
@@ -47,6 +51,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun setup() = runBlocking {
     vm = DiscussionViewModel()
     nav = mockk(relaxed = true)
+    navVM = NavigationViewModel()
 
     // Create test users using repository
     me =
@@ -127,7 +132,11 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @Test
   fun all_tests() = runBlocking {
     // Set content once at the beginning
-    compose.setContent { AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) } }
+    compose.setContent {
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+      }
+    }
 
     checkpoint("Test setup") {
       assert(me.name == "Marco")

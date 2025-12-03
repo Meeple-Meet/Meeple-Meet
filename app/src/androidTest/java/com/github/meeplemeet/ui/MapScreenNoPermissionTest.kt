@@ -1,6 +1,7 @@
 package com.github.meeplemeet.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -14,6 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
@@ -40,6 +43,7 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var mockNavigation: NavigationActions
+  private lateinit var navVM: NavigationViewModel
   private lateinit var regularAccount: Account
   private lateinit var currentAccountState: MutableState<Account>
   private var renderTrigger by mutableStateOf(0)
@@ -54,6 +58,7 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
     } catch (_: Exception) {}
 
     mockNavigation = mockk(relaxed = true)
+    navVM = NavigationViewModel()
 
     runBlocking {
       regularAccount =
@@ -73,16 +78,18 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = MapViewModel(),
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = {},
-              onRedirect = {},
-              cameraPositionState = cameraState,
-              forceNoPermission = true)
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = MapViewModel(),
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = {},
+                onRedirect = {},
+                cameraPositionState = cameraState,
+                forceNoPermission = true)
+          }
         }
       }
     }

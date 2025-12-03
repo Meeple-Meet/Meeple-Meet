@@ -1,9 +1,12 @@
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
@@ -34,6 +37,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
   fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var nav: NavigationActions
+  private lateinit var navVM: NavigationViewModel
   private lateinit var viewModel: SessionOverviewViewModel
   private lateinit var account: Account
   private lateinit var capturedDiscussionId: String
@@ -49,6 +53,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
   @Before
   fun setup() = runBlocking {
     nav = mockk(relaxed = true)
+    navVM = NavigationViewModel()
     viewModel = SessionOverviewViewModel()
 
     val uid = "uid_" + UUID.randomUUID().toString().take(8)
@@ -59,12 +64,14 @@ class SessionsOverviewScreenTest : FirestoreTests() {
     capturedDiscussionId = ""
 
     compose.setContent {
-      AppTheme(ThemeMode.DARK) {
-        SessionsOverviewScreen(
-            viewModel = viewModel,
-            navigation = nav,
-            account = account,
-            onSelectSession = { session -> capturedDiscussionId = session })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme(ThemeMode.DARK) {
+          SessionsOverviewScreen(
+              viewModel = viewModel,
+              navigation = nav,
+              account = account,
+              onSelectSession = { session -> capturedDiscussionId = session })
+        }
       }
     }
   }

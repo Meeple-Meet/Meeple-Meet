@@ -309,7 +309,12 @@ private fun loadAccountsOrEmpty(
     viewModel: FriendsScreenViewModel,
     onResult: (List<Account>) -> Unit,
 ) {
-  if (ids.isEmpty()) onResult(emptyList()) else viewModel.getAccounts(ids, context, onResult)
+
+  if (ids.isEmpty()) {
+    onResult(emptyList())
+  } else {
+    viewModel.getAccounts(ids, context, onResult)
+  }
 }
 
 /**
