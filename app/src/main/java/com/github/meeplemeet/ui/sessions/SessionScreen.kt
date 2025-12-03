@@ -5,6 +5,7 @@ package com.github.meeplemeet.ui.sessions
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -125,6 +127,11 @@ object SessionDefaults {
   const val ADMIN_TEXT = "Admin"
   const val MEMBER_TEXT = "Member"
   const val USER_NAME_MISSING_AVATAR_PLACEHOLDER = "?"
+
+  object Image {
+    const val IMAGE_SCREEN_RATIO = 0.8f
+    val BORDER_WIDTH = 2.dp
+  }
 
   object Layout {
     val SCREEN_HORIZONTAL_PADDING = Dimensions.Spacing.extraLarge
@@ -322,8 +329,15 @@ fun SessionScreen(
                   model = gameUiState.fetchedGame!!.imageURL,
                   contentDescription = gameUiState.fetchedGame!!.name,
                   contentScale = ContentScale.Fit,
-                  modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-              )
+                  modifier =
+                      Modifier.fillMaxWidth(SessionDefaults.Image.IMAGE_SCREEN_RATIO)
+                          .wrapContentHeight()
+                          .clip(RoundedCornerShape(Dimensions.CornerRadius.large))
+                          .border(
+                              SessionDefaults.Image.BORDER_WIDTH,
+                              MaterialTheme.colorScheme.outline,
+                              RoundedCornerShape(Dimensions.CornerRadius.large),
+                          ))
             }
           }
         }
