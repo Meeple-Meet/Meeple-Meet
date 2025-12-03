@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -444,6 +446,9 @@ fun UserChipsGrid(
     account: Account,
     editable: Boolean = false,
     candidateMembers: List<Account> = emptyList(),
+    onAdd: ((Account) -> Unit)? = null,
+    useCheckboxes: Boolean = false,
+    selectedParticipants: List<Account> = emptyList()
 ) {
   var searchQuery by remember { mutableStateOf("") }
 
@@ -456,12 +461,25 @@ fun UserChipsGrid(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
         // Existing participant chips - now full width rectangles
         participants.forEach { p ->
+          val isSelected = selectedParticipants.any { it.uid == p.uid }
           UserChip(
               user = p,
               modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.chipsTag(p.uid)),
               onRemove = { if (editable) onRemove(p) },
               account = account,
-              showRemoveBTN = editable)
+              showRemoveBTN = !useCheckboxes && editable,
+              showCheckbox = useCheckboxes,
+              isChecked = isSelected,
+              onCheckedChange =
+                  if (useCheckboxes && onAdd != null) {
+                    { checked ->
+                      if (checked) {
+                        onAdd(p)
+                      } else {
+                        onRemove(p)
+                      }
+                    }
+                  } else null)
         }
       }
 }
@@ -663,7 +681,10 @@ fun UserChip(
     account: Account,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
-    showRemoveBTN: Boolean = false
+    showRemoveBTN: Boolean = false,
+    isChecked: Boolean = false,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    showCheckbox: Boolean = false
 ) {
   Surface(
       modifier = modifier,
@@ -707,8 +728,17 @@ fun UserChip(
                     }
                   }
 
-              // Remove button
-              if (showRemoveBTN && account.handle != user.handle) {
+              // Checkbox or Remove button
+              if (showCheckbox && onCheckedChange != null) {
+                Checkbox(
+                    checked = isChecked,
+                    onCheckedChange = onCheckedChange,
+                    modifier = Modifier.testTag(SessionTestTags.removeParticipantTag(user.name)),
+                    colors =
+                        CheckboxDefaults.colors(
+                            checkedColor = AppColors.neutral,
+                            uncheckedColor = AppColors.textIconsFade))
+              } else if (showRemoveBTN && account.handle != user.handle) {
                 IconButton(
                     onClick = onRemove,
                     modifier =

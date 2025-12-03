@@ -166,6 +166,8 @@ fun CreateSessionScreen(
 ) {
   // Holds the form state for the session
   var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
+  // Store all discussion members separately (remains constant)
+  var allDiscussionMembers by remember { mutableStateOf<List<Account>>(emptyList()) }
   // Holds the selected location (may be null)
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
@@ -180,7 +182,8 @@ fun CreateSessionScreen(
   // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
     viewModel.getAccounts(discussion.participants) { fetched ->
-      form = form.copy(participants = (fetched + account).distinctBy { it.uid })
+      allDiscussionMembers = (fetched + account).distinctBy { it.uid }
+      form = form.copy(participants = allDiscussionMembers)
     }
 
     // If a game query was already entered, trigger search
@@ -294,7 +297,7 @@ fun CreateSessionScreen(
               ParticipantsSection(
                   account = account,
                   selected = form.participants,
-                  allCandidates = form.participants,
+                  allCandidates = allDiscussionMembers,
                   minPlayers = gameUi.fetchedGame?.minPlayers ?: 0,
                   maxPlayers = gameUi.fetchedGame?.maxPlayers ?: 0,
                   onAdd = { toAdd ->
@@ -415,7 +418,7 @@ fun OrganisationSection(
               MaterialTheme.colorScheme.background,
               MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
-        Text(text = "Basic Info", style = MaterialTheme.typography.titleMedium)
+        Text(text = "Basic Info", style = MaterialTheme.typography.titleLarge)
 
         Spacer(Modifier.height(Dimensions.Spacing.small))
 
@@ -444,7 +447,7 @@ fun OrganisationSection(
 
         Spacer(Modifier.height(Dimensions.Spacing.xLarge))
 
-        Text(text = "Where & When", style = MaterialTheme.typography.titleMedium)
+        Text(text = "Where & When", style = MaterialTheme.typography.titleLarge)
 
         Spacer(Modifier.height(Dimensions.Spacing.small))
 
@@ -500,7 +503,7 @@ fun ParticipantsSection(
             horizontalArrangement = Arrangement.Start,
         ) {
           Column {
-            Text(mainSectionTitle, style = MaterialTheme.typography.titleMedium)
+            Text(mainSectionTitle, style = MaterialTheme.typography.titleLarge)
             if (minPlayers > 0 && maxPlayers > 0)
                 Text(
                     "Recommended: $minPlayers - $maxPlayers",
@@ -514,6 +517,12 @@ fun ParticipantsSection(
         Spacer(Modifier.height(Dimensions.Spacing.medium))
 
         UserChipsGrid(
-            participants = allCandidates, onRemove = onRemove, account = account, editable = true)
+            participants = allCandidates,
+            onRemove = onRemove,
+            onAdd = onAdd,
+            account = account,
+            editable = true,
+            useCheckboxes = true,
+            selectedParticipants = selected)
       }
 }

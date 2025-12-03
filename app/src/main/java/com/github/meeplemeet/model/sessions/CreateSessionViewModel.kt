@@ -73,11 +73,13 @@ open class CreateSessionViewModel(
     viewModelScope.launch {
       // Add all the participants that accept friend request from everyone or only there friends
       val participantsToAdd =
-          participants.filter { account ->
-            account.notificationSettings == NotificationSettings.EVERYONE ||
-                account.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
-                    requester.relationships[account.uid] == RelationshipStatus.FRIEND
-          }
+          participants
+              .filter { account ->
+                account.notificationSettings == NotificationSettings.EVERYONE ||
+                    account.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
+                        requester.relationships[account.uid] == RelationshipStatus.FRIEND
+              }
+              .filterNot { it.uid == requester.uid } // Exclude requester to avoid duplication
 
       sessionRepository.createSession(
           discussion.uid,
