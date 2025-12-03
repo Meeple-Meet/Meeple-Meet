@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
@@ -76,6 +78,7 @@ const val ERROR_NOT_SENT_COMMENT: String = "Couldn't send comment. Please try ag
 const val ERROR_NOT_DELETED_POST: String = "Couldn't delete post. Please try again."
 const val ERROR_SEND_REPLY: String = "Couldn't send reply. Please try again."
 const val ERROR_NOT_DELETED_COMMENT: String = "Couldn't delete comment. Please try again."
+const val ERROR_NOT_EDITED_POST: String = "Couldn't edit post. Please try again."
 
 const val TOPBAR_TITLE: String = "Post"
 const val COMMENT_TEXT_ZONE_PLACEHOLDER: String = "Share your thoughts..."
@@ -87,7 +90,7 @@ const val HIDE_REPLIES_TEXT: String = "Hide replies"
 const val MAX_COMMENT_LENGTH: Int = 2048
 
 /* ================================================================
- * Setups
+ * Setups and Helpers
  * ================================================================ */
 
 private typealias ResolveUser = (String) -> Account?
@@ -97,6 +100,11 @@ private object ThreadStyle {
   val GapAfter: Dp = Dimensions.Spacing.small
   val Stroke: Dp = Dimensions.Elevation.medium
   val VerticalInset: Dp = Dimensions.Spacing.small
+}
+
+private enum class PostEditTarget {
+  TITLE,
+  BODY
 }
 
 object PostTags {
@@ -127,6 +135,8 @@ object PostTags {
   fun tagChip(tag: String) = "post_tag_chip:$tag"
 
   const val POST_DELETE_BTN = "post_delete_btn"
+  const val POST_EDIT_BTN = "post_edit_btn"
+  const val POST_BODY_EDIT_BTN = "post_body_edit_btn"
 
   fun threadCard(id: String) = "post_thread_card:$id"
 
@@ -151,6 +161,41 @@ object PostTags {
   fun commentReplySend(id: String) = "post_comment_reply_send:$id"
 }
 
+/**
+ * Composable function to display a row of tags associated with a post.
+ *
+ * @param tags List of tags to display.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PostTagsRow(tags: List<String>) {
+  if (tags.isEmpty()) return
+
+  FlowRow(
+      modifier = Modifier.testTag(PostTags.POST_TAGS_ROW),
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+        tags.forEach { tag ->
+          Surface(
+              shape = RoundedCornerShape(Dimensions.CornerRadius.small),
+              color = MessagingColors.redditBlueBg,
+              modifier = Modifier.testTag(PostTags.tagChip(tag))) {
+                Text(
+                    text = tag,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = Dimensions.TextSize.tiny,
+                    fontWeight = FontWeight.Bold,
+                    color = MessagingColors.redditBlue,
+                    modifier =
+                        Modifier.padding(
+                            horizontal = Dimensions.Spacing.medium,
+                            vertical = Dimensions.Spacing.small))
+              }
+        }
+      }
+  Spacer(Modifier.height(Dimensions.Spacing.medium))
+}
+
 /* ================================================================
  * Main screen
  * ================================================================ */
@@ -173,8 +218,7 @@ fun PostScreen(
     accountViewModel: AccountViewModel = postViewModel,
     onBack: () -> Unit = {}
 ) {
-  val viewModel = postViewModel
-  val post: Post? by viewModel.postFlow(postId).collectAsState()
+  val post: Post? by postViewModel.postFlow(postId).collectAsState()
 
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
@@ -184,6 +228,7 @@ fun PostScreen(
   var topComment by rememberSaveable { mutableStateOf("") }
   var isSending by remember { mutableStateOf(false) }
   var isReplyingToComment by remember { mutableStateOf(false) }
+  var editTarget by remember { mutableStateOf<PostEditTarget?>(null) }
 
   // Track if post was ever loaded to distinguish between loading and deleted states
   var postEverLoaded by remember { mutableStateOf(false) }
@@ -259,15 +304,31 @@ fun PostScreen(
               sendEnabled = !isSending && topComment.isNotBlank() && post != null,
               onSend = {
                 val p = post ?: return@ComposerBar
+
                 scope.launch {
                   isSending = true
+                  val target = editTarget
+
                   try {
-                    viewModel.addComment(
-                        author = account, post = p, parentId = p.id, text = topComment.trim())
+                    if (target != null) {
+                      val value = topComment.trim()
+                      when (target) {
+                        PostEditTarget.TITLE ->
+                            postViewModel.editPost(author = account, post = p, newTitle = value)
+                        PostEditTarget.BODY ->
+                            postViewModel.editPost(author = account, post = p, newBody = value)
+                      }
+                      editTarget = null
+                    } else {
+                      postViewModel.addComment(
+                          author = account, post = p, parentId = p.id, text = topComment.trim())
+                    }
+
                     topComment = ""
                     focusManager.clearFocus(force = true)
                   } catch (_: Throwable) {
-                    snackbarHostState.showSnackbar(ERROR_NOT_SENT_COMMENT)
+                    snackbarHostState.showSnackbar(
+                        if (target != null) ERROR_NOT_EDITED_POST else ERROR_NOT_SENT_COMMENT)
                   } finally {
                     isSending = false
                   }
@@ -289,20 +350,28 @@ fun PostScreen(
               onDeletePost = {
                 scope.launch {
                   deleted = true
-                  runCatching { viewModel.deletePost(account, currentPost) }
+                  runCatching { postViewModel.deletePost(account, currentPost) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
                   onBack()
                 }
               },
+              onEditPostBody = {
+                topComment = currentPost.body
+                editTarget = PostEditTarget.BODY
+              },
+              onEditPostTitle = {
+                topComment = currentPost.title
+                editTarget = PostEditTarget.TITLE
+              },
               onReply = { parentId, text ->
                 scope.launch {
-                  runCatching { viewModel.addComment(account, currentPost, parentId, text) }
+                  runCatching { postViewModel.addComment(account, currentPost, parentId, text) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_SEND_REPLY) }
                 }
               },
               onDeleteComment = { comment ->
                 scope.launch {
-                  runCatching { viewModel.removeComment(account, currentPost, comment) }
+                  runCatching { postViewModel.removeComment(account, currentPost, comment) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_COMMENT) }
                 }
               },
@@ -458,12 +527,16 @@ private fun ComposerBar(
  * @param onReplyingStateChanged Lambda to notify when reply field focus changes.
  * @param resolveUser Lambda to resolve a user ID to an Account.
  * @param modifier Modifier to be applied to the content.
+ * @param onEditPostBody Lambda to invoke when editing the post body.
+ * @param onEditPostTitle Lambda to invoke when editing the post title.
  */
 @Composable
 private fun PostContent(
     post: Post,
     currentUser: Account,
     onDeletePost: () -> Unit,
+    onEditPostBody: () -> Unit,
+    onEditPostTitle: () -> Unit,
     onReply: (parentId: String, text: String) -> Unit,
     onDeleteComment: (Comment) -> Unit,
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
@@ -473,6 +546,10 @@ private fun PostContent(
   val listState = rememberLazyListState()
   val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
   val focusManager = LocalFocusManager.current
+
+  val canEditPost =
+      post.authorId == currentUser.uid &&
+          System.currentTimeMillis() <= post.timestamp.toDate().time + EDIT_MAX_THRESHOLD
 
   LazyColumn(
       state = listState,
@@ -489,7 +566,10 @@ private fun PostContent(
               post = post,
               author = resolveUser(post.authorId),
               currentUser = currentUser,
-              onDelete = onDeletePost)
+              canEdit = canEditPost,
+              onDelete = onDeletePost,
+              onEditBody = onEditPostBody,
+              onEditTitle = onEditPostTitle)
         }
 
         items(items = post.comments, key = { it.id }, contentType = { "root_comment" }) { root ->
@@ -512,67 +592,71 @@ private fun PostContent(
  * @param author The author of the post.
  * @param currentUser The current user's account information.
  * @param onDelete Lambda to invoke when deleting the post.
+ * @param onEditBody Lambda to invoke when editing the post body.
+ * @param onEditTitle Lambda to invoke when editing the post title.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelete: () -> Unit) {
+private fun PostCard(
+    post: Post,
+    author: Account?,
+    currentUser: Account,
+    canEdit: Boolean,
+    onDelete: () -> Unit,
+    onEditBody: () -> Unit,
+    onEditTitle: () -> Unit
+) {
+  val isOwner = post.authorId == currentUser.uid
+  val showEdit = canEdit && isOwner
+
   Column(modifier = Modifier.fillMaxWidth()) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MessagingColors.messagingSurface,
         shadowElevation = Dimensions.Elevation.minimal) {
-          Box(Modifier.fillMaxWidth().testTag(PostTags.postCard(post.id))) {
+          Box(modifier = Modifier.fillMaxWidth().testTag(PostTags.postCard(post.id))) {
             Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
-              // Post metadata (author and date)
+              // Header
               PostHeader(post = post, author = author)
 
               Spacer(Modifier.height(Dimensions.Padding.large))
 
-              // Tags row at top
-              if (post.tags.isNotEmpty()) {
-                FlowRow(
-                    modifier = Modifier.testTag(PostTags.POST_TAGS_ROW),
-                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
-                    verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                      post.tags.forEach { tag ->
-                        Surface(
-                            shape = RoundedCornerShape(Dimensions.CornerRadius.small),
-                            color = MessagingColors.redditBlueBg,
-                            modifier = Modifier.testTag(PostTags.tagChip(tag))) {
-                              Text(
-                                  text = tag,
-                                  style = MaterialTheme.typography.labelSmall,
-                                  fontSize = Dimensions.TextSize.tiny,
-                                  fontWeight = FontWeight.Bold,
-                                  color = MessagingColors.redditBlue,
-                                  modifier =
-                                      Modifier.padding(
-                                          horizontal = Dimensions.Spacing.medium,
-                                          vertical = Dimensions.Spacing.small))
-                            }
-                      }
-                    }
-                Spacer(Modifier.height(Dimensions.Spacing.medium))
-              }
+              // Tags row
+              PostTagsRow(post.tags)
 
-              // Title
-              Text(
-                  text = post.title,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontSize = Dimensions.TextSize.heading,
-                  fontWeight = FontWeight.Bold,
-                  color = MessagingColors.primaryText,
-                  modifier = Modifier.testTag(PostTags.POST_TITLE))
+              // Title row
+              PostEditableRow(
+                  editVisible = showEdit,
+                  editTestTag = PostTags.POST_EDIT_BTN,
+                  editContentDescription = "Edit title",
+                  verticalAlignment = Alignment.CenterVertically,
+                  onEdit = onEditTitle) {
+                    Text(
+                        text = post.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = Dimensions.TextSize.heading,
+                        fontWeight = FontWeight.Bold,
+                        color = MessagingColors.primaryText,
+                        modifier = Modifier.weight(1f).testTag(PostTags.POST_TITLE))
+                  }
 
               Spacer(Modifier.height(Dimensions.Padding.large))
 
-              // Body
-              Text(
-                  text = post.body,
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontSize = Dimensions.TextSize.body,
-                  color = MessagingColors.primaryText,
-                  modifier = Modifier.testTag(PostTags.POST_BODY))
+              // Body row
+              PostEditableRow(
+                  editVisible = showEdit,
+                  editTestTag = PostTags.POST_BODY_EDIT_BTN,
+                  editContentDescription = "Edit body",
+                  verticalAlignment = Alignment.Top,
+                  editYOffset = -Dimensions.Spacing.extraLarge,
+                  onEdit = onEditBody) {
+                    Text(
+                        text = post.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = Dimensions.TextSize.body,
+                        color = MessagingColors.primaryText,
+                        modifier = Modifier.weight(1f).testTag(PostTags.POST_BODY))
+                  }
 
               Spacer(Modifier.height(Dimensions.Padding.large))
 
@@ -600,21 +684,63 @@ private fun PostCard(post: Post, author: Account?, currentUser: Account, onDelet
                   }
             }
 
-            if (post.authorId == currentUser.uid) {
+            // Top-right delete button
+            if (isOwner) {
               IconButton(
                   onClick = onDelete,
-                  modifier = Modifier.align(Alignment.TopEnd).testTag(PostTags.POST_DELETE_BTN)) {
+                  modifier =
+                      Modifier.align(Alignment.TopEnd)
+                          .padding(top = Dimensions.Spacing.small, end = Dimensions.Padding.large)
+                          .testTag(PostTags.POST_DELETE_BTN)) {
                     Icon(
-                        Icons.Default.Delete,
-                        "Delete post",
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete post",
                         tint = MessagingColors.redditOrange,
                         modifier = Modifier.size(Dimensions.IconSize.standard))
                   }
             }
           }
         }
+
     HorizontalDivider(
         color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
+  }
+}
+
+/**
+ * Composable displaying a row with optional edit button.
+ *
+ * @param editVisible Whether the edit button should be visible.
+ * @param editTestTag Test tag for the edit button.
+ * @param editContentDescription Content description for the edit button.
+ * @param verticalAlignment Vertical alignment for the row content.
+ * @param editYOffset Vertical offset for the edit button.
+ * @param onEdit Lambda to invoke when the edit button is pressed.
+ * @param content Composable content to display in the row.
+ */
+@Composable
+private fun PostEditableRow(
+    editVisible: Boolean,
+    editTestTag: String,
+    editContentDescription: String,
+    verticalAlignment: Alignment.Vertical,
+    editYOffset: Dp = Dp.Hairline,
+    onEdit: () -> Unit,
+    content: @Composable RowScope.() -> Unit
+) {
+  Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = verticalAlignment) {
+    content()
+
+    if (editVisible) {
+      IconButton(
+          onClick = onEdit, modifier = Modifier.offset(y = editYOffset).testTag(editTestTag)) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = editContentDescription,
+                tint = MessagingColors.secondaryText,
+                modifier = Modifier.size(Dimensions.IconSize.standard))
+          }
+    }
   }
 }
 

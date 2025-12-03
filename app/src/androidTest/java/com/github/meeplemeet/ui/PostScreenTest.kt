@@ -4,7 +4,10 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -18,6 +21,7 @@ import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.model.posts.toNoUid
 import com.github.meeplemeet.ui.posts.COMMENT_TEXT_ZONE_PLACEHOLDER
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
@@ -26,6 +30,8 @@ import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,7 +50,8 @@ class PostScreenTest : FirestoreTests() {
       Account(uid = "u_alex", handle = "alex", name = "Alex", email = "alex@meeple.ch")
   private val dany =
       Account(uid = "u_dany", handle = "dany", name = "Dany", email = "dany@meeple.ch")
-  private val ts = Timestamp(1_725_000_000, 0)
+
+  private val ts = Timestamp.now()
 
   private fun testComment(id: String, text: String, author: Account, vararg children: Comment) =
       Comment(
@@ -57,27 +64,29 @@ class PostScreenTest : FirestoreTests() {
   private lateinit var postByAlex: Post
   private lateinit var postByMarco: Post
 
-  /* Fake AccountViewModel */
+  /* Fake AccountViewModel that never hits Firestore */
   private inner class FakeAccountViewModel : ViewModel(), AccountViewModel {
     override val scope: CoroutineScope
       get() = viewModelScope
 
     private val accounts = mutableMapOf(marco.uid to marco, alex.uid to alex, dany.uid to dany)
 
-    override fun getOtherAccount(uid: String, onResult: (Account) -> Unit) {
-      if (uid.isBlank()) return
-      accounts[uid]?.let { onResult(it) }
+    override fun getOtherAccount(id: String, onResult: (Account) -> Unit) {
+      if (id.isBlank()) return
+      accounts[id]?.let { onResult(it) }
     }
 
-    fun addAccount(account: Account) {
-      accounts[account.uid] = account
+    override fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
+      onResult(uids.mapNotNull { accounts[it] })
     }
   }
 
   /* ViewModels */
-  private lateinit var postRepo: PostRepository
   private lateinit var postVM: PostViewModel
   private lateinit var accountVM: FakeAccountViewModel
+
+  private val postRepo: PostRepository
+    get() = postRepository
 
   /* Query helpers */
   private fun findNodeByTag(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true)
@@ -85,21 +94,14 @@ class PostScreenTest : FirestoreTests() {
   private fun findNodeByText() =
       compose.onNodeWithText(COMMENT_TEXT_ZONE_PLACEHOLDER, useUnmergedTree = true)
 
-  private fun settleAnimations() {
-    compose.mainClock.advanceTimeBy(700)
-    compose.waitForIdle()
-  }
+  private fun seedPostInFirestore(post: Post) {
+    runBlocking {
+      val (postNoUid, commentDocs) = toNoUid(post)
+      val docRef = postRepo.collection.document(post.id)
+      docRef.set(postNoUid).await()
 
-  private fun setContent(account: Account = marco, postId: String = "p1", onBack: () -> Unit = {}) {
-    compose.setContent {
-      AppTheme {
-        PostScreen(
-            account = account,
-            postId = postId,
-            postViewModel = postVM,
-            accountViewModel = accountVM,
-            onBack = onBack)
-      }
+      val commentsCol = docRef.collection("comments")
+      commentDocs.forEach { comment -> commentsCol.document(comment.id).set(comment).await() }
     }
   }
 
@@ -113,23 +115,28 @@ class PostScreenTest : FirestoreTests() {
 
     postByAlex =
         Post(
-            id = "p1",
+            id = "p_alex",
             title = "Friday Root Night",
             body = "Who wants to play Root or Ark Nova?",
             timestamp = ts,
             authorId = alex.uid,
             tags = listOf("boardgames", "lausanne"),
             comments = listOf(c1, c2))
-    postByMarco = postByAlex.copy(id = "p2", authorId = marco.uid)
 
-    postRepo = PostRepository()
+    // Same content but owned by Marco (this is the editable one)
+    postByMarco = postByAlex.copy(id = "p_marco", authorId = marco.uid)
+
     postVM = PostViewModel(postRepo)
     accountVM = FakeAccountViewModel()
+
+    seedPostInFirestore(postByAlex)
+    seedPostInFirestore(postByMarco)
   }
 
   @Test
   fun all_post_screen_tests() {
     var backCount = 0
+    // Start with a non-existent post to test loading state
     val postIdState = mutableStateOf("p_nonexistent")
 
     compose.setContent {
@@ -164,8 +171,8 @@ class PostScreenTest : FirestoreTests() {
     }
 
     checkpoint("composer_bar_exists_and_interactions") {
-      // Switch to a different post ID
-      postIdState.value = "p_test"
+      // Switch to Marco's own post (exists and is editable)
+      postIdState.value = postByMarco.id
       compose.waitForIdle()
 
       findNodeByTag(PostTags.COMPOSER_BAR).assertExists()
@@ -176,12 +183,42 @@ class PostScreenTest : FirestoreTests() {
     }
 
     checkpoint("tags_display_correctly") {
-      postIdState.value = "p_tags"
-      compose.waitForIdle()
+      // Switch to Alex's post (has tags ["boardgames", "lausanne"])
+      postIdState.value = postByAlex.id
+
+      compose.waitUntil(timeoutMillis = 5_000) {
+        compose
+            .onAllNodesWithTag(PostTags.POST_BODY, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+
+      val screenNodes =
+          compose.onAllNodesWithTag(PostTags.SCREEN, useUnmergedTree = true).fetchSemanticsNodes()
+      assert(screenNodes.isNotEmpty())
+
+      val bodyNodes =
+          compose
+              .onAllNodesWithTag(PostTags.POST_BODY, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+      assert(bodyNodes.isNotEmpty())
+
+      compose.waitUntil(timeoutMillis = 5_000) {
+        compose
+            .onAllNodesWithText("boardgames", useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+      compose.waitUntil(timeoutMillis = 5_000) {
+        compose
+            .onAllNodesWithText("lausanne", useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
     }
 
     checkpoint("character_counter_not_visible_initially") {
-      postIdState.value = "p_test"
+      postIdState.value = postByMarco.id
       compose.waitForIdle()
 
       // Counter should not be visible initially
@@ -189,15 +226,15 @@ class PostScreenTest : FirestoreTests() {
     }
 
     checkpoint("character_counter_appears_when_approaching_limit") {
-      // Type text to get close to limit (2048 - 100 = 1948 chars to trigger counter)
+      // Type text to get close to limit
       val longText = "a".repeat(1950)
       findNodeByTag(PostTags.COMPOSER_INPUT).performTextReplacement(longText)
       compose.waitForIdle()
 
       // Counter should now be visible
       findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertExists()
-      // Should show remaining chars (2048 - 1950 = 98)
-      compose.onNodeWithText("98").assertExists()
+      // Should show remaining chars
+      compose.onNodeWithText("98", useUnmergedTree = true).assertExists()
     }
 
     checkpoint("character_counter_shows_warning_when_low") {
@@ -208,7 +245,7 @@ class PostScreenTest : FirestoreTests() {
 
       // Counter should be visible showing 18 chars remaining
       findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertExists()
-      compose.onNodeWithText("18").assertExists()
+      compose.onNodeWithText("18", useUnmergedTree = true).assertExists()
     }
 
     checkpoint("character_limit_enforced") {
@@ -219,14 +256,127 @@ class PostScreenTest : FirestoreTests() {
 
       // Counter should show 0 chars remaining
       findNodeByTag(PostTags.COMPOSER_CHAR_COUNTER).assertExists()
-      compose.onNodeWithText("0").assertExists()
+      compose.onNodeWithText("0", useUnmergedTree = true).assertExists()
 
       // Verify we can't type more - text input should still be exactly 2048 chars
       findNodeByTag(PostTags.COMPOSER_INPUT).performTextInput("b")
       compose.waitForIdle()
 
       // Counter should still show 0 (input rejected)
-      compose.onNodeWithText("0").assertExists()
+      compose.onNodeWithText("0", useUnmergedTree = true).assertExists()
+    }
+
+    checkpoint("edit_buttons_visible_only_for_own_post") {
+      // First show Alex's post (Marco is NOT the author) -> no edit buttons
+      postIdState.value = postByAlex.id
+      compose.waitForIdle()
+
+      findNodeByTag(PostTags.POST_BODY).assertExists()
+
+      compose.onNodeWithTag(PostTags.POST_EDIT_BTN, useUnmergedTree = true).assertDoesNotExist()
+      compose
+          .onNodeWithTag(PostTags.POST_BODY_EDIT_BTN, useUnmergedTree = true)
+          .assertDoesNotExist()
+
+      // Now show Marco's post -> edit buttons should be visible
+      postIdState.value = postByMarco.id
+      compose.waitForIdle()
+
+      findNodeByTag(PostTags.POST_BODY).assertExists()
+
+      compose.onNodeWithTag(PostTags.POST_EDIT_BTN, useUnmergedTree = true).assertExists()
+      compose.onNodeWithTag(PostTags.POST_BODY_EDIT_BTN, useUnmergedTree = true).assertExists()
+    }
+
+    checkpoint("edit_post_body_prefillsComposerAndUpdatesBody") {
+      postIdState.value = postByMarco.id
+      compose.waitForIdle()
+
+      // Wait for body text to be present
+      findNodeByTag(PostTags.POST_BODY).assertExists()
+
+      // Tap the body edit button
+      compose
+          .onNodeWithTag(PostTags.POST_BODY_EDIT_BTN, useUnmergedTree = true)
+          .assertExists()
+          .assertHasClickAction()
+          .performClick()
+      compose.waitForIdle()
+
+      // Composer should be prefilled with the original body
+      compose
+          .onNodeWithTag(PostTags.COMPOSER_INPUT, useUnmergedTree = true)
+          .assertExists()
+          .assertTextEquals(postByMarco.body)
+
+      // Replace with new body text
+      val updatedBody = "Updated body from test about Root and Ark Nova."
+      compose
+          .onNodeWithTag(PostTags.COMPOSER_INPUT, useUnmergedTree = true)
+          .performTextReplacement(updatedBody)
+
+      // Send edit
+      compose
+          .onNodeWithTag(PostTags.COMPOSER_SEND, useUnmergedTree = true)
+          .assertHasClickAction()
+          .performClick()
+      compose.waitForIdle()
+
+      // Composer should be cleared after sending
+      compose.onNodeWithTag(PostTags.COMPOSER_INPUT, useUnmergedTree = true).assertTextEquals("")
+
+      // Wait until the updated body appears in the UI
+      compose.waitUntil(timeoutMillis = 5_000) {
+        compose
+            .onAllNodesWithText(updatedBody, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+    }
+
+    checkpoint("edit_post_title_prefillsComposerAndUpdatesTitle") {
+      postIdState.value = postByMarco.id
+      compose.waitForIdle()
+
+      // Wait for title
+      findNodeByTag(PostTags.POST_TITLE).assertExists()
+
+      // Tap the title edit button
+      compose
+          .onNodeWithTag(PostTags.POST_EDIT_BTN, useUnmergedTree = true)
+          .assertExists()
+          .assertHasClickAction()
+          .performClick()
+      compose.waitForIdle()
+
+      // Composer should be prefilled with the current title
+      compose
+          .onNodeWithTag(PostTags.COMPOSER_INPUT, useUnmergedTree = true)
+          .assertExists()
+          .assertTextEquals(postByMarco.title)
+
+      val updatedTitle = "Updated Friday Root Night"
+      compose
+          .onNodeWithTag(PostTags.COMPOSER_INPUT, useUnmergedTree = true)
+          .performTextReplacement(updatedTitle)
+
+      // Send edit
+      compose
+          .onNodeWithTag(PostTags.COMPOSER_SEND, useUnmergedTree = true)
+          .assertHasClickAction()
+          .performClick()
+      compose.waitForIdle()
+
+      // Composer cleared
+      compose.onNodeWithTag(PostTags.COMPOSER_INPUT, useUnmergedTree = true).assertTextEquals("")
+
+      // Wait until updated title appears in UI
+      compose.waitUntil(timeoutMillis = 5_000) {
+        compose
+            .onAllNodesWithText(updatedTitle, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
     }
   }
 }

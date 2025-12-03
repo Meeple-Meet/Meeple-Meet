@@ -7,9 +7,11 @@ import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +25,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Games
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LibraryAdd
@@ -30,11 +34,14 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,10 +49,19 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
@@ -56,6 +72,7 @@ import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
@@ -72,6 +89,13 @@ import kotlinx.coroutines.launch
 const val MAX_MESSAGE_LENGTH: Int = 4096
 const val CHAR_COUNTER_THRESHOLD: Int = 100
 const val CHAR_COUNTER_WARNING_THRESHOLD: Int = 20
+val EDITING_POPUP_WIDTH = 120.dp
+val EDITING_POPUP_HEIGHT = 80.dp
+const val UNSELECTED_BACKGROUND_ALPHA = 0.45f
+
+const val EDIT_MESSAGE_TEXT = "Edit"
+const val DELETE_MESSAGE_TEXT = "Delete"
+const val UNKNOWN_ERROR = "Unknown error"
 
 /** Test-tag constants for the Discussion screen and its poll sub-components. */
 object DiscussionTestTags {
@@ -91,12 +115,24 @@ object DiscussionTestTags {
   const val ALLOW_MULTIPLE_CHECKBOX = "poll_allow_multiple"
   const val CREATE_POLL_CONFIRM = "poll_create_button"
 
+  const val MESSAGE_OPTIONS_ROOT = "message_options_root"
+  const val MESSAGE_OPTIONS_CARD = "message_options_card"
+  const val MESSAGE_EDIT_BUTTON = "message_options_edit"
+  const val MESSAGE_DELETE_BUTTON = "message_options_delete"
+
   fun pollVoteButton(msgIndex: Int, optIndex: Int) = "poll_msg${msgIndex}_opt${optIndex}_vote"
 
   fun pollPercent(msgIndex: Int, optIndex: Int) = "poll_msg${msgIndex}_opt${optIndex}_percent"
 
   fun discussionInfo(name: String) = "DiscussionInfo/$name"
 }
+
+data class MessageAnchor(
+    val top: Int,
+    val bottom: Int,
+    val centerY: Int,
+    val centerX: Int,
+)
 
 /**
  * Character counter that appears when approaching the character limit.
@@ -164,7 +200,7 @@ fun CharacterCounter(currentLength: Int, maxLength: Int, testTag: String) {
  * @see DiscussionViewModel.messagesFlow for real-time message updates
  * @see ImageFileUtils for photo caching utilities
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DiscussionScreen(
     account: Account,
@@ -175,7 +211,7 @@ fun DiscussionScreen(
     onCreateSessionClick: (Discussion) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
-  var messageText by remember { mutableStateOf("") }
+  var messageText by remember { mutableStateOf(TextFieldValue("")) }
   val listState = rememberLazyListState()
   var isSending by remember { mutableStateOf(false) }
   var discussionName by remember { mutableStateOf("Loading...") }
@@ -183,14 +219,24 @@ fun DiscussionScreen(
   val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
 
+  var selectedMessageForActions by remember { mutableStateOf<Message?>(null) }
+  var messageBeingEdited by remember { mutableStateOf<Message?>(null) }
+  val configuration = LocalConfiguration.current
+  val density = LocalDensity.current
+  val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+  val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+  val messageAnchors = remember { mutableStateMapOf<String, MessageAnchor>() }
+  var messagesContainerTopPx by remember { mutableIntStateOf(0) }
+  var selectedMessageAnchor by remember { mutableStateOf<MessageAnchor?>(null) }
+
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
     try {
-      viewModel.sendMessageWithPhoto(discussion, account, messageText, context, path)
-      messageText = ""
+      viewModel.sendMessageWithPhoto(discussion, account, messageText.text, context, path)
+      messageText = TextFieldValue("")
     } catch (e: Exception) {
       snackbarHostState.showSnackbar(
-          message = "Failed to send image: ${e.message ?: "Unknown error"}",
+          message = "Failed to send image: ${e.message ?: UNKNOWN_ERROR}",
           duration = SnackbarDuration.Long)
     } finally {
       isSending = false
@@ -243,6 +289,12 @@ fun DiscussionScreen(
         listState.animateScrollToItem(maxOf(0, messages.size - 1))
       } catch (_: Exception) {}
     }
+  }
+
+  LaunchedEffect(discussion.uid) {
+    selectedMessageForActions = null
+    messageBeingEdited = null
+    selectedMessageAnchor = null
   }
 
   Scaffold(
@@ -315,72 +367,245 @@ fun DiscussionScreen(
                     }
                   })
 
-              LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
-                itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
-                  val isMine = message.senderId == account.uid
-                  val sender =
-                      if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
-                      else DiscussionCommons.YOU_SENDER_NAME
+              // Messages area + overlay + popup
+              Box(
+                  modifier =
+                      Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { coords ->
+                        val pos = coords.positionInRoot()
+                        messagesContainerTopPx = pos.y.toInt()
+                      }) {
+                    val actionMessage = selectedMessageForActions
+                    val anchor = selectedMessageAnchor
+                    val hasSelection = actionMessage != null && anchor != null
 
-                  val showDateHeader =
-                      shouldShowDateHeader(
-                          current = message.createdAt.toDate(),
-                          previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
-                  if (showDateHeader) {
-                    Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                    DateSeparator(date = message.createdAt.toDate())
-                    Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                  }
+                    // Messages list
+                    LazyColumn(
+                        state = listState,
+                        modifier =
+                            Modifier.fillMaxSize().let { base ->
+                              if (hasSelection) base.blur(Dimensions.Blurring.tiny) else base
+                            }) {
+                          itemsIndexed(items = messages, key = { _, msg -> msg.uid }) {
+                              index,
+                              message ->
+                            val isMine = message.senderId == account.uid
+                            val sender =
+                                if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
+                                else DiscussionCommons.YOU_SENDER_NAME
 
-                  // Check if this is the last message from this sender
-                  val nextMessage = messages.getOrNull(index + 1)
-                  val isLastFromSender = nextMessage?.senderId != message.senderId
+                            val showDateHeader =
+                                shouldShowDateHeader(
+                                    current = message.createdAt.toDate(),
+                                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
+                            if (showDateHeader) {
+                              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+                              DateSeparator(date = message.createdAt.toDate())
+                              Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+                            }
 
-                  // Check if the previous message is from the same sender
-                  val prevMessage = messages.getOrNull(index - 1)
-                  val isFirstFromSender =
-                      prevMessage?.senderId != message.senderId || showDateHeader
+                            val nextMessage = messages.getOrNull(index + 1)
+                            val isLastFromSender = nextMessage?.senderId != message.senderId
 
-                  when {
-                    message.poll != null ->
-                        PollBubble(
-                            msgIndex = index,
-                            poll = message.poll,
-                            authorName = sender,
-                            currentUserId = account.uid,
-                            onVote = { optionIndex, isRemoving ->
-                              if (isRemoving) {
-                                viewModel.removeVoteFromPollAsync(
-                                    discussion.uid, message.uid, account, optionIndex)
-                              } else {
-                                viewModel.voteOnPollAsync(
-                                    discussion.uid, message.uid, account, optionIndex)
+                            val prevMessage = messages.getOrNull(index - 1)
+                            val isFirstFromSender =
+                                prevMessage?.senderId != message.senderId || showDateHeader
+
+                            SelectableMessageContainer(
+                                message = message,
+                                isMine = isMine,
+                                onAnchorChanged = { id, anchorPos ->
+                                  messageAnchors[id] = anchorPos
+                                },
+                                onLongPress = { msg ->
+                                  selectedMessageForActions = msg
+                                  selectedMessageAnchor = messageAnchors[msg.uid]
+                                },
+                            ) {
+                              when {
+                                message.poll != null -> {
+                                  PollBubble(
+                                      msgIndex = index,
+                                      poll = message.poll,
+                                      authorName = sender,
+                                      currentUserId = account.uid,
+                                      onVote = { optionIndex, isRemoving ->
+                                        if (isRemoving) {
+                                          viewModel.removeVoteFromPollAsync(
+                                              discussion.uid, message.uid, account, optionIndex)
+                                        } else {
+                                          viewModel.voteOnPollAsync(
+                                              discussion.uid, message.uid, account, optionIndex)
+                                        }
+                                      },
+                                      createdAt = message.createdAt.toDate(),
+                                      showProfilePicture = isLastFromSender)
+                                }
+                                message.photoUrl != null -> {
+                                  PhotoBubble(
+                                      message = message,
+                                      isMine = isMine,
+                                      senderName = sender,
+                                      showProfilePicture = isLastFromSender,
+                                      showSenderName = isFirstFromSender,
+                                      allMessages = messages,
+                                      userCache = userCache,
+                                      currentUserId = account.uid)
+                                }
+                                else -> {
+                                  ChatBubble(
+                                      message = message,
+                                      isMine = isMine,
+                                      senderName = sender,
+                                      showProfilePicture = isLastFromSender,
+                                      showSenderName = isFirstFromSender)
+                                }
                               }
-                            },
-                            createdAt = message.createdAt.toDate(),
-                            showProfilePicture = isLastFromSender)
-                    message.photoUrl != null ->
-                        PhotoBubble(
-                            message,
-                            isMine,
-                            sender,
-                            isLastFromSender,
-                            isFirstFromSender,
-                            messages,
-                            userCache,
-                            account.uid)
-                    else -> ChatBubble(message, isMine, sender, isLastFromSender, isFirstFromSender)
+                            }
+
+                            Spacer(
+                                Modifier.height(
+                                    if (isLastFromSender) Dimensions.Spacing.small
+                                    else Dimensions.Spacing.extraSmall))
+                          }
+                        }
+
+                    // Selected message overlay
+                    if (actionMessage != null && anchor != null) {
+                      val relativeOffsetY = anchor.top - messagesContainerTopPx
+
+                      Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                        // Scrim
+                        Box(
+                            modifier =
+                                Modifier.matchParentSize()
+                                    .background(
+                                        MaterialTheme.colorScheme.scrim.copy(
+                                            alpha = UNSELECTED_BACKGROUND_ALPHA))
+                                    .clickable(
+                                        enabled = true,
+                                        indication = null,
+                                        interactionSource =
+                                            remember { MutableInteractionSource() }) {})
+
+                        val isMineOverlay = actionMessage.senderId == account.uid
+                        val senderOverlay =
+                            if (!isMineOverlay) userCache[actionMessage.senderId]?.name ?: "Unknown"
+                            else DiscussionCommons.YOU_SENDER_NAME
+
+                        val msgIndex = messages.indexOfFirst { it.uid == actionMessage.uid }
+                        if (msgIndex >= 0) {
+                          val prevMessageOverlay = messages.getOrNull(msgIndex - 1)
+                          val nextMessageOverlay = messages.getOrNull(msgIndex + 1)
+                          val showDateHeaderOverlay =
+                              shouldShowDateHeader(
+                                  current = actionMessage.createdAt.toDate(),
+                                  previous = prevMessageOverlay?.createdAt?.toDate())
+                          val isLastFromSenderOverlay =
+                              nextMessageOverlay?.senderId != actionMessage.senderId
+                          val isFirstFromSenderOverlay =
+                              prevMessageOverlay?.senderId != actionMessage.senderId ||
+                                  showDateHeaderOverlay
+
+                          Box(
+                              modifier =
+                                  Modifier.offset { IntOffset(x = 0, y = relativeOffsetY) }) {
+                                when {
+                                  actionMessage.poll != null -> {
+                                    PollBubble(
+                                        msgIndex = msgIndex,
+                                        poll = actionMessage.poll,
+                                        authorName = senderOverlay,
+                                        currentUserId = account.uid,
+                                        onVote = { optionIndex, isRemoving ->
+                                          if (isRemoving) {
+                                            viewModel.removeVoteFromPollAsync(
+                                                discussion.uid,
+                                                actionMessage.uid,
+                                                account,
+                                                optionIndex)
+                                          } else {
+                                            viewModel.voteOnPollAsync(
+                                                discussion.uid,
+                                                actionMessage.uid,
+                                                account,
+                                                optionIndex)
+                                          }
+                                        },
+                                        createdAt = actionMessage.createdAt.toDate(),
+                                        showProfilePicture = isLastFromSenderOverlay)
+                                  }
+                                  actionMessage.photoUrl != null -> {
+                                    PhotoBubble(
+                                        message = actionMessage,
+                                        isMine = isMineOverlay,
+                                        senderName = senderOverlay,
+                                        showProfilePicture = isLastFromSenderOverlay,
+                                        showSenderName = isFirstFromSenderOverlay,
+                                        allMessages = messages,
+                                        userCache = userCache,
+                                        currentUserId = account.uid)
+                                  }
+                                  else -> {
+                                    ChatBubble(
+                                        message = actionMessage,
+                                        isMine = isMineOverlay,
+                                        senderName = senderOverlay,
+                                        showProfilePicture = isLastFromSenderOverlay,
+                                        showSenderName = isFirstFromSenderOverlay)
+                                  }
+                                }
+                              }
+                        }
+                      }
+                    }
+
+                    // Options popup
+                    if (actionMessage != null && anchor != null) {
+                      val nowMs = System.currentTimeMillis()
+                      val messageMs = actionMessage.createdAt.toDate().time
+
+                      val isEditable =
+                          actionMessage.senderId == account.uid &&
+                              actionMessage.poll == null &&
+                              actionMessage.photoUrl == null &&
+                              nowMs <= messageMs + EDIT_MAX_THRESHOLD
+
+                      MessageOptionsPopup(
+                          isEditable = isEditable,
+                          anchor = anchor,
+                          screenWidthPx = screenWidthPx,
+                          screenHeightPx = screenHeightPx,
+                          onDismiss = {
+                            selectedMessageForActions = null
+                            selectedMessageAnchor = null
+                          },
+                          onEdit = {
+                            selectedMessageForActions = null
+                            selectedMessageAnchor = null
+                            messageBeingEdited = actionMessage
+
+                            val text = actionMessage.content
+                            messageText =
+                                TextFieldValue(text = text, selection = TextRange(text.length))
+                          },
+                          onDelete = {
+                            selectedMessageForActions = null
+                            selectedMessageAnchor = null
+                            scope.launch {
+                              try {
+                                viewModel.deleteMessage(discussion, actionMessage, account)
+                              } catch (e: Exception) {
+                                snackbarHostState.showSnackbar(
+                                    message =
+                                        "Failed to delete message: ${e.message ?: UNKNOWN_ERROR}",
+                                    duration = SnackbarDuration.Long)
+                              }
+                            }
+                          })
+                    }
                   }
 
-                  // Add spacing between messages
-                  if (!isLastFromSender) {
-                    Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-                  } else {
-                    Spacer(Modifier.height(Dimensions.Spacing.small))
-                  }
-                }
-              }
-
+              // Bottom input bar
               var showAttachmentMenu by remember { mutableStateOf(false) }
               var showPollDialog by remember { mutableStateOf(false) }
 
@@ -445,13 +670,13 @@ fun DiscussionScreen(
                                                       IconButton(
                                                           onClick = {
                                                             showAttachmentMenu = false
-                                                            val cameraPermissionGranted =
+                                                            val granted =
                                                                 ContextCompat.checkSelfPermission(
                                                                     context,
                                                                     Manifest.permission.CAMERA) ==
                                                                     PackageManager
                                                                         .PERMISSION_GRANTED
-                                                            if (cameraPermissionGranted) {
+                                                            if (granted) {
                                                               cameraLauncher.launch(null)
                                                             } else {
                                                               cameraPermissionLauncher.launch(
@@ -529,8 +754,10 @@ fun DiscussionScreen(
 
                                 BasicTextField(
                                     value = messageText,
-                                    onValueChange = {
-                                      if (it.length <= MAX_MESSAGE_LENGTH) messageText = it
+                                    onValueChange = { newValue ->
+                                      if (newValue.text.length <= MAX_MESSAGE_LENGTH) {
+                                        messageText = newValue
+                                      }
                                     },
                                     modifier =
                                         Modifier.weight(1f)
@@ -543,33 +770,42 @@ fun DiscussionScreen(
                                     minLines = 1,
                                     maxLines = 5,
                                     decorationBox = { inner ->
-                                      if (messageText.isEmpty())
-                                          Text(
-                                              "Message",
-                                              style = MaterialTheme.typography.bodyMedium,
-                                              fontSize = Dimensions.TextSize.body,
-                                              color = MessagingColors.metadataText)
+                                      if (messageText.text.isEmpty()) {
+                                        Text(
+                                            "Message",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontSize = Dimensions.TextSize.body,
+                                            color = MessagingColors.metadataText)
+                                      }
                                       inner()
                                     })
+
                                 CharacterCounter(
-                                    currentLength = messageText.length,
+                                    currentLength = messageText.text.length,
                                     maxLength = MAX_MESSAGE_LENGTH,
                                     testTag = DiscussionTestTags.CHAR_COUNTER)
                               }
 
                           FloatingActionButton(
                               onClick = {
-                                if (messageText.isNotBlank() && !isSending) {
+                                if (messageText.text.isNotBlank() && !isSending) {
                                   scope.launch {
                                     isSending = true
                                     try {
-                                      viewModel.sendMessageToDiscussion(
-                                          discussion, account, messageText)
-                                      messageText = ""
+                                      val editing = messageBeingEdited
+                                      if (editing != null) {
+                                        viewModel.editMessage(
+                                            discussion, editing, account, messageText.text)
+                                        messageBeingEdited = null
+                                      } else {
+                                        viewModel.sendMessageToDiscussion(
+                                            discussion, account, messageText.text)
+                                      }
+                                      messageText = TextFieldValue("")
                                     } catch (e: Exception) {
                                       snackbarHostState.showSnackbar(
                                           message =
-                                              "Failed to send message: ${e.message ?: "Unknown error"}",
+                                              "Failed to send message: ${e.message ?: UNKNOWN_ERROR}",
                                           duration = SnackbarDuration.Long)
                                     } finally {
                                       isSending = false
@@ -1384,4 +1620,204 @@ fun CreatePollDialog(onDismiss: () -> Unit, onCreate: (String, List<String>, Boo
       },
       shape = RoundedCornerShape(Dimensions.CornerRadius.large),
       modifier = Modifier.testTag(DiscussionTestTags.DIALOG_ROOT))
+}
+
+/**
+ * Popup menu for message options (edit/delete).
+ *
+ * @param isEditable Whether the message can be edited.
+ * @param anchor Anchor position of the message in screen coordinates.
+ * @param screenWidthPx Width of the screen in pixels.
+ * @param screenHeightPx Height of the screen in pixels.
+ * @param onEdit Callback when Edit is selected.
+ * @param onDelete Callback when Delete is selected.
+ * @param onDismiss Callback when the popup is dismissed.
+ */
+@Composable
+fun MessageOptionsPopup(
+    isEditable: Boolean,
+    anchor: MessageAnchor,
+    screenWidthPx: Int,
+    screenHeightPx: Int,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+  val density = LocalDensity.current
+
+  // General margin from screen edges
+  val marginPx = with(density) { Dimensions.Spacing.medium.toPx().toInt() }
+
+  // Same horizontal layout as our own bubbles:
+  // Row padding + avatar size + spacing between bubble and avatar
+  val rowPaddingPx = with(density) { Dimensions.Spacing.small.toPx().toInt() }
+  val avatarSizePx = with(density) { Dimensions.AvatarSize.small.toPx().toInt() }
+  val bubbleAvatarSpacingPx = with(density) { Dimensions.Spacing.small.toPx().toInt() }
+  val rightMarginPx = rowPaddingPx + avatarSizePx + bubbleAvatarSpacingPx
+
+  val fallbackWidthPx = with(density) { EDITING_POPUP_WIDTH.toPx().toInt() }
+  val fallbackHeightPx = with(density) { EDITING_POPUP_HEIGHT.toPx().toInt() }
+
+  var menuSize by remember { mutableStateOf(IntSize.Zero) }
+  val menuWidthPx = if (menuSize.width > 0) menuSize.width else fallbackWidthPx
+  val menuHeightPx = if (menuSize.height > 0) menuSize.height else fallbackHeightPx
+
+  val showBelow = anchor.centerY < screenHeightPx / 2
+
+  // ---- X: align to the right like our own bubbles -----------------------
+  val rawX = screenWidthPx - rightMarginPx - menuWidthPx
+  val maxX = screenWidthPx - marginPx - menuWidthPx
+  val x =
+      if (maxX <= marginPx) {
+        ((screenWidthPx - menuWidthPx) / 2).coerceAtLeast(0)
+      } else {
+        rawX.coerceIn(marginPx, maxX)
+      }
+
+  // ---- Y: just above / below the message bubble -------------------------
+  val rawY = if (showBelow) anchor.bottom + marginPx else anchor.top - menuHeightPx - marginPx
+
+  val maxY = screenHeightPx - marginPx - menuHeightPx
+  val y = rawY.coerceIn(marginPx, maxY)
+
+  Popup(onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+    Box(modifier = Modifier.fillMaxSize().testTag(DiscussionTestTags.MESSAGE_OPTIONS_ROOT)) {
+      // Scrim – tap outside to dismiss
+      Box(
+          modifier =
+              Modifier.matchParentSize().clickable(
+                  interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    onDismiss()
+                  })
+
+      Surface(
+          shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+          color = MessagingColors.messageBubbleOther,
+          shadowElevation = Dimensions.Elevation.xxHigh,
+          modifier =
+              Modifier.offset { IntOffset(x, y) }
+                  .onGloballyPositioned { menuSize = it.size }
+                  .widthIn(max = EDITING_POPUP_WIDTH)
+                  .testTag(DiscussionTestTags.MESSAGE_OPTIONS_CARD)) {
+            Column {
+              if (isEditable) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null) {
+                                  onEdit()
+                                }
+                            .padding(
+                                horizontal = Dimensions.Spacing.large,
+                                vertical = Dimensions.Spacing.medium)
+                            .testTag(DiscussionTestTags.MESSAGE_EDIT_BUTTON),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                      Icon(
+                          imageVector = Icons.Filled.Edit,
+                          contentDescription = "Edit message",
+                          tint = AppColors.textIcons)
+                      Text(
+                          text = EDIT_MESSAGE_TEXT,
+                          style = MaterialTheme.typography.bodyMedium,
+                          fontSize = Dimensions.TextSize.body,
+                          color = AppColors.textIcons)
+                    }
+
+                HorizontalDivider(
+                    thickness = Dimensions.DividerThickness.thin, color = MessagingColors.divider)
+              }
+
+              Row(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .clickable(
+                              interactionSource = remember { MutableInteractionSource() },
+                              indication = null) {
+                                onDelete()
+                              }
+                          .padding(
+                              horizontal = Dimensions.Spacing.large,
+                              vertical = Dimensions.Spacing.medium)
+                          .testTag(DiscussionTestTags.MESSAGE_DELETE_BUTTON),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Delete message",
+                        tint = AppColors.negative)
+                    Text(
+                        text = DELETE_MESSAGE_TEXT,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = Dimensions.TextSize.body,
+                        color = AppColors.textIcons)
+                  }
+            }
+          }
+    }
+  }
+}
+
+/**
+ * Container for a message that supports selection via long-press.
+ *
+ * @param message Message being displayed.
+ * @param isMine Whether the message was sent by the current user.
+ * @param onAnchorChanged Callback to report the message's anchor position.
+ * @param onLongPress Callback when the message is long-pressed.
+ * @param content Composable content of the message.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SelectableMessageContainer(
+    message: Message,
+    isMine: Boolean,
+    onAnchorChanged: (String, MessageAnchor) -> Unit,
+    onLongPress: (Message) -> Unit,
+    content: @Composable () -> Unit,
+) {
+  val longPressModifier =
+      if (isMine) {
+        Modifier.combinedClickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {},
+            onLongClick = { onLongPress(message) })
+      } else {
+        Modifier
+      }
+
+  Box(
+      modifier = Modifier.fillMaxWidth(),
+      contentAlignment = if (isMine) Alignment.CenterEnd else Alignment.CenterStart,
+  ) {
+    // This inner box has the same width/position as the bubble
+    Box(
+        modifier =
+            longPressModifier.onPlaced { coords ->
+              val pos = coords.positionInRoot()
+              val width = coords.size.width
+              val height = coords.size.height
+
+              val top = pos.y.toInt()
+              val bottom = top + height
+              val centerY = top + height / 2
+
+              val left = pos.x.toInt()
+              val centerX = left + width / 2
+
+              onAnchorChanged(
+                  message.uid,
+                  MessageAnchor(
+                      top = top,
+                      bottom = bottom,
+                      centerY = centerY,
+                      centerX = centerX,
+                  ))
+            }) {
+          content()
+        }
+  }
 }
