@@ -24,14 +24,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -142,6 +139,7 @@ private const val PLACEHOLDER_SEARCH = "Search"
 private const val PLACEHOLDER_LOCATION = "Location"
 private const val TEXT_LOADING = "Loading..."
 private const val SESSION_DETAILS_TITLE = "Session Details"
+const val MAX_TITLE_LENGTH: Int = 100
 
 /* =======================================================================
  * Helpers
@@ -310,7 +308,9 @@ fun SessionDetailsScreen(
                   discussion = discussion,
                   account = account,
                   gameUIState = gameUIState,
-                  onValueChangeTitle = { form = form.copy(title = it) },
+                  onValueChangeTitle = {
+                    if (it.length <= MAX_TITLE_LENGTH) form = form.copy(title = it)
+                  },
                   isCurrUserAdmin = isCurrUserAdmin,
                   sessionViewModel = viewModel,
                   onFocusChanged = { isInputFocused = it })
@@ -419,12 +419,10 @@ fun ParticipantsSection(
     UserChipsGrid(
         participants = participants,
         onRemove = onRemoveParticipant,
-        onAdd = onAddParticipant,
         account = account,
         editable = editable,
         candidateMembers = candidateAccounts, // full discussion members as Accounts
-        modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS),
-        onFocusChanged = onFocusChanged)
+        modifier = Modifier.testTag(SessionTestTags.PARTICIPANT_CHIPS))
   }
 }
 
@@ -442,22 +440,12 @@ fun ParticipantsSection(
 fun UserChipsGrid(
     participants: List<Account>,
     onRemove: (Account) -> Unit,
-    onAdd: (Account) -> Unit,
     modifier: Modifier = Modifier,
     account: Account,
     editable: Boolean = false,
     candidateMembers: List<Account> = emptyList(),
-    maxPlayers: Int = Int.MAX_VALUE,
-    onFocusChanged: (Boolean) -> Unit = {}
 ) {
-  var showAddMenu by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
-
-  // Filter: not already a participant AND matches handle (case-insensitive)
-  val filteredCandidates =
-      candidateMembers
-          .filter { m -> participants.none { it.uid == m.uid } }
-          .filter { m -> m.handle.contains(searchQuery, ignoreCase = true) }
 
   // Set up vertical scroll with a maximum height
   val maxHeight = Dimensions.ContainerSize.mapHeight
@@ -474,67 +462,6 @@ fun UserChipsGrid(
               onRemove = { if (editable) onRemove(p) },
               account = account,
               showRemoveBTN = editable)
-        }
-
-        // "+" button: admins only, disappears when full
-        val canAdd = editable && filteredCandidates.isNotEmpty() && participants.size < maxPlayers
-        if (canAdd) {
-          Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { showAddMenu = true },
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(Dimensions.ButtonSize.standard)
-                        .testTag(SessionTestTags.ADD_PARTICIPANT_BUTTON),
-                shape = appShapes.medium,
-                border = BorderStroke(Dimensions.DividerThickness.standard, AppColors.divider),
-                colors =
-                    ButtonDefaults.outlinedButtonColors(
-                        containerColor = AppColors.primary, contentColor = AppColors.textIcons)) {
-                  Icon(
-                      imageVector = Icons.Default.Add,
-                      contentDescription = "Add participant",
-                      modifier = Modifier.size(Dimensions.IconSize.medium))
-                  Spacer(Modifier.width(Dimensions.Spacing.medium))
-                  Text("Add Participant", style = MaterialTheme.typography.bodyMedium)
-                }
-
-            DropdownMenu(
-                expanded = showAddMenu,
-                onDismissRequest = { showAddMenu = false },
-                modifier = Modifier.background(AppColors.primary).fillMaxWidth(0.9f)) {
-                  // Search (by handle only)
-                  FocusableInputField(
-                      value = searchQuery,
-                      onValueChange = { searchQuery = it },
-                      placeholder = { Text(PLACEHOLDER_SEARCH, color = AppColors.textIconsFade) },
-                      singleLine = true,
-                      modifier =
-                          Modifier.padding(horizontal = Dimensions.Spacing.large)
-                              .fillMaxWidth()
-                              .onFocusChanged { onFocusChanged(it.isFocused) }
-                              .testTag(SessionTestTags.ADD_PARTICIPANT_SEARCH))
-
-                  Spacer(Modifier.height(Dimensions.Spacing.small))
-
-                  // Candidates list
-                  filteredCandidates.forEach { member ->
-                    DropdownMenuItem(
-                        onClick = {
-                          showAddMenu = false
-                          onAdd(member)
-                        },
-                        modifier = Modifier.testTag(SessionTestTags.addParticipantTag(member.uid)),
-                        text = {
-                          Row(verticalAlignment = Alignment.CenterVertically) {
-                            AvatarBubble(member.name)
-                            Spacer(Modifier.width(Dimensions.Spacing.large))
-                            Text(member.handle, color = AppColors.textIcons)
-                          }
-                        })
-                  }
-                }
-          }
         }
       }
 }

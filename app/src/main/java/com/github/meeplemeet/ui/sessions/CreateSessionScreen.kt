@@ -279,7 +279,9 @@ fun CreateSessionScreen(
                   viewModel = viewModel,
                   account = account,
                   discussion = discussion,
-                  onTitleChange = { form = form.copy(title = it) },
+                  onTitleChange = {
+                    if (it.length <= MAX_TITLE_LENGTH) form = form.copy(title = it)
+                  },
                   form = form,
                   date = form.date,
                   time = form.time,
@@ -512,10 +514,6 @@ fun ParticipantsSection(
         Spacer(Modifier.height(Dimensions.Spacing.medium))
 
         UserChipsGrid(
-            participants = allCandidates,
-            onRemove = onRemove,
-            onAdd = onAdd,
-            account = account,
-            editable = true)
+            participants = allCandidates, onRemove = onRemove, account = account, editable = true)
       }
 }
