@@ -372,10 +372,11 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
       composeTestRule
           .onNodeWithTag(DiscussionTestTags.ALLOW_MULTIPLE_CHECKBOX, useUnmergedTree = true)
           .performClick()
+          .assertIsOn()
 
       composeTestRule.onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM).performClick()
       checkpoint("Wait until poll message exists in repo") {
-        runBlocking { testDiscussion = awaitPollMessage(testDiscussion, 1) }
+        runBlocking { testDiscussion = awaitPollMessage(testDiscussion, 2) }
       }
 
       /* ------------------------------------------------------------------
@@ -393,12 +394,12 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
           .onNodeWithTag(
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
           .performClick()
+      composeTestRule.waitForIdle()
       composeTestRule
           .onNodeWithTag(
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 2), useUnmergedTree = true)
           .performClick()
-
-      runBlocking { delay(250) }
+      composeTestRule.waitForIdle()
 
       checkpoint("Popcorn 50 %") { waitUntilPercentIs(multiMsgIndex, 0, "50%") }
       checkpoint("Soda 50 %") { waitUntilPercentIs(multiMsgIndex, 2, "50%") }
@@ -409,7 +410,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
           .performClick()
 
-      runBlocking { delay(250) }
+      composeTestRule.waitForIdle()
 
       checkpoint("Popcorn 0 %") { waitUntilPercentIs(multiMsgIndex, 0, "0%") }
       checkpoint("Soda now 100 %") { waitUntilPercentIs(multiMsgIndex, 2, "100%") }
