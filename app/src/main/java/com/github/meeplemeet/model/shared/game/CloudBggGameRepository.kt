@@ -2,6 +2,8 @@ package com.github.meeplemeet.model.shared.game
 
 import com.github.meeplemeet.BuildConfig
 import com.github.meeplemeet.HttpClientProvider
+import com.github.meeplemeet.model.GameFetchException
+import com.github.meeplemeet.model.GameSearchException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -61,7 +63,7 @@ class CloudBggGameRepository(
    *
    * @param gameID The game ID to fetch.
    * @return The [Game] object corresponding to the given ID.
-   * @throws IOException If the HTTP request fails.
+   * @throws GameFetchException if fetching fails.
    */
   override suspend fun getGameById(gameID: String): Game =
       withContext(ioDispatcher) {
@@ -73,8 +75,8 @@ class CloudBggGameRepository(
    *
    * @param gameIDs One or more game IDs to fetch.
    * @return A list of [Game] objects.
-   * @throws IllegalArgumentException If more than 20 IDs are provided.
-   * @throws IOException If the HTTP request fails.
+   * @throws IllegalArgumentException if more than 20 IDs are provided.
+   * @throws GameFetchException if fetching fails.
    */
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> =
       withContext(ioDispatcher) {
@@ -88,12 +90,20 @@ class CloudBggGameRepository(
                 .build()
 
         val request = Request.Builder().url(url).build()
-        client.newCall(request).execute().use { response ->
-          if (!response.isSuccessful) throw IOException("Failed: ${response.code}")
-          val jsonArray = JSONArray(response.body?.string().orEmpty())
-          return@withContext (0 until jsonArray.length()).map { i ->
-            jsonArray.getJSONObject(i).toGame()
+        try {
+          client.newCall(request).execute().use { response ->
+            val bodyString = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+              throw GameFetchException("Failed to fetch games (HTTP ${response.code}): $bodyString")
+            }
+
+            val jsonArray = JSONArray(bodyString)
+            return@withContext (0 until jsonArray.length()).map { i ->
+              jsonArray.getJSONObject(i).toGame()
+            }
           }
+        } catch (e: IOException) {
+          throw GameFetchException("Network error while fetching games: ${e.message}", e)
         }
       }
 
@@ -118,7 +128,7 @@ class CloudBggGameRepository(
    * @param query The search query string.
    * @param maxResults Maximum number of results to return.
    * @return A list of [GameSearchResult] objects.
-   * @throws IOException If the HTTP request fails.
+   * @throws GameSearchException if the search fails.
    */
   suspend fun searchGamesByNameLight(query: String, maxResults: Int): List<GameSearchResult> =
       withContext(ioDispatcher) {
@@ -131,12 +141,23 @@ class CloudBggGameRepository(
                 .build()
 
         val request = Request.Builder().url(url).build()
-        client.newCall(request).execute().use { response ->
-          if (!response.isSuccessful) throw IOException("Failed: ${response.code}")
-          val jsonArray = JSONArray(response.body?.string().orEmpty())
-          return@withContext (0 until jsonArray.length()).map { i ->
-            jsonArray.getJSONObject(i).toGameSearchResult()
+
+        try {
+          client.newCall(request).execute().use { response ->
+            val bodyString = response.body?.string().orEmpty()
+
+            if (!response.isSuccessful) {
+              throw GameSearchException(
+                  "Failed to search games (HTTP ${response.code}): $bodyString")
+            }
+
+            val jsonArray = JSONArray(bodyString)
+            return@withContext (0 until jsonArray.length()).map { i ->
+              jsonArray.getJSONObject(i).toGameSearchResult()
+            }
           }
+        } catch (e: Exception) {
+          throw GameSearchException("Network error while searching games: ${e.message}", e)
         }
       }
 

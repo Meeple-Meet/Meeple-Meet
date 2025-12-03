@@ -62,11 +62,26 @@ class ImageProcessingException(message: String, cause: Throwable? = null) :
     Exception(message, cause)
 
 /**
- * Exception thrown when a BGG API request or search fails.
+ * Exception thrown when a search request to the BGG API fails.
+ *
+ * This can happen if the network request fails, the server returns an error code, or the response
+ * cannot be parsed correctly.
  *
  * @param message A human-readable message describing the failure.
+ * @param cause Optional underlying exception that triggered this error.
  */
-class GameSearchException(message: String) : Exception(message)
+class GameSearchException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/**
+ * Exception thrown when fetching full game details from the BGG API fails.
+ *
+ * This can happen if the network request fails, the server returns an error code, or the response
+ * cannot be parsed correctly.
+ *
+ * @param message A human-readable message describing the failure.
+ * @param cause Optional underlying exception that triggered this error.
+ */
+class GameFetchException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /**
  * Exception thrown when a required field cannot be parsed from a BGG XML response.
