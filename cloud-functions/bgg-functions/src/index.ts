@@ -28,7 +28,7 @@ export const ping = onRequest((req, res) => {
 });
 
 // --------------------
-// Config cache
+// Cache config
 // --------------------
 const GAME_TTL_MS = 24 * 60 * 60 * 1000;
 const SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
@@ -88,6 +88,88 @@ async function setToL2Cache<T>(collection: string, key: string, value: T) {
   await docRef.set({
     value,
     updatedAt: admin.firestore.Timestamp.now()
+  });
+}
+
+// --------------------
+// Pending batch coalescing
+// --------------------
+const PENDING_DEBOUNCE_MS = 100;
+
+type PendingRequester = {
+  requestedIds: string[];
+  resolve: (map: Record<string, GameOut | null>) => void;
+  reject: (err: any) => void;
+}
+
+type PendingBatch = {
+  ids: Set<string>;
+  requesters: PendingRequester[];
+  timer: NodeJS.Timeout;
+}
+
+const pendingBatches: PendingBatch[] = [];
+
+function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | null>> {
+  return new Promise((resolve, reject) => {
+    for (const pb of pendingBatches) {
+      const combined = new Set([...pb.ids, ...ids]);
+      if (combined.size <= 20) {
+        ids.forEach((id) => pb.ids.add(id));
+        pb.requesters.push({ requestedIds: ids, resolve, reject });
+        return;
+      }
+    }
+
+    const pb: PendingBatch = {
+      ids: new Set(ids),
+      requesters: [{ requestedIds: ids, resolve, reject }],
+      timer: setTimeout(async () => {
+        const idx = pendingBatches.indexOf(pb);
+        if (idx >= 0) pendingBatches.splice(idx, 1);
+
+        const batchIds = Array.from(pb.ids);
+        logger.log("coalesced batch firing", { count: batchIds.length, ids: batchIds });
+
+        try {
+          const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${batchIds.join(",")}&type=boardgame&stats=1`;
+          const response = await fetchWithAuth(bggUrl);
+
+          if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            logger.error("BGG fetch failed (coalesced)", { status: response.status, body: text });
+            for (const r of pb.requesters) r.reject(new Error(`BGG API returned ${response.status}`));
+            return;
+          }
+
+          const xml = await response.text();
+          const parsed = parser.parse(xml);
+          let items = parsed?.items?.item ?? [];
+          if (!Array.isArray(items)) items = [items];
+
+          const fetchedById: Record<string, GameOut> = {};
+          for (const item of items) {
+            try {
+              const g = parseItemToGame(item);
+              fetchedById[g.uid] = g;
+            } catch (e: any) {
+              logger.warn("Ignored item during parse (coalesced)", { id: item?.["@id"], reason: e?.message });
+            }
+          }
+
+          for (const r of pb.requesters) {
+            const resultMap: Record<string, GameOut | null> = {};
+            for (const id of r.requestedIds) resultMap[id] = fetchedById[id] ?? null;
+            r.resolve(resultMap);
+          }
+        } catch (err: any) {
+          logger.error("Error during coalesced fetch", { err: err?.message ?? err });
+          for (const r of pb.requesters) r.reject(err);
+        }
+      }, PENDING_DEBOUNCE_MS),
+    };
+
+    pendingBatches.push(pb);
   });
 }
 
@@ -327,50 +409,44 @@ export const getGamesByIds = onRequest(
         });
       }
 
-      logger.log("getGamesByIds", {
-        requested: ids.length,
-        cached: Object.keys(cachedById).length,
-        missing: missingIds.length,
-      });
+      logger.log("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
 
       // Fetch from BGG if still missing
       if (missingIds.length > 0) {
-        const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${missingIds.join(",")}&type=boardgame&stats=1`;
-        logger.log("getGamesByIds: fetching from BGG", { bggUrl, count: missingIds.length });
+        logger.log("getGamesByIds: scheduling coalesced fetch", { missingIdsCount: missingIds.length, missingIds });
 
-        const response = await fetchWithAuth(bggUrl);
-        if (!response.ok) {
-          const text = await response.text().catch(() => "");
-          logger.error("BGG fetch failed", { status: response.status, body: text });
-          res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
+        try {
+          const fetchedMap = await scheduleBatchFetch(missingIds);
+
+          for (const id of Object.keys(fetchedMap)) {
+            const g = fetchedMap[id];
+            if (g) {
+              setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX);
+              await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g);
+              cachedById[g.uid] = g;
+            } else {
+              logger.warn("coalesced fetch returned no game for id", { id });
+            }
+          }
+
+          const ordered = ids.map((id) => cachedById[id] ?? null).filter(Boolean);
+          res.json(ordered);
+          return;
+        } catch (err: any) {
+          logger.error("Error in coalesced getGamesByIds", { err: err?.message ?? err });
+          res.status(502).json({ error: "BGG fetch failed", message: err?.message });
           return;
         }
-
-        const xml = await response.text();
-        const parsed = parser.parse(xml);
-        let items = parsed?.items?.item ?? [];
-        if (!Array.isArray(items)) items = [items];
-
-        for (const item of items) {
-          try {
-            const g = parseItemToGame(item);
-            cachedById[g.uid] = g;
-            // write to L1 cache
-            setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX);
-            // write to L2 cache
-            await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g);
-          } catch (e: any) {
-            logger.warn("Ignored item during parse", { id: item?.["@id"], reason: e?.message });
-          }
-        }
+      } else {
+        // all cached
+        const ordered = ids.map((id) => cachedById[id]).filter(Boolean);
+        res.json(ordered);
+        return;
       }
-
-      // --- Return ordered results ---
-      const ordered = ids.map((id) => cachedById[id]).filter(Boolean);
-      res.json(ordered);
     } catch (err: any) {
       logger.error("getGamesByIds unexpected error", { err: err?.message ?? err });
       res.status(500).json({ error: "Internal server error", message: err?.message });
+      return;
     }
   }
 );
