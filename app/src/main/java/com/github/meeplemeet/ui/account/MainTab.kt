@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,8 +65,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -83,10 +86,10 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
 object MainTabTestTags {
-    const val CONTENT_SCROLL = "main_tab_content_scroll"
+  const val CONTENT_SCROLL = "main_tab_content_scroll"
 }
+
 object PublicInfoTestTags {
 
   // ROOT
@@ -116,7 +119,7 @@ object PublicInfoTestTags {
   // ------------------------------------------------------------
   const val ACTION_FRIENDS = "action_friends"
   const val ACTION_NOTIFICATIONS = "action_notifications"
-    const val NOTIF_COUNT = "notif_count"
+  const val NOTIF_COUNT = "notif_count"
   const val ACTION_LOGOUT = "Logout Button"
 
   // ------------------------------------------------------------
@@ -140,7 +143,7 @@ object PrivateInfoTestTags {
   // ------------------------------------------------------------
   // PRIVATE INFO ROOT
   // ------------------------------------------------------------
-    const val COLLAPSABLE = "collapsable"
+  const val COLLAPSABLE = "collapsable"
 
   // ------------------------------------------------------------
   // EMAIL SECTION
@@ -273,44 +276,50 @@ object MainTabUi {
     const val OPT_NONE = "Accept notifications from no one."
   }
 
-    object SettingRows {
-        const val HEADER = "Settings"
-        const val PREFERENCES = "Preferences"
-        const val NOTIF = "Manage Notifications"
-        const val BUSINESSES = "Manage Your Businesses"
-        const val EMAIL = "Manage Your Email"
-    }
+  object SettingRows {
+    const val HEADER = "Settings"
+    const val PREFERENCES = "Preferences"
+    const val NOTIF = "Manage Notifications"
+    const val BUSINESSES = "Manage Your Businesses"
+    const val EMAIL = "Manage Your Email"
+  }
 
-    object PreferencesPage {
-        const val HEADER = "Theme"
-        const val OPT_LIGHT = "Light"
-        const val OPT_DARK = "Dark"
-        const val OPT_SYSTEM = "System Settings"
-    }
+  object PreferencesPage {
+    const val HEADER = "Theme"
+    const val OPT_LIGHT = "Light"
+    const val OPT_DARK = "Dark"
+    const val OPT_SYSTEM = "System Settings"
+  }
 
-    object Businesses {
-        const val HEADER = "Your Businesses"
-        const val TEXT_NO_ROLES = "You have no businesses. Select a role to get started!"
-        const val TEXT_ROLES_NO_BUSINESS = "You have no businesses yet."
-    }
+  object Businesses {
+    const val HEADER = "Your Businesses"
+    const val TEXT_NO_ROLES = "You have no businesses. Select a role to get started!"
+    const val TEXT_ROLES_NO_BUSINESS = "You have no businesses yet."
+  }
 }
 
 sealed class ProfilePage {
   data object Main : ProfilePage()
+
   data object Preferences : ProfilePage()
+
   data object NotificationSettings : ProfilePage()
+
   data object Businesses : ProfilePage()
+
   data object Email : ProfilePage()
 }
 
 /**
  * Main entry composable
+ *
  * @param viewModel VM used by this screen
  * @param account current user
  * @param onFriendsClick callback upon clicking on the friend's button
  * @param onNotificationClick callback upon clicking on notifications button
  * @param onSignOutOrDel callback upon signing out/deleting account
  * @param onDelete callback upon deleting account
+ * @param onInputFocusChanged callback when input focus state changes
  */
 @Composable
 fun MainTab(
@@ -319,7 +328,8 @@ fun MainTab(
     onFriendsClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
   var currentPage by remember { mutableStateOf<ProfilePage>(ProfilePage.Main) }
 
@@ -332,7 +342,8 @@ fun MainTab(
             onNotificationClick = onNotificationClick,
             onSignOutOrDel = onSignOutOrDel,
             onDelete = onDelete,
-            onNavigate = { page -> currentPage = page })
+            onNavigate = { page -> currentPage = page },
+            onInputFocusChanged = onInputFocusChanged)
     ProfilePage.Preferences ->
         SubPageScaffold("Preferences", onBack = { currentPage = ProfilePage.Main }) {
           PreferencesPage(
@@ -361,6 +372,7 @@ fun MainTab(
               isVerified = isVerified,
               onEmailChange = { newEmail -> email = newEmail },
               onFocusChanged = { focused ->
+                onInputFocusChanged(focused)
                 if (!focused) {
                   viewModel.setAccountEmail(account, email)
                 }
@@ -375,6 +387,7 @@ fun MainTab(
 
 /**
  * Handles the content of the preference sub-page
+ *
  * @param preference User's theme preference
  * @param onPreferenceChange callback upon preference change
  */
@@ -390,9 +403,7 @@ fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Un
         label = MainTabUi.PreferencesPage.OPT_LIGHT,
         selected = preference == ThemeMode.LIGHT,
         modifier = Modifier.testTag(PreferencesSectionTestTags.RADIO_LIGHT),
-        onClick = {
-          onPreferenceChange(ThemeMode.LIGHT)
-        })
+        onClick = { onPreferenceChange(ThemeMode.LIGHT) })
 
     RadioOptionRow(
         label = MainTabUi.PreferencesPage.OPT_DARK,
@@ -426,7 +437,7 @@ fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account) {
     else Text(text = MainTabUi.Businesses.TEXT_ROLES_NO_BUSINESS)
     // TODO: Implement business management HERE
   }
-}   
+}
 
 /**
  * Helper function to know the user's roles
@@ -448,6 +459,7 @@ private fun hasNoRoles(account: Account): Boolean {
  * @param onSignOutOrDel callback upon signing out
  * @param onDelete callback upon account deletion
  * @param onNavigate callback upon navigation to a subpage
+ * @param onInputFocusChanged callback when input focus state changes
  */
 @Composable
 fun MainTabContent(
@@ -457,14 +469,17 @@ fun MainTabContent(
     onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit,
-    onNavigate: (ProfilePage) -> Unit
+    onNavigate: (ProfilePage) -> Unit,
+    onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
   var showDelDialog by remember { mutableStateOf(false) }
+  val focusManager = LocalFocusManager.current
 
   Column(
       modifier =
           Modifier.padding(Dimensions.Padding.xxLarge)
               .verticalScroll(rememberScrollState())
+              .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
               .testTag(MainTabTestTags.CONTENT_SCROLL),
       horizontalAlignment = Alignment.CenterHorizontally) {
         Box(modifier = Modifier.fillMaxWidth().testTag(PublicInfoTestTags.PUBLIC_INFO)) {
@@ -486,7 +501,10 @@ fun MainTabContent(
                           onSignOut = onSignOutOrDel)
                     }
 
-                PublicInfoInputs(account = account, viewModel = viewModel)
+                PublicInfoInputs(
+                    account = account,
+                    viewModel = viewModel,
+                    onInputFocusChanged = onInputFocusChanged)
               }
         }
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
@@ -569,6 +587,7 @@ fun MainTabContent(
 
 /**
  * Composable used to display a settings row, they lead to the opening of a subpage
+ *
  * @param icon Icon to display at the start of the row
  * @param label Text to the right of the icon
  * @param onClick callback upon clicking on the row
@@ -596,27 +615,34 @@ fun SettingsRow(
 }
 
 /**
- * Handles sub-pages as it creates a fake "scaffold". The point is that it switches the
- * page's content to only display what it's given and handles back navigation to the main tab of the screen
+ * Handles sub-pages as it creates a fake "scaffold". The point is that it switches the page's
+ * content to only display what it's given and handles back navigation to the main tab of the screen
+ *
  * @param title "Top bar" text
  * @param onBack callback to return to the main page
  * @param content Content of the subpage scaffold
  */
 @Composable
 fun SubPageScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
-  Column(Modifier.fillMaxSize().padding(Dimensions.Padding.extraLarge)) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      IconButton(
-          onClick = onBack, modifier = Modifier.testTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
-      Text(title, style = MaterialTheme.typography.headlineSmall)
-    }
+  val focusManager = LocalFocusManager.current
 
-    Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
+  Column(
+      Modifier.fillMaxSize().padding(Dimensions.Padding.extraLarge).pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          IconButton(
+              onClick = onBack,
+              modifier = Modifier.testTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              }
+          Text(title, style = MaterialTheme.typography.headlineSmall)
+        }
 
-    content()
-  }
+        Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
+
+        content()
+      }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -691,8 +717,8 @@ fun PublicInfoActions(
                           Modifier.size(Dimensions.IconSize.large)
                               .align(Alignment.TopEnd)
                               .offset(MainTabUi.OFFSET_X, MainTabUi.OFFSET_Y)
-                              .background(AppColors.negative, CircleShape).testTag(
-                                  PublicInfoTestTags.NOTIF_COUNT),
+                              .background(AppColors.negative, CircleShape)
+                              .testTag(PublicInfoTestTags.NOTIF_COUNT),
                       contentAlignment = Alignment.Center) {
                         Text(
                             text =
@@ -733,9 +759,14 @@ fun PublicInfoActions(
  *
  * @param account Current user
  * @param viewModel viewmodel used by this screen
+ * @param onInputFocusChanged callback when input focus state changes
  */
 @Composable
-fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
+fun PublicInfoInputs(
+    account: Account,
+    viewModel: ProfileScreenViewModel,
+    onInputFocusChanged: (Boolean) -> Unit = {}
+) {
   var name by remember { mutableStateOf(account.name) }
   var desc by remember { mutableStateOf(account.description ?: "") }
 
@@ -775,6 +806,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
             singleLine = true,
             isError = errorHandle,
             onFocusChanged = { focused ->
+              onInputFocusChanged(focused)
               if (!focused && !errorHandle) viewModel.setAccountHandle(account, newHandle = handle)
             })
 
@@ -811,6 +843,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
             },
             isError = nameError,
             onFocusChanged = { focused ->
+              onInputFocusChanged(focused)
               if (!focused && !nameError) {
                 viewModel.setAccountName(account, name)
               }
@@ -847,6 +880,7 @@ fun PublicInfoInputs(account: Account, viewModel: ProfileScreenViewModel) {
             onValueChange = { if (it.length < 90) desc = it },
             singleLine = false,
             onFocusChanged = { focused ->
+              onInputFocusChanged(focused)
               if (!focused) viewModel.setAccountDescription(account, newDescription = desc)
             })
 
@@ -1210,8 +1244,10 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
               Modifier.background(
                       color = AppColors.textIconsFade,
                       shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-                  .padding(horizontal = Dimensions.Padding.extraLarge, vertical = Dimensions.Padding.small).testTag(
-                      PrivateInfoTestTags.EMAIL_TOAST)) {
+                  .padding(
+                      horizontal = Dimensions.Padding.extraLarge,
+                      vertical = Dimensions.Padding.small)
+                  .testTag(PrivateInfoTestTags.EMAIL_TOAST)) {
             Text(
                 text = data.message,
                 color = AppColors.primary,
@@ -1447,10 +1483,7 @@ fun RadioOptionRow(
     modifier: Modifier = Modifier
 ) {
   Row(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .clickable(onClick = onClick),
+      modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
       verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = onClick)
         Spacer(Modifier.width(Dimensions.Spacing.medium))

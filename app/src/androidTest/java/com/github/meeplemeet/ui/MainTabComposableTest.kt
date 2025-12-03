@@ -3,9 +3,8 @@ package com.github.meeplemeet.ui
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.test.*
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -15,10 +14,10 @@ import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
 import com.github.meeplemeet.ui.account.MainTab
 import com.github.meeplemeet.ui.account.MainTabTestTags
-import com.github.meeplemeet.ui.account.ProfileNavigationTestTags
 import com.github.meeplemeet.ui.account.NotificationsSectionTestTags
 import com.github.meeplemeet.ui.account.PreferencesSectionTestTags
 import com.github.meeplemeet.ui.account.PrivateInfoTestTags
+import com.github.meeplemeet.ui.account.ProfileNavigationTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
@@ -170,12 +169,15 @@ class MainTabComposableTest : FirestoreTests() {
 
   private fun ComposeTestRule.descriptionField() = onTag(PublicInfoTestTags.INPUT_DESCRIPTION)
 
+  // Preferences section
+  private fun ComposeTestRule.preferencesTitle() =
+      onTag(PreferencesSectionTestTags.PREFERENCES_SECTION_TITLE)
 
-    // Preferences section
-    private fun ComposeTestRule.preferencesTitle() = onTag(PreferencesSectionTestTags.PREFERENCES_SECTION_TITLE)
-    private fun ComposeTestRule.radioLight() = onTag(PreferencesSectionTestTags.RADIO_LIGHT)
-    private fun ComposeTestRule.radioDark() = onTag(PreferencesSectionTestTags.RADIO_DARK)
-    private fun ComposeTestRule.radioSystem() = onTag(PreferencesSectionTestTags.RADIO_SYSTEM)
+  private fun ComposeTestRule.radioLight() = onTag(PreferencesSectionTestTags.RADIO_LIGHT)
+
+  private fun ComposeTestRule.radioDark() = onTag(PreferencesSectionTestTags.RADIO_DARK)
+
+  private fun ComposeTestRule.radioSystem() = onTag(PreferencesSectionTestTags.RADIO_SYSTEM)
 
   // =======================
   // EMAIL SECTION
@@ -220,7 +222,6 @@ class MainTabComposableTest : FirestoreTests() {
   private fun ComposeTestRule.notifRadioFriends() =
       onTag(NotificationsSectionTestTags.RADIO_FRIENDS)
 
-
   // DELETE ACCOUNT
 
   private fun ComposeTestRule.delAccountBtn() = onTag(DeleteAccSectionTestTags.BUTTON)
@@ -243,9 +244,11 @@ class MainTabComposableTest : FirestoreTests() {
   private fun ComposeTestRule.settingsRowBusinesses() =
       onTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
 
-  private fun ComposeTestRule.settingsRowEmail() = onTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL)
+  private fun ComposeTestRule.settingsRowEmail() =
+      onTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL)
 
-  private fun ComposeTestRule.subPageBackButton() = onTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)
+  private fun ComposeTestRule.subPageBackButton() =
+      onTag(ProfileNavigationTestTags.SUB_PAGE_BACK_BUTTON)
 
   /** Waits until a child of the node with [parentTag] is selected. */
   private fun ComposeTestRule.waitUntilChildIsSelected(
@@ -254,11 +257,9 @@ class MainTabComposableTest : FirestoreTests() {
   ) {
     waitUntil(timeoutMillis) {
       try {
-        onNodeWithTag(parentTag)
-            .onChildren()
-            .filter(isSelectable())
-            .fetchSemanticsNodes()
-            .any { it.config.getOrElse(SemanticsProperties.Selected) { false } }
+        onNodeWithTag(parentTag).onChildren().filter(isSelectable()).fetchSemanticsNodes().any {
+          it.config.getOrElse(SemanticsProperties.Selected) { false }
+        }
       } catch (e: Exception) {
         false
       }
@@ -376,39 +377,39 @@ class MainTabComposableTest : FirestoreTests() {
       compose.settingsRowPreferences().assertExists().performClick()
       compose.waitForIdle()
 
-        compose.preferencesTitle().assertExists()
-        compose.radioLight().assertExists().performClick()
-        compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_LIGHT)
-        compose
-            .radioLight()
-            .onChildren()
-            .filterToOne(hasClickAction() or hasSetTextAction())
-            .assertIsSelected()
+      compose.preferencesTitle().assertExists()
+      compose.radioLight().assertExists().performClick()
+      compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_LIGHT)
+      compose
+          .radioLight()
+          .onChildren()
+          .filterToOne(hasClickAction() or hasSetTextAction())
+          .assertIsSelected()
 
-        compose.waitForIdle()
+      compose.waitForIdle()
 
-        compose.radioDark().assertExists().performClick()
-        compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_DARK)
+      compose.radioDark().assertExists().performClick()
+      compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_DARK)
 
-        compose
-            .radioDark()
-            .onChildren()
-            .filterToOne(hasClickAction() or hasSetTextAction())
-            .assertIsSelected()
+      compose
+          .radioDark()
+          .onChildren()
+          .filterToOne(hasClickAction() or hasSetTextAction())
+          .assertIsSelected()
 
-        compose.radioSystem().assertExists().performClick()
-        compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_SYSTEM)
-        compose
-            .radioSystem()
-            .onChildren()
-            .filterToOne(hasClickAction() or hasSetTextAction())
-            .assertIsSelected()
-        compose.waitForIdle()
+      compose.radioSystem().assertExists().performClick()
+      compose.waitUntilChildIsSelected(PreferencesSectionTestTags.RADIO_SYSTEM)
+      compose
+          .radioSystem()
+          .onChildren()
+          .filterToOne(hasClickAction() or hasSetTextAction())
+          .assertIsSelected()
+      compose.waitForIdle()
 
-        // navigate back to main page
-        compose.subPageBackButton().performClick()
-        compose.waitForIdle()
-        compose.publicInfoRoot().assertExists()
+      // navigate back to main page
+      compose.subPageBackButton().performClick()
+      compose.waitForIdle()
+      compose.publicInfoRoot().assertExists()
       compose.publicInfoRoot().assertExists()
     }
 
@@ -461,42 +462,43 @@ class MainTabComposableTest : FirestoreTests() {
 
       compose.rolesTitle().assertExists()
 
-        // Toggle on for the first time == no dialog
-        compose.roleSpaceCheckbox().assertExists().performClick()
-        compose.roleDialog().assertDoesNotExist()
+      // Toggle on for the first time == no dialog
+      compose.roleSpaceCheckbox().assertExists().performClick()
+      compose.roleDialog().assertDoesNotExist()
 
-        // Toggle Off == dialog
-        compose.roleSpaceCheckbox().assertExists().performClick()
-        compose.roleDialog().assertExists()
-        compose.rolesDialogText().assertExists().assertTextContains("spaces", substring = true)
+      // Toggle Off == dialog
+      compose.roleSpaceCheckbox().assertExists().performClick()
+      compose.roleDialog().assertExists()
+      compose.rolesDialogText().assertExists().assertTextContains("spaces", substring = true)
 
-        // Cancel
-        compose.roleDialogCancel().performClick()
-        compose.roleDialog().assertDoesNotExist()
+      // Cancel
+      compose.roleDialogCancel().performClick()
+      compose.roleDialog().assertDoesNotExist()
 
-        // Toggle OFF again → confirm
-        compose.roleSpaceCheckbox().performClick()
-        compose.roleDialog().assertExists()
+      // Toggle OFF again → confirm
+      compose.roleSpaceCheckbox().performClick()
+      compose.roleDialog().assertExists()
 
-        compose.roleDialogConfirm().performClick()
-        compose.roleDialog().assertDoesNotExist()
-        compose.waitForIdle()
+      compose.roleDialogConfirm().performClick()
+      compose.roleDialog().assertDoesNotExist()
+      compose.waitForIdle()
 
-        // Now add the shop owner role and leave the subscaffold. Check that UI is updated right with regards to these changes
-        compose.roleShopCheckbox().performClick()
-        compose.roleDialog().assertDoesNotExist()
+      // Now add the shop owner role and leave the subscaffold. Check that UI is updated right with
+      // regards to these changes
+      compose.roleShopCheckbox().performClick()
+      compose.roleDialog().assertDoesNotExist()
 
-        compose.subPageBackButton().performClick()
-        compose.waitForIdle()
-        compose.publicInfoRoot().assertExists()
+      compose.subPageBackButton().performClick()
+      compose.waitForIdle()
+      compose.publicInfoRoot().assertExists()
 
-        compose.settingsRowBusinesses().performClick()
-        compose.waitForIdle()
-        compose.rolesTitle().assertExists().performClick()
-        compose.roleShopCheckbox().assertExists() // UI updated correctly
+      compose.settingsRowBusinesses().performClick()
+      compose.waitForIdle()
+      compose.rolesTitle().assertExists().performClick()
+      compose.roleShopCheckbox().assertExists() // UI updated correctly
 
-        compose.subPageBackButton().performClick()
-        compose.waitForIdle()
+      compose.subPageBackButton().performClick()
+      compose.waitForIdle()
     }
 
     // ---------------------------------------------------------------------
