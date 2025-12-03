@@ -216,6 +216,10 @@ fun MeepleMeetApp(
   var spaceId by remember { mutableStateOf("") }
   var spaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
 
+  var userLocation by remember {
+    mutableStateOf<com.github.meeplemeet.model.shared.location.Location?>(null)
+  }
+
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
 
   // Track previous online state and sync when it changes from false to true
@@ -393,6 +397,7 @@ fun MeepleMeetApp(
       MapScreen(
           navigation = navigationActions,
           account = account!!,
+          onUserLocationChange = { userLocation = it },
           onFABCLick = { geoPin ->
             when (geoPin) {
               PinType.SHOP -> {
@@ -486,6 +491,8 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.CreateSpaceRenter.name) {
       CreateSpaceRenterScreen(
           owner = account!!,
+          online = online,
+          userLocation = userLocation,
           onBack = { navigationActions.goBack() },
           onCreated = { navigationActions.goBack() })
     }

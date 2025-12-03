@@ -250,6 +250,7 @@ fun MapScreen(
     viewModel: MapViewModel = viewModel(),
     navigation: NavigationActions,
     account: Account,
+    onUserLocationChange: (Location?) -> Unit = {},
     onFABCLick: (PinType) -> Unit,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
@@ -338,6 +339,7 @@ fun MapScreen(
         } else null
 
     userLocation = loc
+    onUserLocationChange(loc)
     isLoadingLocation = false
   }
 
@@ -353,7 +355,9 @@ fun MapScreen(
           object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
               result.lastLocation?.let { loc ->
-                userLocation = Location(loc.latitude, loc.longitude, "User Location")
+                val location = Location(loc.latitude, loc.longitude, "User Location")
+                userLocation = location
+                onUserLocationChange(location)
               }
             }
           }
