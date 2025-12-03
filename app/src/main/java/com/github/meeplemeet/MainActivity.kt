@@ -169,10 +169,10 @@ const val LOADING_SCREEN_TAG = "Loading Screen"
  * Make sure you have an Android emulator running or a physical device connected.
  */
 class MainActivity : ComponentActivity() {
-    // Simple coroutine scope for sync operations
-    val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+  // Simple coroutine scope for sync operations
+  val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+  override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     MapsInitializer.initialize(applicationContext)
     OfflineModeManager.start(applicationContext)
@@ -216,24 +216,20 @@ fun MeepleMeetApp(
   var spaceId by remember { mutableStateOf("") }
   var spaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
 
-
-
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
 
-    // ADD THIS: Track previous online state and sync when it changes from false to true
-    var wasOnline by remember { mutableStateOf(online) }
-    val activity = context as? MainActivity
+  // ADD THIS: Track previous online state and sync when it changes from false to true
+  var wasOnline by remember { mutableStateOf(online) }
+  val activity = context as? MainActivity
 
-    LaunchedEffect(online) {
-        // Only sync when transitioning from offline to online
-        if (online && !wasOnline) {
-            Log.d("MeepleMeetApp", "Connection restored - triggering sync")
-            activity?.syncScope?.launch {
-                viewModel.syncAllPendingData()
-            }
-        }
-        wasOnline = online
+  LaunchedEffect(online) {
+    // Only sync when transitioning from offline to online
+    if (online && !wasOnline) {
+      Log.d("MeepleMeetApp", "Connection restored - triggering sync")
+      activity?.syncScope?.launch { viewModel.syncAllPendingData() }
     }
+    wasOnline = online
+  }
   DisposableEffect(Unit) {
     val listener = FirebaseAuth.AuthStateListener { accountId = it.currentUser?.uid ?: "" }
     FirebaseProvider.auth.addAuthStateListener(listener)

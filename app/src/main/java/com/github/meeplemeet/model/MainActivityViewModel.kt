@@ -133,98 +133,91 @@ class MainActivityViewModel(
             initialValue =
                 OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.first)
   }
-    /**
-     * Syncs all pending offline data with Firestore.
-     * Call this function when connection is restored.
-     */
-    suspend fun syncAllPendingData() {
-        try {
-            syncPendingSpaceRenters()
-            syncPendingShops()
-            Log.d("MainActivity", "Sync completed successfully")
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error during sync", e)
-        }
+  /**
+   * Syncs all pending offline data with Firestore. Call this function when connection is restored.
+   */
+  suspend fun syncAllPendingData() {
+    try {
+      syncPendingSpaceRenters()
+      syncPendingShops()
+      Log.d("MainActivity", "Sync completed successfully")
+    } catch (e: Exception) {
+      Log.e("MainActivity", "Error during sync", e)
     }
+  }
 
-    /**
-     * Syncs all pending space renter creations.
-     */
-    private suspend fun syncPendingSpaceRenters() {
-        val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+  /** Syncs all pending space renter creations. */
+  private suspend fun syncPendingSpaceRenters() {
+    val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
 
-        if (pendingChanges.isEmpty()) return
+    if (pendingChanges.isEmpty()) return
 
-        Log.d("MainActivity", "Syncing ${pendingChanges.size} space renter(s)")
+    Log.d("MainActivity", "Syncing ${pendingChanges.size} space renter(s)")
 
-        pendingChanges.forEach { (renter, changes) ->
-            try {
-                if (changes.containsKey("_pending_create")) {
-                        RepositoryProvider.spaceRenters.createSpaceRenter(
-                            owner = renter.owner,
-                            name = renter.name,
-                            phone = renter.phone,
-                            email = renter.email,
-                            website = renter.website,
-                            address = renter.address,
-                            openingHours = renter.openingHours,
-                            spaces = renter.spaces,
-                            photoCollectionUrl = renter.photoCollectionUrl
-                        )
+    pendingChanges.forEach { (renter, changes) ->
+      try {
+        if (changes.containsKey("_pending_create")) {
+          RepositoryProvider.spaceRenters.createSpaceRenter(
+              owner = renter.owner,
+              name = renter.name,
+              phone = renter.phone,
+              email = renter.email,
+              website = renter.website,
+              address = renter.address,
+              openingHours = renter.openingHours,
+              spaces = renter.spaces,
+              photoCollectionUrl = renter.photoCollectionUrl)
 
-                        OfflineModeManager.removeSpaceRenter(renter.id)
-                        Log.d("MainActivity", "✓ Created space renter: ${renter.name}")
-                } else {
-                    // Update logic for future implementation
-                    OfflineModeManager.clearSpaceRenterChanges(renter.id)
-                    Log.d("MainActivity", "✓ Updated space renter: ${renter.name}")
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "✗ Failed to sync space renter ${renter.id}: ${e.message}")
-            }
+          OfflineModeManager.removeSpaceRenter(renter.id)
+          Log.d("MainActivity", "✓ Created space renter: ${renter.name}")
+        } else {
+          // Update logic for future implementation
+          OfflineModeManager.clearSpaceRenterChanges(renter.id)
+          Log.d("MainActivity", "✓ Updated space renter: ${renter.name}")
         }
+      } catch (e: Exception) {
+        Log.e("MainActivity", "✗ Failed to sync space renter ${renter.id}: ${e.message}")
+      }
     }
+  }
 
-    /**
-     * Syncs all pending shop creations.
-     */
-    private suspend fun syncPendingShops() {
-        val pendingChanges = OfflineModeManager.getPendingShopChanges()
+  /** Syncs all pending shop creations. */
+  private suspend fun syncPendingShops() {
+    val pendingChanges = OfflineModeManager.getPendingShopChanges()
 
-        if (pendingChanges.isEmpty()) return
+    if (pendingChanges.isEmpty()) return
 
-        Log.d("MainActivity", "Syncing ${pendingChanges.size} shop(s)")
+    Log.d("MainActivity", "Syncing ${pendingChanges.size} shop(s)")
 
-        pendingChanges.forEach { (shop, changes) ->
-            try {
-                if (changes.containsKey("_pending_create")) {
-                    val owner = RepositoryProvider.accounts.getAccountSafe(shop.owner.uid, false)
+    pendingChanges.forEach { (shop, changes) ->
+      try {
+        if (changes.containsKey("_pending_create")) {
+          val owner = RepositoryProvider.accounts.getAccountSafe(shop.owner.uid, false)
 
-                    if (owner != null) {
-                        RepositoryProvider.shops.createShop(
-                            owner = owner,
-                            name = shop.name,
-                            phone = shop.phone,
-                            email = shop.email,
-                            website = shop.website,
-                            address = shop.address,
-                            openingHours = shop.openingHours,
-                            gameCollection = shop.gameCollection,
-                            photoCollectionUrl = shop.photoCollectionUrl
-                        )
+          if (owner != null) {
+            RepositoryProvider.shops.createShop(
+                owner = owner,
+                name = shop.name,
+                phone = shop.phone,
+                email = shop.email,
+                website = shop.website,
+                address = shop.address,
+                openingHours = shop.openingHours,
+                gameCollection = shop.gameCollection,
+                photoCollectionUrl = shop.photoCollectionUrl)
 
-                        OfflineModeManager.removeShop(shop.id)
-                        Log.d("MainActivity", "✓ Created shop: ${shop.name}")
-                    } else {
-                        Log.e("MainActivity", "✗ Cannot sync - owner not found: ${shop.owner}")
-                    }
-                } else {
-                    OfflineModeManager.clearShopChanges(shop.id)
-                    Log.d("MainActivity", "✓ Updated shop: ${shop.name}")
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "✗ Failed to sync shop ${shop.id}: ${e.message}")
-            }
+            OfflineModeManager.removeShop(shop.id)
+            Log.d("MainActivity", "✓ Created shop: ${shop.name}")
+          } else {
+            Log.e("MainActivity", "✗ Cannot sync - owner not found: ${shop.owner}")
+          }
+        } else {
+          OfflineModeManager.clearShopChanges(shop.id)
+          Log.d("MainActivity", "✓ Updated shop: ${shop.name}")
         }
+      } catch (e: Exception) {
+        Log.e("MainActivity", "✗ Failed to sync shop ${shop.id}: ${e.message}")
+      }
     }
+  }
 }
