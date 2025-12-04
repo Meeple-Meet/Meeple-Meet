@@ -82,13 +82,3 @@ class GameSearchException(message: String, cause: Throwable? = null) : Exception
  * @param cause Optional underlying exception that triggered this error.
  */
 class GameFetchException(message: String, cause: Throwable? = null) : Exception(message, cause)
-
-/**
- * Exception thrown when a required field cannot be parsed from a BGG XML response.
- *
- * @param itemId The BGG item ID that failed to parse (may be null if unknown).
- * @param field The name of the field that failed to parse.
- * @param message A human-readable message describing the parsing error.
- */
-class GameParseException(val itemId: String?, val field: String, message: String) :
-    Exception(message)
