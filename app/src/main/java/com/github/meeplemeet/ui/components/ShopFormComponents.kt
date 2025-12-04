@@ -210,7 +210,8 @@ fun RequiredInfoSection(
     onLink: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
     viewModel: ShopSearchViewModel,
-    owner: Account
+    owner: Account,
+    online: Boolean
 ) {
   Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP)) {
     LabeledField(
@@ -257,6 +258,7 @@ fun RequiredInfoSection(
         owner,
         shop,
         viewModel,
+        enabled = online,
         inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
         dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
   }
