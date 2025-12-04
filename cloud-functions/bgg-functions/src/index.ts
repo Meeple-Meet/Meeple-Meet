@@ -27,6 +27,47 @@ export const ping = onRequest((req, res) => {
   res.json({ message: "pong" });
 });
 
+// -----------------------
+// Safe logging helpers
+// -----------------------
+function _safeSerialize(value: any): any {
+  try {
+    if (value instanceof Error) {
+      return { message: value.message, stack: value.stack };
+    }
+    // attempt JSON-safe clone
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    try {
+      return String(value);
+    } catch {
+      return '[unserializable]';
+    }
+  }
+}
+
+function formatLog(obj: Record<string, any>) {
+  if (!obj) return {};
+  const out: Record<string, any> = {};
+  for (const k of Object.keys(obj)) {
+    out[k] = _safeSerialize(obj[k]);
+  }
+  return out;
+}
+
+function safeLog(message: string, meta?: Record<string, any>) {
+  if (meta) logger.log(message, formatLog(meta));
+  else logger.log(message);
+}
+function safeWarn(message: string, meta?: Record<string, any>) {
+  if (meta) logger.warn(message, formatLog(meta));
+  else logger.warn(message);
+}
+function safeError(message: string, meta?: Record<string, any>) {
+  if (meta) logger.error(message, formatLog(meta));
+  else logger.error(message);
+}
+
 // --------------------
 // Cache config
 // --------------------
@@ -129,7 +170,7 @@ function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | nul
         if (idx >= 0) pendingBatches.splice(idx, 1);
 
         const batchIds = Array.from(pb.ids);
-        logger.log("coalesced batch firing", { count: batchIds.length, ids: batchIds });
+        safeLog("coalesced batch firing", { count: batchIds.length, ids: batchIds });
 
         try {
           const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${batchIds.join(",")}&type=boardgame&stats=1`;
@@ -137,7 +178,7 @@ function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | nul
 
           if (!response.ok) {
             const text = await response.text().catch(() => "");
-            logger.error("BGG fetch failed (coalesced)", { status: response.status, body: text });
+            safeError("BGG fetch failed (coalesced)", { status: response.status, body: text });
             for (const r of pb.requesters) r.reject(new Error(`BGG API returned ${response.status}`));
             return;
           }
@@ -153,7 +194,7 @@ function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | nul
               const g = parseItemToGame(item);
               fetchedById[g.uid] = g;
             } catch (e: any) {
-              logger.warn("Ignored item during parse (coalesced)", { id: item?.["@id"], reason: e?.message });
+              safeWarn("Ignored item during parse (coalesced)", { id: item?.["@id"], reason: e?.message ?? _safeSerialize(e) });
             }
           }
 
@@ -163,7 +204,7 @@ function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | nul
             r.resolve(resultMap);
           }
         } catch (err: any) {
-          logger.error("Error during coalesced fetch", { err: err?.message ?? err });
+          safeError("Error during coalesced fetch", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
           for (const r of pb.requesters) r.reject(err);
         }
       }, PENDING_DEBOUNCE_MS),
@@ -203,6 +244,7 @@ const parser = new XMLParser({
   textNodeName: "#text",
   ignoreDeclaration: true,
   removeNSPrefix: true,
+  isArray: (tagName) => tagName === "link",
 });
 
 // --------------------
@@ -246,7 +288,7 @@ function parseItemToGame(item: any): GameOut {
   // Optional fields
   let recommendedPlayers: number | null = null;
   try {
-    const pollSummaries = item["poll-summary"] ?? item.poll;
+    const pollSummaries = item["poll-summary"] ?? item["poll_summary"] ?? item.poll;
     if (pollSummaries) {
       const pollArray = Array.isArray(pollSummaries) ? pollSummaries : [pollSummaries];
       const suggested = pollArray.find((p: any) => p?.["@name"] === "suggested_numplayers");
@@ -409,11 +451,11 @@ export const getGamesByIds = onRequest(
         });
       }
 
-      logger.log("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
+      safeLog("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
 
       // Fetch from BGG if still missing
       if (missingIds.length > 0) {
-        logger.log("getGamesByIds: scheduling coalesced fetch", { missingIdsCount: missingIds.length, missingIds });
+        safeLog("getGamesByIds: scheduling coalesced fetch", { missingIdsCount: missingIds.length, missingIds });
 
         try {
           const fetchedMap = await scheduleBatchFetch(missingIds);
@@ -425,7 +467,7 @@ export const getGamesByIds = onRequest(
               await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g);
               cachedById[g.uid] = g;
             } else {
-              logger.warn("coalesced fetch returned no game for id", { id });
+              safeWarn("coalesced fetch returned no game for id", { id });
             }
           }
 
@@ -433,7 +475,7 @@ export const getGamesByIds = onRequest(
           res.json(ordered);
           return;
         } catch (err: any) {
-          logger.error("Error in coalesced getGamesByIds", { err: err?.message ?? err });
+          safeError("Error in coalesced getGamesByIds", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
           res.status(502).json({ error: "BGG fetch failed", message: err?.message });
           return;
         }
@@ -444,7 +486,7 @@ export const getGamesByIds = onRequest(
         return;
       }
     } catch (err: any) {
-      logger.error("getGamesByIds unexpected error", { err: err?.message ?? err });
+      safeError("getGamesByIds unexpected error", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
       res.status(500).json({ error: "Internal server error", message: err?.message });
       return;
     }
@@ -482,27 +524,27 @@ export const searchGames = onRequest(
       if (!cached) {
         cached = await getFromL2Cache<GameSearchResult[]>(SEARCH_CACHE_COLLECTION, cacheKey, SEARCH_TTL_MS);
         if (cached) {
-          logger.log("searchGames cache hit (L2)", { query: queryParam, cachedCount: cached.length });
+          safeLog("searchGames cache hit (L2)", { query: queryParam, cachedCount: cached.length });
           setToCache(searchCache, cacheKey, cached, SEARCH_TTL_MS, SEARCH_CACHE_MAX);
         }
       }
 
       if (cached) {
-        logger.log("searchGames cache hit (L1/L2)", { query: queryParam });
+        safeLog("searchGames cache hit (L1/L2)", { query: queryParam });
         res.json(cached.slice(0, maxResults));
         return;
       }
 
-      logger.log("searchGames cache miss", { query: queryParam });
+      safeLog("searchGames cache miss", { query: queryParam });
 
       // --- Fetch BGG ---
       const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(queryParam)}&type=boardgame`;
-      logger.log("searchGames: fetching", { url });
+      safeLog("searchGames: fetching", { url });
 
       const response = await fetchWithAuth(url);
       if (!response.ok) {
         const text = await response.text().catch(() => "");
-        logger.error("BGG search failed", { status: response.status, body: text });
+        safeError("BGG search failed", { status: response.status, body: text });
         res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
         return;
       }
@@ -538,7 +580,7 @@ export const searchGames = onRequest(
       res.json(ranked);
       return;
     } catch (err: any) {
-      logger.error("searchGames unexpected error", { err: err?.message ?? err });
+      safeError("searchGames unexpected error", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
       res.status(500).json({ error: "Internal server error", message: err?.message });
       return;
     }
