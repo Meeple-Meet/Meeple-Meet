@@ -52,7 +52,7 @@ export const ping = onRequest((req, res) => {
  *  - uid: BGG game ID
  *  - name: primary game name
  *  - description: game description text
- *  - imageURL: thumbnail image URL
+ *  - imageURL: Image URL
  *  - minPlayers/maxPlayers: player count range
  *  - recommendedPlayers: suggested number of players (optional)
  *  - averagePlayTime: average game duration in minutes (optional)
@@ -490,8 +490,8 @@ function parseItemToGame(item: any): GameOut {
   if (!uid) throw new Error("missing id");
 
   // Image
-  const thumbnail = extractText(item.thumbnail);
-  if (!thumbnail) throw new Error("Missing imageURL");
+  const image = extractText(item.image);
+  if (!image) throw new Error("Missing imageURL");
 
   // Name
   let nameNode = item.name;
@@ -545,7 +545,7 @@ function parseItemToGame(item: any): GameOut {
     uid: String(uid),
     name: String(name),
     description: String(description),
-    imageURL: thumbnail,
+    imageURL: image,
     minPlayers,
     maxPlayers,
     recommendedPlayers,

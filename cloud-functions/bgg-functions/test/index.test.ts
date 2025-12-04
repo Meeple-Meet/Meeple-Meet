@@ -83,7 +83,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="181">
-            <thumbnail>https://example.com/risk.jpg</thumbnail>
+            <image>https://example.com/risk.jpg</image>
             <name type="primary" value="Risk" />
             <description>A war game</description>
             <minplayers value="2" />
@@ -128,7 +128,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="181">
-            <thumbnail>https://example.com/risk.jpg</thumbnail>
+            <image>https://example.com/risk.jpg</image>
             <name type="primary" value="Risk" />
             <description>War game</description>
             <minplayers value="2" />
@@ -137,7 +137,7 @@ describe("Cloud Functions Tests", () => {
             <minage value="10" />
           </item>
           <item type="boardgame" id="13">
-            <thumbnail>https://example.com/catan.jpg</thumbnail>
+            <image>https://example.com/catan.jpg</image>
             <name type="primary" value="CATAN" />
             <description>Settle the island</description>
             <minplayers value="3" />
@@ -209,7 +209,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="999">
-            <thumbnail>https://example.com/minimal.jpg</thumbnail>
+            <image>https://example.com/minimal.jpg</image>
             <name type="primary" value="Minimal Game" />
             <description>Minimal description</description>
             <minplayers value="1" />
@@ -246,7 +246,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="13">
-            <thumbnail>https://example.com/catan.jpg</thumbnail>
+            <image>https://example.com/catan.jpg</image>
             <name type="primary" value="CATAN" />
             <description>Settle</description>
             <minplayers value="3" />
@@ -284,7 +284,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="181">
-            <thumbnail>https://example.com/risk.jpg</thumbnail>
+            <image>https://example.com/risk.jpg</image>
             <name type="primary" value="Risk" />
             <description>War</description>
             <minplayers value="2" />
@@ -356,7 +356,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="1">
-            <thumbnail>https://example.com/1.jpg</thumbnail>
+            <image>https://example.com/1.jpg</image>
             <name type="primary" value="G1" />
             <description>d1</description>
             <minplayers value="1" />
@@ -648,7 +648,7 @@ describe("Cloud Functions Tests", () => {
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
           <item type="boardgame" id="1">
-            <thumbnail>https://example.com/game.jpg</thumbnail>
+            <image>https://example.com/game.jpg</image>
             <name type="primary" value="Test" />
             <description>Test</description>
             <minplayers value="1" />
