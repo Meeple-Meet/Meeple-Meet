@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableMap
 
 const val PENDING_STRING = "_pending_create"
+const val UNCHECKED_CAST = "UNCHECKED_CAST"
 
 /**
  * Caps the size of a LinkedHashMap by removing the least recently used entries until the size is at
@@ -454,7 +455,7 @@ object OfflineModeManager {
           val castValue =
               if (value is List<*> &&
                   value.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
-                @Suppress("UNCHECKED_CAST")
+                @Suppress(UNCHECKED_CAST)
                 value as List<com.github.meeplemeet.model.shops.OpeningHours>
               } else updated.openingHours
           updated = updated.copy(openingHours = castValue)
@@ -463,7 +464,7 @@ object OfflineModeManager {
           val castValue =
               if (value is List<*> &&
                   value.all { it is com.github.meeplemeet.model.space_renter.Space }) {
-                @Suppress("UNCHECKED_CAST")
+                @Suppress(UNCHECKED_CAST)
                 value as List<com.github.meeplemeet.model.space_renter.Space>
               } else updated.spaces
           updated = updated.copy(spaces = castValue)
@@ -471,7 +472,7 @@ object OfflineModeManager {
         "photoCollectionUrl" -> {
           val castValue =
               if (value is List<*> && value.all { it is String }) {
-                @Suppress("UNCHECKED_CAST")
+                @Suppress(UNCHECKED_CAST)
                 value as List<String>
               } else updated.photoCollectionUrl
           updated = updated.copy(photoCollectionUrl = castValue)
