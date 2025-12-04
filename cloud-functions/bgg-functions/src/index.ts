@@ -32,7 +32,7 @@ import { Cache } from "./Cache"
 // Apply global options to all functions
 setGlobalOptions({
   region: "us-central1",   // Deployment region (keep all functions in the same region)
-  memory: "128MiB",         // Memory allocation (lower = cheaper, 128MiB is enough for lightweight functions)
+  memory: "256MiB",        // Memory allocation (lower = cheaper, 256MiB is enough for lightweight functions)
   timeoutSeconds: 30,      // Max execution time per request (prevents long-running costs)
   maxInstances: 5,         // Limit concurrent instances (controls scaling and cost)
   minInstances: 0,         // Keep 0 warm instances (no cost when idle)
