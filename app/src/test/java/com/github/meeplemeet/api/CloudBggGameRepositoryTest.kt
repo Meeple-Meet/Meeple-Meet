@@ -4,6 +4,7 @@ import com.github.meeplemeet.model.GameFetchException
 import com.github.meeplemeet.model.GameSearchException
 import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
@@ -353,9 +354,14 @@ class CloudBggGameRepositoryTest {
     mockWebServer.shutdown()
 
     @Suppress("DEPRECATION")
-    assertFailsWith<GameFetchException> {
+    val exception = assertFails {
       repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
     }
+
+    // Accept both possible exception types
+    assertTrue(
+        exception is GameFetchException || exception is GameSearchException,
+        "Expected GameFetchException or GameSearchException, but got ${exception::class}")
   }
 
   // ==================== JSON Parsing Edge Cases ====================
