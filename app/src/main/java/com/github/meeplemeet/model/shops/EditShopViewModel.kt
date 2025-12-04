@@ -127,6 +127,7 @@ class EditShopViewModel(
 
         OfflineModeManager.clearShopChanges(shop.id)
       } else {
+        // OFFLINE: Record changes and update cached shop object
         val changes = mutableMapOf<String, Any>()
         if (owner != null) changes[Shop::owner.name] = owner.uid
         if (name != null) changes[Shop::name.name] = name
@@ -138,8 +139,28 @@ class EditShopViewModel(
         if (gameCollection != null) changes[Shop::gameCollection.name] = gameCollection
         if (photoCollectionUrl != null) changes[Shop::photoCollectionUrl.name] = photoCollectionUrl
 
+        // Apply changes to create updated shop object
+        val updatedShop =
+            shop.copy(
+                owner = owner ?: shop.owner,
+                name = name ?: shop.name,
+                phone = phone ?: shop.phone,
+                email = email ?: shop.email,
+                website = website ?: shop.website,
+                address = address ?: shop.address,
+                openingHours = openingHours ?: shop.openingHours,
+                gameCollection = gameCollection ?: shop.gameCollection,
+                photoCollectionUrl = photoCollectionUrl ?: shop.photoCollectionUrl)
+
+        // Update cache with modified shop
+        OfflineModeManager.updateShopCache(updatedShop)
+
+        // Update local StateFlow
+        _shop.value = updatedShop
+
+        // Record changes for sync
         changes.forEach { (property, value) ->
-          OfflineModeManager.setShopChange(shop, property, value)
+          OfflineModeManager.setShopChange(updatedShop, property, value)
         }
       }
     }
