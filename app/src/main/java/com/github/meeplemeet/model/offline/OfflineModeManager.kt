@@ -440,22 +440,42 @@ object OfflineModeManager {
     var updated = renter
     changes.forEach { (key, value) ->
       when (key) {
-        "name" -> updated = updated.copy(name = value as String)
-        "phone" -> updated = updated.copy(phone = value as String)
-        "email" -> updated = updated.copy(email = value as String)
-        "website" -> updated = updated.copy(website = value as String)
+        "name" -> updated = updated.copy(name = value as? String ?: updated.name)
+        "phone" -> updated = updated.copy(phone = value as? String ?: updated.phone)
+        "email" -> updated = updated.copy(email = value as? String ?: updated.email)
+        "website" -> updated = updated.copy(website = value as? String ?: updated.website)
         "address" ->
             updated =
                 updated.copy(
-                    address = value as com.github.meeplemeet.model.shared.location.Location)
-        "openingHours" ->
-            updated =
-                updated.copy(
-                    openingHours = value as List<com.github.meeplemeet.model.shops.OpeningHours>)
-        "spaces" ->
-            updated =
-                updated.copy(spaces = value as List<com.github.meeplemeet.model.space_renter.Space>)
-        "photoCollectionUrl" -> updated = updated.copy(photoCollectionUrl = value as List<String>)
+                    address =
+                        value as? com.github.meeplemeet.model.shared.location.Location
+                            ?: updated.address)
+        "openingHours" -> {
+          val castValue =
+              if (value is List<*> &&
+                  value.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
+                @Suppress("UNCHECKED_CAST")
+                value as List<com.github.meeplemeet.model.shops.OpeningHours>
+              } else updated.openingHours
+          updated = updated.copy(openingHours = castValue)
+        }
+        "spaces" -> {
+          val castValue =
+              if (value is List<*> &&
+                  value.all { it is com.github.meeplemeet.model.space_renter.Space }) {
+                @Suppress("UNCHECKED_CAST")
+                value as List<com.github.meeplemeet.model.space_renter.Space>
+              } else updated.spaces
+          updated = updated.copy(spaces = castValue)
+        }
+        "photoCollectionUrl" -> {
+          val castValue =
+              if (value is List<*> && value.all { it is String }) {
+                @Suppress("UNCHECKED_CAST")
+                value as List<String>
+              } else updated.photoCollectionUrl
+          updated = updated.copy(photoCollectionUrl = castValue)
+        }
       }
     }
     return updated
@@ -538,7 +558,7 @@ object OfflineModeManager {
    *
    * @return List of pairs containing the space renter and its pending changes map
    */
-  private fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
+  fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
     return _offlineModeFlow.value.spaceRenters.values.filter { it.second.isNotEmpty() }.toList()
   }
 
