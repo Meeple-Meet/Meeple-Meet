@@ -141,9 +141,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           sessionRepository.createSession(
               discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
 
-          // Wait for session to appear
           compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
-          // Wait for auto-archiving to complete (card disappears)
           compose.waitUntil(5000) { sessionCard(discussion.uid).isNotDisplayed() }
 
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
