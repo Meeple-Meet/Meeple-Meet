@@ -208,7 +208,9 @@ fun ImageCarousel(
                         modifier =
                             Modifier.fillMaxSize()
                                 .clickable { showImageSourceMenu = true }
-                                .testTag(CommonComponentsTestTags.CAROUSEL_IMAGE))
+                                .testTag(CommonComponentsTestTags.CAROUSEL_IMAGE),
+                        placeholder = androidx.compose.ui.res.painterResource(com.github.meeplemeet.R.drawable.ic_storefront),
+                        error = androidx.compose.ui.res.painterResource(com.github.meeplemeet.R.drawable.ic_storefront))
                     if (page < photoCollectionUrl.size && editable) {
                       Box(
                           modifier =
