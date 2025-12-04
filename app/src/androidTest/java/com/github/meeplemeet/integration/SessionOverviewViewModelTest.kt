@@ -106,14 +106,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     // Archive a session with a photo URL
     val discussion = discussionRepository.createDiscussion("Archive Photo", "Test", account.uid)
     val game = gameRepository.getGameById(existingGameId)
-    val session =
-        sessionRepository.createSession(
-            discussion.uid,
-            "Archive Photo Session",
-            game.uid,
-            Timestamp.now(),
-            testLocation,
-            account.uid)
+    sessionRepository.createSession(
+        discussion.uid,
+        "Archive Photo Session",
+        game.uid,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
     val photoUrl = "https://example.com/archived_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
     sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
@@ -130,14 +129,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     // Archive a session with a photo URL
     val discussion = discussionRepository.createDiscussion("Find By Photo", "Test", account.uid)
     val game = gameRepository.getGameById(existingGameId)
-    val session =
-        sessionRepository.createSession(
-            discussion.uid,
-            "Find By Photo Session",
-            game.uid,
-            Timestamp.now(),
-            testLocation,
-            account.uid)
+    sessionRepository.createSession(
+        discussion.uid,
+        "Find By Photo Session",
+        game.uid,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
     val photoUrl = "https://example.com/find_by_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
     sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
