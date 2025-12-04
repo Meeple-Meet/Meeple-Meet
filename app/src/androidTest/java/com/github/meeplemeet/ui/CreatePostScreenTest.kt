@@ -227,7 +227,7 @@ class CreatePostScreenTest : FirestoreTests() {
       postCalled = false
       postButton().performClick()
       compose.waitUntil(timeoutMillis = 800) { postCalled }
-      
+
       // Give Firestore time to persist in CI
       Thread.sleep(500)
 
@@ -271,7 +271,7 @@ class CreatePostScreenTest : FirestoreTests() {
       postCalled = false
       postButton().performClick()
       compose.waitUntil(timeoutMillis = 800) { postCalled }
-      
+
       // Give Firestore time to persist in CI
       Thread.sleep(500)
 
@@ -315,7 +315,7 @@ class CreatePostScreenTest : FirestoreTests() {
       postButton().assertIsEnabled()
       postButton().performClick()
       compose.waitUntil(timeoutMillis = 2000) { postCalled }
-      
+
       // Give Firestore time to persist in CI
       Thread.sleep(500)
 
