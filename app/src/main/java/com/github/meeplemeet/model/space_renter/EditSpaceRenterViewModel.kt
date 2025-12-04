@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for editing and deleting existing space renters.
@@ -85,37 +84,18 @@ class EditSpaceRenterViewModel(
       spaces: List<Space>? = null,
       photoCollectionUrl: List<String>? = null
   ) {
-    validateUpdateRequest(spaceRenter, requester, name, openingHours, address)
+    val params =
+        SpaceRenterUpdateParams(
+            owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+    validateUpdateRequest(spaceRenter, requester, params)
 
     viewModelScope.launch {
       val isOnline = OfflineModeManager.hasInternetConnection.first()
 
-      withContext(OfflineModeManager.dispatcher) {
-        if (isOnline) {
-          handleOnlineUpdate(
-              spaceRenter,
-              owner,
-              name,
-              phone,
-              email,
-              website,
-              address,
-              openingHours,
-              spaces,
-              photoCollectionUrl)
-        } else {
-          handleOfflineUpdate(
-              spaceRenter,
-              owner,
-              name,
-              phone,
-              email,
-              website,
-              address,
-              openingHours,
-              spaces,
-              photoCollectionUrl)
-        }
+      if (isOnline) {
+        handleOnlineUpdate(spaceRenter, params)
+      } else {
+        handleOfflineUpdate(spaceRenter, params)
       }
     }
   }
@@ -129,54 +109,40 @@ class EditSpaceRenterViewModel(
   private fun validateUpdateRequest(
       spaceRenter: SpaceRenter,
       requester: Account,
-      name: String?,
-      openingHours: List<OpeningHours>?,
-      address: Location?
+      params: SpaceRenterUpdateParams
   ) {
     if (spaceRenter.owner.uid != requester.uid) {
       throw PermissionDeniedException("Only the space renter's owner can edit his own space renter")
     }
 
-    if (name != null && name.isBlank()) {
-      throw IllegalArgumentException("SpaceRenter name cannot be blank")
+    require(!(params.name != null && params.name.isBlank())) { "SpaceRenter name cannot be blank" }
+
+    if (params.openingHours != null) {
+      val uniqueByDay = params.openingHours.distinctBy { it.day }
+      require(uniqueByDay.size == 7) { "7 opening hours are needed" }
     }
 
-    if (openingHours != null) {
-      val uniqueByDay = openingHours.distinctBy { it.day }
-      if (uniqueByDay.size != 7) {
-        throw IllegalArgumentException("7 opening hours are needed")
-      }
-    }
-
-    if (address != null && address == Location()) {
-      throw IllegalArgumentException("An address is required to create a space renter")
+    require(!(params.address != null && params.address == Location())) {
+      "An address is required to create a space renter"
     }
   }
 
   /** Handles online update by persisting to repository and updating cache. */
   private suspend fun handleOnlineUpdate(
       spaceRenter: SpaceRenter,
-      owner: Account?,
-      name: String?,
-      phone: String?,
-      email: String?,
-      website: String?,
-      address: Location?,
-      openingHours: List<OpeningHours>?,
-      spaces: List<Space>?,
-      photoCollectionUrl: List<String>?
+      params: SpaceRenterUpdateParams
   ) {
     spaceRenterRepository.updateSpaceRenter(
         spaceRenter.id,
-        owner?.uid,
-        name,
-        phone,
-        email,
-        website,
-        address,
-        openingHours,
-        spaces,
-        photoCollectionUrl)
+        params.owner?.uid,
+        params.name,
+        params.phone,
+        params.email,
+        params.website,
+        params.address,
+        params.openingHours,
+        params.spaces,
+        params.photoCollectionUrl)
 
     val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
 
@@ -189,65 +155,55 @@ class EditSpaceRenterViewModel(
     OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
   }
 
-  /** Handles offline update by recording changes for later synchronization. */
+  /** Handles offline update by recording changes and updating cache. */
   private suspend fun handleOfflineUpdate(
       spaceRenter: SpaceRenter,
-      owner: Account?,
-      name: String?,
-      phone: String?,
-      email: String?,
-      website: String?,
-      address: Location?,
-      openingHours: List<OpeningHours>?,
-      spaces: List<Space>?,
-      photoCollectionUrl: List<String>?
+      params: SpaceRenterUpdateParams
   ) {
-    val changes =
-        buildChangeMap(
-            owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+    // OFFLINE: Record changes and update cached space renter object
+    val changes = buildChangeMap(params)
 
+    // Apply changes to create updated space renter object
+    val updatedSpaceRenter =
+        spaceRenter.copy(
+            owner = params.owner ?: spaceRenter.owner,
+            name = params.name ?: spaceRenter.name,
+            phone = params.phone ?: spaceRenter.phone,
+            email = params.email ?: spaceRenter.email,
+            website = params.website ?: spaceRenter.website,
+            address = params.address ?: spaceRenter.address,
+            openingHours = params.openingHours ?: spaceRenter.openingHours,
+            spaces = params.spaces ?: spaceRenter.spaces,
+            photoCollectionUrl = params.photoCollectionUrl ?: spaceRenter.photoCollectionUrl)
+
+    // Update cache with modified space renter
+    OfflineModeManager.updateSpaceRenterCache(updatedSpaceRenter)
+
+    // Update local StateFlow
+    _currentSpaceRenter.value = updatedSpaceRenter
+
+    // Record changes for sync
     changes.forEach { (property, value) ->
-      OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
+      OfflineModeManager.setSpaceRenterChange(updatedSpaceRenter, property, value)
     }
   }
 
-  /** Builds a map of property changes for offline synchronization. */
-  private fun buildChangeMap(
-      owner: Account?,
-      name: String?,
-      phone: String?,
-      email: String?,
-      website: String?,
-      address: Location?,
-      openingHours: List<OpeningHours>?,
-      spaces: List<Space>?,
-      photoCollectionUrl: List<String>?
-  ): Map<String, Any> {
+  private fun buildChangeMap(params: SpaceRenterUpdateParams): Map<String, Any> {
     val changes = mutableMapOf<String, Any>()
-    if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
-    if (name != null) changes[SpaceRenter::name.name] = name
-    if (phone != null) changes[SpaceRenter::phone.name] = phone
-    if (email != null) changes[SpaceRenter::email.name] = email
-    if (website != null) changes[SpaceRenter::website.name] = website
-    if (address != null) changes[SpaceRenter::address.name] = address
-    if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
-    if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
-    if (photoCollectionUrl != null)
-        changes[SpaceRenter::photoCollectionUrl.name] = photoCollectionUrl
+    if (params.owner != null) changes[SpaceRenter::owner.name] = params.owner.uid
+    if (params.name != null) changes[SpaceRenter::name.name] = params.name
+    if (params.phone != null) changes[SpaceRenter::phone.name] = params.phone
+    if (params.email != null) changes[SpaceRenter::email.name] = params.email
+    if (params.website != null) changes[SpaceRenter::website.name] = params.website
+    if (params.address != null) changes[SpaceRenter::address.name] = params.address
+    if (params.openingHours != null) changes[SpaceRenter::openingHours.name] = params.openingHours
+    if (params.spaces != null) changes[SpaceRenter::spaces.name] = params.spaces
+    if (params.photoCollectionUrl != null)
+        changes[SpaceRenter::photoCollectionUrl.name] = params.photoCollectionUrl
     return changes
   }
 
-  /**
-   * Deletes a space renter from Firestore.
-   *
-   * This operation is performed asynchronously in the viewModelScope. Only the space renter owner
-   * can delete the space renter. The repository will automatically remove the space renter ID from
-   * the owner's businesses subcollection.
-   *
-   * @param spaceRenter The space renter to delete.
-   * @param requester The account requesting the deletion.
-   * @throws PermissionDeniedException if the requester is not the space renter owner.
-   */
+  /** Deletes a space renter. */
   fun deleteSpaceRenter(spaceRenter: SpaceRenter, requester: Account) {
     if (spaceRenter.owner.uid != requester.uid)
         throw PermissionDeniedException(
@@ -259,3 +215,16 @@ class EditSpaceRenterViewModel(
     }
   }
 }
+
+/** Data class to encapsulate update parameters and reduce parameter count in methods. */
+private data class SpaceRenterUpdateParams(
+    val owner: Account? = null,
+    val name: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+    val website: String? = null,
+    val address: Location? = null,
+    val openingHours: List<OpeningHours>? = null,
+    val spaces: List<Space>? = null,
+    val photoCollectionUrl: List<String>? = null
+)

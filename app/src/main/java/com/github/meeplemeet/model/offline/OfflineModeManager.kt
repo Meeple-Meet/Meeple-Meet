@@ -452,28 +452,28 @@ object OfflineModeManager {
                         value as? com.github.meeplemeet.model.shared.location.Location
                             ?: updated.address)
         "openingHours" -> {
+          val list = value as? List<*>
           val castValue =
-              if (value is List<*> &&
-                  value.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
-                @Suppress(UNCHECKED_CAST)
-                value as List<com.github.meeplemeet.model.shops.OpeningHours>
+              if (list != null &&
+                  list.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
+                list.filterIsInstance<com.github.meeplemeet.model.shops.OpeningHours>()
               } else updated.openingHours
           updated = updated.copy(openingHours = castValue)
         }
         "spaces" -> {
+          val list = value as? List<*>
           val castValue =
-              if (value is List<*> &&
-                  value.all { it is com.github.meeplemeet.model.space_renter.Space }) {
-                @Suppress(UNCHECKED_CAST)
-                value as List<com.github.meeplemeet.model.space_renter.Space>
+              if (list != null &&
+                  list.all { it is com.github.meeplemeet.model.space_renter.Space }) {
+                list.filterIsInstance<com.github.meeplemeet.model.space_renter.Space>()
               } else updated.spaces
           updated = updated.copy(spaces = castValue)
         }
         "photoCollectionUrl" -> {
+          val list = value as? List<*>
           val castValue =
-              if (value is List<*> && value.all { it is String }) {
-                @Suppress(UNCHECKED_CAST)
-                value as List<String>
+              if (list != null && list.all { it is String }) {
+                list.filterIsInstance<String>()
               } else updated.photoCollectionUrl
           updated = updated.copy(photoCollectionUrl = castValue)
         }
