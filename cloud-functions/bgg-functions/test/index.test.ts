@@ -1,4 +1,5 @@
 // Test suite for Cloud Functions
+// Generated with Claude Sonet 4.5
 
 import nock from "nock";
 import { _clearInMemoryStateForTests } from "../src/index";
@@ -347,6 +348,53 @@ describe("Cloud Functions Tests", () => {
       await Promise.resolve();
 
       expect(res.json).toHaveBeenCalled();
+    });
+
+    it("should coalesce concurrent requests into a single BGG fetch (when combined ids <= 20)", async () => {
+      // small response for any id set
+      const bggResponse = `
+        <?xml version="1.0" encoding="UTF-8"?>
+        <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+          <item type="boardgame" id="1">
+            <thumbnail>https://example.com/1.jpg</thumbnail>
+            <name type="primary" value="G1" />
+            <description>d1</description>
+            <minplayers value="1" />
+            <maxplayers value="2" />
+          </item>
+        </items>
+      `;
+
+      // capture the requests: we expect exactly ONE network call
+      let callCount = 0;
+      let lastUri: string | null = null;
+
+      nock("https://boardgamegeek.com")
+        .get("/xmlapi2/thing")
+        .query(true)
+        .times(1) // expect only one call
+        .reply(function (uri, body) {
+          callCount++;
+          lastUri = uri;
+          return [200, bggResponse];
+        });
+
+      // create two concurrent calls whose ids total <= 20
+      const { req: req1, res: res1 } = createMockReqRes({ ids: "1,2,3" });
+      const { req: req2, res: res2 } = createMockReqRes({ ids: "4" });
+
+      // fire them *without awaiting* so they schedule nearly concurrently
+      const p1 = getGamesByIds(req1, res1);
+      const p2 = getGamesByIds(req2, res2);
+
+      // wait both
+      await Promise.all([p1, p2]);
+
+      expect(callCount).toBe(1);
+      expect(lastUri).toBeTruthy();
+      // the query should contain the combined ids (order can vary); check presence of at least these ids
+      expect(lastUri).toContain("id=");
+      expect(lastUri).toMatch(/id=.*1.*2.*3.*4|id=.*4.*1.*2.*3|id=.*2.*3.*4.*1/);
     });
   });
 

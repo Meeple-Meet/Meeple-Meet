@@ -457,67 +457,126 @@ const pendingBatches: PendingBatch[] = [];
  *  - Ensures batch size <= 20
  */
 function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | null>> {
-  return new Promise((resolve, reject) => {
-    for (const pb of pendingBatches) {
-      const combined = new Set([...pb.ids, ...ids]);
-      if (combined.size <= 20) {
-        ids.forEach((id) => pb.ids.add(id));
-        pb.requesters.push({ requestedIds: ids, resolve, reject });
-        return;
+  // normalize and dedupe input ids to be safe
+  const uniqueIds = Array.from(new Set(ids.map((s) => String(s).trim()).filter(Boolean)));
+  if (uniqueIds.length === 0) return Promise.resolve({});
+
+  // we will create one promise per chunk assigned to a pending batch (existing or new)
+  const chunkPromises: Promise<Record<string, GameOut | null>>[] = [];
+
+  // remaining ids to assign
+  const remaining = new Set(uniqueIds);
+
+  // First: try to fill existing pending batches as much as possible
+  for (const pb of pendingBatches) {
+    if (remaining.size === 0) break;
+    const freeSlots = 20 - pb.ids.size;
+    if (freeSlots <= 0) continue;
+
+    // take up to freeSlots from remaining
+    const toTake: string[] = [];
+    for (const id of remaining) {
+      if (toTake.length >= freeSlots) break;
+      toTake.push(id);
+    }
+    if (toTake.length === 0) continue;
+
+    // add those ids to the existing pending batch
+    toTake.forEach((id) => {
+      pb.ids.add(id);
+      remaining.delete(id);
+    });
+
+    // register a per-chunk promise that will be resolved by that pending batch
+    const p = new Promise<Record<string, GameOut | null>>((resolve, reject) => {
+      pb.requesters.push({ requestedIds: toTake, resolve, reject });
+    });
+    chunkPromises.push(p);
+  }
+
+  // Second: for any ids still remaining, create new pending batch(es) (chunks of up to 20)
+  while (remaining.size > 0) {
+    const take: string[] = [];
+    for (const id of remaining) {
+      if (take.length >= 20) break;
+      take.push(id);
+    }
+    // remove from remaining
+    take.forEach((id) => remaining.delete(id));
+
+    // create a promise for this chunk and create a new pending batch
+    const p = new Promise<Record<string, GameOut | null>>((resolve, reject) => {
+      const pb: PendingBatch = {
+        ids: new Set(take),
+        requesters: [{ requestedIds: take, resolve, reject }],
+        timer: setTimeout(async () => {
+          // remove pb from global list
+          const idx = pendingBatches.indexOf(pb);
+          if (idx >= 0) pendingBatches.splice(idx, 1);
+
+          const batchIds = Array.from(pb.ids);
+          logMsg("coalesced batch firing", { count: batchIds.length, ids: batchIds });
+
+          try {
+            const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${batchIds.join(",")}&type=boardgame&stats=1`;
+            const response = await fetchWithAuth(bggUrl);
+
+            if (!response.ok) {
+              const text = await response.text().catch(() => "");
+              logError("BGG fetch failed (coalesced)", { status: response.status, body: text });
+              for (const r of pb.requesters) r.reject(new Error(`BGG API returned ${response.status}`));
+              return;
+            }
+
+            const xml = await response.text();
+            const parsed = parser.parse(xml);
+            let items = parsed?.items?.item ?? [];
+            if (!Array.isArray(items)) items = [items];
+
+            const fetchedById: Record<string, GameOut> = {};
+            for (const item of items) {
+              try {
+                const g = parseItemToGame(item);
+                fetchedById[g.uid] = g;
+              } catch (e: any) {
+                logWarning("Ignored item during parse (coalesced)", {
+                  id: item?.["@id"],
+                  reason: e?.message ?? _safeSerialize(e),
+                });
+              }
+            }
+
+            // resolve each registered requester with only their requestedIds
+            for (const r of pb.requesters) {
+              const resultMap: Record<string, GameOut | null> = {};
+              for (const id of r.requestedIds) resultMap[id] = fetchedById[id] ?? null;
+              r.resolve(resultMap);
+            }
+          } catch (err: any) {
+            logError("Error during coalesced fetch", {
+              err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err),
+            });
+            for (const r of pb.requesters) r.reject(err);
+          }
+        }, PENDING_DEBOUNCE_MS),
+      };
+
+      // push new pb to the global list
+      pendingBatches.push(pb);
+    });
+
+    chunkPromises.push(p);
+  }
+
+  // Finally: wait all chunk promises and merge maps into a single map for the caller
+  return Promise.all(chunkPromises).then((maps) => {
+    const merged: Record<string, GameOut | null> = {};
+    for (const m of maps) {
+      for (const k of Object.keys(m)) {
+        merged[k] = m[k];
       }
     }
-
-    const pb: PendingBatch = {
-      ids: new Set(ids),
-      requesters: [{ requestedIds: ids, resolve, reject }],
-      timer: setTimeout(async () => {
-        const idx = pendingBatches.indexOf(pb);
-        if (idx >= 0) pendingBatches.splice(idx, 1);
-
-        const batchIds = Array.from(pb.ids);
-        logMsg("coalesced batch firing", { count: batchIds.length, ids: batchIds });
-
-        try {
-          const bggUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${batchIds.join(",")}&type=boardgame&stats=1`;
-          const response = await fetchWithAuth(bggUrl);
-
-          if (!response.ok) {
-            const text = await response.text().catch(() => "");
-            logError("BGG fetch failed (coalesced)", { status: response.status, body: text });
-            for (const r of pb.requesters) r.reject(new Error(`BGG API returned ${response.status}`));
-            return;
-          }
-
-          const xml = await response.text();
-          const parsed = parser.parse(xml);
-          let items = parsed?.items?.item ?? [];
-          if (!Array.isArray(items)) items = [items];
-
-          const fetchedById: Record<string, GameOut> = {};
-          for (const item of items) {
-            try {
-              const g = parseItemToGame(item);
-              fetchedById[g.uid] = g;
-            } catch (e: any) {
-              logWarning("Ignored item during parse (coalesced)", { id: item?.["@id"], reason: e?.message ?? _safeSerialize(e) });
-            }
-          }
-
-          for (const r of pb.requesters) {
-            const resultMap: Record<string, GameOut | null> = {};
-            for (const id of r.requestedIds) resultMap[id] = fetchedById[id] ?? null;
-            r.resolve(resultMap);
-          }
-        } catch (err: any) {
-          logError("Error during coalesced fetch", {
-            err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err),
-          });
-          for (const r of pb.requesters) r.reject(err);
-        }
-      }, PENDING_DEBOUNCE_MS),
-    };
-
-    pendingBatches.push(pb);
+    return merged;
   });
 }
 
