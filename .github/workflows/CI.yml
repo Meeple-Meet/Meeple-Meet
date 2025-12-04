@@ -188,7 +188,9 @@ jobs:
             firebase emulators:start --only auth,firestore,storage --project demo-project > firebase-emulator.log 2>&1 &
             echo "Waiting for Firebase emulators to be ready..."
             for i in {1..30}; do
-              if curl -s http://localhost:9099 >/dev/null 2>&1 && curl -s http://localhost:8080 >/dev/null 2>&1 && curl -s http://localhost:9199 >/dev/null 2>&1; then
+              if curl -s http://localhost:9099 >/dev/null 2>&1 \
+                 && curl -s http://localhost:8080 >/dev/null 2>&1 \
+                 && curl -s http://localhost:9199 >/dev/null 2>&1; then
                 echo "Firebase emulators are ready!"
                 break
               fi
@@ -288,7 +290,9 @@ jobs:
             firebase emulators:start --only auth,firestore,storage --project demo-project > firebase-emulator.log 2>&1 &
             echo "Waiting for Firebase emulators to be ready..."
             for i in {1..30}; do
-              if curl -s http://localhost:9099 >/dev/null 2>&1 && curl -s http://localhost:8080 >/dev/null 2>&1 && curl -s http://localhost:9199 >/dev/null 2>&1; then
+              if curl -s http://localhost:9099 >/dev/null 2>&1 \
+                 && curl -s http://localhost:8080 >/dev/null 2>&1 \
+                 && curl -s http://localhost:9199 >/dev/null 2>&1; then
                 echo "Firebase emulators are ready!"
                 break
               fi
