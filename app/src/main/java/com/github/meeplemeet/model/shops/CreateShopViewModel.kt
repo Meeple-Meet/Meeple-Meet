@@ -108,6 +108,15 @@ class CreateShopViewModel(
     }
 
     // Return a placeholder shop since we can't return the real one immediately
-    return Shop(id = "pending", email = email, phone = phone, website = website, owner = owner, name = name, address = address, openingHours = openingHours, gameCollection = gameCollection)
+    return Shop(
+        id = "pending",
+        email = email,
+        phone = phone,
+        website = website,
+        owner = owner,
+        name = name,
+        address = address,
+        openingHours = openingHours,
+        gameCollection = gameCollection)
   }
 }

@@ -60,9 +60,7 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
 
     currentShopId = id
 
-    viewModelScope.launch {
-      OfflineModeManager.loadShop(id) { shop -> _shop.value = shop }
-    }
+    viewModelScope.launch { OfflineModeManager.loadShop(id) { shop -> _shop.value = shop } }
   }
 
   /**

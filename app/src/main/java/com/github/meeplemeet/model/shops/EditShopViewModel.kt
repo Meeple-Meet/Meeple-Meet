@@ -37,7 +37,7 @@ class EditShopViewModel(
    */
   fun setShop(shop: Shop?) {
     _shop.value = shop
-    
+
     if (shop != null) {
       // Load latest version from cache or repository
       viewModelScope.launch {
