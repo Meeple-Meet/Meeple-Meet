@@ -530,6 +530,15 @@ object OfflineModeManager {
     _offlineModeFlow.first { offlineMode -> offlineMode.spaceRenters[renter.id]?.first == renter }
   }
 
+  suspend fun updateShopCache(shop: Shop) {
+    val state = _offlineModeFlow.value.shops
+    val newState = LinkedHashMap(state)
+    newState[shop.id] = shop to state[shop.id]?.second.orEmpty()
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
+    // Wait until the StateFlow has actually updated with this exact object
+    _offlineModeFlow.first { offlineMode -> offlineMode.shops[shop.id]?.first == shop }
+  }
+
   /**
    * Removes a space renter from the offline cache. Used when deleting a space renter or after
    * successful synchronization.
