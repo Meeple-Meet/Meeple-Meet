@@ -341,6 +341,8 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             .onNodeWithTag(DiscussionTestTags.pollVoteButton(msgIndex, 0), useUnmergedTree = true)
             .performClick()
       }
+      composeTestRule.waitForIdle()
+      Thread.sleep(500) // Allow Firestore update to propagate
       checkpoint("First option 100 %") { waitUntilPercentIs(msgIndex, 0, "100%") }
 
       /* ------------------------------------------------------------------
@@ -352,6 +354,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             .performClick()
       }
       composeTestRule.waitForIdle()
+      Thread.sleep(500) // Allow Firestore update to propagate
       checkpoint("First option 0 %") { waitUntilPercentIs(msgIndex, 0, "0%") }
       checkpoint("Second option 100 %") { waitUntilPercentIs(msgIndex, 1, "100%") }
 
@@ -395,11 +398,13 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 0), useUnmergedTree = true)
           .performClick()
       composeTestRule.waitForIdle()
+      Thread.sleep(500) // Allow Firestore update to propagate
       composeTestRule
           .onNodeWithTag(
               DiscussionTestTags.pollVoteButton(multiMsgIndex, 2), useUnmergedTree = true)
           .performClick()
       composeTestRule.waitForIdle()
+      Thread.sleep(500) // Allow Firestore update to propagate
 
       checkpoint("Popcorn 50 %") { waitUntilPercentIs(multiMsgIndex, 0, "50%") }
       checkpoint("Soda 50 %") { waitUntilPercentIs(multiMsgIndex, 2, "50%") }
@@ -411,6 +416,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
           .performClick()
 
       composeTestRule.waitForIdle()
+      Thread.sleep(500) // Allow Firestore update to propagate
 
       checkpoint("Popcorn 0 %") { waitUntilPercentIs(multiMsgIndex, 0, "0%") }
       checkpoint("Soda now 100 %") { waitUntilPercentIs(multiMsgIndex, 2, "100%") }
