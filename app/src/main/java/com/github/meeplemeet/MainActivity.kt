@@ -37,7 +37,6 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
-import com.github.meeplemeet.model.shared.game.BggGameRepository
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
@@ -127,7 +126,6 @@ object RepositoryProvider {
 
   /** Lazily initialized repository for board game data operations. */
   val games: FirestoreGameRepository by lazy { FirestoreGameRepository() }
-  val gamesApi: BggGameRepository by lazy { BggGameRepository() }
 
   /** Lazily initialized repository for location operations. */
   val locations: LocationRepository by lazy { NominatimLocationRepository() }
