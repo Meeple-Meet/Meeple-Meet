@@ -79,36 +79,36 @@ class CloudBggGameRepository(
    * @throws IllegalArgumentException if more than 20 IDs are provided.
    * @throws GameFetchException if fetching fails.
    */
-  override suspend fun getGamesById(vararg gameIDs: String): List<Game> =
-      withContext(ioDispatcher) {
-        require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
+  override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
+    require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
+    return withContext(ioDispatcher) {
+      val url =
+          baseUrl
+              .newBuilder()
+              .addPathSegment(PATH_GET_GAMES_BY_IDS)
+              .addQueryParameter("ids", gameIDs.joinToString(","))
+              .build()
 
-        val url =
-            baseUrl
-                .newBuilder()
-                .addPathSegment(PATH_GET_GAMES_BY_IDS)
-                .addQueryParameter("ids", gameIDs.joinToString(","))
-                .build()
-
-        val request = Request.Builder().url(url).build()
-        try {
-          client.newCall(request).execute().use { response ->
-            val bodyString = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-              throw GameFetchException("Failed to fetch games (HTTP ${response.code}): $bodyString")
-            }
-
-            val jsonArray = JSONArray(bodyString)
-            return@withContext (0 until jsonArray.length()).map { i ->
-              jsonArray.getJSONObject(i).toGame()
-            }
+      val request = Request.Builder().url(url).build()
+      try {
+        client.newCall(request).execute().use { response ->
+          val bodyString = response.body?.string().orEmpty()
+          if (!response.isSuccessful) {
+            throw GameFetchException("Failed to fetch games (HTTP ${response.code}): $bodyString")
           }
-        } catch (e: JSONException) {
-          throw GameFetchException("Invalid JSON while fetching games: ${e.message}", e)
-        } catch (e: IOException) {
-          throw GameFetchException("Network error while fetching games: ${e.message}", e)
+
+          val jsonArray = JSONArray(bodyString)
+          return@withContext (0 until jsonArray.length()).map { i ->
+            jsonArray.getJSONObject(i).toGame()
+          }
         }
+      } catch (e: JSONException) {
+        throw GameFetchException("Invalid JSON while fetching games: ${e.message}", e)
+      } catch (e: IOException) {
+        throw GameFetchException("Network error while fetching games: ${e.message}", e)
       }
+    }
+  }
 
   /**
    * Deprecated: use [searchGamesByNameLight] instead.
