@@ -655,6 +655,7 @@ private fun SessionBasicInfoSection(
  * @param photoUrl The URL of the session photo.
  * @param isAdmin Whether the current user is an admin.
  * @param onClick Callback when the box is clicked.
+ * @param isUploading Whether a photo is currently being uploaded.
  */
 @Composable
 private fun SessionPhotoUploadBox(
