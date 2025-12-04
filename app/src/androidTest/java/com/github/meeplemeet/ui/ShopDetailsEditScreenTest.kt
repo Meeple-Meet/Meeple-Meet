@@ -206,7 +206,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             onBack = {},
             onSaved = {},
             shop = currentShopState.value,
-            viewModel = editShopViewModel)
+            viewModel = editShopViewModel,
+            online = true)
       }
     }
 

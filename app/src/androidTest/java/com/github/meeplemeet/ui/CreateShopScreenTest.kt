@@ -256,7 +256,8 @@ class CreateShopScreenTest {
                   viewModel = viewModel,
                   owner = owner,
                   gameUi = gameUi,
-                  locationUi = locationUi)
+                  locationUi = locationUi,
+                  online = true)
 
           // 1: Validation gating (disabled -> enabled after fields + hours)
           1 ->
@@ -273,7 +274,8 @@ class CreateShopScreenTest {
                   viewModel = viewModel,
                   owner = owner,
                   gameUi = gameUi,
-                  locationUi = locationUi)
+                  locationUi = locationUi,
+                  online = true)
 
           // 2: Create success
           2 ->
@@ -294,7 +296,8 @@ class CreateShopScreenTest {
                   viewModel = viewModel,
                   owner = owner,
                   gameUi = gameUi,
-                  locationUi = locationUi)
+                  locationUi = locationUi,
+                  online = true)
 
           // 3: Create error -> snackbar
           3 ->
@@ -311,7 +314,8 @@ class CreateShopScreenTest {
                   viewModel = viewModel,
                   owner = owner,
                   gameUi = gameUi,
-                  locationUi = locationUi)
+                  locationUi = locationUi,
+                  online = true)
 
           // 4: Optional fields don't gate
           4 ->
@@ -328,7 +332,8 @@ class CreateShopScreenTest {
                   viewModel = viewModel,
                   owner = owner,
                   gameUi = gameUi,
-                  locationUi = locationUi)
+                  locationUi = locationUi,
+                  online = true)
 
           // 5: Discard clears and calls onBack
           5 ->
@@ -345,7 +350,8 @@ class CreateShopScreenTest {
                   viewModel = viewModel,
                   owner = owner,
                   gameUi = gameUi,
-                  locationUi = locationUi)
+                  locationUi = locationUi,
+                  online = true)
         }
       }
     }
