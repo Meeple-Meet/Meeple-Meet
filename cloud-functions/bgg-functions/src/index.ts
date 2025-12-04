@@ -8,7 +8,7 @@
  */
 
 import { setGlobalOptions } from "firebase-functions";
-import * as admin from "firebase-admin"
+import * as admin from "firebase-admin";
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import fetch from "node-fetch";
@@ -20,7 +20,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const db = admin.firestore()
+const db = admin.firestore();
 
 // Test endpoint
 export const ping = onRequest((req, res) => {
@@ -41,12 +41,12 @@ function _safeSerialize(value: any): any {
     try {
       return String(value);
     } catch {
-      return '[unserializable]';
+      return "[unserializable]";
     }
   }
 }
 
-function formatLog(obj: Record<string, any>) {
+function formatLog(obj: Record<string, any> | undefined) {
   if (!obj) return {};
   const out: Record<string, any> = {};
   for (const k of Object.keys(obj)) {
@@ -84,13 +84,13 @@ const gameCache = new Map<string, CacheEntry<any>>();
 const searchCache = new Map<string, CacheEntry<any>>();
 
 function getFromCache<T>(map: Map<string, CacheEntry<T>>, key: string): T | null {
-    const e = map.get(key);
-    if (!e) return null;
-    if (Date.now() > e.expireAt) {
-        map.delete(key);
-        return null;
-    }
-    return e.value;
+  const e = map.get(key);
+  if (!e) return null;
+  if (Date.now() > e.expireAt) {
+    map.delete(key);
+    return null;
+  }
+  return e.value;
 }
 
 function setToCache<T>(
@@ -100,36 +100,64 @@ function setToCache<T>(
   ttlMs: number,
   maxSize: number
 ) {
-    map.set(key, { value, expireAt: Date.now() + ttlMs });
-    // LRU eviction
-    while (map.size > maxSize) {
-        const firstKey = map.keys().next().value;
-        if (!firstKey) break;
-        map.delete(firstKey);
-    }
+  map.set(key, { value, expireAt: Date.now() + ttlMs });
+  // LRU eviction
+  while (map.size > maxSize) {
+    const firstKey = map.keys().next().value;
+    if (!firstKey) break;
+    map.delete(firstKey);
+  }
 }
 
-
+// --------------------
 // L2 cache in-database (persistent)
+// --------------------
 async function getFromL2Cache<T>(collection: string, key: string, ttlMs: number): Promise<T | null> {
-  const docRef = db.collection(collection).doc(key);
-  const doc = await docRef.get();
-  if (!doc.exists) return null;
-  const data = doc.data();
-  if (!data || !data.value || !data.updatedAt) return null;
-  if (Date.now() - data.updatedAt.toMillis() > ttlMs) {
-    await docRef.delete();
+  try {
+    const docRef = db.collection(collection).doc(key);
+    const doc = await docRef.get();
+    if (!doc.exists) return null;
+    const data = doc.data();
+    if (!data || data.value == null || data.updatedAt == null) return null;
+
+    // support different updatedAt formats: number(ms), Firestore Timestamp (toMillis), Date object
+    let updatedAtMs: number;
+    const ua = data.updatedAt;
+    if (typeof ua === "number") {
+      updatedAtMs = ua;
+    } else if (ua && typeof ua.toMillis === "function") {
+      updatedAtMs = ua.toMillis();
+    } else if (ua && typeof ua.toDate === "function") {
+      updatedAtMs = ua.toDate().getTime();
+    } else {
+      updatedAtMs = Date.now();
+    }
+
+    if (Date.now() - updatedAtMs > ttlMs) {
+      try {
+        await docRef.delete();
+      } catch (e) {
+        safeWarn("Failed to delete expired L2 cache doc", { collection, key, err: e });
+      }
+      return null;
+    }
+    return data.value as T;
+  } catch (err) {
+    safeWarn("getFromL2Cache failed", { collection, key, err });
     return null;
   }
-  return data.value as T;
 }
 
 async function setToL2Cache<T>(collection: string, key: string, value: T) {
   const docRef = db.collection(collection).doc(key);
-  await docRef.set({
-    value,
-    updatedAt: admin.firestore.Timestamp.now()
-  });
+  try {
+    await docRef.set({
+      value,
+      updatedAt: Date.now(),
+    });
+  } catch (err) {
+    safeWarn("setToL2Cache failed", { collection, key, err });
+  }
 }
 
 // --------------------
@@ -141,13 +169,13 @@ type PendingRequester = {
   requestedIds: string[];
   resolve: (map: Record<string, GameOut | null>) => void;
   reject: (err: any) => void;
-}
+};
 
 type PendingBatch = {
   ids: Set<string>;
   requesters: PendingRequester[];
   timer: NodeJS.Timeout;
-}
+};
 
 const pendingBatches: PendingBatch[] = [];
 
@@ -204,7 +232,9 @@ function scheduleBatchFetch(ids: string[]): Promise<Record<string, GameOut | nul
             r.resolve(resultMap);
           }
         } catch (err: any) {
-          safeError("Error during coalesced fetch", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
+          safeError("Error during coalesced fetch", {
+            err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err),
+          });
           for (const r of pb.requesters) r.reject(err);
         }
       }, PENDING_DEBOUNCE_MS),
@@ -382,7 +412,7 @@ function rankSearchResults(
 // Fetch helper with Authorization
 // --------------------
 async function fetchWithAuth(url: string) {
-  const token = process.env.BGG_API_TOKEN
+  const token = process.env.BGG_API_TOKEN;
   const headers: Record<string, string> = { "User-Agent": "MeepleMeet/1.0" };
 
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -442,13 +472,17 @@ export const getGamesByIds = onRequest(
         const l2Results = await Promise.all(
           missingIds.map((id) => getFromL2Cache<GameOut>(GAME_CACHE_COLLECTION, id, GAME_TTL_MS))
         );
-        l2Results.forEach((g, idx) => {
+
+        for (let i = 0; i < l2Results.length; i++) {
+          const g = l2Results[i];
           if (g) {
             cachedById[g.uid] = g;
             setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX); // update L1
-            missingIds = missingIds.filter((id) => id !== g.uid);
           }
-        });
+        }
+
+        // Recompute missingIds after L2 processing
+        missingIds = ids.filter((id) => !cachedById[id]);
       }
 
       safeLog("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
@@ -464,7 +498,9 @@ export const getGamesByIds = onRequest(
             const g = fetchedMap[id];
             if (g) {
               setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX);
-              await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g);
+              await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g).catch((e) =>
+                safeWarn("setToL2Cache rejected", { collection: GAME_CACHE_COLLECTION, key: g.uid, err: e })
+              );
               cachedById[g.uid] = g;
             } else {
               safeWarn("coalesced fetch returned no game for id", { id });
@@ -475,7 +511,9 @@ export const getGamesByIds = onRequest(
           res.json(ordered);
           return;
         } catch (err: any) {
-          safeError("Error in coalesced getGamesByIds", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
+          safeError("Error in coalesced getGamesByIds", {
+            err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err),
+          });
           res.status(502).json({ error: "BGG fetch failed", message: err?.message });
           return;
         }
@@ -492,7 +530,6 @@ export const getGamesByIds = onRequest(
     }
   }
 );
-
 
 /**
  * searchGames
