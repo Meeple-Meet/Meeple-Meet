@@ -110,8 +110,9 @@ fun SessionsOverviewScreen(
     account: Account?,
     onSelectSession: (String) -> Unit = {}
 ) {
+  val context = LocalContext.current
   val sessionMap by
-      viewModel.sessionMapFlow(account?.uid ?: "").collectAsState(initial = emptyMap())
+      viewModel.sessionMapFlow(account?.uid ?: "", context).collectAsState(initial = emptyMap())
 
   /* --------------  NEW: toggle state  -------------- */
   var showHistory by remember { mutableStateOf(false) }
@@ -122,14 +123,6 @@ fun SessionsOverviewScreen(
   LaunchedEffect(showHistory, account) {
     if (showHistory && account != null) {
       viewModel.getArchivedSessions(account.uid) { sessions -> archivedSessions = sessions }
-    }
-  }
-
-  // Auto-archive check for all active sessions
-  val context = LocalContext.current
-  LaunchedEffect(sessionMap.keys) {
-    if (account != null) {
-      sessionMap.keys.forEach { id -> viewModel.updateSession(context, id) }
     }
   }
 

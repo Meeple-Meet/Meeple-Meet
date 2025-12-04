@@ -17,6 +17,7 @@ import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
 private const val PHOTO_MESSAGE_PREVIEW = "📷 Photo"
@@ -126,10 +127,35 @@ class DiscussionRepository(
       collection.document(discussionId).get().await().exists()
 
   /** Retrieve a discussion document by ID. */
-  suspend fun getDiscussion(id: String): Discussion {
+  suspend fun getDiscussion(id: String, context: Context? = null): Discussion {
     val snapshot = collection.document(id).get().await()
     val discussion = snapshot.toObject(DiscussionNoUid::class.java)
-    if (discussion != null) return fromNoUid(id, discussion)
+    if (discussion != null) {
+      val discussionObj = fromNoUid(id, discussion)
+
+      // Automatically archive passed sessions if context is provided
+      if (context != null && discussionObj.session != null) {
+        val sessionRepository = RepositoryProvider.sessions
+        if (sessionRepository.isSessionPassed(id)) {
+          try {
+            val newUuid = sessionRepository.newUUID()
+            var newUrl: String? = null
+            if (discussionObj.session!!.photoUrl != null) {
+              newUrl = imageRepository.moveSessionPhoto(context, id, newUuid)
+            }
+            sessionRepository.archiveSession(id, newUuid, newUrl)
+            // Return updated discussion without session
+            return fromNoUid(
+                id, collection.document(id).get().await().toObject(DiscussionNoUid::class.java)!!)
+          } catch (e: Exception) {
+            e.printStackTrace()
+            // Return original discussion if archiving fails
+          }
+        }
+      }
+
+      return discussionObj
+    }
     throw DiscussionNotFoundException()
   }
 
@@ -603,6 +629,44 @@ class DiscussionRepository(
         }
     awaitClose { reg.remove() }
   }
+
+  /**
+   * Listen for changes to a specific discussion document with automatic session archiving.
+   *
+   * This method wraps [listenDiscussion] and automatically archives sessions that have passed. When
+   * a discussion is emitted with an expired session (more than 24 hours old), the session is
+   * automatically archived and the updated discussion (without the session) is emitted.
+   *
+   * @param discussionId The discussion ID to listen to.
+   * @param context Android context for accessing cache directory during photo archiving.
+   * @return Flow emitting discussions with expired sessions automatically archived.
+   */
+  fun listenDiscussionWithAutoArchive(discussionId: String, context: Context): Flow<Discussion> =
+      listenDiscussion(discussionId).map { discussion ->
+        if (discussion.session != null) {
+          val sessionRepository = RepositoryProvider.sessions
+          if (sessionRepository.isSessionPassed(discussionId)) {
+            try {
+              val newUuid = sessionRepository.newUUID()
+              var newUrl: String? = null
+              if (discussion.session?.photoUrl != null) {
+                newUrl = imageRepository.moveSessionPhoto(context, discussionId, newUuid)
+              }
+              sessionRepository.archiveSession(discussionId, newUuid, newUrl)
+              // Return discussion without session
+              getDiscussion(discussionId)
+            } catch (e: Exception) {
+              e.printStackTrace()
+              // Return original discussion if archiving fails
+              discussion
+            }
+          } else {
+            discussion
+          }
+        } else {
+          discussion
+        }
+      }
 
   /**
    * Retrieve messages for a discussion, ordered by creation time (newest first).

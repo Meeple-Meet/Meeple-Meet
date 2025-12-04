@@ -200,7 +200,7 @@ fun MeepleMeetApp(
   var discussionId by remember { mutableStateOf("") }
   val discussionFlow =
       remember(discussionId, signedOut) {
-        if (!signedOut) viewModel.discussionFlow(discussionId) else MutableStateFlow(null)
+        if (!signedOut) viewModel.discussionFlow(discussionId, context) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
 

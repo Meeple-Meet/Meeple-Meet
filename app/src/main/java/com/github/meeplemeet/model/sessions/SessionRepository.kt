@@ -29,6 +29,7 @@ class SessionRepository(
   private val discussions = discussionRepository.collection
   private val discussionRepo = DiscussionRepository()
   private val geoPinsRepo = RepositoryProvider.geoPins
+  private val imageRepository = RepositoryProvider.images
 
   /**
    * Creates a new session within a discussion.
@@ -148,6 +149,41 @@ class SessionRepository(
     val snap = discussions.document(discussionId).get().await()
     if (!snap.exists()) return null
     return snap.toObject(DiscussionNoUid::class.java)?.session
+  }
+
+  /**
+   * Retrieves the session and automatically archives it if it has passed.
+   *
+   * @param discussionId The ID of the discussion containing the session.
+   * @param context Android context for image operations.
+   * @return The session if active, or null if archived or not found.
+   */
+  suspend fun getSessionWithAutoArchive(
+      discussionId: String,
+      context: android.content.Context
+  ): Session? {
+    val session = getSession(discussionId) ?: return null
+
+    // Check if passed (24 hours after start time)
+    val date = session.date
+    val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
+    val isPassed = (date.toDate().time + twentyFourHoursInMillis) < Timestamp.now().toDate().time
+
+    if (isPassed) {
+      try {
+        val newUuid = newUUID()
+        var newUrl: String? = null
+        if (session.photoUrl != null) {
+          newUrl = imageRepository.moveSessionPhoto(context, discussionId, newUuid)
+        }
+        archiveSession(discussionId, newUuid, newUrl)
+        return null // Session is now archived
+      } catch (e: Exception) {
+        e.printStackTrace()
+        return session // Return session if archiving fails
+      }
+    }
+    return session
   }
 
   /**
