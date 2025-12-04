@@ -120,6 +120,8 @@ const val maxNumberOfImages = 10
 @Composable
 fun CreateShopScreen(
     owner: Account,
+    online: Boolean,
+    userLocation: Location?,
     onBack: () -> Unit,
     onCreated: (String) -> Unit,
     viewModel: CreateShopViewModel = viewModel()
@@ -127,7 +129,15 @@ fun CreateShopScreen(
   val ui by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
 
+  // Set default location when offline
+  LaunchedEffect(online, userLocation) {
+    if (!online && userLocation != null && locationUi.selectedLocation == null) {
+      viewModel.setLocation(userLocation)
+    }
+  }
+
   AddShopContent(
+      online = online,
       onBack = onBack,
       onCreated = onCreated,
       onCreate = { name, email, address, week, stock ->
@@ -176,6 +186,7 @@ fun CreateShopScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddShopContent(
+    online: Boolean,
     onBack: () -> Unit,
     onCreated: (String) -> Unit,
     onCreate:
@@ -309,24 +320,31 @@ fun AddShopContent(
                           horizontal = AddShopUi.Dimensions.contentHPadding,
                           vertical = AddShopUi.Dimensions.contentVPadding)) {
                     item {
-                      ImageCarousel(
-                          photoCollectionUrl = photoCollectionUrl,
-                          maxNumberOfImages = maxNumberOfImages,
-                          onAdd = { path, index ->
-                            photoCollectionUrl =
-                                if (index < photoCollectionUrl.size &&
-                                    photoCollectionUrl[index].isNotEmpty()) {
-                                  photoCollectionUrl.mapIndexed { i, old ->
-                                    if (i == index) path else old
+                      if (online) {
+                        ImageCarousel(
+                            photoCollectionUrl = photoCollectionUrl,
+                            maxNumberOfImages = maxNumberOfImages,
+                            onAdd = { path, index ->
+                              photoCollectionUrl =
+                                  if (index < photoCollectionUrl.size &&
+                                      photoCollectionUrl[index].isNotEmpty()) {
+                                    photoCollectionUrl.mapIndexed { i, old ->
+                                      if (i == index) path else old
+                                    }
+                                  } else {
+                                    photoCollectionUrl + path
                                   }
-                                } else {
-                                  photoCollectionUrl + path
-                                }
-                          },
-                          onRemove = { url ->
-                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                          },
-                          editable = true)
+                            },
+                            onRemove = { url ->
+                              photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                            },
+                            editable = true)
+                      } else {
+                        ImageCarousel(
+                            photoCollectionUrl = photoCollectionUrl,
+                            maxNumberOfImages = maxNumberOfImages,
+                            editable = false)
+                      }
                     }
                     item {
                       CollapsibleSection(
@@ -345,7 +363,8 @@ fun AddShopContent(
                                 onLink = { link = it },
                                 onPickLocation = { loc -> addressText = loc.name },
                                 viewModel = viewModel,
-                                owner = owner)
+                                owner = owner,
+                                online = online)
                           },
                           testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
                     }
@@ -370,21 +389,23 @@ fun AddShopContent(
                           title = Strings.SECTION_GAMES,
                           initiallyExpanded = false,
                           header = {
-                            TextButton(
-                                onClick = {
-                                  onSetGameQuery("")
-                                  showGameDialog = true
-                                },
-                                modifier =
-                                    Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
-                                  Text(
-                                      Strings.BTN_ADD_GAME,
-                                      modifier =
-                                          Modifier.testTag(
-                                              CreateShopScreenTestTags.GAMES_ADD_LABEL))
-                                }
+                            if (online) {
+                              TextButton(
+                                  onClick = {
+                                    onSetGameQuery("")
+                                    showGameDialog = true
+                                  },
+                                  modifier =
+                                      Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)) {
+                                    Icon(Icons.Filled.Add, contentDescription = null)
+                                    Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
+                                    Text(
+                                        Strings.BTN_ADD_GAME,
+                                        modifier =
+                                            Modifier.testTag(
+                                                CreateShopScreenTestTags.GAMES_ADD_LABEL))
+                                  }
+                            }
                           },
                           content = {
                             GamesSection(
