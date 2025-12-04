@@ -125,12 +125,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
         }
       }
 
-      /* 5. toggle history -> WIP shown ------------------------------------ */
-      checkpoint("Toggle History – shows history grid") {
-        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
-      }
-
-      /* 6. click history card -> popup appears ---------------------------- */
+      /* 5. click history card -> popup appears ---------------------------- */
       checkpoint("Click history card – popup appears") {
         runBlocking {
           compose
@@ -146,10 +141,17 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           sessionRepository.createSession(
               discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
 
-          delay(1000)
+          // Wait for session to appear
+          compose.waitUntil(2000) {
+            sessionCard(discussion.uid).isDisplayed()
+          }
+          // Wait for auto-archiving to complete (card disappears)
+          compose.waitUntil(5000) {
+            sessionCard(discussion.uid).isNotDisplayed()
+          }
 
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
-          compose.waitUntil(2000) { compose.onNodeWithText("Past Night").isDisplayed() }
+          compose.waitUntil(4000) { compose.onNodeWithText("Past Night").isDisplayed() }
 
           compose.onNodeWithText("Past Night").performClick()
 
@@ -164,66 +166,95 @@ class SessionsOverviewScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun archive_flow() {
-    checkpoint("Archive flow") {
-      runBlocking {
-        /* 1. Create session that is passed but < 24h */
-        val discussion =
-            discussionRepository.createDiscussion("Archive Me", "Will be archived", account.uid)
-        val game = gameRepository.getGameById(testGameId)
+  fun archive_flow_comprehensive() {
+    runBlocking {
+      /* 1. Archive with confirmation (no photo) --------------------------------- */
+      checkpoint("Archive without photo - shows confirmation dialog") {
+        runBlocking {
+          val discussion =
+              discussionRepository.createDiscussion("Archive Me", "Will be archived", account.uid)
+          val game = gameRepository.getGameById(testGameId)
 
-        val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - 3600000))
-        sessionRepository.createSession(
-            discussion.uid, "Archive Night", game.uid, pastDate, testLocation, account.uid)
+          val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - (90 * 60 * 1000L)))
+          sessionRepository.createSession(
+              discussion.uid, "Archive Night", game.uid, pastDate, testLocation, account.uid)
 
-        /* 2. Verify "Automatically archives in..." text */
-        compose.waitUntil {
-          compose.onNodeWithText("Automatically archives in", substring = true).isDisplayed()
+          compose.waitUntil(2000) {
+            compose.onNodeWithText("Automatically archives in", substring = true).isDisplayed()
+          }
+
+          sessionCard(discussion.uid).assertIsDisplayed()
+          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).assertExists()
+
+          sessionCard(discussion.uid).performTouchInput { swipeLeft() }
+          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).performClick()
+
+          compose.waitUntil(2000) {
+            compose.onNodeWithText("Archive Session").isDisplayed()
+          }
+          compose.onNodeWithText("This session doesn't have an image. Are you sure you want to archive it?").assertIsDisplayed()
+
+          compose.onNodeWithText("Archive").performClick()
+
+          compose.waitUntil(2000) {
+            sessionCard(discussion.uid).isNotDisplayed()
+          }
+          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
+          compose.waitUntil(2000) { compose.onNodeWithText("Archive Night").isDisplayed() }
+
+          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS).performClick()
+          compose.waitUntil(2000) {
+            compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS).isDisplayed()
+          }
         }
-
-        /* 3. Verify archive button exists (creator is admin) */
-        sessionCard(discussion.uid).assertIsDisplayed()
-        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).assertExists()
-
-        /* 4. Click archive button */
-        sessionCard(discussion.uid).performTouchInput { swipeLeft() }
-        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).performClick()
-        delay(500)
-
-        /* 5. Verify session moved to history */
-        sessionCard(discussion.uid).assertDoesNotExist()
-        compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
-        compose.waitUntil(2000) { compose.onNodeWithText("Archive Night").isDisplayed() }
       }
-    }
-  }
 
-  @Test
-  fun admin_permissions() {
-    checkpoint("Admin permissions") {
-      runBlocking {
-        /* 1. Create session where current user is NOT admin */
-        val otherUid = "uid_" + UUID.randomUUID().toString().take(8)
-        accountRepository.createAccount(otherUid, "Other User", "other@x.com", null)
+      /* 2. Non-admin cannot archive -------------------------------------------- */
+      checkpoint("Non-admin cannot see archive button") {
+        runBlocking {
+          val otherUid = "uid_" + UUID.randomUUID().toString().take(8)
+          accountRepository.createAccount(otherUid, "Other User", "other@x.com", null)
 
-        val discussion =
-            discussionRepository.createDiscussion("Not Admin", "Cannot archive", otherUid)
+          val discussion =
+              discussionRepository.createDiscussion("Not Admin", "Cannot archive", otherUid)
 
-        discussionRepository.addUserToDiscussion(discussion.uid, account.uid)
+          discussionRepository.addUserToDiscussion(discussion.uid, account.uid)
 
-        val game = gameRepository.getGameById(testGameId)
-        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
-        sessionRepository.createSession(
-            discussion.uid, "User Night", game.uid, futureDate, testLocation, otherUid, account.uid)
-        delay(100)
+          val game = gameRepository.getGameById(testGameId)
 
-        /* 2. Verify session card is displayed */
-        sessionCard(discussion.uid).assertIsDisplayed()
+          val withinTwoHours = Timestamp(java.util.Date(System.currentTimeMillis() - (60 * 60 * 1000L)))
+          sessionRepository.createSession(
+              discussion.uid, "User Night", game.uid, withinTwoHours, testLocation, otherUid, account.uid)
 
-        /* 3. Verify archive button does NOT exist */
-        compose
-            .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
-            .assertDoesNotExist()
+          compose.waitUntil(2000) {
+            sessionCard(discussion.uid).isDisplayed()
+          }
+
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
+              .assertDoesNotExist()
+        }
+      }
+
+      /* 3. Archive button hidden when more than 2 hours away ------------------- */
+      checkpoint("Archive button hidden when more than 2 hours away") {
+        runBlocking {
+          val discussion =
+              discussionRepository.createDiscussion("Future Session", "Too far away", account.uid)
+          val game = gameRepository.getGameById(testGameId)
+
+          val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
+          sessionRepository.createSession(
+              discussion.uid, "Future Night", game.uid, futureDate, testLocation, account.uid)
+
+          compose.waitUntil(2000) {
+            sessionCard(discussion.uid).isDisplayed()
+          }
+
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
+              .assertDoesNotExist()
+        }
       }
     }
   }
