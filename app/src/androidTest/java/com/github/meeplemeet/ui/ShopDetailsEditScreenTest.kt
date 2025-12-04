@@ -23,8 +23,10 @@ import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopFormTestTags
+import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.ui.shops.EditShopScreenTestTags
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -653,5 +655,35 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Reset config to default for other tests
     UiBehaviorConfig.hideBottomBarWhenInputFocused = true
+  }
+
+  @Test
+  fun editShop_offlineUI_disablesFeatures() {
+    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+
+    // Load the shop into the ViewModel
+    editShopViewModel.setShop(testShop)
+
+    composeTestRule.setContent {
+      AppTheme {
+        ShopDetailsScreen(
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel,
+            online = false // Offline mode
+            )
+      }
+    }
+
+    // Verify Image Carousel is not editable (Add button missing)
+    composeTestRule.onNodeWithTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
+
+    scrollListToTag(
+        CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
+
+    composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
 }
