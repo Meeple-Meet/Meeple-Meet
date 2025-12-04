@@ -85,29 +85,16 @@ class EditSpaceRenterViewModel(
       spaces: List<Space>? = null,
       photoCollectionUrl: List<String>? = null
   ) {
-    if (spaceRenter.owner.uid != requester.uid)
-        throw PermissionDeniedException(
-            "Only the space renter's owner can edit his own space renter")
-
-    if (name != null && name.isBlank())
-        throw IllegalArgumentException("SpaceRenter name cannot be blank")
-
-    if (openingHours != null) {
-      val uniqueByDay = openingHours.distinctBy { it.day }
-      if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
-    }
-
-    if (address != null && address == Location())
-        throw IllegalArgumentException("An address is required to create a space renter")
+    validateUpdateRequest(spaceRenter, requester, name, openingHours, address)
 
     viewModelScope.launch {
       val isOnline = OfflineModeManager.hasInternetConnection.first()
 
       withContext(OfflineModeManager.dispatcher) {
         if (isOnline) {
-          spaceRenterRepository.updateSpaceRenter(
-              spaceRenter.id,
-              owner?.uid,
+          handleOnlineUpdate(
+              spaceRenter,
+              owner,
               name,
               phone,
               email,
@@ -116,35 +103,138 @@ class EditSpaceRenterViewModel(
               openingHours,
               spaces,
               photoCollectionUrl)
-
-          val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
-
-          if (refreshed != null) {
-            // Update both cache and UI state
-            OfflineModeManager.updateSpaceRenterCache(refreshed)
-            _currentSpaceRenter.value = refreshed
-          }
-
-          OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
         } else {
-          val changes = mutableMapOf<String, Any>()
-          if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
-          if (name != null) changes[SpaceRenter::name.name] = name
-          if (phone != null) changes[SpaceRenter::phone.name] = phone
-          if (email != null) changes[SpaceRenter::email.name] = email
-          if (website != null) changes[SpaceRenter::website.name] = website
-          if (address != null) changes[SpaceRenter::address.name] = address
-          if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
-          if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
-          if (photoCollectionUrl != null)
-              changes[SpaceRenter::photoCollectionUrl.name] = photoCollectionUrl
-
-          changes.forEach { (property, value) ->
-            OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
-          }
+          handleOfflineUpdate(
+              spaceRenter,
+              owner,
+              name,
+              phone,
+              email,
+              website,
+              address,
+              openingHours,
+              spaces,
+              photoCollectionUrl)
         }
       }
     }
+  }
+
+  /**
+   * Validates the update request parameters.
+   *
+   * @throws PermissionDeniedException if the requester is not the owner
+   * @throws IllegalArgumentException if validation fails
+   */
+  private fun validateUpdateRequest(
+      spaceRenter: SpaceRenter,
+      requester: Account,
+      name: String?,
+      openingHours: List<OpeningHours>?,
+      address: Location?
+  ) {
+    if (spaceRenter.owner.uid != requester.uid) {
+      throw PermissionDeniedException("Only the space renter's owner can edit his own space renter")
+    }
+
+    if (name != null && name.isBlank()) {
+      throw IllegalArgumentException("SpaceRenter name cannot be blank")
+    }
+
+    if (openingHours != null) {
+      val uniqueByDay = openingHours.distinctBy { it.day }
+      if (uniqueByDay.size != 7) {
+        throw IllegalArgumentException("7 opening hours are needed")
+      }
+    }
+
+    if (address != null && address == Location()) {
+      throw IllegalArgumentException("An address is required to create a space renter")
+    }
+  }
+
+  /** Handles online update by persisting to repository and updating cache. */
+  private suspend fun handleOnlineUpdate(
+      spaceRenter: SpaceRenter,
+      owner: Account?,
+      name: String?,
+      phone: String?,
+      email: String?,
+      website: String?,
+      address: Location?,
+      openingHours: List<OpeningHours>?,
+      spaces: List<Space>?,
+      photoCollectionUrl: List<String>?
+  ) {
+    spaceRenterRepository.updateSpaceRenter(
+        spaceRenter.id,
+        owner?.uid,
+        name,
+        phone,
+        email,
+        website,
+        address,
+        openingHours,
+        spaces,
+        photoCollectionUrl)
+
+    val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
+
+    if (refreshed != null) {
+      // Update both cache and UI state
+      OfflineModeManager.updateSpaceRenterCache(refreshed)
+      _currentSpaceRenter.value = refreshed
+    }
+
+    OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
+  }
+
+  /** Handles offline update by recording changes for later synchronization. */
+  private suspend fun handleOfflineUpdate(
+      spaceRenter: SpaceRenter,
+      owner: Account?,
+      name: String?,
+      phone: String?,
+      email: String?,
+      website: String?,
+      address: Location?,
+      openingHours: List<OpeningHours>?,
+      spaces: List<Space>?,
+      photoCollectionUrl: List<String>?
+  ) {
+    val changes =
+        buildChangeMap(
+            owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+
+    changes.forEach { (property, value) ->
+      OfflineModeManager.setSpaceRenterChange(spaceRenter, property, value)
+    }
+  }
+
+  /** Builds a map of property changes for offline synchronization. */
+  private fun buildChangeMap(
+      owner: Account?,
+      name: String?,
+      phone: String?,
+      email: String?,
+      website: String?,
+      address: Location?,
+      openingHours: List<OpeningHours>?,
+      spaces: List<Space>?,
+      photoCollectionUrl: List<String>?
+  ): Map<String, Any> {
+    val changes = mutableMapOf<String, Any>()
+    if (owner != null) changes[SpaceRenter::owner.name] = owner.uid
+    if (name != null) changes[SpaceRenter::name.name] = name
+    if (phone != null) changes[SpaceRenter::phone.name] = phone
+    if (email != null) changes[SpaceRenter::email.name] = email
+    if (website != null) changes[SpaceRenter::website.name] = website
+    if (address != null) changes[SpaceRenter::address.name] = address
+    if (openingHours != null) changes[SpaceRenter::openingHours.name] = openingHours
+    if (spaces != null) changes[SpaceRenter::spaces.name] = spaces
+    if (photoCollectionUrl != null)
+        changes[SpaceRenter::photoCollectionUrl.name] = photoCollectionUrl
+    return changes
   }
 
   /**
