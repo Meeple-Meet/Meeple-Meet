@@ -462,16 +462,20 @@ fun UserChipsGrid(
         // Existing participant chips - now full width rectangles
         participants.forEach { p ->
           val isSelected = selectedParticipants.any { it.uid == p.uid }
+          // Don't show checkbox for the admin/creator when using checkboxes
+          val isAdmin = p.uid == account.uid
+          val showCheckboxForUser = useCheckboxes && !isAdmin
+
           UserChip(
               user = p,
               modifier = Modifier.fillMaxWidth().testTag(SessionTestTags.chipsTag(p.uid)),
               onRemove = { if (editable) onRemove(p) },
               account = account,
               showRemoveBTN = !useCheckboxes && editable,
-              showCheckbox = useCheckboxes,
+              showCheckbox = showCheckboxForUser,
               isChecked = isSelected,
               onCheckedChange =
-                  if (useCheckboxes && onAdd != null) {
+                  if (showCheckboxForUser && onAdd != null) {
                     { checked ->
                       if (checked) {
                         onAdd(p)
