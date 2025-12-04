@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -35,6 +37,17 @@ class EditShopViewModel(
    */
   fun setShop(shop: Shop?) {
     _shop.value = shop
+    
+    if (shop != null) {
+      // Load latest version from cache or repository
+      viewModelScope.launch {
+        OfflineModeManager.loadShop(shop.id) { loaded ->
+          if (loaded != null) {
+            _shop.value = loaded
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -89,17 +102,46 @@ class EditShopViewModel(
         throw IllegalArgumentException("An address is required to create a shop")
 
     viewModelScope.launch {
-      shopRepository.updateShop(
-          shop.id,
-          owner?.uid,
-          name,
-          phone,
-          email,
-          website,
-          address,
-          openingHours,
-          gameCollection,
-          photoCollectionUrl)
+      val isOnline = OfflineModeManager.hasInternetConnection.first()
+
+      if (isOnline) {
+        shopRepository.updateShop(
+            shop.id,
+            owner?.uid,
+            name,
+            phone,
+            email,
+            website,
+            address,
+            openingHours,
+            gameCollection,
+            photoCollectionUrl)
+
+        val refreshed = shopRepository.getShopSafe(shop.id)
+
+        if (refreshed != null) {
+          // Update both cache and UI state
+          OfflineModeManager.updateShopCache(refreshed)
+          _shop.value = refreshed
+        }
+
+        OfflineModeManager.clearShopChanges(shop.id)
+      } else {
+        val changes = mutableMapOf<String, Any>()
+        if (owner != null) changes[Shop::owner.name] = owner.uid
+        if (name != null) changes[Shop::name.name] = name
+        if (phone != null) changes[Shop::phone.name] = phone
+        if (email != null) changes[Shop::email.name] = email
+        if (website != null) changes[Shop::website.name] = website
+        if (address != null) changes[Shop::address.name] = address
+        if (openingHours != null) changes[Shop::openingHours.name] = openingHours
+        if (gameCollection != null) changes[Shop::gameCollection.name] = gameCollection
+        if (photoCollectionUrl != null) changes[Shop::photoCollectionUrl.name] = photoCollectionUrl
+
+        changes.forEach { (property, value) ->
+          OfflineModeManager.setShopChange(shop, property, value)
+        }
+      }
     }
   }
 
@@ -118,6 +160,9 @@ class EditShopViewModel(
     if (shop.owner.uid != requester.uid)
         throw PermissionDeniedException("Only the shop's owner can delete his own shop")
 
-    viewModelScope.launch { shopRepository.deleteShop(shop.id) }
+    viewModelScope.launch {
+      shopRepository.deleteShop(shop.id)
+      OfflineModeManager.removeShop(shop.id)
+    }
   }
 }

@@ -2,11 +2,14 @@
 
 package com.github.meeplemeet.model.shops
 
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel for creating new shops.
@@ -63,15 +66,48 @@ class CreateShopViewModel(
     if (address == Location())
         throw IllegalArgumentException("An address is required to create a shop")
 
-    return shopRepo.createShop(
-        owner,
-        name,
-        phone,
-        email,
-        website,
-        address,
-        openingHours,
-        gameCollection,
-        photoCollectionUrl)
+    viewModelScope.launch {
+      // Check internet connection status
+      val isOnline = OfflineModeManager.hasInternetConnection.value
+
+      if (isOnline) {
+        // ONLINE: Create immediately in Firestore
+        shopRepo.createShop(
+            owner,
+            name,
+            phone,
+            email,
+            website,
+            address,
+            openingHours,
+            gameCollection,
+            photoCollectionUrl)
+      } else {
+        // OFFLINE: Queue for later creation
+
+        // Generate a temporary ID
+        val tempId = "temp_${System.currentTimeMillis()}_${owner.uid}"
+
+        // Create the Shop object with temporary ID
+        val pendingShop =
+            Shop(
+                id = tempId,
+                owner = owner,
+                name = name,
+                phone = phone,
+                email = email,
+                website = website,
+                address = address,
+                openingHours = openingHours,
+                gameCollection = gameCollection,
+                photoCollectionUrl = photoCollectionUrl)
+
+        // Add to offline cache with pending creation marker
+        OfflineModeManager.addPendingShop(pendingShop)
+      }
+    }
+
+    // Return a placeholder shop since we can't return the real one immediately
+    return Shop(id = "pending", email = email, phone = phone, website = website, owner = owner, name = name, address = address, openingHours = openingHours, gameCollection = gameCollection)
   }
 }
