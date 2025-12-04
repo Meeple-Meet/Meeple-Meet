@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -277,11 +278,12 @@ fun SessionScreen(
   val sessionMs = session.date.toDate().time
   val timeUntilSession = sessionMs - nowMs
   val shouldShowArchive =
-      isAdmin && timeUntilSession <= SessionDefaults.ARCHIVE_THRESHOLD && timeUntilSession > 0
+      isAdmin && timeUntilSession <= SessionDefaults.ARCHIVE_THRESHOLD
 
   // Camera and gallery launchers
   // Photo upload state
   var isUploadingPhoto by remember { mutableStateOf(false) }
+  var isArchiving by remember { mutableStateOf(false) }
 
   // Camera and gallery launchers
   val cameraLauncher =
@@ -337,7 +339,19 @@ fun SessionScreen(
             shouldShowArchive = shouldShowArchive,
             onBack = onBack,
             onEditClick = onEditClick,
-            onArchiveClick = { viewModel.archiveSession(account, discussion, context) })
+            isUploading = isUploadingPhoto || isArchiving,
+            onArchiveClick = {
+              scope.launch {
+                isArchiving = true
+                try {
+                  viewModel.archiveSession(account, discussion, context)
+                } catch (e: Exception) {
+                  e.printStackTrace()
+                } finally {
+                  isArchiving = false
+                }
+              }
+            })
       },
       containerColor = MaterialTheme.colorScheme.background,
       bottomBar = {
@@ -372,7 +386,8 @@ fun SessionScreen(
                   shouldShowArchive = shouldShowArchive,
                   photoUrl = session.photoUrl,
                   onPhotoBoxClick = onPhotoBoxClick,
-                  onShowGameInfo = { showGameDetails = true })
+                  onShowGameInfo = { showGameDetails = true },
+                  isUploading = isUploadingPhoto)
 
               SessionParticipantsSection(participants = participants, admins = discussion.admins)
             }
@@ -436,6 +451,7 @@ private fun SessionViewerTopBar(
     onBack: () -> Unit,
     onEditClick: () -> Unit,
     onArchiveClick: () -> Unit = {},
+    isUploading: Boolean = false,
 ) {
   CenterAlignedTopAppBar(
       modifier = Modifier.testTag(SessionViewerTestTags.TOP_BAR),
@@ -461,6 +477,7 @@ private fun SessionViewerTopBar(
           if (shouldShowArchive) {
             IconButton(
                 onClick = onArchiveClick,
+                enabled = !isUploading,
                 modifier = Modifier.testTag(SessionViewerTestTags.TOP_BAR_ARCHIVE)) {
                   Icon(imageVector = Icons.Default.Archive, contentDescription = "Archive session")
                 }
@@ -548,6 +565,7 @@ private fun SessionBasicInfoSection(
     photoUrl: String?,
     onPhotoBoxClick: () -> Unit,
     onShowGameInfo: () -> Unit,
+    isUploading: Boolean = false,
 ) {
   Row(
       modifier = Modifier.fillMaxWidth().testTag(SessionViewerTestTags.BASIC_INFO_SECTION),
@@ -623,7 +641,11 @@ private fun SessionBasicInfoSection(
         // Photo upload box - show if there's a photo OR if admin within 2 hours of session start
         val shouldShowPhotoBox = photoUrl != null || shouldShowArchive
         if (shouldShowPhotoBox) {
-          SessionPhotoUploadBox(photoUrl = photoUrl, isAdmin = isAdmin, onClick = onPhotoBoxClick)
+          SessionPhotoUploadBox(
+              photoUrl = photoUrl,
+              isAdmin = isAdmin,
+              onClick = onPhotoBoxClick,
+              isUploading = isUploading)
         }
       } // end Row
 }
@@ -636,7 +658,12 @@ private fun SessionBasicInfoSection(
  * @param onClick Callback when the box is clicked.
  */
 @Composable
-private fun SessionPhotoUploadBox(photoUrl: String?, isAdmin: Boolean, onClick: () -> Unit) {
+private fun SessionPhotoUploadBox(
+    photoUrl: String?,
+    isAdmin: Boolean,
+    onClick: () -> Unit,
+    isUploading: Boolean = false
+) {
   val selfieRatio = 3f / 4f // Portrait ratio
 
   Box(
@@ -651,7 +678,9 @@ private fun SessionPhotoUploadBox(photoUrl: String?, isAdmin: Boolean, onClick: 
               .clickable(enabled = isAdmin, onClick = onClick)
               .testTag(SessionViewerTestTags.SESSION_PHOTO_BOX),
       contentAlignment = Alignment.Center) {
-        if (photoUrl != null) {
+        if (isUploading) {
+          CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppColors.textIcons)
+        } else if (photoUrl != null) {
           AsyncImage(
               model = photoUrl,
               contentDescription = "Session photo",

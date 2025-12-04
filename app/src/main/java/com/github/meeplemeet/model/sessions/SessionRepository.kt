@@ -255,10 +255,16 @@ class SessionRepository(
     batch[archivedRef] = archivedSession
 
     // 2. Add session UUID to each participant's pastSessionIds
+    // IMPORTANT: Use set() with merge instead of update() to handle cases where
+    // pastSessionIds field doesn't exist (e.g., new users or users who haven't archived before).
+    // If we use update(), the batch will fail silently for those users.
     val accountsRef = RepositoryProvider.accounts.collection
     session.participants.forEach { participantId ->
       val accountRef = accountsRef.document(participantId)
-      batch.update(accountRef, "pastSessionIds", FieldValue.arrayUnion(newSessionId))
+      batch.set(
+          accountRef,
+          mapOf("pastSessionIds" to FieldValue.arrayUnion(newSessionId)),
+          com.google.firebase.firestore.SetOptions.merge())
     }
 
     // 3. Delete from active session (update discussion)

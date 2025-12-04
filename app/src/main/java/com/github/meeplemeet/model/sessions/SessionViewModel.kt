@@ -159,34 +159,32 @@ class SessionViewModel(
    * Requires admin privileges (requester must be a discussion admin). The session is moved to the
    * archived sessions collection and removed from the active discussion.
    *
-   * @param onSuccess Callback invoked when the session is successfully archived
+   * This is a suspend function that waits for the photo to be moved (if it exists) before
+   * updating Firestore. This ensures the photo archiving completes even if the UI navigates away.
+   *
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
-  fun archiveSession(
+  suspend fun archiveSession(
       requester: Account,
       discussion: Discussion,
-      context: Context,
-      onSuccess: () -> Unit = {}
+      context: Context
   ) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    viewModelScope.launch {
-      val session = discussion.session ?: return@launch
-      val newUuid = sessionRepository.newUUID()
-      var newUrl: String? = null
+    val session = discussion.session ?: return
+    val newUuid = sessionRepository.newUUID()
+    var newUrl: String? = null
 
-      if (session.photoUrl != null) {
-        try {
-          newUrl = imageRepository.moveSessionPhoto(context, discussion.uid, newUuid)
-        } catch (e: Exception) {
-          // If moving photo fails (e.g. file missing), proceed with archive but without photo
-          e.printStackTrace()
-        }
+    if (session.photoUrl != null) {
+      try {
+        newUrl = imageRepository.moveSessionPhoto(context, discussion.uid, newUuid)
+      } catch (e: Exception) {
+        // If moving photo fails (e.g. file missing), proceed with archive but without photo
+        e.printStackTrace()
       }
-
-      sessionRepository.archiveSession(discussion.uid, newUuid, newUrl)
-      onSuccess()
     }
+
+    sessionRepository.archiveSession(discussion.uid, newUuid, newUrl)
   }
 
   /**
@@ -202,7 +200,7 @@ class SessionViewModel(
    * @param inputPath Absolute path to the source image file (from gallery or camera)
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
-  fun saveSessionPhoto(
+  suspend fun saveSessionPhoto(
       requester: Account,
       discussion: Discussion,
       context: Context,
@@ -210,10 +208,8 @@ class SessionViewModel(
   ) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
-    viewModelScope.launch {
-      val photoUrl = imageRepository.saveSessionPhoto(context, discussion.uid, inputPath)
-      sessionRepository.updateSession(discussion.uid, photoUrl = photoUrl)
-    }
+    val photoUrl = imageRepository.saveSessionPhoto(context, discussion.uid, inputPath)
+    sessionRepository.updateSession(discussion.uid, photoUrl = photoUrl)
   }
 
   /**
