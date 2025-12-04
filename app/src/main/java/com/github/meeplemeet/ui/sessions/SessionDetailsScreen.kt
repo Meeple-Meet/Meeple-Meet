@@ -488,7 +488,7 @@ fun UserChipsGrid(
 private fun AvatarBubble(name: String) {
   Box(
       modifier =
-          Modifier.size(Dimensions.AvatarSize.tiny).clip(CircleShape).background(Color.LightGray),
+          Modifier.size(Dimensions.AvatarSize.tiny).clip(CircleShape).background(AppColors.divider),
       contentAlignment = Alignment.Center) {
         Text(
             text = name.firstOrNull()?.uppercase() ?: "?",
