@@ -29,7 +29,16 @@ import fetch from "node-fetch";
 import { XMLParser } from "fast-xml-parser";
 import { Cache } from "./Cache"
 
-setGlobalOptions({ maxInstances: 10 });
+// Apply global options to all functions
+setGlobalOptions({
+  region: "us-central1",   // Deployment region (keep all functions in the same region)
+  memory: "128MiB",         // Memory allocation (lower = cheaper, 128MiB is enough for lightweight functions)
+  timeoutSeconds: 30,      // Max execution time per request (prevents long-running costs)
+  maxInstances: 5,         // Limit concurrent instances (controls scaling and cost)
+  minInstances: 0,         // Keep 0 warm instances (no cost when idle)
+  concurrency: 1,          // Number of requests handled per instance (1 = predictable performance)
+  cpu: 0.25                // Fraction of CPU allocated (lower = cheaper, sufficient for simple tasks)
+});
 
 if (!admin.apps.length) {
   admin.initializeApp();
