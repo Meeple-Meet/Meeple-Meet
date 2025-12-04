@@ -26,7 +26,6 @@ jest.mock("firebase-admin", () => {
   };
 });
 
-
 // Import functions after mocking
 import { getGamesByIds, searchGames, ping } from "../src/index";
 
@@ -175,7 +174,7 @@ describe("Cloud Functions Tests", () => {
     });
 
     it("should return 400 for empty ids", async () => {
-      const { req, res } = createMockReqRes({ ids: "" });
+      const { req, res } = createMockReqRes({ ids: "   " });
 
       await getGamesByIds(req, res);
 
@@ -194,6 +193,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "181" });
 
       await getGamesByIds(req, res);
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(res.status).toHaveBeenCalledWith(502);
       expect(res.json).toHaveBeenCalledWith(
@@ -223,6 +223,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "999" });
 
       await getGamesByIds(req, res);
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -247,6 +248,8 @@ describe("Cloud Functions Tests", () => {
             <description>Settle</description>
             <minplayers value="3" />
             <maxplayers value="4" />
+            <playingtime value="120" />
+            <minage value="10" />
             <poll-summary name="suggested_numplayers">
               <result name="bestwith" value="Best with 4 players" />
             </poll-summary>
@@ -262,6 +265,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "13" });
 
       await getGamesByIds(req, res);
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -282,6 +286,11 @@ describe("Cloud Functions Tests", () => {
             <description>War</description>
             <minplayers value="2" />
             <maxplayers value="6" />
+            <playingtime value="120" />
+            <minage value="10" />
+            <poll-summary name="suggested_numplayers">
+              <result name="bestwith" value="Best with 4 players" />
+            </poll-summary>
             <link type="boardgamecategory" value="Territory Building" />
             <link type="boardgamecategory" value="Wargame" />
             <link type="boardgamecategory" value="Strategy" />
@@ -298,6 +307,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "181" });
 
       await getGamesByIds(req, res);
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -332,6 +342,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: ids.join(",") });
 
       await getGamesByIds(req, res);
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(res.json).toHaveBeenCalled();
     });
@@ -518,7 +529,7 @@ describe("Cloud Functions Tests", () => {
         .reply(200, bggResponse);
 
       const { req, res } = createMockReqRes({
-        query: "Mono",
+        query: "monolev",
         maxResults: "10",
         ignoreCase: "true",
       });
@@ -526,6 +537,7 @@ describe("Cloud Functions Tests", () => {
       await searchGames(req, res);
 
       const results = res.json.mock.calls[0][0];
+      expect(results.length).toBe(3);
       expect(results[0].name).toBe("Monop");
       expect(results[1].name).toBe("Monopo");
       expect(results[2].name).toBe("Monopoly");
@@ -543,7 +555,7 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ query: "test", maxResults: "100" });
+      const { req, res } = createMockReqRes({ query: "testcap", maxResults: "100" });
 
       await searchGames(req, res);
 
@@ -568,7 +580,7 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ query: "game", maxResults: "10" });
+      const { req, res } = createMockReqRes({ query: "gameprimary", maxResults: "10" });
 
       await searchGames(req, res);
 
@@ -607,6 +619,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "1" });
 
       await getGamesByIds(req, res);
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(res.json).toHaveBeenCalled();
     });

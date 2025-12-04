@@ -596,11 +596,17 @@ export const searchGames = onRequest(
           try {
             const id = item?.["@id"];
             if (!id) return null;
+
             let nameNode = item.name;
             if (!nameNode) return null;
-            if (Array.isArray(nameNode)) nameNode = nameNode.find((n: any) => n["@type"] === "primary") ?? nameNode[0];
-            const name = nameNode?.["@value"] ?? null;
+
+            const names = Array.isArray(nameNode) ? nameNode : [nameNode];
+            const primary = names.find((n: any) => n["@type"] === "primary");
+            if (!primary) return null;
+
+            const name = primary["@value"];
             if (!name) return null;
+
             return { id, name };
           } catch {
             return null;
