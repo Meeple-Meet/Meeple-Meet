@@ -709,7 +709,7 @@ fun UserChip(
                         modifier =
                             Modifier.size(Dimensions.AvatarSize.small)
                                 .clip(CircleShape)
-                                .background(Color.LightGray),
+                                .background(AppColors.divider),
                         contentAlignment = Alignment.Center) {
                           Text(
                               text = user.name.firstOrNull()?.toString() ?: "A",
