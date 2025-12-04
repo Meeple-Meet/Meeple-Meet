@@ -396,98 +396,6 @@ object OfflineModeManager {
     newState[account.uid] = existingAccount to updatedChanges
     _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = newState)
   }
-  // ==================== Shop Functions ====================
-  /**
-   * Retrieves a shop by ID, first checking the offline cache, then fetching from repository if
-   * needed.
-   *
-   * Similar to loadAccount, implements a two-tier loading strategy with cache-first approach.
-   * Images are NOT cached or loaded - image handling should be disabled in UI when offline.
-   *
-   * @param shopId The unique identifier of the shop to retrieve
-   * @param onResult Callback invoked with the Shop if found, or null if not found or an error
-   *   occurs
-   */
-  suspend fun loadShop(shopId: String, onResult: (Shop?) -> Unit) {
-    val state = _offlineModeFlow.value.shops
-    val cached = state[shopId]?.first
-
-    if (cached != null) {
-      onResult(cached)
-      return
-    }
-
-    val fetched = RepositoryProvider.shops.getShopSafe(shopId)
-    if (fetched != null) {
-      val newState = LinkedHashMap(state).apply { this[shopId] = fetched to emptyMap() }
-      val (capped, _) = cap(newState, MAX_CACHED_SHOPS)
-      _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = capped)
-    }
-
-    onResult(fetched)
-  }
-
-  /**
-   * Records a change to a shop property in the offline cache for later synchronization.
-   *
-   * This tracks edits made while offline. Changes will be synced when connection is restored.
-   *
-   * @param shop The shop being modified
-   * @param property The name of the property being changed
-   * @param newValue The new value for the property
-   */
-  fun setShopChange(shop: Shop, property: String, newValue: Any) {
-    val state = _offlineModeFlow.value.shops
-    val (existingShop, existingChanges) = state[shop.id] ?: (shop to emptyMap())
-    val updatedChanges =
-        existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
-
-    val newState = LinkedHashMap(state)
-    newState[shop.id] = existingShop to updatedChanges
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
-
-  /**
-   * Adds a new shop to the offline cache for later synchronization. Used when creating a shop while
-   * offline.
-   *
-   * Note: Shop creation should ideally be blocked in UI when offline since images cannot be
-   * uploaded. This is provided for edge cases where text-only shop data needs to be queued.
-   *
-   * @param shop The shop to add
-   */
-  fun addPendingShop(shop: Shop) {
-    val state = _offlineModeFlow.value.shops
-    val newState = LinkedHashMap(state)
-    newState[shop.id] = shop to mapOf(PENDING_STRING to true)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
-
-  /**
-   * Removes a shop from the offline cache. Used when deleting a shop or after successful
-   * synchronization.
-   *
-   * @param shopId The ID of the shop to remove
-   */
-  fun removeShop(shopId: String) {
-    val state = _offlineModeFlow.value.shops
-    val newState = LinkedHashMap(state)
-    newState.remove(shopId)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
-
-  /**
-   * Clears pending changes for a shop after successful synchronization.
-   *
-   * @param shopId The ID of the shop whose changes were synchronized
-   */
-  fun clearShopChanges(shopId: String) {
-    val state = _offlineModeFlow.value.shops
-    val shop = state[shopId]?.first ?: return
-    val newState = LinkedHashMap(state)
-    newState[shopId] = shop to emptyMap()
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
 
   // ==================== Space Renter Functions ====================
 
@@ -621,7 +529,7 @@ object OfflineModeManager {
    *
    * @return List of pairs containing the shop and its pending changes map
    */
-  fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
+  private fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
     return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
   }
 
@@ -630,7 +538,7 @@ object OfflineModeManager {
    *
    * @return List of pairs containing the space renter and its pending changes map
    */
-  fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
+  private fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
     return _offlineModeFlow.value.spaceRenters.values.filter { it.second.isNotEmpty() }.toList()
   }
 
@@ -1184,51 +1092,11 @@ object OfflineModeManager {
       }
     }
   }
-
-  /**
-   * Syncs all pending shop changes with Firestore. Should be called when internet connection is
-   * restored.
-   */
-  private suspend fun syncPendingShops() {
-    val pendingChanges = getPendingShopChanges()
-
-    if (pendingChanges.isEmpty()) return
-
-    pendingChanges.forEach { (shop, changes) ->
-      try {
-        if (changes.containsKey(PENDING_STRING)) {
-          val owner = RepositoryProvider.accounts.getAccountSafe(shop.owner.uid, false)
-
-          if (owner != null) {
-            RepositoryProvider.shops.createShop(
-                owner = owner,
-                name = shop.name,
-                phone = shop.phone,
-                email = shop.email,
-                website = shop.website,
-                address = shop.address,
-                openingHours = shop.openingHours,
-                gameCollection = shop.gameCollection,
-                photoCollectionUrl = shop.photoCollectionUrl)
-
-            removeShop(shop.id)
-          }
-        } else {
-          RepositoryProvider.shops.updateShopOffline(shop.id, changes)
-          clearShopChanges(shop.id)
-        }
-      } catch (e: Exception) {
-        // Log or handle error - silent failure for now
-      }
-    }
-  }
-
   /**
    * Syncs all pending offline data (shops and space renters) with Firestore. Call this when
    * internet connection is restored.
    */
   suspend fun syncAllPendingData() {
     syncPendingSpaceRenters()
-    syncPendingShops()
   }
 }
