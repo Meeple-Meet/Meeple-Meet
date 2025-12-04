@@ -16,7 +16,6 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
-private const val ARCHIVE_THRESHOLD = 2 * 60 * 60 * 1000L // 2 hours in milliseconds
 
 /**
  * ViewModel for managing gaming sessions within a discussion.
