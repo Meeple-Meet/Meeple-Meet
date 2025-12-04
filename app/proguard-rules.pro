@@ -2,7 +2,7 @@
 # Keep Kotlin metadata for reflection and serialization
 # --------------------------
 -keep class kotlin.Metadata { *; }
--keepattributes Signature, *Annotation*
+-keepattributes InnerClasses, EnclosingMethod, Signature, *Annotation*
 
 # --------------------------
 # Firebase Firestore
@@ -10,6 +10,21 @@
 -keep class com.google.firebase.firestore.** { *; }
 -keep class com.google.firebase.Timestamp { *; }
 -dontwarn com.google.firebase.firestore.**
+
+# -----------------------------
+# Firebase Functions & Compat
+# -----------------------------
+# Firebase Functions
+-keep class com.google.firebase.functions.** { *; }
+-dontwarn com.google.firebase.functions.**
+
+# Firebase AppCheck
+-keep class com.google.firebase.appcheck.** { *; }
+-dontwarn com.google.firebase.appcheck.**
+
+# Firebase AppCheck Interop
+-keep class com.google.firebase.appcheck.interop.** { *; }
+-dontwarn com.google.firebase.appcheck.interop.**
 
 # --------------------------
 # Firestore / Serializable models
