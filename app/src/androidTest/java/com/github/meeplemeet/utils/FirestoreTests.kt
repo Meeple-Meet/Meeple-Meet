@@ -20,6 +20,7 @@ import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -71,7 +72,7 @@ open class FirestoreTests {
       }
       if (!functionsEmulatorLaunched) {
         functionsEmulatorLaunched = true
-        FirebaseStorage.getInstance().useEmulator("10.0.2.2", 5001)
+        FirebaseFunctions.getInstance().useEmulator("10.0.2.2", 5001)
       }
     }
   }
