@@ -8,13 +8,13 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.Message
+import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnection
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
 import com.google.firebase.Timestamp
-import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.discussions.Message
-import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -748,6 +748,7 @@ object OfflineModeManager {
     }
 
     return postsFlow to errorFlow
+  }
   // ---------------------- Discussions Methods ---------------------- //
 
   /**
