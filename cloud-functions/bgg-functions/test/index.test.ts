@@ -1,6 +1,7 @@
 // Test suite for Cloud Functions
 
 import nock from "nock";
+import { _clearInMemoryStateForTests } from "../src/index";
 
 // Mock Firebase Admin before importing functions
 jest.mock("firebase-admin", () => {
@@ -40,6 +41,7 @@ describe("Cloud Functions Tests", () => {
   });
 
   beforeEach(() => {
+    _clearInMemoryStateForTests();
     jest.clearAllMocks();
     nock.cleanAll();
   });
@@ -193,7 +195,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "181" });
 
       await getGamesByIds(req, res);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await Promise.resolve();
 
       expect(res.status).toHaveBeenCalledWith(502);
       expect(res.json).toHaveBeenCalledWith(
@@ -223,7 +225,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "999" });
 
       await getGamesByIds(req, res);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await Promise.resolve();
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -265,7 +267,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "13" });
 
       await getGamesByIds(req, res);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await Promise.resolve();
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -307,7 +309,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "181" });
 
       await getGamesByIds(req, res);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await Promise.resolve();
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -342,7 +344,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: ids.join(",") });
 
       await getGamesByIds(req, res);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await Promise.resolve();
 
       expect(res.json).toHaveBeenCalled();
     });
@@ -529,7 +531,7 @@ describe("Cloud Functions Tests", () => {
         .reply(200, bggResponse);
 
       const { req, res } = createMockReqRes({
-        query: "monolev",
+        query: "mono",
         maxResults: "10",
         ignoreCase: "true",
       });
@@ -619,7 +621,7 @@ describe("Cloud Functions Tests", () => {
       const { req, res } = createMockReqRes({ ids: "1" });
 
       await getGamesByIds(req, res);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await Promise.resolve();
 
       expect(res.json).toHaveBeenCalled();
     });

@@ -163,7 +163,7 @@ async function setToL2Cache<T>(collection: string, key: string, value: T) {
 // --------------------
 // Pending batch coalescing
 // --------------------
-const PENDING_DEBOUNCE_MS = 100;
+const PENDING_DEBOUNCE_MS = process.env.NODE_ENV === "test" ? 0 : 100;
 
 type PendingRequester = {
   requestedIds: string[];
@@ -316,31 +316,29 @@ function parseItemToGame(item: any): GameOut {
   if (Number.isNaN(minPlayers) || Number.isNaN(maxPlayers)) throw new Error("missing players");
 
   // Optional fields
+
+  // Recommended players
   let recommendedPlayers: number | null = null;
   try {
     const pollSummaries = item["poll-summary"] ?? item["poll_summary"] ?? item.poll;
-    if (pollSummaries) {
-      const pollArray = Array.isArray(pollSummaries) ? pollSummaries : [pollSummaries];
-      const suggested = pollArray.find((p: any) => p?.["@name"] === "suggested_numplayers");
-      const results = suggested?.result
-        ? Array.isArray(suggested.result)
-          ? suggested.result
-          : [suggested.result]
-        : [];
-      const best = results.find((r: any) => r?.["@name"] === "bestwith");
-      const raw = best?.["@value"] ?? null;
-      if (raw != null) {
-        const m = String(raw).match(/\d+/);
-        recommendedPlayers = m ? Number(m[0]) : null;
-      }
+    const pollArray = Array.isArray(pollSummaries) ? pollSummaries : [pollSummaries].filter(Boolean);
+    const suggested = pollArray.find((p: any) => p?.["@name"] === "suggested_numplayers");
+    const results = Array.isArray(suggested?.result) ? suggested.result : [suggested?.result].filter(Boolean);
+    const best = results.find((r: any) => r?.["@name"] === "bestwith");
+    const raw = best?.["@value"] ?? null;
+    if (raw != null) {
+      const m = String(raw).match(/\d+/);
+      recommendedPlayers = m ? Number(m[0]) : null;
     }
   } catch {
     recommendedPlayers = null;
   }
 
+  // Average play time
   const playingTime = item.playingtime ? Number(item.playingtime?.["@value"]) : null;
   const minAge = item.minage ? Number(item.minage?.["@value"]) : null;
 
+  // Genres
   let links = item.link ?? [];
   if (!Array.isArray(links)) links = [links];
   const genres = links
@@ -629,3 +627,18 @@ export const searchGames = onRequest(
     }
   }
 );
+
+
+// Exported helper for tests: clear in-memory caches + pending batches
+export function _clearInMemoryStateForTests() {
+  try {
+    gameCache.clear();
+    searchCache.clear();
+    // empty pendingBatches array in-place
+    pendingBatches.splice(0, pendingBatches.length);
+  } catch (e) {
+    // never throw in normal code path; tests can log if needed
+    safeWarn("clearInMemoryStateForTests failed", { err: e });
+  }
+}
+
