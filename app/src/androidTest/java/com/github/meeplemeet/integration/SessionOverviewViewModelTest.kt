@@ -106,14 +106,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     // Archive a session with a photo URL
     val discussion = discussionRepository.createDiscussion("Archive Photo", "Test", account.uid)
     val game = gameRepository.getGameById(existingGameId)
-    val session =
-        sessionRepository.createSession(
-            discussion.uid,
-            "Archive Photo Session",
-            game.uid,
-            Timestamp.now(),
-            testLocation,
-            account.uid)
+    sessionRepository.createSession(
+        discussion.uid,
+        "Archive Photo Session",
+        game.uid,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
     val photoUrl = "https://example.com/archived_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
     sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
@@ -130,14 +129,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     // Archive a session with a photo URL
     val discussion = discussionRepository.createDiscussion("Find By Photo", "Test", account.uid)
     val game = gameRepository.getGameById(existingGameId)
-    val session =
-        sessionRepository.createSession(
-            discussion.uid,
-            "Find By Photo Session",
-            game.uid,
-            Timestamp.now(),
-            testLocation,
-            account.uid)
+    sessionRepository.createSession(
+        discussion.uid,
+        "Find By Photo Session",
+        game.uid,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
     val photoUrl = "https://example.com/find_by_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
     sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
@@ -233,11 +231,11 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussionRepository.createDiscussion("Past Session", "Happened earlier", account.uid)
     val game = gameRepository.getGameById(existingGameId)
 
-    // Create a timestamp from 4 hours ago (session has passed after 3-hour threshold)
-    val fourHoursAgo = Timestamp(System.currentTimeMillis() / 1000 - (4 * 60 * 60), 0)
+    val twentyFiveHoursAgo =
+        Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
 
     sessionRepository.createSession(
-        discussion.uid, "Past Chess Night", game.uid, fourHoursAgo, testLocation, account.uid)
+        discussion.uid, "Past Chess Night", game.uid, twentyFiveHoursAgo, testLocation, account.uid)
 
     delay(100)
 
@@ -270,10 +268,16 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussionRepository.createDiscussion("Past Session With Photo", "Had a photo", account.uid)
     val game = gameRepository.getGameById(existingGameId)
 
-    val fourHoursAgo = Timestamp(System.currentTimeMillis() / 1000 - (4 * 60 * 60), 0)
+    val twentyFiveHoursAgo =
+        Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
 
     sessionRepository.createSession(
-        discussion.uid, "Photo Chess Night", game.uid, fourHoursAgo, testLocation, account.uid)
+        discussion.uid,
+        "Photo Chess Night",
+        game.uid,
+        twentyFiveHoursAgo,
+        testLocation,
+        account.uid)
 
     // Add a photo to the session - create a valid image file
     val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -335,6 +339,42 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val sessionAfter = viewModel.sessionMapFlow(account.uid).first()
     assertEquals(1, sessionAfter.size)
     assertEquals("Future Chess Night", sessionAfter[discussion.uid]?.name)
+  }
+
+  @Test
+  fun archiveSession_manually_archives_session() = runBlocking {
+    // Create a discussion and session
+    val discussion =
+        discussionRepository.createDiscussion(
+            "Manual Archive", "Will be manually archived", account.uid)
+    val game = gameRepository.getGameById(existingGameId)
+
+    // Create a session (time doesn't matter for manual archiving in ViewModel)
+    val sessionDate = Timestamp(System.currentTimeMillis() / 1000 - (1 * 60 * 60), 0)
+
+    sessionRepository.createSession(
+        discussion.uid, "Manual Archive Night", game.uid, sessionDate, testLocation, account.uid)
+
+    delay(100)
+
+    // Verify session exists before archiving
+    val sessionBefore = viewModel.sessionMapFlow(account.uid).first()
+    assertEquals(1, sessionBefore.size)
+
+    // Call archiveSession manually
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    viewModel.archiveSession(context, discussion.uid)
+
+    delay(2000) // wait for archiving to complete
+
+    // Verify session is no longer in active sessions
+    val sessionAfter = viewModel.sessionMapFlow(account.uid).first()
+    assertTrue(sessionAfter.isEmpty())
+
+    // Verify session appears in archived sessions
+    val archivedSessions = sessionRepository.getArchivedSessions(account.uid)
+    assertEquals(1, archivedSessions.size)
+    assertEquals("Manual Archive Night", archivedSessions[0].name)
   }
 
   private fun createTestImage(context: Context, filename: String): String {

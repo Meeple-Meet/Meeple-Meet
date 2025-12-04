@@ -47,6 +47,7 @@ object Dimensions {
     val standard: Dp = 20.dp
     val large: Dp = 24.dp
     val extraLarge: Dp = 28.dp
+    val xxLarge: Dp = 34.dp
     val huge: Dp = 48.dp
     val giant: Dp = 64.dp
     val massive: Dp = 80.dp
