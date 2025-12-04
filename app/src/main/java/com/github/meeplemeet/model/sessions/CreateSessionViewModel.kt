@@ -1,4 +1,5 @@
 package com.github.meeplemeet.model.sessions
+// AI was used on this file
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
@@ -15,10 +16,12 @@ import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
 
+@OptIn(FlowPreview::class)
 open class CreateSessionViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val sessionRepository: SessionRepository = RepositoryProvider.sessions,
@@ -70,11 +73,13 @@ open class CreateSessionViewModel(
     viewModelScope.launch {
       // Add all the participants that accept friend request from everyone or only there friends
       val participantsToAdd =
-          participants.filter { account ->
-            account.notificationSettings == NotificationSettings.EVERYONE ||
-                account.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
-                    requester.relationships[account.uid] == RelationshipStatus.FRIEND
-          }
+          participants
+              .filter { account ->
+                account.notificationSettings == NotificationSettings.EVERYONE ||
+                    account.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
+                        requester.relationships[account.uid] == RelationshipStatus.FRIEND
+              }
+              .filterNot { it.uid == requester.uid } // Exclude requester to avoid duplication
 
       sessionRepository.createSession(
           discussion.uid,

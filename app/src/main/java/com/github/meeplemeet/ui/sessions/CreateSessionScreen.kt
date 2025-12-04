@@ -21,21 +21,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.Elevation
 import com.google.firebase.Timestamp
@@ -165,6 +166,8 @@ fun CreateSessionScreen(
 ) {
   // Holds the form state for the session
   var form by remember(account.uid) { mutableStateOf(SessionForm(participants = listOf(account))) }
+  // Store all discussion members separately (remains constant)
+  var allDiscussionMembers by remember { mutableStateOf<List<Account>>(emptyList()) }
   // Holds the selected location (may be null)
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
@@ -179,7 +182,8 @@ fun CreateSessionScreen(
   // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
     viewModel.getAccounts(discussion.participants) { fetched ->
-      form = form.copy(participants = (fetched + account).distinctBy { it.uid })
+      allDiscussionMembers = (fetched + account).distinctBy { it.uid }
+      form = form.copy(participants = allDiscussionMembers)
     }
 
     // If a game query was already entered, trigger search
@@ -270,7 +274,7 @@ fun CreateSessionScreen(
                     .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .verticalScroll(rememberScrollState())
                     .testTag(SessionCreationTestTags.CONTENT_COLUMN),
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
 
               // Organisation section (title, game, date, time, location)
               OrganisationSection(
@@ -278,7 +282,9 @@ fun CreateSessionScreen(
                   viewModel = viewModel,
                   account = account,
                   discussion = discussion,
-                  onTitleChange = { form = form.copy(title = it) },
+                  onTitleChange = {
+                    if (it.length <= MAX_TITLE_LENGTH) form = form.copy(title = it)
+                  },
                   form = form,
                   date = form.date,
                   time = form.time,
@@ -291,7 +297,7 @@ fun CreateSessionScreen(
               ParticipantsSection(
                   account = account,
                   selected = form.participants,
-                  allCandidates = form.participants,
+                  allCandidates = allDiscussionMembers,
                   minPlayers = gameUi.fetchedGame?.minPlayers ?: 0,
                   maxPlayers = gameUi.fetchedGame?.maxPlayers ?: 0,
                   onAdd = { toAdd ->
@@ -303,8 +309,7 @@ fun CreateSessionScreen(
                     form =
                         form.copy(
                             participants = form.participants.filterNot { it.uid == toRemove.uid })
-                  },
-                  modifier = Modifier.testTag(SessionCreationTestTags.PARTICIPANTS_SECTION))
+                  })
             }
       }
 }
@@ -413,15 +418,20 @@ fun OrganisationSection(
               MaterialTheme.colorScheme.background,
               MaterialTheme.shapes.large)
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
+        Text(text = "Basic Info", style = MaterialTheme.typography.titleLarge)
+
+        Spacer(Modifier.height(Dimensions.Spacing.small))
 
         // Title field for session name
-        IconTextField(
+        FocusableInputField(
             value = form.title,
             onValueChange = { onTitleChange(it) },
-            placeholder = TITLE_PLACEHOLDER,
-            editable = true,
+            label = { Text(text = TITLE_PLACEHOLDER) },
             leadingIcon = {
-              Icon(imageVector = Icons.Default.Edit, contentDescription = LABEL_EDIT_TITLE)
+              Icon(
+                  Icons.Default.Edit,
+                  contentDescription = LABEL_EDIT_TITLE,
+                  tint = MaterialTheme.colorScheme.onBackground)
             },
             modifier =
                 Modifier.fillMaxWidth()
@@ -435,38 +445,19 @@ fun OrganisationSection(
           SessionGameSearchBar(account, discussion, viewModel, gameUi.fetchedGame)
         }
 
-        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
+        Spacer(Modifier.height(Dimensions.Spacing.xLarge))
 
-        // Date picker for session date
-        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          DatePickerDockedField(
-              value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
-        }
+        Text(text = "Where & When", style = MaterialTheme.typography.titleLarge)
 
-        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
+        Spacer(Modifier.height(Dimensions.Spacing.small))
 
-        // Time picker for session time
-        Column {
-          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-            TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
-          }
-
-          // Show error if date/time is in the past
-          if (isDateTimeInPast(date, time)) {
-            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-            Text(
-                text = "Cannot create a session in the past",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = Dimensions.Padding.medium))
-          }
-        }
+        DateAndTimePicker(date, time, onDateChange, onFocusChanged, onTimeChange)
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
         // Location search field with suggestions
         Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          SessionLocationSearchBar(account, discussion, viewModel)
+          SessionLocationSearchButton(account, discussion, viewModel)
         }
       }
 }
@@ -493,7 +484,7 @@ fun ParticipantsSection(
     maxPlayers: Int,
     onAdd: (Account) -> Unit,
     onRemove: (Account) -> Unit,
-    mainSectionTitle: String,
+    mainSectionTitle: String
 ) {
   SectionCard(
       modifier
@@ -511,78 +502,27 @@ fun ParticipantsSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start,
         ) {
-          UnderlinedLabel("$mainSectionTitle:")
+          Column {
+            Text(mainSectionTitle, style = MaterialTheme.typography.titleLarge)
+            if (minPlayers > 0 && maxPlayers > 0)
+                Text(
+                    "Recommended: $minPlayers - $maxPlayers",
+                    fontStyle = FontStyle.Italic,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textIconsFade)
+          }
           Spacer(Modifier.width(Dimensions.Spacing.medium))
-          CountBubble(
-              count = selected.size,
-              modifier =
-                  Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.surface)
-                      .border(
-                          Dimensions.DividerThickness.standard,
-                          MaterialTheme.colorScheme.outline,
-                          CircleShape)
-                      .padding(
-                          horizontal = Dimensions.Padding.extraMedium,
-                          vertical = CountBubbleVerticalPadding))
         }
-        Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
 
-        // Slider row
-        if (minPlayers > 0 && maxPlayers > 0) {
-          Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-              modifier = Modifier.fillMaxWidth()) {
-                CountBubble(
-                    count = minPlayers,
-                    modifier =
-                        Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(
-                                Dimensions.DividerThickness.standard,
-                                MaterialTheme.colorScheme.outline,
-                                CircleShape)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraMedium,
-                                vertical = CountBubbleVerticalPadding))
+        Spacer(Modifier.height(Dimensions.Spacing.medium))
 
-                DiscretePillSlider(
-                    range = (minPlayers - 1f)..(maxPlayers + 1f),
-                    values = minPlayers.toFloat()..maxPlayers.toFloat(),
-                    steps = (maxPlayers - minPlayers + 1).coerceAtLeast(0),
-                    modifier = Modifier.weight(1f),
-                    sliderModifier =
-                        Modifier.background(MaterialTheme.colorScheme.background, CircleShape)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraMedium,
-                                vertical = CountBubbleVerticalPadding))
-
-                CountBubble(
-                    count = maxPlayers,
-                    modifier =
-                        Modifier.shadow(Elevation.subtle, CircleShape, clip = false)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(
-                                Dimensions.DividerThickness.standard,
-                                MaterialTheme.colorScheme.outline,
-                                CircleShape)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraMedium,
-                                vertical = CountBubbleVerticalPadding))
-              }
-        }
-        Spacer(Modifier.height(Dimensions.Spacing.large))
-
-        // All candidate chips
         UserChipsGrid(
             participants = allCandidates,
             onRemove = onRemove,
             onAdd = onAdd,
             account = account,
-            editable = true)
+            editable = true,
+            useCheckboxes = true,
+            selectedParticipants = selected)
       }
 }
