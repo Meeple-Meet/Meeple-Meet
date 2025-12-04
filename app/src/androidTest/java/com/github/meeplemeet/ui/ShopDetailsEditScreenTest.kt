@@ -196,8 +196,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // Disable bottom bar hiding to ensure ActionBar is always visible in tests
     UiBehaviorConfig.hideBottomBarWhenInputFocused = false
 
-    // Load the shop into the ViewModel
-    editShopViewModel.setShop(testShop)
+    // Load the shop into the ViewModel using the new initialize() method
+    editShopViewModel.initialize(testShop)
 
     val currentShopState = mutableStateOf(testShop)
 
@@ -313,9 +313,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     checkpoint("editShopScreen_saveChanges_persistsToFirestore") {
       runBlocking {
-        // Reset to initial shop state for this test
+        // Reset to initial shop state for this test using initialize()
         currentShopState.value = testShop
-        editShopViewModel.setShop(testShop)
+        editShopViewModel.initialize(testShop)
         composeTestRule.waitForIdle()
 
         val newName = "Board Game Paradise · Edited"
@@ -485,9 +485,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     }
 
     checkpoint("openingHoursDialog_showsValidationErrorOnOverlap") {
-      // Reset to test shop state
+      // Reset to test shop state using initialize()
       currentShopState.value = testShop
-      editShopViewModel.setShop(testShop)
+      editShopViewModel.initialize(testShop)
       composeTestRule.waitForIdle()
 
       expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
@@ -538,9 +538,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     }
 
     checkpoint("saveButton_disabledWhenNoOpeningHours") {
-      // Reset to test shop state
+      // Reset to test shop state using initialize()
       currentShopState.value = testShop
-      editShopViewModel.setShop(testShop)
+      editShopViewModel.initialize(testShop)
       composeTestRule.waitForIdle()
 
       expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
@@ -591,9 +591,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             .await()
       }
 
-      // Reset to test shop state
+      // Reset to test shop state using initialize()
       currentShopState.value = testShop
-      editShopViewModel.setShop(testShop)
+      editShopViewModel.initialize(testShop)
       composeTestRule.waitForIdle()
 
       // Open Games section and click "Add game"
@@ -663,7 +663,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     UiBehaviorConfig.hideBottomBarWhenInputFocused = false
 
     // Load the shop into the ViewModel
-    editShopViewModel.setShop(testShop)
+    editShopViewModel.initialize(testShop)
 
     composeTestRule.setContent {
       AppTheme {
