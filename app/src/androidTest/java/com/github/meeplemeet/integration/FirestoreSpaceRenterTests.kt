@@ -64,7 +64,9 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
             OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
             OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "20:00"))))
+            OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "20:00"))),
+            OpeningHours(day = 6, hours = listOf(TimeSlot("10:00", "17:00"))),
+            OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
 
     testSpace1 = Space(seats = 10, costPerHour = 25.0)
     testSpace2 = Space(seats = 20, costPerHour = 50.0)
@@ -73,6 +75,13 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   @After
   fun tearDown() {
     runBlocking {
+      // Restore online mode
+      OfflineModeManager.setNetworkStatusForTesting(true)
+
+      // Clean up offline cache
+      val pendingRenters = OfflineModeManager.getPendingSpaceRenterChanges()
+      pendingRenters.forEach { (renter, _) -> OfflineModeManager.removeSpaceRenter(renter.id) }
+
       // Clean up space renters collection
       val snapshot = spaceRenterRepository.collection.get().await()
       val batch = db.batch()
@@ -795,7 +804,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
 
     // Give it time to complete the async operation
-    delay(100)
+    delay(200)
 
     // Verify the StateFlow was updated
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -864,7 +873,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Load the space renter through ViewModel
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
-    delay(100)
+    delay(200)
 
     // Verify spaces are loaded correctly
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -889,7 +898,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Load the space renter through ViewModel
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
-    delay(100)
+    delay(200)
 
     // Verify owner data is loaded correctly
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value
@@ -1235,5 +1244,341 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     assertEquals(testLocation1, updated.address)
     assertEquals(testOpeningHours.size, updated.openingHours.size)
     assertEquals(1, updated.spaces.size)
+  }
+
+  // ==================== OFFLINE MODE TESTS ====================
+
+  @Test
+  fun createSpaceRenter_offline_queuesForSync() = runBlocking {
+    // Set offline mode
+    OfflineModeManager.setNetworkStatusForTesting(false)
+    delay(100) // Give time for StateFlow to update
+
+    val initialPendingCount = OfflineModeManager.getPendingSpaceRenterChanges().size
+
+    // Create space renter offline
+    createSpaceRenterViewModel.createSpaceRenter(
+        owner = testAccount1,
+        name = "Offline Space Renter",
+        phone = "+41 11 111 1111",
+        email = "offline@test.com",
+        website = "https://offline.com",
+        address = testLocation1,
+        openingHours = testOpeningHours,
+        spaces = listOf(testSpace1))
+
+    delay(500) // Give time for offline operation to complete
+
+    // Verify it's in pending changes
+    val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+    assertEquals(initialPendingCount + 1, pendingChanges.size)
+
+    val (pendingRenter, changes) = pendingChanges.last()
+    assertEquals("Offline Space Renter", pendingRenter.name)
+    assertTrue(pendingRenter.id.startsWith("temp_"))
+    assertTrue(changes.containsKey("_pending_create"))
+
+    // Restore online mode
+    OfflineModeManager.setNetworkStatusForTesting(true)
+  }
+
+  @Test
+  fun createSpaceRenter_offline_validationStillWorks() = runBlocking {
+    OfflineModeManager.setNetworkStatusForTesting(false)
+    delay(100)
+
+    // Test blank name
+    try {
+      createSpaceRenterViewModel.createSpaceRenter(
+          owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
+      throw AssertionError("Should have thrown IllegalArgumentException for blank name")
+    } catch (e: IllegalArgumentException) {
+      assertTrue(e.message!!.contains("name cannot be blank"))
+    }
+
+    // Test invalid opening hours
+    try {
+      createSpaceRenterViewModel.createSpaceRenter(
+          owner = testAccount1,
+          name = "Test",
+          address = testLocation1,
+          openingHours = testOpeningHours.take(5)) // Only 5 days
+      throw AssertionError("Should have thrown IllegalArgumentException for invalid opening hours")
+    } catch (e: IllegalArgumentException) {
+      assertTrue(e.message!!.contains("7 opening hours"))
+    }
+
+    // Test empty location
+    try {
+      createSpaceRenterViewModel.createSpaceRenter(
+          owner = testAccount1,
+          name = "Test",
+          address = Location(),
+          openingHours = testOpeningHours)
+      throw AssertionError("Should have thrown IllegalArgumentException for empty location")
+    } catch (e: IllegalArgumentException) {
+      assertTrue(e.message!!.contains("address is required"))
+    }
+
+    OfflineModeManager.setNetworkStatusForTesting(true)
+  }
+
+  @Test
+  fun updateSpaceRenter_offline_recordsChanges() = runBlocking {
+    // Create space renter online first
+    OfflineModeManager.setNetworkStatusForTesting(true)
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Original Name",
+            phone = "+41 11 111 1111",
+            email = "original@test.com",
+            website = "https://original.com",
+            address = testLocation1,
+            openingHours = testOpeningHours,
+            spaces = listOf(testSpace1))
+    delay(100)
+
+    // Set offline mode
+    OfflineModeManager.setNetworkStatusForTesting(false)
+    delay(100)
+
+    // Update space renter offline
+    editSpaceRenterViewModel.initialize(spaceRenter)
+    delay(100)
+    editSpaceRenterViewModel.updateSpaceRenter(
+        spaceRenter = spaceRenter,
+        requester = testAccount1,
+        name = "Updated Name",
+        phone = "+41 99 999 9999",
+        email = "updated@test.com",
+        address = testLocation2)
+    delay(700) // Give time for async operation
+
+    // Verify changes are recorded
+    val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+    val renterChanges = pendingChanges.find { it.first.id == spaceRenter.id }
+    assertNotNull(renterChanges)
+
+    val changes = renterChanges!!.second
+    assertEquals("Updated Name", changes["name"])
+    assertEquals("+41 99 999 9999", changes["phone"])
+    assertEquals("updated@test.com", changes["email"])
+    assertEquals(testLocation2, changes["address"])
+
+    OfflineModeManager.setNetworkStatusForTesting(true)
+  }
+
+  @Test
+  fun updateSpaceRenter_offline_validationStillWorks() = runBlocking {
+    // Create space renter online
+    OfflineModeManager.setNetworkStatusForTesting(true)
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Test Space Renter",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+    delay(100)
+
+    // Set offline
+    OfflineModeManager.setNetworkStatusForTesting(false)
+    delay(100)
+
+    editSpaceRenterViewModel.initialize(spaceRenter)
+    delay(100)
+
+    // Test blank name validation
+    try {
+      editSpaceRenterViewModel.updateSpaceRenter(
+          spaceRenter = spaceRenter, requester = testAccount1, name = "   ")
+      throw AssertionError("Should have thrown IllegalArgumentException for blank name")
+    } catch (e: IllegalArgumentException) {
+      assertTrue(e.message!!.contains("name cannot be blank"))
+    }
+
+    // Test invalid opening hours
+    try {
+      editSpaceRenterViewModel.updateSpaceRenter(
+          spaceRenter = spaceRenter,
+          requester = testAccount1,
+          openingHours = testOpeningHours.take(3))
+      throw AssertionError("Should have thrown IllegalArgumentException for invalid opening hours")
+    } catch (e: IllegalArgumentException) {
+      assertTrue(e.message!!.contains("7 opening hours"))
+    }
+
+    // Test permission denied
+    try {
+      editSpaceRenterViewModel.updateSpaceRenter(
+          spaceRenter = spaceRenter, requester = testAccount2, name = "Hacked")
+      throw AssertionError("Should have thrown PermissionDeniedException")
+    } catch (e: PermissionDeniedException) {
+      assertTrue(e.message!!.contains("owner"))
+    }
+
+    OfflineModeManager.setNetworkStatusForTesting(true)
+  }
+
+  @Test
+  fun offlineModeManager_loadSpaceRenter_fromCache() = runBlocking {
+    OfflineModeManager.setNetworkStatusForTesting(true)
+    val spaceRenter =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Cached Renter",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+    delay(100)
+
+    // Load into cache
+    var loadedRenter: com.github.meeplemeet.model.space_renter.SpaceRenter? = null
+    OfflineModeManager.loadSpaceRenter(spaceRenter.id) { loadedRenter = it }
+    delay(100)
+    assertNotNull(loadedRenter)
+    assertEquals("Cached Renter", loadedRenter!!.name)
+
+    // Load again - should come from cache
+    var cachedRenter: com.github.meeplemeet.model.space_renter.SpaceRenter? = null
+    OfflineModeManager.loadSpaceRenter(spaceRenter.id) { cachedRenter = it }
+    delay(100)
+    assertNotNull(cachedRenter)
+    assertEquals("Cached Renter", cachedRenter!!.name)
+  }
+
+  @Test
+  fun offlineModeManager_addPendingSpaceRenter() = runBlocking {
+    val tempRenter =
+        com.github.meeplemeet.model.space_renter.SpaceRenter(
+            id = "temp_test_123",
+            owner = testAccount1,
+            name = "Pending Renter",
+            phone = "",
+            email = "",
+            website = "",
+            address = testLocation1,
+            openingHours = testOpeningHours,
+            spaces = emptyList(),
+            photoCollectionUrl = emptyList())
+
+    OfflineModeManager.addPendingSpaceRenter(tempRenter)
+    delay(100)
+
+    val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+    val found = pendingChanges.find { it.first.id == "temp_test_123" }
+    assertNotNull(found)
+    assertTrue(found!!.second.containsKey("_pending_create"))
+  }
+
+  @Test
+  fun offlineModeManager_setSpaceRenterChange() = runBlocking {
+    val renter =
+        com.github.meeplemeet.model.space_renter.SpaceRenter(
+            id = "test_renter_123",
+            owner = testAccount1,
+            name = "Test Renter",
+            phone = "",
+            email = "",
+            website = "",
+            address = testLocation1,
+            openingHours = testOpeningHours,
+            spaces = emptyList(),
+            photoCollectionUrl = emptyList())
+
+    // Add to cache first
+    OfflineModeManager.addPendingSpaceRenter(renter)
+    OfflineModeManager.clearSpaceRenterChanges(renter.id)
+    delay(100)
+
+    // Record changes
+    OfflineModeManager.setSpaceRenterChange(renter, "name", "New Name")
+    OfflineModeManager.setSpaceRenterChange(renter, "phone", "+41 11 111 1111")
+    OfflineModeManager.setSpaceRenterChange(renter, "email", "new@test.com")
+    delay(100)
+
+    val pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+    val found = pendingChanges.find { it.first.id == "test_renter_123" }
+    assertNotNull(found)
+
+    val changes = found!!.second
+    assertEquals("New Name", changes["name"])
+    assertEquals("+41 11 111 1111", changes["phone"])
+    assertEquals("new@test.com", changes["email"])
+  }
+
+  @Test
+  fun offlineModeManager_clearSpaceRenterChanges() = runBlocking {
+    val renter =
+        com.github.meeplemeet.model.space_renter.SpaceRenter(
+            id = "test_clear_123",
+            owner = testAccount1,
+            name = "Test",
+            phone = "",
+            email = "",
+            website = "",
+            address = testLocation1,
+            openingHours = testOpeningHours,
+            spaces = emptyList(),
+            photoCollectionUrl = emptyList())
+
+    // Add with changes
+    OfflineModeManager.addPendingSpaceRenter(renter)
+    OfflineModeManager.setSpaceRenterChange(renter, "name", "Changed")
+    delay(100)
+
+    // Verify changes exist
+    var pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+    var found = pendingChanges.find { it.first.id == "test_clear_123" }
+    assertTrue(found!!.second.isNotEmpty())
+
+    // Clear changes
+    OfflineModeManager.clearSpaceRenterChanges("test_clear_123")
+    delay(100)
+
+    // Verify changes are cleared but renter still in cache
+    pendingChanges = OfflineModeManager.getPendingSpaceRenterChanges()
+    found = pendingChanges.find { it.first.id == "test_clear_123" }
+    // Should NOT be in pending changes anymore since it has no changes
+    assertNull(found)
+
+    // But should still be loadable from cache
+    var cachedRenter: com.github.meeplemeet.model.space_renter.SpaceRenter? = null
+    OfflineModeManager.loadSpaceRenter("test_clear_123") { loaded -> cachedRenter = loaded }
+    delay(100)
+    assertNotNull(cachedRenter)
+    // The cached object keeps the changes (changes are cleared from pending map, not reverted)
+    assertEquals("Changed", cachedRenter!!.name)
+  }
+
+  @Test
+  fun offlineModeManager_updateSpaceRenterCache() = runBlocking {
+    OfflineModeManager.setNetworkStatusForTesting(true)
+    val original =
+        spaceRenterRepository.createSpaceRenter(
+            owner = testAccount1,
+            name = "Original",
+            phone = "+41 11 111 1111",
+            address = testLocation1,
+            openingHours = testOpeningHours)
+    delay(100)
+
+    // Load into cache
+    OfflineModeManager.loadSpaceRenter(original.id) {}
+    delay(100)
+
+    // Update the renter
+    val updated = original.copy(name = "Updated", phone = "+41 99 999 9999")
+    OfflineModeManager.updateSpaceRenterCache(updated)
+    delay(100)
+
+    // Load from cache
+    var cachedRenter: com.github.meeplemeet.model.space_renter.SpaceRenter? = null
+    OfflineModeManager.loadSpaceRenter(original.id) { loaded -> cachedRenter = loaded }
+    delay(100)
+
+    val finalRenter = cachedRenter
+    assertNotNull(finalRenter)
+    assertEquals("Updated", finalRenter!!.name)
+    assertEquals("+41 99 999 9999", finalRenter.phone)
   }
 }
