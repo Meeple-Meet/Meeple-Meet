@@ -332,26 +332,40 @@ class SessionRepository(
       pageSize: Int = 12
   ): List<Session> = coroutineScope {
     val pastSessionIds = RepositoryProvider.accounts.getAccount(userId).pastSessionIds
+    println("DEBUG: User $userId has ${pastSessionIds.size} pastSessionIds: $pastSessionIds")
 
     val startIndex = page * pageSize
     if (startIndex >= pastSessionIds.size) return@coroutineScope emptyList()
 
     val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
     val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
+    println("DEBUG: Fetching sessions for page $page: $sessionIdsForPage")
 
-    sessionIdsForPage
+    val results = sessionIdsForPage
         .map { sessionId ->
           async {
             try {
               val snapshot = collection.document(sessionId).get().await()
-              snapshot.toObject(Session::class.java)
-            } catch (_: Exception) {
+              if (!snapshot.exists()) {
+                println("WARNING: Session $sessionId in pastSessionIds but not found in archived_sessions collection")
+                null
+              } else {
+                val session = snapshot.toObject(Session::class.java)
+                println("DEBUG: Successfully loaded session $sessionId: ${session?.name}")
+                session
+              }
+            } catch (e: Exception) {
+              println("ERROR: Failed to load session $sessionId: ${e.message}")
+              e.printStackTrace()
               null
             }
           }
         }
         .awaitAll()
         .filterNotNull()
+    
+    println("DEBUG: Returning ${results.size} sessions out of ${sessionIdsForPage.size} requested")
+    results
   }
 
   /**
