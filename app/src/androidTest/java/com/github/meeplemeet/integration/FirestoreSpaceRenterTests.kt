@@ -828,13 +828,25 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Load first space renter
     spaceRenterViewModel.getSpaceRenter(spaceRenter1.id)
-    delay(100)
+
+    // Wait for state to update
+    var attempts = 0
+    while (spaceRenterViewModel.spaceRenter.value?.name != "First Space Renter" && attempts < 10) {
+      delay(100)
+      attempts++
+    }
 
     assertEquals("First Space Renter", spaceRenterViewModel.spaceRenter.value?.name)
 
     // Load second space renter
     spaceRenterViewModel.getSpaceRenter(spaceRenter2.id)
-    delay(100)
+
+    // Wait for state to update
+    attempts = 0
+    while (spaceRenterViewModel.spaceRenter.value?.name != "Second Space Renter" && attempts < 10) {
+      delay(100)
+      attempts++
+    }
 
     assertEquals("Second Space Renter", spaceRenterViewModel.spaceRenter.value?.name)
   }

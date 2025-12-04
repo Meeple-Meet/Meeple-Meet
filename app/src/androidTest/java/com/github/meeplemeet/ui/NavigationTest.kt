@@ -456,8 +456,10 @@ class AuthenticatedNavigationTest : FirestoreTests() {
         checkpoint("completeNavigationFlow") {
           // 1. Discussions
           onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+          waitForIdle()
           // 2. Create discussion
           onNodeWithTag("Add Discussion").performClick()
+          waitForIdle()
           onNodeWithTag("Add Title").performTextInput("Flow Test")
           onNodeWithTag("Create Discussion").performClick()
           waitUntil(timeoutMillis = 10_000) {
@@ -465,10 +467,13 @@ class AuthenticatedNavigationTest : FirestoreTests() {
                 .fetchSemanticsNodes()
                 .isNotEmpty()
           }
+          waitForIdle()
           // 3. Posts
           onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
+          waitForIdle()
           // 4. Create post
           onNodeWithTag("AddPostButton").performClick()
+          waitForIdle()
           onNodeWithTag("create_post_title_field").performTextInput("Flow Post")
           onNodeWithTag("create_post_body_field").performTextInput("Test")
           onNodeWithTag("create_post_post_btn").performClick()
@@ -477,12 +482,16 @@ class AuthenticatedNavigationTest : FirestoreTests() {
                 .fetchSemanticsNodes()
                 .isNotEmpty()
           }
+          waitForIdle()
           // 5. Sessions
           onNodeWithTag(NavigationTestTags.SESSIONS_TAB).performClick()
+          waitForIdle()
           // 6. Profile
           onNodeWithTag(NavigationTestTags.PROFILE_TAB).performClick()
+          waitForIdle()
           // 7. Back to Discussions
           onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
+          waitForIdle()
           onNodeWithTag(NavigationTestTags.SCREEN_TITLE)
               .assertTextContains(MeepleMeetScreen.DiscussionsOverview.title)
         }
