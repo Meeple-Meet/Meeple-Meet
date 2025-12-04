@@ -27,14 +27,13 @@ import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import fetch from "node-fetch";
 import { XMLParser } from "fast-xml-parser";
+import { Cache } from "./Cache"
 
 setGlobalOptions({ maxInstances: 10 });
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
-
-const db = admin.firestore();
 
 // Test endpoint
 export const ping = onRequest((req, res) => {
@@ -82,6 +81,20 @@ type GameSearchResult = {
   id: string;
   name: string;
 };
+
+// --------------------
+// Cache config
+// --------------------
+const GAME_TTL_MS = 24 * 60 * 60 * 1000;
+const SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
+const GAME_CACHE_MAX = 1000;
+const SEARCH_CACHE_MAX = 100;
+const GAME_CACHE_COLLECTION = "gameCache";
+const SEARCH_CACHE_COLLECTION = "searchCache";
+
+// Create cache instance
+const gameCache = new Cache<GameOut>(GAME_TTL_MS, GAME_CACHE_MAX, GAME_CACHE_COLLECTION);
+const searchCache = new Cache<GameSearchResult[]>(SEARCH_TTL_MS, SEARCH_CACHE_MAX, SEARCH_CACHE_COLLECTION);
 
 // --------------------
 // Cloud Functions
@@ -132,29 +145,11 @@ export const getGamesByIds = onRequest(
       const cachedById: Record<string, GameOut> = {};
       let missingIds: string[] = [];
 
-      // Check L1 cache
+      // Check cache
       for (const id of ids) {
-        const cached = getFromCache<GameOut>(gameCache, `game:${id}`);
+        const cached = await gameCache.get(id);
         if (cached) cachedById[id] = cached;
         else missingIds.push(id);
-      }
-
-      // Check L2 cache
-      if (missingIds.length > 0) {
-        const l2Results = await Promise.all(
-          missingIds.map((id) => getFromL2Cache<GameOut>(GAME_CACHE_COLLECTION, id, GAME_TTL_MS))
-        );
-
-        for (let i = 0; i < l2Results.length; i++) {
-          const g = l2Results[i];
-          if (g) {
-            cachedById[g.uid] = g;
-            setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX); // update L1
-          }
-        }
-
-        // Recompute missingIds after L2 processing
-        missingIds = ids.filter((id) => !cachedById[id]);
       }
 
       logMsg("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
@@ -169,10 +164,7 @@ export const getGamesByIds = onRequest(
           for (const id of Object.keys(fetchedMap)) {
             const g = fetchedMap[id];
             if (g) {
-              setToCache(gameCache, `game:${g.uid}`, g, GAME_TTL_MS, GAME_CACHE_MAX);
-              await setToL2Cache(GAME_CACHE_COLLECTION, g.uid, g).catch((e) =>
-                logWarning("setToL2Cache rejected", { collection: GAME_CACHE_COLLECTION, key: g.uid, err: e })
-              );
+              await gameCache.set(g.uid, g);
               cachedById[g.uid] = g;
             } else {
               logWarning("coalesced fetch returned no game for id", { id });
@@ -230,22 +222,12 @@ export const searchGames = onRequest(
       const maxResults = Math.min(Number(req.query.maxResults) || 20, 50);
       const ignoreCase = req.query.ignoreCase === "true";
 
-      const cacheKey = `search:${queryParam.toLowerCase()}:${ignoreCase ? "i" : "s"}:max${maxResults}`;
+      const cacheKey = `${queryParam.toLowerCase()}:${ignoreCase ? "i" : "s"}:max${maxResults}`;
 
-      // Check L1 cache
-      let cached = getFromCache<GameSearchResult[]>(searchCache, cacheKey);
-
-      // Check L2 cache if miss
-      if (!cached) {
-        cached = await getFromL2Cache<GameSearchResult[]>(SEARCH_CACHE_COLLECTION, cacheKey, SEARCH_TTL_MS);
-        if (cached) {
-          logMsg("searchGames cache hit (L2)", { query: queryParam, cachedCount: cached.length });
-          setToCache(searchCache, cacheKey, cached, SEARCH_TTL_MS, SEARCH_CACHE_MAX);
-        }
-      }
-
+      // Check cache
+      const cached = await searchCache.get(cacheKey);
       if (cached) {
-        logMsg("searchGames cache hit (L1/L2)", { query: queryParam });
+        logMsg("searchGames cache hit", { query: queryParam });
         res.json(cached.slice(0, maxResults));
         return;
       }
@@ -295,8 +277,7 @@ export const searchGames = onRequest(
       const ranked = rankSearchResults(results, queryParam, ignoreCase).slice(0, maxResults);
 
       // --- Write caches ---
-      setToCache(searchCache, cacheKey, ranked, SEARCH_TTL_MS, SEARCH_CACHE_MAX);
-      await setToL2Cache(SEARCH_CACHE_COLLECTION, cacheKey, ranked);
+      await searchCache.set(cacheKey, ranked);
 
       res.json(ranked);
       return;
@@ -316,117 +297,13 @@ export const searchGames = onRequest(
  */
 export function _clearInMemoryStateForTests() {
   try {
-    gameCache.clear();
-    searchCache.clear();
+    gameCache.clearL1();
+    searchCache.clearL1();
     // empty pendingBatches array in-place
     pendingBatches.splice(0, pendingBatches.length);
   } catch (e) {
     // never throw in normal code path; tests can log if needed
     logWarning("clearInMemoryStateForTests failed", { err: e });
-  }
-}
-
-// --------------------
-// Cache config
-// --------------------
-const GAME_TTL_MS = 24 * 60 * 60 * 1000;
-const SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
-const GAME_CACHE_MAX = 1000;
-const SEARCH_CACHE_MAX = 100;
-const GAME_CACHE_COLLECTION = "gameCache";
-const SEARCH_CACHE_COLLECTION = "searchCache";
-
-// Simple L1 in-memory caches (non-persistent)
-type CacheEntry<T> = { value: T; expireAt: number };
-const gameCache = new Map<string, CacheEntry<any>>();
-const searchCache = new Map<string, CacheEntry<any>>();
-
-/**
- * L1 Cache helpers
- *  - getFromCache: returns T|null if present and not expired
- *  - setToCache: stores value with TTL, enforces maxSize using LRU eviction
- */
-function getFromCache<T>(map: Map<string, CacheEntry<T>>, key: string): T | null {
-  const e = map.get(key);
-  if (!e) return null;
-  if (Date.now() > e.expireAt) {
-    map.delete(key);
-    return null;
-  }
-  return e.value;
-}
-
-function setToCache<T>(
-  map: Map<string, CacheEntry<T>>,
-  key: string,
-  value: T,
-  ttlMs: number,
-  maxSize: number
-) {
-  map.set(key, { value, expireAt: Date.now() + ttlMs });
-  // LRU eviction
-  while (map.size > maxSize) {
-    const firstKey = map.keys().next().value;
-    if (!firstKey) break;
-    map.delete(firstKey);
-  }
-}
-
-// --------------------
-// L2 cache in-database (persistent)
-// --------------------
-
-/**
- * L2 Cache helpers
- * Persistent Firestore cache
- *  - getFromL2Cache: fetch document and validate TTL
- *  - setToL2Cache: store document with updatedAt timestamp
- */
-async function getFromL2Cache<T>(collection: string, key: string, ttlMs: number): Promise<T | null> {
-  try {
-    const docRef = db.collection(collection).doc(key);
-    const doc = await docRef.get();
-    if (!doc.exists) return null;
-    const data = doc.data();
-    if (!data || data.value == null || data.updatedAt == null) return null;
-
-    // support different updatedAt formats: number(ms), Firestore Timestamp (toMillis), Date object
-    let updatedAtMs: number;
-    const ua = data.updatedAt;
-    if (typeof ua === "number") {
-      updatedAtMs = ua;
-    } else if (ua && typeof ua.toMillis === "function") {
-      updatedAtMs = ua.toMillis();
-    } else if (ua && typeof ua.toDate === "function") {
-      updatedAtMs = ua.toDate().getTime();
-    } else {
-      updatedAtMs = Date.now();
-    }
-
-    if (Date.now() - updatedAtMs > ttlMs) {
-      try {
-        await docRef.delete();
-      } catch (e) {
-        logWarning("Failed to delete expired L2 cache doc", { collection, key, err: e });
-      }
-      return null;
-    }
-    return data.value as T;
-  } catch (err) {
-    logWarning("getFromL2Cache failed", { collection, key, err });
-    return null;
-  }
-}
-
-async function setToL2Cache<T>(collection: string, key: string, value: T) {
-  const docRef = db.collection(collection).doc(key);
-  try {
-    await docRef.set({
-      value,
-      updatedAt: Date.now(),
-    });
-  } catch (err) {
-    logWarning("setToL2Cache failed", { collection, key, err });
   }
 }
 
