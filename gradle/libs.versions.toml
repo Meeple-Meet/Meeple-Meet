@@ -26,6 +26,7 @@ firebaseDatabaseKtx = "21.0.0"
 firebaseFirestore = "25.1.0"
 firebaseStorage = "21.0.1"
 firebaseFunctionsKtx = "20.2.0"
+firebaseAppcheck = "18.0.0"
 firebaseAppcheckInterop = "17.1.0"
 geoFirestore = "v1.5.0"
 
@@ -107,6 +108,7 @@ firebase-database-ktx = { module = "com.google.firebase:firebase-database-ktx", 
 firebase-firestore = { module = "com.google.firebase:firebase-firestore", version.ref = "firebaseFirestore" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorage" }
 firebase-functions-ktx = { group = "com.google.firebase", name = "firebase-functions-ktx", version.ref = "firebaseFunctionsKtx" }
+firebase-appcheck = { module = "com.google.firebase:firebase-appcheck", version.ref = "firebaseAppcheck" }
 firebase-appcheck-interop = { module = "com.google.firebase:firebase-appcheck-interop", version.ref = "firebaseAppcheckInterop" }
 geofirestore = { module = "com.github.imperiumlabs:GeoFirestore-Android", version.ref = "geoFirestore" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }

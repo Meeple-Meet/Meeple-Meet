@@ -238,8 +238,13 @@ dependencies {
   implementation(libs.firebase.auth)
   implementation(libs.firebase.storage)
   implementation(libs.firebase.functions.ktx)
+  implementation(libs.firebase.appcheck)
   implementation(libs.firebase.appcheck.interop)
   implementation(libs.geofirestore)
+
+  // Firebase for android test
+  androidTestImplementation(libs.firebase.appcheck)
+  androidTestImplementation(libs.firebase.appcheck.interop)
 
   // Credential Manager (for Google Sign-In)
   implementation(libs.credentials)
