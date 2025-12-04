@@ -129,9 +129,7 @@ fun SessionsOverviewScreen(
   val context = LocalContext.current
   LaunchedEffect(sessionMap.keys) {
     if (account != null) {
-      sessionMap.keys.forEach { id ->
-        viewModel.updateSession(context, id)
-      }
+      sessionMap.keys.forEach { id -> viewModel.updateSession(context, id) }
     }
   }
 

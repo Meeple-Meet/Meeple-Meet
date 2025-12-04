@@ -233,7 +233,8 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussionRepository.createDiscussion("Past Session", "Happened earlier", account.uid)
     val game = gameRepository.getGameById(existingGameId)
 
-    val twentyFiveHoursAgo = Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
+    val twentyFiveHoursAgo =
+        Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
 
     sessionRepository.createSession(
         discussion.uid, "Past Chess Night", game.uid, twentyFiveHoursAgo, testLocation, account.uid)
@@ -269,10 +270,16 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussionRepository.createDiscussion("Past Session With Photo", "Had a photo", account.uid)
     val game = gameRepository.getGameById(existingGameId)
 
-    val twentyFiveHoursAgo = Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
+    val twentyFiveHoursAgo =
+        Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
 
     sessionRepository.createSession(
-        discussion.uid, "Photo Chess Night", game.uid, twentyFiveHoursAgo, testLocation, account.uid)
+        discussion.uid,
+        "Photo Chess Night",
+        game.uid,
+        twentyFiveHoursAgo,
+        testLocation,
+        account.uid)
 
     // Add a photo to the session - create a valid image file
     val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -340,7 +347,8 @@ class SessionOverviewViewModelTest : FirestoreTests() {
   fun archiveSession_manually_archives_session() = runBlocking {
     // Create a discussion and session
     val discussion =
-        discussionRepository.createDiscussion("Manual Archive", "Will be manually archived", account.uid)
+        discussionRepository.createDiscussion(
+            "Manual Archive", "Will be manually archived", account.uid)
     val game = gameRepository.getGameById(existingGameId)
 
     // Create a session (time doesn't matter for manual archiving in ViewModel)

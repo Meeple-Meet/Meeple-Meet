@@ -142,13 +142,9 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
 
           // Wait for session to appear
-          compose.waitUntil(2000) {
-            sessionCard(discussion.uid).isDisplayed()
-          }
+          compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
           // Wait for auto-archiving to complete (card disappears)
-          compose.waitUntil(5000) {
-            sessionCard(discussion.uid).isNotDisplayed()
-          }
+          compose.waitUntil(5000) { sessionCard(discussion.uid).isNotDisplayed() }
 
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
           compose.waitUntil(4000) { compose.onNodeWithText("Past Night").isDisplayed() }
@@ -184,27 +180,34 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           }
 
           sessionCard(discussion.uid).assertIsDisplayed()
-          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).assertExists()
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
+              .assertExists()
 
           sessionCard(discussion.uid).performTouchInput { swipeLeft() }
-          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON).performClick()
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
+              .performClick()
 
-          compose.waitUntil(2000) {
-            compose.onNodeWithText("Archive Session").isDisplayed()
-          }
-          compose.onNodeWithText("This session doesn't have an image. Are you sure you want to archive it?").assertIsDisplayed()
+          compose.waitUntil(2000) { compose.onNodeWithText("Archive Session").isDisplayed() }
+          compose
+              .onNodeWithText(
+                  "This session doesn't have an image. Are you sure you want to archive it?")
+              .assertIsDisplayed()
 
           compose.onNodeWithText("Archive").performClick()
 
-          compose.waitUntil(2000) {
-            sessionCard(discussion.uid).isNotDisplayed()
-          }
+          compose.waitUntil(2000) { sessionCard(discussion.uid).isNotDisplayed() }
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
           compose.waitUntil(2000) { compose.onNodeWithText("Archive Night").isDisplayed() }
 
-          compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS).performClick()
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS)
+              .performClick()
           compose.waitUntil(2000) {
-            compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS).isDisplayed()
+            compose
+                .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS)
+                .isDisplayed()
           }
         }
       }
@@ -222,13 +225,18 @@ class SessionsOverviewScreenTest : FirestoreTests() {
 
           val game = gameRepository.getGameById(testGameId)
 
-          val withinTwoHours = Timestamp(java.util.Date(System.currentTimeMillis() - (60 * 60 * 1000L)))
+          val withinTwoHours =
+              Timestamp(java.util.Date(System.currentTimeMillis() - (60 * 60 * 1000L)))
           sessionRepository.createSession(
-              discussion.uid, "User Night", game.uid, withinTwoHours, testLocation, otherUid, account.uid)
+              discussion.uid,
+              "User Night",
+              game.uid,
+              withinTwoHours,
+              testLocation,
+              otherUid,
+              account.uid)
 
-          compose.waitUntil(2000) {
-            sessionCard(discussion.uid).isDisplayed()
-          }
+          compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
 
           compose
               .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
@@ -243,13 +251,12 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               discussionRepository.createDiscussion("Future Session", "Too far away", account.uid)
           val game = gameRepository.getGameById(testGameId)
 
-          val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
+          val futureDate =
+              Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
           sessionRepository.createSession(
               discussion.uid, "Future Night", game.uid, futureDate, testLocation, account.uid)
 
-          compose.waitUntil(2000) {
-            sessionCard(discussion.uid).isDisplayed()
-          }
+          compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
 
           compose
               .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
