@@ -667,7 +667,7 @@ private fun SessionPhotoUploadBox(
 
   Box(
       modifier =
-          Modifier.width(120.dp)
+          Modifier.width(Dimensions.ContainerSize.maxInputHeight)
               .aspectRatio(selfieRatio)
               .border(
                   width = Dimensions.DividerThickness.standard,
@@ -678,7 +678,8 @@ private fun SessionPhotoUploadBox(
               .testTag(SessionViewerTestTags.SESSION_PHOTO_BOX),
       contentAlignment = Alignment.Center) {
         if (isUploading) {
-          CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppColors.textIcons)
+          CircularProgressIndicator(
+              modifier = Modifier.size(Dimensions.AvatarSize.tiny), color = AppColors.textIcons)
         } else if (photoUrl != null) {
           AsyncImage(
               model = photoUrl,
@@ -692,7 +693,7 @@ private fun SessionPhotoUploadBox(
           Box(modifier = Modifier.align(Alignment.BottomEnd).padding(Dimensions.Spacing.small)) {
             Box(
                 modifier =
-                    Modifier.size(32.dp)
+                    Modifier.size(Dimensions.Padding.xxxLarge)
                         .clip(CircleShape)
                         .testTag(SessionViewerTestTags.SESSION_PHOTO_ADD_BUTTON),
                 contentAlignment = Alignment.Center) {
@@ -700,7 +701,7 @@ private fun SessionPhotoUploadBox(
                       imageVector = Icons.Default.Add,
                       contentDescription = "Add photo",
                       tint = AppColors.textIcons,
-                      modifier = Modifier.size(20.dp))
+                      modifier = Modifier.size(Dimensions.IconSize.standard))
                 }
           }
         }
