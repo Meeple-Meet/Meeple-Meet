@@ -125,6 +125,16 @@ fun SessionsOverviewScreen(
     }
   }
 
+  // Auto-archive check for all active sessions
+  val context = LocalContext.current
+  LaunchedEffect(sessionMap.keys) {
+    if (account != null) {
+      sessionMap.keys.forEach { id ->
+        viewModel.updateSession(context, id)
+      }
+    }
+  }
+
   var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
   DisposableEffect(Unit) {
     val timer = Timer()
@@ -399,8 +409,16 @@ fun SessionCard(
         }
       }
 
-  // Auto-archive check
-  LaunchedEffect(session.date) { viewModel.updateSession(context, id) }
+  // Check if session is within 2 hours or has passed
+  val canArchive =
+      remember(session.date, currentTime) {
+        val sessionTime = session.date.toDate().time
+        val twoHoursBeforeSession = sessionTime - (2 * 60 * 60 * 1000L)
+        currentTime >= twoHoursBeforeSession
+      }
+
+  // State for confirmation dialog
+  var showArchiveConfirmation by remember { mutableStateOf(false) }
 
   val actionWidth = Dimensions.ComponentWidth.spaceLabelWidth
   val actionWidthPx = with(density) { actionWidth.toPx() }
@@ -408,7 +426,7 @@ fun SessionCard(
 
   Box(modifier = modifier.height(IntrinsicSize.Min)) {
     // Background (Archive Button)
-    if (isAdmin) {
+    if (isAdmin && canArchive) {
       Box(
           modifier =
               Modifier.align(Alignment.CenterEnd)
@@ -416,8 +434,13 @@ fun SessionCard(
                   .fillMaxHeight()
                   .background(AppColors.neutral)
                   .clickable {
-                    viewModel.archiveSession(context, id)
-                    scope.launch { offsetX.animateTo(0f) }
+                    // Check if session has a photo
+                    if (!session.photoUrl.isNullOrBlank()) {
+                      viewModel.archiveSession(context, id)
+                      scope.launch { offsetX.animateTo(0f) }
+                    } else {
+                      showArchiveConfirmation = true
+                    }
                   }
                   .testTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON),
           contentAlignment = Alignment.Center) {
@@ -434,7 +457,7 @@ fun SessionCard(
         modifier =
             Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .draggable(
-                    enabled = isAdmin,
+                    enabled = isAdmin && canArchive,
                     orientation = Orientation.Horizontal,
                     state =
                         rememberDraggableState { delta ->
@@ -502,6 +525,29 @@ fun SessionCard(
               modifier = Modifier.fillMaxWidth(),
               onClick = onClick)
         }
+  }
+
+  // Confirmation dialog for archiving without image
+  if (showArchiveConfirmation) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { showArchiveConfirmation = false },
+        title = { Text("Archive Session") },
+        text = { Text("This session doesn't have an image. Are you sure you want to archive it?") },
+        confirmButton = {
+          androidx.compose.material3.TextButton(
+              onClick = {
+                viewModel.archiveSession(context, id)
+                scope.launch { offsetX.animateTo(0f) }
+                showArchiveConfirmation = false
+              }) {
+                Text("Archive")
+              }
+        },
+        dismissButton = {
+          androidx.compose.material3.TextButton(onClick = { showArchiveConfirmation = false }) {
+            Text("Cancel")
+          }
+        })
   }
 }
 
