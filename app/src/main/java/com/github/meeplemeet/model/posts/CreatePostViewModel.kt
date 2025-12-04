@@ -1,40 +1,38 @@
-// Docs generated with Claude Code.
-
 package com.github.meeplemeet.model.posts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
-import kotlinx.coroutines.flow.StateFlow
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel for creating new posts.
  *
- * This ViewModel handles the creation of posts and exposes the resulting post ID through a
- * [StateFlow] for UI observation.
- *
- * @property repository The repository used for post operations.
+ * This ViewModel handles the creation of posts both online and offline. When offline, posts are
+ * queued for later upload.
  */
 class CreatePostViewModel(private val repository: PostRepository = RepositoryProvider.posts) :
     ViewModel() {
+
   /**
-   * Creates a new post in Firestore.
+   * Creates a new post in Firestore or queues it for offline upload.
    *
-   * This operation is performed asynchronously in the viewModelScope. Upon successful creation, the
-   * post ID is emitted through [postId].
+   * This operation checks connectivity:
+   * - Online: Posts immediately to Firestore
+   * - Offline: Queues post for later upload
    *
    * @param title The title of the post.
    * @param body The main content/body of the post.
-   * @param author The UID of the user creating the post.
+   * @param author The account creating the post.
    * @param tags Optional list of tags for categorizing the post.
+   * @throws IllegalArgumentException if title or body is blank
    */
   fun createPost(title: String, body: String, author: Account, tags: List<String> = emptyList()) {
-    if (title.isBlank()) throw IllegalArgumentException("Cannot create a post with an empty title")
+    require(title.isNotBlank()) { "Cannot create a post with an empty title" }
+    require(body.isNotBlank()) { "Cannot create a post with an empty body" }
 
-    if (body.isBlank()) throw IllegalArgumentException("Cannot create a post with an empty body")
-
-    viewModelScope.launch { repository.createPost(title, body, author.uid, tags) }
+    viewModelScope.launch { OfflineModeManager.createPost(title, body, author.uid, tags) }
   }
 }

@@ -130,7 +130,6 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
     createdPosts += normal
     normal = postRepository.getPost(normal.id)
     val first = createdPosts.first()
-    postVm.getPosts()
 
     /* 3  LIGHT THEME  ------------------------------------------------------ */
     theme = ThemeMode.LIGHT

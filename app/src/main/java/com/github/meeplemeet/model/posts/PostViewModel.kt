@@ -8,11 +8,9 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -29,10 +27,13 @@ class PostViewModel(private val repository: PostRepository = RepositoryProvider.
     get() = this.viewModelScope
 
   /**
-   * Deletes a post from Firestore.
+   * Deletes a post from Firestore or removes it from offline queue.
    *
    * Only the post's author can delete it. This operation is performed asynchronously in the
    * viewModelScope.
+   *
+   * For offline-created posts (temp IDs), removes them from the queue. For normal posts, deletes
+   * from Firestore.
    *
    * @param author The account attempting to delete the post.
    * @param post The post to delete.
@@ -42,15 +43,14 @@ class PostViewModel(private val repository: PostRepository = RepositoryProvider.
     if (post.authorId != author.uid)
         throw PermissionDeniedException("Another users post cannot be deleted")
 
-    viewModelScope.launch { repository.deletePost(post.id) }
+    viewModelScope.launch { OfflineModeManager.deletePost(post) }
   }
 
   /**
    * Adds a comment or reply to a post.
    *
-   * To add a top-level comment, set [parentId] to the post's ID. To add a reply to another comment,
-   * set [parentId] to that comment's ID. This operation is performed asynchronously in the
-   * viewModelScope.
+   * When offline, comments are queued and synced when back online. Comments appear immediately in
+   * the UI. For offline-created posts, comments are not allowed until the post is uploaded.
    *
    * @param author The account creating the comment.
    * @param post The post being commented on.
@@ -62,23 +62,34 @@ class PostViewModel(private val repository: PostRepository = RepositoryProvider.
   fun addComment(author: Account, post: Post, parentId: String, text: String) {
     if (text.isBlank()) throw IllegalArgumentException("Cannot send a blank comment")
 
-    viewModelScope.launch { repository.addComment(post.id, text, author.uid, parentId) }
+    // Check if post is in the queue - don't allow comments on queued posts
+    if (OfflineModeManager.offlineModeFlow.value.postsToAdd.containsKey(post.id)) {
+      throw IllegalStateException("Cannot comment on a post that is not yet uploaded")
+    }
+
+    viewModelScope.launch { OfflineModeManager.addComment(post.id, text, author.uid, parentId) }
   }
 
   /**
    * Removes a comment and all its direct replies from a post.
    *
-   * Only the comment's author can remove it. This operation cascades to delete all replies to the
-   * specified comment. The operation is performed asynchronously in the viewModelScope.
+   * Only the comment's author can remove it. This operation requires an internet connection as
+   * deletion is a destructive operation that should be immediate. The operation is performed
+   * asynchronously in the viewModelScope.
    *
    * @param author The account attempting to remove the comment.
    * @param post The post containing the comment.
    * @param comment The comment to remove.
    * @throws PermissionDeniedException if the requester is not the comment's author.
+   * @throws IllegalStateException if there is no internet connection.
    */
   fun removeComment(author: Account, post: Post, comment: Comment) {
     if (comment.authorId != author.uid)
         throw PermissionDeniedException("Another users comment cannot be deleted")
+
+    if (!OfflineModeManager.hasInternetConnection.value) {
+      throw IllegalStateException("Cannot delete comments while offline")
+    }
 
     viewModelScope.launch { repository.removeComment(post.id, comment.id) }
   }
@@ -86,15 +97,14 @@ class PostViewModel(private val repository: PostRepository = RepositoryProvider.
   /** Holds a [StateFlow] of discussion preview maps keyed by post ID. */
   private val postFlows = mutableMapOf<String, StateFlow<Post?>>()
 
+  /**
+   * Returns a StateFlow for a specific post, providing cache-first loading and real-time updates.
+   *
+   * Observes offline mode changes to show comments added offline immediately.
+   */
   fun postFlow(postId: String): StateFlow<Post?> {
-    if (postId.isBlank()) return MutableStateFlow(null)
     return postFlows.getOrPut(postId) {
-      repository
-          .listenPost(postId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
+      OfflineModeManager.postFlow(postId, viewModelScope, repository)
     }
   }
 }

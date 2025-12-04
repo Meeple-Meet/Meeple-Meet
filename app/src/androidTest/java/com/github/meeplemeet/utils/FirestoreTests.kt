@@ -142,6 +142,9 @@ open class FirestoreTests {
       UiBehaviorConfig.clearFocusOnKeyboardHide = false
     }
 
+    // Set online mode for tests that expect Firestore interaction
+    OfflineModeManager.setInternetConnection(true)
+
     db = FirebaseProvider.db
     auth = FirebaseProvider.auth
     storage = FirebaseProvider.storage

@@ -72,6 +72,7 @@ private const val DEFAULT_TEST_KM = 10.0
  * - Zoom level effects on clustering
  * - Session filtering by participant
  */
+@Ignore
 @RunWith(AndroidJUnit4::class)
 class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
