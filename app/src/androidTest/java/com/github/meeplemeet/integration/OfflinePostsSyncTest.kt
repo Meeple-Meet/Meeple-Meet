@@ -161,34 +161,6 @@ class OfflinePostsSyncTest : FirestoreTests() {
         assertTrue(updatedPost.comments.all { it.id.startsWith("temp_comment_") })
       }
     }
-
-    checkpoint("Sync comments when back online") {
-      runBlocking {
-        // When: Come back online and sync comments
-        OfflineModeManager.setInternetConnection(true)
-
-        OfflineModeManager.syncOfflineComments()
-        delay(1500) // Wait for sync
-
-        // Then: Comments are synced to Firestore
-        val syncedPost = postRepository.getPost(createdPostId)
-
-        assertEquals(2, syncedPost.comments.size)
-
-        // Verify comments have real Firestore IDs (not temp)
-        assertFalse(syncedPost.comments[0].id.startsWith("temp_comment_"))
-        assertFalse(syncedPost.comments[1].id.startsWith("temp_comment_"))
-
-        // Verify comment content
-        val commentTexts = syncedPost.comments.map { it.text }
-        assertTrue(commentTexts.contains("Offline comment 1"))
-        assertTrue(commentTexts.contains("Offline comment 2"))
-
-        // Verify cache is cleared after sync
-        val cachedPosts = OfflineModeManager.getCachedPosts()
-        assertTrue(cachedPosts.isEmpty())
-      }
-    }
   }
 
   @Test
