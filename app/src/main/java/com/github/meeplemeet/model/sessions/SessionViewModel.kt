@@ -16,6 +16,7 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 
 private const val ERROR_ADMIN_PERMISSION = "Only discussion admins can perform this operation"
+private const val ARCHIVE_THRESHOLD = 2 * 60 * 60 * 1000L // 2 hours in milliseconds
 
 /**
  * ViewModel for managing gaming sessions within a discussion.
@@ -151,6 +152,42 @@ class SessionViewModel(
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch { sessionRepository.deleteSession(discussion.uid) }
+  }
+
+  /**
+   * Archives the session from a discussion.
+   *
+   * Requires admin privileges (requester must be a discussion admin). The session is moved to the
+   * archived sessions collection and removed from the active discussion.
+   *
+   * @param onSuccess Callback invoked when the session is successfully archived
+   * @throws PermissionDeniedException if requester is not a discussion admin
+   */
+  fun archiveSession(
+      requester: Account,
+      discussion: Discussion,
+      context: Context,
+      onSuccess: () -> Unit = {}
+  ) {
+    if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
+
+    viewModelScope.launch {
+      val session = discussion.session ?: return@launch
+      val newUuid = sessionRepository.newUUID()
+      var newUrl: String? = null
+
+      if (session.photoUrl != null) {
+        try {
+          newUrl = imageRepository.moveSessionPhoto(context, discussion.uid, newUuid)
+        } catch (e: Exception) {
+          // If moving photo fails (e.g. file missing), proceed with archive but without photo
+          e.printStackTrace()
+        }
+      }
+
+      sessionRepository.archiveSession(discussion.uid, newUuid, newUrl)
+      onSuccess()
+    }
   }
 
   /**
