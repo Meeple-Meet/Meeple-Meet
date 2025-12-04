@@ -341,29 +341,31 @@ class SessionRepository(
     val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
     println("DEBUG: Fetching sessions for page $page: $sessionIdsForPage")
 
-    val results = sessionIdsForPage
-        .map { sessionId ->
-          async {
-            try {
-              val snapshot = collection.document(sessionId).get().await()
-              if (!snapshot.exists()) {
-                println("WARNING: Session $sessionId in pastSessionIds but not found in archived_sessions collection")
-                null
-              } else {
-                val session = snapshot.toObject(Session::class.java)
-                println("DEBUG: Successfully loaded session $sessionId: ${session?.name}")
-                session
+    val results =
+        sessionIdsForPage
+            .map { sessionId ->
+              async {
+                try {
+                  val snapshot = collection.document(sessionId).get().await()
+                  if (!snapshot.exists()) {
+                    println(
+                        "WARNING: Session $sessionId in pastSessionIds but not found in archived_sessions collection")
+                    null
+                  } else {
+                    val session = snapshot.toObject(Session::class.java)
+                    println("DEBUG: Successfully loaded session $sessionId: ${session?.name}")
+                    session
+                  }
+                } catch (e: Exception) {
+                  println("ERROR: Failed to load session $sessionId: ${e.message}")
+                  e.printStackTrace()
+                  null
+                }
               }
-            } catch (e: Exception) {
-              println("ERROR: Failed to load session $sessionId: ${e.message}")
-              e.printStackTrace()
-              null
             }
-          }
-        }
-        .awaitAll()
-        .filterNotNull()
-    
+            .awaitAll()
+            .filterNotNull()
+
     println("DEBUG: Returning ${results.size} sessions out of ${sessionIdsForPage.size} requested")
     results
   }

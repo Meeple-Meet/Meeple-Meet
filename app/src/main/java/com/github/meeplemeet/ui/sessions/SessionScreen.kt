@@ -277,8 +277,7 @@ fun SessionScreen(
   val nowMs = System.currentTimeMillis()
   val sessionMs = session.date.toDate().time
   val timeUntilSession = sessionMs - nowMs
-  val shouldShowArchive =
-      isAdmin && timeUntilSession <= SessionDefaults.ARCHIVE_THRESHOLD
+  val shouldShowArchive = isAdmin && timeUntilSession <= SessionDefaults.ARCHIVE_THRESHOLD
 
   // Camera and gallery launchers
   // Photo upload state

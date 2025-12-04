@@ -159,16 +159,12 @@ class SessionViewModel(
    * Requires admin privileges (requester must be a discussion admin). The session is moved to the
    * archived sessions collection and removed from the active discussion.
    *
-   * This is a suspend function that waits for the photo to be moved (if it exists) before
-   * updating Firestore. This ensures the photo archiving completes even if the UI navigates away.
+   * This is a suspend function that waits for the photo to be moved (if it exists) before updating
+   * Firestore. This ensures the photo archiving completes even if the UI navigates away.
    *
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
-  suspend fun archiveSession(
-      requester: Account,
-      discussion: Discussion,
-      context: Context
-  ) {
+  suspend fun archiveSession(requester: Account, discussion: Discussion, context: Context) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     val session = discussion.session ?: return

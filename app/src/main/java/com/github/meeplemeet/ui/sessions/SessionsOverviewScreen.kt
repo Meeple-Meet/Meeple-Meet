@@ -118,7 +118,7 @@ fun SessionsOverviewScreen(
   var showHistory by remember { mutableStateOf(false) }
   var popupSession by remember { mutableStateOf<Session?>(null) }
   var archivedSessions by remember { mutableStateOf<List<Session>>(emptyList()) }
-  
+
   // Refresh counter to force re-fetching when switching to history tab
   var historyRefreshTrigger by remember { mutableStateOf(0) }
 
@@ -129,7 +129,7 @@ fun SessionsOverviewScreen(
       viewModel.getArchivedSessions(account.uid) { sessions -> archivedSessions = sessions }
     }
   }
-  
+
   // Increment refresh trigger when history tab is opened
   LaunchedEffect(showHistory) {
     if (showHistory) {
