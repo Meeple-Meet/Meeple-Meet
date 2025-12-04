@@ -9,10 +9,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.AccountViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -33,6 +30,7 @@ class DiscussionsOverviewViewModel(
 
   /**
    * Holds cached [StateFlow]s of discussions keyed by discussion ID to avoid duplicate listeners.
+   * Each key is a combination of discussion ID and context hash to support different contexts.
    */
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
 
@@ -76,28 +74,6 @@ class DiscussionsOverviewViewModel(
 
       batch.commit().await()
       checkedPreviews.addAll(toMarkValid)
-    }
-  }
-
-  /**
-   * Returns a real-time flow of discussion data for the specified discussion ID.
-   *
-   * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
-   * flow emits updated discussion data whenever changes occur in Firestore.
-   *
-   * @param discussionId The ID of the discussion to observe
-   * @return A StateFlow that emits the discussion or null if the discussion doesn't exist or ID is
-   *   blank
-   */
-  fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
-    if (discussionId.isBlank()) return MutableStateFlow(null)
-    return discussionFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenDiscussion(discussionId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
     }
   }
 }

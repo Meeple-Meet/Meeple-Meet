@@ -34,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
@@ -51,6 +52,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
@@ -59,6 +61,7 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -178,10 +181,31 @@ fun DiscussionScreen(
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
   var isSending by remember { mutableStateOf(false) }
-  var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val networkMonitorStarted by
+      OfflineModeManager.networkMonitorStarted.collectAsStateWithLifecycle()
+  val effectiveOnline = online || !networkMonitorStarted
+  val offlineMode by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
+
+  LaunchedEffect(effectiveOnline) {
+    val state = offlineMode.discussions[discussion.uid]
+    if (effectiveOnline && state != null) {
+      state.third.forEach {
+        if (it.poll != null)
+            viewModel.createPoll(
+                discussion,
+                account.uid,
+                it.poll.question,
+                it.poll.options,
+                it.poll.allowMultipleVotes)
+        else viewModel.sendMessageToDiscussion(discussion, account, it.content)
+      }
+      offlineMode.discussions[discussion.uid] = Triple(state.first, state.second, emptyList())
+    }
+  }
 
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
@@ -222,10 +246,7 @@ fun DiscussionScreen(
         }
       }
 
-  val discussionState by viewModel.discussionFlow(discussion.uid).collectAsState()
-  val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
-
-  LaunchedEffect(discussionState) { discussionState?.let { disc -> discussionName = disc.name } }
+  val messages by viewModel.messagesFlow(discussion.uid, context).collectAsStateWithLifecycle()
 
   LaunchedEffect(messages) {
     messages
@@ -272,7 +293,7 @@ fun DiscussionScreen(
                               backgroundColor = AppColors.neutral)
                           Spacer(Modifier.width(Dimensions.Spacing.large))
                           Text(
-                              text = discussionName,
+                              text = discussion.name,
                               style = MaterialTheme.typography.titleMedium,
                               fontSize = Dimensions.TextSize.heading,
                               fontWeight = FontWeight.SemiBold,
@@ -449,6 +470,7 @@ fun DiscussionScreen(
                                                         Modifier.padding(
                                                             Dimensions.Spacing.small)) {
                                                       IconButton(
+                                                          enabled = online,
                                                           onClick = {
                                                             showAttachmentMenu = false
                                                             val cameraPermissionGranted =
@@ -466,8 +488,14 @@ fun DiscussionScreen(
                                                           },
                                                           modifier =
                                                               Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_CAMERA_OPTION)) {
+                                                                      DiscussionTestTags
+                                                                          .ATTACHMENT_CAMERA_OPTION)
+                                                                  .alpha(
+                                                                      if (online)
+                                                                          Dimensions.Alpha.full
+                                                                      else
+                                                                          Dimensions.Alpha
+                                                                              .disabled)) {
                                                             Icon(
                                                                 Icons.Default.PhotoCamera,
                                                                 contentDescription = "Camera",
@@ -478,14 +506,21 @@ fun DiscussionScreen(
                                                                             .medium))
                                                           }
                                                       IconButton(
+                                                          enabled = online,
                                                           onClick = {
                                                             showAttachmentMenu = false
                                                             galleryLauncher.launch("image/*")
                                                           },
                                                           modifier =
                                                               Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_GALLERY_OPTION)) {
+                                                                      DiscussionTestTags
+                                                                          .ATTACHMENT_GALLERY_OPTION)
+                                                                  .alpha(
+                                                                      if (online)
+                                                                          Dimensions.Alpha.full
+                                                                      else
+                                                                          Dimensions.Alpha
+                                                                              .disabled)) {
                                                             Icon(
                                                                 Icons.Default.Image,
                                                                 contentDescription = "Gallery",
@@ -523,12 +558,23 @@ fun DiscussionScreen(
                                   CreatePollDialog(
                                       onDismiss = { showPollDialog = false },
                                       onCreate = { question, options, allowMultiple ->
-                                        viewModel.createPoll(
-                                            discussion = discussion,
-                                            creatorId = account.uid,
-                                            question = question,
-                                            options = options,
-                                            allowMultipleVotes = allowMultiple)
+                                        if (effectiveOnline)
+                                            viewModel.createPoll(
+                                                discussion = discussion,
+                                                creatorId = account.uid,
+                                                question = question,
+                                                options = options,
+                                                allowMultipleVotes = allowMultiple)
+                                        else
+                                            OfflineModeManager.sendPendingMessage(
+                                                discussion.uid,
+                                                Message(
+                                                    content = question,
+                                                    poll =
+                                                        Poll(
+                                                            question,
+                                                            options,
+                                                            allowMultipleVotes = allowMultiple)))
                                         showPollDialog = false
                                       })
                                 }
@@ -566,20 +612,24 @@ fun DiscussionScreen(
                           FloatingActionButton(
                               onClick = {
                                 if (messageText.isNotBlank() && !isSending) {
-                                  scope.launch {
-                                    isSending = true
-                                    try {
-                                      viewModel.sendMessageToDiscussion(
-                                          discussion, account, messageText)
-                                      messageText = ""
-                                    } catch (e: Exception) {
+                                  isSending = true
+                                  try {
+                                    if (effectiveOnline)
+                                        viewModel.sendMessageToDiscussion(
+                                            discussion, account, messageText)
+                                    else
+                                        OfflineModeManager.sendPendingMessage(
+                                            discussion.uid, Message(content = messageText))
+                                    messageText = ""
+                                  } catch (e: Exception) {
+                                    scope.launch {
                                       snackbarHostState.showSnackbar(
                                           message =
                                               "Failed to send message: ${e.message ?: "Unknown error"}",
                                           duration = SnackbarDuration.Long)
-                                    } finally {
-                                      isSending = false
                                     }
+                                  } finally {
+                                    isSending = false
                                   }
                                 }
                               },

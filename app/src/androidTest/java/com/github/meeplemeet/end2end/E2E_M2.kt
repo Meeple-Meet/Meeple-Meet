@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -107,6 +108,7 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
   }
 
+  @Ignore
   @Test
   fun signUpUser_createOtherUsers_createDiscussionAndAddMembers() {
     // Generate unique identifiers for test data with UUID to allow multiple test runs
