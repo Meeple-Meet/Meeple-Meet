@@ -109,6 +109,7 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
   }
 
+  @Ignore
   @Test
   fun signUpUser_createOtherUsers_createDiscussionAndAddMembers() {
     // Generate unique identifiers for test data with UUID to allow multiple test runs

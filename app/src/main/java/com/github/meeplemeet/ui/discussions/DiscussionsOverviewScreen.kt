@@ -32,7 +32,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -44,11 +43,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.DiscussionsOverviewViewModel
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -97,11 +98,23 @@ fun DiscussionsOverviewScreen(
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
   val context = LocalContext.current
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val offline by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
   val discussionPreviewsSorted =
-      remember(account.previews) {
-        account.previews.values.sortedByDescending { it.lastMessageAt.toDate() }
+      remember(account.previews, online, offline.discussions) {
+        val previews =
+            if (online) account.previews
+            else account.previews.filter { offline.discussions.contains(it.value.uid) }
+        previews.values.sortedByDescending { it.lastMessageAt.toDate() }
       }
+
   LaunchedEffect(account.previews) { viewModel.validatePreviews(account) }
+
+  LaunchedEffect(account.previews) {
+    account.previews.values
+        .sortedBy { it.lastMessageAt }
+        .forEach { OfflineModeManager.loadDiscussion(it.uid, context) {} }
+  }
 
   Scaffold(
       floatingActionButton = {
@@ -145,7 +158,7 @@ fun DiscussionsOverviewScreen(
                       .background(MaterialTheme.colorScheme.background)
                       .padding(innerPadding)) {
                 items(discussionPreviewsSorted, key = { it.uid }) { preview ->
-                  val discussion by viewModel.discussionFlow(preview.uid).collectAsState()
+                  val discussion = offline.discussions[preview.uid]?.first
                   val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
 
                   val senderId = preview.lastMessageSender

@@ -34,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
@@ -51,6 +52,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
@@ -59,6 +61,7 @@ import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -178,10 +181,31 @@ fun DiscussionScreen(
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
   var isSending by remember { mutableStateOf(false) }
-  var discussionName by remember { mutableStateOf("Loading...") }
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val networkMonitorStarted by
+      OfflineModeManager.networkMonitorStarted.collectAsStateWithLifecycle()
+  val effectiveOnline = online || !networkMonitorStarted
+  val offlineMode by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
+
+  LaunchedEffect(effectiveOnline) {
+    val state = offlineMode.discussions[discussion.uid]
+    if (effectiveOnline && state != null) {
+      state.third.forEach {
+        if (it.poll != null)
+            viewModel.createPoll(
+                discussion,
+                account.uid,
+                it.poll.question,
+                it.poll.options,
+                it.poll.allowMultipleVotes)
+        else viewModel.sendMessageToDiscussion(discussion, account, it.content)
+      }
+      offlineMode.discussions[discussion.uid] = Triple(state.first, state.second, emptyList())
+    }
+  }
 
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
@@ -222,10 +246,7 @@ fun DiscussionScreen(
         }
       }
 
-  val discussionState by viewModel.discussionFlow(discussion.uid).collectAsState()
-  val messages by viewModel.messagesFlow(discussion.uid).collectAsState()
-
-  LaunchedEffect(discussionState) { discussionState?.let { disc -> discussionName = disc.name } }
+  val messages by viewModel.messagesFlow(discussion.uid, context).collectAsStateWithLifecycle()
 
   LaunchedEffect(messages) {
     messages
@@ -272,7 +293,7 @@ fun DiscussionScreen(
                               backgroundColor = AppColors.neutral)
                           Spacer(Modifier.width(Dimensions.Spacing.large))
                           Text(
-                              text = discussionName,
+                              text = discussion.name,
                               style = MaterialTheme.typography.titleMedium,
                               fontSize = Dimensions.TextSize.heading,
                               fontWeight = FontWeight.SemiBold,
@@ -318,8 +339,9 @@ fun DiscussionScreen(
               LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index, message ->
                   val isMine = message.senderId == account.uid
+                  val senderAccount = userCache[message.senderId]
                   val sender =
-                      if (!isMine) userCache[message.senderId]?.name ?: "Unknown"
+                      if (!isMine) senderAccount?.name ?: "Unknown"
                       else DiscussionCommons.YOU_SENDER_NAME
 
                   val showDateHeader =
@@ -348,6 +370,9 @@ fun DiscussionScreen(
                             poll = message.poll,
                             authorName = sender,
                             currentUserId = account.uid,
+                            profilePictureUrl =
+                                if (isMine) account.photoUrl
+                                else userCache[message.senderId]?.photoUrl,
                             onVote = { optionIndex, isRemoving ->
                               if (isRemoving) {
                                 viewModel.removeVoteFromPollAsync(
@@ -368,8 +393,10 @@ fun DiscussionScreen(
                             isFirstFromSender,
                             messages,
                             userCache,
-                            account.uid)
-                    else -> ChatBubble(message, isMine, sender, isLastFromSender, isFirstFromSender)
+                            account)
+                    else ->
+                        ChatBubble(
+                            message, senderAccount, account, isLastFromSender, isFirstFromSender)
                   }
 
                   // Add spacing between messages
@@ -443,6 +470,7 @@ fun DiscussionScreen(
                                                         Modifier.padding(
                                                             Dimensions.Spacing.small)) {
                                                       IconButton(
+                                                          enabled = online,
                                                           onClick = {
                                                             showAttachmentMenu = false
                                                             val cameraPermissionGranted =
@@ -460,8 +488,14 @@ fun DiscussionScreen(
                                                           },
                                                           modifier =
                                                               Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_CAMERA_OPTION)) {
+                                                                      DiscussionTestTags
+                                                                          .ATTACHMENT_CAMERA_OPTION)
+                                                                  .alpha(
+                                                                      if (online)
+                                                                          Dimensions.Alpha.full
+                                                                      else
+                                                                          Dimensions.Alpha
+                                                                              .disabled)) {
                                                             Icon(
                                                                 Icons.Default.PhotoCamera,
                                                                 contentDescription = "Camera",
@@ -472,14 +506,21 @@ fun DiscussionScreen(
                                                                             .medium))
                                                           }
                                                       IconButton(
+                                                          enabled = online,
                                                           onClick = {
                                                             showAttachmentMenu = false
                                                             galleryLauncher.launch("image/*")
                                                           },
                                                           modifier =
                                                               Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_GALLERY_OPTION)) {
+                                                                      DiscussionTestTags
+                                                                          .ATTACHMENT_GALLERY_OPTION)
+                                                                  .alpha(
+                                                                      if (online)
+                                                                          Dimensions.Alpha.full
+                                                                      else
+                                                                          Dimensions.Alpha
+                                                                              .disabled)) {
                                                             Icon(
                                                                 Icons.Default.Image,
                                                                 contentDescription = "Gallery",
@@ -517,12 +558,23 @@ fun DiscussionScreen(
                                   CreatePollDialog(
                                       onDismiss = { showPollDialog = false },
                                       onCreate = { question, options, allowMultiple ->
-                                        viewModel.createPoll(
-                                            discussion = discussion,
-                                            creatorId = account.uid,
-                                            question = question,
-                                            options = options,
-                                            allowMultipleVotes = allowMultiple)
+                                        if (effectiveOnline)
+                                            viewModel.createPoll(
+                                                discussion = discussion,
+                                                creatorId = account.uid,
+                                                question = question,
+                                                options = options,
+                                                allowMultipleVotes = allowMultiple)
+                                        else
+                                            OfflineModeManager.sendPendingMessage(
+                                                discussion.uid,
+                                                Message(
+                                                    content = question,
+                                                    poll =
+                                                        Poll(
+                                                            question,
+                                                            options,
+                                                            allowMultipleVotes = allowMultiple)))
                                         showPollDialog = false
                                       })
                                 }
@@ -560,20 +612,24 @@ fun DiscussionScreen(
                           FloatingActionButton(
                               onClick = {
                                 if (messageText.isNotBlank() && !isSending) {
-                                  scope.launch {
-                                    isSending = true
-                                    try {
-                                      viewModel.sendMessageToDiscussion(
-                                          discussion, account, messageText)
-                                      messageText = ""
-                                    } catch (e: Exception) {
+                                  isSending = true
+                                  try {
+                                    if (effectiveOnline)
+                                        viewModel.sendMessageToDiscussion(
+                                            discussion, account, messageText)
+                                    else
+                                        OfflineModeManager.sendPendingMessage(
+                                            discussion.uid, Message(content = messageText))
+                                    messageText = ""
+                                  } catch (e: Exception) {
+                                    scope.launch {
                                       snackbarHostState.showSnackbar(
                                           message =
                                               "Failed to send message: ${e.message ?: "Unknown error"}",
                                           duration = SnackbarDuration.Long)
-                                    } finally {
-                                      isSending = false
                                     }
+                                  } finally {
+                                    isSending = false
                                   }
                                 }
                               },
@@ -595,12 +651,41 @@ fun DiscussionScreen(
 }
 
 /**
+ * Profile picture for message bubbles.
+ *
+ * @param showProfilePicture Whether to show the profile picture or a spacer.
+ * @param profilePictureUrl URL of the profile picture.
+ * @param isMine Whether this is the current user's message (affects background color and spacer
+ *   position).
+ */
+@Composable
+private fun MessageProfilePicture(
+    showProfilePicture: Boolean,
+    profilePictureUrl: String?,
+    isMine: Boolean
+) {
+  if (isMine) Spacer(Modifier.width(Dimensions.Spacing.small))
+
+  if (showProfilePicture) {
+    ProfilePicture(
+        profilePictureUrl = profilePictureUrl,
+        size = Dimensions.AvatarSize.small,
+        backgroundColor = if (isMine) AppColors.focus else AppColors.neutral)
+  } else {
+    Spacer(Modifier.width(Dimensions.AvatarSize.small))
+  }
+
+  if (!isMine) Spacer(Modifier.width(Dimensions.Spacing.small))
+}
+
+/**
  * Visual bubble for a poll message.
  *
  * @param msgIndex Position inside the message list (used for test tags).
  * @param poll The poll data.
  * @param authorName Display name of the creator.
  * @param currentUserId Id of the viewer (to show personal vote).
+ * @param profilePictureUrl URL of the sender's profile picture (null for default avatar).
  * @param createdAt Time-stamp shown under the card.
  * @param onVote Callback when an option is tapped (index, isRemoving).
  * @param showProfilePicture Whether to show the profile picture for this message.
@@ -611,6 +696,7 @@ fun PollBubble(
     poll: Poll,
     authorName: String,
     currentUserId: String,
+    profilePictureUrl: String?,
     createdAt: Date,
     onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit,
     showProfilePicture: Boolean = true
@@ -624,18 +710,7 @@ fun PollBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        // Profile picture for received messages (on the left)
-        if (!isMine) {
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = null,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.neutral)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-        }
+        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
 
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
 
@@ -815,18 +890,7 @@ fun PollBubble(
               }
         }
 
-        // Profile picture for sent messages (on the right)
-        if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = null,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.focus)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-        }
+        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
       }
 }
 
@@ -840,24 +904,17 @@ private fun PhotoBubble(
     showSenderName: Boolean = true,
     allMessages: List<Message> = emptyList(),
     userCache: Map<String, Account> = emptyMap(),
-    currentUserId: String = ""
+    currentAccount: Account
 ) {
   var showFullImage by remember { mutableStateOf(false) }
+  val profilePictureUrl =
+      if (isMine) currentAccount.photoUrl else userCache[message.senderId]?.photoUrl
+
   Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        if (!isMine) {
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = null,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.neutral)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-        }
+        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
 
         Box(
             modifier =
@@ -925,17 +982,7 @@ private fun PhotoBubble(
               }
             }
 
-        if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = null,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.focus)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-        }
+        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
       }
 
   if (showFullImage) {
@@ -948,7 +995,7 @@ private fun PhotoBubble(
         allPhotoMessages = allMessages,
         currentMessage = message,
         userCache = userCache,
-        currentUserId = currentUserId)
+        currentUserId = currentAccount.uid)
   }
 }
 
@@ -1089,35 +1136,29 @@ fun FullscreenImageDialog(
  * Ordinary chat message bubble (text only).
  *
  * @param message Content to render.
- * @param isMine Whether the message was sent by the current user (aligns right).
- * @param senderName Display name of the sender (null for own messages).
+ * @param senderAccount Account of the message sender (null if not cached or for own messages).
+ * @param currentAccount Current logged-in user's account.
  * @param showProfilePicture Whether to show the profile picture for this message.
  * @param showSenderName Whether to show the sender name for this message.
  */
 @Composable
 fun ChatBubble(
     message: Message,
-    isMine: Boolean,
-    senderName: String?,
+    senderAccount: Account?,
+    currentAccount: Account,
     showProfilePicture: Boolean = true,
     showSenderName: Boolean = true
 ) {
+  val isMine = message.senderId == currentAccount.uid
+  val senderName =
+      if (isMine) DiscussionCommons.YOU_SENDER_NAME else senderAccount?.name ?: "Unknown"
+  val profilePictureUrl = if (isMine) currentAccount.photoUrl else senderAccount?.photoUrl
+
   Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        // Profile picture for received messages (on the left)
-        if (!isMine) {
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = null,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.neutral)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-        }
+        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
 
         // Message bubble
         Box(
@@ -1146,7 +1187,7 @@ fun ChatBubble(
                         horizontal = Dimensions.Spacing.large,
                         vertical = Dimensions.Spacing.medium)) {
               Column {
-                if (senderName != null && !isMine && showSenderName) {
+                if (!isMine && showSenderName) {
                   Text(
                       senderName,
                       style = MaterialTheme.typography.labelSmall,
@@ -1176,18 +1217,7 @@ fun ChatBubble(
               }
             }
 
-        // Profile picture for sent messages (on the right)
-        if (isMine) {
-          Spacer(Modifier.width(Dimensions.Spacing.small))
-          if (showProfilePicture) {
-            ProfilePicture(
-                profilePictureUrl = null,
-                size = Dimensions.AvatarSize.small,
-                backgroundColor = AppColors.focus)
-          } else {
-            Spacer(Modifier.width(Dimensions.AvatarSize.small))
-          }
-        }
+        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
       }
 }
 

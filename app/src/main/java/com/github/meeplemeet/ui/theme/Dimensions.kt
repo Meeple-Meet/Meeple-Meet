@@ -214,6 +214,7 @@ object Dimensions {
   // Alpha values
   object Alpha {
     const val full: Float = 1f
+    const val disabled: Float = 0.5f
     const val opaque: Float = 0.65f
     const val editingBorder: Float = 1f
     const val readonlyBorder: Float = 0.3f

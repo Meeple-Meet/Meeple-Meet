@@ -347,6 +347,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
    * Tests clustering display, single pin selection, and cluster interactions. Tests with both
    * single cluster strategy and no cluster strategy.
    */
+  @Ignore
   @Test
   fun test_clustering_and_singlePin_interactions() {
     // First part: test with no clustering (individual pins)

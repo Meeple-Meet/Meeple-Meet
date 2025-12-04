@@ -102,6 +102,8 @@ fun SignInScreen(
 
   val focusManager = LocalFocusManager.current
 
+  LaunchedEffect(Unit) { focusManager.clearFocus(true) }
+
   // Observe authentication state from the ViewModel
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

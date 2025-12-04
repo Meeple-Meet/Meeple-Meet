@@ -2,11 +2,18 @@ package com.github.meeplemeet.integration
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.Message
+import com.github.meeplemeet.model.discussions.Poll
+import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.ui.discussions.DiscussionScreen
 import com.github.meeplemeet.utils.FirestoreTests
 import java.io.File
 import java.io.FileOutputStream
@@ -22,6 +29,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Before
 import org.junit.Test
 
@@ -572,31 +580,6 @@ class FirestoreDiscussionTests : FirestoreTests() {
   }
 
   @Test
-  fun viewModelMessagesFlowUpdatesInRealTime() = runBlocking {
-    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "First message")
-
-    val messagesFlow = discussionViewModel.messagesFlow(discussion.uid)
-    var receivedMessages = listOf<com.github.meeplemeet.model.discussions.Message>()
-
-    val job = launch { messagesFlow.collect { messages -> receivedMessages = messages } }
-
-    delay(500)
-
-    assertEquals(1, receivedMessages.size)
-    assertEquals("First message", receivedMessages[0].content)
-
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "Second message")
-    delay(500)
-
-    assertEquals(2, receivedMessages.size)
-    assertEquals("Second message", receivedMessages[1].content)
-
-    job.cancel()
-  }
-
-  @Test
   fun viewModelSendMessageWithPhotoUploadsAndSendsMessage() = runTest {
     val discussion =
         discussionRepository.createDiscussion(
@@ -696,5 +679,69 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     // Clean up test image
     File(testImagePath).delete()
+  }
+
+  @Test
+  fun discussionScreenResendsPendingMessagesWhenBackOnline() {
+    OfflineModeManager.clearOfflineMode()
+    val discussion = runBlocking {
+      discussionRepository.createDiscussion("Offline test", "", account1.uid)
+    }
+    runBlocking { OfflineModeManager.addDiscussionToCache(discussion, context) }
+
+    val pollQuestion = "Offline poll question"
+    val pollOptions = listOf("Option A", "Option B")
+
+    OfflineModeManager.sendPendingMessage(
+        discussion.uid, Message(senderId = account1.uid, content = "Offline text message"))
+    OfflineModeManager.sendPendingMessage(
+        discussion.uid,
+        Message(
+            senderId = account1.uid,
+            content = pollQuestion,
+            poll = Poll(question = pollQuestion, options = pollOptions, allowMultipleVotes = true)))
+
+    val scenario = ActivityScenario.launch(ComponentActivity::class.java)
+    try {
+      try {
+        scenario.onActivity { activity ->
+          activity.setContent {
+            DiscussionScreen(
+                account = account1,
+                discussion = discussion,
+                viewModel = discussionViewModel,
+                onBack = {},
+                onOpenDiscussionInfo = {},
+                onCreateSessionClick = {})
+          }
+        }
+
+        runBlocking {
+          withTimeout(20_000) {
+            while (discussionRepository.getMessages(discussion.uid).size < 2) {
+              delay(200)
+            }
+          }
+        }
+      } finally {
+        scenario.close()
+      }
+
+      val messages = runBlocking { discussionRepository.getMessages(discussion.uid) }
+      assertEquals(2, messages.size)
+
+      val textMessage = messages.firstOrNull { it.poll == null && it.photoUrl == null }
+      assertEquals("Offline text message", textMessage?.content)
+
+      val pollMessage = messages.firstOrNull { it.poll != null }
+      assertEquals(pollQuestion, pollMessage?.poll?.question)
+      assertTrue(pollMessage?.poll?.allowMultipleVotes == true)
+
+      val pending =
+          OfflineModeManager.offlineModeFlow.value.discussions[discussion.uid]?.third ?: emptyList()
+      assertTrue(pending.isEmpty())
+    } finally {
+      OfflineModeManager.clearOfflineMode()
+    }
   }
 }

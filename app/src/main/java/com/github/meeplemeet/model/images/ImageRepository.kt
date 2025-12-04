@@ -227,6 +227,9 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray =
       loadImage(context, discussionProfilePath(discussionId))
 
+  suspend fun deleteLocalDiscussionProfilePicture(context: Context, discussionId: String) =
+      deleteLocalImages(context, discussionProfilePath(discussionId))
+
   /**
    * Saves a session photo to Firebase Storage and local cache.
    *

@@ -9,6 +9,8 @@ import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 
+const val MAX_CACHED_DISCUSSIONS = 50
+
 /**
  * Maximum number of accounts to cache in offline mode.
  *
@@ -64,6 +66,9 @@ data class OfflineMode(
     val posts: LinkedHashMap<String, Post> = LinkedHashMap(MAX_CACHED_POSTS, LOAD_FACTOR, true),
     val postsToAdd: LinkedHashMap<String, Post> =
         LinkedHashMap(MAX_OFFLINE_CREATED_POSTS, LOAD_FACTOR, true),
+    val discussions: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>> =
+        LinkedHashMap(MAX_CACHED_DISCUSSIONS, LOAD_FACTOR, true),
+    val posts: LinkedHashMap<String, Pair<Post, Boolean>> = LinkedHashMap(16, LOAD_FACTOR, true),
     val shopsToAdd: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> =
         LinkedHashMap(16, LOAD_FACTOR, true),
     val spaceRentersToAdd: LinkedHashMap<String, Pair<SpaceRenter, Map<String, Any>>> =

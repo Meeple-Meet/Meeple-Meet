@@ -7,10 +7,17 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -31,7 +38,7 @@ const val SUGGESTIONS_LIMIT = 30
  * - **Unread tracking**: Automatic unread count management
  *
  * ## Photo Messaging Flow
- * 1. User selects/captures photo → cached via [ImageFileUtils]
+ * 1. User selects/captures photo → cached via [com.github.meeplemeet.model.images.ImageFileUtils]
  * 2. [sendMessageWithPhoto] uploads to Firebase Storage via [ImageRepository]
  * 3. Creates message with photoUrl via [DiscussionRepository]
  * 4. All participants' previews are updated with "📷 Photo" text
@@ -94,8 +101,10 @@ class DiscussionViewModel(
    * @param localPath Absolute file path to the local image (typically in app cache directory).
    * @throws IllegalArgumentException if localPath is blank
    * @throws IllegalStateException if photo upload fails to return a download URL
-   * @see ImageFileUtils.cacheUriToFile for preparing gallery photos
-   * @see ImageFileUtils.saveBitmapToCache for preparing camera photos
+   * @see com.github.meeplemeet.model.images.ImageFileUtils.cacheUriToFile for preparing gallery
+   *   photos
+   * @see com.github.meeplemeet.model.images.ImageFileUtils.saveBitmapToCache for preparing camera
+   *   photos
    * @see ImageRepository.saveDiscussionPhotoMessages for photo upload
    * @see DiscussionRepository.sendPhotoMessageToDiscussion for message creation
    */
@@ -232,47 +241,26 @@ class DiscussionViewModel(
       optionIndex: Int
   ) = viewModelScope.launch { removeVoteFromPoll(discussionId, messageId, voter, optionIndex) }
 
-  // Holds a [StateFlow] of discussion documents keyed by discussion ID.
-  private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
-
   /**
-   * Real-time flow of a discussion document.
+   * Real-time flow of messages in a discussion with offline caching support.
    *
-   * Emits a new [Discussion] on every snapshot change, or `null` if the discussion does not exist
-   * yet.
-   */
-  fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
-    if (discussionId.isBlank()) return MutableStateFlow(null)
-    return discussionFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenDiscussion(discussionId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
-    }
-  }
-
-  // Holds a [StateFlow] of messages keyed by discussion ID.
-  private val messagesFlows = mutableMapOf<String, StateFlow<List<Message>>>()
-
-  /**
-   * Real-time flow of messages in a discussion.
+   * Returns a StateFlow that emits the list of messages for the given discussion. The behavior
+   * depends on network connectivity:
+   * - **Online**: Fetches messages from repository and caches them automatically
+   * - **Offline**: Returns cached messages from OfflineModeManager
    *
-   * Returns a StateFlow that emits the complete list of messages whenever the messages
-   * subcollection changes. Messages are ordered by creation time (oldest first). The flow is shared
-   * across all collectors for the same discussion ID.
+   * Messages are ordered by creation time (oldest first).
    *
-   * ## Flow Characteristics
-   * - **Sharing**: WhileSubscribed with 0ms timeout (stops when no collectors)
-   * - **Initial value**: Empty list
-   * - **Updates**: Full message list on any change (add, update, delete)
-   * - **Caching**: One flow instance per discussion ID
+   * ## Offline Caching
+   * - **Cache source**: OfflineModeManager.offlineModeFlow
+   * - **Auto-caching**: New messages are automatically cached when online
+   * - **Cache updates**: Triggered when discussionId changes
    *
    * ## Usage in Composables
    *
    * ```kotlin
-   * val messages by viewModel.messagesFlow(discussionId).collectAsState()
+   * val context = LocalContext.current
+   * val messages by viewModel.messagesFlow(discussionId, context).collectAsState()
    * LazyColumn {
    *   items(messages) { message ->
    *     MessageBubble(message)
@@ -281,19 +269,47 @@ class DiscussionViewModel(
    * ```
    *
    * @param discussionId The discussion UID to listen to. Returns empty flow if blank.
+   * @param context Android context for image caching operations (required for caching).
    * @return StateFlow emitting lists of messages ordered by createdAt.
-   * @see discussionFlow for discussion metadata updates
    * @see DiscussionRepository.listenMessages for underlying listener
+   * @see OfflineModeManager.cacheDiscussionMessages for cache updates
+   * @see OfflineModeManager.hasInternetConnection for connectivity status
    */
-  fun messagesFlow(discussionId: String): StateFlow<List<Message>> {
+  @OptIn(ExperimentalCoroutinesApi::class)
+  fun messagesFlow(discussionId: String, context: Context): StateFlow<List<Message>> {
     if (discussionId.isBlank()) return MutableStateFlow(emptyList())
-    return messagesFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenMessages(discussionId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = emptyList())
+
+    if (!OfflineModeManager.offlineModeFlow.value.discussions.containsKey(discussionId)) {
+      viewModelScope.launch { OfflineModeManager.loadDiscussion(discussionId, context) { _ -> } }
     }
+
+    val cachedMessagesFlow =
+        OfflineModeManager.offlineModeFlow.map { offlineMode ->
+          offlineMode.discussions[discussionId]?.second
+        }
+
+    return combine(
+            OfflineModeManager.hasInternetConnection,
+            OfflineModeManager.networkMonitorStarted,
+            cachedMessagesFlow) { isOnline, monitorStarted, cached ->
+              Triple(isOnline, monitorStarted, cached)
+            }
+        .flatMapLatest { (isOnline, monitorStarted, cachedMessages) ->
+          val cacheAvailable = !cachedMessages.isNullOrEmpty()
+          val treatAsOnline = isOnline || !monitorStarted
+          if (treatAsOnline || !cacheAvailable) {
+            discussionRepository.listenMessages(discussionId).onEach { messages ->
+              OfflineModeManager.cacheDiscussionMessages(discussionId, messages)
+            }
+          } else {
+            flowOf(cachedMessages!!)
+          }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+            initialValue =
+                OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.second
+                    ?: emptyList())
   }
 }

@@ -168,5 +168,7 @@ open class FirestoreTests {
       deleteAllCollectionsOnce(db)
       deleteAllStorageFiles(storage)
     }
+
+    OfflineModeManager.forceInternet()
   }
 }

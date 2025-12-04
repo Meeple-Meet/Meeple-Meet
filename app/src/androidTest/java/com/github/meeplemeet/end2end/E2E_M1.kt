@@ -40,7 +40,6 @@ class E2E_M1 : FirestoreTests() {
   fun completeUserJourney_signUpCreateAccountAndNavigate() {
     composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
 
-    // Step 6: Navigate through the main tabs to verify full access
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
     composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
