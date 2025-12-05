@@ -18,6 +18,8 @@ const val MAX_CACHED_DISCUSSIONS = 50
  * and their profile pictures are deleted from local storage to free up space.
  */
 const val MAX_CACHED_ACCOUNTS = 50
+const val MAX_CACHED_SHOPS = 20
+const val MAX_CACHED_SPACE_RENTERS = 20
 
 /**
  * Maximum number of posts to cache in offline mode.
@@ -50,9 +52,9 @@ const val LOAD_FACTOR = 0.9f
  *   LinkedHashMap maintains LRU access order.
  * @property postsToAdd Map of temporary IDs to Post objects created offline. These are uploaded
  *   when connectivity is restored. LinkedHashMap maintains access order (LRU) for cache eviction.
- * @property shopsToAdd Map of shop IDs to pairs of Shop objects and their associated metadata.
+ * @property shops Map of shop IDs to pairs of Shop objects and their associated metadata.
  *   LinkedHashMap maintains access order (LRU) for cache eviction.
- * @property spaceRentersToAdd Map of space renter IDs to pairs of SpaceRenter objects and their
+ * @property spaceRenters Map of space renter IDs to pairs of SpaceRenter objects and their
  *   associated metadata. LinkedHashMap maintains access order (LRU) for cache eviction.
  * @property loadedPins Map of pin IDs to GeoPinWithLocation objects, representing map pins that
  *   have been loaded and cached for offline viewing. LinkedHashMap maintains access order (LRU) for
@@ -66,10 +68,10 @@ data class OfflineMode(
         LinkedHashMap(MAX_OFFLINE_CREATED_POSTS, LOAD_FACTOR, true),
     val discussions: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>> =
         LinkedHashMap(MAX_CACHED_DISCUSSIONS, LOAD_FACTOR, true),
-    val shopsToAdd: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> =
-        LinkedHashMap(16, LOAD_FACTOR, true),
-    val spaceRentersToAdd: LinkedHashMap<String, Pair<SpaceRenter, Map<String, Any>>> =
-        LinkedHashMap(16, LOAD_FACTOR, true),
+    val shops: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> =
+        LinkedHashMap(MAX_CACHED_SHOPS, LOAD_FACTOR, true),
+    val spaceRenters: LinkedHashMap<String, Pair<SpaceRenter, Map<String, Any>>> =
+        LinkedHashMap(MAX_CACHED_SPACE_RENTERS, LOAD_FACTOR, true),
     val loadedPins: LinkedHashMap<String, GeoPinWithLocation> =
         LinkedHashMap(16, LOAD_FACTOR, true),
 )

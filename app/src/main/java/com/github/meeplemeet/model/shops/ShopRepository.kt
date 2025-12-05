@@ -275,4 +275,28 @@ class ShopRepository(
 
     return fromNoUid(doc.id, shopNoUid, owner, gameCollection)
   }
+  /**
+   * Attempts to retrieve a shop by its ID from Firestore.
+   *
+   * Returns null if the shop does not exist or if an error occurs during retrieval.
+   *
+   * @param shopId The unique identifier of the shop to retrieve.
+   * @return The Shop with the specified ID, or null if not found or on error.
+   */
+  suspend fun getShopSafe(shopId: String): Shop? {
+    return try {
+      getShop(shopId)
+    } catch (_: Exception) {
+      null
+    }
+  }
+  /**
+   * Updates a shop document from its offline changes.
+   *
+   * @param id The shop ID to update
+   * @param changes The changes made offline
+   */
+  suspend fun updateShopOffline(id: String, changes: Map<String, Any>) {
+    collection.document(id).update(changes).await()
+  }
 }

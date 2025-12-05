@@ -10,12 +10,16 @@ import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+const val TAG = "MainActivityViewModel"
 
 /**
  * Main view model for the application that provides real-time data flows for accounts and
@@ -31,6 +35,8 @@ import kotlinx.coroutines.launch
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
 ) : AuthenticationViewModel() {
 
   /**
@@ -131,5 +137,11 @@ class MainActivityViewModel(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
             initialValue =
                 OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.first)
+  }
+  /**
+   * Syncs all pending offline data with Firestore. Call this function when connection is restored.
+   */
+  fun syncOfflineData() {
+    viewModelScope.launch { OfflineModeManager.syncAllPendingData() }
   }
 }

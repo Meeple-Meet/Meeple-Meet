@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.space_renter
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.coroutines.launch
@@ -21,15 +22,19 @@ class CreateSpaceRenterViewModel(
     private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
 ) : SpaceRenterSearchViewModel() {
   /**
-   * Creates a new space renter in Firestore.
+   * Creates a new space renter, either immediately (online) or queued for sync (offline).
    *
    * This operation is performed asynchronously in the viewModelScope. Validates that:
    * - The space renter name is not blank
    * - Exactly 7 opening hours entries are provided (one for each day of the week)
    * - A valid address is provided
    *
-   * The repository will automatically add the space renter ID to the owner's businesses
-   * subcollection.
+   * **Online behavior**: Creates the space renter in Firestore immediately. The repository will
+   * automatically add the space renter ID to the owner's businesses subcollection.
+   *
+   * **Offline behavior**: Queues the space renter for creation by storing it in the offline cache
+   * with a "_pending_create" marker. When connection is restored, a sync mechanism should detect
+   * this pending creation and push it to the server.
    *
    * @param owner The account that owns the space rental business.
    * @param name The name of the space rental business.
@@ -41,8 +46,8 @@ class CreateSpaceRenterViewModel(
    *   day).
    * @param spaces The collection of rentable spaces with their details (optional, defaults to
    *   empty).
-   * @throws IllegalArgumentException if the space renter name is blank, if not exactly 7 opening
-   *   hours entries are provided, or if the address is not valid.
+   * @param photoCollectionUrl List of photo URLs (optional, defaults to empty).
+   * @throws IllegalArgumentException if validation fails.
    */
   fun createSpaceRenter(
       owner: Account,
@@ -55,17 +60,50 @@ class CreateSpaceRenterViewModel(
       spaces: List<Space> = emptyList(),
       photoCollectionUrl: List<String> = emptyList(),
   ) {
+    // Validation
     if (name.isBlank()) throw IllegalArgumentException("SpaceRenter name cannot be blank")
 
     val uniqueByDay = openingHours.distinctBy { it.day }
     if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
 
     if (address == Location())
-        throw IllegalArgumentException("An address it required to create a space renter")
+        throw IllegalArgumentException("An address is required to create a space renter")
 
     viewModelScope.launch {
-      repository.createSpaceRenter(
-          owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+      // Check internet connection status
+      val isOnline = OfflineModeManager.hasInternetConnection.value
+
+      if (isOnline) {
+        // ONLINE: Create immediately in Firestore
+        repository.createSpaceRenter(
+            owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+      } else {
+        // OFFLINE: Queue for later creation
+
+        // Generate a temporary ID (you might need to adjust this based on your ID generation
+        // strategy)
+        val tempId = "temp_${System.currentTimeMillis()}_${owner.uid}"
+
+        // Create the SpaceRenter object with temporary ID
+        val pendingRenter =
+            SpaceRenter(
+                id = tempId,
+                owner = owner,
+                name = name,
+                phone = phone,
+                email = email,
+                website = website,
+                address = address,
+                openingHours = openingHours,
+                spaces = spaces,
+                photoCollectionUrl = photoCollectionUrl)
+
+        // Add to offline cache with pending creation marker
+        OfflineModeManager.addPendingSpaceRenter(pendingRenter)
+
+        // Optional: Show a message to user that creation will happen when online
+        // You might want to expose a callback or LiveData for this
+      }
     }
   }
 }

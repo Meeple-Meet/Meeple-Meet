@@ -69,6 +69,8 @@ open class FirestoreTests {
         storageEmulatorLaunched = true
         FirebaseStorage.getInstance().useEmulator("10.0.2.2", 9199)
       }
+      // Ensure we start with a signed out user
+      FirebaseAuth.getInstance().signOut()
     }
   }
 
@@ -170,5 +172,10 @@ open class FirestoreTests {
     }
 
     OfflineModeManager.forceInternet()
+  }
+
+  @org.junit.After
+  fun testsTearDown() {
+    FirebaseProvider.auth.signOut()
   }
 }

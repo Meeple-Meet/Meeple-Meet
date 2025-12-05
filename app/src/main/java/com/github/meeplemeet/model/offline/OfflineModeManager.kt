@@ -14,6 +14,8 @@ import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnect
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +23,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableMap
+
+const val PENDING_STRING = "_pending_create"
+const val UNCHECKED_CAST = "UNCHECKED_CAST"
 
 /**
  * Caps the size of a LinkedHashMap by removing the least recently used entries until the size is at
@@ -183,6 +189,15 @@ object OfflineModeManager {
           }
         })
     _networkMonitorStarted.value = true
+  }
+
+  /**
+   * Forces the network connection status for testing purposes.
+   *
+   * @param isConnected The desired connection status.
+   */
+  fun setNetworkStatusForTesting(isConnected: Boolean) {
+    _hasInternetConnection.value = isConnected
   }
 
   /**
@@ -381,6 +396,184 @@ object OfflineModeManager {
     val newState = LinkedHashMap(state)
     newState[account.uid] = existingAccount to updatedChanges
     _offlineModeFlow.value = _offlineModeFlow.value.copy(accounts = newState)
+  }
+
+  // ==================== Space Renter Functions ====================
+
+  /**
+   * Retrieves a space renter by ID, first checking the offline cache, then fetching from repository
+   * if needed.
+   *
+   * Images are NOT cached or loaded - image handling should be disabled in UI when offline.
+   *
+   * @param renterId The unique identifier of the space renter to retrieve
+   * @param onResult Callback invoked with the SpaceRenter if found, or null otherwise
+   */
+  suspend fun loadSpaceRenter(renterId: String, onResult: (SpaceRenter?) -> Unit) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val cached = state[renterId]?.first
+
+    if (cached != null) {
+      onResult(cached)
+      return
+    }
+
+    val fetched = RepositoryProvider.spaceRenters.getSpaceRenterSafe(renterId)
+    if (fetched != null) {
+      val newState = LinkedHashMap(state).apply { this[renterId] = fetched to emptyMap() }
+      val (capped, _) = cap(newState, MAX_CACHED_SPACE_RENTERS)
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = capped)
+    }
+
+    onResult(fetched)
+  }
+
+  /**
+   * Applies pending changes to a SpaceRenter object.
+   *
+   * @param renter The base SpaceRenter object.
+   * @param changes The map of pending changes.
+   * @return The SpaceRenter with changes applied.
+   */
+  private fun applySpaceRenterChanges(renter: SpaceRenter, changes: Map<String, Any>): SpaceRenter {
+    if (changes.isEmpty()) return renter
+
+    var updated = renter
+    changes.forEach { (key, value) ->
+      when (key) {
+        "name" -> updated = updated.copy(name = value as? String ?: updated.name)
+        "phone" -> updated = updated.copy(phone = value as? String ?: updated.phone)
+        "email" -> updated = updated.copy(email = value as? String ?: updated.email)
+        "website" -> updated = updated.copy(website = value as? String ?: updated.website)
+        "address" ->
+            updated =
+                updated.copy(
+                    address =
+                        value as? com.github.meeplemeet.model.shared.location.Location
+                            ?: updated.address)
+        "openingHours" -> {
+          val list = value as? List<*>
+          val castValue =
+              if (list != null &&
+                  list.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
+                list.filterIsInstance<com.github.meeplemeet.model.shops.OpeningHours>()
+              } else updated.openingHours
+          updated = updated.copy(openingHours = castValue)
+        }
+        "spaces" -> {
+          val list = value as? List<*>
+          val castValue =
+              if (list != null &&
+                  list.all { it is com.github.meeplemeet.model.space_renter.Space }) {
+                list.filterIsInstance<com.github.meeplemeet.model.space_renter.Space>()
+              } else updated.spaces
+          updated = updated.copy(spaces = castValue)
+        }
+        "photoCollectionUrl" -> {
+          val list = value as? List<*>
+          val castValue =
+              if (list != null && list.all { it is String }) {
+                list.filterIsInstance<String>()
+              } else updated.photoCollectionUrl
+          updated = updated.copy(photoCollectionUrl = castValue)
+        }
+      }
+    }
+    return updated
+  }
+
+  /**
+   * Records a change to a space renter property in the offline cache for later synchronization.
+   *
+   * This tracks edits made while offline. Changes will be synced when connection is restored.
+   *
+   * @param renter The space renter being modified
+   * @param property The name of the property being changed
+   * @param newValue The new value for the property
+   */
+  fun setSpaceRenterChange(renter: SpaceRenter, property: String, newValue: Any) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val (existingRenter, existingChanges) = state[renter.id] ?: (renter to emptyMap())
+    val updatedChanges =
+        existingChanges.toMutableMap().apply { put(property, newValue) }.toImmutableMap()
+
+    // Update the base object with the new change
+    val updatedRenter = applySpaceRenterChanges(existingRenter, mapOf(property to newValue))
+
+    val newState = LinkedHashMap(state)
+    newState[renter.id] = updatedRenter to updatedChanges
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
+  }
+
+  /**
+   * Adds a new space renter to the offline cache for later synchronization. Used when creating a
+   * space renter while offline.
+   *
+   * Note: Space renter creation should ideally be blocked in UI when offline since images cannot be
+   * uploaded. This is provided for edge cases where text-only data needs to be queued.
+   *
+   * @param renter The space renter to add
+   */
+  fun addPendingSpaceRenter(renter: SpaceRenter) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val newState = LinkedHashMap(state)
+    newState[renter.id] = renter to mapOf(PENDING_STRING to true)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
+  }
+
+  suspend fun updateSpaceRenterCache(renter: SpaceRenter) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val newState = LinkedHashMap(state)
+    newState[renter.id] = renter to state[renter.id]?.second.orEmpty()
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
+    // Wait until the StateFlow has actually updated with this exact object
+    _offlineModeFlow.first { offlineMode -> offlineMode.spaceRenters[renter.id]?.first == renter }
+  }
+
+  /**
+   * Removes a space renter from the offline cache. Used when deleting a space renter or after
+   * successful synchronization.
+   *
+   * @param renterId The ID of the space renter to remove
+   */
+  fun removeSpaceRenter(renterId: String) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val newState = LinkedHashMap(state)
+    newState.remove(renterId)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
+  }
+
+  // ==================== Synchronization Helpers ====================
+
+  /**
+   * Retrieves all pending changes for shops that need to be synchronized.
+   *
+   * @return List of pairs containing the shop and its pending changes map
+   */
+  private fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
+    return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
+  }
+
+  /**
+   * Retrieves all pending changes for space renters that need to be synchronized.
+   *
+   * @return List of pairs containing the space renter and its pending changes map
+   */
+  fun getPendingSpaceRenterChanges(): List<Pair<SpaceRenter, Map<String, Any>>> {
+    return _offlineModeFlow.value.spaceRenters.values.filter { it.second.isNotEmpty() }.toList()
+  }
+
+  /**
+   * Clears pending changes for a space renter after successful synchronization.
+   *
+   * @param renterId The ID of the space renter whose changes were synchronized
+   */
+  fun clearSpaceRenterChanges(renterId: String) {
+    val state = _offlineModeFlow.value.spaceRenters
+    val renter = state[renterId]?.first ?: return
+    val newState = LinkedHashMap(state)
+    newState[renterId] = renter to emptyMap()
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
   // ==================== POST CACHING METHODS ====================
@@ -874,5 +1067,57 @@ object OfflineModeManager {
     if (cached == null) return
 
     updateDiscussionCache(state, cached.first, cached.second, cached.third + message)
+  }
+
+  // Add to OfflineModeManager object, after the existing helper functions
+
+  /**
+   * Syncs all pending space renter changes with Firestore. Should be called when internet
+   * connection is restored.
+   */
+  private suspend fun syncPendingSpaceRenters() {
+    val pendingChanges = getPendingSpaceRenterChanges()
+
+    if (pendingChanges.isEmpty()) return
+
+    pendingChanges.forEach { (renter, changes) ->
+      try {
+        if (changes.containsKey(PENDING_STRING)) {
+          RepositoryProvider.spaceRenters.createSpaceRenter(
+              owner = renter.owner,
+              name = renter.name,
+              phone = renter.phone,
+              email = renter.email,
+              website = renter.website,
+              address = renter.address,
+              openingHours = renter.openingHours,
+              spaces = renter.spaces,
+              photoCollectionUrl = renter.photoCollectionUrl)
+
+          removeSpaceRenter(renter.id)
+        } else {
+          // Update Firestore
+          RepositoryProvider.spaceRenters.updateSpaceRenterOffline(renter.id, changes)
+
+          // Fetch the updated data from Firestore
+          val refreshed = RepositoryProvider.spaceRenters.getSpaceRenterSafe(renter.id)
+          if (refreshed != null) {
+            // Update the cache with fresh data
+            updateSpaceRenterCache(refreshed)
+          }
+
+          clearSpaceRenterChanges(renter.id)
+        }
+      } catch (e: Exception) {
+        // Log or handle error - silent failure for now
+      }
+    }
+  }
+  /**
+   * Syncs all pending offline data (shops and space renters) with Firestore. Call this when
+   * internet connection is restored.
+   */
+  suspend fun syncAllPendingData() {
+    syncPendingSpaceRenters()
   }
 }

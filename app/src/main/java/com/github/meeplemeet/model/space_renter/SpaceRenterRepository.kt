@@ -222,4 +222,21 @@ class SpaceRenterRepository(
           .awaitAll()
     }
   }
+
+  suspend fun getSpaceRenterSafe(renterId: String): SpaceRenter? {
+    return try {
+      getSpaceRenter(renterId)
+    } catch (e: Exception) {
+      null
+    }
+  }
+  /**
+   * Updates a space renter document from its offline changes.
+   *
+   * @param id The space renter ID to update
+   * @param changes The changes made offline
+   */
+  suspend fun updateSpaceRenterOffline(id: String, changes: Map<String, Any>) {
+    collection.document(id).update(changes).await()
+  }
 }

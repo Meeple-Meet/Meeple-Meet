@@ -81,14 +81,24 @@ object AddSpaceRenterUi {
 @Composable
 fun CreateSpaceRenterScreen(
     owner: Account,
+    online: Boolean,
+    userLocation: Location?,
     onBack: () -> Unit,
     onCreated: () -> Unit,
     viewModel: CreateSpaceRenterViewModel = viewModel()
 ) {
   val locationUi by viewModel.locationUIState.collectAsState()
 
+  // Set default location when offline
+  LaunchedEffect(online, userLocation) {
+    if (!online && userLocation != null && locationUi.selectedLocation == null) {
+      viewModel.setLocation(userLocation)
+    }
+  }
+
   AddSpaceRenterContent(
       owner = owner,
+      online = online,
       onBack = onBack,
       onCreated = onCreated,
       onCreate = { renter ->
@@ -114,6 +124,7 @@ fun CreateSpaceRenterScreen(
 @Composable
 internal fun AddSpaceRenterContent(
     owner: Account,
+    online: Boolean,
     onBack: () -> Unit,
     onCreated: () -> Unit,
     onCreate: suspend (SpaceRenter) -> Unit,
@@ -269,6 +280,7 @@ internal fun AddSpaceRenterContent(
                           content = {
                             SpaceRenterRequiredInfoSection(
                                 spaceRenter = draftRenter,
+                                online = online,
                                 onSpaceName = { name = it },
                                 onEmail = { email = it },
                                 onPhone = { phone = it },

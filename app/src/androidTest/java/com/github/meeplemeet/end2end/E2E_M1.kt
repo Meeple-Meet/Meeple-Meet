@@ -105,6 +105,10 @@ class E2E_M1 : FirestoreTests() {
         .performClick()
     composeTestRule.waitForIdle()
 
+    // Verify Bob is added to the list (search query is cleared, so if handle exists it's in the
+    // list)
+    composeTestRule.onNodeWithText(user2Handle).assertExists()
+
     // Create the discussion with Bob as a member
     composeTestRule
         .onNodeWithTag("Create Discussion")
