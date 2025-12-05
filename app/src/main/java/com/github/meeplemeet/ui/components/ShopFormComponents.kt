@@ -264,6 +264,29 @@ fun RequiredInfoSection(
   }
 }
 
+@Composable
+fun ShopImageCarousel(
+    photoCollectionUrl: List<String>,
+    maxNumberOfImages: Int,
+    onAdd: (String, Int) -> Unit,
+    onRemove: (String) -> Unit,
+    online: Boolean
+) {
+  if (online) {
+    ImageCarousel(
+        photoCollectionUrl = photoCollectionUrl,
+        maxNumberOfImages = maxNumberOfImages,
+        onAdd = onAdd,
+        onRemove = onRemove,
+        editable = true)
+  } else {
+    ImageCarousel(
+        photoCollectionUrl = photoCollectionUrl,
+        maxNumberOfImages = maxNumberOfImages,
+        editable = false)
+  }
+}
+
 /**
  * Composable function representing the availability section.
  *

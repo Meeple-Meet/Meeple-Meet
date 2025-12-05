@@ -1,5 +1,5 @@
 package com.github.meeplemeet.model.offline
-// AI was used on this file
+// AI was used on this fille
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -451,35 +451,54 @@ object OfflineModeManager {
                     address =
                         value as? com.github.meeplemeet.model.shared.location.Location
                             ?: updated.address)
-        "openingHours" -> {
+        "openingHours" ->
+            updated =
+                updated.copy(
+                    openingHours =
+                        safeCastList(value, updated.openingHours) {
+                          it is com.github.meeplemeet.model.shops.OpeningHours
+                        })
+        "spaces" ->
+            updated =
+                updated.copy(
+                    spaces =
+                        safeCastList(value, updated.spaces) {
+                          it is com.github.meeplemeet.model.space_renter.Space
+                        })
+        "gameCollection" -> {
           val list = value as? List<*>
           val castValue =
               if (list != null &&
-                  list.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
-                list.filterIsInstance<com.github.meeplemeet.model.shops.OpeningHours>()
-              } else updated.openingHours
-          updated = updated.copy(openingHours = castValue)
+                  list.all {
+                    it is Pair<*, *> &&
+                        it.first is com.github.meeplemeet.model.shared.game.Game &&
+                        it.second is Int
+                  }) {
+                @Suppress(UNCHECKED_CAST)
+                list as List<Pair<com.github.meeplemeet.model.shared.game.Game, Int>>
+              } else updated.gameCollection
+          updated = updated.copy(gameCollection = castValue)
         }
-        "spaces" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null &&
-                  list.all { it is com.github.meeplemeet.model.space_renter.Space }) {
-                list.filterIsInstance<com.github.meeplemeet.model.space_renter.Space>()
-              } else updated.spaces
-          updated = updated.copy(spaces = castValue)
-        }
-        "photoCollectionUrl" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null && list.all { it is String }) {
-                list.filterIsInstance<String>()
-              } else updated.photoCollectionUrl
-          updated = updated.copy(photoCollectionUrl = castValue)
-        }
+        "photoCollectionUrl" ->
+            updated =
+                updated.copy(
+                    photoCollectionUrl = safeCastList(value, updated.photoCollectionUrl) { it is String })
       }
     }
     return updated
+  }
+
+  private inline fun <reified T> safeCastList(
+      value: Any?,
+      current: List<T>,
+      check: (Any?) -> Boolean
+  ): List<T> {
+    val list = value as? List<*>
+    return if (list != null && list.all(check)) {
+      list.filterIsInstance<T>()
+    } else {
+      current
+    }
   }
 
   /**
@@ -521,14 +540,6 @@ object OfflineModeManager {
     _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
-  /**
-   * Updates the space renter cache with the provided space renter object, preserving any existing
-   * pending changes.
-   *
-   * Waits until the StateFlow has actually updated with this exact object.
-   *
-   * @param renter The space renter object to update in the cache.
-   */
   suspend fun updateSpaceRenterCache(renter: SpaceRenter) {
     val state = _offlineModeFlow.value.spaceRenters
     val newState = LinkedHashMap(state)
@@ -536,176 +547,6 @@ object OfflineModeManager {
     _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
     // Wait until the StateFlow has actually updated with this exact object
     _offlineModeFlow.first { offlineMode -> offlineMode.spaceRenters[renter.id]?.first == renter }
-  }
-
-  // ==================== Shop Functions ====================
-  /**
-   * Retrieves a shop by ID, first checking the offline cache, then fetching from repository if
-   * needed.
-   *
-   * Images are NOT cached or loaded - image handling should be disabled in UI when offline.
-   *
-   * @param shopId The unique identifier of the shop to retrieve
-   * @param onResult Callback invoked with the Shop if found, or null otherwise
-   */
-  suspend fun loadShop(shopId: String, onResult: (Shop?) -> Unit) {
-    val state = _offlineModeFlow.value.shops
-    val cached = state[shopId]?.first
-
-    if (cached != null) {
-      onResult(cached)
-      return
-    }
-
-    val fetched = RepositoryProvider.shops.getShopSafe(shopId)
-    if (fetched != null) {
-      val newState = LinkedHashMap(state).apply { this[shopId] = fetched to emptyMap() }
-      val (capped, _) = cap(newState, MAX_CACHED_SHOPS)
-      _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = capped)
-    }
-
-    onResult(fetched)
-  }
-
-  /**
-   * Updates the shop cache with the provided shop object, preserving any existing pending changes.
-   *
-   * Waits until the StateFlow has actually updated with this exact object.
-   *
-   * @param shop The shop object to update in the cache.
-   */
-  suspend fun updateShopCache(shop: Shop) {
-    val state = _offlineModeFlow.value.shops
-    val newState = LinkedHashMap(state)
-    newState[shop.id] = shop to state[shop.id]?.second.orEmpty()
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-    // Wait until the StateFlow has actually updated with this exact object
-    _offlineModeFlow.first { offlineMode -> offlineMode.shops[shop.id]?.first == shop }
-  }
-
-  /**
-   * Adds a new shop to the offline cache for later synchronization. Used when creating a shop while
-   * offline.
-   *
-   * @param shop The shop to add
-   */
-  fun addPendingShop(shop: Shop) {
-    val state = _offlineModeFlow.value.shops
-    val newState = LinkedHashMap(state)
-    newState[shop.id] = shop to mapOf(PENDING_STRING to true)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
-
-  /**
-   * Records a pending change for a shop.
-   *
-   * If the shop is not already in the cache, it is added. Changes are accumulated in a map keyed by
-   * property name. The base object is updated with the new change.
-   *
-   * @param shop The shop being modified
-   * @param property The name of the property changing
-   * @param newValue The new value for the property
-   */
-  fun setShopChange(shop: Shop, property: String, newValue: Any) {
-    val state = _offlineModeFlow.value.shops
-    val existingEntry = state[shop.id]
-
-    // If not in cache, add it first
-    val (existingShop, existingChanges) =
-        if (existingEntry == null) {
-          addPendingShop(shop)
-          shop to emptyMap()
-        } else {
-          existingEntry
-        }
-
-    val updatedChanges = existingChanges.toMutableMap()
-    updatedChanges[property] = newValue
-
-    // Update the base object with the new change
-    val updatedShop = applyShopChanges(existingShop, mapOf(property to newValue))
-
-    val newState = LinkedHashMap(state)
-    newState[shop.id] = updatedShop to updatedChanges
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
-
-  private fun applyShopChanges(shop: Shop, changes: Map<String, Any>): Shop {
-    if (changes.isEmpty()) return shop
-
-    var updated = shop
-    changes.forEach { (key, value) ->
-      when (key) {
-        "name" -> updated = updated.copy(name = value as? String ?: updated.name)
-        "phone" -> updated = updated.copy(phone = value as? String ?: updated.phone)
-        "email" -> updated = updated.copy(email = value as? String ?: updated.email)
-        "website" -> updated = updated.copy(website = value as? String ?: updated.website)
-        "address" ->
-            updated =
-                updated.copy(
-                    address =
-                        value as? com.github.meeplemeet.model.shared.location.Location
-                            ?: updated.address)
-        "openingHours" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null &&
-                  list.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
-                list.filterIsInstance<com.github.meeplemeet.model.shops.OpeningHours>()
-              } else updated.openingHours
-          updated = updated.copy(openingHours = castValue)
-        }
-        "gameCollection" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null &&
-                  list.all {
-                    it is Pair<*, *> &&
-                        it.first is com.github.meeplemeet.model.shared.game.Game &&
-                        it.second is Int
-                  }) {
-                @Suppress(UNCHECKED_CAST)
-                list as List<Pair<com.github.meeplemeet.model.shared.game.Game, Int>>
-              } else updated.gameCollection
-          updated = updated.copy(gameCollection = castValue)
-        }
-        "photoCollectionUrl" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null && list.all { it is String }) {
-                list.filterIsInstance<String>()
-              } else updated.photoCollectionUrl
-          updated = updated.copy(photoCollectionUrl = castValue)
-        }
-      }
-    }
-    return updated
-  }
-
-  /**
-   * Clears pending changes for a shop after successful synchronization.
-   *
-   * @param shopId The ID of the shop whose changes were synchronized
-   */
-  fun clearShopChanges(shopId: String) {
-    val state = _offlineModeFlow.value.shops
-    val shop = state[shopId]?.first ?: return
-    val newState = LinkedHashMap(state)
-    newState[shopId] = shop to emptyMap()
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
-  }
-
-  /**
-   * Removes a shop from the offline cache. Used when deleting a shop or after successful
-   * synchronization.
-   *
-   * @param shopId The ID of the shop to remove
-   */
-  fun removeShop(shopId: String) {
-    val state = _offlineModeFlow.value.shops
-    val newState = LinkedHashMap(state)
-    newState.remove(shopId)
-    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
   }
 
   /**
@@ -722,6 +563,15 @@ object OfflineModeManager {
   }
 
   // ==================== Synchronization Helpers ====================
+
+  /**
+   * Retrieves all pending changes for shops that need to be synchronized.
+   *
+   * @return List of pairs containing the shop and its pending changes map
+   */
+  private fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
+    return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
+  }
 
   /**
    * Retrieves all pending changes for space renters that need to be synchronized.
@@ -1237,6 +1087,8 @@ object OfflineModeManager {
 
     updateDiscussionCache(state, cached.first, cached.second, cached.third + message)
   }
+
+  // Add to OfflineModeManager object, after the existing helper functions
 
   /**
    * Syncs all pending space renter changes with Firestore. Should be called when internet

@@ -131,7 +131,6 @@ private object EditShopUi {
 fun ShopDetailsScreen(
     owner: Account,
     shop: Shop,
-    online: Boolean,
     onBack: () -> Unit,
     onSaved: () -> Unit,
     onDelete: () -> Unit = {},
@@ -140,16 +139,8 @@ fun ShopDetailsScreen(
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
 
-  // Initialize ViewModel with the shop location if needed
-  LaunchedEffect(shop.address) {
-    if (locationUi.selectedLocation == null && shop.address != Location()) {
-      viewModel.setLocation(shop.address)
-    }
-  }
-
   EditShopContent(
       shop = shop,
-      online = online,
       onBack = onBack,
       onSaved = onSaved,
       onSave = {
@@ -217,7 +208,6 @@ fun ShopDetailsScreen(
 @Composable
 fun EditShopContent(
     shop: Shop,
-    online: Boolean,
     onBack: () -> Unit,
     onSaved: () -> Unit,
     onSave:
@@ -358,31 +348,24 @@ fun EditShopContent(
                           horizontal = EditShopUi.Dimensions.contentHPadding,
                           vertical = EditShopUi.Dimensions.contentVPadding)) {
                     item {
-                      if (online) {
-                        ImageCarousel(
-                            photoCollectionUrl = photoCollectionUrl,
-                            maxNumberOfImages = maxNumberOfImages,
-                            onAdd = { path, index ->
-                              photoCollectionUrl =
-                                  if (index < photoCollectionUrl.size &&
-                                      photoCollectionUrl[index].isNotEmpty()) {
-                                    photoCollectionUrl.mapIndexed { i, old ->
-                                      if (i == index) path else old
-                                    }
-                                  } else {
-                                    photoCollectionUrl + path
+                      ShopImageCarousel(
+                          photoCollectionUrl = photoCollectionUrl,
+                          maxNumberOfImages = maxNumberOfImages,
+                          onAdd = { path, index ->
+                            photoCollectionUrl =
+                                if (index < photoCollectionUrl.size &&
+                                    photoCollectionUrl[index].isNotEmpty()) {
+                                  photoCollectionUrl.mapIndexed { i, old ->
+                                    if (i == index) path else old
                                   }
-                            },
-                            onRemove = { url ->
-                              photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                            },
-                            editable = true)
-                      } else {
-                        ImageCarousel(
-                            photoCollectionUrl = photoCollectionUrl,
-                            maxNumberOfImages = maxNumberOfImages,
-                            editable = false)
-                      }
+                                } else {
+                                  photoCollectionUrl + path
+                                }
+                          },
+                          onRemove = { url ->
+                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                          },
+                          online = online)
                     }
                     item {
                       CollapsibleSection(
@@ -401,8 +384,7 @@ fun EditShopContent(
                                 onLink = { link = it },
                                 onPickLocation = { loc -> addressText = loc.name },
                                 viewModel = viewModel,
-                                owner = owner,
-                                online = online)
+                                owner = owner)
                           },
                           testTag = EditShopScreenTestTags.SECTION_REQUIRED)
                     }
@@ -439,23 +421,20 @@ fun EditShopContent(
                           title = EditShopUi.Strings.SECTION_GAMES,
                           initiallyExpanded = true,
                           header = {
-                            if (online) {
-                              TextButton(
-                                  onClick = {
-                                    onSetGameQuery("")
-                                    showGameDialog = true
-                                  },
-                                  modifier =
-                                      Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                                    Icon(Icons.Filled.Add, contentDescription = null)
-                                    Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
-                                    Text(
-                                        EditShopUi.Strings.BTN_ADD_GAME,
-                                        modifier =
-                                            Modifier.testTag(
-                                                EditShopScreenTestTags.GAMES_ADD_LABEL))
-                                  }
-                            }
+                            TextButton(
+                                onClick = {
+                                  onSetGameQuery("")
+                                  showGameDialog = true
+                                },
+                                modifier =
+                                    Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)) {
+                                  Icon(Icons.Filled.Add, contentDescription = null)
+                                  Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
+                                  Text(
+                                      EditShopUi.Strings.BTN_ADD_GAME,
+                                      modifier =
+                                          Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_LABEL))
+                                }
                           },
                           content = {
                             GamesSection(

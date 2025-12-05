@@ -1281,4 +1281,55 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals(testOpeningHours.size, updated.openingHours.size)
     assertEquals(1, updated.gameCollection.size)
   }
+
+  @Test
+  fun updateShop_offline_recordsChanges() = runBlocking {
+    // Setup offline mode
+    OfflineModeManager.setNetworkStatusForTesting(false)
+    
+    // Create a shop first (online for setup)
+    OfflineModeManager.setNetworkStatusForTesting(true)
+    val shop = shopRepository.createShop(
+        testAccount1,
+        "Offline Update Shop",
+        "123",
+        "email@test.com",
+        "website.com",
+        testLocation1,
+        testOpeningHours,
+        emptyList(),
+        emptyList()
+    )
+    assertNotNull(shop)
+    
+    // Switch to offline
+    OfflineModeManager.setNetworkStatusForTesting(false)
+    
+    // Load shop into ViewModel
+    editShopViewModel.setShop(shop)
+    delay(100)
+    
+    // Perform update
+    editShopViewModel.updateShop(
+        shop!!,
+        testAccount1,
+        name = "Updated Offline Name",
+        phone = "999"
+    )
+    delay(100)
+    
+    // Verify changes are in OfflineModeManager
+    val pendingChanges = OfflineModeManager.getPendingShopChanges()
+    assertTrue(pendingChanges.isNotEmpty())
+    val (cachedShop, changes) = pendingChanges.find { it.first.id == shop.id }!!
+    
+    assertEquals("Updated Offline Name", changes["name"])
+    assertEquals("999", changes["phone"])
+    assertEquals("Updated Offline Name", cachedShop.name)
+    
+    // Cleanup
+    OfflineModeManager.removeShop(shop.id)
+    OfflineModeManager.setNetworkStatusForTesting(true)
+    shopRepository.deleteShop(shop.id)
+  }
 }
