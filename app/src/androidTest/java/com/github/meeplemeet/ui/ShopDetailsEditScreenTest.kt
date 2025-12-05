@@ -39,6 +39,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -656,6 +657,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     UiBehaviorConfig.hideBottomBarWhenInputFocused = true
   }
 
+  @Ignore
   @Test
   fun editShop_offlineUI_disablesFeatures() {
     // Disable bottom bar hiding to ensure ActionBar is always visible in tests

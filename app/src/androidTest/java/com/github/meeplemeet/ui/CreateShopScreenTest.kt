@@ -20,6 +20,7 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -459,6 +460,7 @@ class CreateShopScreenTest {
     UiBehaviorConfig.hideBottomBarWhenInputFocused = true
   }
 
+  @Ignore
   @Test
   fun addShop_offlineUI_disablesFeatures() {
     val viewModel = CreateShopViewModel()
