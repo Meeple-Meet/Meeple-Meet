@@ -305,7 +305,7 @@ fun MeepleMeetApp(
                       onCreateSessionClick = {
                         discussionId = it.uid
                         navigationActions.navigateTo(
-                            if (it.session != null) MeepleMeetScreen.Session
+                            if (it.session != null) MeepleMeetScreen.SessionViewer
                             else MeepleMeetScreen.CreateSession)
                       },
                   )
@@ -357,7 +357,7 @@ fun MeepleMeetApp(
                 account = account,
                 onSelectSession = {
                   discussionId = it
-                  navigationActions.navigateTo(MeepleMeetScreen.Session)
+                  navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
                 })
           }
 
@@ -412,7 +412,7 @@ fun MeepleMeetApp(
                     PinType.SESSION -> {
                       discussionId = geoPin.uid
                       println(geoPin.uid)
-                      navigationActions.navigateTo(MeepleMeetScreen.Session)
+                      navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
                     }
                   }
                 })
@@ -559,7 +559,7 @@ fun MeepleMeetApp(
                   account = account!!,
                   discussion = discussion!!,
                   onBack = { navigationActions.goBack() },
-                  onEditClick = { navigationActions.goBack() })
+                  onEditClick = { navigationActions.navigateTo(MeepleMeetScreen.Session) })
             } else {
               navigationActions.navigateTo(MeepleMeetScreen.Discussion)
             }
