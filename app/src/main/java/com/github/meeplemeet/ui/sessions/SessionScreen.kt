@@ -54,6 +54,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -283,6 +286,17 @@ fun SessionScreen(
   // Photo upload state
   var isUploadingPhoto by remember { mutableStateOf(false) }
   var isArchiving by remember { mutableStateOf(false) }
+  var uploadError by remember { mutableStateOf<String?>(null) }
+
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  // Show error message in Snackbar
+  LaunchedEffect(uploadError) {
+    uploadError?.let { error ->
+      snackbarHostState.showSnackbar(message = error, duration = SnackbarDuration.Short)
+      uploadError = null // Clear after showing
+    }
+  }
 
   // Camera and gallery launchers
   val cameraLauncher =
@@ -290,9 +304,15 @@ fun SessionScreen(
         if (bitmap != null && !isUploadingPhoto) {
           scope.launch {
             isUploadingPhoto = true
-            val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
-            viewModel.saveSessionPhoto(account, discussion, context, path)
-            isUploadingPhoto = false
+            try {
+              val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
+              viewModel.saveSessionPhoto(account, discussion, context, path)
+            } catch (e: Exception) {
+              e.printStackTrace()
+              uploadError = "Failed to upload photo: ${e.message ?: "Unknown error"}"
+            } finally {
+              isUploadingPhoto = false
+            }
           }
         }
       }
@@ -353,6 +373,7 @@ fun SessionScreen(
             })
       },
       containerColor = MaterialTheme.colorScheme.background,
+      snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
       bottomBar = {
         SessionLeaveButton(
             onLeave = {
