@@ -102,12 +102,13 @@ class SessionViewerScreenTest : FirestoreTests() {
         .await()
 
     sessionGame = gameRepository.getGameById(gameId)
+    val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
 
     sessionRepository.createSession(
         discussionId = baseDiscussion.uid,
         name = "Friday Night Session",
         gameId = sessionGame.uid,
-        date = Timestamp.now(),
+        date = futureDate,
         location = Location(name = "Meeple Café"),
         *participantIds.toTypedArray())
 
@@ -375,12 +376,13 @@ class SessionViewerScreenTest : FirestoreTests() {
               participants = listOf(soloAdmin.uid))
 
       discussionRepository.addAdminToDiscussion(soloDiscussion, soloAdmin.uid)
+      val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
 
       sessionRepository.createSession(
           discussionId = soloDiscussion.uid,
           name = "Solo Admin Session",
           gameId = sessionGame.uid,
-          date = Timestamp.now(),
+          date = futureDate,
           location = Location(name = "Solo Place"),
           soloAdmin.uid)
 

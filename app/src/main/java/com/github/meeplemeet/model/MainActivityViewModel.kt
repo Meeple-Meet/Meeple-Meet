@@ -71,20 +71,26 @@ class MainActivityViewModel(
   private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
 
   /**
-   * Returns a real-time flow of discussion data for the specified discussion ID.
+   * Returns a real-time flow of discussion data for the specified discussion ID with automatic
+   * session archiving.
    *
    * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
-   * flow emits updated discussion data whenever changes occur in Firestore.
+   * flow emits updated discussion data whenever changes occur in Firestore, and automatically
+   * archives sessions that have passed (more than 24 hours after session time).
    *
    * @param discussionId The ID of the discussion to observe
+   * @param context Android context for accessing cache directory during photo archiving
    * @return A [StateFlow] that emits the discussion or null if the discussion doesn't exist or ID
    *   is blank
    */
-  fun discussionFlow(discussionId: String): StateFlow<Discussion?> {
+  fun discussionFlow(
+      discussionId: String,
+      context: android.content.Context
+  ): StateFlow<Discussion?> {
     if (discussionId.isBlank()) return MutableStateFlow(null)
     return discussionFlows.getOrPut(discussionId) {
       discussionRepository
-          .listenDiscussion(discussionId)
+          .listenDiscussionWithAutoArchive(discussionId, context)
           .stateIn(
               scope = viewModelScope,
               started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),

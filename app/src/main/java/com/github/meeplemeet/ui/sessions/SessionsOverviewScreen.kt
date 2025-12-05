@@ -110,26 +110,30 @@ fun SessionsOverviewScreen(
     account: Account?,
     onSelectSession: (String) -> Unit = {}
 ) {
+  val context = LocalContext.current
   val sessionMap by
-      viewModel.sessionMapFlow(account?.uid ?: "").collectAsState(initial = emptyMap())
+      viewModel.sessionMapFlow(account?.uid ?: "", context).collectAsState(initial = emptyMap())
 
   /* --------------  NEW: toggle state  -------------- */
   var showHistory by remember { mutableStateOf(false) }
   var popupSession by remember { mutableStateOf<Session?>(null) }
   var archivedSessions by remember { mutableStateOf<List<Session>>(emptyList()) }
 
+  // Refresh counter to force re-fetching when switching to history tab
+  var historyRefreshTrigger by remember { mutableStateOf(0) }
+
   // Fetch archived sessions when history tab is active
-  LaunchedEffect(showHistory, account) {
+  // Refresh whenever showHistory becomes true (by using historyRefreshTrigger)
+  LaunchedEffect(showHistory, account, historyRefreshTrigger) {
     if (showHistory && account != null) {
       viewModel.getArchivedSessions(account.uid) { sessions -> archivedSessions = sessions }
     }
   }
 
-  // Auto-archive check for all active sessions
-  val context = LocalContext.current
-  LaunchedEffect(sessionMap.keys) {
-    if (account != null) {
-      sessionMap.keys.forEach { id -> viewModel.updateSession(context, id) }
+  // Increment refresh trigger when history tab is opened
+  LaunchedEffect(showHistory) {
+    if (showHistory) {
+      historyRefreshTrigger++
     }
   }
 

@@ -29,6 +29,7 @@ class SessionRepository(
   private val discussions = discussionRepository.collection
   private val discussionRepo = DiscussionRepository()
   private val geoPinsRepo = RepositoryProvider.geoPins
+  private val imageRepository = RepositoryProvider.images
 
   /**
    * Creates a new session within a discussion.
@@ -151,6 +152,41 @@ class SessionRepository(
   }
 
   /**
+   * Retrieves the session and automatically archives it if it has passed.
+   *
+   * @param discussionId The ID of the discussion containing the session.
+   * @param context Android context for image operations.
+   * @return The session if active, or null if archived or not found.
+   */
+  suspend fun getSessionWithAutoArchive(
+      discussionId: String,
+      context: android.content.Context
+  ): Session? {
+    val session = getSession(discussionId) ?: return null
+
+    // Check if passed (24 hours after start time)
+    val date = session.date
+    val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
+    val isPassed = (date.toDate().time + twentyFourHoursInMillis) < Timestamp.now().toDate().time
+
+    if (isPassed) {
+      try {
+        val newUuid = newUUID()
+        var newUrl: String? = null
+        if (session.photoUrl != null) {
+          newUrl = imageRepository.moveSessionPhoto(context, discussionId, newUuid)
+        }
+        archiveSession(discussionId, newUuid, newUrl)
+        return null // Session is now archived
+      } catch (e: Exception) {
+        e.printStackTrace()
+        return session // Return session if archiving fails
+      }
+    }
+    return session
+  }
+
+  /**
    * Real-time stream of discussion **document ids** whose embedded session contains the given user
    * in its participant list.
    *
@@ -219,10 +255,16 @@ class SessionRepository(
     batch[archivedRef] = archivedSession
 
     // 2. Add session UUID to each participant's pastSessionIds
+    // IMPORTANT: Use set() with merge instead of update() to handle cases where
+    // pastSessionIds field doesn't exist (e.g., new users or users who haven't archived before).
+    // If we use update(), the batch will fail silently for those users.
     val accountsRef = RepositoryProvider.accounts.collection
     session.participants.forEach { participantId ->
       val accountRef = accountsRef.document(participantId)
-      batch.update(accountRef, "pastSessionIds", FieldValue.arrayUnion(newSessionId))
+      batch.set(
+          accountRef,
+          mapOf("pastSessionIds" to FieldValue.arrayUnion(newSessionId)),
+          com.google.firebase.firestore.SetOptions.merge())
     }
 
     // 3. Delete from active session (update discussion)
@@ -297,19 +339,28 @@ class SessionRepository(
     val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
     val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
 
-    sessionIdsForPage
-        .map { sessionId ->
-          async {
-            try {
-              val snapshot = collection.document(sessionId).get().await()
-              snapshot.toObject(Session::class.java)
-            } catch (_: Exception) {
-              null
+    val results =
+        sessionIdsForPage
+            .map { sessionId ->
+              async {
+                try {
+                  val snapshot = collection.document(sessionId).get().await()
+                  if (!snapshot.exists()) {
+                    null
+                  } else {
+                    val session = snapshot.toObject(Session::class.java)
+                    session
+                  }
+                } catch (e: Exception) {
+                  e.printStackTrace()
+                  null
+                }
+              }
             }
-          }
-        }
-        .awaitAll()
-        .filterNotNull()
+            .awaitAll()
+            .filterNotNull()
+
+    results
   }
 
   /**

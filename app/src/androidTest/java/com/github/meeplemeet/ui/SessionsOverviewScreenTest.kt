@@ -148,9 +148,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           sessionRepository.createSession(
               discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
 
-          compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
-          compose.waitUntil(5000) { sessionCard(discussion.uid).isNotDisplayed() }
-
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
           compose.waitUntil(4000) { compose.onNodeWithText("Past Night").isDisplayed() }
 
