@@ -254,7 +254,8 @@ class NotificationsViewModel(
                             icon = bytes))
                   }
                 } else {
-                  // If session is null but discussion exists, we might want to delete notification or handle it differently.
+                  // If session is null but discussion exists, we might want to delete notification
+                  // or handle it differently.
                   // For now, let's assume if session is missing it's invalid.
                   deleteNotification(account, notif)
                 }
