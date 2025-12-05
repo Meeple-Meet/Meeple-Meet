@@ -4,6 +4,7 @@ import com.github.meeplemeet.model.GameFetchException
 import com.github.meeplemeet.model.GameSearchException
 import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
@@ -12,6 +13,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 
 class CloudBggGameRepositoryTest {
@@ -298,12 +300,68 @@ class CloudBggGameRepositoryTest {
 
   // ==================== Deprecated Method Test ====================
 
+  @Ignore("Temporarely re-enable")
   @Test
   fun deprecatedSearchGamesByNameContainsThrowsUnsupported() = runTest {
     @Suppress("DEPRECATION")
     assertFailsWith<UnsupportedOperationException> {
       repository.searchGamesByNameContains("test", 5, ignoreCase = true)
     }
+  }
+
+  @Test
+  fun searchGamesByNameContainsReturnsFullGames() = runTest {
+    val searchResponse =
+        MockResponse().setResponseCode(200).setBody("""[{"id":"181","name":"Risk"}]""")
+    val fetchResponse =
+        MockResponse()
+            .setResponseCode(200)
+            .setBody(
+                """[{
+            "uid":"181",
+            "name":"Risk",
+            "description":"A classic war game.",
+            "imageURL":"https://cf.geekdo-images.com/example.jpg",
+            "minPlayers":2,
+            "maxPlayers":6,
+            "genres":["Wargame"]
+          }]""")
+
+    mockWebServer.enqueue(searchResponse)
+    mockWebServer.enqueue(fetchResponse)
+
+    @Suppress("DEPRECATION")
+    val games = repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
+
+    assertEquals(1, games.size)
+    assertEquals("Risk", games[0].name)
+    assertEquals(2, games[0].minPlayers)
+  }
+
+  @Test
+  fun searchGamesByNameContainsReturnsEmptyListWhenNoResults() = runTest {
+    val searchResponse = MockResponse().setResponseCode(200).setBody("[]")
+    mockWebServer.enqueue(searchResponse)
+
+    @Suppress("DEPRECATION")
+    val games = repository.searchGamesByNameContains("unknown", 5, ignoreCase = true)
+
+    assertTrue(games.isEmpty())
+  }
+
+  @Test
+  fun searchGamesByNameContainsThrowsOnNetworkError() = runTest {
+    mockWebServer.shutdown()
+
+    @Suppress("DEPRECATION")
+    val exception = assertFails {
+      repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
+    }
+
+    // Accept both possible exception types
+    assertTrue(
+        exception is GameFetchException || exception is GameSearchException,
+        "Expected GameFetchException or GameSearchException, but got ${exception::class}")
   }
 
   // ==================== JSON Parsing Edge Cases ====================

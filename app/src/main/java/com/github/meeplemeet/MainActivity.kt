@@ -40,7 +40,8 @@ import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.Shop
@@ -130,7 +131,7 @@ object RepositoryProvider {
   val sessions: SessionRepository by lazy { SessionRepository() }
 
   /** Lazily initialized repository for board game data operations. */
-  val games: FirestoreGameRepository by lazy { FirestoreGameRepository() }
+  var games: GameRepository = CloudBggGameRepository()
 
   /** Lazily initialized repository for location operations. */
   val locations: LocationRepository by lazy { NominatimLocationRepository() }

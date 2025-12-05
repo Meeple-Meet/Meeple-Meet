@@ -37,7 +37,7 @@ class CloudBggGameRepository(
     private val LOCAL_URL: HttpUrl =
         HttpUrl.Builder()
             .scheme("http")
-            .host("127.0.0.1")
+            .host("10.0.2.2")
             .port(5001)
             .addPathSegment("meeple-meet-36ecb")
             .addPathSegment("us-central1")
@@ -111,19 +111,28 @@ class CloudBggGameRepository(
   }
 
   /**
-   * Deprecated: use [searchGamesByNameLight] instead.
+   * Quick fix: temporarily re-implemented to maintain backward compatibility.
    *
-   * @throws UnsupportedOperationException Always thrown.
+   * This method delegates to [searchGamesByNameLight] to get lightweight results (IDs), then
+   * immediately fetches the full [Game] objects via [getGamesById].
+   *
+   * Deprecated: use [searchGamesByNameLight] instead. This method will be permanently removed in a
+   * future release.
+   *
+   * @throws GameSearchException if the search fails
+   * @throws GameFetchException if fetching full games fails
    */
   @Deprecated("Use searchGamesByNameLight for partial search results")
   override suspend fun searchGamesByNameContains(
       query: String,
       maxResults: Int,
       ignoreCase: Boolean
-  ): List<Game> {
-    throw UnsupportedOperationException(
-        "searchGamesByNameContains(...) is deprecated and unsupported. Use searchGamesByNameLight(...) and then fetch full games if needed.")
-  }
+  ): List<Game> =
+      withContext(ioDispatcher) {
+        val lightResults = searchGamesByNameLight(query, maxResults)
+        if (lightResults.isEmpty()) return@withContext emptyList()
+        return@withContext getGamesById(*lightResults.map { it.id }.toTypedArray())
+      }
 
   /**
    * Searches games by name and returns lightweight results (ID + name).

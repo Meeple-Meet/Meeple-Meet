@@ -122,7 +122,7 @@ android {
       }
 
       // Host PROD
-      buildConfigField("String", "GAME_API_HOST", "\"meeple-meet-36ecb.uc.r.appspot.com\"")
+      buildConfigField("String", "GAME_API_HOST", "\"us-central1-meeple-meet-36ecb.cloudfunctions.net\"")
     }
 
     getByName("debug") {
