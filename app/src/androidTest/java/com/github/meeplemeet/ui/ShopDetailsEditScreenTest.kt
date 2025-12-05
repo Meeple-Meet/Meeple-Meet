@@ -208,8 +208,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             onBack = {},
             onSaved = {},
             shop = currentShopState.value,
-            viewModel = editShopViewModel,
-            online = true)
+            viewModel = editShopViewModel)
       }
     }
 
@@ -673,7 +672,6 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             onSaved = {},
             shop = testShop,
             viewModel = editShopViewModel,
-            online = false // Offline mode
             )
       }
     }

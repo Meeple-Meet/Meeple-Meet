@@ -210,8 +210,7 @@ fun RequiredInfoSection(
     onLink: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
     viewModel: ShopSearchViewModel,
-    owner: Account,
-    online: Boolean
+    owner: Account
 ) {
   Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP)) {
     LabeledField(
@@ -258,32 +257,8 @@ fun RequiredInfoSection(
         owner,
         shop,
         viewModel,
-        enabled = online,
         inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
         dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
-  }
-}
-
-@Composable
-fun ShopImageCarousel(
-    photoCollectionUrl: List<String>,
-    maxNumberOfImages: Int,
-    onAdd: (String, Int) -> Unit,
-    onRemove: (String) -> Unit,
-    online: Boolean
-) {
-  if (online) {
-    ImageCarousel(
-        photoCollectionUrl = photoCollectionUrl,
-        maxNumberOfImages = maxNumberOfImages,
-        onAdd = onAdd,
-        onRemove = onRemove,
-        editable = true)
-  } else {
-    ImageCarousel(
-        photoCollectionUrl = photoCollectionUrl,
-        maxNumberOfImages = maxNumberOfImages,
-        editable = false)
   }
 }
 

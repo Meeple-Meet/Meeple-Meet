@@ -473,8 +473,6 @@ fun MeepleMeetApp(
     composable(MeepleMeetScreen.CreateShop.name) {
       CreateShopScreen(
           owner = account!!,
-          online = online,
-          userLocation = userLocation,
           onBack = { navigationActions.goBack() },
           onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
     }
@@ -484,7 +482,6 @@ fun MeepleMeetApp(
         ShopDetailsScreen(
             owner = account!!,
             shop = shop!!,
-            online = online,
             onBack = { navigationActions.goBack() },
             onSaved = { navigationActions.goBack() })
       } else {

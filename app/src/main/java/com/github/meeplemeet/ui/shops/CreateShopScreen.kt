@@ -309,7 +309,7 @@ fun AddShopContent(
                           horizontal = AddShopUi.Dimensions.contentHPadding,
                           vertical = AddShopUi.Dimensions.contentVPadding)) {
                     item {
-                      ShopImageCarousel(
+                      ImageCarousel(
                           photoCollectionUrl = photoCollectionUrl,
                           maxNumberOfImages = maxNumberOfImages,
                           onAdd = { path, index ->
@@ -326,7 +326,7 @@ fun AddShopContent(
                           onRemove = { url ->
                             photoCollectionUrl = photoCollectionUrl.filter { it != url }
                           },
-                          online = online)
+                          editable = true)
                     }
                     item {
                       CollapsibleSection(

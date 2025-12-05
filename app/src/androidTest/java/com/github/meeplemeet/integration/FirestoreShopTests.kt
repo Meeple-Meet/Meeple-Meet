@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -1284,52 +1285,43 @@ class FirestoreShopTests : FirestoreTests() {
 
   @Test
   fun updateShop_offline_recordsChanges() = runBlocking {
-    // Setup offline mode
+    // Set network to offline
     OfflineModeManager.setNetworkStatusForTesting(false)
-    
-    // Create a shop first (online for setup)
-    OfflineModeManager.setNetworkStatusForTesting(true)
-    val shop = shopRepository.createShop(
-        testAccount1,
-        "Offline Update Shop",
-        "123",
-        "email@test.com",
-        "website.com",
-        testLocation1,
-        testOpeningHours,
-        emptyList(),
-        emptyList()
-    )
-    assertNotNull(shop)
-    
-    // Switch to offline
-    OfflineModeManager.setNetworkStatusForTesting(false)
-    
-    // Load shop into ViewModel
-    editShopViewModel.setShop(shop)
-    delay(100)
-    
-    // Perform update
+
+    val shop =
+        shopRepository.createShop(
+            testAccount1,
+            "Offline Test Shop",
+            "+41 11 111 1111",
+            "offline@test.com",
+            "https://offline.com",
+            testLocation1,
+            testOpeningHours,
+            listOf(testGame1 to 5),
+            emptyList())
+
+    delay(200)
+
+    // Update shop while offline
     editShopViewModel.updateShop(
-        shop!!,
+        shop,
         testAccount1,
-        name = "Updated Offline Name",
-        phone = "999"
-    )
-    delay(100)
-    
-    // Verify changes are in OfflineModeManager
+        name = "Updated Offline",
+        phone = "+41 22 222 2222",
+        email = "updated@offline.com")
+
+    delay(200)
+
+    // Verify changes were recorded in OfflineModeManager
     val pendingChanges = OfflineModeManager.getPendingShopChanges()
-    assertTrue(pendingChanges.isNotEmpty())
-    val (cachedShop, changes) = pendingChanges.find { it.first.id == shop.id }!!
-    
-    assertEquals("Updated Offline Name", changes["name"])
-    assertEquals("999", changes["phone"])
-    assertEquals("Updated Offline Name", cachedShop.name)
-    
-    // Cleanup
-    OfflineModeManager.removeShop(shop.id)
+    val shopChanges = pendingChanges.find { it.first.id == shop.id }
+
+    assertNotNull(shopChanges)
+    assertEquals("Updated Offline", shopChanges!!.second["name"])
+    assertEquals("+41 22 222 2222", shopChanges.second["phone"])
+    assertEquals("updated@offline.com", shopChanges.second["email"])
+
+    // Restore online status
     OfflineModeManager.setNetworkStatusForTesting(true)
-    shopRepository.deleteShop(shop.id)
   }
 }
