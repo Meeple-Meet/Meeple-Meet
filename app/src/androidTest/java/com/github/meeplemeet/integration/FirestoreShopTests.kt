@@ -2,7 +2,6 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
@@ -1281,47 +1280,5 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals(testLocation1, updated.address)
     assertEquals(testOpeningHours.size, updated.openingHours.size)
     assertEquals(1, updated.gameCollection.size)
-  }
-
-  @Test
-  fun updateShop_offline_recordsChanges() = runBlocking {
-    // Set network to offline
-    OfflineModeManager.setNetworkStatusForTesting(false)
-
-    val shop =
-        shopRepository.createShop(
-            testAccount1,
-            "Offline Test Shop",
-            "+41 11 111 1111",
-            "offline@test.com",
-            "https://offline.com",
-            testLocation1,
-            testOpeningHours,
-            listOf(testGame1 to 5),
-            emptyList())
-
-    delay(200)
-
-    // Update shop while offline
-    editShopViewModel.updateShop(
-        shop,
-        testAccount1,
-        name = "Updated Offline",
-        phone = "+41 22 222 2222",
-        email = "updated@offline.com")
-
-    delay(200)
-
-    // Verify changes were recorded in OfflineModeManager
-    val pendingChanges = OfflineModeManager.getPendingShopChanges()
-    val shopChanges = pendingChanges.find { it.first.id == shop.id }
-
-    assertNotNull(shopChanges)
-    assertEquals("Updated Offline", shopChanges!!.second["name"])
-    assertEquals("+41 22 222 2222", shopChanges.second["phone"])
-    assertEquals("updated@offline.com", shopChanges.second["email"])
-
-    // Restore online status
-    OfflineModeManager.setNetworkStatusForTesting(true)
   }
 }

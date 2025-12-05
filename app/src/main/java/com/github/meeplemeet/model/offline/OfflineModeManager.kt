@@ -439,8 +439,8 @@ object OfflineModeManager {
   }
 
   /**
-   * Helper to apply standard changes (name, phone, email, website, address, openingHours, photos) to
-   * any object.
+   * Helper to apply standard changes (name, phone, email, website, address, openingHours, photos)
+   * to any object.
    */
   private inline fun <T> applyStandardChanges(
       target: T,
