@@ -439,6 +439,47 @@ object OfflineModeManager {
   }
 
   /**
+   * Helper to apply standard changes (name, phone, email, website, address, openingHours, photos) to
+   * any object.
+   */
+  private inline fun <T> applyStandardChanges(
+      target: T,
+      changes: Map<String, Any>,
+      crossinline copyName: (T, String) -> T,
+      crossinline copyPhone: (T, String) -> T,
+      crossinline copyEmail: (T, String) -> T,
+      crossinline copyWebsite: (T, String) -> T,
+      crossinline copyAddress: (T, com.github.meeplemeet.model.shared.location.Location) -> T,
+      crossinline copyOpeningHours: (T, List<com.github.meeplemeet.model.shops.OpeningHours>) -> T,
+      crossinline copyPhotoCollection: (T, List<String>) -> T,
+      crossinline getOpeningHours: (T) -> List<com.github.meeplemeet.model.shops.OpeningHours>,
+      crossinline getPhotoCollection: (T) -> List<String>,
+      crossinline onOther: (T, String, Any) -> T
+  ): T {
+    var updated = target
+    changes.forEach { (key, value) ->
+      updated =
+          when (key) {
+            "name" -> copyName(updated, value as? String ?: return@forEach)
+            "phone" -> copyPhone(updated, value as? String ?: return@forEach)
+            "email" -> copyEmail(updated, value as? String ?: return@forEach)
+            "website" -> copyWebsite(updated, value as? String ?: return@forEach)
+            "address" ->
+                copyAddress(
+                    updated,
+                    value as? com.github.meeplemeet.model.shared.location.Location
+                        ?: return@forEach)
+            "openingHours" ->
+                copyOpeningHours(updated, safeFilterList(value, getOpeningHours(updated)))
+            "photoCollectionUrl" ->
+                copyPhotoCollection(updated, safeFilterList(value, getPhotoCollection(updated)))
+            else -> onOther(updated, key, value)
+          }
+    }
+    return updated
+  }
+
+  /**
    * Applies pending changes to a SpaceRenter object.
    *
    * @param renter The base SpaceRenter object.
@@ -448,28 +489,21 @@ object OfflineModeManager {
   private fun applySpaceRenterChanges(renter: SpaceRenter, changes: Map<String, Any>): SpaceRenter {
     if (changes.isEmpty()) return renter
 
-    var updated = renter
-    changes.forEach { (key, value) ->
-      when (key) {
-        "name" -> updated = updated.copy(name = value as? String ?: updated.name)
-        "phone" -> updated = updated.copy(phone = value as? String ?: updated.phone)
-        "email" -> updated = updated.copy(email = value as? String ?: updated.email)
-        "website" -> updated = updated.copy(website = value as? String ?: updated.website)
-        "address" ->
-            updated =
-                updated.copy(
-                    address =
-                        value as? com.github.meeplemeet.model.shared.location.Location
-                            ?: updated.address)
-        "openingHours" ->
-            updated = updated.copy(openingHours = safeFilterList(value, updated.openingHours))
-        "spaces" -> updated = updated.copy(spaces = safeFilterList(value, updated.spaces))
-        "photoCollectionUrl" ->
-            updated =
-                updated.copy(photoCollectionUrl = safeFilterList(value, updated.photoCollectionUrl))
-      }
-    }
-    return updated
+    return applyStandardChanges(
+        target = renter,
+        changes = changes,
+        copyName = { t, v -> t.copy(name = v) },
+        copyPhone = { t, v -> t.copy(phone = v) },
+        copyEmail = { t, v -> t.copy(email = v) },
+        copyWebsite = { t, v -> t.copy(website = v) },
+        copyAddress = { t, v -> t.copy(address = v) },
+        copyOpeningHours = { t, v -> t.copy(openingHours = v) },
+        copyPhotoCollection = { t, v -> t.copy(photoCollectionUrl = v) },
+        getOpeningHours = { it.openingHours },
+        getPhotoCollection = { it.photoCollectionUrl },
+        onOther = { t, k, v ->
+          if (k == "spaces") t.copy(spaces = safeFilterList(v, t.spaces)) else t
+        })
   }
 
   /**
@@ -601,41 +635,34 @@ object OfflineModeManager {
   private fun applyShopChanges(shop: Shop, changes: Map<String, Any>): Shop {
     if (changes.isEmpty()) return shop
 
-    var updated = shop
-    changes.forEach { (key, value) ->
-      when (key) {
-        "name" -> updated = updated.copy(name = value as? String ?: updated.name)
-        "phone" -> updated = updated.copy(phone = value as? String ?: updated.phone)
-        "email" -> updated = updated.copy(email = value as? String ?: updated.email)
-        "website" -> updated = updated.copy(website = value as? String ?: updated.website)
-        "address" ->
-            updated =
-                updated.copy(
-                    address =
-                        value as? com.github.meeplemeet.model.shared.location.Location
-                            ?: updated.address)
-        "openingHours" ->
-            updated = updated.copy(openingHours = safeFilterList(value, updated.openingHours))
-        "gameCollection" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null &&
-                  list.all {
-                    it is Pair<*, *> &&
-                        it.first is com.github.meeplemeet.model.shared.game.Game &&
-                        it.second is Int
-                  }) {
-                @Suppress(UNCHECKED_CAST)
-                list as List<Pair<com.github.meeplemeet.model.shared.game.Game, Int>>
-              } else updated.gameCollection
-          updated = updated.copy(gameCollection = castValue)
-        }
-        "photoCollectionUrl" ->
-            updated =
-                updated.copy(photoCollectionUrl = safeFilterList(value, updated.photoCollectionUrl))
-      }
-    }
-    return updated
+    return applyStandardChanges(
+        target = shop,
+        changes = changes,
+        copyName = { t, v -> t.copy(name = v) },
+        copyPhone = { t, v -> t.copy(phone = v) },
+        copyEmail = { t, v -> t.copy(email = v) },
+        copyWebsite = { t, v -> t.copy(website = v) },
+        copyAddress = { t, v -> t.copy(address = v) },
+        copyOpeningHours = { t, v -> t.copy(openingHours = v) },
+        copyPhotoCollection = { t, v -> t.copy(photoCollectionUrl = v) },
+        getOpeningHours = { it.openingHours },
+        getPhotoCollection = { it.photoCollectionUrl },
+        onOther = { t, k, v ->
+          if (k == "gameCollection") {
+            val list = v as? List<*>
+            val castValue =
+                if (list != null &&
+                    list.all {
+                      it is Pair<*, *> &&
+                          it.first is com.github.meeplemeet.model.shared.game.Game &&
+                          it.second is Int
+                    }) {
+                  @Suppress(UNCHECKED_CAST)
+                  list as List<Pair<com.github.meeplemeet.model.shared.game.Game, Int>>
+                } else t.gameCollection
+            t.copy(gameCollection = castValue)
+          } else t
+        })
   }
 
   suspend fun updateShopCache(shop: Shop) {
