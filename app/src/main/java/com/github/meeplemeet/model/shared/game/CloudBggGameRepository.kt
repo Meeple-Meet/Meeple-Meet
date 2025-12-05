@@ -37,7 +37,7 @@ class CloudBggGameRepository(
     private val LOCAL_URL: HttpUrl =
         HttpUrl.Builder()
             .scheme("http")
-            .host("127.0.0.1")
+            .host("10.0.2.2")
             .port(5001)
             .addPathSegment("meeple-meet-36ecb")
             .addPathSegment("us-central1")
