@@ -672,7 +672,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             onSaved = {},
             shop = testShop,
             viewModel = editShopViewModel,
-            )
+        )
       }
     }
 

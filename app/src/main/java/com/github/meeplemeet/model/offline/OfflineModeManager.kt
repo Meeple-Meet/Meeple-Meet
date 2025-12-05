@@ -461,9 +461,12 @@ object OfflineModeManager {
                     address =
                         value as? com.github.meeplemeet.model.shared.location.Location
                             ?: updated.address)
-        "openingHours" -> updated = updated.copy(openingHours = safeFilterList(value, updated.openingHours))
+        "openingHours" ->
+            updated = updated.copy(openingHours = safeFilterList(value, updated.openingHours))
         "spaces" -> updated = updated.copy(spaces = safeFilterList(value, updated.spaces))
-        "photoCollectionUrl" -> updated = updated.copy(photoCollectionUrl = safeFilterList(value, updated.photoCollectionUrl))
+        "photoCollectionUrl" ->
+            updated =
+                updated.copy(photoCollectionUrl = safeFilterList(value, updated.photoCollectionUrl))
       }
     }
     return updated
@@ -611,7 +614,8 @@ object OfflineModeManager {
                     address =
                         value as? com.github.meeplemeet.model.shared.location.Location
                             ?: updated.address)
-        "openingHours" -> updated = updated.copy(openingHours = safeFilterList(value, updated.openingHours))
+        "openingHours" ->
+            updated = updated.copy(openingHours = safeFilterList(value, updated.openingHours))
         "gameCollection" -> {
           val list = value as? List<*>
           val castValue =
@@ -626,7 +630,9 @@ object OfflineModeManager {
               } else updated.gameCollection
           updated = updated.copy(gameCollection = castValue)
         }
-        "photoCollectionUrl" -> updated = updated.copy(photoCollectionUrl = safeFilterList(value, updated.photoCollectionUrl))
+        "photoCollectionUrl" ->
+            updated =
+                updated.copy(photoCollectionUrl = safeFilterList(value, updated.photoCollectionUrl))
       }
     }
     return updated

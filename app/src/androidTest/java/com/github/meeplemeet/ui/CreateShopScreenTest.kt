@@ -481,7 +481,7 @@ class CreateShopScreenTest {
             owner = owner,
             gameUi = gameUi,
             locationUi = locationUi,
-            )
+        )
       }
     }
     // Verify Image Carousel is not editable (Add button missing)
