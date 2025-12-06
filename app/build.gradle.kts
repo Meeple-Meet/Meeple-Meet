@@ -121,17 +121,11 @@ android {
       if (releaseSigning != null && releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
           signingConfig = releaseSigning
       }
-
-      // Host PROD
-      buildConfigField("String", "GAME_API_HOST", "\"us-central1-meeple-meet-36ecb.cloudfunctions.net\"")
     }
 
     getByName("debug") {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
-
-      // Placeholder host
-      buildConfigField("String", "GAME_API_HOST", "\"127.0.0.1\"")
     }
   }
 
