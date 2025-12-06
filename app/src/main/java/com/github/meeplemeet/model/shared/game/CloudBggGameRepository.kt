@@ -27,7 +27,10 @@ class CloudBggGameRepository(
   }
 
   override suspend fun getGameById(gameID: String): Game =
-      withContext(ioDispatcher) { getGamesById(gameID).first() }
+      withContext(ioDispatcher) {
+        getGamesById(gameID).firstOrNull()
+            ?: throw GameFetchException("No game found for id: $gameID")
+      }
 
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
     require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
@@ -42,12 +45,12 @@ class CloudBggGameRepository(
             throw GameFetchException("Failed calling Cloud Function: ${e.message}", e)
           }
 
+      if (data.any { it == null || it !is Map<*, *> }) {
+        throw GameFetchException("Failed parsing JSON: invalid element(s) in response")
+      }
+
       try {
-        data.mapNotNull { element ->
-          if (element is Map<*, *>) {
-            mapToGame(element)
-          } else null
-        }
+        data.map { elem -> mapToGame(elem as Map<*, *>) }
       } catch (e: Exception) {
         throw GameFetchException("Failed parsing JSON: ${e.message}", e)
       }
@@ -77,12 +80,12 @@ class CloudBggGameRepository(
               throw GameSearchException("Failed calling Cloud Function: ${e.message}", e)
             }
 
+        if (data.any { it == null || it !is Map<*, *> }) {
+          throw GameSearchException("Failed parsing JSON: invalid element(s) in response")
+        }
+
         try {
-          data.mapNotNull { element ->
-            if (element is Map<*, *>) {
-              mapToGameSearchResult(element)
-            } else null
-          }
+          data.map { elem -> mapToGameSearchResult(elem as Map<*, *>) }
         } catch (e: Exception) {
           throw GameSearchException("Failed parsing JSON: ${e.message}", e)
         }
