@@ -86,6 +86,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
+import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.functions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
@@ -110,6 +112,9 @@ object FirebaseProvider {
 
   /** Lazily initialized Firebase Storage instance for storage operations. */
   val storage: FirebaseStorage by lazy { Firebase.storage }
+
+  /** Lazily initialized Firebase Functions instance for cloud functions operations. */
+  val functions: FirebaseFunctions by lazy { Firebase.functions }
 }
 
 /**

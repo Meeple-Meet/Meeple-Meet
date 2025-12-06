@@ -1,19 +1,14 @@
 package com.github.meeplemeet.model.shared.game
 
 import com.github.meeplemeet.BuildConfig
-import com.github.meeplemeet.HttpClientProvider
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.model.GameFetchException
 import com.github.meeplemeet.model.GameSearchException
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okio.IOException
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 
 /**
  * Repository implementation for fetching board games from the custom Cloud Functions backend.
@@ -21,39 +16,21 @@ import org.json.JSONObject
  * This repository uses Firebase Cloud Functions to fetch game details by ID or to search games by
  * name.
  *
- * @property client The HTTP client used to perform requests. Defaults to
- *   [HttpClientProvider.client].
- * @property baseUrl The base URL for the Cloud Functions backend. Defaults to [getBaseUrl].
+ * @property functions The [FirebaseFunctions] instance used to call cloud functions.
+ * @property ioDispatcher The [CoroutineDispatcher] used for IO operations. Defaults to
+ *   [Dispatchers.IO].
  */
 class CloudBggGameRepository(
-    private val client: OkHttpClient = HttpClientProvider.client,
-    private val baseUrl: HttpUrl = getBaseUrl(),
+    private val functions: FirebaseFunctions = FirebaseProvider.functions,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : GameRepository {
 
+  // Use emulator for debug builds
+  init {
+    if (BuildConfig.DEBUG) functions.useEmulator("10.0.2.2", 5001)
+  }
+
   companion object {
-
-    /** Local emulator URL for development. */
-    private val LOCAL_URL: HttpUrl =
-        HttpUrl.Builder()
-            .scheme("http")
-            .host("10.0.2.2")
-            .port(5001)
-            .addPathSegment("meeple-meet-36ecb")
-            .addPathSegment("us-central1")
-            .build()
-
-    /** Production Cloud Function URL (uses BuildConfig for security). */
-    private val PROD_URL: HttpUrl =
-        HttpUrl.Builder().scheme("https").host(BuildConfig.GAME_API_HOST).build()
-
-    /**
-     * Returns the appropriate base URL depending on the build type.
-     *
-     * Uses [LOCAL_URL] for debug builds and [PROD_URL] for release builds.
-     */
-    fun getBaseUrl(): HttpUrl = if (BuildConfig.DEBUG) LOCAL_URL else PROD_URL
-
     /** Cloud Function Endpoints */
     private const val PATH_GET_GAMES_BY_IDS = "getGamesByIds"
     private const val PATH_SEARCH_GAMES = "searchGames"
@@ -81,31 +58,22 @@ class CloudBggGameRepository(
    */
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
     require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
+
     return withContext(ioDispatcher) {
-      val url =
-          baseUrl
-              .newBuilder()
-              .addPathSegment(PATH_GET_GAMES_BY_IDS)
-              .addQueryParameter("ids", gameIDs.joinToString(","))
-              .build()
-
-      val request = Request.Builder().url(url).build()
       try {
-        client.newCall(request).execute().use { response ->
-          val bodyString = response.body?.string().orEmpty()
-          if (!response.isSuccessful) {
-            throw GameFetchException("Failed to fetch games (HTTP ${response.code}): $bodyString")
-          }
+        val result =
+            functions
+                .getHttpsCallable(PATH_GET_GAMES_BY_IDS)
+                .call(mapOf("ids" to gameIDs.toList()))
+                .await()
 
-          val jsonArray = JSONArray(bodyString)
-          return@withContext (0 until jsonArray.length()).map { i ->
-            jsonArray.getJSONObject(i).toGame()
-          }
-        }
-      } catch (e: JSONException) {
-        throw GameFetchException("Invalid JSON while fetching games: ${e.message}", e)
-      } catch (e: IOException) {
-        throw GameFetchException("Network error while fetching games: ${e.message}", e)
+        val data =
+            result.data as? List<Map<String, Any>>
+                ?: throw GameFetchException("Invalid response from Firebase Functions")
+
+        return@withContext data.map { it.toGame() }
+      } catch (e: Exception) {
+        throw GameFetchException("Failed to fetch games: ${e.message}", e)
       }
     }
   }
@@ -144,52 +112,38 @@ class CloudBggGameRepository(
    */
   suspend fun searchGamesByNameLight(query: String, maxResults: Int): List<GameSearchResult> =
       withContext(ioDispatcher) {
-        val url =
-            baseUrl
-                .newBuilder()
-                .addPathSegment(PATH_SEARCH_GAMES)
-                .addQueryParameter("query", query)
-                .addQueryParameter("maxResults", maxResults.toString())
-                .build()
-
-        val request = Request.Builder().url(url).build()
-
         try {
-          client.newCall(request).execute().use { response ->
-            val bodyString = response.body?.string().orEmpty()
+          val result =
+              functions
+                  .getHttpsCallable(PATH_SEARCH_GAMES)
+                  .call(mapOf("query" to query, "maxResults" to maxResults))
+                  .await()
 
-            if (!response.isSuccessful) {
-              throw GameSearchException(
-                  "Failed to search games (HTTP ${response.code}): $bodyString")
-            }
+          val data =
+              result.data as? List<Map<String, Any>>
+                  ?: throw GameSearchException("Invalid response from Firebase Functions")
 
-            val jsonArray = JSONArray(bodyString)
-            return@withContext (0 until jsonArray.length()).map { i ->
-              jsonArray.getJSONObject(i).toGameSearchResult()
-            }
-          }
+          return@withContext data.map { it.toGameSearchResult() }
         } catch (e: Exception) {
-          throw GameSearchException("Network error while searching games: ${e.message}", e)
+          throw GameSearchException("Failed to search games: ${e.message}", e)
         }
       }
 
-  /** Converts a [JSONObject] to a [Game] object. */
-  private fun JSONObject.toGame(): Game =
+  /** Converts a [Map] returned by Firebase Functions to a [Game] object. */
+  private fun Map<String, Any>.toGame(): Game =
       Game(
-          uid = getString("uid"),
-          name = getString("name"),
-          description = getString("description"),
-          imageURL = getString("imageURL"),
-          minPlayers = getInt("minPlayers"),
-          maxPlayers = getInt("maxPlayers"),
-          recommendedPlayers = optInt("recommendedPlayers"),
-          averagePlayTime = optInt("averagePlayTime"),
-          minAge = optInt("minAge"),
-          genres =
-              optJSONArray("genres")?.let { arr -> List(arr.length()) { i -> arr.getString(i) } }
-                  ?: emptyList())
+          uid = this["uid"] as String,
+          name = this["name"] as String,
+          description = this["description"] as String,
+          imageURL = this["imageURL"] as String,
+          minPlayers = (this["minPlayers"] as Number).toInt(),
+          maxPlayers = (this["maxPlayers"] as Number).toInt(),
+          recommendedPlayers = (this["recommendedPlayers"] as? Number)?.toInt(),
+          averagePlayTime = (this["averagePlayTime"] as? Number)?.toInt(),
+          minAge = (this["minAge"] as? Number)?.toInt(),
+          genres = (this["genres"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList())
 
-  /** Converts a [JSONObject] to a [GameSearchResult] object. */
-  private fun JSONObject.toGameSearchResult(): GameSearchResult =
-      GameSearchResult(id = getString("id"), name = getString("name"))
+  /** Converts a [Map] returned by Firebase Functions to a [GameSearchResult] object. */
+  private fun Map<String, Any>.toGameSearchResult(): GameSearchResult =
+      GameSearchResult(id = this["id"] as String, name = this["name"] as String)
 }
