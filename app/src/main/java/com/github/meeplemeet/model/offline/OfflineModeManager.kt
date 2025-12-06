@@ -448,18 +448,96 @@ object OfflineModeManager {
    * Strategy pattern object to hold copier functions for standard changes. Reduces parameter count
    * for applyStandardChanges.
    */
-  private class StandardUpdateStrategy<T>(
-      val copyName: (T, String) -> T,
-      val copyPhone: (T, String) -> T,
-      val copyEmail: (T, String) -> T,
-      val copyWebsite: (T, String) -> T,
-      val copyAddress: (T, Location) -> T,
-      val copyOpeningHours: (T, List<OpeningHours>) -> T,
-      val copyPhotoCollection: (T, List<String>) -> T,
-      val getOpeningHours: (T) -> List<OpeningHours>,
-      val getPhotoCollection: (T) -> List<String>,
-      val onOther: (T, String, Any) -> T
-  )
+  private interface StandardCopier<T> {
+    fun copyName(t: T, v: String): T
+
+    fun copyPhone(t: T, v: String): T
+
+    fun copyEmail(t: T, v: String): T
+
+    fun copyWebsite(t: T, v: String): T
+
+    fun copyAddress(t: T, v: Location): T
+
+    fun copyOpeningHours(t: T, v: List<OpeningHours>): T
+
+    fun copyPhotoCollection(t: T, v: List<String>): T
+
+    fun getOpeningHours(t: T): List<OpeningHours>
+
+    fun getPhotoCollection(t: T): List<String>
+
+    fun onOther(t: T, key: String, value: Any): T
+  }
+
+  private object SpaceRenterCopier : StandardCopier<SpaceRenter> {
+    override fun copyName(t: SpaceRenter, v: String) = t.copy(name = v)
+
+    override fun copyPhone(t: SpaceRenter, v: String) = t.copy(phone = v)
+
+    override fun copyEmail(t: SpaceRenter, v: String) = t.copy(email = v)
+
+    override fun copyWebsite(t: SpaceRenter, v: String) = t.copy(website = v)
+
+    override fun copyAddress(t: SpaceRenter, v: Location) = t.copy(address = v)
+
+    override fun copyOpeningHours(t: SpaceRenter, v: List<OpeningHours>) = t.copy(openingHours = v)
+
+    override fun copyPhotoCollection(t: SpaceRenter, v: List<String>) =
+        t.copy(photoCollectionUrl = v)
+
+    override fun getOpeningHours(t: SpaceRenter) = t.openingHours
+
+    override fun getPhotoCollection(t: SpaceRenter) = t.photoCollectionUrl
+
+    override fun onOther(t: SpaceRenter, key: String, value: Any): SpaceRenter {
+      return if (key == "spaces") t.copy(spaces = safeFilterList(value, t.spaces)) else t
+    }
+  }
+
+  private object ShopCopier : StandardCopier<Shop> {
+    override fun copyName(t: Shop, v: String) = t.copy(name = v)
+
+    override fun copyPhone(t: Shop, v: String) = t.copy(phone = v)
+
+    override fun copyEmail(t: Shop, v: String) = t.copy(email = v)
+
+    override fun copyWebsite(t: Shop, v: String) = t.copy(website = v)
+
+    override fun copyAddress(t: Shop, v: Location) = t.copy(address = v)
+
+    override fun copyOpeningHours(t: Shop, v: List<OpeningHours>) = t.copy(openingHours = v)
+
+    override fun copyPhotoCollection(t: Shop, v: List<String>) = t.copy(photoCollectionUrl = v)
+
+    override fun getOpeningHours(t: Shop) = t.openingHours
+
+    override fun getPhotoCollection(t: Shop) = t.photoCollectionUrl
+
+    override fun onOther(t: Shop, key: String, value: Any): Shop {
+      if (key == "gameCollection") {
+        val list = value as? List<*>
+        val castValue =
+            if (list != null) {
+              list.mapNotNull { item ->
+                if (item is Pair<*, *> &&
+                    item.first is com.github.meeplemeet.model.shared.game.Game &&
+                    item.second is Int) {
+                  @Suppress("UNCHECKED_CAST")
+                  (item.first as com.github.meeplemeet.model.shared.game.Game) to
+                      (item.second as Int)
+                } else {
+                  null
+                }
+              }
+            } else t.gameCollection
+        if (list != null && castValue.size == list.size) {
+          return t.copy(gameCollection = castValue)
+        }
+      }
+      return t
+    }
+  }
 
   /**
    * Helper to apply standard changes (name, phone, email, website, address, openingHours, photos)
@@ -468,28 +546,28 @@ object OfflineModeManager {
   private fun <T> applyStandardChanges(
       target: T,
       changes: Map<String, Any>,
-      strategy: StandardUpdateStrategy<T>
+      copier: StandardCopier<T>
   ): T {
     var updated = target
     changes.forEach { (key, value) ->
       updated =
           when (key) {
-            "name" -> strategy.copyName(updated, value as? String ?: return@forEach)
-            "phone" -> strategy.copyPhone(updated, value as? String ?: return@forEach)
-            "email" -> strategy.copyEmail(updated, value as? String ?: return@forEach)
-            "website" -> strategy.copyWebsite(updated, value as? String ?: return@forEach)
+            "name" -> copier.copyName(updated, value as? String ?: return@forEach)
+            "phone" -> copier.copyPhone(updated, value as? String ?: return@forEach)
+            "email" -> copier.copyEmail(updated, value as? String ?: return@forEach)
+            "website" -> copier.copyWebsite(updated, value as? String ?: return@forEach)
             "address" ->
-                strategy.copyAddress(
+                copier.copyAddress(
                     updated,
                     value as? com.github.meeplemeet.model.shared.location.Location
                         ?: return@forEach)
             "openingHours" ->
-                strategy.copyOpeningHours(
-                    updated, safeFilterList(value, strategy.getOpeningHours(updated)))
+                copier.copyOpeningHours(
+                    updated, safeFilterList(value, copier.getOpeningHours(updated)))
             "photoCollectionUrl" ->
-                strategy.copyPhotoCollection(
-                    updated, safeFilterList(value, strategy.getPhotoCollection(updated)))
-            else -> strategy.onOther(updated, key, value)
+                copier.copyPhotoCollection(
+                    updated, safeFilterList(value, copier.getPhotoCollection(updated)))
+            else -> copier.onOther(updated, key, value)
           }
     }
     return updated
@@ -505,22 +583,7 @@ object OfflineModeManager {
   private fun applySpaceRenterChanges(renter: SpaceRenter, changes: Map<String, Any>): SpaceRenter {
     if (changes.isEmpty()) return renter
 
-    val strategy =
-        StandardUpdateStrategy<SpaceRenter>(
-            copyName = { t, v -> t.copy(name = v) },
-            copyPhone = { t, v -> t.copy(phone = v) },
-            copyEmail = { t, v -> t.copy(email = v) },
-            copyWebsite = { t, v -> t.copy(website = v) },
-            copyAddress = { t, v -> t.copy(address = v) },
-            copyOpeningHours = { t, v -> t.copy(openingHours = v) },
-            copyPhotoCollection = { t, v -> t.copy(photoCollectionUrl = v) },
-            getOpeningHours = { it.openingHours },
-            getPhotoCollection = { it.photoCollectionUrl },
-            onOther = { t, k, v ->
-              if (k == "spaces") t.copy(spaces = safeFilterList(v, t.spaces)) else t
-            })
-
-    return applyStandardChanges(renter, changes, strategy)
+    return applyStandardChanges(renter, changes, SpaceRenterCopier)
   }
 
   /**
@@ -652,45 +715,7 @@ object OfflineModeManager {
   private fun applyShopChanges(shop: Shop, changes: Map<String, Any>): Shop {
     if (changes.isEmpty()) return shop
 
-    val strategy =
-        StandardUpdateStrategy<Shop>(
-            copyName = { t, v -> t.copy(name = v) },
-            copyPhone = { t, v -> t.copy(phone = v) },
-            copyEmail = { t, v -> t.copy(email = v) },
-            copyWebsite = { t, v -> t.copy(website = v) },
-            copyAddress = { t, v -> t.copy(address = v) },
-            copyOpeningHours = { t, v -> t.copy(openingHours = v) },
-            copyPhotoCollection = { t, v -> t.copy(photoCollectionUrl = v) },
-            getOpeningHours = { it.openingHours },
-            getPhotoCollection = { it.photoCollectionUrl },
-            onOther = { t, k, v ->
-              if (k == "gameCollection") {
-                val list = v as? List<*>
-                val castValue =
-                    if (list != null) {
-                      list.mapNotNull { item ->
-                        if (item is Pair<*, *> &&
-                            item.first is com.github.meeplemeet.model.shared.game.Game &&
-                            item.second is Int) {
-                          @Suppress("UNCHECKED_CAST")
-                          (item.first as com.github.meeplemeet.model.shared.game.Game) to
-                              (item.second as Int)
-                        } else {
-                          null
-                        }
-                      }
-                    } else t.gameCollection
-                // Only update if we successfully mapped something or if the list was empty but not
-                // null
-                if (list != null && castValue.size == list.size) {
-                  t.copy(gameCollection = castValue)
-                } else {
-                  t
-                }
-              } else t
-            })
-
-    return applyStandardChanges(shop, changes, strategy)
+    return applyStandardChanges(shop, changes, ShopCopier)
   }
 
   suspend fun updateShopCache(shop: Shop) {
