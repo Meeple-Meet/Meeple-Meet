@@ -9,6 +9,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
  * Repository implementation for fetching board games from the custom Cloud Functions backend.
@@ -37,6 +40,29 @@ class CloudBggGameRepository(
   }
 
   /**
+   * DTO representing the JSON returned by Firebase Functions for full game details.
+   *
+   * Keeping this separate from the domain [Game] model prevents backend format changes from
+   * breaking the rest of the app.
+   */
+  @Serializable
+  data class GameDto(
+      val uid: String,
+      val name: String,
+      val description: String,
+      val imageURL: String,
+      val minPlayers: Int,
+      val maxPlayers: Int,
+      val recommendedPlayers: Int? = null,
+      val averagePlayTime: Int? = null,
+      val minAge: Int? = null,
+      val genres: List<String> = emptyList()
+  )
+
+  /** DTO for lightweight search results (ID + name). */
+  @Serializable data class GameSearchResultDto(val id: String, val name: String)
+
+  /**
    * Fetches a single game by its unique ID.
    *
    * @param gameID The game ID to fetch.
@@ -44,9 +70,7 @@ class CloudBggGameRepository(
    * @throws GameFetchException if fetching fails.
    */
   override suspend fun getGameById(gameID: String): Game =
-      withContext(ioDispatcher) {
-        return@withContext getGamesById(gameID).first()
-      }
+      withContext(ioDispatcher) { getGamesById(gameID).first() }
 
   /**
    * Fetches multiple games by their IDs.
@@ -60,20 +84,24 @@ class CloudBggGameRepository(
     require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
 
     return withContext(ioDispatcher) {
+      val params = mapOf("ids" to gameIDs.toList())
+
+      val result =
+          try {
+            functions.getHttpsCallable(PATH_GET_GAMES_BY_IDS).call(params).await()
+          } catch (e: Exception) {
+            throw GameFetchException("Failed calling Cloud Function: ${e.message}", e)
+          }
+
+      val data = result.data as? List<*> ?: throw GameFetchException("Invalid response from server")
+
       try {
-        val result =
-            functions
-                .getHttpsCallable(PATH_GET_GAMES_BY_IDS)
-                .call(mapOf("ids" to gameIDs.toList()))
-                .await()
-
-        val data =
-            result.data as? List<Map<String, Any>>
-                ?: throw GameFetchException("Invalid response from Firebase Functions")
-
-        return@withContext data.map { it.toGame() }
+        data.map { element ->
+          val json = Json.parseToJsonElement(element.toString())
+          Json.decodeFromJsonElement<GameDto>(json).toGame()
+        }
       } catch (e: Exception) {
-        throw GameFetchException("Failed to fetch games: ${e.message}", e)
+        throw GameFetchException("Failed parsing JSON: ${e.message}", e)
       }
     }
   }
@@ -112,38 +140,43 @@ class CloudBggGameRepository(
    */
   suspend fun searchGamesByNameLight(query: String, maxResults: Int): List<GameSearchResult> =
       withContext(ioDispatcher) {
+        val params = mapOf("query" to query, "maxResults" to maxResults)
+
+        val result =
+            try {
+              functions.getHttpsCallable(PATH_SEARCH_GAMES).call(params).await()
+            } catch (e: Exception) {
+              throw GameSearchException("Failed calling Cloud Function: ${e.message}", e)
+            }
+
+        val data =
+            result.data as? List<*> ?: throw GameSearchException("Invalid response from server")
+
         try {
-          val result =
-              functions
-                  .getHttpsCallable(PATH_SEARCH_GAMES)
-                  .call(mapOf("query" to query, "maxResults" to maxResults))
-                  .await()
-
-          val data =
-              result.data as? List<Map<String, Any>>
-                  ?: throw GameSearchException("Invalid response from Firebase Functions")
-
-          return@withContext data.map { it.toGameSearchResult() }
+          data.map { element ->
+            val json = Json.parseToJsonElement(element.toString())
+            Json.decodeFromJsonElement<GameSearchResultDto>(json).toGameSearchResult()
+          }
         } catch (e: Exception) {
-          throw GameSearchException("Failed to search games: ${e.message}", e)
+          throw GameSearchException("Failed parsing JSON: ${e.message}", e)
         }
       }
 
-  /** Converts a [Map] returned by Firebase Functions to a [Game] object. */
-  private fun Map<String, Any>.toGame(): Game =
+  /** Converts a Dto to domain model. */
+  private fun GameDto.toGame(): Game =
       Game(
-          uid = this["uid"] as String,
-          name = this["name"] as String,
-          description = this["description"] as String,
-          imageURL = this["imageURL"] as String,
-          minPlayers = (this["minPlayers"] as Number).toInt(),
-          maxPlayers = (this["maxPlayers"] as Number).toInt(),
-          recommendedPlayers = (this["recommendedPlayers"] as? Number)?.toInt(),
-          averagePlayTime = (this["averagePlayTime"] as? Number)?.toInt(),
-          minAge = (this["minAge"] as? Number)?.toInt(),
-          genres = (this["genres"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList())
+          uid = uid,
+          name = name,
+          description = description,
+          imageURL = imageURL,
+          minPlayers = minPlayers,
+          maxPlayers = maxPlayers,
+          recommendedPlayers = recommendedPlayers,
+          averagePlayTime = averagePlayTime,
+          minAge = minAge,
+          genres = genres)
 
-  /** Converts a [Map] returned by Firebase Functions to a [GameSearchResult] object. */
-  private fun Map<String, Any>.toGameSearchResult(): GameSearchResult =
-      GameSearchResult(id = this["id"] as String, name = this["name"] as String)
+  /** Converts DTO to domain model. */
+  private fun GameSearchResultDto.toGameSearchResult(): GameSearchResult =
+      GameSearchResult(id = id, name = name)
 }
