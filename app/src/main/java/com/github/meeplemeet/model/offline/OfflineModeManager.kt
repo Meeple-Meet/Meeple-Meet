@@ -14,6 +14,9 @@ import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnect
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.google.firebase.Timestamp
@@ -428,6 +431,142 @@ object OfflineModeManager {
     onResult(fetched)
   }
 
+  // ==================== SPACE RENTER OFFLINE METHODS ====================
+
+  /** Helper to safely filter a list by type, returning the filtered list or the fallback. */
+  private inline fun <reified T> safeFilterList(value: Any, fallback: List<T>): List<T> {
+    val list = value as? List<*>
+    return if (list != null && list.all { it is T }) {
+      list.filterIsInstance<T>()
+    } else fallback
+  }
+
+  /**
+   * Helper to apply standard changes (name, phone, email, website, address, openingHours, photos)
+   * to any object.
+   */
+  /**
+   * Strategy pattern object to hold copier functions for standard changes. Reduces parameter count
+   * for applyStandardChanges.
+   */
+  private interface StandardCopier<T> {
+    fun copyName(t: T, v: String): T
+
+    fun copyPhone(t: T, v: String): T
+
+    fun copyEmail(t: T, v: String): T
+
+    fun copyWebsite(t: T, v: String): T
+
+    fun copyAddress(t: T, v: Location): T
+
+    fun copyOpeningHours(t: T, v: List<OpeningHours>): T
+
+    fun copyPhotoCollection(t: T, v: List<String>): T
+
+    fun getOpeningHours(t: T): List<OpeningHours>
+
+    fun getPhotoCollection(t: T): List<String>
+
+    fun onOther(t: T, key: String, value: Any): T
+  }
+
+  private object SpaceRenterCopier : StandardCopier<SpaceRenter> {
+    override fun copyName(t: SpaceRenter, v: String) = t.copy(name = v)
+
+    override fun copyPhone(t: SpaceRenter, v: String) = t.copy(phone = v)
+
+    override fun copyEmail(t: SpaceRenter, v: String) = t.copy(email = v)
+
+    override fun copyWebsite(t: SpaceRenter, v: String) = t.copy(website = v)
+
+    override fun copyAddress(t: SpaceRenter, v: Location) = t.copy(address = v)
+
+    override fun copyOpeningHours(t: SpaceRenter, v: List<OpeningHours>) = t.copy(openingHours = v)
+
+    override fun copyPhotoCollection(t: SpaceRenter, v: List<String>) =
+        t.copy(photoCollectionUrl = v)
+
+    override fun getOpeningHours(t: SpaceRenter) = t.openingHours
+
+    override fun getPhotoCollection(t: SpaceRenter) = t.photoCollectionUrl
+
+    override fun onOther(t: SpaceRenter, key: String, value: Any): SpaceRenter {
+      return if (key == "spaces") t.copy(spaces = safeFilterList(value, t.spaces)) else t
+    }
+  }
+
+  private object ShopCopier : StandardCopier<Shop> {
+    override fun copyName(t: Shop, v: String) = t.copy(name = v)
+
+    override fun copyPhone(t: Shop, v: String) = t.copy(phone = v)
+
+    override fun copyEmail(t: Shop, v: String) = t.copy(email = v)
+
+    override fun copyWebsite(t: Shop, v: String) = t.copy(website = v)
+
+    override fun copyAddress(t: Shop, v: Location) = t.copy(address = v)
+
+    override fun copyOpeningHours(t: Shop, v: List<OpeningHours>) = t.copy(openingHours = v)
+
+    override fun copyPhotoCollection(t: Shop, v: List<String>) = t.copy(photoCollectionUrl = v)
+
+    override fun getOpeningHours(t: Shop) = t.openingHours
+
+    override fun getPhotoCollection(t: Shop) = t.photoCollectionUrl
+
+    override fun onOther(t: Shop, key: String, value: Any): Shop {
+      if (key == "gameCollection") {
+        val list = value as? List<*>
+        val castValue =
+            if (list != null) {
+              list.mapNotNull { item ->
+                if (item is Pair<*, *> && item.first is Game && item.second is Int) {
+                  @Suppress("UNCHECKED_CAST")
+                  (item.first as Game) to (item.second as Int)
+                } else {
+                  null
+                }
+              }
+            } else t.gameCollection
+        if (list != null && castValue.size == list.size) {
+          return t.copy(gameCollection = castValue)
+        }
+      }
+      return t
+    }
+  }
+
+  /**
+   * Helper to apply standard changes (name, phone, email, website, address, openingHours, photos)
+   * to any object using a strategy.
+   */
+  private fun <T> applyStandardChanges(
+      target: T,
+      changes: Map<String, Any>,
+      copier: StandardCopier<T>
+  ): T {
+    var updated = target
+    changes.forEach { (key, value) ->
+      updated =
+          when (key) {
+            "name" -> copier.copyName(updated, value as? String ?: return@forEach)
+            "phone" -> copier.copyPhone(updated, value as? String ?: return@forEach)
+            "email" -> copier.copyEmail(updated, value as? String ?: return@forEach)
+            "website" -> copier.copyWebsite(updated, value as? String ?: return@forEach)
+            "address" -> copier.copyAddress(updated, value as? Location ?: return@forEach)
+            "openingHours" ->
+                copier.copyOpeningHours(
+                    updated, safeFilterList(value, copier.getOpeningHours(updated)))
+            "photoCollectionUrl" ->
+                copier.copyPhotoCollection(
+                    updated, safeFilterList(value, copier.getPhotoCollection(updated)))
+            else -> copier.onOther(updated, key, value)
+          }
+    }
+    return updated
+  }
+
   /**
    * Applies pending changes to a SpaceRenter object.
    *
@@ -438,48 +577,7 @@ object OfflineModeManager {
   private fun applySpaceRenterChanges(renter: SpaceRenter, changes: Map<String, Any>): SpaceRenter {
     if (changes.isEmpty()) return renter
 
-    var updated = renter
-    changes.forEach { (key, value) ->
-      when (key) {
-        "name" -> updated = updated.copy(name = value as? String ?: updated.name)
-        "phone" -> updated = updated.copy(phone = value as? String ?: updated.phone)
-        "email" -> updated = updated.copy(email = value as? String ?: updated.email)
-        "website" -> updated = updated.copy(website = value as? String ?: updated.website)
-        "address" ->
-            updated =
-                updated.copy(
-                    address =
-                        value as? com.github.meeplemeet.model.shared.location.Location
-                            ?: updated.address)
-        "openingHours" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null &&
-                  list.all { it is com.github.meeplemeet.model.shops.OpeningHours }) {
-                list.filterIsInstance<com.github.meeplemeet.model.shops.OpeningHours>()
-              } else updated.openingHours
-          updated = updated.copy(openingHours = castValue)
-        }
-        "spaces" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null &&
-                  list.all { it is com.github.meeplemeet.model.space_renter.Space }) {
-                list.filterIsInstance<com.github.meeplemeet.model.space_renter.Space>()
-              } else updated.spaces
-          updated = updated.copy(spaces = castValue)
-        }
-        "photoCollectionUrl" -> {
-          val list = value as? List<*>
-          val castValue =
-              if (list != null && list.all { it is String }) {
-                list.filterIsInstance<String>()
-              } else updated.photoCollectionUrl
-          updated = updated.copy(photoCollectionUrl = castValue)
-        }
-      }
-    }
-    return updated
+    return applyStandardChanges(renter, changes, SpaceRenterCopier)
   }
 
   /**
@@ -543,6 +641,112 @@ object OfflineModeManager {
     _offlineModeFlow.value = _offlineModeFlow.value.copy(spaceRenters = newState)
   }
 
+  // ==================== SHOP OFFLINE METHODS ====================
+
+  /**
+   * Loads a shop from the offline cache or repository.
+   *
+   * @param shopId The ID of the shop to load
+   * @param onLoaded Callback invoked with the loaded shop (or null if not found)
+   */
+  fun loadShop(shopId: String, onLoaded: (Shop?) -> Unit) {
+    val cached = _offlineModeFlow.value.shops[shopId]?.first
+    if (cached != null) {
+      onLoaded(cached)
+    } else {
+      // Load from repository if not in cache
+      CoroutineScope(dispatcher).launch {
+        val shop = RepositoryProvider.shops.getShopSafe(shopId)
+        onLoaded(shop)
+      }
+    }
+  }
+
+  /**
+   * Adds a new shop to the offline cache for later synchronization. Used when creating a shop while
+   * offline.
+   *
+   * @param shop The shop to add
+   */
+  fun addPendingShop(shop: Shop) {
+    val state = _offlineModeFlow.value.shops
+    val newState = LinkedHashMap(state)
+    newState[shop.id] = shop to mapOf(PENDING_STRING to true)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
+  }
+
+  /**
+   * Records a change to a shop property in the offline cache for later synchronization.
+   *
+   * @param shop The shop being modified
+   * @param property The name of the property changing
+   * @param newValue The new value for the property
+   */
+  fun setShopChange(shop: Shop, property: String, newValue: Any) {
+    val state = _offlineModeFlow.value.shops
+    val existingEntry = state[shop.id]
+
+    // If not in cache, add it first
+    val (existingShop, existingChanges) =
+        if (existingEntry == null) {
+          addPendingShop(shop)
+          shop to emptyMap()
+        } else {
+          existingEntry
+        }
+
+    val updatedChanges = existingChanges.toMutableMap()
+    updatedChanges[property] = newValue
+
+    // Update the base object with the new change
+    val updatedShop = applyShopChanges(existingShop, mapOf(property to newValue))
+
+    val newState = LinkedHashMap(state)
+    newState[shop.id] = updatedShop to updatedChanges
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
+  }
+
+  private fun applyShopChanges(shop: Shop, changes: Map<String, Any>): Shop {
+    if (changes.isEmpty()) return shop
+
+    return applyStandardChanges(shop, changes, ShopCopier)
+  }
+
+  suspend fun updateShopCache(shop: Shop) {
+    val state = _offlineModeFlow.value.shops
+    val newState = LinkedHashMap(state)
+    newState[shop.id] = shop to state[shop.id]?.second.orEmpty()
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
+    // Wait until the StateFlow has actually updated with this exact object
+    _offlineModeFlow.first { offlineMode -> offlineMode.shops[shop.id]?.first == shop }
+  }
+
+  /**
+   * Clears pending changes for a shop after successful synchronization.
+   *
+   * @param shopId The ID of the shop whose changes were synchronized
+   */
+  fun clearShopChanges(shopId: String) {
+    val state = _offlineModeFlow.value.shops
+    val shop = state[shopId]?.first ?: return
+    val newState = LinkedHashMap(state)
+    newState[shopId] = shop to emptyMap()
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
+  }
+
+  /**
+   * Removes a shop from the offline cache. Used when deleting a shop or after successful
+   * synchronization.
+   *
+   * @param shopId The ID of the shop to remove
+   */
+  fun removeShop(shopId: String) {
+    val state = _offlineModeFlow.value.shops
+    val newState = LinkedHashMap(state)
+    newState.remove(shopId)
+    _offlineModeFlow.value = _offlineModeFlow.value.copy(shops = newState)
+  }
+
   // ==================== Synchronization Helpers ====================
 
   /**
@@ -550,7 +754,7 @@ object OfflineModeManager {
    *
    * @return List of pairs containing the shop and its pending changes map
    */
-  private fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
+  fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
     return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
   }
 

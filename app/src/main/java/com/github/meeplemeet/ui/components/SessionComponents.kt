@@ -763,6 +763,7 @@ fun ShopLocationSearchBar(
     account: Account,
     shop: Shop?,
     viewModel: ShopSearchViewModel,
+    enabled: Boolean = true,
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
 ) {
@@ -779,7 +780,7 @@ fun ShopLocationSearchBar(
       },
       initial = shop?.address ?: Location(),
       viewModel = viewModel,
-      enabled = true,
+      enabled = enabled,
       inputFieldTestTag = inputFieldTestTag,
       dropdownItemTestTag = dropdownItemTestTag)
 }

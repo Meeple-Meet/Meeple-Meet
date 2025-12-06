@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +28,24 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
    */
   val shop: StateFlow<Shop?> = _shop
 
+  private var currentShopId: String? = null
+
+  init {
+    // Observe the offline cache for changes to the current shop
+    viewModelScope.launch {
+      OfflineModeManager.offlineModeFlow.collect { offlineMode ->
+        val shopId = shop.value?.id ?: currentShopId
+        if (shopId != null) {
+          // Update the StateFlow when the cached shop changes
+          val cached = offlineMode.shops[shopId]?.first
+          if (cached != null) {
+            _shop.value = cached
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Retrieves a shop by its ID from Firestore.
    *
@@ -39,7 +58,9 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
   fun getShop(id: String) {
     if (id.isBlank()) throw IllegalArgumentException("Shop ID cannot be blank")
 
-    viewModelScope.launch { _shop.value = repository.getShop(id) }
+    currentShopId = id
+
+    viewModelScope.launch { OfflineModeManager.loadShop(id) { shop -> _shop.value = shop } }
   }
 
   /**
