@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -291,12 +292,8 @@ fun GameItemImage(
                         contentDescription = game.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
-                        placeholder =
-                            androidx.compose.ui.res.painterResource(
-                                com.github.meeplemeet.R.drawable.ic_dice),
-                        error =
-                            androidx.compose.ui.res.painterResource(
-                                com.github.meeplemeet.R.drawable.ic_dice))
+                        placeholder = painterResource(com.github.meeplemeet.R.drawable.ic_dice),
+                        error = painterResource(com.github.meeplemeet.R.drawable.ic_dice))
                   }
 
               Spacer(Modifier.height(Dimensions.Spacing.small))

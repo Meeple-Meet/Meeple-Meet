@@ -14,6 +14,8 @@ import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnect
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.google.firebase.Timestamp
@@ -451,10 +453,10 @@ object OfflineModeManager {
       val copyPhone: (T, String) -> T,
       val copyEmail: (T, String) -> T,
       val copyWebsite: (T, String) -> T,
-      val copyAddress: (T, com.github.meeplemeet.model.shared.location.Location) -> T,
-      val copyOpeningHours: (T, List<com.github.meeplemeet.model.shops.OpeningHours>) -> T,
+      val copyAddress: (T, Location) -> T,
+      val copyOpeningHours: (T, List<OpeningHours>) -> T,
       val copyPhotoCollection: (T, List<String>) -> T,
-      val getOpeningHours: (T) -> List<com.github.meeplemeet.model.shops.OpeningHours>,
+      val getOpeningHours: (T) -> List<OpeningHours>,
       val getPhotoCollection: (T) -> List<String>,
       val onOther: (T, String, Any) -> T
   )
@@ -596,7 +598,7 @@ object OfflineModeManager {
       onLoaded(cached)
     } else {
       // Load from repository if not in cache
-      kotlinx.coroutines.CoroutineScope(dispatcher).launch {
+      CoroutineScope(dispatcher).launch {
         val shop = RepositoryProvider.shops.getShopSafe(shopId)
         onLoaded(shop)
       }

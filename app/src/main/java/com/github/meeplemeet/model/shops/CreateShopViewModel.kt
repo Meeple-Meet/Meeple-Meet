@@ -47,7 +47,7 @@ class CreateShopViewModel(
    * @throws IllegalArgumentException if the shop name is blank, if not exactly 7 opening hours
    *   entries are provided, or if the address is not valid.
    */
-  suspend fun createShop(
+  fun createShop(
       owner: Account,
       name: String,
       phone: String = "",
