@@ -5,6 +5,7 @@ plugins {
   jacoco
   alias(libs.plugins.androidApplication)
   alias(libs.plugins.jetbrainsKotlinAndroid)
+  alias(libs.plugins.compose.compiler)
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.gms)
   alias(libs.plugins.sonar)
@@ -144,9 +145,6 @@ android {
   buildFeatures {
     compose = true
     buildConfig = true
-  }
-  composeOptions {
-    kotlinCompilerExtensionVersion = "1.5.1"
   }
   packaging {
     resources {
