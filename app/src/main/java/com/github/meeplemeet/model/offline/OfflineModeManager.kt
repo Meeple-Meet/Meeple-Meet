@@ -14,6 +14,7 @@ import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnect
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
@@ -520,12 +521,9 @@ object OfflineModeManager {
         val castValue =
             if (list != null) {
               list.mapNotNull { item ->
-                if (item is Pair<*, *> &&
-                    item.first is com.github.meeplemeet.model.shared.game.Game &&
-                    item.second is Int) {
+                if (item is Pair<*, *> && item.first is Game && item.second is Int) {
                   @Suppress("UNCHECKED_CAST")
-                  (item.first as com.github.meeplemeet.model.shared.game.Game) to
-                      (item.second as Int)
+                  (item.first as Game) to (item.second as Int)
                 } else {
                   null
                 }
@@ -556,11 +554,7 @@ object OfflineModeManager {
             "phone" -> copier.copyPhone(updated, value as? String ?: return@forEach)
             "email" -> copier.copyEmail(updated, value as? String ?: return@forEach)
             "website" -> copier.copyWebsite(updated, value as? String ?: return@forEach)
-            "address" ->
-                copier.copyAddress(
-                    updated,
-                    value as? com.github.meeplemeet.model.shared.location.Location
-                        ?: return@forEach)
+            "address" -> copier.copyAddress(updated, value as? Location ?: return@forEach)
             "openingHours" ->
                 copier.copyOpeningHours(
                     updated, safeFilterList(value, copier.getOpeningHours(updated)))

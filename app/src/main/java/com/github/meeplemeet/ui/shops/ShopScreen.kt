@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.Shop
@@ -292,8 +293,8 @@ fun GameItemImage(
                         contentDescription = game.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
-                        placeholder = painterResource(com.github.meeplemeet.R.drawable.ic_dice),
-                        error = painterResource(com.github.meeplemeet.R.drawable.ic_dice))
+                        placeholder = painterResource(R.drawable.ic_dice),
+                        error = painterResource(R.drawable.ic_dice))
                   }
 
               Spacer(Modifier.height(Dimensions.Spacing.small))
