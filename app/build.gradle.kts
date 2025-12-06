@@ -232,11 +232,14 @@ dependencies {
   implementation(libs.coil.compose)
 
   // Firebase
+  implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.database.ktx)
   implementation(libs.firebase.firestore)
   implementation(libs.firebase.auth.ktx)
   implementation(libs.firebase.auth)
   implementation(libs.firebase.storage)
+  implementation(libs.firebase.appcheck)
+  implementation(libs.firebase.appcheck.debug)
   implementation(libs.geofirestore)
 
   // Credential Manager (for Google Sign-In)
