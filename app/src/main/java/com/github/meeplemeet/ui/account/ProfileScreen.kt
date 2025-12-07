@@ -47,6 +47,8 @@ fun ProfileScreen(
     onDelete: () -> Unit,
     onFriendClick: () -> Unit,
     onNotificationClick: () -> Unit,
+    onSpaceRenterClick: (String) -> Unit,
+    onShopClick: (String) -> Unit
 ) {
   // Refresh email verification status when the profile is shown
   LaunchedEffect(account.uid) { viewModel.refreshEmailVerificationStatus() }
@@ -83,7 +85,9 @@ fun ProfileScreen(
                   onNotificationClick = onNotificationClick,
                   onSignOutOrDel = onSignOutOrDel,
                   onDelete = onDelete,
-                  onInputFocusChanged = { isInputFocused = it })
+                  onInputFocusChanged = { isInputFocused = it },
+                  onSpaceRenterClick = onSpaceRenterClick,
+                  onShopClick = onShopClick)
             }
       }
 }
