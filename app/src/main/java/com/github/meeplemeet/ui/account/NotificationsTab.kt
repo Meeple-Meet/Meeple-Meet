@@ -683,9 +683,9 @@ private fun NotificationRowContent(
   val context = LocalContext.current
 
   var avatarBytes by remember(notif.uid) { mutableStateOf<ByteArray?>(null) }
-  var friend by remember { mutableStateOf<Account?>(null) }
-  var discussionName by remember { mutableStateOf<String?>(null) }
-  var sessionName by remember { mutableStateOf<String?>(null) }
+  var friend by remember(notif.uid) { mutableStateOf<Account?>(null) }
+  var discussionName by remember(notif.uid) { mutableStateOf<String?>(null) }
+  var sessionName by remember(notif.uid) { mutableStateOf<String?>(null) }
 
   LaunchedEffect(notif.uid) {
     when (notif.type) {
@@ -697,14 +697,6 @@ private fun NotificationRowContent(
               viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
             },
             onDeleted = { viewModel.deleteNotification(account, notif) })
-        viewModel.getAccount(notif.senderOrDiscussionId, context) { acc ->
-          if (acc == null) {
-            viewModel.deleteNotification(account, notif)
-          } else {
-            friend = acc
-            viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
-          }
-        }
       }
       NotificationType.JOIN_DISCUSSION -> {
         viewModel.getDiscussion(
