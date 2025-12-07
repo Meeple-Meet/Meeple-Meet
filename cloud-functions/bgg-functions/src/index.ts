@@ -128,11 +128,12 @@ const searchCache = new Cache<GameSearchResult[]>(SEARCH_TTL_MS, SEARCH_CACHE_MA
  *  - unavailable: BGG API fetch failed
  *  - internal: unexpected internal error
  */
-export const getGamesByIds = onCall(
-  { secrets: ["BGG_API_TOKEN"] },
-  async (request) => {
-    try {
-      const { ids } = request.data;
+/**
+ * Handler function for getGamesByIds - extracted for testing
+ */
+export async function handleGetGamesByIds(data: any): Promise<GameOut[]> {
+  try {
+    const { ids } = data;
 
       if (!ids || !Array.isArray(ids)) {
         throw new HttpsError("invalid-argument", "Missing or invalid 'ids' array");
@@ -194,7 +195,14 @@ export const getGamesByIds = onCall(
       });
       throw new HttpsError("internal", "Internal server error", err?.message);
     }
-  }
+}
+
+/**
+ * Callable wrapper for getGamesByIds
+ */
+export const getGamesByIds = onCall(
+  { secrets: ["BGG_API_TOKEN"] },
+  async (request) => handleGetGamesByIds(request.data)
 );
 
 /**
@@ -211,11 +219,12 @@ export const getGamesByIds = onCall(
  * 6. Stores ranked results in L1 and L2 caches
  * 7. Returns array of GameSearchResult (limited by maxResults)
  */
-export const searchGames = onCall(
-  { secrets: ["BGG_API_TOKEN"] },
-  async (request) => {
-    try {
-      const { query, maxResults: maxResultsParam } = request.data;
+/**
+ * Handler function for searchGames - extracted for testing
+ */
+export async function handleSearchGames(data: any): Promise<GameSearchResult[]> {
+  try {
+    const { query, maxResults: maxResultsParam } = data;
 
       if (!query || typeof query !== "string") {
         throw new HttpsError("invalid-argument", "Missing or invalid 'query' parameter");
@@ -289,6 +298,13 @@ export const searchGames = onCall(
       throw new HttpsError("internal", "Internal server error", err?.message);
     }
   }
+
+/**
+ * Callable wrapper for searchGames
+ */
+export const searchGames = onCall(
+  { secrets: ["BGG_API_TOKEN"] },
+  async (request) => handleSearchGames(request.data)
 );
 
 
