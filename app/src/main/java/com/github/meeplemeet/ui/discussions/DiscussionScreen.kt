@@ -398,7 +398,8 @@ fun DiscussionScreen(
                             val isMine = message.senderId == account.uid
                             val senderAccount = userCache[message.senderId]
                             val sender =
-                                if (!isMine) senderAccount?.name ?: "Unknown"
+                                if (!isMine)
+                                    senderAccount?.name ?: DiscussionCommons.UNKNOWN_SENDER_NAME
                                 else DiscussionCommons.YOU_SENDER_NAME
 
                             val showDateHeader =
@@ -497,7 +498,9 @@ fun DiscussionScreen(
 
                         val isMineOverlay = actionMessage.senderId == account.uid
                         val senderOverlay =
-                            if (!isMineOverlay) userCache[actionMessage.senderId]?.name ?: "Unknown"
+                            if (!isMineOverlay)
+                                userCache[actionMessage.senderId]?.name
+                                    ?: DiscussionCommons.UNKNOWN_SENDER_NAME
                             else DiscussionCommons.YOU_SENDER_NAME
 
                         val msgIndex = messages.indexOfFirst { it.uid == actionMessage.uid }
@@ -525,8 +528,9 @@ fun DiscussionScreen(
                                         authorName = senderOverlay,
                                         currentUserId = account.uid,
                                         profilePictureUrl =
-                                          if (actionMessage.senderId == account.uid) account.photoUrl
-                                          else userCache[actionMessage.senderId]?.photoUrl,
+                                            if (actionMessage.senderId == account.uid)
+                                                account.photoUrl
+                                            else userCache[actionMessage.senderId]?.photoUrl,
                                         onVote = { optionIndex, isRemoving ->
                                           if (isRemoving) {
                                             viewModel.removeVoteFromPollAsync(
@@ -547,23 +551,22 @@ fun DiscussionScreen(
                                   }
                                   actionMessage.photoUrl != null -> {
                                     PhotoBubble(
-                                      message = actionMessage,
-                                      isMine = isMineOverlay,
-                                      senderName = senderOverlay,
-                                      showProfilePicture = isLastFromSenderOverlay,
-                                      showSenderName = isFirstFromSenderOverlay,
-                                      allMessages = messages,
-                                      userCache = userCache,
-                                      currentAccount = account
-                                    )
+                                        message = actionMessage,
+                                        isMine = isMineOverlay,
+                                        senderName = senderOverlay,
+                                        showProfilePicture = isLastFromSenderOverlay,
+                                        showSenderName = isFirstFromSenderOverlay,
+                                        allMessages = messages,
+                                        userCache = userCache,
+                                        currentAccount = account)
                                   }
                                   else -> {
                                     ChatBubble(
-                                      actionMessage,
-                                      account,
-                                      account,
-                                      isLastFromSenderOverlay,
-                                      isFirstFromSenderOverlay)
+                                        actionMessage,
+                                        account,
+                                        account,
+                                        isLastFromSenderOverlay,
+                                        isFirstFromSenderOverlay)
                                   }
                                 }
                               }
@@ -1248,7 +1251,7 @@ fun FullscreenImageDialog(
       remember(currentPhotoMessage, userCache) {
         currentPhotoMessage?.let { msg ->
           if (msg.senderId == currentUserId) DiscussionCommons.YOU_SENDER_NAME
-          else userCache[msg.senderId]?.name ?: "Unknown"
+          else userCache[msg.senderId]?.name ?: DiscussionCommons.UNKNOWN_SENDER_NAME
         } ?: senderName
       }
 
@@ -1318,35 +1321,35 @@ fun FullscreenImageDialog(
                                     Color.Black.copy(alpha = 0.0f),
                                     Color.Black.copy(alpha = 0.9f))))
                         .align(Alignment.BottomCenter)) {
-              LazyRow(
-                  modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.extraLarge),
-                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-                    items(photoMessages.size) { index ->
-                      val msg = photoMessages[index]
-                      val isSelected =
-                          msg.uid == (currentPhotoMessage?.uid ?: currentMessage?.uid)
+                  LazyRow(
+                      modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.extraLarge),
+                      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                        items(photoMessages.size) { index ->
+                          val msg = photoMessages[index]
+                          val isSelected =
+                              msg.uid == (currentPhotoMessage?.uid ?: currentMessage?.uid)
 
-                      Box(
-                          modifier =
-                              Modifier.size(Dimensions.Spacing.xxxxLarge)
-                                  .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
-                                  .border(
-                                      width =
-                                          if (isSelected) Dimensions.DividerThickness.medium
-                                          else Dimensions.CornerRadius.none,
-                                      color =
-                                          if (isSelected) Color.White else Color.Transparent,
-                                      shape =
-                                          RoundedCornerShape(Dimensions.CornerRadius.medium))
-                                  .clickable { currentPhotoMessage = msg }) {
-                            AsyncImage(
-                                model = msg.photoUrl,
-                                contentDescription = "Photo thumbnail",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize())
-                          }
-                    }
-                  }
+                          Box(
+                              modifier =
+                                  Modifier.size(Dimensions.Spacing.xxxxLarge)
+                                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                                      .border(
+                                          width =
+                                              if (isSelected) Dimensions.DividerThickness.medium
+                                              else Dimensions.CornerRadius.none,
+                                          color =
+                                              if (isSelected) Color.White else Color.Transparent,
+                                          shape =
+                                              RoundedCornerShape(Dimensions.CornerRadius.medium))
+                                      .clickable { currentPhotoMessage = msg }) {
+                                AsyncImage(
+                                    model = msg.photoUrl,
+                                    contentDescription = "Photo thumbnail",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize())
+                              }
+                        }
+                      }
                 }
           }
         }
@@ -1372,7 +1375,8 @@ fun ChatBubble(
 ) {
   val isMine = message.senderId == currentAccount.uid
   val senderName =
-      if (isMine) DiscussionCommons.YOU_SENDER_NAME else senderAccount?.name ?: "Unknown"
+      if (isMine) DiscussionCommons.YOU_SENDER_NAME
+      else senderAccount?.name ?: DiscussionCommons.UNKNOWN_SENDER_NAME
   val profilePictureUrl = if (isMine) currentAccount.photoUrl else senderAccount?.photoUrl
 
   Row(

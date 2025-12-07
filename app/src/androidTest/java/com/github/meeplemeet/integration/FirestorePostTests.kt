@@ -451,6 +451,7 @@ class FirestorePostTests : FirestoreTests() {
   @Test
   fun testEditPostAndCommentWithPermissionsAndValidation() = runTest {
     // Test ViewModel edit with permissions
+    val postVM = PostViewModel()
     val post = postRepository.createPost("Test Post", "Test Body", testAccount1.uid)
 
     // Edit as author (should succeed)

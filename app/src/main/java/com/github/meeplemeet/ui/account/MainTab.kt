@@ -347,43 +347,40 @@ fun MainTab(
             onSignOutOrDel = onSignOutOrDel,
             onDelete = onDelete,
             onNavigate = { page -> currentPage = page },
-            onInputFocusChanged = onInputFocusChanged, online = online)
+            onInputFocusChanged = onInputFocusChanged,
+            online = online)
     ProfilePage.Preferences ->
         SubPageScaffold("Preferences", onBack = { currentPage = ProfilePage.Main }) {
           PreferencesPage(
-            preference = if (online) {
-              account.themeMode
-            } else {
-              offlineData.accounts[account.uid]
-                ?.second
-                ?.get(Account::themeMode.name)
-                  as? ThemeMode
-                ?: account.themeMode
-            },
-            onPreferenceChange = {
-              if (online)
-                viewModel.setAccountTheme(account, it)
-              else
-                OfflineModeManager.setAccountChange(account, Account::themeMode.name, it)
-            })
+              preference =
+                  if (online) {
+                    account.themeMode
+                  } else {
+                    offlineData.accounts[account.uid]?.second?.get(Account::themeMode.name)
+                        as? ThemeMode ?: account.themeMode
+                  },
+              onPreferenceChange = {
+                if (online) viewModel.setAccountTheme(account, it)
+                else OfflineModeManager.setAccountChange(account, Account::themeMode.name, it)
+              })
         }
     ProfilePage.NotificationSettings ->
         SubPageScaffold("Notifications", onBack = { currentPage = ProfilePage.Main }) {
           NotificationSettingsSection(
-              preference = if (online) {
-                account.notificationSettings
-              } else {
-                offlineData.accounts[account.uid]
-                  ?.second
-                  ?.get(Account::notificationSettings.name)
-                    as? NotificationSettings
-                  ?: account.notificationSettings
-              },
+              preference =
+                  if (online) {
+                    account.notificationSettings
+                  } else {
+                    offlineData.accounts[account.uid]
+                        ?.second
+                        ?.get(Account::notificationSettings.name) as? NotificationSettings
+                        ?: account.notificationSettings
+                  },
               onPreferenceChange = {
-                if (online)
-                  viewModel.setAccountNotificationSettings(account, it)
+                if (online) viewModel.setAccountNotificationSettings(account, it)
                 else
-                  OfflineModeManager.setAccountChange(account, Account::notificationSettings.name, it)
+                    OfflineModeManager.setAccountChange(
+                        account, Account::notificationSettings.name, it)
               })
         }
     ProfilePage.Businesses ->

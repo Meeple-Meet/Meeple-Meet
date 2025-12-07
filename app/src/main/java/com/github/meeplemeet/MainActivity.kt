@@ -574,8 +574,7 @@ fun MeepleMeetApp(
               FriendsScreen(
                   account = currentAccount,
                   onBack = { navigationActions.goBack() },
-                  onNavigate = { navigationActions.navigateTo(it) }
-              )
+                  onNavigate = { navigationActions.navigateTo(it) })
             } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
           }
 

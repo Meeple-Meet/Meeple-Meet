@@ -1316,15 +1316,15 @@ object OfflineModeManager {
       try {
         if (changes.containsKey(PENDING_STRING)) {
           RepositoryProvider.shops.createShop(
-            owner = shop.owner,
-            name = shop.name,
-            phone = shop.phone,
-            email = shop.email,
-            website = shop.website,
-            address = shop.address,
-            openingHours = shop.openingHours,
-            gameCollection = shop.gameCollection,
-            photoCollectionUrl = shop.photoCollectionUrl)
+              owner = shop.owner,
+              name = shop.name,
+              phone = shop.phone,
+              email = shop.email,
+              website = shop.website,
+              address = shop.address,
+              openingHours = shop.openingHours,
+              gameCollection = shop.gameCollection,
+              photoCollectionUrl = shop.photoCollectionUrl)
 
           removeShop(shop.id)
         } else {
@@ -1392,9 +1392,9 @@ object OfflineModeManager {
    * internet connection is restored.
    */
   suspend fun syncAllPendingData() {
-    _offlineModeFlow.value.accounts.values.filter{it.second.isNotEmpty()}.forEach {
-      RepositoryProvider.accounts.updateAccount(it.first.uid, it.second)
-    }
+    _offlineModeFlow.value.accounts.values
+        .filter { it.second.isNotEmpty() }
+        .forEach { RepositoryProvider.accounts.updateAccount(it.first.uid, it.second) }
 
     syncPendingSpaceRenters()
     syncPendingShops()

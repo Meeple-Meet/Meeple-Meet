@@ -61,10 +61,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,7 +79,6 @@ import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
-import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.Dimensions
 import okhttp3.internal.toImmutableList
 
@@ -378,48 +377,46 @@ fun FriendsScreen(
         val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
         if (!(shouldHide && isInputFocused)) {
           BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.Profile,
-            onTabSelected = { onNavigate(it) })
+              currentScreen = MeepleMeetScreen.Profile, onTabSelected = { onNavigate(it) })
+        }
+      }) { innerPadding ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(innerPadding)
+                    .testTag(FriendsManagementTestTags.SCREEN_ROOT),
+        ) {
+          FriendsSearchBar(
+              query = searchQuery,
+              onQueryChange = { searchQuery = it },
+              onClearQuery = { searchQuery = FriendsManagementDefaults.RESET_QUERY_TEXT },
+              onFocusChanged = { isInputFocused = it },
+          )
+
+          if (!isSearching) {
+            Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
+            FriendsTabSwitcher(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+            )
+          }
+
+          FriendsManagementContent(
+              account = account,
+              lists =
+                  FriendsLists(
+                      friends = friends,
+                      sentRequests = sentRequests,
+                      blockedUsers = blockedUsers,
+                  ),
+              suggestions = suggestions,
+              searchQuery = searchQuery,
+              selectedTab = selectedTab,
+              viewModel = viewModel,
+              onClearFocus = { focusManager.clearFocus() },
+          )
         }
       }
-  ) { innerPadding ->
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .padding(innerPadding)
-                .testTag(FriendsManagementTestTags.SCREEN_ROOT),
-    ) {
-      FriendsSearchBar(
-          query = searchQuery,
-          onQueryChange = { searchQuery = it },
-          onClearQuery = { searchQuery = FriendsManagementDefaults.RESET_QUERY_TEXT },
-          onFocusChanged = { isInputFocused = it },
-      )
-
-      if (!isSearching) {
-        Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
-        FriendsTabSwitcher(
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
-        )
-      }
-
-      FriendsManagementContent(
-          account = account,
-          lists =
-              FriendsLists(
-                  friends = friends,
-                  sentRequests = sentRequests,
-                  blockedUsers = blockedUsers,
-              ),
-          suggestions = suggestions,
-          searchQuery = searchQuery,
-          selectedTab = selectedTab,
-          viewModel = viewModel,
-          onClearFocus = { focusManager.clearFocus() },
-      )
-    }
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -277,7 +277,6 @@ class MainTabComposableTest : FirestoreTests() {
       val accountState by accountRepository.listenAccount(user.uid).collectAsState(initial = user)
       AppTheme {
         MainTab(
-            online = true,
             viewModel = profileVM,
             account = accountState,
             onFriendsClick = { friendsClicked = true },
