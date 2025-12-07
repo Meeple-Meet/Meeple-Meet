@@ -10,6 +10,10 @@ import com.github.meeplemeet.model.auth.AuthUIState
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.auth.coolDownErrMessage
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.SpaceRenter
+import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +33,8 @@ import kotlinx.coroutines.launch
 class ProfileScreenViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
     private val imageRepository: ImageRepository = RepositoryProvider.images,
     private val authRepository: AuthenticationRepository = RepositoryProvider.authentication
 ) : CreateAccountViewModel(handlesRepository) {
@@ -40,9 +46,12 @@ class ProfileScreenViewModel(
   }
 
   private val _uiState = MutableStateFlow(AuthUIState())
+  private val _businesses =
+      MutableStateFlow(Pair<List<Shop>, List<SpaceRenter>>(emptyList(), emptyList()))
 
   // Public read-only state flow that UI components can observe for state changes
   val uiState: StateFlow<AuthUIState> = _uiState
+  val businesses: StateFlow<Pair<List<Shop>, List<SpaceRenter>>> = _businesses
 
   /**
    * Changes the account profile picture
@@ -240,6 +249,25 @@ class ProfileScreenViewModel(
     viewModelScope.launch {
       val (_, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
       RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+    }
+  }
+
+  fun loadAccountBusinesses(account: Account) {
+    viewModelScope.launch {
+      val (shopIds, spaceRenterIds) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+
+      val shops =
+          shopIds.mapNotNull { id ->
+            // safely call repository per id; getOrNull ignores failures
+            runCatching { shopRepository.getShop(id) }.getOrNull()
+          }
+
+      val spaceRenters =
+          spaceRenterIds.mapNotNull { id ->
+            runCatching { spaceRenterRepository.getSpaceRenter(id) }.getOrNull()
+          }
+
+      _businesses.value = Pair(shops, spaceRenters)
     }
   }
 }
