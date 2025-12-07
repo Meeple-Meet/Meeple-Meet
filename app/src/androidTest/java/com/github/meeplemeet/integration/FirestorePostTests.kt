@@ -408,4 +408,107 @@ class FirestorePostTests : FirestoreTests() {
     assertEquals(1, foundPost!!.commentCount)
     assertTrue(foundPost.comments.isEmpty()) // Comments not loaded
   }
+
+  @Test
+  fun testEditPostAndComment() = runBlocking {
+    // Test editing post at repository level
+    val post =
+        postRepository.createPost(
+            "Original Title", "Original Body", testAccount1.uid, listOf("tag1"))
+
+    // Edit all fields
+    postRepository.editPost(
+        post.id,
+        newTitle = "Updated Title",
+        newBody = "Updated Body",
+        newTags = listOf("tag2", "tag3"))
+    delay(500)
+
+    val updatedPost = postRepository.getPost(post.id)
+    assertEquals("Updated Title", updatedPost.title)
+    assertEquals("Updated Body", updatedPost.body)
+    assertEquals(listOf("tag2", "tag3"), updatedPost.tags)
+
+    // Edit only title
+    postRepository.editPost(post.id, newTitle = "Title Only")
+    delay(500)
+    val titleOnlyPost = postRepository.getPost(post.id)
+    assertEquals("Title Only", titleOnlyPost.title)
+    assertEquals("Updated Body", titleOnlyPost.body)
+
+    // Test editing comment at repository level
+    val commentId =
+        postRepository.addComment(post.id, "Original Comment", testAccount2.uid, post.id)
+    delay(500)
+
+    postRepository.editComment(post.id, commentId, "Updated Comment")
+    delay(500)
+
+    val postWithUpdatedComment = postRepository.getPost(post.id)
+    assertEquals("Updated Comment", postWithUpdatedComment.comments[0].text)
+  }
+
+  @Test
+  fun testEditPostAndCommentWithPermissionsAndValidation() = runTest {
+    // Test ViewModel edit with permissions
+    val post = postRepository.createPost("Test Post", "Test Body", testAccount1.uid)
+
+    // Edit as author (should succeed)
+    postVM.editPost(testAccount1, post, newTitle = "Edited by Author")
+
+    val editedPost = postRepository.getPost(post.id)
+    assertEquals("Edited by Author", editedPost.title)
+
+    // Try to edit as non-author (should fail)
+    try {
+      postVM.editPost(testAccount2, post, newTitle = "Hacked Title")
+      throw AssertionError("Expected PermissionDeniedException")
+    } catch (_: PermissionDeniedException) {
+      // Expected
+    }
+
+    // Test blank title validation
+    try {
+      postVM.editPost(testAccount1, post, newTitle = "")
+      throw AssertionError("Expected IllegalArgumentException for blank title")
+    } catch (_: IllegalArgumentException) {
+      // Expected
+    }
+
+    // Test blank body validation
+    try {
+      postVM.editPost(testAccount1, post, newBody = "")
+      throw AssertionError("Expected IllegalArgumentException for blank body")
+    } catch (_: IllegalArgumentException) {
+      // Expected
+    }
+
+    // Test comment editing with permissions
+    postRepository.addComment(post.id, "Test Comment", testAccount2.uid, post.id)
+    val postWithComment = postRepository.getPost(post.id)
+    val comment = postWithComment.comments[0]
+
+    // Edit as comment author (should succeed)
+    postVM.editComment(testAccount2, postWithComment, comment, "Edited Comment")
+
+    val postWithEditedComment = postRepository.getPost(post.id)
+    assertEquals("Edited Comment", postWithEditedComment.comments[0].text)
+
+    // Try to edit as non-author (should fail)
+    try {
+      postVM.editComment(
+          testAccount1, postWithEditedComment, postWithEditedComment.comments[0], "Hacked Comment")
+      throw AssertionError("Expected PermissionDeniedException")
+    } catch (_: PermissionDeniedException) {
+      // Expected
+    }
+
+    // Test blank comment validation
+    try {
+      postVM.editComment(testAccount2, postWithEditedComment, postWithEditedComment.comments[0], "")
+      throw AssertionError("Expected IllegalArgumentException for blank comment")
+    } catch (_: IllegalArgumentException) {
+      // Expected
+    }
+  }
 }

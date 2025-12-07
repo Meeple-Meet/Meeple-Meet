@@ -6,6 +6,8 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.images.ImageRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -214,6 +216,55 @@ class FriendsScreenViewModel(
             null
           }
       onLoaded(bytes)
+    }
+  }
+  /**
+   * Retrieves multiple accounts by their IDs and provides them to a callback.
+   *
+   * This implementation overrides the default [AccountViewModel.getAccounts] to:
+   * 1. Safely handle missing accounts (e.g. deleted users) by ignoring them instead of crashing.
+   * 2. Optimize performance by fetching only basic account data (getAllData = false).
+   * 3. Load profile pictures for the found accounts.
+   *
+   * @param uids List of account IDs to retrieve
+   * @param context Context used for loading profile pictures
+   * @param onResult Callback that receives the list of retrieved accounts
+   */
+  override fun getAccounts(
+      uids: List<String>,
+      context: Context,
+      onResult: (List<Account>) -> Unit
+  ) {
+    viewModelScope.launch {
+      // Fetch accounts concurrently using async/await
+      // We use getAllData = false because we only need basic info (name, handle, avatar)
+      // for the friends list, not their relationships or discussions.
+      val accounts =
+          uids
+              .map { id ->
+                async {
+                  try {
+                    accountRepository.getAccount(id, false)
+                  } catch (_: Exception) {
+                    null
+                  }
+                }
+              }
+              .awaitAll()
+              .filterNotNull()
+
+      onResult(accounts)
+
+      // Load profile pictures for found accounts
+      accounts.forEach { account ->
+        launch {
+          try {
+            imageRepository.loadAccountProfilePicture(account.uid, context)
+          } catch (_: Exception) {
+            // Ignore image loading errors
+          }
+        }
+      }
     }
   }
 }

@@ -116,16 +116,21 @@ android {
       proguardFiles(
           getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
       )
-      // Apply signing config only if the release signing config has a valid storeFile present
       val releaseSigning = signingConfigs.findByName("release")
       if (releaseSigning != null && releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
-        signingConfig = releaseSigning
+          signingConfig = releaseSigning
       }
+
+      // Host PROD
+      buildConfigField("String", "GAME_API_HOST", "\"us-central1-meeple-meet-36ecb.cloudfunctions.net\"")
     }
 
     getByName("debug") {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
+
+      // Placeholder host
+      buildConfigField("String", "GAME_API_HOST", "\"127.0.0.1\"")
     }
   }
 

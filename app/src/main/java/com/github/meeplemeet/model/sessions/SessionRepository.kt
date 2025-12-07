@@ -29,6 +29,7 @@ class SessionRepository(
   private val discussions = discussionRepository.collection
   private val discussionRepo = DiscussionRepository()
   private val geoPinsRepo = RepositoryProvider.geoPins
+  private val imageRepository = RepositoryProvider.images
 
   /**
    * Creates a new session within a discussion.
@@ -151,6 +152,41 @@ class SessionRepository(
   }
 
   /**
+   * Retrieves the session and automatically archives it if it has passed.
+   *
+   * @param discussionId The ID of the discussion containing the session.
+   * @param context Android context for image operations.
+   * @return The session if active, or null if archived or not found.
+   */
+  suspend fun getSessionWithAutoArchive(
+      discussionId: String,
+      context: android.content.Context
+  ): Session? {
+    val session = getSession(discussionId) ?: return null
+
+    // Check if passed (24 hours after start time)
+    val date = session.date
+    val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
+    val isPassed = (date.toDate().time + twentyFourHoursInMillis) < Timestamp.now().toDate().time
+
+    if (isPassed) {
+      try {
+        val newUuid = newUUID()
+        var newUrl: String? = null
+        if (session.photoUrl != null) {
+          newUrl = imageRepository.moveSessionPhoto(context, discussionId, newUuid)
+        }
+        archiveSession(discussionId, newUuid, newUrl)
+        return null // Session is now archived
+      } catch (e: Exception) {
+        e.printStackTrace()
+        return session // Return session if archiving fails
+      }
+    }
+    return session
+  }
+
+  /**
    * Real-time stream of discussion **document ids** whose embedded session contains the given user
    * in its participant list.
    *
@@ -168,7 +204,7 @@ class SessionRepository(
   /**
    * Checks if the session identified by [sessionId] has already passed.
    *
-   * A session is considered passed if the current time is more than 3 hours after the session's
+   * A session is considered passed if the current time is more than 24 hours after the session's
    * scheduled date and time.
    *
    * @param sessionId Firestore document id of the parent discussion containing the session.
@@ -177,9 +213,9 @@ class SessionRepository(
   suspend fun isSessionPassed(sessionId: String): Boolean {
     val session = getSession(sessionId) ?: return false
     val date = session.date
-    // Add 3 hours to the session time to account for session duration
-    val threeHoursInMillis = 3 * 60 * 60 * 1000L
-    return (date.toDate().time + threeHoursInMillis) < Timestamp.now().toDate().time
+    // Add 24 hours to the session time to account for session duration
+    val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
+    return (date.toDate().time + twentyFourHoursInMillis) < Timestamp.now().toDate().time
   }
 
   /**
@@ -219,10 +255,16 @@ class SessionRepository(
     batch[archivedRef] = archivedSession
 
     // 2. Add session UUID to each participant's pastSessionIds
+    // IMPORTANT: Use set() with merge instead of update() to handle cases where
+    // pastSessionIds field doesn't exist (e.g., new users or users who haven't archived before).
+    // If we use update(), the batch will fail silently for those users.
     val accountsRef = RepositoryProvider.accounts.collection
     session.participants.forEach { participantId ->
       val accountRef = accountsRef.document(participantId)
-      batch.update(accountRef, "pastSessionIds", FieldValue.arrayUnion(newSessionId))
+      batch.set(
+          accountRef,
+          mapOf("pastSessionIds" to FieldValue.arrayUnion(newSessionId)),
+          com.google.firebase.firestore.SetOptions.merge())
     }
 
     // 3. Delete from active session (update discussion)
@@ -274,6 +316,51 @@ class SessionRepository(
         }
         .awaitAll()
         .filterNotNull()
+  }
+
+  /**
+   * Retrieves archived sessions with pagination support.
+   *
+   * @param userId The user ID whose archived sessions should be retrieved
+   * @param page Page number (0-indexed).
+   * @param pageSize Number of sessions to return per page.
+   * @return List of Session objects for the requested page.
+   */
+  suspend fun getArchivedSessions(
+      userId: String,
+      page: Int = 0,
+      pageSize: Int = 12
+  ): List<Session> = coroutineScope {
+    val pastSessionIds = RepositoryProvider.accounts.getAccount(userId).pastSessionIds
+
+    val startIndex = page * pageSize
+    if (startIndex >= pastSessionIds.size) return@coroutineScope emptyList()
+
+    val endIndex = minOf(startIndex + pageSize, pastSessionIds.size)
+    val sessionIdsForPage = pastSessionIds.subList(startIndex, endIndex)
+
+    val results =
+        sessionIdsForPage
+            .map { sessionId ->
+              async {
+                try {
+                  val snapshot = collection.document(sessionId).get().await()
+                  if (!snapshot.exists()) {
+                    null
+                  } else {
+                    val session = snapshot.toObject(Session::class.java)
+                    session
+                  }
+                } catch (e: Exception) {
+                  e.printStackTrace()
+                  null
+                }
+              }
+            }
+            .awaitAll()
+            .filterNotNull()
+
+    results
   }
 
   /**

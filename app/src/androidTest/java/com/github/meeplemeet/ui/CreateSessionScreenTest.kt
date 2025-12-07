@@ -7,16 +7,28 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
+import com.github.meeplemeet.model.sessions.SessionRepository
+import com.github.meeplemeet.model.sessions.SessionViewModel
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionCreationTestTags
+import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.lang.reflect.Method
 import java.time.Instant
 import java.time.LocalDate
@@ -37,14 +49,33 @@ class CreateSessionScreenTest : FirestoreTests() {
 
   fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
+  // Repos / VMs
+  private lateinit var viewModel: DiscussionViewModel
+  private lateinit var accountRepo: AccountRepository
+  private lateinit var sessionRepo: SessionRepository
+  private lateinit var fakeGameRepo: FakeGameRepository
+  private lateinit var sessionVM: SessionViewModel
+  private lateinit var createSessionVM: TestCreateSessionViewModel
+
   // Test data
   private val me = Account(uid = "user1", handle = "", name = "Marco", email = "marco@epfl.ch")
   private val alex = Account(uid = "user2", handle = "", name = "Alexandre", email = "alex@epfl.ch")
   private val dany = Account(uid = "user3", handle = "", name = "Dany", email = "dany@epfl.ch")
   private val discussionId = "discussion1"
 
+  private lateinit var injectedDiscussionFlow: MutableStateFlow<Discussion?>
   private lateinit var baseDiscussion: Discussion
-  private lateinit var createSessionVM: CreateSessionViewModel
+
+  // Short wait util
+  private fun waitForAtLeastOne(
+      matcher: SemanticsMatcher,
+      timeoutMs: Long = 1_000L,
+      useUnmergedTree: Boolean = false
+  ) {
+    compose.waitUntil(timeoutMs) {
+      compose.onAllNodes(matcher, useUnmergedTree).fetchSemanticsNodes().isNotEmpty()
+    }
+  }
 
   // Node helpers
   private fun titleInput() = compose.onNodeWithTag(SessionCreationTestTags.FORM_TITLE_FIELD)
@@ -56,31 +87,81 @@ class CreateSessionScreenTest : FirestoreTests() {
 
   private fun gameInput() = allInputs()[1]
 
-  private fun locationInput() = allInputs()[2]
+  private class FakeGameRepository : GameRepository {
+    var throwOnSearch: Boolean = false
+
+    override suspend fun getGameById(gameID: String): Game {
+      throw RuntimeException("not used")
+    }
+
+    override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
+      throw RuntimeException("not used")
+    }
+
+    override suspend fun searchGamesByNameContains(
+        query: String,
+        maxResults: Int,
+        ignoreCase: Boolean
+    ): List<Game> {
+      if (throwOnSearch) throw RuntimeException("boom")
+      return emptyList()
+    }
+  }
+
+  private inner class TestCreateSessionViewModel(
+      accountRepository: AccountRepository,
+      sessionRepository: SessionRepository,
+      gameRepository: GameRepository
+  ) : CreateSessionViewModel(accountRepository, sessionRepository, gameRepository) {
+    // Delegate getAccounts to the mocked DiscussionViewModel
+    override fun getAccounts(uids: List<String>, onResult: (List<Account>) -> Unit) {
+      viewModel.getAccounts(uids, onResult)
+    }
+  }
 
   @Before
   fun setUp() {
-    runBlocking {
-      auth.signInAnonymously().await()
+    discussionRepository = mockk(relaxed = true)
+    viewModel = spyk(DiscussionViewModel(discussionRepository))
 
-      // Create test accounts in Firestore
-      val accountRepo = RepositoryProvider.accounts
-      accountRepo.createAccount("user1", "Marco", "marco@epfl.ch", null)
-      accountRepo.createAccount("user2", "Alexandre", "alex@epfl.ch", null)
-      accountRepo.createAccount("user3", "Dany", "dany@epfl.ch", null)
+    baseDiscussion =
+        Discussion(
+            uid = discussionId,
+            name = "Board Night",
+            description = "",
+            participants = listOf(me.uid, alex.uid, dany.uid),
+            admins = listOf(me.uid),
+            creatorId = me.uid)
 
-      baseDiscussion =
-          Discussion(
-              uid = discussionId,
-              name = "Board Night",
-              description = "",
-              participants = listOf(me.uid, alex.uid, dany.uid),
-              admins = listOf(me.uid),
-              creatorId = me.uid)
+    val discussionFlowsField = viewModel::class.java.getDeclaredField("discussionFlows")
+    discussionFlowsField.isAccessible = true
+    @Suppress("UNCHECKED_CAST")
+    val map = discussionFlowsField.get(viewModel) as MutableMap<String, StateFlow<Discussion?>>
+    injectedDiscussionFlow = MutableStateFlow(baseDiscussion)
+    map[discussionId] = injectedDiscussionFlow
 
-      // Use the real CreateSessionViewModel with default (real) repositories
-      createSessionVM = CreateSessionViewModel()
-    }
+    every { viewModel.getAccounts(any(), any(), any()) } answers
+        {
+          val disc = firstArg<List<String>>()
+          val cb = secondArg<(List<Account>) -> Unit>()
+          val accounts =
+              disc.distinct().mapNotNull { uid ->
+                when (uid) {
+                  me.uid -> me
+                  alex.uid -> alex
+                  dany.uid -> dany
+                  "u4" -> Account(uid = "u4", handle = "newb", name = "Newbie", email = "n@x")
+                  else -> null
+                }
+              }
+          cb(accounts)
+        }
+
+    accountRepo = mockk(relaxed = true)
+    sessionRepo = mockk(relaxed = true)
+    fakeGameRepo = FakeGameRepository()
+    sessionVM = SessionViewModel(accountRepository = accountRepo, sessionRepository = sessionRepo)
+    createSessionVM = TestCreateSessionViewModel(accountRepo, sessionRepo, fakeGameRepo)
   }
 
   private class ComposeOnceHarness(
@@ -190,15 +271,36 @@ class CreateSessionScreenTest : FirestoreTests() {
       harness.discussion.value = baseDiscussion.copy(participants = listOf(me.uid))
       compose.waitForIdle()
 
+      // Fill in title and game
       titleInput().performTextInput("Friday Night Board Game Jam")
       gameInput().performTextInput("Root")
-      locationInput().performTextInput("Table A1")
+
+      // Open location dialog and search for a location
+      compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_BUTTON).performClick()
+      compose.waitForIdle()
+      compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_DIALOG).assertIsDisplayed()
+      compose
+          .onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
+          .performTextInput("EPFL")
+      compose.waitForIdle()
+
+      // Close the dialog
+      compose.onNodeWithText("OK").performClick()
+      compose.waitForIdle()
+
+      // Button should still be disabled because date and time are not set
       createBtn().assertIsNotEnabled()
     }
 
-    checkpoint("organisation_section_shows_location_label") {
-      compose.onAllNodesWithText("Location").onFirst().assertExists()
-    }
+    checkpoint("game_search_clear_and_error") {
+      fakeGameRepo.throwOnSearch = true
+      gameInput().performTextInput("Catan")
+      waitForAtLeastOne(hasTestTag(SessionCreationTestTags.GAME_SEARCH_ERROR), 2_000L)
+      compose.onNodeWithTag(SessionCreationTestTags.GAME_SEARCH_ERROR).assertExists()
+
+      checkpoint("organisation_section_shows_location_label") {
+        compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_BUTTON).assertExists()
+      }
 
     checkpoint("create_and_discard_button_components_behave") {
       // Note: This checkpoint has been removed to maintain single setContent requirement.

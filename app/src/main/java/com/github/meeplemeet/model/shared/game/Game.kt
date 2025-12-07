@@ -3,6 +3,16 @@ package com.github.meeplemeet.model.shared.game
 import kotlinx.serialization.Serializable
 
 /**
+ * Represents a minimal search result for a board gameG.
+ *
+ * Contains only the ID and the name of the game, suitable for autocomplete or search ranking.
+ *
+ * @property id The ID of the game.
+ * @property name The name of the game.
+ */
+data class GameSearchResult(val id: String, val name: String)
+
+/**
  * Represents a game stored in Firestore.
  *
  * @property uid Globally unique identifier of the game (Firestore document ID).

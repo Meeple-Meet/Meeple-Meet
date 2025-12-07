@@ -139,6 +139,8 @@ open class FirestoreTests {
 
   @Before
   fun testsSetup() {
+    RepositoryProvider.games = FirestoreGameRepository()
+
     InstrumentationRegistry.getInstrumentation().runOnMainSync {
       UiBehaviorConfig.hideBottomBarWhenInputFocused = false
       UiBehaviorConfig.clearFocusOnKeyboardHide = false
@@ -153,7 +155,7 @@ open class FirestoreTests {
     accountRepository = RepositoryProvider.accounts
     discussionRepository = RepositoryProvider.discussions
     sessionRepository = RepositoryProvider.sessions
-    gameRepository = RepositoryProvider.games
+    gameRepository = RepositoryProvider.games as FirestoreGameRepository
     locationRepository = RepositoryProvider.locations
     geoPinRepository = RepositoryProvider.geoPins
     markerPreviewRepository = RepositoryProvider.markerPreviews

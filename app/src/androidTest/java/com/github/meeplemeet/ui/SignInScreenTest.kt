@@ -17,11 +17,12 @@ import com.github.meeplemeet.model.auth.SignInViewModel
 import com.github.meeplemeet.ui.auth.SignInScreen
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class SignInScreenTest {
+class SignInScreenTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
 

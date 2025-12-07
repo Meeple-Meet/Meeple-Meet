@@ -53,7 +53,7 @@ import org.junit.runner.RunWith
  * from the UI, and add all 3 members to it. Ask to users the name of the store through a poll,
  * create the store, create a post to advertise it, wait for reactions.
  */
-@Ignore
+@Ignore("flaky test")
 @RunWith(AndroidJUnit4::class)
 class E2E_M2 : FirestoreTests() {
   // Generic retry helper used for waiting on backend state convergence
@@ -109,7 +109,6 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
   }
 
-  @Ignore
   @Test
   fun signUpUser_createOtherUsers_createDiscussionAndAddMembers() {
     // Generate unique identifiers for test data with UUID to allow multiple test runs

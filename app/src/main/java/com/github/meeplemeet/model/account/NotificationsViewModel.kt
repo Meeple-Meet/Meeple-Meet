@@ -49,14 +49,14 @@ class NotificationsViewModel(
       val disc =
           try {
             discussionRepository.getDiscussion(discussionId)
+          } catch (e: com.github.meeplemeet.model.DiscussionNotFoundException) {
+            onDeleted()
+            return@launch
           } catch (_: Exception) {
             null
           }
       if (disc != null) {
         onResult(disc)
-      } else {
-        onDeleted()
-        return@launch
       }
     }
   }
@@ -73,15 +73,15 @@ class NotificationsViewModel(
       val acc =
           try {
             accountRepository.getAccount(id, false)
+          } catch (e: com.github.meeplemeet.model.AccountNotFoundException) {
+            onDeleted()
+            return@launch
           } catch (_: Exception) {
             null
           }
 
       if (acc != null) {
         onResult(acc)
-      } else {
-        onDeleted()
-        return@launch
       }
     }
   }
@@ -215,7 +215,7 @@ class NotificationsViewModel(
                         title = disc.name,
                         participants = disc.participants.size,
                         dateLabel =
-                            "Created at" +
+                            "Created at " +
                                 disc.createdAt
                                     .toDate()
                                     .toInstant()
@@ -254,6 +254,9 @@ class NotificationsViewModel(
                             icon = bytes))
                   }
                 } else {
+                  // If session is null but discussion exists, we might want to delete notification
+                  // or handle it differently.
+                  // For now, let's assume if session is missing it's invalid.
                   deleteNotification(account, notif)
                 }
               }

@@ -60,8 +60,8 @@ class FirestoreDiscussionTests : FirestoreTests() {
     }
   }
 
-  private fun createTestImage(filename: String, width: Int, height: Int, color: Int): String {
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+  private fun createTestImage(filename: String, height: Int, color: Int): String {
+    val bitmap = Bitmap.createBitmap(800, height, Bitmap.Config.ARGB_8888)
     bitmap.eraseColor(color)
 
     val file = File(context.cacheDir, filename)
@@ -585,7 +585,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
         discussionRepository.createDiscussion(
             "Test", "", account1.uid, listOf(account2.uid, account3.uid))
 
-    val testImagePath = createTestImage("test_photo.jpg", 800, 600, Color.RED)
+    val testImagePath = createTestImage("test_photo.jpg", 600, Color.RED)
 
     discussionViewModel.sendMessageWithPhoto(
         discussion, account1, "Check this out!", context, testImagePath)
@@ -649,7 +649,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
   fun viewModelSetDiscussionProfilePictureUploadsAndUpdates() = runTest {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
-    val testImagePath = createTestImage("test_profile.jpg", 800, 800, Color.BLUE)
+    val testImagePath = createTestImage("test_profile.jpg", 800, Color.BLUE)
 
     discussionDetailsViewModel.setDiscussionProfilePicture(
         discussion, account1, context, testImagePath)
@@ -671,7 +671,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
     discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
-    val testImagePath = createTestImage("test_profile.jpg", 800, 800, Color.BLUE)
+    val testImagePath = createTestImage("test_profile.jpg", 800, Color.BLUE)
 
     // account2 is not an admin, should throw exception
     discussionDetailsViewModel.setDiscussionProfilePicture(
@@ -743,5 +743,166 @@ class FirestoreDiscussionTests : FirestoreTests() {
     } finally {
       OfflineModeManager.clearOfflineMode()
     }
+  }
+
+  @Test
+  fun repository_editMessage_lastMessage_updatesContentAndPreview() = runBlocking {
+    val discussion =
+        discussionRepository.createDiscussion("Test", "", account1.uid, listOf(account2.uid))
+
+    // Send initial message
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Original message")
+
+    // Get the last message
+    val lastMessage = discussionRepository.getLastMessage(discussion.uid)!!
+
+    // Edit the message
+    discussionRepository.editMessage(discussion, account1, lastMessage.uid, "Edited message")
+
+    // Verify message content updated
+    val editedMessage = discussionRepository.getLastMessage(discussion.uid)
+    assertNotNull("Edited message should exist", editedMessage)
+    assertEquals("Edited message", editedMessage?.content)
+
+    // Verify preview updated for participants
+    val updatedAccount = accountRepository.getAccount(account1.uid)
+    val preview = updatedAccount.previews[discussion.uid]
+    assertNotNull("Preview should exist", preview)
+    assertEquals("Edited message", preview?.lastMessage)
+  }
+
+  @Test
+  fun repository_editMessage_earlierMessage_updatesContentAndMarksEdited() = runBlocking {
+    val discussion =
+        discussionRepository.createDiscussion("Test", "", account1.uid, listOf(account2.uid))
+
+    // Send two messages
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "First message")
+    discussionRepository.sendMessageToDiscussion(discussion, account2, "Second message")
+
+    // Get the first message
+    var messages = discussionRepository.getMessages(discussion.uid)
+    val firstMessage = messages.first { it.content == "First message" }
+
+    // Edit the first message (not the last one)
+    discussionRepository.editMessage(discussion, account1, firstMessage.uid, "Edited first")
+
+    // Verify message content updated and marked as edited
+    messages = discussionRepository.getMessages(discussion.uid)
+    val editedMessage = messages.find { it.uid == firstMessage.uid }
+    assertNotNull("Edited message should exist", editedMessage)
+    assertEquals("Edited first", editedMessage?.content)
+    assertTrue("Message should be marked as edited", editedMessage?.edited == true)
+
+    // Verify preview NOT updated (still shows last message)
+    val updatedAccount = accountRepository.getAccount(account2.uid)
+    val preview = updatedAccount.previews[discussion.uid]
+    assertEquals("Second message", preview?.lastMessage)
+  }
+
+  @Test
+  fun repository_deleteMessage_removesMessageFromDiscussion() = runBlocking {
+    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
+
+    // Send a message to delete
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Message to delete")
+
+    // Get the message and count before deletion
+    val messageToDelete = discussionRepository.getLastMessage(discussion.uid)!!
+    val initialCount = discussionRepository.getMessages(discussion.uid).size
+
+    // Delete the message
+    discussionRepository.deleteMessage(discussion.uid, messageToDelete.uid)
+
+    // Verify message is deleted
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertEquals(initialCount - 1, messages.size)
+    assertTrue("Message should be deleted", messages.none { it.uid == messageToDelete.uid })
+  }
+
+  @Test
+  fun viewModel_editMessage_validEdit_updatesMessage() = runBlocking {
+    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
+
+    // Send initial message
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Original")
+
+    // Get the last message
+    val message = discussionRepository.getLastMessage(discussion.uid)!!
+
+    // Edit via viewModel
+    discussionViewModel.editMessage(discussion, message, account1, "Edited via ViewModel")
+
+    // Wait for async operation
+    delay(1000)
+
+    // Verify message updated
+    val editedMessage = discussionRepository.getLastMessage(discussion.uid)
+    assertNotNull("Edited message should exist", editedMessage)
+    assertEquals("Edited via ViewModel", editedMessage?.content)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun viewModel_editMessage_wrongSender_throwsException() = runBlocking {
+    val discussion =
+        discussionRepository.createDiscussion("Test", "", account1.uid, listOf(account2.uid))
+
+    // Send message from account1
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Account1 message")
+
+    // Get the last message
+    val message = discussionRepository.getLastMessage(discussion.uid)!!
+
+    // Try to edit as account2 - should throw
+    discussionViewModel.editMessage(discussion, message, account2, "Trying to edit")
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun viewModel_editMessage_blankContent_throwsException() = runBlocking {
+    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
+
+    // Send initial message
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Original")
+
+    // Get the last message
+    val message = discussionRepository.getLastMessage(discussion.uid)!!
+
+    // Try to edit with blank content - should throw
+    discussionViewModel.editMessage(discussion, message, account1, "   ")
+  }
+
+  @Test
+  fun viewModel_deleteMessage_validDelete_removesMessage() = runBlocking {
+    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
+
+    // Send message to delete
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "To delete")
+
+    // Get the message and count before deletion
+    val message = discussionRepository.getLastMessage(discussion.uid)!!
+    val initialCount = discussionRepository.getMessages(discussion.uid).size
+
+    // Delete via viewModel
+    discussionViewModel.deleteMessage(discussion, message, account1)
+
+    // Verify message deleted
+    val messages = discussionRepository.getMessages(discussion.uid)
+    assertEquals(initialCount - 1, messages.size)
+    assertTrue("Message should be deleted", messages.none { it.uid == message.uid })
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun viewModel_deleteMessage_wrongSender_throwsException() = runBlocking {
+    val discussion =
+        discussionRepository.createDiscussion("Test", "", account1.uid, listOf(account2.uid))
+
+    // Send message from account1
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Account1 message")
+
+    // Get the last message
+    val message = discussionRepository.getLastMessage(discussion.uid)!!
+
+    // Try to delete as account2 - should throw
+    discussionViewModel.deleteMessage(discussion, message, account2)
   }
 }

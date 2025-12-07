@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -31,6 +32,8 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -87,6 +90,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var mockNavigation: NavigationActions
+  private lateinit var navVM: NavigationViewModel
 
   private lateinit var regularAccount: Account
   private lateinit var shopOwnerAccount: Account
@@ -126,6 +130,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     } catch (_: Exception) {}
 
     mockNavigation = mockk(relaxed = true)
+    navVM = NavigationViewModel()
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
 
@@ -178,6 +183,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
   override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {}
 
+  private fun refreshContent(account: Account? = null) {
+    composeRule.runOnUiThread {
+      account?.let { currentAccountState.value = it }
+      renderTrigger++
+    }
+    composeRule.waitForIdle()
+  }
+
   /**
    * Tests basic UI structure, FAB behavior, filters, and creation dialog. Uses no clustering
    * strategy to test individual pins.
@@ -188,17 +201,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = viewModel,
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = { type ->
-                fabClickCount++
-                lastFabClickType = type
-              },
-              onRedirect = { pin -> lastRedirect = pin.uid })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = viewModel,
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = { type ->
+                  fabClickCount++
+                  lastFabClickType = type
+                },
+                onRedirect = { pin -> lastRedirect = pin.uid })
+          }
         }
       }
     }
@@ -211,6 +226,61 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       composeRule.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
       composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).assertIsDisplayed()
     }
+
+    checkpoint("mapScreen_showsButtonMenu") {
+      composeRule.onNodeWithTag(MapScreenTestTags.BUTTON_MENU).assertIsDisplayed()
+    }
+
+    checkpoint("recenterButton_displayedWithPermission") {
+      composeRule.onNodeWithTag(MapScreenTestTags.RECENTER_BUTTON).assertIsDisplayed()
+      composeRule.onNodeWithTag(MapScreenTestTags.RECENTER_BUTTON).assertHasClickAction()
+    }
+
+    checkpoint("scaleBar_displaysOnStart") {
+      composeRule.waitForIdle()
+      Thread.sleep(500)
+      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE).assertIsDisplayed()
+    }
+
+    // TODO fix visibility assert
+    //    checkpoint("scaleBar_hidesAfterDelay") {
+    //      runBlocking {
+    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+    //        delay(3500)
+    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
+    //      }
+    //    }
+
+    checkpoint("scaleBar_showsCorrectMetricUnits") {
+      composeRule.waitForIdle()
+      Thread.sleep(500)
+
+      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+      val distanceNode = composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE)
+      distanceNode.assertIsDisplayed()
+
+      try {
+        distanceNode.assertTextContains("m", substring = true)
+      } catch (_: AssertionError) {
+        distanceNode.assertTextContains("km", substring = true)
+      }
+    }
+
+    // TODO fix visibility assert
+    //    checkpoint("scaleBar_reappearsOnZoomChange") {
+    //      runBlocking {
+    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+    //
+    //        delay(3500)
+    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
+    //
+    //        viewModel.updateZoomLevel(16f)
+    //        delay(100)
+    //
+    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+    //      }
+    //    }
 
     checkpoint("fab_hiddenForRegularUser") {
       currentAccountState.value = regularAccount
@@ -355,17 +425,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = noClusterViewModel,
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = { type ->
-                fabClickCount++
-                lastFabClickType = type
-              },
-              onRedirect = { pin -> lastRedirect = pin.uid })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = noClusterViewModel,
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = { type ->
+                  fabClickCount++
+                  lastFabClickType = type
+                },
+                onRedirect = { pin -> lastRedirect = pin.uid })
+          }
         }
       }
     }
@@ -675,17 +747,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      AppTheme {
-        key(trigger) {
-          MapScreen(
-              viewModel = singleClusterViewModel,
-              navigation = mockNavigation,
-              account = currentAccountState.value,
-              onFABCLick = { type ->
-                fabClickCount++
-                lastFabClickType = type
-              },
-              onRedirect = { pin -> lastRedirect = pin.uid })
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme {
+          key(trigger) {
+            MapScreen(
+                viewModel = singleClusterViewModel,
+                navigation = mockNavigation,
+                account = currentAccountState.value,
+                onFABCLick = { type ->
+                  fabClickCount++
+                  lastFabClickType = type
+                },
+                onRedirect = { pin -> lastRedirect = pin.uid })
+          }
         }
       }
     }
@@ -1031,13 +1105,5 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         shopRepository.deleteShop(shop3.id)
       }
     }
-  }
-
-  private fun refreshContent(account: Account? = null) {
-    composeRule.runOnUiThread {
-      account?.let { currentAccountState.value = it }
-      renderTrigger++
-    }
-    composeRule.waitForIdle()
   }
 }

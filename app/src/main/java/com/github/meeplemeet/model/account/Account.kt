@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.account
 import com.github.meeplemeet.model.discussions.DiscussionPreview
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
 import com.github.meeplemeet.model.discussions.fromNoUid
+import com.github.meeplemeet.ui.theme.ThemeMode
 import kotlinx.serialization.Serializable
 
 /**
@@ -109,6 +110,7 @@ data class Account(
     val relationships: Map<String, RelationshipStatus> = emptyMap(),
     val notifications: List<Notification> = emptyList(),
     val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT,
     val pastSessionIds: List<String> = emptyList()
 )
 
@@ -139,6 +141,7 @@ data class AccountNoUid(
     val shopOwner: Boolean = false,
     val spaceRenter: Boolean = false,
     val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT,
     val pastSessionIds: List<String> = emptyList()
 )
 
@@ -178,5 +181,6 @@ fun fromNoUid(
         spaceRenter = accountNoUid.spaceRenter,
         relationships = relationships.associate { it.uid to it.status },
         notifications = notifications,
+        themeMode = accountNoUid.themeMode,
         notificationSettings = accountNoUid.notificationSettings,
         pastSessionIds = accountNoUid.pastSessionIds)

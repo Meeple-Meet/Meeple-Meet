@@ -11,15 +11,16 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location as AndroidLocation
-import android.net.Uri
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,12 +34,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +52,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TableRestaurant
@@ -88,7 +90,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
@@ -100,6 +101,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -128,24 +130,36 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.asin
 import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.log10
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
+  const val RECENTER_BUTTON = "recenterButton"
+  const val SCALE_BAR = "scaleBar"
+  const val SCALE_BAR_DISTANCE = "scaleBarDistance"
+  const val BUTTON_MENU = "mapMenu"
   const val ADD_FAB = "addFab"
   const val ADD_CHOOSE_DIALOG = "chooseAddDialog"
   const val FILTER_BUTTON = "filterButton"
@@ -211,20 +225,28 @@ object ClusterConfig {
   }
 }
 
-private val DEFAULT_CENTER = Location(46.5183, 6.5662, "EPFL")
+private object MapScaleBarDefaults {
+  const val BAR_WIDTH: Int = 100
+  val LINE_HEIGHT = 2.dp
+  val TICK_HEIGHT = 8.dp
+  val TICK_WIDTH = 2.dp
+  val LABEL_SPACING = 2.dp
+}
+
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
-private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 30_000L
+private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 5_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
+private const val SCALE_BAR_HIDE_MS = 3000L
 private const val DEFAULT_MARKER_SCALE = 1.5f
 private const val DEFAULT_MARKER_BACKGROUND_ALPHA = 1.0f
 private const val RGB_MAX_ALPHA = 255
 
 /**
  * MapScreen displays an interactive Google Map centered on the user's location (if granted) or
- * defaults to EPFL. It dynamically loads pins (shops, spaces, sessions) from Firestore through the
- * [MapViewModel].
+ * falls back to an approximate default location. It dynamically loads pins (shops, spaces,
+ * sessions) from Firestore through the [MapViewModel].
  *
  * Main responsibilities:
  * - Request location permissions (fine or coarse)
@@ -252,7 +274,9 @@ fun MapScreen(
     account: Account,
     onUserLocationChange: (Location?) -> Unit = {},
     onFABCLick: (PinType) -> Unit,
-    onRedirect: (StorableGeoPin) -> Unit
+    onRedirect: (StorableGeoPin) -> Unit,
+    cameraPositionState: CameraPositionState = rememberCameraPositionState(),
+    forceNoPermission: Boolean = false
 ) {
   // --- State & helpers ---
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -272,15 +296,11 @@ fun MapScreen(
    */
   val permissionLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-          permissionGranted = true
-        } else {
-          val coarseGranted =
-              ContextCompat.checkSelfPermission(
-                  context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-                  PackageManager.PERMISSION_GRANTED
-          permissionGranted = coarseGranted
-        }
+        permissionGranted =
+            granted ||
+                ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED
         permissionChecked = true
       }
 
@@ -305,18 +325,25 @@ fun MapScreen(
    * once at screen start.
    */
   LaunchedEffect(Unit) {
-    val fine =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-    val coarse =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-    when {
-      fine -> permissionGranted = true
-      coarse -> permissionGranted = true
-      else -> permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    if (forceNoPermission) {
+      // Bypass permission manager for testing purpose
+      permissionGranted = false
+      permissionChecked = true
+    } else {
+      val fine =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+              PackageManager.PERMISSION_GRANTED
+      val coarse =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+              PackageManager.PERMISSION_GRANTED
+      when {
+        fine || coarse -> {
+          permissionGranted = true
+          permissionChecked = true
+        }
+        else -> permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+      }
     }
-    permissionChecked = true
   }
 
   /**
@@ -376,7 +403,7 @@ fun MapScreen(
     if (isLoadingLocation || isQueryLaunched) return@LaunchedEffect
 
     viewModel.startGeoQuery(
-        center = userLocation ?: DEFAULT_CENTER,
+        center = userLocation ?: getApproximateLocationFromTimezone(),
         currentUserId = account.uid,
         radiusKm = DEFAULT_RADIUS_KM)
 
@@ -453,15 +480,15 @@ fun MapScreen(
         }
 
         // --- Map rendering ---
-        val cameraPositionState = rememberCameraPositionState()
-
         /** Centers the camera once location is resolved (real or fallback). */
         LaunchedEffect(isLoadingLocation) {
           if (isLoadingLocation || isCameraCentered) return@LaunchedEffect
 
           val target =
               userLocation?.let { LatLng(it.latitude, it.longitude) }
-                  ?: LatLng(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude)
+                  ?: LatLng(
+                      getApproximateLocationFromTimezone().latitude,
+                      getApproximateLocationFromTimezone().longitude)
 
           cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(target, DEFAULT_ZOOM_LEVEL))
 
@@ -492,8 +519,10 @@ fun MapScreen(
           }
         }
 
-        // --- Google Map content ---
-        Box(modifier = Modifier.fillMaxSize()) {
+        // --- Main map + buttons ---
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+
+          // --- Google Map content ---
           val isDarkTheme = isSystemInDarkTheme()
           val mapStyleOptions =
               if (isDarkTheme) {
@@ -507,15 +536,28 @@ fun MapScreen(
           val spaceIcon = rememberMarkerIcon(resId = R.drawable.ic_table)
           val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
 
+          // State for scale bar visibility and recenter button
+          var showScaleBar by remember { mutableStateOf(false) }
+          var scaleBarJob: Job? by remember { mutableStateOf(null) }
+          val currentZoom = cameraPositionState.position.zoom
+
+          LaunchedEffect(currentZoom) {
+            showScaleBar = true
+            scaleBarJob?.cancel()
+            scaleBarJob = launch {
+              delay(SCALE_BAR_HIDE_MS)
+              showScaleBar = false
+            }
+          }
+
           GoogleMap(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(innerPadding)
-                      .testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
+              modifier = Modifier.fillMaxSize().testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
               cameraPositionState = cameraPositionState,
               properties =
                   MapProperties(
-                      mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted)) {
+                      mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted),
+              uiSettings =
+                  MapUiSettings(myLocationButtonEnabled = false, zoomControlsEnabled = false)) {
                 val clusters = viewModel.getClusters()
 
                 clusters
@@ -560,125 +602,99 @@ fun MapScreen(
                     }
               }
 
-          // --- FILTER BUTTON + vertical list of filter chips (top-start) ---
-          Box(
+          StaticVerticalMapMenu(
               modifier =
                   Modifier.align(Alignment.TopStart)
-                      .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium)
-                      .wrapContentSize()) {
-                // Main filter FAB
-                FloatingActionButton(
-                    onClick = { showFilterButtons = !showFilterButtons },
-                    containerColor = AppColors.neutral,
-                    contentColor = AppColors.textIcons,
-                    shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-                    modifier =
-                        Modifier.testTag(MapScreenTestTags.FILTER_BUTTON)
-                            .size(Dimensions.ButtonSize.standard)) {
-                      Icon(Icons.Default.FilterList, contentDescription = "Filter pins")
-                    }
+                      .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium),
+              showCreateButton = account.shopOwner || account.spaceRenter,
+              onToggleFilters = { showFilterButtons = !showFilterButtons },
+              onAddClick = {
+                when (account.shopOwner to account.spaceRenter) {
+                  true to true -> showCreateDialog = true
+                  true to false -> onFABCLick(PinType.SHOP)
+                  false to true -> onFABCLick(PinType.SPACE)
+                  else -> {}
+                }
+              })
 
-                // Panel with FilterChips
-                AnimatedVisibility(
-                    visible = showFilterButtons,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopStart)) {
-                      Surface(
+          // --- Panel with FilterChips ---
+          AnimatedVisibility(
+              visible = showFilterButtons,
+              enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+              exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+              modifier =
+                  Modifier.align(Alignment.TopStart)
+                      .offset(
+                          x =
+                              Dimensions.Padding.medium +
+                                  Dimensions.ButtonSize.standard +
+                                  Dimensions.Spacing.medium,
+                          y = Dimensions.Padding.medium)) {
+                Surface(
+                    modifier =
+                        Modifier.widthIn(
+                                max =
+                                    Dimensions.ComponentWidth.spaceLabelWidth.plus(
+                                        Dimensions.Padding.extraMedium))
+                            .wrapContentHeight(),
+                    tonalElevation = Dimensions.Elevation.high,
+                    shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+                    color = AppColors.primary.copy(alpha = 0.95f)) {
+                      Column(
                           modifier =
-                              Modifier.padding(top = Dimensions.Padding.giant)
-                                  .widthIn(
-                                      max =
-                                          Dimensions.ComponentWidth.spaceLabelWidth.plus(
-                                              Dimensions.Padding.extraMedium))
-                                  .wrapContentHeight()
-                                  .background(AppColors.primary)
-                                  .shadow(
-                                      Dimensions.Elevation.floating,
-                                      RoundedCornerShape(Dimensions.CornerRadius.large)),
-                          tonalElevation = Dimensions.Elevation.high,
-                          shape = RoundedCornerShape(Dimensions.CornerRadius.large),
-                          color = AppColors.primary.copy(alpha = 0.95f)) {
-                            Column(
-                                modifier =
-                                    Modifier.padding(
-                                        horizontal = Dimensions.Padding.medium,
-                                        vertical = Dimensions.Padding.mediumSmall),
-                                verticalArrangement =
-                                    Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                                  PinType.entries.forEach { type ->
-                                    val selected = includeTypes.contains(type)
-                                    FilterChip(
-                                        selected = selected,
-                                        onClick = {
-                                          includeTypes =
-                                              if (selected) includeTypes - type
-                                              else includeTypes + type
-                                        },
-                                        label = {
-                                          Text(
-                                              text =
-                                                  type.name.lowercase().replaceFirstChar {
-                                                    it.uppercaseChar()
-                                                  },
-                                              color = AppColors.textIcons,
-                                              style = MaterialTheme.typography.labelLarge)
-                                        },
-                                        leadingIcon = {
-                                          Checkbox(
-                                              checked = selected,
-                                              onCheckedChange = null,
-                                              modifier = Modifier.size(Dimensions.IconSize.medium))
-                                        },
-                                        colors =
-                                            SelectableChipColors(
-                                                containerColor = AppColors.primary,
-                                                leadingIconColor = Color.Transparent,
-                                                trailingIconColor = Color.Transparent,
-                                                disabledContainerColor = Color.Transparent,
-                                                disabledLabelColor = Color.Transparent,
-                                                disabledLeadingIconColor = Color.Transparent,
-                                                disabledTrailingIconColor = Color.Transparent,
-                                                disabledSelectedContainerColor = Color.Transparent,
-                                                selectedLabelColor = Color.Transparent,
-                                                selectedLeadingIconColor = Color.Transparent,
-                                                selectedTrailingIconColor = Color.Transparent,
-                                                labelColor = AppColors.textIcons,
-                                                selectedContainerColor = Color.Transparent),
-                                        modifier =
-                                            Modifier.testTag(pinTypeTestTag(type))
-                                                .height(Dimensions.Padding.huge)
-                                                .background(AppColors.primary)
-                                                .fillMaxWidth())
-                                  }
-                                }
+                              Modifier.padding(
+                                  horizontal = Dimensions.Padding.medium,
+                                  vertical = Dimensions.Padding.mediumSmall),
+                          verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                            PinType.entries.forEach { type ->
+                              val selected = includeTypes.contains(type)
+                              FilterChip(
+                                  selected = selected,
+                                  onClick = {
+                                    includeTypes =
+                                        if (selected) includeTypes - type else includeTypes + type
+                                  },
+                                  label = {
+                                    Text(
+                                        text =
+                                            type.name.lowercase().replaceFirstChar {
+                                              it.uppercaseChar()
+                                            },
+                                        color = AppColors.textIcons,
+                                        style = MaterialTheme.typography.labelLarge)
+                                  },
+                                  leadingIcon = {
+                                    Checkbox(
+                                        checked = selected,
+                                        onCheckedChange = null,
+                                        modifier = Modifier.size(Dimensions.IconSize.medium))
+                                  },
+                                  colors =
+                                      SelectableChipColors(
+                                          containerColor = AppColors.primary,
+                                          leadingIconColor = Color.Transparent,
+                                          trailingIconColor = Color.Transparent,
+                                          disabledContainerColor = Color.Transparent,
+                                          disabledLabelColor = Color.Transparent,
+                                          disabledLeadingIconColor = Color.Transparent,
+                                          disabledTrailingIconColor = Color.Transparent,
+                                          disabledSelectedContainerColor = Color.Transparent,
+                                          selectedLabelColor = Color.Transparent,
+                                          selectedLeadingIconColor = Color.Transparent,
+                                          selectedTrailingIconColor = Color.Transparent,
+                                          labelColor = AppColors.textIcons,
+                                          selectedContainerColor = Color.Transparent),
+                                  modifier =
+                                      Modifier.testTag(pinTypeTestTag(type))
+                                          .height(Dimensions.Padding.huge)
+                                          .background(AppColors.primary)
+                                          .fillMaxWidth())
+                            }
                           }
                     }
               }
 
-          // --- Add button for shop/space owners ---
-          if (account.shopOwner || account.spaceRenter) {
-            FloatingActionButton(
-                onClick = {
-                  when (account.shopOwner to account.spaceRenter) {
-                    true to true -> showCreateDialog = true
-                    true to false -> onFABCLick(PinType.SHOP)
-                    false to true -> onFABCLick(PinType.SPACE)
-                    else -> {}
-                  }
-                },
-                contentColor = AppColors.textIcons,
-                containerColor = AppColors.neutral,
-                shape = CircleShape,
-                modifier =
-                    Modifier.testTag(MapScreenTestTags.ADD_FAB)
-                        .align(Alignment.TopEnd)
-                        .padding(
-                            top = Dimensions.Padding.medium, end = Dimensions.Padding.medium)) {
-                  Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
-                }
-          }
-
+          // --- Dialog for business creation if ambiguous ---
           if (showCreateDialog) {
             Dialog(
                 onDismissRequest = {
@@ -809,6 +825,54 @@ fun MapScreen(
                       }
                 }
           }
+
+          // --- Scale bar (bottom-right, left RECENTER button, appears on zoom) ---
+          AnimatedVisibility(
+              visible = showScaleBar,
+              enter = fadeIn(),
+              exit = fadeOut(),
+              modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                      .padding(
+                          end =
+                              if (permissionGranted && userLocation != null) {
+                                // Shift scale bar to the left when recenter button is visible
+                                Dimensions.Padding.medium
+                                    .plus(Dimensions.ButtonSize.standard)
+                                    .plus(Dimensions.Padding.small)
+                              } else {
+                                // No recenter button → align scale bar directly at bottom-right
+                                Dimensions.Padding.medium
+                              },
+                          bottom = Dimensions.Padding.medium)) {
+                MapScaleBar(
+                    latitude = cameraPositionState.position.target.latitude,
+                    zoomLevel = currentZoom)
+              }
+
+          // --- Recenter button (bottom-right) ---
+          if (permissionGranted && userLocation != null) {
+            FloatingActionButton(
+                onClick = {
+                  coroutineScope.launch {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(userLocation!!.latitude, userLocation!!.longitude),
+                            DEFAULT_ZOOM_LEVEL))
+                  }
+                },
+                containerColor = AppColors.neutral,
+                contentColor = AppColors.textIcons,
+                shape = CircleShape,
+                modifier =
+                    Modifier.testTag(MapScreenTestTags.RECENTER_BUTTON)
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = Dimensions.Padding.medium, bottom = Dimensions.Padding.medium)
+                        .size(Dimensions.ButtonSize.standard)) {
+                  Icon(Icons.Default.MyLocation, contentDescription = "Recenter")
+                }
+          }
         }
       }
 
@@ -871,7 +935,7 @@ private suspend fun getUserLocation(fusedClient: FusedLocationProviderClient): L
  * @param lng The destination longitude.
  */
 private fun Context.openGoogleMapsDirections(lat: Double, lng: Double) {
-  val uri = Uri.parse("google.navigation:q=$lat,$lng")
+  val uri = "google.navigation:q=$lat,$lng".toUri()
   val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") }
   if (intent.resolveActivity(packageManager) != null) {
     startActivity(intent)
@@ -920,7 +984,8 @@ private fun GeoPinWithLocation.distanceTo(location: Location): Double {
  */
 private fun GeoPinWithLocation.distanceToString(location: Location): String {
   val km = distanceTo(location)
-  return if (km < 1.0) "${(km * 1000).toInt()} m" else String.format("%.1f km", km)
+  return if (km < 1.0) "${(km * 1000).toInt()} m"
+  else String.format(Locale.getDefault(), "%.1f km", km)
 }
 
 /**
@@ -1293,5 +1358,151 @@ private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescript
     canvas.drawText(size.toString(), radius, textY, textPaint)
 
     BitmapDescriptorFactory.fromBitmap(bitmap)
+  }
+}
+
+/**
+ * Displays a map scale bar (metric only).
+ * - Metric label (m/km) shown below the bar
+ * - Values rounded to human-friendly steps (1, 2, 5 × 10^n)
+ * - Design: horizontal line ending with a single downward tick at the left end (no upward tick).
+ * - Transparent background so the map remains fully visible.
+ */
+@Composable
+private fun MapScaleBar(latitude: Double, zoomLevel: Float) {
+  val metersPerPixel = 156543.03392 * cos(latitude * Math.PI / 180) / (1 shl zoomLevel.toInt())
+  val rawDistanceMeters = metersPerPixel * MapScaleBarDefaults.BAR_WIDTH
+  val distanceMeters = roundDistance(rawDistanceMeters)
+
+  val metricLabel =
+      if (distanceMeters >= 1000) "${(distanceMeters / 1000).toInt()} km"
+      else "${distanceMeters.toInt()} m"
+
+  Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier = Modifier.testTag(MapScreenTestTags.SCALE_BAR)) {
+        // Horizontal bar with downward tick at the left end
+        Box {
+          // Main horizontal line
+          Box(
+              Modifier.width(MapScaleBarDefaults.BAR_WIDTH.dp)
+                  .height(MapScaleBarDefaults.LINE_HEIGHT)
+                  .background(AppColors.textIcons))
+          // Downward tick aligned to the left end of the line
+          Box(
+              Modifier.align(Alignment.BottomStart)
+                  .height(MapScaleBarDefaults.TICK_HEIGHT)
+                  .width(MapScaleBarDefaults.TICK_WIDTH)
+                  .background(AppColors.textIcons))
+        }
+
+        Spacer(Modifier.height(MapScaleBarDefaults.LABEL_SPACING))
+        Text(
+            metricLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = AppColors.textIcons,
+            modifier = Modifier.testTag(MapScreenTestTags.SCALE_BAR_DISTANCE))
+      }
+}
+
+/**
+ * Rounds a raw distance in meters to a human-friendly value.
+ *
+ * Uses steps 1, 2, or 5 multiplied by powers of 10 (e.g., 3200 m → 5 km; 180 m → 200 m).
+ *
+ * @param meters Raw distance in meters
+ * @return Rounded distance in meters
+ */
+private fun roundDistance(meters: Double): Double {
+  val pow10 = 10.0.pow(floor(log10(meters)))
+  val normalized = meters / pow10
+  val rounded =
+      when {
+        normalized < 2 -> 1.0
+        normalized < 5 -> 2.0
+        else -> 5.0
+      }
+  return rounded * pow10
+}
+
+/**
+ * Static vertical menu for map controls.
+ *
+ * Displays filter and add buttons stacked vertically.
+ *
+ * @param modifier Modifier for the menu container
+ * @param showCreateButton Whether to show the create/add button
+ * @param onToggleFilters Callback when filter button is clicked
+ * @param onAddClick Callback when add button is clicked
+ */
+@Composable
+private fun StaticVerticalMapMenu(
+    modifier: Modifier = Modifier,
+    showCreateButton: Boolean,
+    onToggleFilters: () -> Unit,
+    onAddClick: () -> Unit
+) {
+  Column(
+      modifier = modifier.testTag(MapScreenTestTags.BUTTON_MENU),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+        // Filter button - circular
+        FloatingActionButton(
+            onClick = onToggleFilters,
+            containerColor = AppColors.neutral,
+            contentColor = AppColors.textIcons,
+            shape = CircleShape,
+            modifier =
+                Modifier.testTag(MapScreenTestTags.FILTER_BUTTON)
+                    .size(Dimensions.ButtonSize.standard)) {
+              Icon(Icons.Default.FilterList, contentDescription = "Filter pins")
+            }
+
+        // Add button (visible only for owners/renters)
+        if (showCreateButton) {
+          FloatingActionButton(
+              onClick = onAddClick,
+              containerColor = AppColors.neutral,
+              contentColor = AppColors.textIcons,
+              shape = CircleShape,
+              modifier =
+                  Modifier.testTag(MapScreenTestTags.ADD_FAB)
+                      .size(Dimensions.ButtonSize.standard)) {
+                Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
+              }
+        }
+      }
+}
+
+/**
+ * Estimates a fallback geographic location based on the device timezone.
+ *
+ * Provides broad continental centers (e.g., Europe, Asia) or regional defaults for America (East
+ * Coast, West Coast, Central). Used when user location permission is denied, so the map can still
+ * be initialized.
+ *
+ * @return Approximate [Location] for the current timezone
+ */
+internal fun getApproximateLocationFromTimezone(): Location {
+  val timeZone = TimeZone.getDefault().id
+
+  return when {
+    timeZone.startsWith("Europe/") -> {
+      Location(50.0, 10.0, "Europe")
+    }
+    timeZone.startsWith("America/") -> {
+      when {
+        timeZone.contains("New_York") || timeZone.contains("Toronto") ->
+            Location(40.0, -75.0, "East Coast")
+        timeZone.contains("Los_Angeles") || timeZone.contains("Vancouver") ->
+            Location(37.0, -120.0, "West Coast")
+        timeZone.contains("Chicago") || timeZone.contains("Mexico") ->
+            Location(35.0, -95.0, "Central")
+        else -> Location(40.0, -100.0, "Americas")
+      }
+    }
+    timeZone.startsWith("Asia/") -> Location(35.0, 105.0, "Asia")
+    timeZone.startsWith("Africa/") -> Location(0.0, 20.0, "Africa")
+    timeZone.startsWith("Australia/") -> Location(-25.0, 135.0, "Australia")
+    else -> Location(0.0, 0.0, "World")
   }
 }

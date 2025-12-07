@@ -6,6 +6,7 @@ import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid
+import com.github.meeplemeet.ui.theme.ThemeMode
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
@@ -301,6 +302,16 @@ class AccountRepository :
    */
   suspend fun setAccountName(id: String, name: String) {
     collection.document(id).update(Account::name.name, name).await()
+  }
+
+  /**
+   * Updates the theme preference of an account
+   *
+   * @param id The account ID to update
+   * @param theme The new theme preference
+   */
+  suspend fun setAccountTheme(id: String, theme: ThemeMode) {
+    collection.document(id).update(Account::themeMode.name, theme).await()
   }
 
   /**

@@ -18,6 +18,7 @@ import com.github.meeplemeet.ui.shops.AddShopContent
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
+import com.github.meeplemeet.utils.FirestoreTests
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Ignore
@@ -26,7 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class CreateShopScreenTest {
+class CreateShopScreenTest : FirestoreTests() {
 
   /* ───────────────────────────────── RULES ───────────────────────────────── */
 

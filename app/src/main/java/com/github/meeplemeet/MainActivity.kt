@@ -2,7 +2,6 @@ package com.github.meeplemeet
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,10 +37,12 @@ import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
-import com.github.meeplemeet.model.shared.game.BggGameRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.Shop
@@ -67,6 +69,7 @@ import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostsOverviewScreen
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
+import com.github.meeplemeet.ui.sessions.SessionScreen
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
@@ -75,6 +78,7 @@ import com.github.meeplemeet.ui.space_renter.CreateSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
+import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.KeyboardUtils
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
@@ -132,8 +136,7 @@ object RepositoryProvider {
   val sessions: SessionRepository by lazy { SessionRepository() }
 
   /** Lazily initialized repository for board game data operations. */
-  val games: FirestoreGameRepository by lazy { FirestoreGameRepository() }
-  val gamesApi: BggGameRepository by lazy { BggGameRepository() }
+  var games: GameRepository = CloudBggGameRepository()
 
   /** Lazily initialized repository for location operations. */
   val locations: LocationRepository by lazy { NominatimLocationRepository() }
@@ -176,7 +179,7 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     MapsInitializer.initialize(applicationContext)
     OfflineModeManager.start(applicationContext)
-    setContent { AppTheme { Surface(modifier = Modifier.fillMaxSize()) { MeepleMeetApp() } } }
+    setContent { MeepleMeetApp() }
   }
 
   override fun onDestroy() {
@@ -205,7 +208,7 @@ fun MeepleMeetApp(
   var discussionId by remember { mutableStateOf("") }
   val discussionFlow =
       remember(discussionId, signedOut) {
-        if (!signedOut) viewModel.discussionFlow(discussionId) else MutableStateFlow(null)
+        if (!signedOut) viewModel.discussionFlow(discussionId, context) else MutableStateFlow(null)
       }
   val discussion by discussionFlow.collectAsStateWithLifecycle()
 
@@ -240,327 +243,359 @@ fun MeepleMeetApp(
     onDispose { FirebaseProvider.auth.removeAuthStateListener(listener) }
   }
 
-  NavHost(navController = navController, startDestination = MeepleMeetScreen.SignIn.name) {
-    composable(MeepleMeetScreen.SignIn.name) {
-      LaunchedEffect(account) {
-        if (account != null && FirebaseProvider.auth.currentUser != null) {
-          val exists =
-              RepositoryProvider.handles.handleForAccountExists(account!!.uid, account!!.handle)
+  val navigationViewModel: NavigationViewModel = viewModel()
+  LaunchedEffect(accountId) { navigationViewModel.startListening(accountId) }
 
-          if (exists) navigationActions.navigateOutOfAuthGraph()
-          else navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
-        }
-      }
+  AppTheme(themeMode = account?.themeMode ?: ThemeMode.SYSTEM_DEFAULT) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+      CompositionLocalProvider(LocalNavigationVM provides navigationViewModel) {
+        NavHost(navController = navController, startDestination = MeepleMeetScreen.SignIn.name) {
+          composable(MeepleMeetScreen.SignIn.name) {
+            LaunchedEffect(account) {
+              if (account != null && FirebaseProvider.auth.currentUser != null) {
+                val exists =
+                    RepositoryProvider.handles.handleForAccountExists(
+                        account!!.uid, account!!.handle)
 
-      if (FirebaseProvider.auth.currentUser != null) LoadingScreen()
-      else
-          SignInScreen(
-              credentialManager = credentialManager,
-              onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUp) },
-              onSignIn = { signedOut = false })
-    }
+                if (exists) navigationActions.navigateOutOfAuthGraph()
+                else navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
+              }
+            }
 
-    composable(MeepleMeetScreen.SignUp.name) {
-      SignUpScreen(
-          credentialManager = credentialManager,
-          onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) },
-          onRegister = {
-            signedOut = false
-            navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
-          })
-    }
+            if (FirebaseProvider.auth.currentUser != null) LoadingScreen()
+            else
+                SignInScreen(
+                    credentialManager = credentialManager,
+                    onSignUpClick = { navigationActions.navigateTo(MeepleMeetScreen.SignUp) },
+                    onSignIn = { signedOut = false })
+          }
 
-    composable(MeepleMeetScreen.CreateAccount.name) {
-      if (account != null) {
-        CreateAccountScreen(
-            account!!,
-            onCreate = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
-            onBack = {
-              viewModel.signOut()
-              FirebaseProvider.auth.signOut()
-              navigationActions.goBack()
-            })
-      } else {
-        LoadingScreen()
-      }
-    }
+          composable(MeepleMeetScreen.SignUp.name) {
+            SignUpScreen(
+                credentialManager = credentialManager,
+                onLogInClick = { navigationActions.navigateTo(MeepleMeetScreen.SignIn) },
+                onRegister = {
+                  signedOut = false
+                  navigationActions.navigateTo(MeepleMeetScreen.CreateAccount)
+                })
+          }
 
-    composable(MeepleMeetScreen.DiscussionsOverview.name) {
-      DiscussionsOverviewScreen(
-          account!!,
-          navigationActions,
-          onClickAddDiscussion = {
-            navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
-          },
-          onSelectDiscussion = {
-            discussionId = it.uid
-            navigationActions.navigateTo(MeepleMeetScreen.Discussion)
-          },
-      )
-    }
+          composable(MeepleMeetScreen.CreateAccount.name) {
+            if (account != null) {
+              CreateAccountScreen(
+                  account!!,
+                  onCreate = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
+                  onBack = {
+                    viewModel.signOut()
+                    FirebaseProvider.auth.signOut()
+                    navigationActions.goBack()
+                  })
+            } else {
+              LoadingScreen()
+            }
+          }
 
-    composable(MeepleMeetScreen.CreateDiscussion.name) {
-      CreateDiscussionScreen(
-          account = account!!,
-          onBack = { navigationActions.goBack() },
-          onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
-    }
-
-    composable(MeepleMeetScreen.Discussion.name) {
-      if (discussion != null) {
-        if (discussion!!.participants.contains(account!!.uid))
-            DiscussionScreen(
+          composable(MeepleMeetScreen.DiscussionsOverview.name) {
+            DiscussionsOverviewScreen(
                 account!!,
-                discussion!!,
-                onBack = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-                onOpenDiscussionInfo = {
-                  navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
+                navigationActions,
+                onClickAddDiscussion = {
+                  navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
                 },
-                onCreateSessionClick = {
+                onSelectDiscussion = {
                   discussionId = it.uid
-                  navigationActions.navigateTo(
-                      if (it.session != null) MeepleMeetScreen.Session
-                      else MeepleMeetScreen.CreateSession)
+                  navigationActions.navigateTo(MeepleMeetScreen.Discussion)
                 },
             )
-        else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-      } else LoadingScreen()
-    }
+          }
 
-    composable(MeepleMeetScreen.DiscussionDetails.name) {
-      if (discussion != null && discussion!!.participants.contains(account!!.uid))
-          DiscussionDetailsScreen(
-              account = account!!,
-              discussion = discussion!!,
-              onBack = { navigationActions.goBack() },
-              onLeave = {
-                discussionId = ""
-                navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-              },
-              onDelete = {
-                discussionId = ""
-                navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-              })
-      else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-    }
+          composable(MeepleMeetScreen.CreateDiscussion.name) {
+            CreateDiscussionScreen(
+                account = account!!,
+                onBack = { navigationActions.goBack() },
+                onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
+          }
 
-    composable(MeepleMeetScreen.CreateSession.name) {
-      CreateSessionScreen(
-          account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
-    }
+          composable(MeepleMeetScreen.Discussion.name) {
+            if (discussion != null) {
+              if (discussion!!.participants.contains(account!!.uid))
+                  DiscussionScreen(
+                      account!!,
+                      discussion!!,
+                      onBack = {
+                        navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+                      },
+                      onOpenDiscussionInfo = {
+                        navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
+                      },
+                      onCreateSessionClick = {
+                        discussionId = it.uid
+                        navigationActions.navigateTo(
+                            if (it.session != null) MeepleMeetScreen.SessionViewer
+                            else MeepleMeetScreen.CreateSession)
+                      },
+                  )
+              else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+            } else LoadingScreen()
+          }
 
-    composable(MeepleMeetScreen.Session.name) {
-      if (discussion == null) {
-        LoadingScreen()
-      } else if (discussion!!.session != null &&
-          discussion!!.session!!.participants.contains(account!!.uid)) {
-        SessionDetailsScreen(
-            account = account!!, discussion = discussion!!, onBack = { navigationActions.goBack() })
-      } else {
-        navigationActions.navigateTo(MeepleMeetScreen.Discussion)
-      }
-    }
+          composable(MeepleMeetScreen.DiscussionDetails.name) {
+            if (discussion != null && discussion!!.participants.contains(account!!.uid))
+                DiscussionDetailsScreen(
+                    account = account!!,
+                    discussion = discussion!!,
+                    onBack = { navigationActions.goBack() },
+                    onLeave = {
+                      discussionId = ""
+                      navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+                    },
+                    onDelete = {
+                      discussionId = ""
+                      navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+                    })
+            else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+          }
 
-    composable(MeepleMeetScreen.SessionsOverview.name) {
-      SessionsOverviewScreen(
-          navigation = navigationActions,
-          account = account,
-          onSelectSession = {
-            discussionId = it
-            navigationActions.navigateTo(MeepleMeetScreen.Session)
-          })
-    }
+          composable(MeepleMeetScreen.CreateSession.name) {
+            CreateSessionScreen(
+                account = account!!,
+                discussion = discussion!!,
+                onBack = { navigationActions.goBack() })
+          }
 
-    composable(MeepleMeetScreen.PostsOverview.name) {
-      PostsOverviewScreen(
-          navigation = navigationActions,
-          onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
-          onSelectPost = {
-            postId = it.id
-            navigationActions.navigateTo(MeepleMeetScreen.Post)
-          })
-    }
-
-    composable(MeepleMeetScreen.Post.name) {
-      PostScreen(account = account!!, postId = postId, onBack = { navigationActions.goBack() })
-    }
-
-    composable(MeepleMeetScreen.CreatePost.name) {
-      CreatePostScreen(
-          account = account!!,
-          onPost = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
-          onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
-          onBack = { navigationActions.goBack() })
-    }
-
-    composable(MeepleMeetScreen.Map.name) {
-      MapScreen(
-          navigation = navigationActions,
-          account = account!!,
-          onUserLocationChange = { userLocation = it },
-          onFABCLick = { geoPin ->
-            when (geoPin) {
-              PinType.SHOP -> {
-                navigationActions.navigateTo(MeepleMeetScreen.CreateShop)
-              }
-              PinType.SPACE -> {
-                navigationActions.navigateTo(MeepleMeetScreen.CreateSpaceRenter)
-              }
-              PinType.SESSION -> {}
+          composable(MeepleMeetScreen.Session.name) {
+            if (discussion == null) {
+              LoadingScreen()
+            } else if (discussion!!.session != null &&
+                discussion!!.session!!.participants.contains(account!!.uid)) {
+              SessionDetailsScreen(
+                  account = account!!,
+                  discussion = discussion!!,
+                  onBack = { navigationActions.goBack() })
+            } else {
+              navigationActions.navigateTo(MeepleMeetScreen.Discussion)
             }
-          },
-          onRedirect = { geoPin ->
-            when (geoPin.type) {
-              PinType.SHOP -> {
-                shopId = geoPin.uid
-                navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
-              }
-              PinType.SPACE -> {
-                spaceId = geoPin.uid
-                navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
-              }
-              PinType.SESSION -> {
-                discussionId = geoPin.uid
-                println(geoPin.uid)
-                navigationActions.navigateTo(MeepleMeetScreen.Session)
-              }
+          }
+
+          composable(MeepleMeetScreen.SessionsOverview.name) {
+            SessionsOverviewScreen(
+                navigation = navigationActions,
+                account = account,
+                onSelectSession = {
+                  discussionId = it
+                  navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
+                })
+          }
+
+          composable(MeepleMeetScreen.PostsOverview.name) {
+            PostsOverviewScreen(
+                navigation = navigationActions,
+                onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
+                onSelectPost = {
+                  postId = it.id
+                  navigationActions.navigateTo(MeepleMeetScreen.Post)
+                })
+          }
+
+          composable(MeepleMeetScreen.Post.name) {
+            PostScreen(
+                account = account!!, postId = postId, onBack = { navigationActions.goBack() })
+          }
+
+          composable(MeepleMeetScreen.CreatePost.name) {
+            CreatePostScreen(
+                account = account!!,
+                onPost = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
+                onDiscard = { navigationActions.navigateTo(MeepleMeetScreen.PostsOverview) },
+                onBack = { navigationActions.goBack() })
+          }
+
+          composable(MeepleMeetScreen.Map.name) {
+            MapScreen(
+                navigation = navigationActions,
+                account = account!!,
+                onFABCLick = { geoPin ->
+                  when (geoPin) {
+                    PinType.SHOP -> {
+                      navigationActions.navigateTo(MeepleMeetScreen.CreateShop)
+                    }
+                    PinType.SPACE -> {
+                      navigationActions.navigateTo(MeepleMeetScreen.CreateSpaceRenter)
+                    }
+                    PinType.SESSION -> {}
+                  }
+                },
+                onRedirect = { geoPin ->
+                  when (geoPin.type) {
+                    PinType.SHOP -> {
+                      shopId = geoPin.uid
+                      navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
+                    }
+                    PinType.SPACE -> {
+                      spaceId = geoPin.uid
+                      navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
+                    }
+                    PinType.SESSION -> {
+                      discussionId = geoPin.uid
+                      println(geoPin.uid)
+                      navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
+                    }
+                  }
+                })
+          }
+
+          composable(MeepleMeetScreen.Profile.name) {
+            account?.let {
+              ProfileScreen(
+                  navigation = navigationActions,
+                  account = account!!,
+                  online = online,
+                  onSignOutOrDel = {
+                    navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+                    signedOut = true
+                  },
+                  onDelete = {
+                    // Sign out the user before deleting his account, avoiding an infinite loading
+                    // screen
+                    FirebaseProvider.auth.signOut()
+                  },
+                  onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
+                  onNotificationClick = {
+                    navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
+                  })
+            } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+          }
+
+          composable(MeepleMeetScreen.NotificationsTab.name) {
+            account?.let {
+              NotificationsTab(account = account!!, onBack = { navigationActions.goBack() })
             }
-          })
-    }
+          }
 
-    composable(MeepleMeetScreen.Profile.name) {
-      account?.let {
-        ProfileScreen(
-            navigation = navigationActions,
-            account = account!!,
-            online = online,
-            onSignOutOrDel = {
-              navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-              signedOut = true
-            },
-            onDelete = {
-              // Sign out the user before deleting his account, avoiding an infinite loading screen
-              FirebaseProvider.auth.signOut()
-            },
-            onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
-            onNotificationClick = {
-              navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
-            })
-      } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-    }
+          composable(MeepleMeetScreen.ShopDetails.name) {
+            if (shopId.isNotEmpty()) {
+              ShopScreen(
+                  account = account!!,
+                  shopId = shopId,
+                  onBack = { navigationActions.goBack() },
+                  onEdit = {
+                    shop = it
+                    navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
+                  })
+            } else {
+              LoadingScreen()
+            }
+          }
 
-    composable(MeepleMeetScreen.NotificationsTab.name) {
-      account?.let {
-        NotificationsTab(account = account!!, onBack = { navigationActions.goBack() })
-      }
-    }
+          composable(MeepleMeetScreen.CreateShop.name) {
+            CreateShopScreen(
+                owner = account!!,
+                onBack = { navigationActions.goBack() },
+                onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
+          }
 
-    composable(MeepleMeetScreen.ShopDetails.name) {
-      if (shopId.isNotEmpty()) {
-        ShopScreen(
-            account = account!!,
-            shopId = shopId,
-            onBack = { navigationActions.goBack() },
-            onEdit = {
-              shop = it
-              navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
-            })
-      } else {
-        LoadingScreen()
-      }
-    }
-
-    composable(MeepleMeetScreen.CreateShop.name) {
-      CreateShopScreen(
-          owner = account!!,
-          onBack = { navigationActions.goBack() },
-          onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
-    }
-
-    composable(MeepleMeetScreen.EditShop.name) {
-      if (shop != null) {
-        ShopDetailsScreen(
-            owner = account!!,
-            shop = shop!!,
-            onBack = { navigationActions.goBack() },
-            onSaved = { navigationActions.goBack() })
-      } else {
-        LoadingScreen()
-      }
-    }
-    composable(MeepleMeetScreen.CreateSpaceRenter.name) {
-      CreateSpaceRenterScreen(
-          owner = account!!,
-          online = online,
+          composable(MeepleMeetScreen.EditShop.name) {
+            if (shop != null) {
+              ShopDetailsScreen(
+                  owner = account!!,
+                  shop = shop!!,
+                  onBack = { navigationActions.goBack() },
+                  onSaved = { navigationActions.goBack() })
+            } else {
+              LoadingScreen()
+            }
+          }
+          composable(MeepleMeetScreen.CreateSpaceRenter.name) {
+            CreateSpaceRenterScreen(
+                owner = account!!,
+                online = online,
           userLocation = userLocation,
           onBack = { navigationActions.goBack() },
           onCreated = { navigationActions.goBack() })
     }
 
-    composable(MeepleMeetScreen.SpaceDetails.name) {
-      if (spaceId.isNotEmpty()) {
-        SpaceRenterScreen(
-            account = account!!,
-            spaceId = spaceId,
-            onBack = { navigationActions.goBack() },
-            onEdit = {
-              spaceRenter = it
-              navigationActions.navigateTo(MeepleMeetScreen.EditSpaceRenter, popUpTo = false)
-            })
-      } else {
-        LoadingScreen()
-      }
-    }
-    composable(MeepleMeetScreen.EditSpaceRenter.name) {
-      if (spaceRenter != null) {
-        EditSpaceRenterScreen(
-            owner = account!!,
-            spaceRenter = spaceRenter!!,
-            onBack = { navigationActions.goBack() },
-            onUpdated = { navigationActions.goBack() },
+          composable(MeepleMeetScreen.SpaceDetails.name) {
+            if (spaceId.isNotEmpty()) {
+              SpaceRenterScreen(
+                  account = account!!,
+                  spaceId = spaceId,
+                  onBack = { navigationActions.goBack() },
+                  onEdit = {
+                    spaceRenter = it
+                    navigationActions.navigateTo(MeepleMeetScreen.EditSpaceRenter, popUpTo = false)
+                  })
+            } else {
+              LoadingScreen()
+            }
+          }
+          composable(MeepleMeetScreen.EditSpaceRenter.name) {
+            if (spaceRenter != null) {
+              EditSpaceRenterScreen(
+                  owner = account!!,
+                  spaceRenter = spaceRenter!!,
+                  onBack = { navigationActions.goBack() },
+                  onUpdated = { navigationActions.goBack() },
             online = online)
       } else {
         LoadingScreen()
       }
     }
 
-    // OnBoarding Screen
-    composable(MeepleMeetScreen.OnBoarding.name) {
-      val pages =
-          listOf(
-              OnBoardPage(
-                  image = R.drawable.discussion_logo,
-                  title = "Welcome to MeepleMeet",
-                  description = "Discover events and meet new people."),
-              OnBoardPage(
-                  image = R.drawable.discussion_logo,
-                  title = "Discussions",
-                  description = "Host your own gatherings easily."),
-              OnBoardPage(
-                  image = R.drawable.discussion_logo,
-                  title = "Explore",
-                  description = "Find activities near you."),
-              OnBoardPage(
-                  image = R.drawable.session_logo,
-                  title = "Sessions",
-                  description = "Organize gaming meetups"),
-              OnBoardPage(
-                  image = R.drawable.discussion_logo,
-                  title = "Posts",
-                  description = "Share with the community"),
-              OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
-      OnBoardingScreen(
-          pages = pages,
-          onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-          onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
-    }
-    composable(MeepleMeetScreen.Friends.name) {
-      account?.let { currentAccount ->
-        FriendsScreen(
-            account = currentAccount,
-            onBack = { navigationActions.goBack() },
-        )
-      } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+          // OnBoarding Screen
+          composable(MeepleMeetScreen.OnBoarding.name) {
+            val pages =
+                listOf(
+                    OnBoardPage(
+                        image = R.drawable.discussion_logo,
+                        title = "Welcome to MeepleMeet",
+                        description = "Discover events and meet new people."),
+                    OnBoardPage(
+                        image = R.drawable.discussion_logo,
+                        title = "Discussions",
+                        description = "Host your own gatherings easily."),
+                    OnBoardPage(
+                        image = R.drawable.discussion_logo,
+                        title = "Explore",
+                        description = "Find activities near you."),
+                    OnBoardPage(
+                        image = R.drawable.session_logo,
+                        title = "Sessions",
+                        description = "Organize gaming meetups"),
+                    OnBoardPage(
+                        image = R.drawable.discussion_logo,
+                        title = "Posts",
+                        description = "Share with the community"),
+                    OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
+            OnBoardingScreen(
+                pages = pages,
+                onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
+          }
+          composable(MeepleMeetScreen.Friends.name) {
+            account?.let { currentAccount ->
+              FriendsScreen(
+                  account = currentAccount,
+                  onBack = { navigationActions.goBack() },
+              )
+            } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+          }
+
+          composable(MeepleMeetScreen.SessionViewer.name) {
+            if (discussion == null) {
+              LoadingScreen()
+            } else if (discussion!!.session != null &&
+                discussion!!.session!!.participants.contains(account!!.uid)) {
+              SessionScreen(
+                  account = account!!,
+                  discussion = discussion!!,
+                  onBack = { navigationActions.goBack() },
+                  onEditClick = { navigationActions.navigateTo(MeepleMeetScreen.Session) })
+            } else {
+              navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+            }
+          }
+        }
+      }
     }
   }
 }

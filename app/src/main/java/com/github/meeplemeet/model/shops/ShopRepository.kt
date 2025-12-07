@@ -8,8 +8,8 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -26,7 +26,7 @@ import kotlinx.coroutines.tasks.await
  */
 class ShopRepository(
     val accountRepository: AccountRepository = RepositoryProvider.accounts,
-    val gameRepository: FirestoreGameRepository = RepositoryProvider.games,
+    val gameRepository: GameRepository = RepositoryProvider.games,
     val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
 ) : FirestoreRepository("shops") {
   /**

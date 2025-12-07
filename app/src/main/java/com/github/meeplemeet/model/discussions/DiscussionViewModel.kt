@@ -7,6 +7,7 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.images.ImageRepository
+import com.google.firebase.Timestamp
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 const val SUGGESTIONS_LIMIT = 30
+const val EDIT_MAX_THRESHOLD = 2 * 60 * 60 * 1000L
 
 /**
  * ViewModel for managing discussion messaging and real-time updates.
@@ -66,9 +68,80 @@ class DiscussionViewModel(
     if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
 
     viewModelScope.launch {
-      readDiscussionMessages(sender, discussion)
       discussionRepository.sendMessageToDiscussion(discussion, sender, cleaned)
     }
+  }
+
+  /**
+   * Edit a message's content in a discussion.
+   *
+   * Validates that the sender is the original message author, checks the time threshold, trims
+   * whitespace, and updates the message content asynchronously. The operation is executed in
+   * viewModelScope.
+   *
+   * ## Validation
+   * - Sender must be the original message author
+   * - Message must be within the edit time threshold (2 hours)
+   * - Content cannot be blank (after trimming)
+   * - Trailing whitespace is automatically removed
+   *
+   * ## Time Threshold
+   * Messages can only be edited within [EDIT_MAX_THRESHOLD] (2 hours) of their creation. This
+   * prevents editing old messages that may have already been read and acted upon by other
+   * participants.
+   *
+   * ## Behavior
+   * - **Last message**: Updates message and all participants' previews
+   * - **Earlier message**: Updates message content and marks as edited
+   *
+   * @param discussion The discussion containing the message.
+   * @param message The message to edit (must belong to sender).
+   * @param sender The account editing the message.
+   * @param newContent The new text content for the message.
+   * @throws IllegalArgumentException if sender is not the message author or content is blank
+   * @see DiscussionRepository.editMessage for detailed behavior
+   * @see EDIT_MAX_THRESHOLD for the time limit
+   */
+  fun editMessage(discussion: Discussion, message: Message, sender: Account, newContent: String) {
+    if (message.senderId != sender.uid)
+        throw IllegalArgumentException("Can not edit someone else's message")
+
+    require(Timestamp.now().toDate().time <= message.createdAt.toDate().time + EDIT_MAX_THRESHOLD) {
+      "Can not edit a message after ${EDIT_MAX_THRESHOLD}ms it has been created"
+    }
+
+    val cleaned = newContent.trimEnd()
+    if (cleaned.isBlank()) throw IllegalArgumentException("Message content cannot be blank")
+
+    viewModelScope.launch {
+      discussionRepository.editMessage(discussion, sender, message.uid, cleaned)
+    }
+  }
+
+  /**
+   * Delete a message from a discussion.
+   *
+   * Validates that the sender is the original message author and removes the message document
+   * asynchronously. The operation is executed in viewModelScope.
+   *
+   * ## Important Notes
+   * - Only the message author can delete their own messages
+   * - If the deleted message is the most recent one, the preview will still show its content until
+   *   a new message is sent
+   * - The message document is permanently deleted and cannot be recovered
+   * - Photo attachments in Firebase Storage are NOT automatically deleted
+   *
+   * @param discussion The discussion containing the message.
+   * @param message The message to delete (must belong to sender).
+   * @param sender The account deleting the message.
+   * @throws IllegalArgumentException if sender is not the message author
+   * @see DiscussionRepository.deleteMessage for low-level deletion
+   */
+  fun deleteMessage(discussion: Discussion, message: Message, sender: Account) {
+    if (message.senderId != sender.uid)
+        throw IllegalArgumentException("Can not delete someone else's message")
+
+    viewModelScope.launch { discussionRepository.deleteMessage(discussion.uid, message.uid) }
   }
 
   /**
@@ -166,7 +239,7 @@ class DiscussionViewModel(
    */
   suspend fun loadOlderMessages(
       discussionId: String,
-      beforeTimestamp: com.google.firebase.Timestamp,
+      beforeTimestamp: Timestamp,
       limit: Int = 50
   ): List<Message> {
     return discussionRepository.getMessagesBeforeTimestamp(discussionId, beforeTimestamp, limit)

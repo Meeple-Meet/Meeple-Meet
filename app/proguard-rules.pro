@@ -2,7 +2,7 @@
 # Keep Kotlin metadata for reflection and serialization
 # --------------------------
 -keep class kotlin.Metadata { *; }
--keepattributes Signature, *Annotation*
+-keepattributes InnerClasses, EnclosingMethod, Signature, *Annotation*
 
 # --------------------------
 # Firebase Firestore

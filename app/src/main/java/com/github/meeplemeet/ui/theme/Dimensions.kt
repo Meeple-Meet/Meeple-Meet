@@ -20,6 +20,7 @@ object Dimensions {
     val xxLarge: Dp = 24.dp
     val xxxLarge: Dp = 32.dp
     val xxxxLarge: Dp = 60.dp
+    val huge: Dp = 80.dp
   }
 
   // Padding
@@ -46,6 +47,7 @@ object Dimensions {
     val standard: Dp = 20.dp
     val large: Dp = 24.dp
     val extraLarge: Dp = 28.dp
+    val xxLarge: Dp = 34.dp
     val huge: Dp = 48.dp
     val giant: Dp = 64.dp
     val massive: Dp = 80.dp
@@ -105,6 +107,15 @@ object Dimensions {
     val xLarge: TextUnit = 32.sp
     val extraLarge: TextUnit = 36.sp
     val displayMedium: TextUnit = 56.sp
+  }
+
+  // Blurring levels
+  object Blurring {
+    val none: Dp = 0.dp
+    val tiny: Dp = 1.dp
+    val extraSmall: Dp = 2.dp
+    val small: Dp = 4.dp
+    val medium: Dp = 8.dp
   }
 
   // Text indentation

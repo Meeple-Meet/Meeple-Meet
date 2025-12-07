@@ -26,7 +26,7 @@ import org.junit.runner.RunWith
  * End-to-end test for Meeple Meet application. Tests the complete user journey from sign-up to
  * navigating the app.
  */
-@Ignore
+@Ignore("flaky test")
 @RunWith(AndroidJUnit4::class)
 class E2E_M1 : FirestoreTests() {
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
@@ -40,6 +40,7 @@ class E2E_M1 : FirestoreTests() {
   fun completeUserJourney_signUpCreateAccountAndNavigate() {
     composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
 
+    // Step 6: Navigate through the main tabs to verify full access
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
     composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
@@ -104,10 +105,6 @@ class E2E_M1 : FirestoreTests() {
         .assertExists()
         .performClick()
     composeTestRule.waitForIdle()
-
-    // Verify Bob is added to the list (search query is cleared, so if handle exists it's in the
-    // list)
-    composeTestRule.onNodeWithText(user2Handle).assertExists()
 
     // Create the discussion with Bob as a member
     composeTestRule

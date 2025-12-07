@@ -8,11 +8,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -52,11 +56,16 @@ fun ProfileScreen(
   // Refresh email verification status when the profile is shown
   LaunchedEffect(account.uid) { viewModel.refreshEmailVerificationStatus() }
 
+  var isInputFocused by remember { mutableStateOf(false) }
+
   Scaffold(
       bottomBar = {
-        BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.Profile,
-            onTabSelected = { screen -> navigation.navigateTo(screen) })
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          BottomNavigationMenu(
+              currentScreen = MeepleMeetScreen.Profile,
+              onTabSelected = { screen -> navigation.navigateTo(screen) })
+        }
       }) { innerPadding ->
 
         // New content here
@@ -70,7 +79,8 @@ fun ProfileScreen(
                   onFriendsClick = onFriendClick,
                   onNotificationClick = onNotificationClick,
                   onSignOutOrDel = onSignOutOrDel,
-                  onDelete = onDelete)
+                  onDelete = onDelete,
+                  onInputFocusChanged = { isInputFocused = it })
             }
       }
 }
