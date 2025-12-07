@@ -82,12 +82,15 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.KeyboardUtils
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.functions
+import com.google.firebase.initialize
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
@@ -182,8 +185,14 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
     MapsInitializer.initialize(applicationContext)
+
+    Firebase.initialize(context = this)
+    Firebase.appCheck.installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
+
     OfflineModeManager.start(applicationContext)
+
     setContent { MeepleMeetApp() }
   }
 

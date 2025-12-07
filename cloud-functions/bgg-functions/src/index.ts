@@ -201,7 +201,10 @@ export async function handleGetGamesByIds(data: any): Promise<GameOut[]> {
  * Callable wrapper for getGamesByIds
  */
 export const getGamesByIds = onCall(
-  { secrets: ["BGG_API_TOKEN"] },
+  {
+    secrets: ["BGG_API_TOKEN"],
+    enforceAppCheck: true
+  },
   async (request) => handleGetGamesByIds(request.data)
 );
 
@@ -303,7 +306,10 @@ export async function handleSearchGames(data: any): Promise<GameSearchResult[]> 
  * Callable wrapper for searchGames
  */
 export const searchGames = onCall(
-  { secrets: ["BGG_API_TOKEN"] },
+  {
+    secrets: ["BGG_API_TOKEN"],
+    enforceAppCheck: true
+  },
   async (request) => handleSearchGames(request.data)
 );
 
