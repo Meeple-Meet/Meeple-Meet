@@ -3,7 +3,6 @@ package com.github.meeplemeet.ui.components
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -150,8 +149,6 @@ fun ImageCarousel(
       rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
           cameraLauncher.launch(null)
-        } else {
-          Log.w("ImageCarousel", "Camera permission denied")
         }
       }
 

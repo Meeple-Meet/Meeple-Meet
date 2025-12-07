@@ -150,14 +150,4 @@ interface AccountViewModel {
       RepositoryProvider.accounts.deleteAccount(account.uid)
     }
   }
-
-  /**
-   * Updates an account document from it's offline changes.
-   *
-   * @param account The account to update
-   * @param changes The changes made offline
-   */
-  fun updateAccount(account: Account, changes: Map<String, Any>) {
-    scope.launch { RepositoryProvider.accounts.updateAccount(account.uid, changes) }
-  }
 }

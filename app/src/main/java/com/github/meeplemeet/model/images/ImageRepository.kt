@@ -934,7 +934,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @return The encoded WebP image as a byte array
    * @throws ImageProcessingException if image decoding or encoding fails
    */
-  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 800, quality: Int = 40): ByteArray {
+  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 1600, quality: Int = 60): ByteArray {
     // Check if file exists and is readable
     val inputFile = File(inputPath)
     if (!inputFile.exists()) {

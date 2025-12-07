@@ -36,9 +36,9 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.navigation.NavigationViewModel
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
@@ -232,7 +232,6 @@ fun MeepleMeetApp(
   LaunchedEffect(online) {
     // Only sync when transitioning from offline to online
     if (online && !wasOnline) {
-      Log.d("MeepleMeetApp", "Connection restored - triggering sync")
       activity?.syncScope?.launch { viewModel.syncOfflineData() }
     }
     wasOnline = online
@@ -449,7 +448,6 @@ fun MeepleMeetApp(
               ProfileScreen(
                   navigation = navigationActions,
                   account = account!!,
-                  online = online,
                   onSignOutOrDel = {
                     navigationActions.navigateTo(MeepleMeetScreen.SignIn)
                     signedOut = true
@@ -509,10 +507,10 @@ fun MeepleMeetApp(
             CreateSpaceRenterScreen(
                 owner = account!!,
                 online = online,
-          userLocation = userLocation,
-          onBack = { navigationActions.goBack() },
-          onCreated = { navigationActions.goBack() })
-    }
+                userLocation = userLocation,
+                onBack = { navigationActions.goBack() },
+                onCreated = { navigationActions.goBack() })
+          }
 
           composable(MeepleMeetScreen.SpaceDetails.name) {
             if (spaceId.isNotEmpty()) {
@@ -535,11 +533,11 @@ fun MeepleMeetApp(
                   spaceRenter = spaceRenter!!,
                   onBack = { navigationActions.goBack() },
                   onUpdated = { navigationActions.goBack() },
-            online = online)
-      } else {
-        LoadingScreen()
-      }
-    }
+                  online = online)
+            } else {
+              LoadingScreen()
+            }
+          }
 
           // OnBoarding Screen
           composable(MeepleMeetScreen.OnBoarding.name) {
@@ -576,6 +574,7 @@ fun MeepleMeetApp(
               FriendsScreen(
                   account = currentAccount,
                   onBack = { navigationActions.goBack() },
+                  onNavigate = { navigationActions.navigateTo(it) }
               )
             } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
           }

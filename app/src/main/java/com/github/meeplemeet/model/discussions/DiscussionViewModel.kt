@@ -7,8 +7,8 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.images.ImageRepository
-import com.google.firebase.Timestamp
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow

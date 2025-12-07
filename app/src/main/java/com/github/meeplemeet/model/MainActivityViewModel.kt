@@ -109,8 +109,8 @@ class MainActivityViewModel(
    *
    * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
    * flow emits updated discussion data whenever changes occur in Firestore, and automatically
-   * archives sessions that have passed (more than 24 hours after session time).
-   * The flow automatically switches between online and offline modes:
+   * archives sessions that have passed (more than 24 hours after session time). The flow
+   * automatically switches between online and offline modes:
    * - **Online:** Emits real-time updates from Firestore
    * - **Offline:** Emits data from the offline cache loaded via [OfflineModeManager]
    *
@@ -122,10 +122,7 @@ class MainActivityViewModel(
    * @return A [StateFlow] that emits the discussion or null if the discussion doesn't exist or ID
    *   is blank
    */
-  fun discussionFlow(
-      discussionId: String,
-      context: Context
-  ): StateFlow<Discussion?> {
+  fun discussionFlow(discussionId: String, context: Context): StateFlow<Discussion?> {
     if (discussionId.isBlank()) return MutableStateFlow(null)
 
     // Combine online/offline state with live data and cached data

@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
@@ -333,6 +334,8 @@ fun MainTab(
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
   var currentPage by remember { mutableStateOf<ProfilePage>(ProfilePage.Main) }
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val offlineData by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   when (currentPage) {
     ProfilePage.Main ->
@@ -344,22 +347,48 @@ fun MainTab(
             onSignOutOrDel = onSignOutOrDel,
             onDelete = onDelete,
             onNavigate = { page -> currentPage = page },
-            onInputFocusChanged = onInputFocusChanged)
+            onInputFocusChanged = onInputFocusChanged, online = online)
     ProfilePage.Preferences ->
         SubPageScaffold("Preferences", onBack = { currentPage = ProfilePage.Main }) {
           PreferencesPage(
-              preference = account.themeMode,
-              onPreferenceChange = { viewModel.setAccountTheme(account, it) })
+            preference = if (online) {
+              account.themeMode
+            } else {
+              offlineData.accounts[account.uid]
+                ?.second
+                ?.get(Account::themeMode.name)
+                  as? ThemeMode
+                ?: account.themeMode
+            },
+            onPreferenceChange = {
+              if (online)
+                viewModel.setAccountTheme(account, it)
+              else
+                OfflineModeManager.setAccountChange(account, Account::themeMode.name, it)
+            })
         }
     ProfilePage.NotificationSettings ->
         SubPageScaffold("Notifications", onBack = { currentPage = ProfilePage.Main }) {
           NotificationSettingsSection(
-              preference = account.notificationSettings,
-              onPreferenceChange = { viewModel.setAccountNotificationSettings(account, it) })
+              preference = if (online) {
+                account.notificationSettings
+              } else {
+                offlineData.accounts[account.uid]
+                  ?.second
+                  ?.get(Account::notificationSettings.name)
+                    as? NotificationSettings
+                  ?: account.notificationSettings
+              },
+              onPreferenceChange = {
+                if (online)
+                  viewModel.setAccountNotificationSettings(account, it)
+                else
+                  OfflineModeManager.setAccountChange(account, Account::notificationSettings.name, it)
+              })
         }
     ProfilePage.Businesses ->
         SubPageScaffold("Your Businesses", onBack = { currentPage = ProfilePage.Main }) {
-          ManageBusinessesPage(viewModel, account)
+          ManageBusinessesPage(viewModel, account, online)
         }
     ProfilePage.Email ->
         SubPageScaffold("Email Settings", onBack = { currentPage = ProfilePage.Main }) {
@@ -371,6 +400,7 @@ fun MainTab(
           EmailSection(
               email = email,
               isVerified = isVerified,
+              online = online,
               onEmailChange = { newEmail -> email = newEmail },
               onFocusChanged = { focused ->
                 onInputFocusChanged(focused)
@@ -421,8 +451,8 @@ fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Un
 }
 
 @Composable
-fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account) {
-  RolesSection(account = account, viewModel = viewModel)
+fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account, online: Boolean) {
+  RolesSection(account = account, viewModel = viewModel, online = online)
   Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
@@ -474,15 +504,8 @@ fun MainTabContent(
     onNavigate: (ProfilePage) -> Unit,
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
-  var pref by remember { mutableStateOf(NotificationSettings.EVERYONE) }
-  val cache by OfflineModeManager.offlineModeFlow.collectAsState()
   var showDelDialog by remember { mutableStateOf(false) }
   val focusManager = LocalFocusManager.current
-
-  LaunchedEffect(online) {
-    if (online && cache.accounts[account.uid] != null)
-        viewModel.updateAccount(account, cache.accounts[account.uid]!!.second)
-  }
 
   Column(
       modifier =
@@ -500,13 +523,6 @@ fun MainTabContent(
                     verticalAlignment = Alignment.CenterVertically) {
                       DisplayAvatar(viewModel, account)
 
-        PublicInfo(
-            account = account,
-            viewModel = viewModel,
-            online = online,
-            onFriendsClick = onFriendsClick,
-            onNotificationClick = onNotificationClick,
-            onSignOut = onSignOutOrDel)
                       Spacer(modifier = Modifier.weight(1f))
 
                       PublicInfoActions(
@@ -520,6 +536,7 @@ fun MainTabContent(
                 PublicInfoInputs(
                     account = account,
                     viewModel = viewModel,
+                    online = online,
                     onInputFocusChanged = onInputFocusChanged)
               }
         }
@@ -558,42 +575,17 @@ fun MainTabContent(
             onClick = { onNavigate(ProfilePage.Businesses) },
             modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES))
 
-        PrivateInfo(account = account, viewModel = viewModel, online)
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = Dimensions.DividerThickness.standard,
             color = AppColors.textIcons.copy(alpha = 0.5f))
 
-        NotificationSettingsSection(
-            preference = pref,
-            onPreferenceChange = {
-              pref = it
-
-              if (online) viewModel.setAccountNotificationSettings(account, it)
-              else
-                  OfflineModeManager.setAccountChange(
-                      account, Account::notificationSettings.name, it)
-            })
         SettingsRow(
             icon = Icons.Default.Email,
             label = MainTabUi.SettingRows.EMAIL,
             onClick = { onNavigate(ProfilePage.Email) },
             modifier = Modifier.testTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL))
 
-        Button(
-            enabled = online,
-            onClick = { showDelDialog = true },
-            shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-            elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
-            modifier = Modifier.testTag(DeleteAccSectionTestTags.BUTTON),
-            colors =
-                ButtonColors(
-                    containerColor = AppColors.negative,
-                    disabledContainerColor = AppColors.negative,
-                    contentColor = AppColors.textIcons,
-                    disabledContentColor = AppColors.textIcons)) {
-              Text(text = MainTabUi.Misc.DELETE_ACCOUNT)
-            }
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = Dimensions.DividerThickness.standard,
@@ -856,7 +848,7 @@ fun PublicInfoInputs(
               if (!focused && !errorHandle) viewModel.setAccountHandle(account, newHandle = handle)
             })
 
-        RenderIf(errorHandle) {
+        if (errorHandle) {
           Text(
               text = errorMsg,
               color = AppColors.negative,
@@ -927,9 +919,7 @@ fun PublicInfoInputs(
             singleLine = false,
             onFocusChanged = { focused ->
               onInputFocusChanged(focused)
-              if (focused) return@FocusableInputField
-              if (online) viewModel.setAccountDescription(account, newDescription = desc)
-              else OfflineModeManager.setAccountChange(account, Account::description.name, desc)
+              if (!focused) viewModel.setAccountDescription(account, newDescription = desc)
             })
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
@@ -943,21 +933,21 @@ fun PublicInfoInputs(
  * @param account Current user
  */
 @Composable
-fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: Boolean) {
+fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   var showChooser by remember { mutableStateOf(false) }
   var showPermissionDenied by remember { mutableStateOf(false) }
 
   // --- Upload function ---
-  val setPhoto: suspend (String) -> Unit = {
-    runCatching { viewModel.setAccountPhoto(account, context, it) }
+  val setPhoto: suspend (String) -> Unit = { path ->
+    runCatching { viewModel.setAccountPhoto(account, context, path) }
   }
 
   // --- Camera launcher ---
   val cameraLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let {
+        if (bitmap != null) {
           scope.launch {
             val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
             setPhoto(path)
@@ -978,7 +968,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
   // --- Gallery launcher ---
   val galleryLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
+        if (uri != null) {
           scope.launch {
             val path = ImageFileUtils.cacheUriToFile(context, uri)
             setPhoto(path)
@@ -990,7 +980,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
   Box(
       modifier =
           Modifier.size(MainTabUi.AVATAR_SIZE)
-              .clickable { if (online) showChooser = true }
+              .clickable { showChooser = true }
               .testTag(PublicInfoTestTags.AVATAR_CONTAINER),
       contentAlignment = Alignment.TopEnd) {
         if (account.photoUrl.isNullOrBlank()) {
@@ -1030,7 +1020,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
       }
 
   // --- Chooser dialog ---
-  RenderIf(showChooser) {
+  if (showChooser) {
     AvatarChooserDialog(
         onDismiss = { showChooser = false },
         onCamera = {
@@ -1050,7 +1040,7 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account, online: B
   }
 
   // --- Permission denied ---
-  RenderIf(showPermissionDenied) {
+  if (showPermissionDenied) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(PublicInfoTestTags.CAMERA_PERMISSION_DIALOG),
@@ -1140,63 +1130,6 @@ fun AvatarChooserDialog(
 /////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Second section of the MainTab's screen. This one handles information only the user has access to
- *
- * @param account Current user
- * @param viewModel viewmodel used by this screen
- */
-@Composable
-fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
-
-  val uiState by viewModel.uiState.collectAsState()
-
-  var email by remember { mutableStateOf(account.email) }
-  val isVerified = uiState.isEmailVerified
-
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
-              .background(AppColors.secondary)
-              .testTag(PrivateInfoTestTags.PRIVATE_INFO)) {
-        Column(
-            modifier = Modifier.padding(Dimensions.Padding.xxxLarge),
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-
-              // TITLE
-              Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = MainTabUi.PrivateInfo.TITLE,
-                    modifier = Modifier.testTag(PrivateInfoTestTags.PRIVATE_INFO_TITLE),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-              }
-
-              // EMAIL SECTION
-              EmailSection(
-                  online = online,
-                  email = email,
-                  isVerified = isVerified,
-                  onEmailChange = { newEmail -> email = newEmail },
-                  onFocusChanged = { focused ->
-                    if (!focused) {
-                      viewModel.setAccountEmail(account, email)
-                    }
-                  },
-                  onSendVerification = {
-                    viewModel.sendVerificationEmail()
-                    viewModel.refreshEmailVerificationStatus()
-                  })
-
-              // ROLES SECTION
-              RolesSection(account = account, viewModel = viewModel, online = online)
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-            }
-      }
-}
-
-/**
  * Handles everything related to the email field
  *
  * @param email email of the user
@@ -1207,9 +1140,9 @@ fun PrivateInfo(account: Account, viewModel: ProfileScreenViewModel, online: Boo
  */
 @Composable
 fun EmailSection(
-    online: Boolean,
     email: String,
     isVerified: Boolean,
+    online: Boolean,
     onEmailChange: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     onSendVerification: () -> Unit
@@ -1275,6 +1208,7 @@ fun EmailSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally) {
               Button(
+                  enabled = online,
                   modifier =
                       Modifier.padding(top = Dimensions.Padding.medium)
                           .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
@@ -1284,7 +1218,7 @@ fun EmailSection(
                           containerColor = AppColors.affirmative,
                           disabledContainerColor = AppColors.affirmative,
                           contentColor = AppColors.textIcons,
-                          disabledContentColor = AppColors.textIcons),
+                          disabledContentColor = AppColors.negative),
                   onClick = {
                     onSendVerification()
                     toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
@@ -1367,7 +1301,7 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
 @Composable
 fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
 
-  var expanded by remember { mutableStateOf(hasNoRoles(account)) }
+  var expanded by remember { mutableStateOf(!hasNoRoles(account)) }
 
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }
@@ -1397,7 +1331,6 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
     AnimatedVisibility(visible = expanded) {
       Column {
         RoleCheckBox(
-            online = online,
             isChecked = isShopChecked,
             onCheckedChange = { checked ->
               if (!checked) {
@@ -1410,10 +1343,10 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
             },
             label = MainTabUi.PrivateInfo.SELL_ITEMS_LABEL,
             description = MainTabUi.PrivateInfo.SELL_ITEMS_DESC,
-            testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
+            testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX,
+            online = online)
 
-  RoleCheckBox(
-      online = online,
+        RoleCheckBox(
             isChecked = isSpaceRented,
             onCheckedChange = { checked ->
               if (!checked) {
@@ -1426,7 +1359,8 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
             },
             label = MainTabUi.PrivateInfo.RENT_SPACES_LABEL,
             description = MainTabUi.PrivateInfo.RENT_SPACES_DESC,
-            testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
+            testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX,
+            online = online)
       }
     }
   }
@@ -1486,7 +1420,7 @@ private fun RemoveCatalogDialog(
         RoleAction.SpaceOff -> MainTabUi.PrivateInfo.ROLE_ACTION_SPACE
       }
 
-  RenderIf(visible) {
+  if (visible) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(PrivateInfoTestTags.ROLE_DIALOG),
@@ -1602,7 +1536,7 @@ fun RadioOptionRow(
  */
 @Composable
 fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
-  RenderIf(show) {
+  if (show) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(DeleteAccSectionTestTags.POPUP),
@@ -1636,9 +1570,4 @@ fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Un
               }
         })
   }
-}
-
-@Composable
-fun RenderIf(condition: Boolean, composable: @Composable () -> Unit) {
-  if (condition) composable()
 }

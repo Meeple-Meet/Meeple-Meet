@@ -8,8 +8,8 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow

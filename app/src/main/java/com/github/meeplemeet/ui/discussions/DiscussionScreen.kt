@@ -15,6 +15,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -226,23 +227,6 @@ fun DiscussionScreen(
   val effectiveOnline = online || !networkMonitorStarted
   val offlineMode by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
-  LaunchedEffect(effectiveOnline) {
-    val state = offlineMode.discussions[discussion.uid]
-    if (effectiveOnline && state != null) {
-      state.third.forEach {
-        if (it.poll != null)
-            viewModel.createPoll(
-                discussion,
-                account.uid,
-                it.poll.question,
-                it.poll.options,
-                it.poll.allowMultipleVotes)
-        else viewModel.sendMessageToDiscussion(discussion, account, it.content)
-      }
-      offlineMode.discussions[discussion.uid] = Triple(state.first, state.second, emptyList())
-    }
-  }
-
   var selectedMessageForActions by remember { mutableStateOf<Message?>(null) }
   var messageBeingEdited by remember { mutableStateOf<Message?>(null) }
   val configuration = LocalConfiguration.current
@@ -408,19 +392,19 @@ fun DiscussionScreen(
                             Modifier.fillMaxSize().let { base ->
                               if (hasSelection) base.blur(Dimensions.Blurring.tiny) else base
                             }) {
-                          itemsIndexed(items = messages, key = { _, msg -> msg.uid }) { index,
-                                                                                        message ->
+                          itemsIndexed(items = messages, key = { _, msg -> msg.uid }) {
+                              index,
+                              message ->
                             val isMine = message.senderId == account.uid
                             val senderAccount = userCache[message.senderId]
                             val sender =
-                              if (!isMine) senderAccount?.name ?: "Unknown"
-                              else DiscussionCommons.YOU_SENDER_NAME
+                                if (!isMine) senderAccount?.name ?: "Unknown"
+                                else DiscussionCommons.YOU_SENDER_NAME
 
                             val showDateHeader =
-                              shouldShowDateHeader(
-                                current = message.createdAt.toDate(),
-                                previous = messages.getOrNull(index - 1)?.createdAt?.toDate()
-                              )
+                                shouldShowDateHeader(
+                                    current = message.createdAt.toDate(),
+                                    previous = messages.getOrNull(index - 1)?.createdAt?.toDate())
                             if (showDateHeader) {
                               Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
                               DateSeparator(date = message.createdAt.toDate())
@@ -432,74 +416,66 @@ fun DiscussionScreen(
 
                             val prevMessage = messages.getOrNull(index - 1)
                             val isFirstFromSender =
-                              prevMessage?.senderId != message.senderId || showDateHeader
+                                prevMessage?.senderId != message.senderId || showDateHeader
 
                             SelectableMessageContainer(
-                              message = message,
-                              isMine = isMine,
-                              onAnchorChanged = { id, anchorPos ->
-                                messageAnchors[id] = anchorPos
-                              },
-                              onLongPress = { msg ->
-                                selectedMessageForActions = msg
-                                selectedMessageAnchor = messageAnchors[msg.uid]
-                              },
+                                message = message,
+                                isMine = isMine,
+                                onAnchorChanged = { id, anchorPos ->
+                                  messageAnchors[id] = anchorPos
+                                },
+                                onLongPress = { msg ->
+                                  selectedMessageForActions = msg
+                                  selectedMessageAnchor = messageAnchors[msg.uid]
+                                },
                             ) {
                               when {
                                 message.poll != null ->
-                                  PollBubble(
-                                    msgIndex = index,
-                                    poll = message.poll,
-                                    authorName = sender,
-                                    currentUserId = account.uid,
-                                    profilePictureUrl =
-                                      if (isMine) account.photoUrl
-                                      else userCache[message.senderId]?.photoUrl,
-                                    onVote = { optionIndex, isRemoving ->
-                                      if (isRemoving) {
-                                        viewModel.removeVoteFromPollAsync(
-                                          discussion.uid, message.uid, account, optionIndex
-                                        )
-                                      } else {
-                                        viewModel.voteOnPollAsync(
-                                          discussion.uid, message.uid, account, optionIndex
-                                        )
-                                      }
-                                    },
-                                    createdAt = message.createdAt.toDate(),
-                                    showProfilePicture = isLastFromSender
-                                  )
-
+                                    PollBubble(
+                                        msgIndex = index,
+                                        poll = message.poll,
+                                        authorName = sender,
+                                        currentUserId = account.uid,
+                                        profilePictureUrl =
+                                            if (isMine) account.photoUrl
+                                            else userCache[message.senderId]?.photoUrl,
+                                        onVote = { optionIndex, isRemoving ->
+                                          if (isRemoving) {
+                                            viewModel.removeVoteFromPollAsync(
+                                                discussion.uid, message.uid, account, optionIndex)
+                                          } else {
+                                            viewModel.voteOnPollAsync(
+                                                discussion.uid, message.uid, account, optionIndex)
+                                          }
+                                        },
+                                        createdAt = message.createdAt.toDate(),
+                                        showProfilePicture = isLastFromSender)
                                 message.photoUrl != null ->
-                                  PhotoBubble(
-                                    message,
-                                    isMine,
-                                    sender,
-                                    isLastFromSender,
-                                    isFirstFromSender,
-                                    messages,
-                                    userCache,
-                                    account
-                                  )
-
+                                    PhotoBubble(
+                                        message,
+                                        isMine,
+                                        sender,
+                                        isLastFromSender,
+                                        isFirstFromSender,
+                                        messages,
+                                        userCache,
+                                        account)
                                 else ->
-                                  ChatBubble(
-                                    message,
-                                    senderAccount,
-                                    account,
-                                    isLastFromSender,
-                                    isFirstFromSender
-                                  )
+                                    ChatBubble(
+                                        message,
+                                        senderAccount,
+                                        account,
+                                        isLastFromSender,
+                                        isFirstFromSender)
                               }
                             }
 
-
-                              Spacer(
+                            Spacer(
                                 Modifier.height(
-                                  if (isLastFromSender) Dimensions.Spacing.small
-                                  else Dimensions.Spacing.extraSmall))
-                            }
+                                    if (isLastFromSender) Dimensions.Spacing.small
+                                    else Dimensions.Spacing.extraSmall))
                           }
+                        }
 
                     // Selected message overlay
                     if (actionMessage != null && anchor != null) {
@@ -548,6 +524,9 @@ fun DiscussionScreen(
                                         poll = actionMessage.poll,
                                         authorName = senderOverlay,
                                         currentUserId = account.uid,
+                                        profilePictureUrl =
+                                          if (actionMessage.senderId == account.uid) account.photoUrl
+                                          else userCache[actionMessage.senderId]?.photoUrl,
                                         onVote = { optionIndex, isRemoving ->
                                           if (isRemoving) {
                                             viewModel.removeVoteFromPollAsync(
@@ -568,22 +547,23 @@ fun DiscussionScreen(
                                   }
                                   actionMessage.photoUrl != null -> {
                                     PhotoBubble(
-                                        message = actionMessage,
-                                        isMine = isMineOverlay,
-                                        senderName = senderOverlay,
-                                        showProfilePicture = isLastFromSenderOverlay,
-                                        showSenderName = isFirstFromSenderOverlay,
-                                        allMessages = messages,
-                                        userCache = userCache,
-                                        currentUserId = account.uid)
+                                      message = actionMessage,
+                                      isMine = isMineOverlay,
+                                      senderName = senderOverlay,
+                                      showProfilePicture = isLastFromSenderOverlay,
+                                      showSenderName = isFirstFromSenderOverlay,
+                                      allMessages = messages,
+                                      userCache = userCache,
+                                      currentAccount = account
+                                    )
                                   }
                                   else -> {
                                     ChatBubble(
-                                        message = actionMessage,
-                                        isMine = isMineOverlay,
-                                        senderName = senderOverlay,
-                                        showProfilePicture = isLastFromSenderOverlay,
-                                        showSenderName = isFirstFromSenderOverlay)
+                                      actionMessage,
+                                      account,
+                                      account,
+                                      isLastFromSenderOverlay,
+                                      isFirstFromSenderOverlay)
                                   }
                                 }
                               }
@@ -852,14 +832,13 @@ fun DiscussionScreen(
                                       val editing = messageBeingEdited
                                       if (editing != null) {
                                         viewModel.editMessage(
-                                          discussion, editing, account, messageText.text)
+                                            discussion, editing, account, messageText.text)
                                         messageBeingEdited = null
                                       } else {
                                         viewModel.sendMessageToDiscussion(
-                                          discussion, account, messageText.text)
+                                            discussion, account, messageText.text)
                                       }
-                                    }
-                                    else
+                                    } else
                                         OfflineModeManager.sendPendingMessage(
                                             discussion.uid, Message(content = messageText.text))
                                     messageText = TextFieldValue("")
@@ -1339,35 +1318,35 @@ fun FullscreenImageDialog(
                                     Color.Black.copy(alpha = 0.0f),
                                     Color.Black.copy(alpha = 0.9f))))
                         .align(Alignment.BottomCenter)) {
-                  androidx.compose.foundation.lazy.LazyRow(
-                      modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.extraLarge),
-                      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-                        items(photoMessages.size) { index ->
-                          val msg = photoMessages[index]
-                          val isSelected =
-                              msg.uid == (currentPhotoMessage?.uid ?: currentMessage?.uid)
+              LazyRow(
+                  modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.extraLarge),
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                    items(photoMessages.size) { index ->
+                      val msg = photoMessages[index]
+                      val isSelected =
+                          msg.uid == (currentPhotoMessage?.uid ?: currentMessage?.uid)
 
-                          Box(
-                              modifier =
-                                  Modifier.size(Dimensions.Spacing.xxxxLarge)
-                                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
-                                      .border(
-                                          width =
-                                              if (isSelected) Dimensions.DividerThickness.medium
-                                              else Dimensions.CornerRadius.none,
-                                          color =
-                                              if (isSelected) Color.White else Color.Transparent,
-                                          shape =
-                                              RoundedCornerShape(Dimensions.CornerRadius.medium))
-                                      .clickable { currentPhotoMessage = msg }) {
-                                AsyncImage(
-                                    model = msg.photoUrl,
-                                    contentDescription = "Photo thumbnail",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize())
-                              }
-                        }
-                      }
+                      Box(
+                          modifier =
+                              Modifier.size(Dimensions.Spacing.xxxxLarge)
+                                  .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                                  .border(
+                                      width =
+                                          if (isSelected) Dimensions.DividerThickness.medium
+                                          else Dimensions.CornerRadius.none,
+                                      color =
+                                          if (isSelected) Color.White else Color.Transparent,
+                                      shape =
+                                          RoundedCornerShape(Dimensions.CornerRadius.medium))
+                                  .clickable { currentPhotoMessage = msg }) {
+                            AsyncImage(
+                                model = msg.photoUrl,
+                                contentDescription = "Photo thumbnail",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize())
+                          }
+                    }
+                  }
                 }
           }
         }

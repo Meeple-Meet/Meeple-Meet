@@ -120,6 +120,9 @@ object OfflineModeManager {
 
   var dispatcher = Dispatchers.IO
 
+  /** Application context for use in sync operations. Set during start(). */
+  private var appContext: Context? = null
+
   /**
    * Starts monitoring network connectivity changes.
    *
@@ -136,6 +139,7 @@ object OfflineModeManager {
    * @param context Android context used to access the ConnectivityManager system service
    */
   fun start(context: Context) {
+    appContext = context.applicationContext
     val cm = context.getSystemService(ConnectivityManager::class.java)
 
     val request =
@@ -157,6 +161,7 @@ object OfflineModeManager {
               CoroutineScope(dispatcher).launch {
                 syncQueuedPosts()
                 syncOfflineComments()
+                syncPendingDiscussionMessages()
               }
             }
           }
@@ -172,6 +177,7 @@ object OfflineModeManager {
               CoroutineScope(dispatcher).launch {
                 syncQueuedPosts()
                 syncOfflineComments()
+                syncPendingDiscussionMessages()
               }
             }
           }
@@ -1291,11 +1297,107 @@ object OfflineModeManager {
       }
     }
   }
+
+  /**
+   * Retrieves all pending changes for shops that need to be synchronized.
+   *
+   * @return List of pairs containing the shop and its pending changes map
+   */
+  private fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
+    return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
+  }
+
+  private suspend fun syncPendingShops() {
+    val pendingChanges = getPendingShopChanges()
+
+    if (pendingChanges.isEmpty()) return
+
+    pendingChanges.forEach { (shop, changes) ->
+      try {
+        if (changes.containsKey(PENDING_STRING)) {
+          RepositoryProvider.shops.createShop(
+            owner = shop.owner,
+            name = shop.name,
+            phone = shop.phone,
+            email = shop.email,
+            website = shop.website,
+            address = shop.address,
+            openingHours = shop.openingHours,
+            gameCollection = shop.gameCollection,
+            photoCollectionUrl = shop.photoCollectionUrl)
+
+          removeShop(shop.id)
+        } else {
+          // Update Firestore
+          RepositoryProvider.shops.updateShopOffline(shop.id, changes)
+
+          // Fetch the updated data from Firestore
+          val refreshed = RepositoryProvider.shops.getShop(shop.id)
+          updateShopCache(refreshed)
+
+          clearSpaceRenterChanges(shop.id)
+        }
+      } catch (_: Exception) {
+        // Log or handle error - silent failure for now
+      }
+    }
+  }
+
+  /**
+   * Syncs pending discussion messages to Firestore. Should be called when internet connection is
+   * restored.
+   */
+  private suspend fun syncPendingDiscussionMessages() {
+    val context = appContext ?: return
+    val discussions = _offlineModeFlow.value.discussions
+
+    discussions.forEach { (discussionUid, triple) ->
+      val (discussion, messages, pendingMessages) = triple
+      if (pendingMessages.isEmpty()) return@forEach
+
+      pendingMessages.forEach { message ->
+        try {
+          if (message.poll != null) {
+            RepositoryProvider.discussions.createPoll(
+                discussion,
+                message.senderId,
+                message.poll.question,
+                message.poll.options,
+                message.poll.allowMultipleVotes)
+          } else {
+            // Load sender account for the message
+            loadAccount(message.senderId, context, false) { sender ->
+              if (sender != null) {
+                CoroutineScope(dispatcher).launch {
+                  RepositoryProvider.discussions.sendMessageToDiscussion(
+                      discussion, sender, message.content)
+                }
+              }
+            }
+          }
+        } catch (_: Exception) {
+          // Silent failure - message stays in queue for next sync
+        }
+      }
+
+      // Clear pending messages after successful sync
+      val newState = LinkedHashMap(_offlineModeFlow.value.discussions)
+      newState[discussionUid] = Triple(discussion, messages, emptyList())
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(discussions = newState)
+    }
+  }
+
   /**
    * Syncs all pending offline data (shops and space renters) with Firestore. Call this when
    * internet connection is restored.
    */
   suspend fun syncAllPendingData() {
+    _offlineModeFlow.value.accounts.values.filter{it.second.isNotEmpty()}.forEach {
+      RepositoryProvider.accounts.updateAccount(it.first.uid, it.second)
+    }
+
     syncPendingSpaceRenters()
+    syncPendingShops()
+    syncPendingDiscussionMessages()
   }
 }

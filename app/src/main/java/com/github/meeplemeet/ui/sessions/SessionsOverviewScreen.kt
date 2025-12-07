@@ -481,13 +481,13 @@ fun SessionCard(
           /* ---------  resolve names via the callback  --------- */
           val names = remember { mutableStateListOf<String>() }
 
-  LaunchedEffect(session.participants) {
-    names.clear()
-    viewModel.getAccounts(session.participants.toSet().toList(), context) {
-      it.forEach { account -> names += account?.name ?: "Unknown" }
-    }
-  }
-  /* ----------------------------------------------------- */
+          LaunchedEffect(session.participants) {
+            names.clear()
+            viewModel.getAccounts(session.participants.toSet().toList(), context) {
+              it.forEach { account -> names += account?.name ?: "Unknown" }
+            }
+          }
+          /* ----------------------------------------------------- */
 
           val participantText =
               when {
