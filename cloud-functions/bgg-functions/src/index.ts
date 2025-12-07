@@ -23,7 +23,7 @@
 
 import { setGlobalOptions } from "firebase-functions";
 import * as admin from "firebase-admin";
-import { onRequest } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import fetch from "node-fetch";
 import { XMLParser } from "fast-xml-parser";
@@ -44,7 +44,8 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// Test endpoint
+// Test endpoint (keep as HTTP for easy testing)
+import { onRequest } from "firebase-functions/v2/https";
 export const ping = onRequest((req, res) => {
   res.json({ message: "pong" });
 });
@@ -112,56 +113,48 @@ const searchCache = new Cache<GameSearchResult[]>(SEARCH_TTL_MS, SEARCH_CACHE_MA
 /**
  * getGamesByIds
  *
- * HTTP GET endpoint: expects `ids` query param (comma-separated list or array)
+ * Callable Function: expects data.ids (array of strings)
  *
  * Behavior:
- * 1. Parses query parameter and limits to 20 IDs
+ * 1. Parses data parameter and limits to 20 IDs
  * 2. Checks L1 in-memory cache for each ID
  * 3. For missing IDs, checks L2 Firestore cache
  * 4. For still missing IDs, triggers coalesced BGG API fetch
  * 5. Stores successfully fetched games in both L1 and L2 caches
  * 6. Returns ordered array of GameOut (skips missing/failures)
  *
- * Response codes:
- *  - 200: successful array of games
- *  - 400: invalid/missing query parameter
- *  - 502: BGG API fetch failed
- *  - 500: unexpected internal error
+ * Throws:
+ *  - invalid-argument: invalid/missing data parameter
+ *  - unavailable: BGG API fetch failed
+ *  - internal: unexpected internal error
  */
-export const getGamesByIds = onRequest(
+export const getGamesByIds = onCall(
   { secrets: ["BGG_API_TOKEN"] },
-  async (req, res) => {
+  async (request) => {
     try {
-      const idsParam = req.query.ids;
-      if (!idsParam) {
-        res.status(400).json({ error: "Missing query param 'ids'" });
-        return;
+      const { ids } = request.data;
+
+      if (!ids || !Array.isArray(ids)) {
+        throw new HttpsError("invalid-argument", "Missing or invalid 'ids' array");
       }
 
-      const rawIds: string[] =
-        typeof idsParam === "string"
-          ? idsParam.split(",")
-          : Array.isArray(idsParam)
-          ? idsParam.map(String)
-          : [String(idsParam)];
+      const validIds = ids.map((id) => String(id).trim()).filter(Boolean).slice(0, 20);
 
-      const ids = rawIds.map((s) => s.trim()).filter(Boolean).slice(0, 20);
-      if (!ids.length) {
-        res.status(400).json({ error: "No valid ids provided" });
-        return;
+      if (validIds.length === 0) {
+        throw new HttpsError("invalid-argument", "No valid ids provided");
       }
 
       const cachedById: Record<string, GameOut> = {};
       let missingIds: string[] = [];
 
       // Check cache
-      for (const id of ids) {
+      for (const id of validIds) {
         const cached = await gameCache.get(id);
         if (cached) cachedById[id] = cached;
         else missingIds.push(id);
       }
 
-      logMsg("getGamesByIds", { requested: ids.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
+      logMsg("getGamesByIds", { requested: validIds.length, cached: Object.keys(cachedById).length, missing: missingIds.length });
 
       // Fetch from BGG if still missing
       if (missingIds.length > 0) {
@@ -180,26 +173,26 @@ export const getGamesByIds = onRequest(
             }
           }
 
-          const results = ids.map((id) => cachedById[id] ?? null).filter(Boolean);
-          res.json(results);
-          return;
+          const results = validIds.map((id) => cachedById[id] ?? null).filter(Boolean);
+          return results;
         } catch (err: any) {
           logError("Error in coalesced getGamesByIds", {
             err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err),
           });
-          res.status(502).json({ error: "BGG fetch failed", message: err?.message });
-          return;
+          throw new HttpsError("unavailable", "BGG fetch failed", err?.message);
         }
       } else {
         // all cached
-        const results = ids.map((id) => cachedById[id]).filter(Boolean);
-        res.json(results);
-        return;
+        const results = validIds.map((id) => cachedById[id]).filter(Boolean);
+        return results;
       }
     } catch (err: any) {
-      logError("getGamesByIds unexpected error", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
-      res.status(500).json({ error: "Internal server error", message: err?.message });
-      return;
+      if (err instanceof HttpsError) throw err;
+
+      logError("getGamesByIds unexpected error", {
+        err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err)
+      });
+      throw new HttpsError("internal", "Internal server error", err?.message);
     }
   }
 );
@@ -207,7 +200,7 @@ export const getGamesByIds = onRequest(
 /**
  * searchGames
  *
- * HTTP GET endpoint: expects `query` param, optional `maxResults` and `ignoreCase`
+ * Callable Function: expects data.query (string), optional data.maxResults (number)
  *
  * Behavior:
  * 1. Checks L1 cache using normalized query key
@@ -218,41 +211,39 @@ export const getGamesByIds = onRequest(
  * 6. Stores ranked results in L1 and L2 caches
  * 7. Returns array of GameSearchResult (limited by maxResults)
  */
-export const searchGames = onRequest(
+export const searchGames = onCall(
   { secrets: ["BGG_API_TOKEN"] },
-  async (req, res) => {
+  async (request) => {
     try {
-      const queryParam = req.query.query;
-      if (!queryParam || typeof queryParam !== "string") {
-        res.status(400).json({ error: "Missing query parameter 'query'" });
-        return;
+      const { query, maxResults: maxResultsParam } = request.data;
+
+      if (!query || typeof query !== "string") {
+        throw new HttpsError("invalid-argument", "Missing or invalid 'query' parameter");
       }
 
-      const maxResults = Math.min(Number(req.query.maxResults) || 20, 50);
-      const ignoreCase = req.query.ignoreCase === "true";
+      const maxResults = Math.min(Number(maxResultsParam) || 20, 50);
+      const ignoreCase = true;
 
-      const cacheKey = `${queryParam.toLowerCase()}:${ignoreCase ? "i" : "s"}:max${maxResults}`;
+      const cacheKey = `${query.toLowerCase()}:i:max${maxResults}`;
 
       // Check cache
       const cached = await searchCache.get(cacheKey);
       if (cached) {
-        logMsg("searchGames cache hit", { query: queryParam });
-        res.json(cached.slice(0, maxResults));
-        return;
+        logMsg("searchGames cache hit", { query });
+        return cached.slice(0, maxResults);
       }
 
-      logMsg("searchGames cache miss", { query: queryParam });
+      logMsg("searchGames cache miss", { query });
 
       // --- Fetch BGG ---
-      const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(queryParam)}&type=boardgame`;
+      const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame`;
       logMsg("searchGames: fetching", { url });
 
       const response = await fetchWithAuth(url);
       if (!response.ok) {
         const text = await response.text().catch(() => "");
         logError("BGG search failed", { status: response.status, body: text });
-        res.status(502).json({ error: `BGG API returned ${response.status}`, details: text });
-        return;
+        throw new HttpsError("unavailable", `BGG API returned ${response.status}`, text);
       }
 
       const xml = await response.text();
@@ -283,17 +274,19 @@ export const searchGames = onRequest(
         })
         .filter((r: GameSearchResult | null): r is GameSearchResult => r != null);
 
-      const ranked = rankSearchResults(results, queryParam, ignoreCase).slice(0, maxResults);
+      const ranked = rankSearchResults(results, query, ignoreCase).slice(0, maxResults);
 
       // --- Write caches ---
       await searchCache.set(cacheKey, ranked);
 
-      res.json(ranked);
-      return;
+      return ranked;
     } catch (err: any) {
-      logError("searchGames unexpected error", { err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err) });
-      res.status(500).json({ error: "Internal server error", message: err?.message });
-      return;
+      if (err instanceof HttpsError) throw err;
+
+      logError("searchGames unexpected error", {
+        err: err instanceof Error ? { message: err.message, stack: err.stack } : _safeSerialize(err)
+      });
+      throw new HttpsError("internal", "Internal server error", err?.message);
     }
   }
 );
