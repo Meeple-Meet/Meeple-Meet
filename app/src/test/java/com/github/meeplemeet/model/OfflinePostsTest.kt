@@ -36,7 +36,7 @@ class OfflinePostsTest {
   fun setup() {
     OfflineModeManager.dispatcher = testDispatcher
     // Start in offline mode
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
   }
 
   @After
@@ -45,7 +45,7 @@ class OfflinePostsTest {
     // Clear queued posts
     val queuedPosts = OfflineModeManager.getQueuedPosts()
     queuedPosts.forEach { post -> OfflineModeManager.removeQueuedPost(post.id) }
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
   }
 
   // ==================== CREATE POST OFFLINE ====================
@@ -53,7 +53,7 @@ class OfflinePostsTest {
   @Test
   fun `createPost offline queues post with temp ID`() = runTest {
     // Given: Offline mode
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // When: Create a post
     OfflineModeManager.createPost(
@@ -80,7 +80,7 @@ class OfflinePostsTest {
   @Test
   fun `createPost offline limits queue size to MAX_OFFLINE_CREATED_POSTS`() = runTest {
     // Given: Offline mode
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // When: Create more than MAX_OFFLINE_CREATED_POSTS (which is 2)
     OfflineModeManager.createPost("Post 1", "Body 1", "user1")
@@ -100,7 +100,7 @@ class OfflinePostsTest {
   @Test
   fun `createPost with no tags creates post without tags`() = runTest {
     // Given: Offline mode
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // When: Create post without tags
     OfflineModeManager.createPost(
@@ -134,7 +134,7 @@ class OfflinePostsTest {
   @Test
   fun `getAllPostsForDisplay returns queued posts`() = runTest {
     // Given: Queued posts
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // Create queued post
     OfflineModeManager.createPost("Queued Post", "Body", "user1")
@@ -151,7 +151,7 @@ class OfflinePostsTest {
   @Test
   fun `getAllPostsForDisplay returns posts sorted by timestamp`() = runTest {
     // Given: Posts with different timestamps
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // Create posts with delay to ensure different timestamps
     OfflineModeManager.createPost("First Post", "Body", "user1")
@@ -178,7 +178,7 @@ class OfflinePostsTest {
   @Test
   fun `addComment throws exception when trying to comment on queued post`() = runTest {
     // Given: Offline mode with a queued post
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
     OfflineModeManager.createPost("Queued Post", "Body", "user1")
     advanceUntilIdle()
 
@@ -199,7 +199,7 @@ class OfflinePostsTest {
   @Test
   fun `deletePost removes queued post when ID starts with temp`() = runTest {
     // Given: Offline mode with a queued post
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
     OfflineModeManager.createPost("Temp Post", "Body", "user1")
     advanceUntilIdle()
 
@@ -218,7 +218,7 @@ class OfflinePostsTest {
   @Test
   fun `removeQueuedPost removes specific post from queue`() = runTest {
     // Given: Multiple queued posts
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
     OfflineModeManager.createPost("Post 1", "Body 1", "user1")
     advanceUntilIdle()
     OfflineModeManager.createPost("Post 2", "Body 2", "user2")
@@ -249,13 +249,13 @@ class OfflinePostsTest {
   }
 
   @Test
-  fun `setInternetConnection changes connection state`() {
+  fun `setNetworkStatusForTesting changes connection state`() {
     // Given: Initially offline
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
     assertFalse(OfflineModeManager.hasInternetConnection.value)
 
     // When: Set to online
-    OfflineModeManager.setInternetConnection(true)
+    OfflineModeManager.setNetworkStatusForTesting(true)
 
     // Then: State changes
     assertTrue(OfflineModeManager.hasInternetConnection.value)
@@ -293,7 +293,7 @@ class OfflinePostsTest {
   @Test
   fun `addComment to non-existent post does nothing`() = runTest {
     // Given: Offline mode with no cached posts
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // When: Try to add comment to non-existent post
     OfflineModeManager.addComment("nonexistent", "Comment", "user1", "nonexistent")
@@ -307,7 +307,7 @@ class OfflinePostsTest {
   @Test
   fun `createPost generates unique temp IDs`() = runTest {
     // Given: Offline mode
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // When: Create multiple posts quickly
     OfflineModeManager.createPost("Post 1", "Body 1", "user1")

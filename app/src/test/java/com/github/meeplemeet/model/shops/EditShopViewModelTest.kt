@@ -42,7 +42,7 @@ class EditShopViewModelTest {
 
     // Clear offline mode state
     OfflineModeManager.clearOfflineMode()
-    OfflineModeManager.setInternetConnection(true)
+    OfflineModeManager.setNetworkStatusForTesting(true)
 
     viewModel = EditShopViewModel(repository)
   }
@@ -78,7 +78,7 @@ class EditShopViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle() // Let initialize finish
 
     // Simulate offline
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
 
     // Act
     val newName = "Updated Shop Name"

@@ -35,7 +35,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
   @Before
   fun setup() {
     // Start in offline mode
-    OfflineModeManager.setInternetConnection(false)
+    OfflineModeManager.setNetworkStatusForTesting(false)
   }
 
   @After
@@ -51,7 +51,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Create posts offline") {
       runBlocking {
         // Given: Offline mode with queued posts
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
 
         OfflineModeManager.createPost(
             title = "Offline Post 1",
@@ -77,7 +77,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Sync posts when back online") {
       runBlocking {
         // When: Come back online and sync
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         OfflineModeManager.syncQueuedPosts()
         delay(1500) // Wait for sync
 
@@ -114,7 +114,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Create post online") {
       runBlocking {
         // Given: Create a post online first
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         val post =
             postRepository.createPost(
                 title = "Test Post", content = "For offline comments", authorId = "user123")
@@ -126,16 +126,16 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Add comments offline") {
       runBlocking {
         // When: Go offline and fetch the post, then add comments
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
 
         // Fetch the post from Firestore while online to cache it
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         val postWithData = postRepository.getPost(createdPostId)
         OfflineModeManager.cachePosts(listOf(postWithData))
         delay(1000)
 
         // Now go offline
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
 
         // Add top-level comments
         OfflineModeManager.addComment(
@@ -171,7 +171,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Create post and add parent comment online") {
       runBlocking {
         // Given: Post with a parent comment created online
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         val post =
             postRepository.createPost(
                 title = "Nested Comments Post",
@@ -195,7 +195,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Add reply offline") {
       runBlocking {
         // When: Go offline and add reply to parent comment
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
 
         val cachedPosts = OfflineModeManager.getCachedPosts()
         assertTrue("No posts cached", cachedPosts.isNotEmpty())
@@ -224,7 +224,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Sync nested comments") {
       runBlocking {
         // When: Come back online and sync
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
 
         OfflineModeManager.syncOfflineComments()
         delay(1500)
@@ -253,7 +253,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Setup post with comment hierarchy") {
       runBlocking {
         // Given: Create post online
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         val post =
             postRepository.createPost(
                 title = "Deep Nesting",
@@ -275,7 +275,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Add nested replies offline") {
       runBlocking {
         // When: Go offline and add nested replies
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
 
         val cachedPosts = OfflineModeManager.getCachedPosts()
         assertTrue("No posts cached", cachedPosts.isNotEmpty())
@@ -308,7 +308,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Sync preserves all nesting levels") {
       runBlocking {
         // When: Sync to Firestore
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
 
         OfflineModeManager.syncOfflineComments()
         delay(1500)
@@ -333,7 +333,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Create posts offline") {
       runBlocking {
         // Given: Offline with queued posts
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
         OfflineModeManager.createPost("Offline Post", "Body", "user1")
         delay(500)
 
@@ -360,7 +360,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Setup") {
       runBlocking {
         // Given: Post with offline comments
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         val post = postRepository.createPost("Post", "Body", "user1")
         createdPostId = post.id
 
@@ -369,7 +369,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
         OfflineModeManager.cachePosts(listOf(postData))
         delay(1000)
 
-        OfflineModeManager.setInternetConnection(false)
+        OfflineModeManager.setNetworkStatusForTesting(false)
         OfflineModeManager.addComment(post.id, "Offline comment", "user2", post.id)
         delay(500)
 
@@ -405,7 +405,7 @@ class OfflinePostsSyncTest : FirestoreTests() {
     checkpoint("Create post with comments online") {
       runBlocking {
         // Given: Post with comments in Firestore
-        OfflineModeManager.setInternetConnection(true)
+        OfflineModeManager.setNetworkStatusForTesting(true)
         val post = postRepository.createPost("Full Post", "Body", "user1")
         createdPostId = post.id
         postRepository.addComment(post.id, "Comment 1", "user2", post.id)

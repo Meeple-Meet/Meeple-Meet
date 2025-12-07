@@ -1,5 +1,5 @@
 package com.github.meeplemeet.model.offline
-// AI was used on this fille
+// AI was used on this file
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableMap
 
 const val PENDING_STRING = "_pending_create"
-const val UNCHECKED_CAST = "UNCHECKED_CAST"
 
 /**
  * Caps the size of a LinkedHashMap by removing the least recently used entries until the size is at
@@ -122,16 +121,6 @@ object OfflineModeManager {
   var dispatcher = Dispatchers.IO
 
   /**
-   * Sets the internet connection state. For testing purposes only. In production, connection state
-   * is managed by the network callback in start().
-   *
-   * @param connected true if connected, false if offline
-   */
-  fun setInternetConnection(connected: Boolean) {
-    _hasInternetConnection.value = connected
-  }
-
-  /**
    * Starts monitoring network connectivity changes.
    *
    * This function registers a network callback that monitors the device's internet connectivity
@@ -210,10 +199,6 @@ object OfflineModeManager {
    */
   fun clearOfflineMode() {
     _offlineModeFlow.value = OfflineMode()
-  }
-
-  fun forceInternet() {
-    _hasInternetConnection.value = true
   }
 
   // ---------------------- Accounts Methods ---------------------- //
@@ -519,16 +504,14 @@ object OfflineModeManager {
       if (key == "gameCollection") {
         val list = value as? List<*>
         val castValue =
-            if (list != null) {
-              list.mapNotNull { item ->
-                if (item is Pair<*, *> && item.first is Game && item.second is Int) {
-                  @Suppress("UNCHECKED_CAST")
-                  (item.first as Game) to (item.second as Int)
-                } else {
-                  null
-                }
+            list?.mapNotNull { item ->
+              if (item is Pair<*, *> && item.first is Game && item.second is Int) {
+                @Suppress("UNCHECKED_CAST")
+                (item.first as Game) to (item.second as Int)
+              } else {
+                null
               }
-            } else t.gameCollection
+            } ?: t.gameCollection
         if (list != null && castValue.size == list.size) {
           return t.copy(gameCollection = castValue)
         }
@@ -748,15 +731,6 @@ object OfflineModeManager {
   }
 
   // ==================== Synchronization Helpers ====================
-
-  /**
-   * Retrieves all pending changes for shops that need to be synchronized.
-   *
-   * @return List of pairs containing the shop and its pending changes map
-   */
-  fun getPendingShopChanges(): List<Pair<Shop, Map<String, Any>>> {
-    return _offlineModeFlow.value.shops.values.filter { it.second.isNotEmpty() }.toList()
-  }
 
   /**
    * Retrieves all pending changes for space renters that need to be synchronized.
@@ -1037,7 +1011,7 @@ object OfflineModeManager {
 
       val newState = LinkedHashMap(_offlineModeFlow.value.postsToAdd)
 
-      if (newState.size >= MAX_OFFLINE_CREATED_POSTS) {
+      if (newState.size >= MAX_CACHED_CREATED_POSTS) {
         newState.remove(newState.entries.first().key)
       }
 
@@ -1312,7 +1286,7 @@ object OfflineModeManager {
 
           clearSpaceRenterChanges(renter.id)
         }
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         // Log or handle error - silent failure for now
       }
     }
