@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -126,13 +127,15 @@ fun CreateShopScreen(
 ) {
   val ui by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   AddShopContent(
       onBack = onBack,
       onCreated = onCreated,
-      onCreate = { name, email, address, week, stock ->
+      onCreate = { name, email, address, week, stock, photoUrls ->
         val shop =
             viewModel.createShop(
+                context = context,
                 owner = owner,
                 name = name,
                 phone = "",
@@ -140,7 +143,8 @@ fun CreateShopScreen(
                 website = "",
                 address = address,
                 openingHours = week,
-                gameCollection = stock)
+                gameCollection = stock,
+                photoCollectionUrl = photoUrls)
         shop.id
       },
       gameUi = ui,
@@ -184,7 +188,8 @@ fun AddShopContent(
             email: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> String,
+            stock: List<Pair<Game, Int>>,
+            photoUrls: List<String>) -> String,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     gameQuery: String,
@@ -289,7 +294,7 @@ fun AddShopContent(
                       val addr = locationUi.selectedLocation ?: Location()
                       scope.launch {
                         try {
-                          val shopId = onCreate(shopName, email, addr, week, stock)
+                          val shopId = onCreate(shopName, email, addr, week, stock, photoCollectionUrl)
                           onCreated(shopId)
                         } catch (e: IllegalArgumentException) {
                           snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)

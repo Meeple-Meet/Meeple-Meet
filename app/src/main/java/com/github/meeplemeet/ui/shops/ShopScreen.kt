@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,10 +34,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.Shop
@@ -114,8 +119,27 @@ fun ShopScreen(
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
+
+  val context = LocalContext.current
+  val lifecycleOwner = LocalLifecycleOwner.current
+  DisposableEffect(lifecycleOwner, shopId) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        viewModel.getShop(shopId, context)
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
+  val images by viewModel.photos.collectAsStateWithLifecycle()
   // Trigger loading of shop data when shopId changes
-  LaunchedEffect(shopId) { viewModel.getShop(shopId) }
+  LaunchedEffect(shopId) { viewModel.getShop(shopId, context) }
+  // Holds the cached image file paths
+  val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
+  LaunchedEffect(images) {
+    val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
+    cachedImagePathsState.value = paths
+  }
 
   var popupGame by remember { mutableStateOf<Game?>(null) }
 
@@ -147,7 +171,7 @@ fun ShopScreen(
                         .padding(Dimensions.Padding.extraLarge)
                         .fillMaxSize(),
                 onGameClick = { game -> popupGame = game },
-            )
+                photoCollectionUrl = cachedImagePathsState.value)
           }
               ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -206,7 +230,7 @@ fun ShopDetails(
           if (photoCollectionUrl.isNotEmpty()) {
             ImageCarousel(
                 photoCollectionUrl = photoCollectionUrl,
-                maxNumberOfImages = shop.photoCollectionUrl.size,
+                maxNumberOfImages = photoCollectionUrl.size,
                 onAdd = { _, _ -> },
                 onRemove = { _ -> },
                 editable = false)
