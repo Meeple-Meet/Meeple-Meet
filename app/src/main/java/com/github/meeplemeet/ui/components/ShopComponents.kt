@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -45,6 +44,22 @@ import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+interface ShopFormActions {
+  fun onNameChange(name: String)
+  fun onEmailChange(email: String)
+  fun onPhoneChange(phone: String)
+  fun onWebsiteChange(website: String)
+  fun onLocationChange(location: Location)
+}
+
+interface GamePickerActions {
+  fun onStockChange(stock: List<Pair<Game, Int>>)
+  fun onQtyChange(qty: Int)
+  fun onSetGameQuery(query: String)
+  fun onSetGame(game: Game)
+  fun onDismiss()
+}
 
 /* ================================================================================================
  * Shared Test Tags
@@ -102,6 +117,10 @@ object ShopFormUi {
     const val OPEN24_LABEL = "Open 24 hours"
 
     const val ERROR_EMAIL_MSG = "Enter a valid email address."
+
+    const val SECTION_REQUIRED = "Required Info"
+    const val SECTION_AVAILABILITY = "Availability"
+    const val SECTION_GAMES = "Games in stock"
   }
 
   val dayNames: List<String> by lazy {
@@ -194,6 +213,125 @@ fun emptyWeek(): List<OpeningHours> =
  */
 fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
+@Stable
+class CreateShopFormState(
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialWeek: List<OpeningHours> = emptyWeek(),
+    private val onSetGameQueryCallback: (String) -> Unit,
+    private val onSetGameCallback: (Game) -> Unit
+) : ShopFormActions, GamePickerActions {
+
+    var shopName by mutableStateOf("")
+    var email by mutableStateOf("")
+    var phone by mutableStateOf("")
+    var website by mutableStateOf("")
+    var addressText by mutableStateOf("")
+
+    var week by mutableStateOf(initialWeek)
+    var stock by mutableStateOf(initialStock)
+    var photoCollectionUrl by mutableStateOf(listOf<String>())
+
+    // Dialog & UI states
+    var showHoursDialog by mutableStateOf(false)
+    var editingDay by mutableStateOf<Int?>(null)
+
+    var showGameDialog by mutableStateOf(false)
+    var qty by mutableIntStateOf(1)
+
+    // Derived state for validation
+    private val hasOpeningHours by derivedStateOf { week.any { it.hours.isNotEmpty() } }
+
+    fun isValid(selectedLocation: Location?): Boolean {
+        return shopName.isNotBlank() &&
+                isValidEmail(email) &&
+                selectedLocation != null &&
+                hasOpeningHours
+    }
+
+    // ---- ShopFormActions implementation ----
+    override fun onNameChange(name: String) {
+        shopName = name
+    }
+
+    override fun onEmailChange(email: String) {
+        this.email = email
+    }
+
+    override fun onPhoneChange(phone: String) {
+        this.phone = phone
+    }
+
+    override fun onWebsiteChange(website: String) {
+        this.website = website
+    }
+
+    override fun onLocationChange(location: Location) {
+        addressText = location.name
+    }
+
+    // ---- GamePickerActions implementation ----
+    override fun onStockChange(stock: List<Pair<Game, Int>>) {
+        this.stock = stock
+    }
+
+    override fun onQtyChange(qty: Int) {
+        this.qty = qty
+    }
+
+    override fun onSetGameQuery(query: String) {
+        onSetGameQueryCallback(query)
+    }
+
+    override fun onSetGame(game: Game) {
+        onSetGameCallback(game)
+    }
+
+    override fun onDismiss() {
+        showGameDialog = false
+    }
+
+    // ---- Helpers for photos ----
+    fun addOrReplacePhoto(path: String, index: Int) {
+        photoCollectionUrl =
+            if (index < photoCollectionUrl.size && photoCollectionUrl[index].isNotEmpty()) {
+                photoCollectionUrl.mapIndexed { i, old -> if (i == index) path else old }
+            } else {
+                photoCollectionUrl + path
+            }
+    }
+
+    fun removePhoto(url: String) {
+        photoCollectionUrl = photoCollectionUrl.filter { it != url }
+    }
+
+    // ---- Helpers for stock ----
+    fun updateStockQuantity(game: Game, qty: Int) {
+        stock = stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+    }
+
+    fun removeFromStock(game: Game) {
+        stock = stock.filterNot { it.first.uid == game.uid }
+    }
+
+    // ---- Helpers ----
+    fun onDiscard(onBack: () -> Unit) {
+        shopName = ""
+        email = ""
+        addressText = ""
+        phone = ""
+        website = ""
+        week = emptyWeek()
+        editingDay = null
+        showHoursDialog = false
+        showGameDialog = false
+        qty = 1
+        stock = emptyList()
+        photoCollectionUrl = emptyList()
+        onSetGameQueryCallback("")
+        onBack()
+    }
+}
+
 /* ================================================================================================
  * Shared Composable Components
  * ================================================================================================ */
@@ -201,24 +339,15 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
 /**
  * Composable function representing the required information section.
  *
- * @param shopName The current value of the shop name field.
- * @param onShopName Callback function to update the shop name.
- * @param email The current value of the email field.
- * @param onEmail Callback function to update the email.
- * @param phone The current value of the phone field.
- * @param onPhone Callback function to update the phone.
- * @param link The current value of the link field.
- * @param onLink Callback function to update the link.
- * @param onPickLocation Callback function to handle location selection.
+ * @param shop The current shop state.
+ * @param actions The actions to handle form updates.
+ * @param viewModel The view model for location search.
+ * @param owner The owner account.
  */
 @Composable
 fun RequiredInfoSection(
     shop: Shop,
-    onShopName: (String) -> Unit,
-    onEmail: (String) -> Unit,
-    onPhone: (String) -> Unit,
-    onLink: (String) -> Unit,
-    onPickLocation: (Location) -> Unit,
+    actions: ShopFormActions,
     viewModel: ShopSearchViewModel,
     owner: Account
 ) {
@@ -227,14 +356,14 @@ fun RequiredInfoSection(
         label = ShopFormUi.Strings.SHOP_LABEL,
         placeholder = ShopFormUi.Strings.SHOP_PLACEHOLDER,
         value = shop.name,
-        onValueChange = onShopName)
+        onValueChange = actions::onNameChange)
   }
 
     Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS).padding(bottom = Dimensions.Padding.small)) {
         ShopLocationSearchBar(
             account = owner,
-            shop,
-            viewModel,
+            shop = shop,
+            viewModel = viewModel,
             inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
             dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
     }
@@ -251,7 +380,7 @@ fun RequiredInfoSection(
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
         leadingIcon =  { Icon(imageVector = Icons.Default.Email, tint = AppColors.neutral, contentDescription = null)},
         value = shop.email,
-        onValueChange = onEmail,
+        onValueChange = actions::onEmailChange,
         keyboardType = KeyboardType.Email)
   }
 
@@ -270,7 +399,7 @@ fun RequiredInfoSection(
                 placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
                 value = shop.phone,
                 leadingIcon = {Icon(imageVector = Icons.Default.Call, tint=AppColors.neutral, contentDescription = null)},
-                onValueChange = onPhone,
+                onValueChange = actions::onPhoneChange,
                 keyboardType = KeyboardType.Phone
             )
         }
@@ -281,7 +410,7 @@ fun RequiredInfoSection(
                 placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
                 value = shop.website,
                 leadingIcon = {Icon(imageVector = Icons.Default.Link, tint = AppColors.neutral, contentDescription = null)},
-                onValueChange = onLink,
+                onValueChange = actions::onWebsiteChange,
                 keyboardType = KeyboardType.Uri
             )
         }
@@ -293,15 +422,11 @@ fun RequiredInfoSection(
  *
  * @param show Boolean indicating whether to show the dialog.
  * @param stock List of pairs containing games and their quantities in stock.
- * @param onStockChange Callback function to update the stock list.
+ * @param state The actions to handle game picking.
  * @param gameQuery The current query string for searching games.
  * @param gameSuggestions List of game suggestions based on the current query.
  * @param isSearching Boolean indicating if a search operation is in progress.
  * @param qty The quantity of the picked game.
- * @param onQtyChange Callback function to update the quantity of the picked game.
- * @param onSetGameQuery Callback function to update the game search query.
- * @param onSetGame Callback function to set the selected game.
- * @param onDismiss Callback function to dismiss the dialog.
  */
 @Composable
 fun GameStockPicker(
@@ -309,40 +434,33 @@ fun GameStockPicker(
     shop: Shop?,
     viewModel: ShopSearchViewModel,
     gameUIState: GameUIState,
-    show: Boolean,
-    stock: List<Pair<Game, Int>>,
-    onStockChange: (List<Pair<Game, Int>>) -> Unit,
-    qty: Int,
-    onQtyChange: (Int) -> Unit,
-    onSetGameQuery: (String) -> Unit,
-    onSetGame: (Game) -> Unit,
-    onDismiss: () -> Unit
+    state: CreateShopFormState,
 ) {
-  if (!show) return
+  if (!state.showGameDialog) return
 
-  val existing = remember(stock) { stock.map { it.first.uid }.toSet() }
+  val existing = remember(state.stock) { state.stock.map { it.first.uid }.toSet() }
   Box(Modifier.testTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER)) {
     GameStockDialog(
         owner,
         shop,
         viewModel = viewModel,
         gameUIState = gameUIState,
-        onQueryChange = onSetGameQuery,
-        quantity = qty,
-        onQuantityChange = onQtyChange,
+        onQueryChange = state::onSetGameQuery,
+        quantity = state.qty,
+        onQuantityChange = state::onQtyChange,
         existingIds = existing,
         onDismiss = {
-          onDismiss()
-          onQtyChange(1)
-          onSetGameQuery("")
+          state.onDismiss()
+          state.onQtyChange(1)
+          state.onSetGameQuery("")
         },
         onSave = {
           gameUIState.fetchedGame?.let { g ->
-            onStockChange((stock + (g to qty)).distinctBy { it.first.uid })
+            state.onStockChange((state.stock + (g to state.qty)).distinctBy { it.first.uid })
           }
-          onQtyChange(1)
-          onSetGameQuery("")
-          onDismiss()
+          state.onQtyChange(1)
+          state.onSetGameQuery("")
+          state.onDismiss()
         })
   }
 }
