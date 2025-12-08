@@ -8,12 +8,16 @@ import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.*
@@ -24,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -208,67 +213,79 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
  */
 @Composable
 fun RequiredInfoSection(
-    shop: Shop?,
-    shopName: String,
+    shop: Shop,
     onShopName: (String) -> Unit,
-    email: String,
     onEmail: (String) -> Unit,
-    phone: String,
     onPhone: (String) -> Unit,
-    link: String,
     onLink: (String) -> Unit,
     onPickLocation: (Location) -> Unit,
     viewModel: ShopSearchViewModel,
     owner: Account
 ) {
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP)) {
+  Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP).padding(bottom = Dimensions.Padding.small)) {
     LabeledField(
         label = ShopFormUi.Strings.SHOP_LABEL,
         placeholder = ShopFormUi.Strings.SHOP_PLACEHOLDER,
-        value = shopName,
+        value = shop.name,
         onValueChange = onShopName)
   }
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL)) {
+
+    Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS).padding(bottom = Dimensions.Padding.small)) {
+        ShopLocationSearchBar(
+            account = owner,
+            shop,
+            viewModel,
+            inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+            dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+    }
+
+    Box(modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.small)) {
+        Text(
+            text = "Contact Info",
+            style = MaterialTheme.typography.titleMedium)
+    }
+
+  Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL).padding(bottom = Dimensions.Padding.small)) {
     LabeledField(
         label = ShopFormUi.Strings.EMAIL_LABEL,
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
-        value = email,
+        leadingIcon =  { Icon(imageVector = Icons.Default.Email, tint = AppColors.neutral, contentDescription = null)},
+        value = shop.email,
         onValueChange = onEmail,
         keyboardType = KeyboardType.Email)
   }
-  val showEmailError = email.isNotEmpty() && !isValidEmail(email)
+
+  val showEmailError = shop.email.isNotEmpty() && !isValidEmail(shop.email)
   if (showEmailError) {
     Text(
         text = ShopFormUi.Strings.ERROR_EMAIL_MSG,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall)
   }
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_PHONE)) {
-    LabeledField(
-        label = ShopFormUi.Strings.PHONE_LABEL,
-        placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
-        value = phone,
-        onValueChange = onPhone,
-        keyboardType = KeyboardType.Phone)
-  }
 
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK)) {
-    LabeledField(
-        label = ShopFormUi.Strings.LINK_LABEL,
-        placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
-        value = link,
-        onValueChange = onLink,
-        keyboardType = KeyboardType.Uri)
-  }
+    Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+        Box(Modifier.testTag(ShopFormTestTags.FIELD_PHONE).weight(1f).padding(end = Dimensions.Padding.medium)) {
+            LabeledField(
+                label = ShopFormUi.Strings.PHONE_LABEL,
+                placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
+                value = shop.phone,
+                leadingIcon = {Icon(imageVector = Icons.Default.Call, tint=AppColors.neutral, contentDescription = null)},
+                onValueChange = onPhone,
+                keyboardType = KeyboardType.Phone
+            )
+        }
 
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
-    ShopLocationSearchBar(
-        owner,
-        shop,
-        viewModel,
-        inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
-  }
+        Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK).weight(1f)) {
+            LabeledField(
+                label = ShopFormUi.Strings.LINK_LABEL,
+                placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
+                value = shop.website,
+                leadingIcon = {Icon(imageVector = Icons.Default.Link, tint = AppColors.neutral, contentDescription = null)},
+                onValueChange = onLink,
+                keyboardType = KeyboardType.Uri
+            )
+        }
+    }
 }
 
 /**

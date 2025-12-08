@@ -1142,9 +1142,7 @@ private fun LocationSearchBar(
                 Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                     .fillMaxWidth()
                     .testTag(inputFieldTestTag),
-            leadingIcon = {
-              Icon(Icons.Default.Search, contentDescription = null, tint = AppColors.neutral)
-            },
+            leadingIcon = { Icon(Icons.Default.Search, tint = AppColors.neutral, contentDescription = null) },
         )
 
         ExposedDropdownMenu(

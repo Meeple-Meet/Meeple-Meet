@@ -373,13 +373,9 @@ fun EditShopContent(
                           content = {
                             RequiredInfoSection(
                                 shop = shop,
-                                shopName = shopName,
                                 onShopName = { shopName = it },
-                                email = email,
                                 onEmail = { email = it },
-                                phone = phone,
                                 onPhone = { phone = it },
-                                link = link,
                                 onLink = { link = it },
                                 onPickLocation = { loc -> addressText = loc.name },
                                 viewModel = viewModel,
