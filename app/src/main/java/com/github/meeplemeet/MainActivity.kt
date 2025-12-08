@@ -522,8 +522,7 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.CreateShop.name) {
             CreateShopScreen(
                 owner = account!!,
-                onBack = { navigationActions.goBack() },
-                onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
+                onBack = { navigationActions.goBack() })
           }
 
           composable(MeepleMeetScreen.EditShop.name) {

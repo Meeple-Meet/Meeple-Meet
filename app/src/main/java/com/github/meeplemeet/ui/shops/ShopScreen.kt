@@ -218,7 +218,7 @@ fun ShopDetails(
               name = shop.name,
               address = shop.address.name,
               email = shop.email,
-              phone = shop.email,
+              phone = shop.phone,
               website = shop.website)
         }
 
