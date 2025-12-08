@@ -3,16 +3,22 @@
 // Docstrings were generated using copilot from Android studio
 package com.github.meeplemeet.ui.shops
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -21,6 +27,8 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
@@ -37,6 +45,7 @@ import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.shops.AddShopUi.Strings
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
@@ -92,7 +101,7 @@ private object AddShopUi {
   object Strings {
     const val REQUIREMENTS_SECTION = "Required Info"
     const val SECTION_AVAILABILITY = "Availability"
-    const val SECTION_GAMES = "Games in stock"
+    const val SECTION_GAMES = "Game Vitrine"
 
     const val BTN_ADD_GAME = "Add game"
     const val EMPTY_GAMES = "No games selected yet."
@@ -211,6 +220,7 @@ fun AddShopContent(
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var showGameDialog by remember { mutableStateOf(false) }
+    var games by remember {mutableStateOf(listOf<Pair<Game, Int>>())}
   var qty by rememberSaveable { mutableIntStateOf(1) }
   var stock by remember { mutableStateOf(initialStock) }
 
@@ -224,6 +234,20 @@ fun AddShopContent(
               hasOpeningHours
         }
       }
+
+
+    val draftShop =
+        Shop(
+            id = "",
+            owner = owner,
+            name = shopName,
+            phone = phone,
+            email = email,
+            website = link,
+            address = locationUi.selectedLocation ?: Location(),
+            openingHours = week,
+            gameCollection = games,
+            photoCollectionUrl = emptyList())
 
   // Sync addressText with locationUi.locationQuery when typing
   LaunchedEffect(locationUi.locationQuery) {
@@ -333,14 +357,10 @@ fun AddShopContent(
                           initiallyExpanded = true,
                           content = {
                             RequiredInfoSection(
-                                shop = null,
-                                shopName = shopName,
+                                shop = draftShop,
                                 onShopName = { shopName = it },
-                                email = email,
                                 onEmail = { email = it },
-                                phone = phone,
                                 onPhone = { phone = it },
-                                link = link,
                                 onLink = { link = it },
                                 onPickLocation = { loc -> addressText = loc.name },
                                 viewModel = viewModel,
@@ -367,8 +387,32 @@ fun AddShopContent(
                     item {
                       CollapsibleSection(
                           title = Strings.SECTION_GAMES,
-                          initiallyExpanded = false,
+                          initiallyExpanded = draftShop.gameCollection.isEmpty(),
                           content = {
+                                  Button(
+                                      shape = RoundedCornerShape(4.dp),
+                                      colors = ButtonColors(
+                                          containerColor = AppColors.secondary,
+                                          disabledContainerColor = AppColors.secondary,
+                                          contentColor = AppColors.focus,
+                                          disabledContentColor = AppColors.focus
+                                      ),
+                                      onClick = {
+                                          onSetGameQuery("")
+                                          showGameDialog = true
+                                      },
+                                      modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).fillMaxWidth()
+                                  ) {
+                                      Icon(Icons.Filled.Add, contentDescription = null)
+                                      Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
+                                      Text(
+                                          Strings.BTN_ADD_GAME,
+                                          modifier =
+                                              Modifier.testTag(
+                                                  CreateShopScreenTestTags.GAMES_ADD_LABEL
+                                              )
+                                      )
+                              }
                             GamesSection(
                                 stock = stock,
                                 onQuantityChange = { game, newQuantity ->
@@ -399,6 +443,7 @@ fun AddShopContent(
       week = week,
       onWeekChange = { week = it },
       onDismiss = { showHoursDialog = false })
+
 
   GameStockPicker(
       owner = owner,
