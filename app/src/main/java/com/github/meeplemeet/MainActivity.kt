@@ -565,6 +565,8 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.CreateShop.name) {
             CreateShopScreen(
                 owner = account!!,
+                online = online,
+                userLocation = userLocation,
                 onBack = { navigationActions.goBack() })
           }
 
@@ -574,6 +576,7 @@ fun MeepleMeetApp(
                   owner = account!!,
                   shop = shop!!,
                   onBack = { navigationActions.goBack() },
+                  online = online,
                   onSaved = { navigationActions.goBack() })
             } else {
               LoadingScreen()

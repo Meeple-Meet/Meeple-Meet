@@ -31,6 +31,7 @@ import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.CreateShopFormState
 import com.github.meeplemeet.ui.components.EditableGameItem
+import com.github.meeplemeet.ui.components.EditableImageCarousel
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
@@ -103,7 +104,7 @@ private object AddShopUi {
     }
 }
 
-const val maxNumberOfImages = 10
+const val IMAGE_COUNT = 10
 
 // Callback type for shop creation, kept explicit but readable.
 private typealias CreateShopHandler = suspend (
@@ -131,31 +132,25 @@ private typealias CreateShopHandler = suspend (
 fun CreateShopScreen(
     owner: Account,
     onBack: () -> Unit,
+    online: Boolean,
+    userLocation: Location?,
     viewModel: CreateShopViewModel = viewModel()
 ) {
     val gameUi by viewModel.gameUIState.collectAsState()
     val locationUi by viewModel.locationUIState.collectAsState()
 
-    val createShopHandler: CreateShopHandler = { name, email, address, week, stock ->
-        val shop =
-            viewModel.createShop(
-                owner = owner,
-                name = name,
-                phone = "",
-                email = email,
-                website = "",
-                address = address,
-                openingHours = week,
-                gameCollection = stock
-            )
-        shop.id
+    // Set default location when offline
+    LaunchedEffect(online, userLocation) {
+        if (!online && userLocation != null && locationUi.selectedLocation == null) {
+            viewModel.setLocation(userLocation)
+        }
     }
 
     AddShopContent(
         onBack = onBack,
-        onCreate = createShopHandler,
         gameUi = gameUi,
         locationUi = locationUi,
+        online = online,
         viewModel = viewModel,
         owner = owner
     )
@@ -185,9 +180,9 @@ fun CreateShopScreen(
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
-    onCreate: CreateShopHandler,
     gameUi: GameUIState,
     locationUi: LocationUIState,
+    online: Boolean,
     initialStock: List<Pair<Game, Int>> = emptyList(),
     viewModel: CreateShopViewModel,
     owner: Account
@@ -203,9 +198,11 @@ fun AddShopContent(
 
     // Sync addressText with locationUi.locationQuery when typing
     LaunchedEffect(locationUi.locationQuery) {
-        val query = locationUi.locationQuery
-        if (query.isNotEmpty() && state.addressText != query) {
-            state.addressText = query
+        val sel = locationUi.selectedLocation
+        if (sel != null && locationUi.locationQuery != sel.name) {
+            val typed = locationUi.locationQuery
+            viewModel.clearLocationSearch()
+            if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
         }
     }
 
@@ -264,7 +261,6 @@ fun AddShopContent(
                                         openingHours = state.week,
                                         gameCollection = state.stock,
                                         photoCollectionUrl = state.photoCollectionUrl
-
                                     )
                                     onBack()
                         },
@@ -284,17 +280,27 @@ fun AddShopContent(
                         vertical = AddShopUi.Dimensions.contentVPadding
                     )
             ) {
-                item { ShopImageSection(state) }
+                item {     if (online) {
+                    EditableImageCarousel(
+                        photoCollectionUrl = state.photoCollectionUrl,
+                        spacesCount = IMAGE_COUNT,
+                        setPhotoCollectionUrl = { state.photoCollectionUrl = it })
+                } else
+                    ImageCarousel(
+                        photoCollectionUrl = state.photoCollectionUrl,
+                        maxNumberOfImages = IMAGE_COUNT,
+                        editable = false)}
                 item {
                     ShopInfoSection(
                         state = state,
                         viewModel = viewModel,
                         owner = owner,
+                        online = online,
                         locationUi = locationUi
                     )
                 }
                 item { ShopAvailabilitySection(state) }
-                item { ShopGamesSection(state) }
+                item { ShopGamesSection(state, online) }
                 item {
                     Spacer(
                         Modifier
@@ -327,20 +333,10 @@ fun AddShopContent(
  * ================================================================================================ */
 
 @Composable
-private fun ShopImageSection(state: CreateShopFormState) {
-    ImageCarousel(
-        photoCollectionUrl = state.photoCollectionUrl,
-        maxNumberOfImages = maxNumberOfImages,
-        onAdd = { path, index -> state.addOrReplacePhoto(path, index) },
-        onRemove = { url -> state.removePhoto(url) },
-        editable = true
-    )
-}
-
-@Composable
 private fun ShopInfoSection(
     state: CreateShopFormState,
     viewModel: CreateShopViewModel,
+    online: Boolean,
     owner: Account,
     locationUi: LocationUIState
 ) {
@@ -367,6 +363,7 @@ private fun ShopInfoSection(
                 shop = draftShop,
                 actions = state,
                 viewModel = viewModel,
+                online = online,
                 owner = owner
             )
         },
@@ -393,11 +390,12 @@ private fun ShopAvailabilitySection(state: CreateShopFormState) {
 }
 
 @Composable
-private fun ShopGamesSection(state: CreateShopFormState) {
+private fun ShopGamesSection(state: CreateShopFormState, online: Boolean) {
     CollapsibleSection(
         title = AddShopUi.Strings.SECTION_GAMES,
         initiallyExpanded = state.stock.isEmpty(),
         content = {
+            if (online) {
             Button(
                 shape = RoundedCornerShape(4.dp),
                 colors =
@@ -421,7 +419,7 @@ private fun ShopGamesSection(state: CreateShopFormState) {
                     AddShopUi.Strings.BTN_ADD_GAME,
                     modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_LABEL)
                 )
-            }
+            } }
 
             GamesSection(
                 stock = state.stock,
