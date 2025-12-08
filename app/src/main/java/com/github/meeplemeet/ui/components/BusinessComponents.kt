@@ -1277,7 +1277,6 @@ fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
 fun CollapsibleSection(
     title: String,
     initiallyExpanded: Boolean = true,
-    header: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
     testTag: String? = null,
     expanded: Boolean? = null,
@@ -1309,8 +1308,6 @@ fun CollapsibleSection(
                         if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TITLE_SUFFIX)
                         else m
                     })
-
-            header?.invoke(this)
 
             IconButton(
                 onClick = { setExpanded(!isExpanded) },
