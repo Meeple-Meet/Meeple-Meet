@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,9 +17,13 @@ import kotlinx.coroutines.launch
  *
  * @property repository The repository used for shop operations.
  */
-class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ShopSearchViewModel() {
+class ShopViewModel(
+    private val repository: ShopRepository = RepositoryProvider.shops,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
+) : ShopSearchViewModel() {
   private val _shop = MutableStateFlow<Shop?>(null)
+  private val _photos = MutableStateFlow<List<ByteArray>>(emptyList())
+  val photos: StateFlow<List<ByteArray>> = _photos
 
   /**
    * StateFlow exposing the currently loaded shop.
@@ -55,12 +60,17 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
    * @param id The unique identifier of the shop to retrieve.
    * @throws IllegalArgumentException if the shop ID is blank.
    */
-  fun getShop(id: String) {
+  fun getShop(id: String, context: android.content.Context) {
     if (id.isBlank()) throw IllegalArgumentException("Shop ID cannot be blank")
 
     currentShopId = id
 
-    viewModelScope.launch { OfflineModeManager.loadShop(id) { shop -> _shop.value = shop } }
+    viewModelScope.launch {
+        OfflineModeManager.loadShop(id) { shop -> _shop.value = shop }
+        val count = _shop.value!!.photoCollectionUrl.size
+        val images = imageRepository.loadShopPhotos(context = context, shopId = id, count = count)
+        _photos.value = images
+    }
   }
 
   /**

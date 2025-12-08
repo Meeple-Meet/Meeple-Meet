@@ -1,5 +1,6 @@
 package com.github.meeplemeet.integration
 
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
@@ -614,6 +615,7 @@ class FirestoreShopTests : FirestoreTests() {
   fun createShopViewModelThrowsWhenNameIsBlank() {
     runBlocking {
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "",
           email = "test@test.com",
@@ -626,6 +628,7 @@ class FirestoreShopTests : FirestoreTests() {
   fun createShopViewModelThrowsWhenNameIsOnlyWhitespace() {
     runBlocking {
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "   ",
           address = testLocation1,
@@ -644,6 +647,7 @@ class FirestoreShopTests : FirestoreTests() {
               OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))))
 
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "Test Shop",
           address = testLocation1,
@@ -668,6 +672,7 @@ class FirestoreShopTests : FirestoreTests() {
               OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "18:00"))))
 
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "Test Shop",
           address = testLocation1,
@@ -690,6 +695,7 @@ class FirestoreShopTests : FirestoreTests() {
               OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))))
 
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "Test Shop",
           address = testLocation1,
@@ -702,6 +708,7 @@ class FirestoreShopTests : FirestoreTests() {
   fun createShopViewModelThrowsWhenAddressIsDefault() {
     runBlocking {
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "Test Shop",
           address = Location(), // Default empty location
@@ -714,6 +721,7 @@ class FirestoreShopTests : FirestoreTests() {
   fun createShopViewModelThrowsWhenEmptyOpeningHours() {
     runBlocking {
       createShopViewModel.createShop(
+          context = InstrumentationRegistry.getInstrumentation().targetContext,
           owner = testAccount1,
           name = "Test Shop",
           address = testLocation1,
@@ -735,6 +743,7 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
 
     createShopViewModel.createShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
         owner = testAccount1,
         name = "Valid Shop",
         phone = "+41 21 123 4567",
@@ -775,6 +784,7 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
 
     createShopViewModel.createShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
         owner = testAccount1,
         name = "Minimal Shop",
         address = testLocation1,
@@ -807,12 +817,14 @@ class FirestoreShopTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun shopViewModelThrowsWhenShopIdIsBlank() {
-    shopViewModel.getShop("")
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = "")
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun shopViewModelThrowsWhenShopIdIsOnlyWhitespace() {
-    shopViewModel.getShop("   ")
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = "   ")
   }
 
   @Test
@@ -833,7 +845,8 @@ class FirestoreShopTests : FirestoreTests() {
                     GameItem(testGame2.uid, testGame2.name, 3)))
 
     // Load the shop through ViewModel
-    shopViewModel.getShop(shop.id)
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop.id)
 
     val loadedShop =
         kotlinx.coroutines.withTimeout(5000) {
@@ -865,7 +878,8 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Load the shop through ViewModel
-    shopViewModel.getShop(shop.id)
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop.id)
 
     // Give it time to complete the async operation
     delay(200)
@@ -900,13 +914,15 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Load first shop
-    shopViewModel.getShop(shop1.id)
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop1.id)
     delay(100)
 
     assertEquals("First Shop", shopViewModel.shop.value?.name)
 
     // Load second shop
-    shopViewModel.getShop(shop2.id)
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop2.id)
     delay(100)
 
     assertEquals("Second Shop", shopViewModel.shop.value?.name)
@@ -927,7 +943,8 @@ class FirestoreShopTests : FirestoreTests() {
                     GameItem(testGame2.uid, testGame2.name, 5)))
 
     // Load the shop through ViewModel
-    shopViewModel.getShop(shop.id)
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop.id)
     delay(100)
 
     // Verify game collection is loaded correctly
@@ -957,7 +974,8 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Load the shop through ViewModel
-    shopViewModel.getShop(shop.id)
+    shopViewModel.getShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop.id)
     delay(100)
 
     // Verify owner data is loaded correctly
@@ -983,7 +1001,11 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Try to update as testAccount2 (non-owner)
-    editShopViewModel.updateShop(shop, testAccount2, name = "Hacked Shop")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount2,
+        name = "Hacked Shop")
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -1009,7 +1031,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, name = "")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        name = "")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -1021,7 +1047,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, name = "   ")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        name = "   ")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -1039,7 +1069,11 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
             OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))))
 
-    editShopViewModel.updateShop(shop, testAccount1, openingHours = incompleteHours)
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        openingHours = incompleteHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -1062,7 +1096,11 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))),
             OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "18:00"))))
 
-    editShopViewModel.updateShop(shop, testAccount1, openingHours = tooManyHours)
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        openingHours = tooManyHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -1074,7 +1112,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, address = Location())
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        address = Location())
   }
 
   @Test
@@ -1086,7 +1128,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, name = "New Name")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        name = "New Name")
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1103,7 +1149,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, phone = "+41 99 999 9999")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        phone = "+41 99 999 9999")
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1120,7 +1170,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, email = "new@shop.com")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        email = "new@shop.com")
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1137,7 +1191,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, website = "https://new.com")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        website = "https://new.com")
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1153,7 +1211,11 @@ class FirestoreShopTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editShopViewModel.updateShop(shop, testAccount1, address = testLocation2)
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        address = testLocation2)
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1179,7 +1241,11 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 6, hours = listOf(TimeSlot("11:00", "18:00"))),
             OpeningHours(day = 7, hours = listOf(TimeSlot("11:00", "18:00"))))
 
-    editShopViewModel.updateShop(shop, testAccount1, openingHours = newOpeningHours)
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        openingHours = newOpeningHours)
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1200,7 +1266,11 @@ class FirestoreShopTests : FirestoreTests() {
     val newGameCollection =
         listOf(
             GameItem(testGame2.uid, testGame2.name, 10), GameItem(testGame1.uid, testGame1.name, 3))
-    editShopViewModel.updateShop(shop, testAccount1, gameCollection = newGameCollection)
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        gameCollection = newGameCollection)
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
@@ -1232,6 +1302,7 @@ class FirestoreShopTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "22:00"))))
 
     editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
         shop,
         testAccount1,
         name = "New Shop",
@@ -1286,7 +1357,11 @@ class FirestoreShopTests : FirestoreTests() {
             gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 5)))
 
     // Update only the phone
-    editShopViewModel.updateShop(shop, testAccount1, phone = "+41 99 999 9999")
+    editShopViewModel.updateShop(
+        context = InstrumentationRegistry.getInstrumentation().targetContext,
+        shop,
+        testAccount1,
+        phone = "+41 99 999 9999")
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)

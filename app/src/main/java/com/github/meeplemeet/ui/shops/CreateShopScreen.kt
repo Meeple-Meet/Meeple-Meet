@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -128,6 +129,7 @@ fun CreateShopScreen(
 ) {
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   // Set default location when offline
   LaunchedEffect(online, userLocation) {
@@ -138,6 +140,22 @@ fun CreateShopScreen(
 
   AddShopContent(
       onBack = onBack,
+      onCreated = onCreated,
+      onCreate = { name, email, address, week, stock, photoUrls ->
+        val shop =
+            viewModel.createShop(
+                context = context,
+                owner = owner,
+                name = name,
+                phone = "",
+                email = email,
+                website = "",
+                address = address,
+                openingHours = week,
+                gameCollection = stock,
+                photoCollectionUrl = photoUrls)
+        shop.id
+      },
       gameUi = gameUi,
       locationUi = locationUi,
       online = online,
@@ -164,6 +182,15 @@ fun CreateShopScreen(
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
+    onCreated: (String) -> Unit,
+    onCreate:
+        suspend (
+            name: String,
+            email: String,
+            address: Location,
+            week: List<OpeningHours>,
+            stock: List<Pair<Game, Int>>,
+            photoUrls: List<String>) -> String,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     online: Boolean,

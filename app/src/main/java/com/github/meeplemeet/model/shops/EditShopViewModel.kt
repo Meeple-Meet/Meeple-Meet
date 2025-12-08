@@ -1,16 +1,22 @@
 package com.github.meeplemeet.model.shops
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for editing and deleting existing shops.
@@ -23,6 +29,7 @@ import kotlinx.coroutines.launch
  */
 class EditShopViewModel(
     private val shopRepository: ShopRepository = RepositoryProvider.shops,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : ShopSearchViewModel() {
 
   private val _currentShop = MutableStateFlow<Shop?>(null)
@@ -74,6 +81,7 @@ class EditShopViewModel(
    *   entries are provided, or if the address is not valid.
    */
   fun updateShop(
+      context: Context,
       shop: Shop,
       requester: Account,
       owner: Account? = null,
@@ -103,7 +111,7 @@ class EditShopViewModel(
       val isOnline = OfflineModeManager.hasInternetConnection.first()
 
       if (isOnline) {
-        handleOnlineUpdate(shop, params)
+        handleOnlineUpdate(shop, params, context)
       } else {
         handleOfflineUpdate(shop, params)
       }
@@ -134,7 +142,42 @@ class EditShopViewModel(
   }
 
   /** Handles online update by persisting to repository and updating cache. */
-  private suspend fun handleOnlineUpdate(shop: Shop, params: ShopUpdateParams) {
+  private suspend fun handleOnlineUpdate(shop: Shop, params: ShopUpdateParams, context: Context) {
+      // Determine which photos are new and which should be deleted
+      val oldUrls = shop.photoCollectionUrl
+      val newLocalPaths = params.photoCollectionUrl ?: emptyList()
+
+      // Delete old photos that were removed
+      val urlsToDelete = oldUrls.filter { url -> !newLocalPaths.contains(url) }
+      if (urlsToDelete.isNotEmpty()) {
+          try {
+              withContext(NonCancellable) {
+                  imageRepository.deleteShopPhotos(context, shop.id, *urlsToDelete.toTypedArray())
+              }
+          } catch (e: Exception) {
+              Log.e("upload", "Failed to delete old shop photos for ${shop.id}: ${e.message}", e)
+          }
+      }
+
+      // Upload new local photos (those not already existing URLs)
+      val urlsToUpload = newLocalPaths.filter { path -> !oldUrls.contains(path) }
+      val uploadedUrls =
+          if (urlsToUpload.isNotEmpty()) {
+              try {
+                  withContext(NonCancellable) {
+                      imageRepository.saveShopPhotos(context, shop.id, *urlsToUpload.toTypedArray())
+                  }
+              } catch (e: Exception) {
+                  Log.e("upload", "Image upload failed for shop ${shop.id}: ${e.message}", e)
+                  emptyList<String>()
+              }
+          } else {
+              emptyList()
+          }
+
+      // Combine kept old URLs with newly uploaded ones
+      val finalPhotoUrls = oldUrls.filter { newLocalPaths.contains(it) } + uploadedUrls
+
     shopRepository.updateShop(
         shop.id,
         params.owner?.uid,
@@ -145,7 +188,7 @@ class EditShopViewModel(
         params.address,
         params.openingHours,
         params.gameCollection,
-        params.photoCollectionUrl)
+        finalPhotoUrls)
 
     val refreshed = shopRepository.getShopSafe(shop.id)
 

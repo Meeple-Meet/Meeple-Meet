@@ -78,7 +78,6 @@ class CreateSpaceRenterViewModel(
     viewModelScope.launch {
         val isOnline = OfflineModeManager.hasInternetConnection.value
 
-<<<<<<< HEAD
         if (isOnline) {
             try {
                 val created =
@@ -94,25 +93,6 @@ class CreateSpaceRenterViewModel(
                         emptyList()
                     )
 
-                val uploadedUrls =
-                    if (photoCollectionUrl.isNotEmpty()) {
-                        try {
-                            // Upload photos, but don't let a failure bubble up and crash the VM/UI.
-                            imageRepository.saveSpaceRenterPhotos(
-                                context, created.id, *photoCollectionUrl.toTypedArray()
-                            )
-                        } catch (e: Exception) {
-                            // Log and continue with empty list so the renter exists even if uploads fail.
-                            Log.d(
-                                "upload",
-                                "Image upload failed for space renter ${created.id}: ${e.message}"
-                            )
-                            emptyList<String>()
-                        }
-                    } else {
-                        emptyList()
-                    }
-=======
         val uploadedUrls =
             if (photoCollectionUrl.isNotEmpty()) {
               try {
@@ -130,7 +110,6 @@ class CreateSpaceRenterViewModel(
             } else {
               emptyList()
             }
->>>>>>> d69e185d (fix(CreateSpaceRenter): fix throw error even if stored in firebase succefully)
 
         // Update the document with Firebase Storage download URLs
         if (uploadedUrls.isNotEmpty()) {
