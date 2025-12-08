@@ -23,8 +23,10 @@ import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopFormTestTags
+import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.ui.shops.EditShopScreenTestTags
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -37,6 +39,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -194,8 +197,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // Disable bottom bar hiding to ensure ActionBar is always visible in tests
     UiBehaviorConfig.hideBottomBarWhenInputFocused = false
 
-    // Load the shop into the ViewModel
-    editShopViewModel.setShop(testShop)
+    // Load the shop into the ViewModel using the new initialize() method
+    editShopViewModel.initialize(testShop)
 
     val currentShopState = mutableStateOf(testShop)
 
@@ -310,9 +313,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     checkpoint("editShopScreen_saveChanges_persistsToFirestore") {
       runBlocking {
-        // Reset to initial shop state for this test
+        // Reset to initial shop state for this test using initialize()
         currentShopState.value = testShop
-        editShopViewModel.setShop(testShop)
+        editShopViewModel.initialize(testShop)
         composeTestRule.waitForIdle()
 
         val newName = "Board Game Paradise · Edited"
@@ -482,9 +485,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     }
 
     checkpoint("openingHoursDialog_showsValidationErrorOnOverlap") {
-      // Reset to test shop state
+      // Reset to test shop state using initialize()
       currentShopState.value = testShop
-      editShopViewModel.setShop(testShop)
+      editShopViewModel.initialize(testShop)
       composeTestRule.waitForIdle()
 
       expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
@@ -535,9 +538,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     }
 
     checkpoint("saveButton_disabledWhenNoOpeningHours") {
-      // Reset to test shop state
+      // Reset to test shop state using initialize()
       currentShopState.value = testShop
-      editShopViewModel.setShop(testShop)
+      editShopViewModel.initialize(testShop)
       composeTestRule.waitForIdle()
 
       expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
@@ -588,9 +591,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             .await()
       }
 
-      // Reset to test shop state
+      // Reset to test shop state using initialize()
       currentShopState.value = testShop
-      editShopViewModel.setShop(testShop)
+      editShopViewModel.initialize(testShop)
       composeTestRule.waitForIdle()
 
       // Open Games section and click "Add game"
@@ -652,5 +655,35 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Reset config to default for other tests
     UiBehaviorConfig.hideBottomBarWhenInputFocused = true
+  }
+
+  @Ignore
+  @Test
+  fun editShop_offlineUI_disablesFeatures() {
+    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+
+    // Load the shop into the ViewModel
+    editShopViewModel.initialize(testShop)
+
+    composeTestRule.setContent {
+      AppTheme {
+        ShopDetailsScreen(
+            owner = testOwner,
+            onBack = {},
+            onSaved = {},
+            shop = testShop,
+            viewModel = editShopViewModel,
+        )
+      }
+    }
+
+    // Verify Image Carousel is not editable (Add button missing)
+    composeTestRule.onNodeWithTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
+
+    scrollListToTag(
+        CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
+
+    composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
 }

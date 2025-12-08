@@ -19,6 +19,7 @@ import java.util.*
 /** Constants shared across discussion screens */
 object DiscussionCommons {
   const val YOU_SENDER_NAME = "You"
+  const val UNKNOWN_SENDER_NAME = "Unknown"
   const val TIME_FORMAT = "HH:mm"
   const val NO_MESSAGES_DEFAULT_TEXT = "(No messages yet)"
 }

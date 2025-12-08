@@ -59,10 +59,10 @@ import kotlinx.serialization.Serializable
  * @see DiscussionRepository.createPoll for creating poll messages
  */
 data class Message(
-    val uid: String,
-    val senderId: String,
+    val uid: String = "",
+    val senderId: String = "",
     val content: String,
-    val createdAt: Timestamp,
+    val createdAt: Timestamp = Timestamp.now(),
     val poll: Poll? = null,
     val photoUrl: String? = null,
     val edited: Boolean = false,

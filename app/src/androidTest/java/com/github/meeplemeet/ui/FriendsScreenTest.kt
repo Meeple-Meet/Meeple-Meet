@@ -2,6 +2,7 @@
 // and finally completed by copilot. Comments were done by ChatGPT-5
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -18,6 +19,8 @@ import androidx.compose.ui.test.performTextInput
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -38,6 +41,7 @@ class FriendsScreenTest : FirestoreTests() {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var viewModel: FriendsScreenViewModel
+  private lateinit var navViewModel: NavigationViewModel
 
   private lateinit var currentUser: Account
   private lateinit var friend1: Account
@@ -55,6 +59,7 @@ class FriendsScreenTest : FirestoreTests() {
   @Before
   fun setup() {
     viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
+    navViewModel = NavigationViewModel(accountRepository)
 
     runBlocking {
       val suffix = System.currentTimeMillis()
@@ -192,12 +197,14 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_smoke_showsTopBarSearchAndFriendList() {
     compose.setContent {
-      AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsScreen(
-            account = currentUser,
-            viewModel = viewModel,
-            onBack = {},
-        )
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme(themeMode = ThemeMode.DARK) {
+          FriendsScreen(
+              account = currentUser,
+              viewModel = viewModel,
+              onBack = {},
+          )
+        }
       }
     }
 
@@ -363,12 +370,14 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_search_showsDropdownAndHidesFriendsSection() {
     compose.setContent {
-      AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsScreen(
-            account = currentUser,
-            viewModel = viewModel,
-            onBack = {},
-        )
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme(themeMode = ThemeMode.DARK) {
+          FriendsScreen(
+              account = currentUser,
+              viewModel = viewModel,
+              onBack = {},
+          )
+        }
       }
     }
 
@@ -514,12 +523,14 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_removeFriend_updatesRepository() {
     compose.setContent {
-      AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsScreen(
-            account = currentUser,
-            viewModel = viewModel,
-            onBack = {},
-        )
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme(themeMode = ThemeMode.DARK) {
+          FriendsScreen(
+              account = currentUser,
+              viewModel = viewModel,
+              onBack = {},
+          )
+        }
       }
     }
 
@@ -582,14 +593,16 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_blockFromSearch_updatesRepository() {
     compose.setContent {
-      AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsScreen(
-            account =
-                currentUser.copy( // ensure we start without relationship to stranger
-                    relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
-            viewModel = viewModel,
-            onBack = {},
-        )
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme(themeMode = ThemeMode.DARK) {
+          FriendsScreen(
+              account =
+                  currentUser.copy( // ensure we start without relationship to stranger
+                      relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
+              viewModel = viewModel,
+              onBack = {},
+          )
+        }
       }
     }
 
@@ -644,12 +657,14 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_unblockFromSearch_updatesRepository() {
     // currentUser already has blockedUser as BLOCKED in setup()
     compose.setContent {
-      AppTheme(themeMode = ThemeMode.DARK) {
-        FriendsScreen(
-            account = currentUser,
-            viewModel = viewModel,
-            onBack = {},
-        )
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme(themeMode = ThemeMode.DARK) {
+          FriendsScreen(
+              account = currentUser,
+              viewModel = viewModel,
+              onBack = {},
+          )
+        }
       }
     }
 

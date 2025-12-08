@@ -190,6 +190,7 @@ private fun handleDecimalFocusChange(
 @Composable
 fun SpaceRenterRequiredInfoSection(
     spaceRenter: SpaceRenter?,
+    online: Boolean,
     onSpaceName: (String) -> Unit,
     onEmail: (String) -> Unit,
     onPhone: (String) -> Unit,
@@ -256,6 +257,7 @@ fun SpaceRenterRequiredInfoSection(
         account = owner,
         spaceRenter = spaceRenter,
         viewModel = viewModel,
+        enabled = online,
         inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
         dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
   }

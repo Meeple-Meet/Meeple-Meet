@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -66,6 +67,7 @@ import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.discussions.CharacterCounter
+import com.github.meeplemeet.ui.discussions.ProfilePicture
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import com.google.firebase.Timestamp
@@ -223,6 +225,7 @@ fun PostScreen(
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
 
   var topComment by rememberSaveable { mutableStateOf("") }
@@ -281,7 +284,9 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    accountViewModel.getAccounts(toFetch) { it.forEach { acc -> userCache[acc.uid] = acc } }
+    accountViewModel.getAccounts(toFetch, context) {
+      it.forEach { acc -> if (acc != null) userCache[acc.uid] = acc }
+    }
   }
 
   Scaffold(
@@ -756,12 +761,11 @@ private fun PostHeader(post: Post, author: Account?) {
       modifier = Modifier.fillMaxWidth().testTag(PostTags.POST_HEADER),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-        Box(
-            modifier =
-                Modifier.size(Dimensions.AvatarSize.small)
-                    .clip(CircleShape)
-                    .background(MessagingColors.redditOrange)
-                    .clearAndSetSemantics { testTag = PostTags.POST_AVATAR })
+        ProfilePicture(
+            profilePictureUrl = author?.photoUrl,
+            size = Dimensions.AvatarSize.small,
+            backgroundColor = MessagingColors.redditOrange,
+            modifier = Modifier.clearAndSetSemantics { testTag = PostTags.POST_AVATAR })
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
@@ -1046,12 +1050,11 @@ private fun CommentItem(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-          Box(
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.tiny)
-                      .clip(CircleShape)
-                      .background(MessagingColors.redditOrange)
-                      .clearAndSetSemantics {})
+          ProfilePicture(
+              profilePictureUrl = author?.photoUrl,
+              size = Dimensions.AvatarSize.tiny,
+              backgroundColor = MessagingColors.redditOrange,
+              modifier = Modifier.clearAndSetSemantics {})
           Text(
               text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
               style = MaterialTheme.typography.labelMedium,

@@ -134,7 +134,12 @@ class CreateSpaceRenterScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme {
         CreateSpaceRenterScreen(
-            owner = owner, onBack = { backCalled = true }, onCreated = {}, viewModel = vm)
+            owner = owner,
+            online = true,
+            userLocation = null,
+            onBack = { backCalled = true },
+            onCreated = {},
+            viewModel = vm)
       }
     }
 

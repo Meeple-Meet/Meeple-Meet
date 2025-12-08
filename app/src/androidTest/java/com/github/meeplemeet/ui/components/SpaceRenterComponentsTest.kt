@@ -223,6 +223,7 @@ class SpaceRenterComponentsTest : FirestoreTests() {
 
       SpaceRenterRequiredInfoSection(
           spaceRenter = renter,
+          online = true,
           onSpaceName = { renter = renter.copy(name = it) },
           onEmail = { renter = renter.copy(email = it) },
           // test wants digits-only behavior -> filter in the callback
