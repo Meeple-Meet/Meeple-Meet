@@ -5,8 +5,6 @@
 package com.github.meeplemeet.ui.components
 
 import android.util.Patterns
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,15 +14,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -275,150 +270,6 @@ fun RequiredInfoSection(
   }
 }
 
-/**
- * Composable function representing the availability section.
- *
- * @param week List of opening hours for each day of the week.
- * @param onEdit Callback function to handle editing of opening hours for a specific day.
- */
-@Composable
-fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
-  Column(Modifier.testTag(ShopFormTestTags.AVAILABILITY_LIST)) {
-    week.forEach { oh ->
-      val day = oh.day
-      DayRow(
-          dayName = ShopFormUi.dayNames[day], value = humanize(oh.hours), onEdit = { onEdit(day) })
-      HorizontalDivider(
-          modifier = Modifier.testTag(ShopFormTestTags.AVAILABILITY_DIVIDER_PREFIX + day),
-          thickness = Dimensions.DividerThickness.thin)
-    }
-  }
-  Spacer(Modifier.height(Dimensions.Spacing.small))
-}
-
-/**
- * Composable function representing a collapsible section with a title, optional header, and
- * content.
- *
- * @param title The title of the section.
- * @param initiallyExpanded Boolean indicating whether the section is initially expanded.
- * @param header Optional composable function for the header content.
- * @param content Composable function for the main content of the section.
- * @param testTag Optional test tag for the section.
- */
-@Composable
-fun CollapsibleSection(
-    title: String,
-    initiallyExpanded: Boolean = true,
-    header: (@Composable RowScope.() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
-    testTag: String? = null,
-    expanded: Boolean? = null,
-    onExpandedChange: ((Boolean) -> Unit)? = null,
-) {
-  val (isExpanded, setExpanded) =
-      if (expanded != null && onExpandedChange != null) {
-        expanded to onExpandedChange
-      } else {
-        var localExpanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
-        localExpanded to { v: Boolean -> localExpanded = v }
-      }
-
-  val arrowRotation by
-      animateFloatAsState(
-          targetValue = if (isExpanded) Dimensions.Angles.expanded else Dimensions.Angles.collapsed,
-          label = "arrow")
-
-  Column(Modifier.fillMaxWidth()) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth().padding(top = Dimensions.Padding.medium).let { m ->
-              if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_HEADER_SUFFIX)
-              else m
-            },
-        verticalAlignment = Alignment.CenterVertically) {
-          Text(
-              text = title,
-              style = MaterialTheme.typography.titleMedium,
-              modifier =
-                  Modifier.weight(1f).let { m ->
-                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TITLE_SUFFIX)
-                    else m
-                  })
-
-          header?.invoke(this)
-
-          IconButton(
-              onClick = { setExpanded(!isExpanded) },
-              modifier =
-                  Modifier.let { m ->
-                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX)
-                    else m
-                  }) {
-                Icon(
-                    Icons.Filled.ExpandMore,
-                    contentDescription =
-                        if (isExpanded) ShopFormUi.Strings.COLLAPSE else ShopFormUi.Strings.EXPAND,
-                    modifier = Modifier.rotate(arrowRotation))
-              }
-        }
-
-    HorizontalDivider(
-        thickness = Dimensions.DividerThickness.standard,
-        color = MaterialTheme.colorScheme.outlineVariant,
-        modifier =
-            Modifier.padding(bottom = Dimensions.Spacing.large).let { m ->
-              if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_DIVIDER_SUFFIX)
-              else m
-            })
-
-    AnimatedVisibility(visible = isExpanded) {
-      Column(
-          Modifier.padding(top = Dimensions.Spacing.none).let { m ->
-            if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
-          },
-          content = content)
-    }
-  }
-}
-
-/**
- * Composable function representing the opening hours editor dialog.
- *
- * @param show Boolean indicating whether to show the dialog.
- * @param day The day of the week being edited.
- * @param week List of opening hours for each day of the week.
- * @param onWeekChange Callback function to update the opening hours for the week.
- * @param onDismiss Callback function to dismiss the dialog.
- */
-@Composable
-fun OpeningHoursEditor(
-    show: Boolean,
-    day: Int?,
-    week: List<OpeningHours>,
-    onWeekChange: (List<OpeningHours>) -> Unit,
-    onDismiss: () -> Unit
-) {
-  if (!show || day == null) return
-  Box(Modifier.testTag(ShopFormTestTags.OPENING_HOURS_DIALOG_WRAPPER)) {
-    OpeningHoursDialog(
-        initialSelectedDays = setOf(day),
-        current = week[day],
-        onDismiss = onDismiss,
-        onSave = { selectedDays, closed, open24, intervals ->
-          val encoded: List<TimeSlot> =
-              when {
-                closed -> emptyList()
-                open24 -> listOf(TimeSlot(TimeUi.OPEN24_START, TimeUi.OPEN24_END))
-                else -> intervals.map { TimeSlot(it.first.hhmm(), it.second.hhmm()) }
-              }
-          val copy = week.toMutableList()
-          selectedDays.forEach { d -> copy[d] = OpeningHours(day = d, hours = encoded) }
-          onWeekChange(copy)
-          onDismiss()
-        })
-  }
-}
 
 /**
  * Composable function representing the game stock picker dialog.
