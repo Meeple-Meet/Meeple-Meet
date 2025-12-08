@@ -39,6 +39,7 @@ import com.github.meeplemeet.ui.components.RequiredInfoSection
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.emptyWeek
+import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.AppColors
 
@@ -193,6 +194,7 @@ fun AddShopContent(
             onSetGameQuery = viewModel::setGameQuery,
             onSetGame = viewModel::setGame
         )
+    val hasOpeningHours by remember(state.week) { derivedStateOf { state.week.any { it.hours.isNotEmpty() } } }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -247,6 +249,16 @@ fun AddShopContent(
             },
             bottomBar = {
                 val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+
+                val isValid by
+                remember(state.shopName, state.email, locationUi.selectedLocation, hasOpeningHours) {
+                    derivedStateOf {
+                        state.shopName.isNotBlank() &&
+                                isValidEmail(state.email) &&
+                                locationUi.selectedLocation != null &&
+                                hasOpeningHours
+                    }
+                }
                 if (!(shouldHide && isInputFocused)) {
                     ActionBar(
                         onDiscard = { state.onDiscard(onBack) },
@@ -264,7 +276,7 @@ fun AddShopContent(
                                     )
                                     onBack()
                         },
-                        enabled = state.isValid(locationUi.selectedLocation)
+                        enabled = isValid
                     )
                 }
             },
