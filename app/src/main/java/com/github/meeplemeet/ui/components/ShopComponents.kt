@@ -270,7 +270,6 @@ fun RequiredInfoSection(
   }
 }
 
-
 /**
  * Composable function representing the game stock picker dialog.
  *
@@ -340,52 +339,52 @@ fun GameStockPicker(
  */
 @Composable
 fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
-        Text(
-            ShopUiDefaults.StringsMagicNumbers.QUANTITY,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
+  Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
+    Text(
+        ShopUiDefaults.StringsMagicNumbers.QUANTITY,
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
 
-        Spacer(Modifier.height(Dimensions.Spacing.large))
+    Spacer(Modifier.height(Dimensions.Spacing.large))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-            modifier = Modifier.fillMaxWidth()) {
-            IconButton(
-                onClick = {
-                    val newValue = (value - 1)
-                    onValueChange(newValue)
-                },
-                enabled = value > 0,
-                modifier = Modifier.testTag(ShopComponentsTestTags.QTY_MINUS_BUTTON)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+        modifier = Modifier.fillMaxWidth()) {
+          IconButton(
+              onClick = {
+                val newValue = (value - 1)
+                onValueChange(newValue)
+              },
+              enabled = value > 0,
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_MINUS_BUTTON)) {
                 Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-            }
+              }
 
-            FocusableInputField(
-                value = value.toString(),
-                onValueChange = { newText ->
-                    val newValue = newText.toIntOrNull() ?: 0
-                    if (newValue > 0) {
-                        onValueChange(newValue)
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-                modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.QTY_INPUT_FIELD))
+          FocusableInputField(
+              value = value.toString(),
+              onValueChange = { newText ->
+                val newValue = newText.toIntOrNull() ?: 0
+                if (newValue > 0) {
+                  onValueChange(newValue)
+                }
+              },
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+              singleLine = true,
+              textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
+              modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.QTY_INPUT_FIELD))
 
-            IconButton(
-                onClick = {
-                    val newValue = (value + 1)
-                    onValueChange(newValue)
-                },
-                enabled = true,
-                modifier = Modifier.testTag(ShopComponentsTestTags.QTY_PLUS_BUTTON)) {
+          IconButton(
+              onClick = {
+                val newValue = (value + 1)
+                onValueChange(newValue)
+              },
+              enabled = true,
+              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_PLUS_BUTTON)) {
                 Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
-            }
+              }
         }
-    }
+  }
 }
 
 /* =============================================================================
@@ -416,69 +415,69 @@ fun GameStockDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
-    val selectedGame = gameUIState.fetchedGame
-    val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
+  val selectedGame = gameUIState.fetchedGame
+  val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = AppColors.primary,
-        title = {
-            Box(
-                Modifier.fillMaxWidth()
-                    .testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE)
-                    .background(AppColors.primary),
-                contentAlignment = Alignment.Center) {
-                Text(
-                    ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
-                    style = MaterialTheme.typography.headlineSmall)
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      shape = MaterialTheme.shapes.extraLarge,
+      containerColor = AppColors.primary,
+      title = {
+        Box(
+            Modifier.fillMaxWidth()
+                .testTag(ShopComponentsTestTags.GAME_DIALOG_TITLE)
+                .background(AppColors.primary),
+            contentAlignment = Alignment.Center) {
+              Text(
+                  ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
+                  style = MaterialTheme.typography.headlineSmall)
             }
-        },
-        text = {
-            Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
-                ShopGameSearchBar(
-                    owner,
-                    shop,
-                    viewModel,
-                    gameUIState.fetchedGame,
-                    existingIds,
-                    inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
-                    dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
+      },
+      text = {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
+          ShopGameSearchBar(
+              owner,
+              shop,
+              viewModel,
+              gameUIState.fetchedGame,
+              existingIds,
+              inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
+              dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
-                if (isDuplicate) {
-                    Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
-                    Text(
-                        ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
-                }
+          if (isDuplicate) {
+            Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
+            Text(
+                ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
+          }
 
-                Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
+          Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
 
-                GameAddUI(
-                    value = quantity,
-                    onValueChange = onQuantityChange,
-                    modifier =
-                        Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
-                            .background(AppColors.primary))
+          GameAddUI(
+              value = quantity,
+              onValueChange = onQuantityChange,
+              modifier =
+                  Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
+                      .background(AppColors.primary))
+        }
+      },
+      dismissButton = {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL)) {
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
+      },
+      confirmButton = {
+        TextButton(
+            onClick = onSave,
+            enabled = gameUIState.fetchedGame != null && !isDuplicate && quantity > 0,
+            modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onSave,
-                enabled = gameUIState.fetchedGame != null && !isDuplicate && quantity > 0,
-                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
-                Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-            }
-        })
+      })
 }
 
 /* =============================================================================
@@ -507,22 +506,22 @@ fun GameListSection(
     onClick: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {},
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-        modifier = modifier.fillMaxWidth()) {
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = modifier.fillMaxWidth()) {
         if (title != null) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
+          Text(
+              title,
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.SemiBold,
+          )
         }
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
             contentPadding = PaddingValues(bottom = Dimensions.Spacing.extraLarge),
             modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
-            items(items = games, key = { it.first.uid }) { (game, count) ->
+              items(items = games, key = { it.first.uid }) { (game, count) ->
                 GameItem(
                     game = game,
                     count = count,
@@ -530,9 +529,9 @@ fun GameListSection(
                     onClick = onClick,
                     hasDeleteButton = hasDeleteButton,
                     onDelete = onDelete)
+              }
             }
-        }
-    }
+      }
 }
 
 /**
@@ -557,66 +556,66 @@ fun GameItem(
     hasDeleteButton: Boolean = false,
     onDelete: (Game) -> Unit = {},
 ) {
-    Card(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-                .clickable(enabled = clickable, onClick = { onClick(game) }),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+  Card(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+              .clickable(enabled = clickable, onClick = { onClick(game) }),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(
             modifier = Modifier.padding(Dimensions.Padding.medium),
             verticalAlignment = Alignment.CenterVertically) {
 
-            // Icon + badge
-            Box(
-                modifier = Modifier.size(Dimensions.IconSize.huge),
-                contentAlignment = Alignment.Center) {
-                BadgedBox(
-                    badge = {
-                        // Only show badge if count > 0
-                        if (count > 0) {
+              // Icon + badge
+              Box(
+                  modifier = Modifier.size(Dimensions.IconSize.huge),
+                  contentAlignment = Alignment.Center) {
+                    BadgedBox(
+                        badge = {
+                          // Only show badge if count > 0
+                          if (count > 0) {
                             val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
                             val label = if (count > max) "$max+" else count.toString()
                             Badge(
                                 modifier =
                                     Modifier.offset(
-                                        x = Dimensions.BadgeSize.offsetX,
-                                        y = Dimensions.BadgeSize.offsetY)
+                                            x = Dimensions.BadgeSize.offsetX,
+                                            y = Dimensions.BadgeSize.offsetY)
                                         .defaultMinSize(
                                             minWidth = Dimensions.BadgeSize.minSize,
                                             minHeight = Dimensions.BadgeSize.minSize),
                                 containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                                Text(
-                                    label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = Dimensions.Numbers.singleLine,
-                                    softWrap = false,
-                                    modifier =
-                                        Modifier.padding(horizontal = Dimensions.Spacing.small))
-                            }
+                                  Text(
+                                      label,
+                                      style = MaterialTheme.typography.labelSmall,
+                                      maxLines = Dimensions.Numbers.singleLine,
+                                      softWrap = false,
+                                      modifier =
+                                          Modifier.padding(horizontal = Dimensions.Spacing.small))
+                                }
+                          }
+                        }) {
+                          Icon(Icons.Filled.VideogameAsset, contentDescription = null)
                         }
-                    }) {
-                    Icon(Icons.Filled.VideogameAsset, contentDescription = null)
-                }
-            }
+                  }
 
-            Spacer(Modifier.width(Dimensions.Spacing.medium))
+              Spacer(Modifier.width(Dimensions.Spacing.medium))
 
-            // Name centered
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center) {
-                Text(
-                    game.name,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center)
-            }
+              // Name centered
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.Center) {
+                    Text(
+                        game.name,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center)
+                  }
 
-            // Optional delete
-            if (hasDeleteButton) {
+              // Optional delete
+              if (hasDeleteButton) {
                 IconButton(
                     onClick = { onDelete(game) },
                     modifier =
@@ -624,12 +623,12 @@ fun GameItem(
                     colors =
                         IconButtonDefaults.iconButtonColors(
                             contentColor = MaterialTheme.colorScheme.error)) {
-                    Icon(
-                        Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
-                }
+                      Icon(
+                          Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
+                    }
+              }
             }
-        }
-    }
+      }
 }
 
 /* =============================================================================
@@ -645,57 +644,57 @@ fun EditableGameItem(
     onDelete: (Game) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier =
-            modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+  Card(
+      modifier =
+          modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(
             Modifier.padding(Dimensions.Padding.medium),
             verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                game.name,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                IconButton(
-                    onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
-                    enabled = count > 0,
-                    modifier =
-                        Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
-                    Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-                }
-                FocusableInputField(
-                    value = count.toString(),
-                    onValueChange = { newText ->
-                        val newValue = newText.toIntOrNull() ?: 0
-                        if (newValue >= 0) {
-                            onQuantityChange(game, newValue)
+              Text(
+                  game.name,
+                  style = MaterialTheme.typography.bodyLarge,
+                  modifier = Modifier.weight(1f))
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+                    IconButton(
+                        onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
+                        enabled = count > 0,
+                        modifier =
+                            Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
+                          Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
                         }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    textStyle =
-                        MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-                    modifier =
-                        Modifier.width(Dimensions.ComponentWidth.inputFieldWidth)
-                            .testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
-                IconButton(
-                    onClick = { onQuantityChange(game, count + 1) },
-                    modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
-                    Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
-                }
+                    FocusableInputField(
+                        value = count.toString(),
+                        onValueChange = { newText ->
+                          val newValue = newText.toIntOrNull() ?: 0
+                          if (newValue >= 0) {
+                            onQuantityChange(game, newValue)
+                          }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        textStyle =
+                            MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
+                        modifier =
+                            Modifier.width(Dimensions.ComponentWidth.inputFieldWidth)
+                                .testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
+                    IconButton(
+                        onClick = { onQuantityChange(game, count + 1) },
+                        modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
+                          Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
+                        }
+                  }
+              IconButton(
+                  onClick = { onDelete(game) },
+                  colors =
+                      IconButtonDefaults.iconButtonColors(
+                          contentColor = MaterialTheme.colorScheme.error),
+                  modifier =
+                      Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete game")
+                  }
             }
-            IconButton(
-                onClick = { onDelete(game) },
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error),
-                modifier =
-                    Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete game")
-            }
-        }
-    }
+      }
 }
