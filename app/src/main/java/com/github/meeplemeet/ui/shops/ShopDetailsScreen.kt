@@ -135,6 +135,7 @@ fun ShopDetailsScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
     onDelete: () -> Unit = {},
+    online: Boolean,
     viewModel: EditShopViewModel = viewModel()
 ) {
   val gameUi by viewModel.gameUIState.collectAsState()
@@ -183,6 +184,7 @@ fun ShopDetailsScreen(
       onSetGameQuery = viewModel::setGameQuery,
       onSetGame = viewModel::setGame,
       viewModel = viewModel,
+      online = online,
       owner = owner,
   )
 }
@@ -211,6 +213,7 @@ fun EditShopContent(
     shop: Shop,
     onBack: () -> Unit,
     onSaved: () -> Unit,
+    online: Boolean,
     onSave:
         (
             shop: Shop,
@@ -367,7 +370,7 @@ fun EditShopContent(
                     item {
                       ImageCarousel(
                           photoCollectionUrl = photoCollectionUrl,
-                          maxNumberOfImages = maxNumberOfImages,
+                          maxNumberOfImages = IMAGE_COUNT,
                           onAdd = { path, index ->
                             photoCollectionUrl =
                                 if (index < photoCollectionUrl.size &&
@@ -393,6 +396,7 @@ fun EditShopContent(
                                 shop = shop,
                                 actions = shopFormActions,
                                 viewModel = viewModel,
+                                online = online,
                                 owner = owner)
                           },
                           testTag = EditShopScreenTestTags.SECTION_REQUIRED)

@@ -37,7 +37,7 @@ import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags
 import com.github.meeplemeet.ui.components.TimeUi
 import com.github.meeplemeet.ui.components.tryParseTime
-import com.github.meeplemeet.ui.shops.maxNumberOfImages
+import com.github.meeplemeet.ui.shops.IMAGE_COUNT
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.ceil
@@ -199,7 +199,7 @@ fun SpaceRenterDetails(
         if (photoCollectionUrl.isNotEmpty()) {
           ImageCarousel(
               photoCollectionUrl = photoCollectionUrl,
-              maxNumberOfImages = maxNumberOfImages,
+              maxNumberOfImages = IMAGE_COUNT,
               onAdd = { _, _ -> },
               onRemove = { _ -> },
               editable = false)
