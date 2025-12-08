@@ -471,18 +471,17 @@ fun LabeledField(
     placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
-    singleLine: Boolean = true,
-    minLines: Int = Dimensions.Numbers.singleLine,
+    leadingIcon: @Composable (() -> Unit)? = null,
 ) {
-  Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
+  Box(modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
     FocusableInputField(
         label = { Text(label) },
         value = value,
         onValueChange = onValueChange,
-        singleLine = singleLine,
-        minLines = minLines,
+        singleLine = true,
+        leadingIcon = leadingIcon,
+        minLines = Dimensions.Numbers.singleLine,
         keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
         placeholder = { Text(placeholder) },
         shape = MaterialTheme.shapes.medium,
