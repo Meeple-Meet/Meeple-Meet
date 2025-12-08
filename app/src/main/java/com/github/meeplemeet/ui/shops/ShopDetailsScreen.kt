@@ -29,9 +29,11 @@ import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.ConfirmationDialog
 import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GameStockPicker
+import com.github.meeplemeet.ui.components.GamePickerActions
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
 import com.github.meeplemeet.ui.components.RequiredInfoSection
+import com.github.meeplemeet.ui.components.ShopFormActions
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
@@ -276,6 +278,22 @@ fun EditShopContent(
     onBack()
   }
 
+  val shopFormActions = object : ShopFormActions {
+    override fun onNameChange(name: String) { shopName = name }
+    override fun onEmailChange(newEmail: String) { email = newEmail }
+    override fun onPhoneChange(newPhone: String) { phone = newPhone }
+    override fun onWebsiteChange(website: String) { link = website }
+    override fun onLocationChange(location: Location) { addressText = location.name }
+  }
+
+  val gamePickerActions = object : GamePickerActions {
+    override fun onStockChange(newStock: List<Pair<Game, Int>>) { stock = newStock }
+    override fun onQtyChange(newQty: Int) { qty = newQty }
+    override fun onSetGameQuery(query: String) { onSetGameQuery(query) }
+    override fun onSetGame(game: Game) { onSetGame(game) }
+    override fun onDismiss() { showGameDialog = false }
+  }
+
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
@@ -373,11 +391,7 @@ fun EditShopContent(
                           content = {
                             RequiredInfoSection(
                                 shop = shop,
-                                onShopName = { shopName = it },
-                                onEmail = { email = it },
-                                onPhone = { phone = it },
-                                onLink = { link = it },
-                                onPickLocation = { loc -> addressText = loc.name },
+                                actions = shopFormActions,
                                 viewModel = viewModel,
                                 owner = owner)
                           },
@@ -447,19 +461,12 @@ fun EditShopContent(
       onWeekChange = { week = it },
       onDismiss = { showHoursDialog = false })
 
-  GameStockPicker(
-      owner = owner,
-      shop = shop,
-      viewModel = viewModel,
-      gameUIState = gameUi,
-      show = showGameDialog,
-      stock = stock,
-      onStockChange = { stock = it },
-      qty = qty,
-      onQtyChange = { qty = it },
-      onSetGameQuery = onSetGameQuery,
-      onSetGame = onSetGame,
-      onDismiss = { showGameDialog = false })
+//  GameStockPicker(
+//      owner = owner,
+//      shop = shop,
+//      viewModel = viewModel,
+//      gameUIState = gameUi,
+//      state = gamePickerActions)
 
   ConfirmationDialog(
       show = showDeleteDialog,
