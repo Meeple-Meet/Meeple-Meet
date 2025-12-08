@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -369,23 +368,6 @@ fun AddShopContent(
                       CollapsibleSection(
                           title = Strings.SECTION_GAMES,
                           initiallyExpanded = false,
-                          header = {
-                            TextButton(
-                                onClick = {
-                                  onSetGameQuery("")
-                                  showGameDialog = true
-                                },
-                                modifier =
-                                    Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
-                                  Text(
-                                      Strings.BTN_ADD_GAME,
-                                      modifier =
-                                          Modifier.testTag(
-                                              CreateShopScreenTestTags.GAMES_ADD_LABEL))
-                                }
-                          },
                           content = {
                             GamesSection(
                                 stock = stock,
