@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.space_renter
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,9 +18,12 @@ import kotlinx.coroutines.launch
  * @property repository The repository used for space renter operations.
  */
 class SpaceRenterViewModel(
-    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters
+    private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : SpaceRenterSearchViewModel() {
   private val _spaceRenter = MutableStateFlow<SpaceRenter?>(null)
+  private val _photos = MutableStateFlow<List<ByteArray>>(emptyList())
+  val photos: StateFlow<List<ByteArray>> = _photos
 
   /**
    * StateFlow exposing the currently loaded space renter.
@@ -56,13 +60,19 @@ class SpaceRenterViewModel(
    * @param id The unique identifier of the space renter to retrieve.
    * @throws IllegalArgumentException if the space renter ID is blank.
    */
-  fun getSpaceRenter(id: String) {
+  fun getSpaceRenter(id: String, context: android.content.Context) {
     if (id.isBlank()) throw IllegalArgumentException("SpaceRenter ID cannot be blank")
 
     currentSpaceRenterId = id
+      
 
     viewModelScope.launch {
-      OfflineModeManager.loadSpaceRenter(id) { spaceRenter -> _spaceRenter.value = spaceRenter }
-    }
+        OfflineModeManager.loadSpaceRenter(id) { spaceRenter -> _spaceRenter.value = spaceRenter }
+        val count = spaceRenter.value?.photoCollectionUrl?.size
+        val images = count?.let { imageRepository.loadSpaceRenterPhotos(context, id, it) }
+        if (images != null) {
+            _photos.value = images
+        }
+        }
   }
-}
+  }

@@ -137,10 +137,12 @@ fun ImageCarousel(
     photoCollectionUrl: List<String>,
     editable: Boolean = true,
     onAdd: suspend (String, Int) -> Unit = { _, _ -> },
-    onRemove: (String) -> Unit = {}
+    onRemove: (String) -> Unit = {},
+    onStateChange: (List<String>) -> Unit = {}
 ) {
-  // --- Setup ---
-  val canAddMoreImages = editable && photoCollectionUrl.size < maxNumberOfImages
+  // --- State ---
+  var photoCollectionState by remember { mutableStateOf(photoCollectionUrl) }
+  val canAddMoreImages = editable && photoCollectionState.size < maxNumberOfImages
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
 
@@ -148,11 +150,20 @@ fun ImageCarousel(
   val pagerState =
       rememberPagerState(
           pageCount = {
-            if (canAddMoreImages) photoCollectionUrl.size + 1 else photoCollectionUrl.size
+            if (canAddMoreImages) photoCollectionState.size + 1 else photoCollectionState.size
           })
 
   // --- Image source selection state ---
   var showImageSourceMenu by remember { mutableStateOf(false) }
+
+  /** --- Image upload handler --- */
+  val uploadImage: suspend (String) -> Unit = { path ->
+    try {
+      onStateChange(photoCollectionState)
+    } catch (_: Exception) {
+      // Handle error silently or show a snackbar
+    }
+  }
 
   // --- Camera launcher ---
   val cameraLauncher =
@@ -160,18 +171,20 @@ fun ImageCarousel(
         if (bitmap != null) {
           coroutineScope.launch {
             val path = ImageFileUtils.saveBitmapToCache(context, bitmap)
-            onAdd(path, pagerState.currentPage)
+            // Add image to state at current page
+            val insertIndex = pagerState.currentPage
+            val newList =
+                if (insertIndex < photoCollectionState.size &&
+                    photoCollectionState[insertIndex].isNotEmpty()) {
+                  photoCollectionState.mapIndexed { i, old -> if (i == insertIndex) path else old }
+                } else {
+                  photoCollectionState + path
+                }
+            photoCollectionState = newList
+            uploadImage(path)
           }
         }
       }
-  // --- Image upload handler ---
-  val uploadImage: suspend (String) -> Unit = { path ->
-    try {
-      onAdd(path, pagerState.currentPage)
-    } catch (e: Exception) {
-      // Handle error silently or show a snackbar
-    }
-  }
 
   // --- Camera permission launcher ---
   val cameraPermissionLauncher =
@@ -187,7 +200,17 @@ fun ImageCarousel(
         if (uri != null) {
           coroutineScope.launch {
             val path = ImageFileUtils.cacheUriToFile(context, uri)
-            uploadImage(path)
+            // Add image to state at current page
+            val insertIndex = pagerState.currentPage
+            val newList =
+                if (insertIndex < photoCollectionState.size &&
+                    photoCollectionState[insertIndex].isNotEmpty()) {
+                  photoCollectionState.mapIndexed { i, old -> if (i == insertIndex) path else old }
+                } else {
+                  photoCollectionState + path
+                }
+            photoCollectionState = newList
+            onStateChange(newList)
           }
         }
       }
@@ -206,7 +229,7 @@ fun ImageCarousel(
             shape = MaterialTheme.shapes.medium) {
               HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 if (editable &&
-                    (photoCollectionUrl.isEmpty() || page == photoCollectionUrl.size) &&
+                    (photoCollectionState.isEmpty() || page == photoCollectionState.size) &&
                     canAddMoreImages) {
                   Box(
                       modifier =
@@ -229,7 +252,7 @@ fun ImageCarousel(
                 } else {
                   Box(modifier = Modifier.fillMaxSize()) {
                     AsyncImage(
-                        model = photoCollectionUrl[page],
+                        model = photoCollectionState[page],
                         contentDescription = "Discussion Profile Picture",
                         contentScale = ContentScale.Fit,
                         modifier =
@@ -247,7 +270,12 @@ fun ImageCarousel(
                                   .size(Dimensions.IconSize.extraLarge)
                                   .clip(CircleShape)
                                   .background(AppColors.negative)
-                                  .clickable { onRemove(photoCollectionUrl[page]) }
+                                  .clickable {
+                                    val url = photoCollectionState[page]
+                                    val newList = photoCollectionState.filter { it != url }
+                                    photoCollectionState = newList
+                                    onStateChange(newList)
+                                  }
                                   .testTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON),
                           contentAlignment = Alignment.Center) {
                             Text(
@@ -267,30 +295,31 @@ fun ImageCarousel(
         Row(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically) {
-              if ((editable && (photoCollectionUrl.size + 1) > 1) ||
-                  (!editable && photoCollectionUrl.size > 1)) {
-                repeat(if (editable) photoCollectionUrl.size + 1 else photoCollectionUrl.size) {
-                    index ->
-                  val selected = pagerState.currentPage == index
+              if ((editable && (photoCollectionState.size + 1) > 1) ||
+                  (!editable && photoCollectionState.size > 1)) {
+                repeat(
+                    if (editable) photoCollectionState.size + 1 else photoCollectionState.size) {
+                        index ->
+                      val selected = pagerState.currentPage == index
 
-                  Box(
-                      modifier =
-                          Modifier.padding(Dimensions.Padding.small)
-                              .size(
-                                  if (selected) Dimensions.Padding.extraMedium
-                                  else Dimensions.Padding.medium)
-                              .clip(CircleShape)
-                              .background(
-                                  if (selected) MaterialTheme.colorScheme.primary
-                                  else MaterialTheme.colorScheme.surfaceVariant)
-                              .testTag(CommonComponentsTestTags.DOT))
-                }
+                      Box(
+                          modifier =
+                              Modifier.padding(Dimensions.Padding.small)
+                                  .size(
+                                      if (selected) Dimensions.Padding.extraMedium
+                                      else Dimensions.Padding.medium)
+                                  .clip(CircleShape)
+                                  .background(
+                                      if (selected) MaterialTheme.colorScheme.primary
+                                      else MaterialTheme.colorScheme.surfaceVariant)
+                                  .testTag(CommonComponentsTestTags.DOT))
+                    }
               }
             }
         if (showImageSourceMenu) {
           GalleryDialog(
               pageNumber = pagerState.currentPage,
-              galleryPictureUrl = photoCollectionUrl,
+              galleryPictureUrl = photoCollectionState,
               onDismiss = { showImageSourceMenu = false },
               onTakePhoto = {
                 if (editable) {
@@ -521,17 +550,9 @@ fun EditableImageCarousel(
   ImageCarousel(
       photoCollectionUrl = photoCollectionUrl,
       maxNumberOfImages = spacesCount + 2,
-      onAdd = { path, index ->
-        val newList =
-            if (index < photoCollectionUrl.size && photoCollectionUrl[index].isNotEmpty()) {
-              photoCollectionUrl.mapIndexed { i, old -> if (i == index) path else old }
-            } else {
-              photoCollectionUrl + path
-            }
-        setPhotoCollectionUrl(newList)
-      },
-      onRemove = { url -> setPhotoCollectionUrl(photoCollectionUrl.filter { it != url }) },
-      editable = true)
+      editable = true,
+      onStateChange = setPhotoCollectionUrl,
+  )
 }
 
 /**
