@@ -559,8 +559,7 @@ fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifie
                     .testTag(ShopComponentsTestTags.DAY_ROW_VALUE),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
-            fontSize = Dimensions.TextSize.subtitle
-        )
+            fontSize = Dimensions.TextSize.subtitle)
         IconButton(
             onClick = onEdit, modifier = Modifier.testTag(ShopComponentsTestTags.DAY_ROW_EDIT)) {
               Icon(
@@ -1253,14 +1252,14 @@ fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: Stri
  */
 @Composable
 fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
-    Column(Modifier.testTag(ShopFormTestTags.AVAILABILITY_LIST)) {
-        week.forEach { oh ->
-            val day = oh.day
-            DayRow(
-                dayName = ShopFormUi.dayNames[day], value = humanize(oh.hours), onEdit = { onEdit(day) })
-        }
+  Column(Modifier.testTag(ShopFormTestTags.AVAILABILITY_LIST)) {
+    week.forEach { oh ->
+      val day = oh.day
+      DayRow(
+          dayName = ShopFormUi.dayNames[day], value = humanize(oh.hours), onEdit = { onEdit(day) })
     }
-    Spacer(Modifier.height(Dimensions.Spacing.small))
+  }
+  Spacer(Modifier.height(Dimensions.Spacing.small))
 }
 
 /**
@@ -1282,65 +1281,68 @@ fun CollapsibleSection(
     expanded: Boolean? = null,
     onExpandedChange: ((Boolean) -> Unit)? = null,
 ) {
-    val (isExpanded, setExpanded) =
-        if (expanded != null && onExpandedChange != null) {
-            expanded to onExpandedChange
-        } else {
-            var localExpanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
-            localExpanded to { v: Boolean -> localExpanded = v }
-        }
+  val (isExpanded, setExpanded) =
+      if (expanded != null && onExpandedChange != null) {
+        expanded to onExpandedChange
+      } else {
+        var localExpanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+        localExpanded to { v: Boolean -> localExpanded = v }
+      }
 
-    val arrowRotation by
-    animateFloatAsState(
-        targetValue = if (isExpanded) Dimensions.Angles.expanded else Dimensions.Angles.collapsed,
-        label = "arrow")
+  val arrowRotation by
+      animateFloatAsState(
+          targetValue = if (isExpanded) Dimensions.Angles.expanded else Dimensions.Angles.collapsed,
+          label = "arrow")
 
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth().padding(top = Dimensions.Padding.medium).clickable { setExpanded(!isExpanded)}.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                modifier =
-                    Modifier.weight(1f).let { m ->
-                        if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TITLE_SUFFIX)
-                        else m
-                    })
+  Column(Modifier.fillMaxWidth()) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = Dimensions.Padding.medium)
+                .clickable { setExpanded(!isExpanded) }
+                .testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX),
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = title,
+              style = MaterialTheme.typography.titleMedium,
+              modifier =
+                  Modifier.weight(1f).let { m ->
+                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TITLE_SUFFIX)
+                    else m
+                  })
 
-            IconButton(
-                onClick = { setExpanded(!isExpanded) },
-                modifier =
-                    Modifier.let { m ->
-                        if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX)
-                        else m
-                    }) {
+          IconButton(
+              onClick = { setExpanded(!isExpanded) },
+              modifier =
+                  Modifier.let { m ->
+                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX)
+                    else m
+                  }) {
                 Icon(
                     Icons.Filled.ExpandMore,
                     contentDescription =
                         if (isExpanded) ShopFormUi.Strings.COLLAPSE else ShopFormUi.Strings.EXPAND,
                     modifier = Modifier.rotate(arrowRotation))
-            }
+              }
         }
 
-        HorizontalDivider(
-            thickness = Dimensions.DividerThickness.standard,
-            color = MaterialTheme.colorScheme.outlineVariant,
-            modifier =
-                Modifier.padding(bottom = Dimensions.Spacing.large).let { m ->
-                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_DIVIDER_SUFFIX)
-                    else m
-                })
+    HorizontalDivider(
+        thickness = Dimensions.DividerThickness.standard,
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier =
+            Modifier.padding(bottom = Dimensions.Spacing.large).let { m ->
+              if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_DIVIDER_SUFFIX)
+              else m
+            })
 
-        AnimatedVisibility(visible = isExpanded) {
-            Column(
-                Modifier.padding(top = Dimensions.Spacing.none).let { m ->
-                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
-                },
-                content = content)
-        }
+    AnimatedVisibility(visible = isExpanded) {
+      Column(
+          Modifier.padding(top = Dimensions.Spacing.none).let { m ->
+            if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
+          },
+          content = content)
     }
+  }
 }
 
 /**
@@ -1360,23 +1362,23 @@ fun OpeningHoursEditor(
     onWeekChange: (List<OpeningHours>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    if (!show || day == null) return
-    Box(Modifier.testTag(ShopFormTestTags.OPENING_HOURS_DIALOG_WRAPPER)) {
-        OpeningHoursDialog(
-            initialSelectedDays = setOf(day),
-            current = week[day],
-            onDismiss = onDismiss,
-            onSave = { selectedDays, closed, open24, intervals ->
-                val encoded: List<TimeSlot> =
-                    when {
-                        closed -> emptyList()
-                        open24 -> listOf(TimeSlot(TimeUi.OPEN24_START, TimeUi.OPEN24_END))
-                        else -> intervals.map { TimeSlot(it.first.hhmm(), it.second.hhmm()) }
-                    }
-                val copy = week.toMutableList()
-                selectedDays.forEach { d -> copy[d] = OpeningHours(day = d, hours = encoded) }
-                onWeekChange(copy)
-                onDismiss()
-            })
-    }
+  if (!show || day == null) return
+  Box(Modifier.testTag(ShopFormTestTags.OPENING_HOURS_DIALOG_WRAPPER)) {
+    OpeningHoursDialog(
+        initialSelectedDays = setOf(day),
+        current = week[day],
+        onDismiss = onDismiss,
+        onSave = { selectedDays, closed, open24, intervals ->
+          val encoded: List<TimeSlot> =
+              when {
+                closed -> emptyList()
+                open24 -> listOf(TimeSlot(TimeUi.OPEN24_START, TimeUi.OPEN24_END))
+                else -> intervals.map { TimeSlot(it.first.hhmm(), it.second.hhmm()) }
+              }
+          val copy = week.toMutableList()
+          selectedDays.forEach { d -> copy[d] = OpeningHours(day = d, hours = encoded) }
+          onWeekChange(copy)
+          onDismiss()
+        })
+  }
 }
