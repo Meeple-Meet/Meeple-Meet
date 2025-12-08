@@ -220,7 +220,7 @@ fun DiscussionDetailsScreen(
 
   /** Live search effect */
   LaunchedEffect(searchQuery) {
-    if (searchQuery.isBlank() || !online) {
+    if (searchQuery.isBlank()) {
       searchResults = emptyList()
       dropdownExpanded = false
       return@LaunchedEffect
@@ -235,7 +235,8 @@ fun DiscussionDetailsScreen(
     }
   }
 
-  val isAdmin = discussion.admins.contains(account.uid) || discussion.creatorId == account.uid
+  val isAdmin =
+      online && (discussion.admins.contains(account.uid) || discussion.creatorId == account.uid)
 
   /** --- Name + Description --- */
   var newName by remember { mutableStateOf(discussion.name) }
@@ -282,9 +283,13 @@ fun DiscussionDetailsScreen(
                 if (discussion.creatorId == account.uid)
                     OutlinedButton(
                         onClick = { if (isAdmin) showDeleteDialog = true },
-                        enabled = isAdmin && online,
+                        enabled = isAdmin,
                         colors =
-                            ButtonDefaults.outlinedButtonColors(contentColor = AppColors.negative),
+                            ButtonColors(
+                                containerColor = AppColors.negative,
+                                disabledContainerColor = AppColors.negative,
+                                contentColor = AppColors.textIcons,
+                                disabledContentColor = AppColors.textIcons),
                         modifier = Modifier.weight(1f).testTag(UITestTags.DELETE_BUTTON)) {
                           Icon(
                               imageVector = Icons.Default.Delete,
@@ -315,9 +320,7 @@ fun DiscussionDetailsScreen(
                       Modifier.align(Alignment.CenterHorizontally)
                           .size(Dimensions.IconSize.massive.times(Dimensions.Multipliers.double))
                           .clip(CircleShape)
-                          .clickable(enabled = isAdmin) {
-                            if (isAdmin && online) showImageSourceMenu = true
-                          }
+                          .clickable(enabled = isAdmin) { if (isAdmin) showImageSourceMenu = true }
                           .testTag(UITestTags.PROFILE_PICTURE)) {
                     if (discussion.profilePictureUrl != null) {
                       AsyncImage(
@@ -362,7 +365,7 @@ fun DiscussionDetailsScreen(
                   value = newName,
                   onValueChange = { newName = it },
                   readOnly = !isAdmin,
-                  enabled = isAdmin && online,
+                  enabled = isAdmin,
                   modifier =
                       Modifier.fillMaxWidth()
                           .padding(horizontal = Dimensions.Spacing.extraMedium)
@@ -396,7 +399,7 @@ fun DiscussionDetailsScreen(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = TEXT_EDIT,
-                        tint = if (isAdmin && online) AppColors.textIcons else Color.Transparent)
+                        tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
                   },
                   textStyle =
                       LocalTextStyle.current.copy(
@@ -420,7 +423,7 @@ fun DiscussionDetailsScreen(
                   value = newDesc,
                   onValueChange = { newDesc = it },
                   readOnly = !isAdmin,
-                  enabled = isAdmin && online,
+                  enabled = isAdmin,
                   modifier =
                       Modifier.fillMaxWidth()
                           .padding(
@@ -451,7 +454,7 @@ fun DiscussionDetailsScreen(
                         imageVector = Icons.Default.Edit,
                         contentDescription = TEXT_EDIT,
                         modifier = Modifier,
-                        tint = if (isAdmin && online) AppColors.textIcons else Color.Transparent)
+                        tint = if (isAdmin) AppColors.textIcons else Color.Transparent)
                   },
                   textStyle =
                       LocalTextStyle.current.copy(
@@ -460,7 +463,7 @@ fun DiscussionDetailsScreen(
               )
 
               /** Row for search and member selection */
-              if (isAdmin && online)
+              if (isAdmin)
                   MemberSearchField(
                       searchQuery = searchQuery,
                       onQueryChange = { searchQuery = it },
@@ -478,7 +481,7 @@ fun DiscussionDetailsScreen(
               /** --- Members List --- */
               MemberList(
                   selectedMembers = selectedMembers,
-                  isMember = !isAdmin && online,
+                  isMember = !isAdmin,
                   modifier = Modifier.align(Alignment.CenterHorizontally),
                   viewModel = viewModel,
                   currentAccount = account,
