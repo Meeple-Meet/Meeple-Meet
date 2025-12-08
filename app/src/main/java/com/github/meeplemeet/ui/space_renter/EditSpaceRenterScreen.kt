@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -382,21 +381,6 @@ internal fun EditSpaceRenterContent(
                           initiallyExpanded = false,
                           expanded = spacesExpanded,
                           onExpandedChange = { spacesExpanded = it },
-                          header = {
-                            TextButton(
-                                onClick = { addSpace() },
-                                modifier =
-                                    Modifier.testTag(
-                                        EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
-                                  Text(
-                                      AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
-                                      modifier =
-                                          Modifier.testTag(
-                                              EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
-                                }
-                          },
                           content = {
                             SpacesList(
                                 spaces = spaces,

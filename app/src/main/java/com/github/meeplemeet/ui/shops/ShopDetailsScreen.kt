@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -420,22 +419,6 @@ fun EditShopContent(
                       CollapsibleSection(
                           title = EditShopUi.Strings.SECTION_GAMES,
                           initiallyExpanded = true,
-                          header = {
-                            TextButton(
-                                onClick = {
-                                  onSetGameQuery("")
-                                  showGameDialog = true
-                                },
-                                modifier =
-                                    Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
-                                  Text(
-                                      EditShopUi.Strings.BTN_ADD_GAME,
-                                      modifier =
-                                          Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_LABEL))
-                                }
-                          },
                           content = {
                             GamesSection(
                                 stock = stock,
