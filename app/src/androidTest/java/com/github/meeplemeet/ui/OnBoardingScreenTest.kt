@@ -324,16 +324,9 @@ class OnBoardingScreenTest {
 
   @Test
   fun test_session_creation_page() = runBlocking {
-    val testPage =
-        OnBoardPage(
-            image = R.drawable.discussion_logo,
-            title = "Discussions",
-            description = "Join discussions")
     val hasInteracted = mutableStateOf(false)
 
-    compose.setContent {
-      SessionCreationPreviewPage(pageData = testPage, hasInteractedWithDiscussion = hasInteracted)
-    }
+    compose.setContent { SessionCreationPreviewPage(hasInteractedWithDiscussion = hasInteracted) }
     compose.waitForIdle()
 
     checkpoint("Page: Title renders") {

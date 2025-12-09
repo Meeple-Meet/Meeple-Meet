@@ -227,9 +227,7 @@ private fun OnBoardingPager(
         ->
         when (page) {
           0 -> MeepleMeetIntroPage()
-          1 ->
-              SessionCreationPreviewPage(
-                  pageData = pages[page], hasInteractedWithDiscussion = hasInteractedWithDiscussion)
+          1 -> SessionCreationPreviewPage(hasInteractedWithDiscussion = hasInteractedWithDiscussion)
           2 -> SessionsPage()
           3 -> PostsPage()
           4 -> MapExplorationPage()
@@ -264,10 +262,7 @@ fun StandardOnBoardingPage(pageData: OnBoardPage, pageIndex: Int) {
  * @param hasInteractedWithDiscussion Mutable state tracking user interaction
  */
 @Composable
-fun SessionCreationPreviewPage(
-    pageData: OnBoardPage,
-    hasInteractedWithDiscussion: MutableState<Boolean>
-) {
+fun SessionCreationPreviewPage(hasInteractedWithDiscussion: MutableState<Boolean>) {
   LaunchedEffect(Unit) {
     if (!hasInteractedWithDiscussion.value) {
       hasInteractedWithDiscussion.value = true
