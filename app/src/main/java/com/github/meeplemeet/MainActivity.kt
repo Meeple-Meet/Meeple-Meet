@@ -447,6 +447,7 @@ fun MeepleMeetApp(
             MapScreen(
                 navigation = navigationActions,
                 account = account!!,
+                onUserLocationChange = {userLocation = it},
                 onFABCLick = { geoPin ->
                   when (geoPin) {
                     PinType.SHOP -> {
