@@ -3,19 +3,24 @@ package com.github.meeplemeet.utils
 import android.util.Log
 import java.io.PrintWriter
 import java.io.StringWriter
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import org.junit.Assert.assertTrue
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
 /** Annotation to disable retry mechanism for a specific test. */
-@Retention(AnnotationRetention.RUNTIME) @Target(AnnotationTarget.FUNCTION) annotation class noretry
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FUNCTION)
+annotation class noretry
 
-const val CHECKPOINT_TIMEOUT_MS = 5_000L
+const val DEFAULT_CHECKPOINT_TIMEOUT_MS = 20_000L
+
 /**
- * Tiny rule / helper that wraps every test statement and records success / failure together with
- * the stack-trace of the failure.
+ * Tiny rule / helper that wraps every test statement and records success / failure together with the
+ * stack-trace of the failure.
  *
  * Usage: @get:Rule val ck = Checkpoint.rule() // once per test class ... ck("description") { /* any
  * assertion */ }
@@ -26,24 +31,72 @@ class Checkpoint {
   private var currentDescription: Description? = null
 
   /** The wrapper you call from your test. */
-  operator fun invoke(name: String, block: () -> Unit) {
+  operator fun invoke(name: String, block: () -> Unit, timeout: Long = DEFAULT_CHECKPOINT_TIMEOUT_MS) {
     val isNoRetry = currentDescription?.getAnnotation(noretry::class.java) != null
     val maxAttempts = if (isNoRetry) 1 else 3
 
     var attempt = 0
     var lastResult: Result<Unit>? = null
 
-    while (attempt < maxAttempts) {
-      attempt++
-      lastResult = runCatching { runBlocking { withTimeout(CHECKPOINT_TIMEOUT_MS) { block() } } }
-      if (lastResult.isSuccess) break
+    // Use a new executor for each checkpoint to ensure clean state and avoid queueing issues.
+    // We use newSingleThreadExecutor so we have a dedicated thread for this attempt.
+    val executor = Executors.newSingleThreadExecutor()
+
+    try {
+      while (attempt < maxAttempts) {
+        attempt++
+        val future = executor.submit { block() }
+
+        lastResult =
+            runCatching {
+              try {
+                // Wait for the result with a hard timeout
+                future.get(timeout, TimeUnit.MILLISECONDS)
+                Unit
+              } catch (e: TimeoutException) {
+                // If we timed out, try to interrupt the thread
+                future.cancel(true)
+                throw e
+              } catch (e: ExecutionException) {
+                // If the block threw an exception (AssertionError, etc.), unwrap it
+                throw e.cause ?: e
+              }
+            }
+
+        if (lastResult.isSuccess) break
+
+        // If it was a TimeoutException, we caught it inside runCatching as a failure.
+        // We should check if the failure was due to TimeoutException and abort retries if so.
+        if (lastResult.exceptionOrNull() is TimeoutException) {
+          break
+        }
+      }
+    } finally {
+      // If the usage succeeded, use graceful shutdown to allow the thread to wrap up.
+      // If it failed (timeout/crash), force shutdown.
+      if (lastResult?.isSuccess == true) {
+          executor.shutdown()
+      } else {
+          executor.shutdownNow()
+      }
     }
 
+    // Record the result
     report[name] = lastResult ?: Result.failure(RuntimeException("No execution attempted"))
+
+    // If it was a timeout, we should probably fail hard to stop the test from proceeding
+    // and colliding with future checkpoints (since the orphan thread might still be alive).
+    val ex = lastResult?.exceptionOrNull()
+    if (ex is TimeoutException) {
+      throw RuntimeException(
+          "Checkpoint '$name' timed out after ${timeout}ms. Aborting test to prevent recurring issues.",
+          ex)
+    }
   }
 
   /** Call this once at the end of the test (automatic if you use the Rule). */
   fun assertAll() {
+
     val failures = report.filter { it.value.isFailure }
     println("Checkpoint summary: ${report.size - failures.size}/${report.size} OK")
 
