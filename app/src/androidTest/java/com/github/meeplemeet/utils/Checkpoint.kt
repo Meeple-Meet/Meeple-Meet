@@ -12,15 +12,13 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
 /** Annotation to disable retry mechanism for a specific test. */
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FUNCTION)
-annotation class noretry
+@Retention(AnnotationRetention.RUNTIME) @Target(AnnotationTarget.FUNCTION) annotation class noretry
 
 const val DEFAULT_CHECKPOINT_TIMEOUT_MS = 20_000L
 
 /**
- * Tiny rule / helper that wraps every test statement and records success / failure together with the
- * stack-trace of the failure.
+ * Tiny rule / helper that wraps every test statement and records success / failure together with
+ * the stack-trace of the failure.
  *
  * Usage: @get:Rule val ck = Checkpoint.rule() // once per test class ... ck("description") { /* any
  * assertion */ }
@@ -31,7 +29,11 @@ class Checkpoint {
   private var currentDescription: Description? = null
 
   /** The wrapper you call from your test. */
-  operator fun invoke(name: String, block: () -> Unit, timeout: Long = DEFAULT_CHECKPOINT_TIMEOUT_MS) {
+  operator fun invoke(
+      name: String,
+      block: () -> Unit,
+      timeout: Long = DEFAULT_CHECKPOINT_TIMEOUT_MS
+  ) {
     val isNoRetry = currentDescription?.getAnnotation(noretry::class.java) != null
     val maxAttempts = if (isNoRetry) 1 else 3
 
@@ -47,21 +49,20 @@ class Checkpoint {
         attempt++
         val future = executor.submit { block() }
 
-        lastResult =
-            runCatching {
-              try {
-                // Wait for the result with a hard timeout
-                future.get(timeout, TimeUnit.MILLISECONDS)
-                Unit
-              } catch (e: TimeoutException) {
-                // If we timed out, try to interrupt the thread
-                future.cancel(true)
-                throw e
-              } catch (e: ExecutionException) {
-                // If the block threw an exception (AssertionError, etc.), unwrap it
-                throw e.cause ?: e
-              }
-            }
+        lastResult = runCatching {
+          try {
+            // Wait for the result with a hard timeout
+            future.get(timeout, TimeUnit.MILLISECONDS)
+            Unit
+          } catch (e: TimeoutException) {
+            // If we timed out, try to interrupt the thread
+            future.cancel(true)
+            throw e
+          } catch (e: ExecutionException) {
+            // If the block threw an exception (AssertionError, etc.), unwrap it
+            throw e.cause ?: e
+          }
+        }
 
         if (lastResult.isSuccess) break
 
@@ -75,9 +76,9 @@ class Checkpoint {
       // If the usage succeeded, use graceful shutdown to allow the thread to wrap up.
       // If it failed (timeout/crash), force shutdown.
       if (lastResult?.isSuccess == true) {
-          executor.shutdown()
+        executor.shutdown()
       } else {
-          executor.shutdownNow()
+        executor.shutdownNow()
       }
     }
 
