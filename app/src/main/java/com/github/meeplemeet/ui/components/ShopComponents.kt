@@ -265,6 +265,7 @@ class CreateShopFormState(
     var editingDay by mutableStateOf<Int?>(null)
 
     var showGameDialog by mutableStateOf(false)
+    var editingGame by mutableStateOf<Game?>(null)
     var qty by mutableIntStateOf(1)
 
     // Derived state for validation
@@ -317,6 +318,7 @@ class CreateShopFormState(
 
     override fun onDismiss() {
         showGameDialog = false
+        editingGame = null
     }
 
     // ---- Helpers for photos ----
@@ -342,6 +344,15 @@ class CreateShopFormState(
         stock = stock.filterNot { it.first.uid == game.uid }
     }
 
+    fun addOrUpdateStock(game: Game, qty: Int) {
+        val existing = stock.find { it.first.uid == game.uid }
+        stock = if (existing != null) {
+            stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+        } else {
+            stock + (game to qty)
+        }
+    }
+
     // ---- Helpers ----
     fun onDiscard(onBack: () -> Unit) {
         shopName = ""
@@ -357,6 +368,7 @@ class CreateShopFormState(
         stock = emptyList()
         photoCollectionUrl = emptyList()
         onSetGameQueryCallback("")
+        editingGame = null
         onBack()
     }
 }
@@ -480,6 +492,7 @@ fun GameStockPicker(
         quantity = state.qty,
         onQuantityChange = state::onQtyChange,
         existingIds = existing,
+        ignoreId = state.editingGame?.uid,
         onDismiss = {
           state.onDismiss()
           state.onQtyChange(1)
@@ -487,7 +500,7 @@ fun GameStockPicker(
         },
         onSave = {
           gameUIState.fetchedGame?.let { g ->
-            state.onStockChange((state.stock + (g to state.qty)).distinctBy { it.first.uid })
+            state.addOrUpdateStock(g, state.qty)
           }
           state.onQtyChange(1)
           state.onSetGameQuery("")
@@ -508,7 +521,7 @@ fun GameStockImage(gameUIState: GameUIState) {
             model = game.imageURL,
             contentDescription = "Game image",
             modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp)
-                .clip(RoundedCornerShape(4.dp)).padding(vertical = 6.dp),
+                .clip(RoundedCornerShape(8.dp)).padding(vertical = 6.dp),
             contentScale = ContentScale.Fit
         )
     }
@@ -663,11 +676,14 @@ fun GameStockDialog(
     quantity: Int,
     onQuantityChange: (Int) -> Unit,
     existingIds: Set<String> = emptySet(),
+    ignoreId: String? = null,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
   val selectedGame = gameUIState.fetchedGame
-  val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
+  val isDuplicate =
+      selectedGame?.uid?.let { it in existingIds && (ignoreId == null || it != ignoreId) }
+          ?: false
 
   AlertDialog(
       onDismissRequest = onDismiss,
