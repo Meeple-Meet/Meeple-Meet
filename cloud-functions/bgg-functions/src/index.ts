@@ -203,7 +203,8 @@ export async function handleGetGamesByIds(data: any): Promise<GameOut[]> {
 export const getGamesByIds = onCall(
   {
     secrets: ["BGG_API_TOKEN"],
-    enforceAppCheck: true
+    // Temporary measure for easy demo/testing without App Check
+    //enforceAppCheck: true
   },
   async (request) => handleGetGamesByIds(request.data)
 );
@@ -308,7 +309,8 @@ export async function handleSearchGames(data: any): Promise<GameSearchResult[]> 
 export const searchGames = onCall(
   {
     secrets: ["BGG_API_TOKEN"],
-    enforceAppCheck: true
+    // Temporary measure for easy demo/testing without App Check
+    //enforceAppCheck: true
   },
   async (request) => handleSearchGames(request.data)
 );
