@@ -32,6 +32,8 @@ import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.CreateShopFormState
 import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.EditableImageCarousel
+import com.github.meeplemeet.ui.components.GameImageListSection
+import com.github.meeplemeet.ui.components.GameItemImage
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
@@ -433,10 +435,17 @@ private fun ShopGamesSection(state: CreateShopFormState, online: Boolean) {
                 )
             } }
 
-            GamesSection(
-                stock = state.stock,
-                onQuantityChange = { game, qty -> state.updateStockQuantity(game, qty) },
-                onDelete = { game -> state.removeFromStock(game) }
+//            GamesSection(
+//                stock = state.stock,
+//                onQuantityChange = { game, qty -> state.updateStockQuantity(game, qty) },
+//                onDelete = { game -> state.removeFromStock(game) }
+//            )
+
+            GameImageListSection(
+                games = state.stock,
+                clickableGames = true,
+                editable = true,
+                title = ""
             )
         },
         testTag = CreateShopScreenTestTags.SECTION_GAMES
@@ -464,11 +473,11 @@ private fun GamesSection(
             modifier = Modifier.heightIn(max = 500.dp)
         ) {
             items(items = stock, key = { it.first.uid }) { (game, count) ->
-                EditableGameItem(
+                GameItemImage(
                     game = game,
                     count = count,
-                    onQuantityChange = onQuantityChange,
-                    onDelete = onDelete
+                    editable = true,
+                    clickable = false,
                 )
             }
         }
