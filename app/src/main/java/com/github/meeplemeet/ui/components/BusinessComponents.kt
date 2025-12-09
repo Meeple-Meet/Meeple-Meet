@@ -472,6 +472,7 @@ fun LabeledField(
     placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     leadingIcon: @Composable (() -> Unit)? = null,
     scrollToStartOnFocusLost: Boolean = false,
@@ -487,7 +488,7 @@ fun LabeledField(
         keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
         placeholder = { Text(placeholder) },
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT),
+        modifier = modifier.fillMaxWidth(),
         scrollToStartOnFocusLost = scrollToStartOnFocusLost)
   }
 }
