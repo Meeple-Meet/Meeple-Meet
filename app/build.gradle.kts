@@ -231,6 +231,7 @@ dependencies {
   implementation(libs.firebase.storage)
   implementation(libs.firebase.appcheck)
   implementation(libs.firebase.appcheck.debug)
+  implementation(libs.firebase.appcheck.playintegrity)
   implementation(libs.geofirestore)
 
   // Credential Manager (for Google Sign-In)
