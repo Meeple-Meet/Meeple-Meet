@@ -66,7 +66,7 @@ object Dimensions {
   object ButtonSize {
     val small: Dp = 32.dp
     val medium: Dp = 36.dp
-    val navigation: Dp = 42.dp
+    val navigation: Dp = 20.dp
     val standard: Dp = 48.dp
   }
 
@@ -104,7 +104,7 @@ object Dimensions {
     val title: TextUnit = 17.sp
     val heading: TextUnit = 18.sp
     val largeHeading: TextUnit = 20.sp
-    val large: TextUnit = 30.sp
+    val large: TextUnit = 28.sp
     val extraLarge: TextUnit = 36.sp
     val displayMedium: TextUnit = 56.sp
   }

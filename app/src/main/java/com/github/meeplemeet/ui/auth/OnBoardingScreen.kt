@@ -414,7 +414,10 @@ fun NavigationControls(
     onNavigate: (Int) -> Unit
 ) {
   Row(
-      modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.extraLarge),
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(
+                  vertical = Dimensions.Padding.extraLarge, horizontal = Dimensions.Padding.tiny),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween) {
         BackButton(
@@ -543,7 +546,7 @@ fun MeepleMeetIntroPage() {
         modifier =
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(Dimensions.Spacing.xxLarge)) {
+                .padding(Dimensions.Spacing.medium)) {
           PageImage(imageRes = logoRes)
           PageTitle(title = "Meeple Meet", pageIndex = 0)
           Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
