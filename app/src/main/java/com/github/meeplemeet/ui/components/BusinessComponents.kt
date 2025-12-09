@@ -161,6 +161,7 @@ object ShopComponentsTestTags {
   // Game list
   const val SHOP_GAME_PREFIX = "SHOP_GAME_"
   const val SHOP_GAME_DELETE = "shop_game_delete"
+  const val SHOP_GAME_EDIT = "shop_game_edit"
   const val SHOP_GAME_MINUS_BUTTON = "shop_game_minus_button"
   const val SHOP_GAME_QTY_INPUT = "shop_game_qty_input"
   const val SHOP_GAME_PLUS_BUTTON = "shop_game_plus_button"
