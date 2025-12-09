@@ -264,8 +264,6 @@ fun MeepleMeetApp(
     onDispose { FirebaseProvider.auth.removeAuthStateListener(listener) }
   }
 
-  val navigationViewModel: NavigationViewModel = viewModel()
-  LaunchedEffect(accountId) { navigationViewModel.startListening(accountId) }
 
   // Sync email from Firebase Auth to Firestore when user logs in
   // This is the optimal place to sync because:
@@ -280,7 +278,7 @@ fun MeepleMeetApp(
 
   AppTheme(themeMode = account?.themeMode ?: ThemeMode.SYSTEM_DEFAULT) {
     Surface(modifier = Modifier.fillMaxSize()) {
-      CompositionLocalProvider(LocalNavigationVM provides navigationViewModel) {
+      CompositionLocalProvider(LocalNavigationVM provides viewModel) {
         NavHost(navController = navController, startDestination = MeepleMeetScreen.SignIn.name) {
           composable(MeepleMeetScreen.SignIn.name) {
             LaunchedEffect(account) {
