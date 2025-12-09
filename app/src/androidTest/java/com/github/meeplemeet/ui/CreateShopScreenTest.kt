@@ -249,7 +249,7 @@ class CreateShopScreenTest : FirestoreTests() {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> "" },
+                  onCreate = { _, _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -266,7 +266,7 @@ class CreateShopScreenTest : FirestoreTests() {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> "" },
+                  onCreate = { _, _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -283,7 +283,7 @@ class CreateShopScreenTest : FirestoreTests() {
               AddShopContent(
                   onBack = {},
                   onCreated = { calledCreated = true },
-                  onCreate = { name, email, address, _, _ ->
+                  onCreate = { name, email, address, _, _, _ ->
                     calledCreate = true
                     lastPayload = Triple(name, email, address.name)
                     ""
@@ -304,7 +304,7 @@ class CreateShopScreenTest : FirestoreTests() {
               AddShopContent(
                   onBack = {},
                   onCreated = { error("onCreated should not be called on error") },
-                  onCreate = { _, _, _, _, _ -> throw Exception("Something went wrong") },
+                  onCreate = { _, _, _, _, _, _ -> throw Exception("Something went wrong") },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -321,7 +321,7 @@ class CreateShopScreenTest : FirestoreTests() {
               AddShopContent(
                   onBack = {},
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> "" },
+                  onCreate = { _, _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -338,7 +338,7 @@ class CreateShopScreenTest : FirestoreTests() {
               AddShopContent(
                   onBack = { backCalled = true },
                   onCreated = {},
-                  onCreate = { _, _, _, _, _ -> "" },
+                  onCreate = { _, _, _, _, _, _ -> "" },
                   gameQuery = query,
                   gameSuggestions = emptyList(),
                   isSearching = false,
@@ -473,7 +473,7 @@ class CreateShopScreenTest : FirestoreTests() {
         AddShopContent(
             onBack = {},
             onCreated = {},
-            onCreate = { _, _, _, _, _ -> "" },
+            onCreate = { _, _, _, _, _, _ -> "" },
             gameQuery = "",
             gameSuggestions = emptyList(),
             isSearching = false,
