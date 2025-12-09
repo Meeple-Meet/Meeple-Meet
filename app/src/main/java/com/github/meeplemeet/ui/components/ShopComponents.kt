@@ -67,26 +67,33 @@ import com.github.meeplemeet.ui.shops.ShopScreenDefaults
 import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
-import kotlinx.coroutines.launch
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.min
+import kotlinx.coroutines.launch
 
 interface ShopFormActions {
   fun onNameChange(name: String)
+
   fun onEmailChange(email: String)
+
   fun onPhoneChange(phone: String)
+
   fun onWebsiteChange(website: String)
+
   fun onLocationChange(location: Location)
 }
 
 interface GamePickerActions {
   fun onStockChange(stock: List<Pair<Game, Int>>)
+
   fun onQtyChange(qty: Int)
+
   fun onSetGameQuery(query: String)
+
   fun onSetGame(game: Game)
+
   fun onDismiss()
 }
 
@@ -250,127 +257,128 @@ class CreateShopFormState(
     private val onSetGameCallback: (Game) -> Unit
 ) : ShopFormActions, GamePickerActions {
 
-    var shopName by mutableStateOf("")
-    var email by mutableStateOf("")
-    var phone by mutableStateOf("")
-    var website by mutableStateOf("")
-    var addressText by mutableStateOf("")
+  var shopName by mutableStateOf("")
+  var email by mutableStateOf("")
+  var phone by mutableStateOf("")
+  var website by mutableStateOf("")
+  var addressText by mutableStateOf("")
 
-    var week by mutableStateOf(initialWeek)
-    var stock by mutableStateOf(initialStock)
-    var photoCollectionUrl by mutableStateOf(listOf<String>())
+  var week by mutableStateOf(initialWeek)
+  var stock by mutableStateOf(initialStock)
+  var photoCollectionUrl by mutableStateOf(listOf<String>())
 
-    // Dialog & UI states
-    var showHoursDialog by mutableStateOf(false)
-    var editingDay by mutableStateOf<Int?>(null)
+  // Dialog & UI states
+  var showHoursDialog by mutableStateOf(false)
+  var editingDay by mutableStateOf<Int?>(null)
 
-    var showGameDialog by mutableStateOf(false)
-    var editingGame by mutableStateOf<Game?>(null)
-    var qty by mutableIntStateOf(1)
+  var showGameDialog by mutableStateOf(false)
+  var editingGame by mutableStateOf<Game?>(null)
+  var qty by mutableIntStateOf(1)
 
-    // Derived state for validation
-    private val hasOpeningHours by derivedStateOf { week.any { it.hours.isNotEmpty() } }
+  // Derived state for validation
+  private val hasOpeningHours by derivedStateOf { week.any { it.hours.isNotEmpty() } }
 
-    fun isValid(selectedLocation: Location?): Boolean {
-        return shopName.isNotBlank() &&
-                isValidEmail(email) &&
-                selectedLocation != null &&
-                hasOpeningHours
-    }
+  fun isValid(selectedLocation: Location?): Boolean {
+    return shopName.isNotBlank() &&
+        isValidEmail(email) &&
+        selectedLocation != null &&
+        hasOpeningHours
+  }
 
-    // ---- ShopFormActions implementation ----
-    override fun onNameChange(name: String) {
-        shopName = name
-    }
+  // ---- ShopFormActions implementation ----
+  override fun onNameChange(name: String) {
+    shopName = name
+  }
 
-    override fun onEmailChange(email: String) {
-        this.email = email
-    }
+  override fun onEmailChange(email: String) {
+    this.email = email
+  }
 
-    override fun onPhoneChange(phone: String) {
-        this.phone = phone
-    }
+  override fun onPhoneChange(phone: String) {
+    this.phone = phone
+  }
 
-    override fun onWebsiteChange(website: String) {
-        this.website = website
-    }
+  override fun onWebsiteChange(website: String) {
+    this.website = website
+  }
 
-    override fun onLocationChange(location: Location) {
-        addressText = location.name
-    }
+  override fun onLocationChange(location: Location) {
+    addressText = location.name
+  }
 
-    // ---- GamePickerActions implementation ----
-    override fun onStockChange(stock: List<Pair<Game, Int>>) {
-        this.stock = stock
-    }
+  // ---- GamePickerActions implementation ----
+  override fun onStockChange(stock: List<Pair<Game, Int>>) {
+    this.stock = stock
+  }
 
-    override fun onQtyChange(qty: Int) {
-        this.qty = qty
-    }
+  override fun onQtyChange(qty: Int) {
+    this.qty = qty
+  }
 
-    override fun onSetGameQuery(query: String) {
-        onSetGameQueryCallback(query)
-    }
+  override fun onSetGameQuery(query: String) {
+    onSetGameQueryCallback(query)
+  }
 
-    override fun onSetGame(game: Game) {
-        onSetGameCallback(game)
-    }
+  override fun onSetGame(game: Game) {
+    onSetGameCallback(game)
+  }
 
-    override fun onDismiss() {
-        showGameDialog = false
-        editingGame = null
-    }
+  override fun onDismiss() {
+    showGameDialog = false
+    editingGame = null
+  }
 
-    // ---- Helpers for photos ----
-    fun addOrReplacePhoto(path: String, index: Int) {
-        photoCollectionUrl =
-            if (index < photoCollectionUrl.size && photoCollectionUrl[index].isNotEmpty()) {
-                photoCollectionUrl.mapIndexed { i, old -> if (i == index) path else old }
-            } else {
-                photoCollectionUrl + path
-            }
-    }
-
-    fun removePhoto(url: String) {
-        photoCollectionUrl = photoCollectionUrl.filter { it != url }
-    }
-
-    // ---- Helpers for stock ----
-    fun updateStockQuantity(game: Game, qty: Int) {
-        stock = stock.map { if (it.first.uid == game.uid) it.first to qty else it }
-    }
-
-    fun removeFromStock(game: Game) {
-        stock = stock.filterNot { it.first.uid == game.uid }
-    }
-
-    fun addOrUpdateStock(game: Game, qty: Int) {
-        val existing = stock.find { it.first.uid == game.uid }
-        stock = if (existing != null) {
-            stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+  // ---- Helpers for photos ----
+  fun addOrReplacePhoto(path: String, index: Int) {
+    photoCollectionUrl =
+        if (index < photoCollectionUrl.size && photoCollectionUrl[index].isNotEmpty()) {
+          photoCollectionUrl.mapIndexed { i, old -> if (i == index) path else old }
         } else {
-            stock + (game to qty)
+          photoCollectionUrl + path
         }
-    }
+  }
 
-    // ---- Helpers ----
-    fun onDiscard(onBack: () -> Unit) {
-        shopName = ""
-        email = ""
-        addressText = ""
-        phone = ""
-        website = ""
-        week = emptyWeek()
-        editingDay = null
-        showHoursDialog = false
-        showGameDialog = false
-        qty = 1
-        stock = emptyList()
-        photoCollectionUrl = emptyList()
-        onSetGameQueryCallback("")
-        editingGame = null
-        onBack()
-    }
+  fun removePhoto(url: String) {
+    photoCollectionUrl = photoCollectionUrl.filter { it != url }
+  }
+
+  // ---- Helpers for stock ----
+  fun updateStockQuantity(game: Game, qty: Int) {
+    stock = stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+  }
+
+  fun removeFromStock(game: Game) {
+    stock = stock.filterNot { it.first.uid == game.uid }
+  }
+
+  fun addOrUpdateStock(game: Game, qty: Int) {
+    val existing = stock.find { it.first.uid == game.uid }
+    stock =
+        if (existing != null) {
+          stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+        } else {
+          stock + (game to qty)
+        }
+  }
+
+  // ---- Helpers ----
+  fun onDiscard(onBack: () -> Unit) {
+    shopName = ""
+    email = ""
+    addressText = ""
+    phone = ""
+    website = ""
+    week = emptyWeek()
+    editingDay = null
+    showHoursDialog = false
+    showGameDialog = false
+    qty = 1
+    stock = emptyList()
+    photoCollectionUrl = emptyList()
+    onSetGameQueryCallback("")
+    editingGame = null
+    onBack()
+  }
 }
 
 /* ================================================================================================
@@ -401,27 +409,30 @@ fun RequiredInfoSection(
         onValueChange = actions::onNameChange)
   }
 
-    Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS).padding(bottom = Dimensions.Padding.small)) {
-        ShopLocationSearchBar(
-            account = owner,
-            shop = shop,
-            enabled = online,
-            viewModel = viewModel,
-            inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
-            dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
-    }
+  Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS).padding(bottom = Dimensions.Padding.small)) {
+    ShopLocationSearchBar(
+        account = owner,
+        shop = shop,
+        enabled = online,
+        viewModel = viewModel,
+        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+  }
 
-    Box(modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.small)) {
-        Text(
-            text = "Contact Info",
-            style = MaterialTheme.typography.titleMedium)
-    }
+  Box(modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.small)) {
+    Text(text = "Contact Info", style = MaterialTheme.typography.titleMedium)
+  }
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL).padding(bottom = Dimensions.Padding.small)) {
     LabeledField(
         label = ShopFormUi.Strings.EMAIL_LABEL,
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
-        leadingIcon =  { Icon(imageVector = Icons.Default.Email, tint = AppColors.neutral, contentDescription = null)},
+        leadingIcon = {
+          Icon(
+              imageVector = Icons.Default.Email,
+              tint = AppColors.neutral,
+              contentDescription = null)
+        },
         value = shop.email,
         onValueChange = actions::onEmailChange,
         keyboardType = KeyboardType.Email)
@@ -435,29 +446,40 @@ fun RequiredInfoSection(
         style = MaterialTheme.typography.bodySmall)
   }
 
-    Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-        Box(Modifier.testTag(ShopFormTestTags.FIELD_PHONE).weight(1f).padding(end = Dimensions.Padding.medium)) {
-            LabeledField(
-                label = ShopFormUi.Strings.PHONE_LABEL,
-                placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
-                value = shop.phone,
-                leadingIcon = {Icon(imageVector = Icons.Default.Call, tint=AppColors.neutral, contentDescription = null)},
-                onValueChange = actions::onPhoneChange,
-                keyboardType = KeyboardType.Phone
-            )
+  Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+    Box(
+        Modifier.testTag(ShopFormTestTags.FIELD_PHONE)
+            .weight(1f)
+            .padding(end = Dimensions.Padding.medium)) {
+          LabeledField(
+              label = ShopFormUi.Strings.PHONE_LABEL,
+              placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
+              value = shop.phone,
+              leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    tint = AppColors.neutral,
+                    contentDescription = null)
+              },
+              onValueChange = actions::onPhoneChange,
+              keyboardType = KeyboardType.Phone)
         }
 
-        Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK).weight(1f)) {
-            LabeledField(
-                label = ShopFormUi.Strings.LINK_LABEL,
-                placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
-                value = shop.website,
-                leadingIcon = {Icon(imageVector = Icons.Default.Link, tint = AppColors.neutral, contentDescription = null)},
-                onValueChange = actions::onWebsiteChange,
-                keyboardType = KeyboardType.Uri
-            )
-        }
+    Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK).weight(1f)) {
+      LabeledField(
+          label = ShopFormUi.Strings.LINK_LABEL,
+          placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
+          value = shop.website,
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Link,
+                tint = AppColors.neutral,
+                contentDescription = null)
+          },
+          onValueChange = actions::onWebsiteChange,
+          keyboardType = KeyboardType.Uri)
     }
+  }
 }
 
 /**
@@ -499,9 +521,7 @@ fun GameStockPicker(
           state.onSetGameQuery("")
         },
         onSave = {
-          gameUIState.fetchedGame?.let { g ->
-            state.addOrUpdateStock(g, state.qty)
-          }
+          gameUIState.fetchedGame?.let { g -> state.addOrUpdateStock(g, state.qty) }
           state.onQtyChange(1)
           state.onSetGameQuery("")
           state.onDismiss()
@@ -511,22 +531,23 @@ fun GameStockPicker(
 
 /**
  * Displays the fetched game's image
+ *
  * @param gameUIState game Ui state after the search
  */
 @Composable
 fun GameStockImage(gameUIState: GameUIState) {
-    val game = gameUIState.fetchedGame
-    if (game != null) {
-        AsyncImage(
-            model = game.imageURL,
-            contentDescription = "Game image",
-            modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp)
-                .clip(RoundedCornerShape(8.dp)).padding(vertical = 6.dp),
-            contentScale = ContentScale.Fit
-        )
-    }
+  val game = gameUIState.fetchedGame
+  if (game != null) {
+    AsyncImage(
+        model = game.imageURL,
+        contentDescription = "Game image",
+        modifier =
+            Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .padding(vertical = 6.dp),
+        contentScale = ContentScale.Fit)
+  }
 }
-
 
 /**
  * A composable function that displays a quantity input with +/- buttons and a label.
@@ -544,111 +565,97 @@ fun GameAddUI(
     modifier: Modifier = Modifier,
     max: Int = 100
 ) {
-    Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
+  Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
+    Spacer(Modifier.height(Dimensions.Spacing.large))
 
-        Spacer(Modifier.height(Dimensions.Spacing.large))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+        modifier = Modifier.fillMaxWidth()) {
+          var sliderWidth by remember { mutableStateOf(0f) }
+          var bubbleWidth by remember { mutableStateOf(0f) }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            var sliderWidth by remember { mutableStateOf(0f) }
-            var bubbleWidth by remember { mutableStateOf(0f) }
+          val density = LocalDensity.current
+          val thumbSize = 30.dp
+          val thumbDiameterPx = with(density) { thumbSize.toPx() }
+          val thumbRadiusPx = thumbDiameterPx / 2f
 
-            val density = LocalDensity.current
-            val thumbSize = 30.dp
-            val thumbDiameterPx = with(density) { thumbSize.toPx() }
-            val thumbRadiusPx = thumbDiameterPx / 2f
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
-                    .height(100.dp)
-            ) {
-
+          Box(
+              modifier =
+                  Modifier.weight(1f)
+                      .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
+                      .height(100.dp)) {
                 Box(
-                    modifier = Modifier
-                        .onGloballyPositioned { coords ->
-                            bubbleWidth = coords.size.width.toFloat()
-                        }
-                        .offset {
+                    modifier =
+                        Modifier.onGloballyPositioned { coords ->
+                              bubbleWidth = coords.size.width.toFloat()
+                            }
+                            .offset {
+                              if (sliderWidth <= 0f || bubbleWidth <= 0f)
+                                  return@offset IntOffset.Zero
 
-                            if (sliderWidth <= 0f || bubbleWidth <= 0f)
-                                return@offset IntOffset.Zero
+                              val fraction = (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                              val trackWidth = sliderWidth - thumbDiameterPx
+                              val thumbCenterX = thumbRadiusPx + (trackWidth * fraction)
 
-                            val fraction = (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
-                            val trackWidth = sliderWidth - thumbDiameterPx
-                            val thumbCenterX = thumbRadiusPx + (trackWidth * fraction)
+                              val minX = thumbRadiusPx - bubbleWidth / 2f
+                              val maxX = sliderWidth - thumbRadiusPx - bubbleWidth / 2f
 
-                            val minX = thumbRadiusPx - bubbleWidth / 2f
-                            val maxX = sliderWidth - thumbRadiusPx - bubbleWidth / 2f
+                              val x = (thumbCenterX - bubbleWidth / 2f).coerceIn(minX, maxX)
 
-                            val x = (thumbCenterX - bubbleWidth / 2f)
-                                .coerceIn(minX, maxX)
-
-                            IntOffset(x.toInt(), 0)
-                        }
-
-                        .align(Alignment.TopStart)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
+                              IntOffset(x.toInt(), 0)
+                            }
+                            .align(Alignment.TopStart)) {
+                      Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
-                            modifier = Modifier
-                                .shadow(6.dp, CircleShape)
-                                .background(AppColors.focus, CircleShape)
-                                .padding(10.dp)
-                        ) {
-                            Text(
-                                text = value.toString(),
-                                color = AppColors.primary,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+                            modifier =
+                                Modifier.shadow(6.dp, CircleShape)
+                                    .background(AppColors.focus, CircleShape)
+                                    .padding(10.dp)) {
+                              Text(
+                                  text = value.toString(),
+                                  color = AppColors.primary,
+                                  style = MaterialTheme.typography.bodyMedium)
+                            }
 
                         // Pointer triangle
                         val pathColor = AppColors.focus
                         Canvas(modifier = Modifier.size(width = 16.dp, height = 10.dp)) {
-                            val path = Path().apply {
+                          val path =
+                              Path().apply {
                                 moveTo(size.width / 2f, size.height)
                                 lineTo(0f, 0f)
                                 lineTo(size.width, 0f)
                                 close()
-                            }
-                            drawPath(path, pathColor)
+                              }
+                          drawPath(path, pathColor)
                         }
+                      }
                     }
-                }
 
                 Slider(
                     value = value.toFloat(),
                     onValueChange = { onValueChange(it.toInt().coerceIn(0, max)) },
                     valueRange = 0f..max.toFloat(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .onGloballyPositioned {
-                            sliderWidth = it.size.width.toFloat()
+                    modifier =
+                        Modifier.fillMaxWidth().align(Alignment.BottomCenter).onGloballyPositioned {
+                          sliderWidth = it.size.width.toFloat()
                         },
-                    colors = SliderDefaults.colors(
-                        thumbColor = AppColors.focus,
-                        activeTrackColor = AppColors.focus,
-                        inactiveTrackColor = AppColors.textIconsFade
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = AppColors.focus,
+                            activeTrackColor = AppColors.focus,
+                            inactiveTrackColor = AppColors.textIconsFade),
                     thumb = {
-                        Box(
-                            modifier = Modifier
-                                .size(thumbSize)
-                                .shadow(4.dp, CircleShape)
-                                .background(AppColors.focus, CircleShape)
-                        )
-                    }
-                )
-            }
+                      Box(
+                          modifier =
+                              Modifier.size(thumbSize)
+                                  .shadow(4.dp, CircleShape)
+                                  .background(AppColors.focus, CircleShape))
+                    })
+              }
         }
-    }
+  }
 }
 
 /* =============================================================================
@@ -682,8 +689,7 @@ fun GameStockDialog(
 ) {
   val selectedGame = gameUIState.fetchedGame
   val isDuplicate =
-      selectedGame?.uid?.let { it in existingIds && (ignoreId == null || it != ignoreId) }
-          ?: false
+      selectedGame?.uid?.let { it in existingIds && (ignoreId == null || it != ignoreId) } ?: false
 
   AlertDialog(
       onDismissRequest = onDismiss,
@@ -701,35 +707,37 @@ fun GameStockDialog(
             }
       },
       text = {
-        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY), horizontalAlignment = Alignment.CenterHorizontally) {
-          ShopGameSearchBar(
-              owner,
-              shop,
-              viewModel,
-              gameUIState.fetchedGame,
-              existingIds,
-              inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
-              dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
+        Column(
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              ShopGameSearchBar(
+                  owner,
+                  shop,
+                  viewModel,
+                  gameUIState.fetchedGame,
+                  existingIds,
+                  inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
+                  dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
-          if (isDuplicate) {
-            Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
-            Text(
-                ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
-          }
+              if (isDuplicate) {
+                Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
+                Text(
+                    ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
+              }
 
-          Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
-            GameStockImage(gameUIState = gameUIState)
+              Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
+              GameStockImage(gameUIState = gameUIState)
 
-          GameAddUI(
-              value = quantity,
-              onValueChange = onQuantityChange,
-              modifier =
-                  Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
-                      .background(AppColors.primary))
-        }
+              GameAddUI(
+                  value = quantity,
+                  onValueChange = onQuantityChange,
+                  modifier =
+                      Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
+                          .background(AppColors.primary))
+            }
       },
       dismissButton = {
         TextButton(
@@ -825,100 +833,82 @@ fun GameItem(
     onDelete: (Game) -> Unit = {},
     showButtons: Boolean = false,
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-            .let {
-                if (clickable) it.clickable { onClick(game) } else it
-            },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
+  Card(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+              .let { if (clickable) it.clickable { onClick(game) } else it },
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(
             modifier = Modifier.padding(Dimensions.Padding.medium),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
 
-            // LEFT: Game image/icon
-            Icon(
-                Icons.Filled.VideogameAsset,
-                contentDescription = null,
-                modifier = Modifier.size(Dimensions.IconSize.huge)
-            )
+              // LEFT: Game image/icon
+              Icon(
+                  Icons.Filled.VideogameAsset,
+                  contentDescription = null,
+                  modifier = Modifier.size(Dimensions.IconSize.huge))
 
-            Spacer(Modifier.width(Dimensions.Spacing.medium))
+              Spacer(Modifier.width(Dimensions.Spacing.medium))
 
-            // CENTER: Game name
-            Text(
-                text = game.name,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center
-            )
+              // CENTER: Game name
+              Text(
+                  text = game.name,
+                  fontWeight = FontWeight.SemiBold,
+                  modifier = Modifier.weight(1f),
+                  textAlign = TextAlign.Center)
 
-            // RIGHT: Badge + Edit + Delete
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)
-            ) {
+              // RIGHT: Badge + Edit + Delete
+              Column(
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
 
-                // Badge
-                if (count > 0) {
-                    val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                    val label = if (count > max) "$max+" else count.toString()
+                    // Badge
+                    if (count > 0) {
+                      val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+                      val label = if (count > max) "$max+" else count.toString()
 
-                    Badge(
-                        containerColor = MaterialTheme.colorScheme.inversePrimary
-                    ) {
+                      Badge(containerColor = MaterialTheme.colorScheme.inversePrimary) {
                         Text(
                             label,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             softWrap = false,
-                            modifier = Modifier.padding(horizontal = Dimensions.Spacing.small)
-                        )
+                            modifier = Modifier.padding(horizontal = Dimensions.Spacing.small))
+                      }
                     }
-                }
 
-                // Edit button
-                if (showButtons) {
-                    IconButton(
-                        onClick = { onEdit(game) },
-                        modifier = Modifier.testTag(
-                            "${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}"
-                        )
-                    ) {
-                        Icon(
-                            Icons.Filled.Edit,
-                            contentDescription = "Edit ${game.name}"
-                        )
+                    // Edit button
+                    if (showButtons) {
+                      IconButton(
+                          onClick = { onEdit(game) },
+                          modifier =
+                              Modifier.testTag(
+                                  "${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit ${game.name}")
+                          }
                     }
-                }
 
-                // Delete button
-                if (showButtons) {
-                    IconButton(
-                        onClick = { onDelete(game) },
-                        modifier = Modifier.testTag(
-                            "${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"
-                        ),
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(
-                            Icons.Filled.Delete,
-                            contentDescription = "Remove ${game.name} from list"
-                        )
+                    // Delete button
+                    if (showButtons) {
+                      IconButton(
+                          onClick = { onDelete(game) },
+                          modifier =
+                              Modifier.testTag(
+                                  "${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
+                          colors =
+                              IconButtonDefaults.iconButtonColors(
+                                  contentColor = MaterialTheme.colorScheme.error)) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Remove ${game.name} from list")
+                          }
                     }
-                }
+                  }
             }
-        }
-    }
+      }
 }
-
 
 /* =============================================================================
  * Games: editable item helper
@@ -1010,101 +1000,90 @@ fun GameItemImage(
     onDelete: (Game) -> Unit = {},
     imageHeight: Dp? = null,
 ) {
-    Box(
-        modifier = modifier
-            .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
+  Box(modifier = modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")) {
+    Column(
+        modifier =
+            Modifier.padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.background)
                 .clickable(enabled = clickable) { onClick(game) },
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            AsyncImage(
-                model = game.imageURL,
-                contentDescription = game.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth(ShopScreenDefaults.Game.GAME_IMG_RELATIVE_WIDTH)
-                    .shadow(Dimensions.Elevation.high, MaterialTheme.shapes.medium, clip = true)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.background)
-                    .let { if (imageHeight != null) it.height(imageHeight)
-                    else it.aspectRatio(ShopScreenDefaults.Game.GAME_IMG_DEFAULT_ASPECT_RATIO) },
-                placeholder = painterResource(R.drawable.ic_dice),
-                error = painterResource(R.drawable.ic_dice)
-            )
+        horizontalAlignment = Alignment.CenterHorizontally) {
+          AsyncImage(
+              model = game.imageURL,
+              contentDescription = game.name,
+              contentScale = ContentScale.Crop,
+              modifier =
+                  Modifier.fillMaxWidth(ShopScreenDefaults.Game.GAME_IMG_RELATIVE_WIDTH)
+                      .shadow(Dimensions.Elevation.high, MaterialTheme.shapes.medium, clip = true)
+                      .clip(MaterialTheme.shapes.medium)
+                      .background(MaterialTheme.colorScheme.background)
+                      .let {
+                        if (imageHeight != null) it.height(imageHeight)
+                        else it.aspectRatio(ShopScreenDefaults.Game.GAME_IMG_DEFAULT_ASPECT_RATIO)
+                      },
+              placeholder = painterResource(R.drawable.ic_dice),
+              error = painterResource(R.drawable.ic_dice))
 
-            Spacer(Modifier.height(Dimensions.Spacing.small))
+          Spacer(Modifier.height(Dimensions.Spacing.small))
 
-            Text(
-                text = game.name,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                maxLines = ShopScreenDefaults.Game.GAME_NAME_MAX_LINES,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}")
-            )
+          Text(
+              text = game.name,
+              style = MaterialTheme.typography.bodySmall,
+              textAlign = TextAlign.Center,
+              maxLines = ShopScreenDefaults.Game.GAME_NAME_MAX_LINES,
+              overflow = TextOverflow.Ellipsis,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}"))
         }
 
-        if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
-            val label = if (count > ShopScreenDefaults.Stock.MAX_STOCK_SHOWED)
-                "${ShopScreenDefaults.Stock.MAX_STOCK_SHOWED}+"
-            else count.toString()
+    if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
+      val label =
+          if (count > ShopScreenDefaults.Stock.MAX_STOCK_SHOWED)
+              "${ShopScreenDefaults.Stock.MAX_STOCK_SHOWED}+"
+          else count.toString()
 
-            Column(
-                modifier = Modifier
-                    .padding(top = 20.dp).align(Alignment.TopEnd),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
+      Column(
+          modifier = Modifier.padding(top = 20.dp).align(Alignment.TopEnd),
+          horizontalAlignment = Alignment.End,
+          verticalArrangement = Arrangement.SpaceEvenly) {
+            Box(
+                modifier =
+                    Modifier.size(20.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
                         .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                contentAlignment = Alignment.Center) {
+                  Text(
+                      text = label,
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onPrimary)
                 }
 
-                if (editable) {
-                    IconButton(
-                        onClick = { onDelete(game) },
-                        modifier = Modifier.offset(x = 12.dp).padding(0.dp) // Shift icons to the right
-                    ) {
-                        Icon(
-                            Icons.Default.DeleteOutline,
-                            contentDescription = null,
-                            tint = AppColors.textIcons
-                        )
-                    }
+            if (editable) {
+              IconButton(
+                  onClick = { onDelete(game) },
+                  modifier = Modifier.offset(x = 12.dp).padding(0.dp) // Shift icons to the right
+                  ) {
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = null,
+                        tint = AppColors.textIcons)
+                  }
 
-                    IconButton(
-                        onClick = { onEdit(game) },
-                        modifier = Modifier.offset(x = 12.dp, y = (-10).dp).padding(0.dp) // Shift icons to the right
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = AppColors.textIcons
-                        )
-                    }
-                }
+              IconButton(
+                  onClick = { onEdit(game) },
+                  modifier =
+                      Modifier.offset(x = 12.dp, y = (-10).dp)
+                          .padding(0.dp) // Shift icons to the right
+                  ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = AppColors.textIcons)
+                  }
             }
-        }
+          }
     }
+  }
 }
-
 
 /**
  * A composable function that displays a paged grid section of game image items with an optional
@@ -1129,23 +1108,23 @@ fun GameImageListSection(
     onEdit: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {}
 ) {
-    val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
-    if (clampedGames.isEmpty()) return
+  val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
+  if (clampedGames.isEmpty()) return
 
-    val pages =
-        remember(clampedGames) {
-            clampedGames
-                .chunked(ShopScreenDefaults.Pager.GAMES_PER_PAGE)
-                .take(ShopScreenDefaults.Pager.MAX_PAGES)
-        }
-    val pageCount = pages.size
+  val pages =
+      remember(clampedGames) {
+        clampedGames
+            .chunked(ShopScreenDefaults.Pager.GAMES_PER_PAGE)
+            .take(ShopScreenDefaults.Pager.MAX_PAGES)
+      }
+  val pageCount = pages.size
 
-    val pagerState = rememberPagerState(pageCount = { pageCount })
-    val scope = rememberCoroutineScope()
+  val pagerState = rememberPagerState(pageCount = { pageCount })
+  val scope = rememberCoroutineScope()
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
-        modifier = modifier.fillMaxWidth()) {
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
+      modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
@@ -1153,24 +1132,24 @@ fun GameImageListSection(
         )
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val gridWidth = maxWidth
-            val imageHeight = gridWidth / ShopScreenDefaults.Pager.IMAGE_HEIGHT_CORRECTION
-            val textAreaHeight = ShopScreenDefaults.Game.GAME_NAME_AREA_HEIGHT
-            val rowHeight = imageHeight + textAreaHeight
-            val gridHeight = rowHeight * ShopScreenDefaults.Pager.GAMES_PER_COLUMN
+          val gridWidth = maxWidth
+          val imageHeight = gridWidth / ShopScreenDefaults.Pager.IMAGE_HEIGHT_CORRECTION
+          val textAreaHeight = ShopScreenDefaults.Game.GAME_NAME_AREA_HEIGHT
+          val rowHeight = imageHeight + textAreaHeight
+          val gridHeight = rowHeight * ShopScreenDefaults.Pager.GAMES_PER_COLUMN
 
-            HorizontalPager(
-                state = pagerState,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(gridHeight)
-                        .testTag(ShopTestTags.SHOP_GAME_PAGER)) { pageIndex ->
+          HorizontalPager(
+              state = pagerState,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .height(gridHeight)
+                      .testTag(ShopTestTags.SHOP_GAME_PAGER)) { pageIndex ->
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(ShopScreenDefaults.Pager.GAMES_PER_ROW),
                     horizontalArrangement = Arrangement.spacedBy(0.dp),
                     userScrollEnabled = false,
                     modifier = Modifier.fillMaxSize()) {
-                    items(pages[pageIndex], key = { it.first.uid }) { (game, count) ->
+                      items(pages[pageIndex], key = { it.first.uid }) { (game, count) ->
                         GameItemImage(
                             game = game,
                             count = count,
@@ -1180,33 +1159,32 @@ fun GameImageListSection(
                             onDelete = onDelete,
                             onEdit = onEdit,
                             imageHeight = imageHeight,
-                            modifier = Modifier.height(rowHeight)
-                        )
+                            modifier = Modifier.height(rowHeight))
+                      }
                     }
-                }
-            }
+              }
         }
 
         if (pageCount > ShopScreenDefaults.Pager.MINIMAL_PAGE_COUNT) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.medium),
-                horizontalArrangement = Arrangement.Center) {
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.medium),
+              horizontalArrangement = Arrangement.Center) {
                 repeat(pageCount) { index ->
-                    val selected = (index == pagerState.currentPage)
-                    Box(
-                        modifier =
-                            Modifier.padding(horizontal = Dimensions.Padding.small)
-                                .size(
-                                    if (selected) ShopScreenDefaults.Pager.PAGER_SELECTED_BUBBLE_SIZE
-                                    else ShopScreenDefaults.Pager.PAGER_UNSELECTED_BUBBLE_SIZE)
-                                .clip(CircleShape)
-                                .testTag("${ShopTestTags.SHOP_GAME_PAGER_INDICATOR_PREFIX}$index")
-                                .background(
-                                    if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outline)
-                                .clickable { scope.launch { pagerState.animateScrollToPage(index) } })
+                  val selected = (index == pagerState.currentPage)
+                  Box(
+                      modifier =
+                          Modifier.padding(horizontal = Dimensions.Padding.small)
+                              .size(
+                                  if (selected) ShopScreenDefaults.Pager.PAGER_SELECTED_BUBBLE_SIZE
+                                  else ShopScreenDefaults.Pager.PAGER_UNSELECTED_BUBBLE_SIZE)
+                              .clip(CircleShape)
+                              .testTag("${ShopTestTags.SHOP_GAME_PAGER_INDICATOR_PREFIX}$index")
+                              .background(
+                                  if (selected) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.outline)
+                              .clickable { scope.launch { pagerState.animateScrollToPage(index) } })
                 }
-            }
+              }
         }
-    }
+      }
 }
