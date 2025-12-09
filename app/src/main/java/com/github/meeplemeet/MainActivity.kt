@@ -42,7 +42,6 @@ import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
-import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
@@ -448,7 +447,7 @@ fun MeepleMeetApp(
             MapScreen(
                 navigation = navigationActions,
                 account = account!!,
-                onUserLocationChange = {userLocation = it},
+                onUserLocationChange = { userLocation = it },
                 onFABCLick = { geoPin ->
                   when (geoPin) {
                     PinType.SHOP -> {
