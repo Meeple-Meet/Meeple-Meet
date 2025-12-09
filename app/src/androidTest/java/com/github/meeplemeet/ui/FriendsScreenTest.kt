@@ -2,7 +2,6 @@
 // and finally completed by copilot. Comments were done by ChatGPT-5
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -195,13 +194,13 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_smoke_showsTopBarSearchAndFriendList() {
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              onBack = {},
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-              )
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -367,14 +366,13 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_search_showsDropdownAndHidesFriendsSection() {
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              onBack = {},
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-
-              )
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -520,13 +518,13 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_removeFriend_updatesRepository() {
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              onBack = {},
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-              )
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -586,16 +584,16 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_blockFromSearch_updatesRepository() {
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account =
-                  currentUser.copy( // ensure we start without relationship to stranger
-                      relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
-              viewModel = viewModel,
-              onBack = {},
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-              )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account =
+                currentUser.copy( // ensure we start without relationship to stranger
+                    relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
+      }
     }
 
     compose.waitUntilAtLeastOneExists(
@@ -647,13 +645,13 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_unblockFromSearch_updatesRepository() {
     // currentUser already has blockedUser as BLOCKED in setup()
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              onBack = {},
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-              )
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 

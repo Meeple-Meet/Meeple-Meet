@@ -2,7 +2,6 @@
 // Tests were partially done using ChatGPT-5 Thinking Extended and partially done manually
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -199,8 +198,13 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun all_tests() = runBlocking {
     // Set content once at the beginning
     compose.setContent {
-        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav,               unreadCount = me.notifications.count {it -> !it.read},
-        ) }
+      AppTheme {
+        DiscussionsOverviewScreen(
+            account = me,
+            navigation = nav,
+            unreadCount = me.notifications.count { it -> !it.read },
+        )
+      }
     }
 
     checkpoint("Test setup") {

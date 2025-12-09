@@ -109,7 +109,7 @@ fun SessionsOverviewScreen(
     navigation: NavigationActions,
     account: Account?,
     onSelectSession: (String) -> Unit = {},
-            unreadCount: Int
+    unreadCount: Int
 ) {
   val context = LocalContext.current
   val sessionMap by

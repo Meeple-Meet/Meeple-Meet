@@ -1,7 +1,6 @@
 package com.github.meeplemeet.ui
 
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -80,17 +79,17 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
 
     composeRule.setContent {
       val trigger = renderTrigger
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = MapViewModel(),
-                navigation = mockNavigation,
-                account = currentAccountState.value,
-                onFABCLick = {},
-                onRedirect = {},
-                cameraPositionState = cameraState,
-                unreadCount = regularAccount.notifications.count {it -> !it.read},
-                forceNoPermission = true)
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = MapViewModel(),
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              onFABCLick = {},
+              onRedirect = {},
+              cameraPositionState = cameraState,
+              unreadCount = regularAccount.notifications.count { it -> !it.read },
+              forceNoPermission = true)
         }
       }
     }

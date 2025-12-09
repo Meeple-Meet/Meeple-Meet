@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -68,14 +67,14 @@ class NotificationsTabCrashTest : FirestoreTests() {
     val notificationId = initialUser.notifications.first().uid
 
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          NotificationsTab(
-              account = currentUser,
-              viewModel = viewModel,
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        NotificationsTab(
+            account = currentUser,
+            viewModel = viewModel,
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+            onBack = {},
+        )
+      }
     }
 
     compose.waitUntilAtLeastOneExists(

@@ -313,7 +313,7 @@ fun NotificationsTab(
     viewModel: NotificationsViewModel = viewModel(),
     onBack: () -> Unit,
     onNavigate: (MeepleMeetScreen) -> Unit = {},
-            unreadCount: Int
+    unreadCount: Int
 ) {
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
@@ -380,7 +380,8 @@ fun NotificationsTab(
       bottomBar = {
         BottomNavigationMenu(
             unreadCount = unreadCount,
-            currentScreen = MeepleMeetScreen.Profile, onTabSelected = { onNavigate(it) })
+            currentScreen = MeepleMeetScreen.Profile,
+            onTabSelected = { onNavigate(it) })
       }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
           FilterRow(

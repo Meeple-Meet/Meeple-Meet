@@ -378,7 +378,8 @@ fun FriendsScreen(
         if (!(shouldHide && isInputFocused)) {
           BottomNavigationMenu(
               unreadCount = unreadCount,
-              currentScreen = MeepleMeetScreen.Profile, onTabSelected = { onNavigate(it) })
+              currentScreen = MeepleMeetScreen.Profile,
+              onTabSelected = { onNavigate(it) })
         }
       }) { innerPadding ->
         Column(

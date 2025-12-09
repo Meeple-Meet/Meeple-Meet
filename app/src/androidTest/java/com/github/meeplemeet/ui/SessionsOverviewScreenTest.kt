@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -63,14 +62,14 @@ class SessionsOverviewScreenTest : FirestoreTests() {
     capturedDiscussionId = ""
 
     compose.setContent {
-        AppTheme(ThemeMode.DARK) {
-          SessionsOverviewScreen(
-              viewModel = viewModel,
-              navigation = nav,
-              account = account,
-              unreadCount = account.notifications.count {it -> !it.read},
-              onSelectSession = { session -> capturedDiscussionId = session })
-        }
+      AppTheme(ThemeMode.DARK) {
+        SessionsOverviewScreen(
+            viewModel = viewModel,
+            navigation = nav,
+            account = account,
+            unreadCount = account.notifications.count { it -> !it.read },
+            onSelectSession = { session -> capturedDiscussionId = session })
+      }
     }
   }
 

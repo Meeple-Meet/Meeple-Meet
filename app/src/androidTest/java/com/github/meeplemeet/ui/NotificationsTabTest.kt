@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -213,8 +212,14 @@ class NotificationsTabTest : FirestoreTests() {
   @Test
   fun smoke_all_notifications_tests() {
     compose.setContent {
-        AppTheme { NotificationsTab(account = currentUser, viewModel = viewModel, onBack = {},               unreadCount = currentUser.notifications.count {it -> !it.read},
-        ) }
+      AppTheme {
+        NotificationsTab(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
+      }
     }
 
     checkpoint("Initial State") {
@@ -382,8 +387,14 @@ class NotificationsTabTest : FirestoreTests() {
     val emptyAccount = currentUser.copy(notifications = emptyList())
 
     compose.setContent {
-        AppTheme { NotificationsTab(account = emptyAccount, viewModel = viewModel, onBack = {},               unreadCount = currentUser.notifications.count {it -> !it.read},
-        ) }
+      AppTheme {
+        NotificationsTab(
+            account = emptyAccount,
+            viewModel = viewModel,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
+      }
     }
 
     checkpoint("Empty State Displayed") {

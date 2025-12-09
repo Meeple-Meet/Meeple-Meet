@@ -5,7 +5,6 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -198,20 +197,20 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = viewModel,
-                navigation = mockNavigation,
-                account = currentAccountState.value,
-                unreadCount = currentAccountState.value.notifications.count {it -> !it.read},
-                onFABCLick = { type ->
-                  fabClickCount++
-                  lastFabClickType = type
-                },
-                onRedirect = { pin -> lastRedirect = pin.uid })
-          }
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = viewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              unreadCount = currentAccountState.value.notifications.count { it -> !it.read },
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              onRedirect = { pin -> lastRedirect = pin.uid })
         }
+      }
     }
 
     Thread.sleep(500)
@@ -396,19 +395,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = noClusterViewModel,
-                navigation = mockNavigation,
-                account = currentAccountState.value,
-                unreadCount = currentAccountState.value.notifications.count {it -> !it.read},
-                onFABCLick = { type ->
-                  fabClickCount++
-                  lastFabClickType = type
-                },
-                onRedirect = { pin -> lastRedirect = pin.uid })
-          }
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = noClusterViewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              unreadCount = currentAccountState.value.notifications.count { it -> !it.read },
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              onRedirect = { pin -> lastRedirect = pin.uid })
+        }
       }
     }
 
@@ -717,21 +716,21 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = singleClusterViewModel,
-                navigation = mockNavigation,
-                account = currentAccountState.value,
-                unreadCount = currentAccountState.value.notifications.count {it -> !it.read},
-                onFABCLick = { type ->
-                  fabClickCount++
-                  lastFabClickType = type
-                },
-                onRedirect = { pin -> lastRedirect = pin.uid })
-          }
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = singleClusterViewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              unreadCount = currentAccountState.value.notifications.count { it -> !it.read },
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              onRedirect = { pin -> lastRedirect = pin.uid })
         }
       }
+    }
 
     checkpoint("cluster_displaysClusterSheet") {
       runBlocking {

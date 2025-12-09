@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
@@ -63,13 +62,13 @@ class FriendsScreenCrashTest : FirestoreTests() {
   @Test
   fun friendsScreen_missingFriend_doesNotCrash() {
     compose.setContent {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              unreadCount = currentUser.notifications.count {it -> !it.read},
-              onBack = {},
-          )
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+            onBack = {},
+        )
       }
     }
 
