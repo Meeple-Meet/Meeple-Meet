@@ -5,17 +5,21 @@
 package com.github.meeplemeet.ui.components
 
 import android.util.Patterns
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Remove
@@ -24,10 +28,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -37,7 +51,10 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.account.MainTabUi
+import com.github.meeplemeet.ui.account.PublicInfoTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.shops.GameItemImage
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.DateFormatSymbols
@@ -348,6 +365,7 @@ class CreateShopFormState(
 fun RequiredInfoSection(
     shop: Shop,
     actions: ShopFormActions,
+    online: Boolean,
     viewModel: ShopSearchViewModel,
     owner: Account
 ) {
@@ -363,6 +381,7 @@ fun RequiredInfoSection(
         ShopLocationSearchBar(
             account = owner,
             shop = shop,
+            enabled = online,
             viewModel = viewModel,
             inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
             dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
@@ -466,6 +485,33 @@ fun GameStockPicker(
 }
 
 /**
+ * Displays the fetched game's image
+ * @param gameUIState game Ui state after the search
+ */
+@Composable
+fun GameStockImage(gameUIState: GameUIState) {
+    val game = gameUIState.fetchedGame
+    if (game != null) {
+        AsyncImage(
+            model = game.imageURL,
+            contentDescription = "Game image",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop)
+    } else {
+        // Todo: remove me
+        Box(modifier =
+            Modifier.size(150.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(AppColors.textIconsFade)
+                .testTag(PublicInfoTestTags.AVATAR_PLACEHOLDER),
+            contentAlignment = Alignment.Center) {
+            Icon(imageVector = Icons.Default.VideogameAsset, contentDescription = "No game image", tint = AppColors.divider, modifier = Modifier.size(Dimensions.IconSize.giant))
+        }
+    }
+}
+
+
+/**
  * A composable function that displays a quantity input with +/- buttons and a label.
  *
  * @param value The current quantity value.
@@ -473,54 +519,120 @@ fun GameStockPicker(
  * @param range The range of valid quantity values.
  * @param modifier The modifier to be applied to the quantity input.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier) {
-  Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
-    Text(
-        ShopUiDefaults.StringsMagicNumbers.QUANTITY,
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
+fun GameAddUI(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    max: Int = 100
+) {
+    Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
 
-    Spacer(Modifier.height(Dimensions.Spacing.large))
+        Spacer(Modifier.height(Dimensions.Spacing.large))
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-        modifier = Modifier.fillMaxWidth()) {
-          IconButton(
-              onClick = {
-                val newValue = (value - 1)
-                onValueChange(newValue)
-              },
-              enabled = value > 0,
-              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_MINUS_BUTTON)) {
-                Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-              }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            var sliderWidth by remember { mutableStateOf(0f) }
+            var bubbleWidth by remember { mutableStateOf(0f) }
 
-          FocusableInputField(
-              value = value.toString(),
-              onValueChange = { newText ->
-                val newValue = newText.toIntOrNull() ?: 0
-                if (newValue > 0) {
-                  onValueChange(newValue)
+            val density = LocalDensity.current
+            val thumbSize = 30.dp
+            val thumbDiameterPx = with(density) { thumbSize.toPx() }
+            val thumbRadiusPx = thumbDiameterPx / 2f
+            val pointerHeightPx = with(density) { 10.dp.toPx() }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
+                    .height(100.dp)
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .onGloballyPositioned { coords ->
+                            bubbleWidth = coords.size.width.toFloat()
+                        }
+                        .offset {
+
+                            if (sliderWidth <= 0f || bubbleWidth <= 0f)
+                                return@offset IntOffset.Zero
+
+                            val fraction = (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                            val trackWidth = sliderWidth - thumbDiameterPx
+                            val thumbCenterX = thumbRadiusPx + (trackWidth * fraction)
+
+                            val minX = thumbRadiusPx - bubbleWidth / 2f
+                            val maxX = sliderWidth - thumbRadiusPx - bubbleWidth / 2f
+
+                            val x = (thumbCenterX - bubbleWidth / 2f)
+                                .coerceIn(minX, maxX)
+
+                            IntOffset(x.toInt(), 0)
+                        }
+
+                        .align(Alignment.TopStart)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                        Box(
+                            modifier = Modifier
+                                .shadow(6.dp, CircleShape)
+                                .background(AppColors.focus, CircleShape)
+                                .padding(10.dp)
+                        ) {
+                            Text(
+                                text = value.toString(),
+                                color = AppColors.primary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        // Pointer triangle
+                        val pathColor = AppColors.focus
+                        Canvas(modifier = Modifier.size(width = 16.dp, height = 10.dp)) {
+                            val path = Path().apply {
+                                moveTo(size.width / 2f, size.height)
+                                lineTo(0f, 0f)
+                                lineTo(size.width, 0f)
+                                close()
+                            }
+                            drawPath(path, pathColor)
+                        }
+                    }
                 }
-              },
-              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-              singleLine = true,
-              textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-              modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.QTY_INPUT_FIELD))
 
-          IconButton(
-              onClick = {
-                val newValue = (value + 1)
-                onValueChange(newValue)
-              },
-              enabled = true,
-              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_PLUS_BUTTON)) {
-                Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
-              }
+                Slider(
+                    value = value.toFloat(),
+                    onValueChange = { onValueChange(it.toInt()) },
+                    valueRange = 0f..max.toFloat(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .onGloballyPositioned {
+                            sliderWidth = it.size.width.toFloat()
+                        },
+                    colors = SliderDefaults.colors(
+                        thumbColor = AppColors.focus,
+                        activeTrackColor = AppColors.focus,
+                        inactiveTrackColor = AppColors.textIconsFade
+                    ),
+                    thumb = {
+                        Box(
+                            modifier = Modifier
+                                .size(thumbSize)
+                                .shadow(4.dp, CircleShape)
+                                .background(AppColors.focus, CircleShape)
+                        )
+                    }
+                )
+            }
         }
-  }
+    }
 }
 
 /* =============================================================================
@@ -570,7 +682,7 @@ fun GameStockDialog(
             }
       },
       text = {
-        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY), horizontalAlignment = Alignment.CenterHorizontally) {
           ShopGameSearchBar(
               owner,
               shop,
@@ -590,6 +702,7 @@ fun GameStockDialog(
           }
 
           Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
+            GameStockImage(gameUIState = gameUIState)
 
           GameAddUI(
               value = quantity,
@@ -638,7 +751,7 @@ fun GameListSection(
     modifier: Modifier = Modifier,
     clickableGames: Boolean = false,
     title: String? = null,
-    hasDeleteButton: Boolean = false,
+    showButtons: Boolean = false,
     onClick: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {},
 ) {
@@ -663,7 +776,7 @@ fun GameListSection(
                     count = count,
                     clickable = clickableGames,
                     onClick = onClick,
-                    hasDeleteButton = hasDeleteButton,
+                    showButtons = showButtons,
                     onDelete = onDelete)
               }
             }
@@ -689,83 +802,104 @@ fun GameItem(
     modifier: Modifier = Modifier,
     clickable: Boolean = false,
     onClick: (Game) -> Unit = {},
-    hasDeleteButton: Boolean = false,
+    onEdit: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {},
+    showButtons: Boolean = false,
 ) {
-  Card(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-              .clickable(enabled = clickable, onClick = { onClick(game) }),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+            .let {
+                if (clickable) it.clickable { onClick(game) } else it
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
         Row(
             modifier = Modifier.padding(Dimensions.Padding.medium),
-            verticalAlignment = Alignment.CenterVertically) {
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-              // Icon + badge
-              Box(
-                  modifier = Modifier.size(Dimensions.IconSize.huge),
-                  contentAlignment = Alignment.Center) {
-                    BadgedBox(
-                        badge = {
-                          // Only show badge if count > 0
-                          if (count > 0) {
-                            val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                            val label = if (count > max) "$max+" else count.toString()
-                            Badge(
-                                modifier =
-                                    Modifier.offset(
-                                            x = Dimensions.BadgeSize.offsetX,
-                                            y = Dimensions.BadgeSize.offsetY)
-                                        .defaultMinSize(
-                                            minWidth = Dimensions.BadgeSize.minSize,
-                                            minHeight = Dimensions.BadgeSize.minSize),
-                                containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                                  Text(
-                                      label,
-                                      style = MaterialTheme.typography.labelSmall,
-                                      maxLines = Dimensions.Numbers.singleLine,
-                                      softWrap = false,
-                                      modifier =
-                                          Modifier.padding(horizontal = Dimensions.Spacing.small))
-                                }
-                          }
-                        }) {
-                          Icon(Icons.Filled.VideogameAsset, contentDescription = null)
-                        }
-                  }
+            // LEFT: Game image/icon
+            Icon(
+                Icons.Filled.VideogameAsset,
+                contentDescription = null,
+                modifier = Modifier.size(Dimensions.IconSize.huge)
+            )
 
-              Spacer(Modifier.width(Dimensions.Spacing.medium))
+            Spacer(Modifier.width(Dimensions.Spacing.medium))
 
-              // Name centered
-              Column(
-                  modifier = Modifier.weight(1f),
-                  horizontalAlignment = Alignment.CenterHorizontally,
-                  verticalArrangement = Arrangement.Center) {
-                    Text(
-                        game.name,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center)
-                  }
+            // CENTER: Game name
+            Text(
+                text = game.name,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
 
-              // Optional delete
-              if (hasDeleteButton) {
-                IconButton(
-                    onClick = { onDelete(game) },
-                    modifier =
-                        Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error)) {
-                      Icon(
-                          Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
+            // RIGHT: Badge + Edit + Delete
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)
+            ) {
+
+                // Badge
+                if (count > 0) {
+                    val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+                    val label = if (count > max) "$max+" else count.toString()
+
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.inversePrimary
+                    ) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = Dimensions.Spacing.small)
+                        )
                     }
-              }
+                }
+
+                // Edit button
+                if (showButtons) {
+                    IconButton(
+                        onClick = { onEdit(game) },
+                        modifier = Modifier.testTag(
+                            "${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}"
+                        )
+                    ) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = "Edit ${game.name}"
+                        )
+                    }
+                }
+
+                // Delete button
+                if (showButtons) {
+                    IconButton(
+                        onClick = { onDelete(game) },
+                        modifier = Modifier.testTag(
+                            "${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"
+                        ),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Remove ${game.name} from list"
+                        )
+                    }
+                }
             }
-      }
+        }
+    }
 }
+
 
 /* =============================================================================
  * Games: editable item helper
