@@ -261,7 +261,8 @@ fun SpaceRenterRequiredInfoSection(
           placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
           value = phoneValue,
           onValueChange = onPhone,
-          keyboardType = KeyboardType.Phone)
+          keyboardType = KeyboardType.Phone,
+          scrollToStartOnFocusLost = true)
     }
 
     Spacer(Modifier.width(Dimensions.Spacing.medium))
@@ -276,7 +277,8 @@ fun SpaceRenterRequiredInfoSection(
           placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
           value = linkValue,
           onValueChange = onLink,
-          keyboardType = KeyboardType.Uri)
+          keyboardType = KeyboardType.Uri,
+          scrollToStartOnFocusLost = true)
     }
   }
 }
