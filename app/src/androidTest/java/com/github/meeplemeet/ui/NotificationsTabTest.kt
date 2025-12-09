@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationNoUid
@@ -19,7 +20,6 @@ import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -44,7 +44,7 @@ class NotificationsTabTest : FirestoreTests() {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var viewModel: NotificationsViewModel
-  private lateinit var navViewModel: NavigationViewModel
+  private lateinit var navViewModel: MainActivityViewModel
   private lateinit var currentUser: Account
   private lateinit var otherUser: Account
   private lateinit var discussion: Discussion
@@ -90,7 +90,7 @@ class NotificationsTabTest : FirestoreTests() {
             imageRepository = imageRepository,
             discussionRepository = discussionRepository,
             gameRepository = gameRepository)
-    navViewModel = NavigationViewModel(accountRepository)
+    navViewModel = MainActivityViewModel(accountRepository)
 
     runBlocking {
       // Create current user

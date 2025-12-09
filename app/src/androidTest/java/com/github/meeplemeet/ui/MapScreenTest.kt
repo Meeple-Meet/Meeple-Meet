@@ -26,6 +26,7 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.toPackage
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
@@ -33,7 +34,6 @@ import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -88,7 +88,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 120000L)
 
   private lateinit var mockNavigation: NavigationActions
-  private lateinit var navVM: NavigationViewModel
+  private lateinit var navVM: MainActivityViewModel
 
   private lateinit var regularAccount: Account
   private lateinit var shopOwnerAccount: Account
@@ -128,7 +128,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     } catch (_: Exception) {}
 
     mockNavigation = mockk(relaxed = true)
-    navVM = NavigationViewModel()
+    navVM = MainActivityViewModel()
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
 

@@ -6,10 +6,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -25,13 +25,13 @@ class FriendsScreenCrashTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
 
   private lateinit var viewModel: FriendsScreenViewModel
-  private lateinit var navViewModel: NavigationViewModel
+  private lateinit var navViewModel: MainActivityViewModel
   private lateinit var currentUser: Account
 
   @Before
   fun setup() {
     viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
-    navViewModel = NavigationViewModel(accountRepository)
+    navViewModel = MainActivityViewModel(accountRepository)
 
     runBlocking {
       val suffix = System.currentTimeMillis()

@@ -7,12 +7,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -36,7 +36,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   private lateinit var vm: DiscussionViewModel
   private lateinit var nav: NavigationActions
-  private lateinit var navVM: NavigationViewModel
+  private lateinit var navVM: MainActivityViewModel
 
   private lateinit var me: Account
   private lateinit var bob: Account
@@ -50,7 +50,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun setup() = runBlocking {
     vm = DiscussionViewModel()
     nav = mockk(relaxed = true)
-    navVM = NavigationViewModel()
+    navVM = MainActivityViewModel()
 
     // Create test users using repository
     me =

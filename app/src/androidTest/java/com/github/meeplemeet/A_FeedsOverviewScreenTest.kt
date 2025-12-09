@@ -14,10 +14,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -47,7 +47,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   /* repos & VMs */
   private lateinit var postVm: PostOverviewViewModel
   private lateinit var firestoreVm: DiscussionViewModel
-  private lateinit var navVM: NavigationViewModel
+  private lateinit var navVM: MainActivityViewModel
 
   private lateinit var me: Account
   private lateinit var alice: Account
@@ -74,7 +74,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   @Before
   fun setup() = runBlocking {
     postVm = PostOverviewViewModel()
-    navVM = NavigationViewModel()
+    navVM = MainActivityViewModel()
     firestoreVm = DiscussionViewModel()
 
     me = accountRepository.createAccount("meUID", "Me", "me@test.com", null)
