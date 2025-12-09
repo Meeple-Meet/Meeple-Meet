@@ -485,6 +485,8 @@ fun MeepleMeetApp(
                 account = account!!,
                 verified = uiState.isEmailVerified,
                 navigation = navigationActions,
+                account = account!!,
+                onUserLocationChange = {userLocation = it},
                 onFABCLick = { geoPin ->
                   when (geoPin) {
                     PinType.SHOP -> {
