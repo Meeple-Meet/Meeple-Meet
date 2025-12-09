@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
@@ -833,6 +835,7 @@ private fun ThreadCard(
                 CommentItem(
                     comment = root,
                     author = resolveUser(root.authorId),
+                    currentUser = currentUser,
                     isMine = (root.authorId == currentUser.uid),
                     hasReplies = root.children.isNotEmpty(),
                     isExpanded = expanded,
@@ -909,6 +912,7 @@ private fun CommentsTree(
               CommentItem(
                   comment = c,
                   author = resolveUser(c.authorId),
+                  currentUser = currentUser,
                   isMine = (c.authorId == currentUser.uid),
                   hasReplies = c.children.isNotEmpty(),
                   isExpanded = expanded,
@@ -951,6 +955,7 @@ private fun CommentsTree(
             CommentItem(
                 comment = c,
                 author = resolveUser(c.authorId),
+                currentUser = currentUser,
                 isMine = (c.authorId == currentUser.uid),
                 hasReplies = c.children.isNotEmpty(),
                 isExpanded = expanded,
@@ -1019,6 +1024,7 @@ private fun ThreadGutter(
  *
  * @param comment The comment to display.
  * @param author The author of the comment.
+ * @param currentUser The current user's account information.
  * @param isMine Whether the comment was authored by the current user.
  * @param hasReplies Whether this comment has child replies.
  * @param isExpanded Whether the replies are currently visible.
@@ -1031,6 +1037,7 @@ private fun ThreadGutter(
 private fun CommentItem(
     comment: Comment,
     author: Account?,
+    currentUser: Account,
     isMine: Boolean,
     hasReplies: Boolean = false,
     isExpanded: Boolean = false,
@@ -1043,6 +1050,8 @@ private fun CommentItem(
   var replyText by rememberSaveable(comment.id) { mutableStateOf("") }
   val focusManager = LocalFocusManager.current
 
+  val isBlocked = currentUser.relationships[comment.authorId] == RelationshipStatus.BLOCKED
+
   val clickMod = if (onCardClick != null) Modifier.clickable(onClick = onCardClick) else Modifier
   Column(modifier = clickMod.fillMaxWidth().testTag(PostTags.commentCard(comment.id))) {
     // Comment header
@@ -1051,12 +1060,12 @@ private fun CommentItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
           ProfilePicture(
-              profilePictureUrl = author?.photoUrl,
+              profilePictureUrl = if (isBlocked) null else author?.photoUrl,
               size = Dimensions.AvatarSize.tiny,
               backgroundColor = MessagingColors.redditOrange,
               modifier = Modifier.clearAndSetSemantics {})
           Text(
-              text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
+              text = if (isBlocked) "Blocked User" else author?.name ?: UNKNOWN_USER_PLACEHOLDER,
               style = MaterialTheme.typography.labelMedium,
               fontSize = Dimensions.TextSize.small,
               fontWeight = FontWeight.SemiBold,
@@ -1102,12 +1111,22 @@ private fun CommentItem(
     Spacer(Modifier.height(Dimensions.Spacing.medium))
 
     // Comment text
-    Text(
-        text = comment.text,
-        style = MaterialTheme.typography.bodyMedium,
-        fontSize = Dimensions.TextSize.standard,
-        color = MessagingColors.primaryText,
-        modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    if (isBlocked) {
+      Text(
+          text = "Comment from blocked user",
+          style = MaterialTheme.typography.bodyMedium,
+          fontSize = Dimensions.TextSize.standard,
+          color = MessagingColors.secondaryText,
+          fontStyle = FontStyle.Italic,
+          modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    } else {
+      Text(
+          text = comment.text,
+          style = MaterialTheme.typography.bodyMedium,
+          fontSize = Dimensions.TextSize.standard,
+          color = MessagingColors.primaryText,
+          modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    }
 
     // "See replies" button when there are replies
     if (hasReplies) {

@@ -389,6 +389,7 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.PostsOverview.name) {
             PostsOverviewScreen(
                 navigation = navigationActions,
+                account = account!!,
                 onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
                 onSelectPost = {
                   postId = it.id

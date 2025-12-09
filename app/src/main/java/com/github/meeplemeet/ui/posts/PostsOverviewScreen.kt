@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
@@ -69,6 +71,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 fun PostsOverviewScreen(
     viewModel: PostOverviewViewModel = viewModel(),
     navigation: NavigationActions,
+    account: Account,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
@@ -118,6 +121,9 @@ fun PostsOverviewScreen(
               modifier = Modifier.fillMaxSize().padding(innerPadding),
               verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
                 items(postsSorted, key = { it.id }) { post ->
+                  if (account.relationships[post.authorId] == RelationshipStatus.BLOCKED)
+                      return@items
+
                   val dateFormatted =
                       SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                           .format(post.timestamp.toDate())
