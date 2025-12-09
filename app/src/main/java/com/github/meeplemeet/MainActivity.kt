@@ -38,7 +38,6 @@ import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
