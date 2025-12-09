@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -73,7 +75,6 @@ object OnBoardingTestTags {
   const val PAGER_DOT = "OnBoarding_PagerDot"
   const val PAGER = "OnBoarding_Pager"
   const val DISCUSSION_PREVIEW_CARD = "DiscussionPreviewCard"
-  const val CLOSE_DIALOG = "OnBoarding_CloseDialog"
   const val SESSION_CREATION_PAGE = "OnBoarding_SessionCreationPage"
   const val SESSION_CREATION_DATETIME = "OnBoarding_SessionCreationDateTime"
   const val SESSION_CREATION_PARTICIPANTS = "OnBoarding_SessionCreationParticipants"
@@ -84,8 +85,6 @@ object OnBoardingTestTags {
 /** String constants for onboarding screen content and labels. */
 object OnBoardingStrings {
   const val SKIP = "Skip"
-  const val MEEPLE_MEET_INTRO_DESCRIPTION =
-      "Meeple Meet helps you organize game sessions, join discussions, explore shops, check prices, and find local gaming spaces."
   const val SESSION_PAGE_SUBTITLE = "Organize and join gaming meetups with friends"
   const val POST_PAGE_SUBTITLE = "Share your gaming experiences with the world"
   const val MAP_EXPLORATION_SUBTITLE = "Find board game shops and rental spaces near you"
@@ -282,6 +281,7 @@ fun SessionCreationPreviewPage(
       modifier =
           Modifier.fillMaxSize()
               .padding(top = Dimensions.Padding.medium)
+              .verticalScroll(rememberScrollState())
               .testTag(OnBoardingTestTags.SESSION_CREATION_PAGE)) {
         PageTitle(title = OnBoardingStrings.SESSION_CREATION_TITLE, pageIndex = 1)
 
@@ -540,7 +540,10 @@ fun MeepleMeetIntroPage() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
-        modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxLarge)) {
+        modifier =
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(Dimensions.Spacing.xxLarge)) {
           PageImage(imageRes = logoRes)
           PageTitle(title = "Meeple Meet", pageIndex = 0)
           Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
@@ -564,14 +567,6 @@ fun MeepleMeetIntroPage() {
                     "Discover rental spaces and venues for gaming events nearby",
                     tint = AppColors.textIconsFade)
               }
-          Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
-          Text(
-              text = OnBoardingStrings.MEEPLE_MEET_INTRO_DESCRIPTION,
-              fontSize = Dimensions.TextSize.subtitle,
-              color = AppColors.secondary,
-              textAlign = TextAlign.Center,
-              modifier =
-                  Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge))
         }
   }
 }
@@ -609,7 +604,10 @@ fun MapExplorationPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(top = Dimensions.Padding.medium)) {
         PageTitle(title = "Explore Nearby", pageIndex = 4)
 
         Text(
@@ -828,7 +826,10 @@ fun SessionsPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(top = Dimensions.Padding.medium)) {
         PageTitle(title = "Game Sessions", pageIndex = 2)
 
         Text(
@@ -1007,7 +1008,10 @@ fun LetsGoPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center,
-      modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge)) {
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(Dimensions.Spacing.xxxLarge)) {
         Spacer(modifier = Modifier.weight(0.3f))
 
         PageImage(imageRes = logoRes)

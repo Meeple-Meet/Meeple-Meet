@@ -442,12 +442,5 @@ class OnBoardingScreenTest {
     }
 
     checkpoint("Page: Title displayed") { compose.onNodeWithText("Meeple Meet").assertExists() }
-
-    checkpoint("Page: Description displayed") {
-      compose
-          .onNodeWithText(
-              "Meeple Meet helps you organize game sessions, join discussions, explore shops, check prices, and find local gaming spaces.")
-          .assertExists()
-    }
   }
 }
