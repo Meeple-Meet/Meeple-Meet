@@ -141,25 +141,22 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
 
   Box(
       modifier =
-          Modifier.fillMaxSize()
-              .background(AppColors.primary)
-              .padding(Dimensions.CornerRadius.round)
-              .pointerInput(pagerState.currentPage) {
+          Modifier.fillMaxSize().background(AppColors.primary).pointerInput(
+              pagerState.currentPage) {
                 // Block swipe gestures on page 1 if user hasn't interacted
                 if (pagerState.currentPage == 1 && !hasInteractedWithDiscussion.value) {
                   detectHorizontalDragGestures { _, _ -> }
                 }
               }) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize().padding(Dimensions.CornerRadius.round)) {
               Box(modifier = Modifier.fillMaxWidth().weight(Dimensions.Weight.full)) {
                 OnBoardingPager(
                     pagerState = pagerState,
                     pages = pages,
                     hasInteractedWithDiscussion = hasInteractedWithDiscussion,
                     modifier = Modifier.fillMaxSize())
-
-                SkipButton(onSkip = onSkip, modifier = Modifier.align(Alignment.TopEnd))
               }
 
               NavigationControls(
@@ -168,7 +165,6 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                   hasInteractedWithDiscussion = hasInteractedWithDiscussion.value,
                   onNavigate = { page -> scope.launch { pagerState.animateScrollToPage(page) } })
 
-              // Show end button if last page
               if (pagerState.currentPage == pages.lastIndex) {
                 Button(
                     onClick = onFinished,
@@ -183,6 +179,12 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                     }
               }
             }
+
+        SkipButton(
+            onSkip = onSkip,
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = Dimensions.Padding.medium, end = Dimensions.Padding.medium))
       }
 }
 
