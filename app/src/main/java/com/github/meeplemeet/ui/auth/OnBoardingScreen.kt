@@ -382,7 +382,7 @@ private fun PageTitle(title: String, pageIndex: Int) {
       fontWeight = FontWeight.Bold,
       color = MaterialTheme.colorScheme.tertiary,
       modifier =
-          Modifier.padding(bottom = Dimensions.Padding.large)
+          Modifier.padding(bottom = Dimensions.Padding.medium)
               .testTag("${OnBoardingTestTags.PAGE_TITLE}_$pageIndex"))
 }
 
