@@ -140,8 +140,18 @@ fun SpaceRenterScreen(
 
   var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
-  // Initial load when spaceId changes
-  LaunchedEffect(spaceId) { viewModel.getSpaceRenter(spaceId, context) }
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+  val currentState by rememberUpdatedState(spaceId)
+
+  DisposableEffect(lifecycleOwner, currentState) {
+    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+      if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        viewModel.getSpaceRenter(currentState, context)
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
 
   LaunchedEffect(images) {
     val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }

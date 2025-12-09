@@ -125,8 +125,19 @@ fun ShopScreen(
   // Holds the cached image file paths
   val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
 
-  // Initial load when shopId changes
-  LaunchedEffect(shopId) { viewModel.getShop(shopId, context) }
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+  // Reload shop data whenever the screen resumes (e.g. returning from Edit screen)
+  // This ensures we always show the latest data including new photos.
+  DisposableEffect(lifecycleOwner, shopId) {
+    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+      if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        viewModel.getShop(shopId, context)
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
 
   // Convert images to cached file paths
   // Update whenever images change (which happens after reload)

@@ -1,6 +1,8 @@
 package com.github.meeplemeet.ui.shops
 // Github copilot was used for this file
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -257,6 +260,8 @@ fun EditShopContent(
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
+  var isSaving by remember { mutableStateOf(false) }
+
   CompositionLocalProvider(
       LocalFocusableFieldObserver provides
           { token, focused ->
@@ -353,6 +358,17 @@ fun EditShopContent(
                   }
             }
       }
+      if (isSaving) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                    .clickable(enabled = true, onClick = {}),
+            contentAlignment = Alignment.Center) {
+              CircularProgressIndicator()
+            }
+      }
+    }
 
   OpeningHoursEditor(
       show = state.showHoursDialog,

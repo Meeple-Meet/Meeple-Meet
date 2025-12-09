@@ -106,9 +106,9 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   private fun discussionMessagePath(id: String) =
       "${discussionMessagesDir(id)}/${UUID.randomUUID()}.webp"
 
-  private fun shopPath(id: String) = "${RepositoryProvider.shops.collectionName}/$id"
+  private fun shopPath(id: String) = "shops/$id"
 
-  private fun spaceRenterPath(id: String) = "${RepositoryProvider.spaceRenters.collectionName}/$id"
+  private fun spaceRenterPath(id: String) = "space_renters/$id"
 
   private fun cachePath(context: Context, storagePath: String) = "${context.cacheDir}/$storagePath"
 
@@ -528,8 +528,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
-  suspend fun loadShopPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
-    return loadImages(context, shopPath(shopId), count)
+  suspend fun loadShopPhotos(context: Context, shopId: String, urls: List<String>): List<ByteArray> {
+    return loadImagesByUrls(context, urls)
   }
 
   /**
@@ -560,8 +560,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
-  suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
-    return loadImages(context, spaceRenterPath(shopId), count)
+  suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, urls: List<String>): List<ByteArray> {
+    return loadImagesByUrls(context, urls)
   }
 
   /**
@@ -790,6 +790,29 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
     (cachedBytes + remoteBytes).awaitAll()
   }
+  /**
+   * Loads multiple images in parallel from their URLs.
+   *
+   * @param context Android context for accessing cache directory
+   * @param urls List of full HTTPS download URLs
+   * @return List of images as byte arrays in the same order as urls
+   */
+  private suspend fun loadImagesByUrls(context: Context, urls: List<String>): List<ByteArray> =
+      coroutineScope {
+        urls.map { url ->
+              async {
+                val path =
+                    if (url.contains("/o/")) {
+                      val encoded = url.substringAfter("/o/").substringBefore('?')
+                      URLDecoder.decode(encoded, "UTF-8")
+                    } else {
+                      url
+                    }
+                loadImage(context, path)
+              }
+            }
+            .awaitAll()
+      }
 
   /**
    * Deletes one or more images from both local cache and Firebase Storage.

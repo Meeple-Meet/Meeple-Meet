@@ -68,10 +68,26 @@ class ShopViewModel(
     currentShopId = id
 
     viewModelScope.launch {
-        OfflineModeManager.loadShop(id) { shop -> _shop.value = shop }
-        val count = _shop.value!!.photoCollectionUrl.size
-        val images = imageRepository.loadShopPhotos(context = context, shopId = id, count = count)
-        _photos.value = images
+      OfflineModeManager.loadShop(id) { shop ->
+        _shop.value = shop
+        if (shop != null) {
+          loadPhotos(context, shop)
+        }
+      }
+    }
+  }
+
+  /**
+   * Loads photos for the given shop.
+   *
+   * @param context The Android context for image operations.
+   * @param shop The shop to load photos for.
+   */
+  fun loadPhotos(context: android.content.Context, shop: Shop) {
+    val urls = shop.photoCollectionUrl
+    viewModelScope.launch {
+      val images = imageRepository.loadShopPhotos(context = context, shopId = shop.id, urls = urls)
+      _photos.value = images
     }
   }
 

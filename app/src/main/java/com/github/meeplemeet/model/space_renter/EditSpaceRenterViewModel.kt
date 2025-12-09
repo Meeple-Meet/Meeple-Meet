@@ -87,7 +87,7 @@ class EditSpaceRenterViewModel(
    * @throws IllegalArgumentException if the space renter name is blank, if not exactly 7 opening
    *   hours entries are provided, or if the address is not valid.
    */
-  fun updateSpaceRenter(
+  suspend fun updateSpaceRenter(
       context: Context,
       spaceRenter: SpaceRenter,
       requester: Account,
@@ -106,14 +106,12 @@ class EditSpaceRenterViewModel(
             owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
     validateUpdateRequest(spaceRenter, requester, params)
 
-    viewModelScope.launch {
-      val isOnline = OfflineModeManager.hasInternetConnection.first()
+    val isOnline = OfflineModeManager.hasInternetConnection.first()
 
-      if (isOnline) {
-        handleOnlineUpdate(spaceRenter, params, context)
-      } else {
-        handleOfflineUpdate(spaceRenter, params)
-      }
+    if (isOnline) {
+      handleOnlineUpdate(spaceRenter, params, context)
+    } else {
+      handleOfflineUpdate(spaceRenter, params)
     }
   }
 
@@ -194,7 +192,7 @@ class EditSpaceRenterViewModel(
                       "upload",
                       "Image upload failed for space renter ${spaceRenter.id}: ${e.message}",
                       e)
-                  emptyList<String>()
+                  throw e
               }
           } else {
               emptyList()
@@ -227,13 +225,22 @@ class EditSpaceRenterViewModel(
         params.spaces,
         finalPhotoUrls)
 
-    val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
+    // Optimistically update cache with the data we just successfully sent
+    // This avoids race conditions where getSpaceRenterSafe returns stale data
+    val updatedSpaceRenter =
+        spaceRenter.copy(
+            owner = params.owner ?: spaceRenter.owner,
+            name = params.name ?: spaceRenter.name,
+            phone = params.phone ?: spaceRenter.phone,
+            email = params.email ?: spaceRenter.email,
+            website = params.website ?: spaceRenter.website,
+            address = params.address ?: spaceRenter.address,
+            openingHours = params.openingHours ?: spaceRenter.openingHours,
+            spaces = params.spaces ?: spaceRenter.spaces,
+            photoCollectionUrl = finalPhotoUrls)
 
-    if (refreshed != null) {
-      // Update both cache and UI state
-      OfflineModeManager.updateSpaceRenterCache(refreshed)
-      _currentSpaceRenter.value = refreshed
-    }
+    OfflineModeManager.updateSpaceRenterCache(updatedSpaceRenter)
+    _currentSpaceRenter.value = updatedSpaceRenter
 
     OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
   }

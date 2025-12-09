@@ -1,5 +1,7 @@
 package com.github.meeplemeet.ui.space_renter
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -9,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -264,6 +267,7 @@ internal fun EditSpaceRenterContent(
   // Scaffold structure for the screen including top bar, snackbar, and main content.
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
+  var isSaving by remember { mutableStateOf(false) }
 
   CompositionLocalProvider(
       LocalFocusableFieldObserver provides
@@ -272,29 +276,32 @@ internal fun EditSpaceRenterContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        Scaffold(
-            topBar = {
-              CenterAlignedTopAppBar(
-                  title = {
-                    Text(
-                        EditSpaceRenterUi.Strings.SCREEN_TITLE,
-                        modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TITLE))
-                  },
-                  navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.NAV_BACK)) {
-                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                  },
-                  actions = {
-                    IconButton(
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.DELETE_BUTTON)) {
-                          Icon(Icons.Filled.Delete, contentDescription = "Delete space renter")
-                        }
-                  },
-                  modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TOPBAR))
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                topBar = {
+                  CenterAlignedTopAppBar(
+                      title = {
+                        Text(
+                            EditSpaceRenterUi.Strings.SCREEN_TITLE,
+                            modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TITLE))
+                      },
+                      navigationIcon = {
+                        IconButton(
+                            onClick = onBack,
+                            enabled = !isSaving,
+                            modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.NAV_BACK)) {
+                              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                      },
+                      actions = {
+                        IconButton(
+                            onClick = { showDeleteDialog = true },
+                            enabled = !isSaving,
+                            modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.DELETE_BUTTON)) {
+                              Icon(Icons.Filled.Delete, contentDescription = "Delete space renter")
+                            }
+                      },
+                      modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.TOPBAR))
             },
             snackbarHost = {
               SnackbarHost(
@@ -307,19 +314,22 @@ internal fun EditSpaceRenterContent(
                   ActionBar(
                       onDiscard = onBack,
                       onPrimary = {
+                        isSaving = true
                         scope.launch {
                           try {
                             onUpdateSpaceRenter(draftRenter)
                             onUpdated()
                           } catch (e: IllegalArgumentException) {
+                            isSaving = false
                             snackbarHost.showSnackbar(
                                 e.message ?: EditSpaceRenterUi.Strings.ERROR_VALIDATION)
                           } catch (e: Exception) {
+                            isSaving = false
                             snackbarHost.showSnackbar(EditSpaceRenterUi.Strings.ERROR_UPDATE)
                           }
                         }
                       },
-                      enabled = isValid,
+                      enabled = isValid && !isSaving,
                       primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             },
             modifier = Modifier.testTag(EditSpaceRenterScreenTestTags.SCAFFOLD)) { padding ->
@@ -411,7 +421,18 @@ internal fun EditSpaceRenterContent(
                     }
                   }
             }
-      }
+            }
+            if (isSaving) {
+              Box(
+                  modifier =
+                      Modifier.fillMaxSize()
+                          .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                          .clickable(enabled = true, onClick = {}),
+                  contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                  }
+            }
+        }
 
   OpeningHoursEditor(
       show = showHoursDialog,
