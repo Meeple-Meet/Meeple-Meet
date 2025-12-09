@@ -104,7 +104,7 @@ object Dimensions {
     val title: TextUnit = 17.sp
     val heading: TextUnit = 18.sp
     val largeHeading: TextUnit = 20.sp
-    val large: TextUnit = 28.sp
+    val large: TextUnit = 26.sp
     val extraLarge: TextUnit = 36.sp
     val displayMedium: TextUnit = 56.sp
   }
@@ -158,7 +158,7 @@ object Dimensions {
     val maxInputHeight: Dp = 120.dp
     val discussionCardMinHeight: Dp = 68.dp
     val discussionCardMaxHeight: Dp = 84.dp
-    val pageImageSize: Dp = 400.dp
+    val pageImageSize: Dp = 300.dp
     val mapHeight: Dp = 300.dp
     val dividerHorizontalPadding: Dp = 30.dp
   }
