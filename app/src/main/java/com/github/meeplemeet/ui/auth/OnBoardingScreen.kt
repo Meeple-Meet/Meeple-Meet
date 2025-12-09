@@ -417,7 +417,7 @@ fun NavigationControls(
       modifier =
           Modifier.fillMaxWidth()
               .padding(
-                  vertical = Dimensions.Padding.extraLarge, horizontal = Dimensions.Padding.tiny),
+                  vertical = Dimensions.Padding.small, horizontal = Dimensions.Padding.extraLarge),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween) {
         BackButton(
