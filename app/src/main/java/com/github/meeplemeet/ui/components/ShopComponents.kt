@@ -48,6 +48,7 @@ object ShopFormTestTags {
   const val SECTION_HEADER_SUFFIX = "_header"
   const val SECTION_TITLE_SUFFIX = "_title"
   const val SECTION_TOGGLE_SUFFIX = "_toggle"
+  const val SECTION_TOGGLE_ICON_SUFFIX = "_toggle_icon"
   const val SECTION_DIVIDER_SUFFIX = "_divider"
   const val SECTION_CONTENT_SUFFIX = "_content"
 
