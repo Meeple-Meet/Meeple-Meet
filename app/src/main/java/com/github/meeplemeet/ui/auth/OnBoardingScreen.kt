@@ -921,7 +921,10 @@ fun PostsPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(top = Dimensions.Padding.medium)) {
         PageTitle(title = "Community Posts", pageIndex = 3)
 
         Text(
