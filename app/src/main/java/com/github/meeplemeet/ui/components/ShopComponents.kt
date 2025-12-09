@@ -72,6 +72,7 @@ import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.min
 
 interface ShopFormActions {
   fun onNameChange(name: String)
@@ -610,7 +611,7 @@ fun GameAddUI(
 
                 Slider(
                     value = value.toFloat(),
-                    onValueChange = { onValueChange(it.toInt()) },
+                    onValueChange = { onValueChange(it.toInt().coerceIn(0, max)) },
                     valueRange = 0f..max.toFloat(),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1041,14 +1042,13 @@ fun GameItemImage(
 
             Column(
                 modifier = Modifier
-                    .padding(top = 26.dp).align(Alignment.TopEnd),
+                    .padding(top = 20.dp).align(Alignment.TopEnd),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 Box(
                     modifier = Modifier
                         .size(20.dp)
-                        .offset(x = 0.dp) // Shift count bubble to the right
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
                         .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
