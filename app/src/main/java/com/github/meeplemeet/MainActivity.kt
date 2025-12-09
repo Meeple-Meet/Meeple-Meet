@@ -457,7 +457,7 @@ fun MeepleMeetApp(
                     // screen
                     FirebaseProvider.auth.signOut()
                   },
-                  onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.OnBoarding) },
+                  onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
                   onNotificationClick = {
                     navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
                   })
