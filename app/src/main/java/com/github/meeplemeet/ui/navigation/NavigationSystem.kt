@@ -22,14 +22,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavHostController
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.Dispatchers
@@ -173,6 +170,7 @@ enum class MeepleMeetScreen(
 fun BottomNavigationMenu(
     currentScreen: MeepleMeetScreen,
     onTabSelected: (MeepleMeetScreen) -> Unit,
+    unreadCount: Int,
     modifier: Modifier = Modifier
 ) {
   NavigationBar(
@@ -202,14 +200,12 @@ fun BottomNavigationMenu(
                         else screen.icon
 
                     if (screen == MeepleMeetScreen.Profile) {
-                      val viewModel = LocalNavigationVM.current
-                      val unread by viewModel.unreadCount.collectAsState()
                       BadgedBox(
                           badge = {
-                            if (unread != 0) {
+                            if (unreadCount != 0) {
                               Badge(modifier = Modifier.offset(y = (-Dimensions.Padding.small))) {
                                 Text(
-                                    if (unread > 9) "9+" else unread.toString(),
+                                    if (unreadCount > 9) "9+" else unreadCount.toString(),
                                     color = AppColors.textIcons)
                               }
                             }

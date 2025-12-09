@@ -108,7 +108,8 @@ fun SessionsOverviewScreen(
     viewModel: SessionOverviewViewModel = viewModel(),
     navigation: NavigationActions,
     account: Account?,
-    onSelectSession: (String) -> Unit = {}
+    onSelectSession: (String) -> Unit = {},
+            unreadCount: Int
 ) {
   val context = LocalContext.current
   val sessionMap by
@@ -176,6 +177,7 @@ fun SessionsOverviewScreen(
         bottomBar = {
           BottomNavigationMenu(
               currentScreen = MeepleMeetScreen.SessionsOverview,
+              unreadCount = unreadCount,
               onTabSelected = { navigation.navigateTo(it) })
         }) { innerPadding ->
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {

@@ -41,6 +41,7 @@ fun ProfileScreen(
     onDelete: () -> Unit,
     onFriendClick: () -> Unit,
     onNotificationClick: () -> Unit,
+    unreadCount: Int
 ) {
   // Refresh email verification status when the profile is shown
   LaunchedEffect(account.uid) { viewModel.refreshEmailVerificationStatus() }
@@ -53,6 +54,7 @@ fun ProfileScreen(
         if (!(shouldHide && isInputFocused)) {
           BottomNavigationMenu(
               currentScreen = MeepleMeetScreen.Profile,
+              unreadCount = unreadCount,
               onTabSelected = { screen -> navigation.navigateTo(screen) })
         }
       }) { innerPadding ->

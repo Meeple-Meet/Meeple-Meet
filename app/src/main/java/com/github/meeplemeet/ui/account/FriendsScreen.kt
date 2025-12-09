@@ -321,7 +321,8 @@ fun FriendsScreen(
     viewModel: FriendsScreenViewModel = viewModel(),
     account: Account,
     onBack: () -> Unit,
-    onNavigate: (MeepleMeetScreen) -> Unit = {}
+    onNavigate: (MeepleMeetScreen) -> Unit = {},
+    unreadCount: Int
 ) {
   val context = LocalContext.current
 
@@ -376,6 +377,7 @@ fun FriendsScreen(
         val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
         if (!(shouldHide && isInputFocused)) {
           BottomNavigationMenu(
+              unreadCount = unreadCount,
               currentScreen = MeepleMeetScreen.Profile, onTabSelected = { onNavigate(it) })
         }
       }) { innerPadding ->

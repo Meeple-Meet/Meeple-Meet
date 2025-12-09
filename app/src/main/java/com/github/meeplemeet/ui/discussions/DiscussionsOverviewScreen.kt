@@ -95,6 +95,7 @@ fun DiscussionsOverviewScreen(
     account: Account,
     navigation: NavigationActions,
     viewModel: DiscussionsOverviewViewModel = viewModel(),
+    unreadCount: Int,
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
@@ -146,6 +147,7 @@ fun DiscussionsOverviewScreen(
       bottomBar = {
         BottomNavigationMenu(
             currentScreen = MeepleMeetScreen.DiscussionsOverview,
+            unreadCount = unreadCount,
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       }) { innerPadding ->
         if (discussionPreviewsSorted.isEmpty()) {

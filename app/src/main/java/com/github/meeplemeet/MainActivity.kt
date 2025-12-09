@@ -1,6 +1,7 @@
 package com.github.meeplemeet
 // AI was used for this file
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,7 +37,6 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
@@ -209,6 +208,7 @@ class MainActivity : ComponentActivity() {
   }
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun MeepleMeetApp(
     viewModel: MainActivityViewModel = viewModel(),
@@ -277,7 +277,6 @@ fun MeepleMeetApp(
 
   AppTheme(themeMode = account?.themeMode ?: ThemeMode.SYSTEM_DEFAULT) {
     Surface(modifier = Modifier.fillMaxSize()) {
-      CompositionLocalProvider(LocalNavigationVM provides viewModel) {
         NavHost(navController = navController, startDestination = MeepleMeetScreen.SignIn.name) {
           composable(MeepleMeetScreen.SignIn.name) {
             LaunchedEffect(account) {
@@ -335,6 +334,7 @@ fun MeepleMeetApp(
                   discussionId = it.uid
                   navigationActions.navigateTo(MeepleMeetScreen.Discussion)
                 },
+                unreadCount = viewModel.unreadCount.value
             )
           }
 
@@ -410,6 +410,7 @@ fun MeepleMeetApp(
             SessionsOverviewScreen(
                 navigation = navigationActions,
                 account = account,
+                unreadCount = viewModel.unreadCount.value,
                 onSelectSession = {
                   discussionId = it
                   navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
@@ -421,6 +422,7 @@ fun MeepleMeetApp(
                 navigation = navigationActions,
                 account = account!!,
                 onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
+                unreadCount = viewModel.unreadCount.value,
                 onSelectPost = {
                   postId = it.id
                   navigationActions.navigateTo(MeepleMeetScreen.Post)
@@ -455,6 +457,7 @@ fun MeepleMeetApp(
                     PinType.SESSION -> {}
                   }
                 },
+                unreadCount = viewModel.unreadCount.value,
                 onRedirect = { geoPin ->
                   when (geoPin.type) {
                     PinType.SHOP -> {
@@ -479,6 +482,7 @@ fun MeepleMeetApp(
               ProfileScreen(
                   navigation = navigationActions,
                   account = account!!,
+                  unreadCount = viewModel.unreadCount.value,
                   onSignOutOrDel = {
                     navigationActions.navigateTo(MeepleMeetScreen.SignIn)
                     signedOut = true
@@ -497,7 +501,7 @@ fun MeepleMeetApp(
 
           composable(MeepleMeetScreen.NotificationsTab.name) {
             account?.let {
-              NotificationsTab(account = account!!, onBack = { navigationActions.goBack() })
+              NotificationsTab(account = account!!, unreadCount = viewModel.unreadCount.value, onBack = { navigationActions.goBack() })
             }
           }
 
@@ -606,6 +610,7 @@ fun MeepleMeetApp(
               FriendsScreen(
                   account = currentAccount,
                   onBack = { navigationActions.goBack() },
+                  unreadCount = viewModel.unreadCount.value,
                   onNavigate = { navigationActions.navigateTo(it) })
             } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
           }
@@ -626,7 +631,6 @@ fun MeepleMeetApp(
           }
         }
       }
-    }
   }
 }
 
