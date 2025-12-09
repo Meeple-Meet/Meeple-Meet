@@ -1317,7 +1317,8 @@ fun CollapsibleSection(
               onClick = { setExpanded(!isExpanded) },
               modifier =
                   Modifier.let { m ->
-                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX)
+                    if (testTag != null)
+                        m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_ICON_SUFFIX)
                     else m
                   }) {
                 Icon(
