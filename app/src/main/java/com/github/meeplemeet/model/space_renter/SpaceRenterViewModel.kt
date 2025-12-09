@@ -67,13 +67,27 @@ class SpaceRenterViewModel(
 
 
     viewModelScope.launch {
-        OfflineModeManager.loadSpaceRenter(id) { spaceRenter -> _spaceRenter.value = spaceRenter }
-        val count = spaceRenter.value?.photoCollectionUrl?.size
-        val images = count?.let { imageRepository.loadSpaceRenterPhotos(context, id, it) }
-        if (images != null) {
-            _photos.value = images
+      OfflineModeManager.loadSpaceRenter(id) { spaceRenter ->
+        _spaceRenter.value = spaceRenter
+        if (spaceRenter != null) {
+          loadPhotos(context, spaceRenter)
         }
-        }
+      }
+    }
+  }
+
+  /**
+   * Loads photos for the given space renter.
+   *
+   * @param context The Android context for image operations.
+   * @param spaceRenter The space renter to load photos for.
+   */
+  fun loadPhotos(context: android.content.Context, spaceRenter: SpaceRenter) {
+    val urls = spaceRenter.photoCollectionUrl
+    viewModelScope.launch {
+      val images = imageRepository.loadSpaceRenterPhotos(context, spaceRenter.id, urls)
+      _photos.value = images
+    }
   }
 
   fun clearCache() {

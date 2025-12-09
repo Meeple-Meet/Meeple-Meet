@@ -90,7 +90,7 @@ class EditShopViewModel(
    * @throws IllegalArgumentException if the shop name is blank, if not exactly 7 opening hours
    *   entries are provided, or if the address is not valid.
    */
-  fun updateShop(
+  suspend fun updateShop(
       context: Context,
       shop: Shop,
       requester: Account,
@@ -117,14 +117,12 @@ class EditShopViewModel(
             photoCollectionUrl)
     validateUpdateRequest(shop, requester, params)
 
-    viewModelScope.launch {
-      val isOnline = OfflineModeManager.hasInternetConnection.first()
+    val isOnline = OfflineModeManager.hasInternetConnection.first()
 
-      if (isOnline) {
-        handleOnlineUpdate(shop, params, context)
-      } else {
-        handleOfflineUpdate(shop, params)
-      }
+    if (isOnline) {
+      handleOnlineUpdate(shop, params, context)
+    } else {
+      handleOfflineUpdate(shop, params)
     }
   }
 
@@ -189,7 +187,7 @@ class EditShopViewModel(
               }
             } catch (e: Exception) {
               Log.e("upload", "Image upload failed for shop ${shop.id}: ${e.message}", e)
-              emptyList<String>()
+              throw e
             }
           } else {
               emptyList()
@@ -211,25 +209,34 @@ class EditShopViewModel(
             }
           }
 
-      shopRepository.updateShop(
-          shop.id,
-          params.owner?.uid,
-          params.name,
-          params.phone,
-          params.email,
-          params.website,
-          params.address,
-          params.openingHours,
-          params.gameCollection,
-          finalPhotoUrls)
+    shopRepository.updateShop(
+        shop.id,
+        params.owner?.uid,
+        params.name,
+        params.phone,
+        params.email,
+        params.website,
+        params.address,
+        params.openingHours,
+        params.gameCollection,
+        finalPhotoUrls)
 
-    val refreshed = shopRepository.getShopSafe(shop.id)
+    // Optimistically update cache with the data we just successfully sent
+    // This avoids race conditions where getShopSafe returns stale data
+    val updatedShop =
+        shop.copy(
+            owner = params.owner ?: shop.owner,
+            name = params.name ?: shop.name,
+            phone = params.phone ?: shop.phone,
+            email = params.email ?: shop.email,
+            website = params.website ?: shop.website,
+            address = params.address ?: shop.address,
+            openingHours = params.openingHours ?: shop.openingHours,
+            gameCollection = params.gameCollection ?: shop.gameCollection,
+            photoCollectionUrl = finalPhotoUrls)
 
-    if (refreshed != null) {
-      // Update both cache and UI state
-      OfflineModeManager.updateShopCache(refreshed)
-      _currentShop.value = refreshed
-    }
+    OfflineModeManager.updateShopCache(updatedShop)
+    _currentShop.value = updatedShop
 
     OfflineModeManager.clearShopChanges(shop.id)
   }

@@ -1,6 +1,8 @@
 package com.github.meeplemeet.ui.shops
 // Github copilot was used for this file
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -222,7 +225,7 @@ fun EditShopContent(
     onBack: () -> Unit,
     onSaved: () -> Unit,
     onSave:
-        (
+        suspend (
             shop: Shop,
             requester: Account,
             name: String,
@@ -304,6 +307,8 @@ fun EditShopContent(
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
+  var isSaving by remember { mutableStateOf(false) }
+
   CompositionLocalProvider(
       LocalFocusableFieldObserver provides
           { token, focused ->
@@ -311,83 +316,81 @@ fun EditShopContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        Scaffold(
-            topBar = {
-              CenterAlignedTopAppBar(
-                  title = {
-                    Text(
-                        EditShopUi.Strings.SCREEN_TITLE,
-                        modifier = Modifier.testTag(EditShopScreenTestTags.TITLE))
-                  },
-                  navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag(EditShopScreenTestTags.NAV_BACK)) {
-                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                  },
-                  actions = {
-                    IconButton(
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.testTag(EditShopScreenTestTags.DELETE_BUTTON)) {
-                          Icon(Icons.Filled.Delete, contentDescription = "Delete shop")
-                        }
-                  },
-                  modifier = Modifier.testTag(EditShopScreenTestTags.TOPBAR))
-            },
-            snackbarHost = {
-              SnackbarHost(
-                  snackbarHost, modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
-            },
-            bottomBar = {
-              val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
-              if (!(shouldHide && isInputFocused))
-                  ActionBar(
-                      onDiscard = { onDiscard() },
-                      onPrimary = {
-                        val addr = locationUi.selectedLocation ?: Location()
-                        val err =
-                            onSave(
-                                shop,
-                                shop.owner,
-                                shopName,
-                                email,
-                                phone,
-                                link,
-                                addr,
-                                week,
-                                stock,
-                                photoCollectionUrl)
-                        if (err == null) onSaved()
-                        else scope.launch { snackbarHost.showSnackbar(err) }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                topBar = {
+                  CenterAlignedTopAppBar(
+                      title = {
+                        Text(
+                            EditShopUi.Strings.SCREEN_TITLE,
+                            modifier = Modifier.testTag(EditShopScreenTestTags.TITLE))
                       },
-                      enabled = isValid,
-                      primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-            },
-            modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
-              LazyColumn(
-                  modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
-                  contentPadding =
-                      PaddingValues(
-                          horizontal = EditShopUi.Dimensions.contentHPadding,
-                          vertical = EditShopUi.Dimensions.contentVPadding)) {
+                      navigationIcon = {
+                        IconButton(
+                            onClick = onBack,
+                            enabled = !isSaving,
+                            modifier = Modifier.testTag(EditShopScreenTestTags.NAV_BACK)) {
+                              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                      },
+                      actions = {
+                        IconButton(
+                            onClick = { showDeleteDialog = true },
+                            enabled = !isSaving,
+                            modifier = Modifier.testTag(EditShopScreenTestTags.DELETE_BUTTON)) {
+                              Icon(Icons.Filled.Delete, contentDescription = "Delete shop")
+                            }
+                      },
+                      modifier = Modifier.testTag(EditShopScreenTestTags.TOPBAR))
+                },
+                snackbarHost = {
+                  SnackbarHost(
+                      snackbarHost, modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
+                },
+                bottomBar = {
+                  val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+                  if (!(shouldHide && isInputFocused))
+                      ActionBar(
+                          onDiscard = { onDiscard() },
+                          onPrimary = {
+                            isSaving = true
+                            scope.launch {
+                              val addr = locationUi.selectedLocation ?: Location()
+                              val err =
+                                  onSave(
+                                      shop,
+                                      shop.owner,
+                                      shopName,
+                                      email,
+                                      phone,
+                                      link,
+                                      addr,
+                                      week,
+                                      stock,
+                                      photoCollectionUrl)
+                              if (err == null) onSaved()
+                              else {
+                                isSaving = false
+                                snackbarHost.showSnackbar(err)
+                              }
+                            }
+                          },
+                          enabled = isValid && !isSaving,
+                          primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
+                },
+                modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
+                  LazyColumn(
+                      modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
+                      contentPadding =
+                          PaddingValues(
+                              horizontal = EditShopUi.Dimensions.contentHPadding,
+                              vertical = EditShopUi.Dimensions.contentVPadding)) {
                     item {
                       ImageCarousel(
                           photoCollectionUrl = photoCollectionUrl,
                           maxNumberOfImages = maxNumberOfImages,
-                          onAdd = { path, index ->
-                            photoCollectionUrl =
-                                if (index < photoCollectionUrl.size &&
-                                    photoCollectionUrl[index].isNotEmpty()) {
-                                  photoCollectionUrl.mapIndexed { i, old ->
-                                    if (i == index) path else old
-                                  }
-                                } else {
-                                  photoCollectionUrl + path
-                                }
-                          },
-                          onRemove = { url ->
-                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
+                          onStateChange = { newUrls ->
+                            photoCollectionUrl = newUrls
                           },
                           editable = true)
                     }
@@ -484,6 +487,17 @@ fun EditShopContent(
                   }
             }
       }
+      if (isSaving) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                    .clickable(enabled = true, onClick = {}),
+            contentAlignment = Alignment.Center) {
+              CircularProgressIndicator()
+            }
+      }
+    }
 
   OpeningHoursEditor(
       show = showHoursDialog,
