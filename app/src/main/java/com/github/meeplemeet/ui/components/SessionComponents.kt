@@ -175,6 +175,7 @@ private const val TITLE_SELECT_TIME = "Select Time"
 private const val LABEL_GAME = "Game"
 private const val OUTLINE_DEFAULT_ALPHA = 0.5f
 const val MAX_TITLE_LENGTH: Int = 100
+private const val MAX_LINES = 3
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
@@ -1128,6 +1129,7 @@ private fun LocationSearchBar(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         FocusableInputField(
             value = text,
+            maxLines = MAX_LINES,
             enabled = enabled,
             onValueChange = {
               menuOpen = true
