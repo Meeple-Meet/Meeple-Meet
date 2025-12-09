@@ -4,14 +4,21 @@
 
 package com.github.meeplemeet.ui.components
 
+import android.annotation.SuppressLint
 import android.util.Patterns
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
@@ -39,9 +47,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
@@ -51,12 +62,12 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.FocusableInputField
-import com.github.meeplemeet.ui.account.MainTabUi
-import com.github.meeplemeet.ui.account.PublicInfoTestTags
 import com.github.meeplemeet.ui.sessions.SessionTestTags
-import com.github.meeplemeet.ui.shops.GameItemImage
+import com.github.meeplemeet.ui.shops.ShopScreenDefaults
+import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import kotlinx.coroutines.launch
 import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -495,18 +506,10 @@ fun GameStockImage(gameUIState: GameUIState) {
         AsyncImage(
             model = game.imageURL,
             contentDescription = "Game image",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop)
-    } else {
-        // Todo: remove me
-        Box(modifier =
-            Modifier.size(150.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(AppColors.textIconsFade)
-                .testTag(PublicInfoTestTags.AVATAR_PLACEHOLDER),
-            contentAlignment = Alignment.Center) {
-            Icon(imageVector = Icons.Default.VideogameAsset, contentDescription = "No game image", tint = AppColors.divider, modifier = Modifier.size(Dimensions.IconSize.giant))
-        }
+            modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp)
+                .clip(RoundedCornerShape(4.dp)).padding(vertical = 6.dp),
+            contentScale = ContentScale.Fit
+        )
     }
 }
 
@@ -543,7 +546,6 @@ fun GameAddUI(
             val thumbSize = 30.dp
             val thumbDiameterPx = with(density) { thumbSize.toPx() }
             val thumbRadiusPx = thumbDiameterPx / 2f
-            val pointerHeightPx = with(density) { 10.dp.toPx() }
 
             Box(
                 modifier = Modifier
@@ -967,4 +969,228 @@ fun EditableGameItem(
                   }
             }
       }
+}
+
+/**
+ * A composable function that displays a game item as an image card with an optional stock badge
+ *
+ * @param game The [Game] object whose image and name are displayed
+ * @param count The stock quantity for the game. When greater than zero, a stock badge is shown
+ * @param modifier The [Modifier] to be applied to the root container of the game item
+ * @param clickable A boolean indicating whether the game card is clickable
+ * @param onClick A callback function that is invoked when the game card is clicked
+ * @param imageHeight An optional fixed height for the image area
+ */
+@Composable
+fun GameItemImage(
+    game: Game,
+    count: Int,
+    modifier: Modifier = Modifier,
+    editable: Boolean = false,
+    clickable: Boolean = true,
+    onClick: (Game) -> Unit = {},
+    onEdit: (Game) -> Unit = {},
+    onDelete: (Game) -> Unit = {},
+    imageHeight: Dp? = null,
+) {
+    Box(
+        modifier = modifier
+            .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.background)
+                .clickable(enabled = clickable) { onClick(game) },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            AsyncImage(
+                model = game.imageURL,
+                contentDescription = game.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth(ShopScreenDefaults.Game.GAME_IMG_RELATIVE_WIDTH)
+                    .shadow(Dimensions.Elevation.high, MaterialTheme.shapes.medium, clip = true)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.background)
+                    .let { if (imageHeight != null) it.height(imageHeight)
+                    else it.aspectRatio(ShopScreenDefaults.Game.GAME_IMG_DEFAULT_ASPECT_RATIO) },
+                placeholder = painterResource(R.drawable.ic_dice),
+                error = painterResource(R.drawable.ic_dice)
+            )
+
+            Spacer(Modifier.height(Dimensions.Spacing.small))
+
+            Text(
+                text = game.name,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                maxLines = ShopScreenDefaults.Game.GAME_NAME_MAX_LINES,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}")
+            )
+        }
+
+        if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
+            val label = if (count > ShopScreenDefaults.Stock.MAX_STOCK_SHOWED)
+                "${ShopScreenDefaults.Stock.MAX_STOCK_SHOWED}+"
+            else count.toString()
+
+            Column(
+                modifier = Modifier
+                    .padding(top = 26.dp).align(Alignment.TopEnd),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .offset(x = 0.dp) // Shift count bubble to the right
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                if (editable) {
+                    IconButton(
+                        onClick = { onDelete(game) },
+                        modifier = Modifier.offset(x = 12.dp).padding(0.dp) // Shift icons to the right
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteOutline,
+                            contentDescription = null,
+                            tint = AppColors.textIcons
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { onEdit(game) },
+                        modifier = Modifier.offset(x = 12.dp, y = (-10).dp).padding(0.dp) // Shift icons to the right
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = AppColors.textIcons
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * A composable function that displays a paged grid section of game image items with an optional
+ * title and page indicators
+ *
+ * @param games The list of pairs of [Game] and stock count to display in the grid
+ * @param modifier The [Modifier] to be applied to the section container
+ * @param clickableGames A boolean indicating whether individual game cards are clickable
+ * @param title The title text displayed above the grid (for example, "Discover Games")
+ * @param onClick A callback function that is invoked when a game card is clicked
+ */
+@SuppressLint("UnusedBoxWithConstraintsScope")
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun GameImageListSection(
+    games: List<Pair<Game, Int>>,
+    modifier: Modifier = Modifier,
+    clickableGames: Boolean = false,
+    title: String,
+    editable: Boolean = false,
+    onClick: (Game) -> Unit = {},
+    onEdit: (Game) -> Unit = {},
+    onDelete: (Game) -> Unit = {}
+) {
+    val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
+    if (clampedGames.isEmpty()) return
+
+    val pages =
+        remember(clampedGames) {
+            clampedGames
+                .chunked(ShopScreenDefaults.Pager.GAMES_PER_PAGE)
+                .take(ShopScreenDefaults.Pager.MAX_PAGES)
+        }
+    val pageCount = pages.size
+
+    val pagerState = rememberPagerState(pageCount = { pageCount })
+    val scope = rememberCoroutineScope()
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
+        modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val gridWidth = maxWidth
+            val imageHeight = gridWidth / ShopScreenDefaults.Pager.IMAGE_HEIGHT_CORRECTION
+            val textAreaHeight = ShopScreenDefaults.Game.GAME_NAME_AREA_HEIGHT
+            val rowHeight = imageHeight + textAreaHeight
+            val gridHeight = rowHeight * ShopScreenDefaults.Pager.GAMES_PER_COLUMN
+
+            HorizontalPager(
+                state = pagerState,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(gridHeight)
+                        .testTag(ShopTestTags.SHOP_GAME_PAGER)) { pageIndex ->
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(ShopScreenDefaults.Pager.GAMES_PER_ROW),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    userScrollEnabled = false,
+                    modifier = Modifier.fillMaxSize()) {
+                    items(pages[pageIndex], key = { it.first.uid }) { (game, count) ->
+                        GameItemImage(
+                            game = game,
+                            count = count,
+                            clickable = clickableGames,
+                            editable = editable,
+                            onClick = onClick,
+                            onDelete = onDelete,
+                            onEdit = onEdit,
+                            imageHeight = imageHeight,
+                            modifier = Modifier.height(rowHeight)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (pageCount > ShopScreenDefaults.Pager.MINIMAL_PAGE_COUNT) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.medium),
+                horizontalArrangement = Arrangement.Center) {
+                repeat(pageCount) { index ->
+                    val selected = (index == pagerState.currentPage)
+                    Box(
+                        modifier =
+                            Modifier.padding(horizontal = Dimensions.Padding.small)
+                                .size(
+                                    if (selected) ShopScreenDefaults.Pager.PAGER_SELECTED_BUBBLE_SIZE
+                                    else ShopScreenDefaults.Pager.PAGER_UNSELECTED_BUBBLE_SIZE)
+                                .clip(CircleShape)
+                                .testTag("${ShopTestTags.SHOP_GAME_PAGER_INDICATOR_PREFIX}$index")
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline)
+                                .clickable { scope.launch { pagerState.animateScrollToPage(index) } })
+                }
+            }
+        }
+    }
 }

@@ -43,6 +43,7 @@ import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
@@ -144,7 +145,7 @@ object RepositoryProvider {
   val sessions: SessionRepository by lazy { SessionRepository() }
 
   /** Lazily initialized repository for board game data operations. */
-  var games: GameRepository = CloudBggGameRepository()
+  var games: GameRepository = FirestoreGameRepository()
 
   /** Lazily initialized repository for location operations. */
   val locations: LocationRepository by lazy { NominatimLocationRepository() }
