@@ -314,7 +314,7 @@ fun AddShopContent(
                     )
                 }
                 item { ShopAvailabilitySection(state) }
-                item { ShopGamesSection(state, online) }
+                item { ShopGamesSection(state, online, viewModel) }
                 item {
                     Spacer(
                         Modifier
@@ -404,7 +404,7 @@ private fun ShopAvailabilitySection(state: CreateShopFormState) {
 }
 
 @Composable
-private fun ShopGamesSection(state: CreateShopFormState, online: Boolean) {
+private fun ShopGamesSection(state: CreateShopFormState, online: Boolean, viewModel: CreateShopViewModel) {
     CollapsibleSection(
         title = AddShopUi.Strings.SECTION_GAMES,
         initiallyExpanded = state.stock.isEmpty(),
@@ -435,17 +435,18 @@ private fun ShopGamesSection(state: CreateShopFormState, online: Boolean) {
                 )
             } }
 
-//            GamesSection(
-//                stock = state.stock,
-//                onQuantityChange = { game, qty -> state.updateStockQuantity(game, qty) },
-//                onDelete = { game -> state.removeFromStock(game) }
-//            )
-
             GameImageListSection(
                 games = state.stock,
                 clickableGames = true,
                 editable = true,
-                title = ""
+                title = "",
+                onDelete = { state.removeFromStock(it) },
+                onEdit = { game ->
+                    viewModel.setGame(game)
+                    state.editingGame = game
+                    state.qty = state.stock.find { it.first.uid == game.uid }?.second ?: 1
+                    state.showGameDialog = true
+                }
             )
         },
         testTag = CreateShopScreenTestTags.SECTION_GAMES
