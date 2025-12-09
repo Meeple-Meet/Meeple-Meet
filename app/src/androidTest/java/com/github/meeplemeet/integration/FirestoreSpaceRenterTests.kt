@@ -20,6 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -35,6 +36,19 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   private lateinit var testOpeningHours: List<OpeningHours>
   private lateinit var testSpace1: Space
   private lateinit var testSpace2: Space
+
+  private val context = InstrumentationRegistry.getInstrumentation().targetContext
+  
+  private fun createTestImage(filename: String, width: Int = 100, height: Int = 100, color: Int = android.graphics.Color.RED): String {
+    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    bitmap.eraseColor(color)
+
+    val file = java.io.File(context.cacheDir, filename)
+    java.io.FileOutputStream(file).use { out -> bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, out) }
+    bitmap.recycle()
+
+    return file.absolutePath
+  }
 
   @Before
   fun setup() {
@@ -579,12 +593,13 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   @Test(expected = IllegalArgumentException::class)
   fun createSpaceRenterViewModelThrowsWhenNameIsBlank() {
     createSpaceRenterViewModel.createSpaceRenter(
-        owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
+        context, owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun createSpaceRenterViewModelThrowsWhenNameIsOnlyWhitespace() {
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "   ",
         address = testLocation1,
@@ -600,6 +615,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))))
 
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Test Space Renter",
         address = testLocation1,
@@ -621,6 +637,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "18:00"))))
 
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Test Space Renter",
         address = testLocation1,
@@ -640,6 +657,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 6, hours = listOf(TimeSlot("09:00", "18:00"))))
 
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Test Space Renter",
         address = testLocation1,
@@ -649,6 +667,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   @Test(expected = IllegalArgumentException::class)
   fun createSpaceRenterViewModelThrowsWhenAddressIsDefault() {
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Test Space Renter",
         address = Location(), // Default empty location
@@ -658,6 +677,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   @Test(expected = IllegalArgumentException::class)
   fun createSpaceRenterViewModelThrowsWhenEmptyOpeningHours() {
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Test Space Renter",
         address = testLocation1,
@@ -677,6 +697,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
 
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Valid Space Renter",
         phone = "+41 21 123 4567",
@@ -717,6 +738,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("10:00", "17:00"))))
 
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Minimal Space Renter",
         address = testLocation1,
@@ -748,12 +770,12 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
   @Test(expected = IllegalArgumentException::class)
   fun spaceRenterViewModelThrowsWhenSpaceRenterIdIsBlank() {
-    spaceRenterViewModel.getSpaceRenter("")
+    spaceRenterViewModel.getSpaceRenter("", context)
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun spaceRenterViewModelThrowsWhenSpaceRenterIdIsOnlyWhitespace() {
-    spaceRenterViewModel.getSpaceRenter("   ")
+    spaceRenterViewModel.getSpaceRenter("   ", context)
   }
 
   @Test
@@ -771,7 +793,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             spaces = listOf(testSpace1, testSpace2))
 
     // Load the space renter through ViewModel
-    spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
+    spaceRenterViewModel.getSpaceRenter(spaceRenter.id, context)
 
     // Give it time to complete the async operation
     delay(300)
@@ -801,7 +823,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Load the space renter through ViewModel
-    spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
+    spaceRenterViewModel.getSpaceRenter(spaceRenter.id, context)
 
     // Give it time to complete the async operation
     delay(200)
@@ -836,7 +858,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Load first space renter
-    spaceRenterViewModel.getSpaceRenter(spaceRenter1.id)
+    spaceRenterViewModel.getSpaceRenter(spaceRenter1.id, context)
 
     // Wait for state to update
     var attempts = 0
@@ -848,7 +870,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     assertEquals("First Space Renter", spaceRenterViewModel.spaceRenter.value?.name)
 
     // Load second space renter
-    spaceRenterViewModel.getSpaceRenter(spaceRenter2.id)
+    spaceRenterViewModel.getSpaceRenter(spaceRenter2.id, context)
 
     // Wait for state to update
     attempts = 0
@@ -872,7 +894,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             spaces = listOf(testSpace1, testSpace2))
 
     // Load the space renter through ViewModel
-    spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
+    spaceRenterViewModel.getSpaceRenter(spaceRenter.id, context)
     delay(200)
 
     // Verify spaces are loaded correctly
@@ -897,7 +919,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Load the space renter through ViewModel
-    spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
+    spaceRenterViewModel.getSpaceRenter(spaceRenter.id, context)
     delay(200)
 
     // Verify owner data is loaded correctly
@@ -923,7 +945,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Try to update as testAccount2 (non-owner)
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount2, name = "Hacked Space")
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount2, name = "Hacked Space")
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -949,7 +971,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, name = "")
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, name = "")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -961,7 +983,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, name = "   ")
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, name = "   ")
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -980,7 +1002,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))))
 
     editSpaceRenterViewModel.updateSpaceRenter(
-        spaceRenter, testAccount1, openingHours = incompleteHours)
+        context, spaceRenter, testAccount1, openingHours = incompleteHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -1004,7 +1026,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "18:00"))))
 
     editSpaceRenterViewModel.updateSpaceRenter(
-        spaceRenter, testAccount1, openingHours = tooManyHours)
+        context, spaceRenter, testAccount1, openingHours = tooManyHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -1016,7 +1038,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, address = Location())
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, address = Location())
   }
 
   @Test
@@ -1028,7 +1050,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, name = "New Name")
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, name = "New Name")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1045,7 +1067,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, phone = "+41 99 999 9999")
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, phone = "+41 99 999 9999")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1063,7 +1085,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editSpaceRenterViewModel.updateSpaceRenter(
-        spaceRenter, testAccount1, email = "new@spacerenter.com")
+        context, spaceRenter, testAccount1, email = "new@spacerenter.com")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1081,7 +1103,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editSpaceRenterViewModel.updateSpaceRenter(
-        spaceRenter, testAccount1, website = "https://new.com")
+        context, spaceRenter, testAccount1, website = "https://new.com")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1097,7 +1119,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, address = testLocation2)
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, address = testLocation2)
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1124,7 +1146,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("11:00", "18:00"))))
 
     editSpaceRenterViewModel.updateSpaceRenter(
-        spaceRenter, testAccount1, openingHours = newOpeningHours)
+        context, spaceRenter, testAccount1, openingHours = newOpeningHours)
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1143,7 +1165,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             spaces = listOf(testSpace1))
 
     val newSpaces = listOf(testSpace2, Space(seats = 15, costPerHour = 30.0))
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, spaces = newSpaces)
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, spaces = newSpaces)
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1177,6 +1199,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             OpeningHours(day = 7, hours = listOf(TimeSlot("09:00", "22:00"))))
 
     editSpaceRenterViewModel.updateSpaceRenter(
+        context,
         spaceRenter,
         testAccount1,
         name = "New Space Renter",
@@ -1231,7 +1254,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             spaces = listOf(testSpace1))
 
     // Update only the phone
-    editSpaceRenterViewModel.updateSpaceRenter(spaceRenter, testAccount1, phone = "+41 99 999 9999")
+    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, phone = "+41 99 999 9999")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1246,6 +1269,65 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     assertEquals(1, updated.spaces.size)
   }
 
+  @Test
+  fun editSpaceRenterViewModelUpdatesPhotos_uploadsLocalAndDeletesOld() {
+      runBlocking {
+      // 0. Sign in for Storage access
+      auth.signInAnonymously().await()
+
+      // 1. Create a SpaceRenter with an existing remote photo
+      val initialSpaceRenter = spaceRenterRepository.createSpaceRenter(
+          owner = testAccount1,
+          name = "Photo Test Space Renter",
+          address = testLocation1,
+          openingHours = testOpeningHours
+      )
+      
+      // Strategy: Upload a REAL photo first to get a REAL URL.
+      val realOldPhotoPath = createTestImage("old_photo.jpg", 100, 100, android.graphics.Color.BLUE)
+      val realOldPhotoUrl = imageRepository.saveSpaceRenterPhotos(context, initialSpaceRenter.id, realOldPhotoPath).first()
+      
+      // Update the space renter to have this photo
+      val spaceRenterWithPhoto = initialSpaceRenter.copy(photoCollectionUrl = listOf(realOldPhotoUrl))
+      // Directly update repository to set this state without triggering other logic if possible, 
+      // or just use updateSpaceRenter first time.
+      // Let's use repository update directly to set initial state clearly.
+      spaceRenterRepository.updateSpaceRenter(initialSpaceRenter.id, photoCollectionUrl = listOf(realOldPhotoUrl))
+      delay(100)
+      
+      // 2. Prepare update: Remove old photo, add new local photo
+      val newLocalPhotoPath = createTestImage("new_local_photo.jpg", 100, 100, android.graphics.Color.GREEN)
+      val newPhotoCollection = listOf(newLocalPhotoPath)
+
+      // 3. Call updateSpaceRenter
+      editSpaceRenterViewModel.initialize(spaceRenterWithPhoto) // ensure VM has current state
+      delay(100)
+      
+      editSpaceRenterViewModel.updateSpaceRenter(
+          context = context,
+          spaceRenter = spaceRenterWithPhoto,
+          requester = testAccount1,
+          photoCollectionUrl = newPhotoCollection
+      )
+      delay(2000) // Allow time for upload and delete
+      
+      // 4. Verify
+      val updated = spaceRenterRepository.getSpaceRenter(initialSpaceRenter.id)
+      
+      assertEquals(1, updated.photoCollectionUrl.size)
+      val newUrl = updated.photoCollectionUrl.first()
+      
+      // It should be a remote URL (http), not the local path
+      assertTrue(newUrl.startsWith("http"))
+      assertTrue(newUrl != newLocalPhotoPath)
+      assertTrue(newUrl != realOldPhotoUrl)
+      
+      // Cleanup
+      java.io.File(realOldPhotoPath).delete()
+      java.io.File(newLocalPhotoPath).delete()
+    }
+  }
+
   // ==================== OFFLINE MODE TESTS ====================
 
   @Test
@@ -1258,6 +1340,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
     // Create space renter offline
     createSpaceRenterViewModel.createSpaceRenter(
+        context,
         owner = testAccount1,
         name = "Offline Space Renter",
         phone = "+41 11 111 1111",
@@ -1290,7 +1373,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test blank name
     try {
       createSpaceRenterViewModel.createSpaceRenter(
-          owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
+          context, owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
       throw AssertionError("Should have thrown IllegalArgumentException for blank name")
     } catch (e: IllegalArgumentException) {
       assertTrue(e.message!!.contains("name cannot be blank"))
@@ -1299,6 +1382,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test invalid opening hours
     try {
       createSpaceRenterViewModel.createSpaceRenter(
+          context,
           owner = testAccount1,
           name = "Test",
           address = testLocation1,
@@ -1311,6 +1395,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test empty location
     try {
       createSpaceRenterViewModel.createSpaceRenter(
+          context,
           owner = testAccount1,
           name = "Test",
           address = Location(),
@@ -1347,6 +1432,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     editSpaceRenterViewModel.initialize(spaceRenter)
     delay(100)
     editSpaceRenterViewModel.updateSpaceRenter(
+        context = context,
         spaceRenter = spaceRenter,
         requester = testAccount1,
         name = "Updated Name",
@@ -1391,7 +1477,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test blank name validation
     try {
       editSpaceRenterViewModel.updateSpaceRenter(
-          spaceRenter = spaceRenter, requester = testAccount1, name = "   ")
+          context = context, spaceRenter = spaceRenter, requester = testAccount1, name = "   ")
       throw AssertionError("Should have thrown IllegalArgumentException for blank name")
     } catch (e: IllegalArgumentException) {
       assertTrue(e.message!!.contains("name cannot be blank"))
@@ -1400,6 +1486,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test invalid opening hours
     try {
       editSpaceRenterViewModel.updateSpaceRenter(
+          context = context,
           spaceRenter = spaceRenter,
           requester = testAccount1,
           openingHours = testOpeningHours.take(3))
@@ -1411,7 +1498,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test permission denied
     try {
       editSpaceRenterViewModel.updateSpaceRenter(
-          spaceRenter = spaceRenter, requester = testAccount2, name = "Hacked")
+          context = context, spaceRenter = spaceRenter, requester = testAccount2, name = "Hacked")
       throw AssertionError("Should have thrown PermissionDeniedException")
     } catch (e: PermissionDeniedException) {
       assertTrue(e.message!!.contains("owner"))
