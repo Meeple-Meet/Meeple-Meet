@@ -32,7 +32,14 @@ class OnBoardingScreenTest {
 
   private fun discussionCard() = compose.onNodeWithTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD)
 
-  private fun closeDialogButton() = compose.onNodeWithTag(OnBoardingTestTags.CLOSE_DIALOG)
+  private fun sessionCreationPage() =
+      compose.onNodeWithTag(OnBoardingTestTags.SESSION_CREATION_PAGE)
+
+  private fun sessionCreationDateTime() =
+      compose.onNodeWithTag(OnBoardingTestTags.SESSION_CREATION_DATETIME)
+
+  private fun sessionCreationParticipants() =
+      compose.onNodeWithTag(OnBoardingTestTags.SESSION_CREATION_PARTICIPANTS)
 
   /* ------------------------- setup ---------------------------- */
   private lateinit var pages: List<OnBoardPage>
@@ -48,16 +55,16 @@ class OnBoardingScreenTest {
                 description = "Host your own gatherings easily."),
             OnBoardPage(
                 image = android.R.drawable.ic_menu_compass,
-                title = "Explore Nearby",
-                description = "Find board game shops and rental spaces near you"),
-            OnBoardPage(
-                image = R.drawable.discussion_logo,
                 title = "Game Sessions",
                 description = "Organize and join gaming meetups with friends"),
             OnBoardPage(
                 image = R.drawable.discussion_logo,
                 title = "Community Posts",
                 description = "Share your gaming experiences with the world"),
+            OnBoardPage(
+                image = R.drawable.discussion_logo,
+                title = "Explore Nearby",
+                description = "Find board game shops and rental spaces near you"),
             OnBoardPage(
                 image = R.drawable.logo_dark, title = "Let's Go!", description = "Ready to start?"))
   }
@@ -99,66 +106,107 @@ class OnBoardingScreenTest {
     }
 
     checkpoint("Nav: Second page title correct") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertTextEquals("Discussions")
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1")
+          .assertTextEquals(OnBoardingStrings.SESSION_CREATION_TITLE)
     }
 
-    /* DISCUSSION CARD AND INTERACTION LOGIC ---------------------------------- */
-    checkpoint("Discussion: Card visible on second page") {
-      discussionCard().assertExists()
-      discussionCard().assertIsDisplayed()
+    /* SESSION CREATION CARD AND CONTENT -------------------------------------- */
+    checkpoint("SessionCreation: Page tagged and visible") {
+      sessionCreationPage().assertExists().assertIsDisplayed()
     }
 
-    checkpoint("Discussion: Prompt visible before interaction") {
-      compose.onNodeWithText("⬆️ Tap the discussion above to continue").assertExists()
+    checkpoint("SessionCreation: Discussion preview card visible") {
+      discussionCard().assertExists().assertIsDisplayed()
     }
 
-    checkpoint("Discussion: Next button exists") { nextButton().assertExists() }
-
-    checkpoint("Discussion: Swipe blocked before interaction") {
-      // Attempt to swipe - should stay on page 1
-      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
-      compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
+    checkpoint("SessionCreation: Helper texts visible") {
+      compose
+          .onNodeWithText(OnBoardingStrings.SESSION_CREATION_CREATE_SESSION_BUTTON)
+          .assertExists()
+      compose.onNodeWithText(OnBoardingStrings.SESSION_CREATION_CHOOSE_FRIENDS).assertExists()
     }
 
-    checkpoint("Discussion: Multiple swipe attempts still blocked") {
-      repeat(2) {
-        compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
-        compose.waitForIdle()
-      }
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
+    checkpoint("SessionCreation: Date/time preview visible with labels") {
+      sessionCreationDateTime().assertExists()
+      compose.onNodeWithText(OnBoardingStrings.DATE_PREVIEW).assertExists()
+      compose.onNodeWithText(OnBoardingStrings.TIME_PREVIEW).assertExists()
     }
 
-    /* OPEN AND CLOSE DIALOG -------------------------------------------------- */
-    checkpoint("Dialog: Open by clicking discussion card") {
-      discussionCard().performClick()
-      compose.waitForIdle()
-      closeDialogButton().assertExists()
+    checkpoint("SessionCreation: Participants preview visible with static members") {
+      sessionCreationParticipants().assertExists()
+      compose.onNodeWithText(OnBoardingStrings.PARTICIPANTS_SECTION_TEXT).assertExists()
+      compose
+          .onNodeWithTag(
+              OnBoardingTestTags.sessionCreationParticipant(OnBoardingStrings.PARTICIPANT_1))
+          .assertExists()
+      compose
+          .onNodeWithTag(
+              OnBoardingTestTags.sessionCreationParticipant(OnBoardingStrings.PARTICIPANT_2))
+          .assertExists()
     }
 
-    checkpoint("Dialog: Close button works") {
-      closeDialogButton().performClick()
-      compose.waitForIdle()
-      closeDialogButton().assertDoesNotExist()
-    }
-
-    checkpoint("Dialog: Discussion card still visible after closing") {
-      discussionCard().assertExists()
-    }
-
-    checkpoint("Dialog: Prompt changed after interaction") {
-      compose.onNodeWithText("Jump into the conversation and never miss a meetup!").assertExists()
-    }
-
-    /* NAVIGATION TO MAP EXPLORATION PAGE (PAGE 2) ---------------------------- */
-    checkpoint("Map Page: Navigate to map exploration") {
+    checkpoint("SessionCreation: Swiping to next page is allowed") {
       compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
       compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertExists()
     }
 
+    /* SESSIONS PAGE (PAGE 2) ------------------------------------------------- */
+    checkpoint("Sessions Page: Title correct") {
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Game Sessions")
+    }
+
+    checkpoint("Sessions Page: Subtitle visible") {
+      compose.onNodeWithText(OnBoardingStrings.SESSION_PAGE_SUBTITLE).assertExists()
+    }
+
+    checkpoint("Sessions Page: Feature items visible") {
+      compose.onNodeWithText("Schedule sessions with date, time, and location").assertExists()
+      compose.onNodeWithText("Link sessions to specific games you want to play").assertExists()
+      compose.onNodeWithText("Invite friends and manage member list").assertExists()
+      compose.onNodeWithText("View your session history and upcoming events").assertExists()
+    }
+
+    /* POSTS PAGE (PAGE 3) ---------------------------------------------------- */
+    checkpoint("Posts Page: Navigate to posts") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertExists()
+    }
+
+    checkpoint("Posts Page: Title correct") {
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3")
+          .assertTextEquals("Community Posts")
+    }
+
+    checkpoint("Posts Page: Subtitle visible") {
+      compose.onNodeWithText(OnBoardingStrings.POST_PAGE_SUBTITLE).assertExists()
+    }
+
+    checkpoint("Posts Page: Feature items visible") {
+      compose.onNodeWithText("Create threads about any board game topic").assertExists()
+      compose.onNodeWithText("Like and interact with community posts").assertExists()
+    }
+
+    checkpoint("Posts Page: End text visible") {
+      compose.onNodeWithText(OnBoardingStrings.POSTS_PAGE_END_TEXT).assertExists()
+    }
+
+    checkpoint("Posts Page: No end button on posts page") {
+      compose.onNodeWithTag("OnBoarding_EndButton").assertDoesNotExist()
+    }
+
+    /* MAP EXPLORATION PAGE (PAGE 4) ------------------------------------------ */
+    checkpoint("Map Page: Navigate to map exploration") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4").assertExists()
+    }
+
     checkpoint("Map Page: Title correct") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Explore Nearby")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4").assertTextEquals("Explore Nearby")
     }
 
     checkpoint("Map Page: Subtitle visible") {
@@ -183,58 +231,6 @@ class OnBoardingScreenTest {
 
     checkpoint("Map Page: You marker label visible") {
       compose.onNodeWithText("You").assertExists()
-    }
-
-    /* NAVIGATION TO SESSIONS PAGE (PAGE 3) ----------------------------------- */
-    checkpoint("Sessions Page: Navigate to sessions") {
-      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
-      compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertExists()
-    }
-
-    checkpoint("Sessions Page: Title correct") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertTextEquals("Game Sessions")
-    }
-
-    checkpoint("Sessions Page: Subtitle visible") {
-      compose.onNodeWithText(OnBoardingStrings.SESSION_PAGE_SUBTITLE).assertExists()
-    }
-
-    checkpoint("Sessions Page: Feature items visible") {
-      compose.onNodeWithText("Schedule sessions with date, time, and location").assertExists()
-      compose.onNodeWithText("Link sessions to specific games you want to play").assertExists()
-      compose.onNodeWithText("Invite friends and manage member list").assertExists()
-      compose.onNodeWithText("View your session history and upcoming events").assertExists()
-    }
-
-    /* NAVIGATION TO POSTS PAGE (PAGE 4) -------------------------------------- */
-    checkpoint("Posts Page: Navigate to posts") {
-      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
-      compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4").assertExists()
-    }
-
-    checkpoint("Posts Page: Title correct") {
-      compose
-          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4")
-          .assertTextEquals("Community Posts")
-    }
-
-    checkpoint("Posts Page: Subtitle visible") {
-      compose.onNodeWithText(OnBoardingStrings.POST_PAGE_SUBTITLE).assertExists()
-    }
-
-    checkpoint("Posts Page: Feature items visible") {
-      compose.onNodeWithText("Create threads about any board game topic").assertExists()
-      compose.onNodeWithText("Like and interact with community posts").assertExists()
-    }
-
-    checkpoint("Posts Page: End text visible") {
-      compose.onNodeWithText(OnBoardingStrings.POSTS_PAGE_END_TEXT).assertExists()
-    }
-
-    checkpoint("Posts Page: No end button on posts page") {
-      compose.onNodeWithTag("OnBoarding_EndButton").assertDoesNotExist()
     }
 
     /* NAVIGATION TO LET'S GO PAGE (PAGE 5) - FINAL PAGE --------------------- */
@@ -263,49 +259,48 @@ class OnBoardingScreenTest {
     }
 
     /* BACK NAVIGATION THROUGH ALL PAGES -------------------------------------- */
+    checkpoint("Back Nav: Back to map page") {
+      backButton().performClick()
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4").assertTextEquals("Explore Nearby")
+    }
+
     checkpoint("Back Nav: Back to posts page") {
       backButton().performClick()
       compose.waitForIdle()
       compose
-          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_4")
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3")
           .assertTextEquals("Community Posts")
     }
 
     checkpoint("Back Nav: Back to sessions page") {
       backButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_3").assertTextEquals("Game Sessions")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Game Sessions")
     }
 
-    checkpoint("Back Nav: Back to map page") {
+    checkpoint("Back Nav: Back to session creation page") {
       backButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Explore Nearby")
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1")
+          .assertTextEquals(OnBoardingStrings.SESSION_CREATION_TITLE)
     }
 
-    checkpoint("Back Nav: Back to discussion page") {
-      backButton().performClick()
-      compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertTextEquals("Discussions")
-    }
-
-    checkpoint("Back Nav: Discussion card still present") { discussionCard().assertExists() }
+    checkpoint("Back Nav: Session creation card still present") { discussionCard().assertExists() }
 
     checkpoint("Back Nav: Can navigate forward again") {
       nextButton().performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Explore Nearby")
-    }
-
-    checkpoint("Back Nav: Back to discussion again") {
-      backButton().performClick()
-      compose.waitForIdle()
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1").assertExists()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_2").assertTextEquals("Game Sessions")
     }
 
     checkpoint("Back Nav: Back to first page") {
       backButton().performClick()
       compose.waitForIdle()
+      backButton().performClick()
+      compose.waitForIdle()
+
       compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_0").assertTextEquals("Meeple Meet")
     }
 
@@ -328,7 +323,7 @@ class OnBoardingScreenTest {
   /* ============ ADDITIONAL COMPOSABLE COVERAGE TESTS ============= */
 
   @Test
-  fun test_discussion_page_and_dialog() = runBlocking {
+  fun test_session_creation_page() = runBlocking {
     val testPage =
         OnBoardPage(
             image = R.drawable.discussion_logo,
@@ -337,47 +332,40 @@ class OnBoardingScreenTest {
     val hasInteracted = mutableStateOf(false)
 
     compose.setContent {
-      DiscussionPreviewPage(pageData = testPage, hasInteractedWithDiscussion = hasInteracted)
+      SessionCreationPreviewPage(pageData = testPage, hasInteractedWithDiscussion = hasInteracted)
     }
+    compose.waitForIdle()
 
-    checkpoint("Page: Title renders") { compose.onNodeWithText("Discussions").assertExists() }
-
-    checkpoint("Page: Helper text visible") {
+    checkpoint("Page: Title renders") {
       compose
-          .onNodeWithText("Meeple Meet helps you connect with new friends", substring = true)
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_1")
+          .assertTextEquals(OnBoardingStrings.SESSION_CREATION_TITLE)
+    }
+
+    checkpoint("Page: LaunchedEffect marks interaction") {
+      assert(hasInteracted.value) { "hasInteractedWithDiscussion should be true after composition" }
+    }
+
+    checkpoint("Page: Helper texts visible") {
+      compose
+          .onNodeWithText(OnBoardingStrings.SESSION_CREATION_CREATE_SESSION_BUTTON)
           .assertExists()
+      compose.onNodeWithText(OnBoardingStrings.SESSION_CREATION_CHOOSE_FRIENDS).assertExists()
     }
 
-    checkpoint("Page: Card visible") { discussionCard().assertExists() }
+    checkpoint("Page: Discussion card visible") { discussionCard().assertExists() }
 
-    checkpoint("Page: Initial prompt before interaction") {
-      compose.onNodeWithText("⬆️ Tap the discussion above to continue").assertExists()
+    checkpoint("Page: Date/time section present with labels") {
+      sessionCreationDateTime().assertExists()
+      compose.onNodeWithText(OnBoardingStrings.DATE_PREVIEW).assertExists()
+      compose.onNodeWithText(OnBoardingStrings.TIME_PREVIEW).assertExists()
     }
 
-    checkpoint("Page: Click updates state") {
-      discussionCard().performClick()
-      compose.waitForIdle()
-      assert(hasInteracted.value) { "Should be marked as interacted" }
-    }
-
-    checkpoint("Page: Prompt changes after interaction") {
-      compose.onNodeWithText("Jump into the conversation and never miss a meetup!").assertExists()
-    }
-
-    checkpoint("Page: Dialog opens") { closeDialogButton().assertExists() }
-
-    checkpoint("Dialog: Session Creation title") {
-      compose.onNodeWithText("Session Creation").assertExists()
-    }
-
-    checkpoint("Dialog: Board Game Night in header") {
-      compose.onNodeWithTag("DiscussionHeader_Title").assertExists()
-    }
-
-    checkpoint("Dialog: Close button works") {
-      closeDialogButton().performClick()
-      compose.waitForIdle()
-      closeDialogButton().assertDoesNotExist()
+    checkpoint("Page: Participants section with static participants") {
+      sessionCreationParticipants().assertExists()
+      compose.onNodeWithText(OnBoardingStrings.PARTICIPANTS_SECTION_TEXT).assertExists()
+      compose.onNodeWithText(OnBoardingStrings.PARTICIPANT_1).assertExists()
+      compose.onNodeWithText(OnBoardingStrings.PARTICIPANT_2).assertExists()
     }
   }
 

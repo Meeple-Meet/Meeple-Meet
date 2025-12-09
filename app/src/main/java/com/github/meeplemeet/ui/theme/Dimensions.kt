@@ -104,7 +104,7 @@ object Dimensions {
     val title: TextUnit = 17.sp
     val heading: TextUnit = 18.sp
     val largeHeading: TextUnit = 20.sp
-    val xLarge: TextUnit = 32.sp
+    val large: TextUnit = 30.sp
     val extraLarge: TextUnit = 36.sp
     val displayMedium: TextUnit = 56.sp
   }
