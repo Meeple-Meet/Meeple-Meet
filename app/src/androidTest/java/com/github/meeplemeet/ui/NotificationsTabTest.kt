@@ -19,7 +19,6 @@ import com.github.meeplemeet.model.account.NotificationNoUid
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -214,9 +213,8 @@ class NotificationsTabTest : FirestoreTests() {
   @Test
   fun smoke_all_notifications_tests() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme { NotificationsTab(account = currentUser, viewModel = viewModel, onBack = {}) }
-      }
+        AppTheme { NotificationsTab(account = currentUser, viewModel = viewModel, onBack = {},               unreadCount = currentUser.notifications.count {it -> !it.read},
+        ) }
     }
 
     checkpoint("Initial State") {
@@ -384,9 +382,8 @@ class NotificationsTabTest : FirestoreTests() {
     val emptyAccount = currentUser.copy(notifications = emptyList())
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme { NotificationsTab(account = emptyAccount, viewModel = viewModel, onBack = {}) }
-      }
+        AppTheme { NotificationsTab(account = emptyAccount, viewModel = viewModel, onBack = {},               unreadCount = currentUser.notifications.count {it -> !it.read},
+        ) }
     }
 
     checkpoint("Empty State Displayed") {

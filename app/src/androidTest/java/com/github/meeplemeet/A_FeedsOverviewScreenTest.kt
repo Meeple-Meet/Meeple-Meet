@@ -17,7 +17,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -93,16 +92,15 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   @Test
   fun full_smoke_all_cases() = runBlocking {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
         AppTheme(themeMode = theme) {
           PostsOverviewScreen(
               viewModel = postVm,
               navigation = nav,
               account = me,
               onClickAddPost = { fabClicked = true },
+              unreadCount = me.notifications.count {it -> !it.read},
               onSelectPost = { clickedPost = it })
         }
-      }
     }
 
     /* 1  EMPTY STATE  ------------------------------------------------------ */

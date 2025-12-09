@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -64,14 +63,13 @@ class FriendsScreenCrashTest : FirestoreTests() {
   @Test
   fun friendsScreen_missingFriend_doesNotCrash() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
         AppTheme(themeMode = ThemeMode.DARK) {
           FriendsScreen(
               account = currentUser,
               viewModel = viewModel,
+              unreadCount = currentUser.notifications.count {it -> !it.read},
               onBack = {},
           )
-        }
       }
     }
 

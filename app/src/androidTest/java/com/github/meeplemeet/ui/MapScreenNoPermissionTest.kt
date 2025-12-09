@@ -18,7 +18,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
@@ -81,7 +80,6 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
         AppTheme {
           key(trigger) {
             MapScreen(
@@ -91,8 +89,8 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
                 onFABCLick = {},
                 onRedirect = {},
                 cameraPositionState = cameraState,
+                unreadCount = regularAccount.notifications.count {it -> !it.read},
                 forceNoPermission = true)
-          }
         }
       }
     }

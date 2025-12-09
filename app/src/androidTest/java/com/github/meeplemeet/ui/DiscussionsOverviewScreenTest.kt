@@ -12,7 +12,6 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.ui.discussions.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -200,9 +199,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun all_tests() = runBlocking {
     // Set content once at the beginning
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
-      }
+        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav,               unreadCount = me.notifications.count {it -> !it.read},
+        ) }
     }
 
     checkpoint("Test setup") {

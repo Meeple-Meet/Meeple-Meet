@@ -7,7 +7,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationsViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.NotificationsTabTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -69,15 +68,14 @@ class NotificationsTabCrashTest : FirestoreTests() {
     val notificationId = initialUser.notifications.first().uid
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
         AppTheme(themeMode = ThemeMode.DARK) {
           NotificationsTab(
               account = currentUser,
               viewModel = viewModel,
+              unreadCount = currentUser.notifications.count {it -> !it.read},
               onBack = {},
           )
         }
-      }
     }
 
     compose.waitUntilAtLeastOneExists(

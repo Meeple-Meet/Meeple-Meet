@@ -33,7 +33,6 @@ import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -199,13 +198,13 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
         AppTheme {
           key(trigger) {
             MapScreen(
                 viewModel = viewModel,
                 navigation = mockNavigation,
                 account = currentAccountState.value,
+                unreadCount = currentAccountState.value.notifications.count {it -> !it.read},
                 onFABCLick = { type ->
                   fabClickCount++
                   lastFabClickType = type
@@ -213,7 +212,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
                 onRedirect = { pin -> lastRedirect = pin.uid })
           }
         }
-      }
     }
 
     Thread.sleep(500)
@@ -398,20 +396,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
         AppTheme {
           key(trigger) {
             MapScreen(
                 viewModel = noClusterViewModel,
                 navigation = mockNavigation,
                 account = currentAccountState.value,
+                unreadCount = currentAccountState.value.notifications.count {it -> !it.read},
                 onFABCLick = { type ->
                   fabClickCount++
                   lastFabClickType = type
                 },
                 onRedirect = { pin -> lastRedirect = pin.uid })
           }
-        }
       }
     }
 
@@ -720,13 +717,13 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
         AppTheme {
           key(trigger) {
             MapScreen(
                 viewModel = singleClusterViewModel,
                 navigation = mockNavigation,
                 account = currentAccountState.value,
+                unreadCount = currentAccountState.value.notifications.count {it -> !it.read},
                 onFABCLick = { type ->
                   fabClickCount++
                   lastFabClickType = type
@@ -735,7 +732,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
           }
         }
       }
-    }
 
     checkpoint("cluster_displaysClusterSheet") {
       runBlocking {
