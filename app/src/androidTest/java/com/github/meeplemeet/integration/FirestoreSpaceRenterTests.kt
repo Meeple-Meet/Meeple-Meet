@@ -1,5 +1,6 @@
 package com.github.meeplemeet.integration
 
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.LocationSearchException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
@@ -20,7 +21,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,13 +38,22 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   private lateinit var testSpace2: Space
 
   private val context = InstrumentationRegistry.getInstrumentation().targetContext
-  
-  private fun createTestImage(filename: String, width: Int = 100, height: Int = 100, color: Int = android.graphics.Color.RED): String {
-    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+
+  private fun createTestImage(
+      filename: String,
+      width: Int = 100,
+      height: Int = 100,
+      color: Int = android.graphics.Color.RED
+  ): String {
+    val bitmap =
+        android.graphics.Bitmap.createBitmap(
+            width, height, android.graphics.Bitmap.Config.ARGB_8888)
     bitmap.eraseColor(color)
 
     val file = java.io.File(context.cacheDir, filename)
-    java.io.FileOutputStream(file).use { out -> bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, out) }
+    java.io.FileOutputStream(file).use { out ->
+      bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, out)
+    }
     bitmap.recycle()
 
     return file.absolutePath
@@ -593,7 +602,11 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
   @Test(expected = IllegalArgumentException::class)
   fun createSpaceRenterViewModelThrowsWhenNameIsBlank() {
     createSpaceRenterViewModel.createSpaceRenter(
-        context, owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
+        context,
+        owner = testAccount1,
+        name = "",
+        address = testLocation1,
+        openingHours = testOpeningHours)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -945,7 +958,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     // Try to update as testAccount2 (non-owner)
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount2, name = "Hacked Space")
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount2, name = "Hacked Space")
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -1038,7 +1052,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, address = Location())
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount1, address = Location())
   }
 
   @Test
@@ -1050,7 +1065,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, name = "New Name")
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount1, name = "New Name")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1067,7 +1083,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, phone = "+41 99 999 9999")
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount1, phone = "+41 99 999 9999")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1119,7 +1136,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             address = testLocation1,
             openingHours = testOpeningHours)
 
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, address = testLocation2)
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount1, address = testLocation2)
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1165,7 +1183,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             spaces = listOf(testSpace1))
 
     val newSpaces = listOf(testSpace2, Space(seats = 15, costPerHour = 30.0))
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, spaces = newSpaces)
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount1, spaces = newSpaces)
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1254,7 +1273,8 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
             spaces = listOf(testSpace1))
 
     // Update only the phone
-    editSpaceRenterViewModel.updateSpaceRenter(context, spaceRenter, testAccount1, phone = "+41 99 999 9999")
+    editSpaceRenterViewModel.updateSpaceRenter(
+        context, spaceRenter, testAccount1, phone = "+41 99 999 9999")
     delay(100)
 
     val updated = spaceRenterRepository.getSpaceRenter(spaceRenter.id)
@@ -1271,57 +1291,62 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
 
   @Test
   fun editSpaceRenterViewModelUpdatesPhotos_uploadsLocalAndDeletesOld() {
-      runBlocking {
+    runBlocking {
       // 0. Sign in for Storage access
       auth.signInAnonymously().await()
 
       // 1. Create a SpaceRenter with an existing remote photo
-      val initialSpaceRenter = spaceRenterRepository.createSpaceRenter(
-          owner = testAccount1,
-          name = "Photo Test Space Renter",
-          address = testLocation1,
-          openingHours = testOpeningHours
-      )
-      
+      val initialSpaceRenter =
+          spaceRenterRepository.createSpaceRenter(
+              owner = testAccount1,
+              name = "Photo Test Space Renter",
+              address = testLocation1,
+              openingHours = testOpeningHours)
+
       // Strategy: Upload a REAL photo first to get a REAL URL.
       val realOldPhotoPath = createTestImage("old_photo.jpg", 100, 100, android.graphics.Color.BLUE)
-      val realOldPhotoUrl = imageRepository.saveSpaceRenterPhotos(context, initialSpaceRenter.id, realOldPhotoPath).first()
-      
+      val realOldPhotoUrl =
+          imageRepository
+              .saveSpaceRenterPhotos(context, initialSpaceRenter.id, realOldPhotoPath)
+              .first()
+
       // Update the space renter to have this photo
-      val spaceRenterWithPhoto = initialSpaceRenter.copy(photoCollectionUrl = listOf(realOldPhotoUrl))
-      // Directly update repository to set this state without triggering other logic if possible, 
+      val spaceRenterWithPhoto =
+          initialSpaceRenter.copy(photoCollectionUrl = listOf(realOldPhotoUrl))
+      // Directly update repository to set this state without triggering other logic if possible,
       // or just use updateSpaceRenter first time.
       // Let's use repository update directly to set initial state clearly.
-      spaceRenterRepository.updateSpaceRenter(initialSpaceRenter.id, photoCollectionUrl = listOf(realOldPhotoUrl))
+      spaceRenterRepository.updateSpaceRenter(
+          initialSpaceRenter.id, photoCollectionUrl = listOf(realOldPhotoUrl))
       delay(100)
-      
+
       // 2. Prepare update: Remove old photo, add new local photo
-      val newLocalPhotoPath = createTestImage("new_local_photo.jpg", 100, 100, android.graphics.Color.GREEN)
+      val newLocalPhotoPath =
+          createTestImage("new_local_photo.jpg", 100, 100, android.graphics.Color.GREEN)
       val newPhotoCollection = listOf(newLocalPhotoPath)
 
       // 3. Call updateSpaceRenter
       editSpaceRenterViewModel.initialize(spaceRenterWithPhoto) // ensure VM has current state
       delay(100)
-      
+
       editSpaceRenterViewModel.updateSpaceRenter(
           context = context,
           spaceRenter = spaceRenterWithPhoto,
           requester = testAccount1,
-          photoCollectionUrl = newPhotoCollection
-      )
+          photoCollectionUrl = newPhotoCollection)
       delay(2000) // Allow time for upload and delete
-      
+
       // 4. Verify
       val updated = spaceRenterRepository.getSpaceRenter(initialSpaceRenter.id)
-      
+
       assertEquals(1, updated.photoCollectionUrl.size)
       val newUrl = updated.photoCollectionUrl.first()
-      
+
       // It should be a remote URL (http), not the local path
       assertTrue(newUrl.startsWith("http"))
       assertTrue(newUrl != newLocalPhotoPath)
       assertTrue(newUrl != realOldPhotoUrl)
-      
+
       // Cleanup
       java.io.File(realOldPhotoPath).delete()
       java.io.File(newLocalPhotoPath).delete()
@@ -1373,7 +1398,11 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     // Test blank name
     try {
       createSpaceRenterViewModel.createSpaceRenter(
-          context, owner = testAccount1, name = "", address = testLocation1, openingHours = testOpeningHours)
+          context,
+          owner = testAccount1,
+          name = "",
+          address = testLocation1,
+          openingHours = testOpeningHours)
       throw AssertionError("Should have thrown IllegalArgumentException for blank name")
     } catch (e: IllegalArgumentException) {
       assertTrue(e.message!!.contains("name cannot be blank"))

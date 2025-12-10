@@ -130,8 +130,9 @@ class ImageRepositoryTests : FirestoreTests() {
       val shopId = "test_shop_123"
 
       runTest {
-        val urls = imageRepository.saveShopPhotos(
-            context, shopId, testImagePath1, testImagePath2, testImagePath3)
+        val urls =
+            imageRepository.saveShopPhotos(
+                context, shopId, testImagePath1, testImagePath2, testImagePath3)
         val images = imageRepository.loadShopPhotos(context, shopId, urls)
         assertNotNull(images)
         assertEquals(3, images.size)
@@ -165,8 +166,9 @@ class ImageRepositoryTests : FirestoreTests() {
       val spaceRenterId = "test_space_renter_123"
 
       runTest {
-        val urls = imageRepository.saveSpaceRenterPhotos(
-            context, spaceRenterId, testImagePath1, testImagePath2)
+        val urls =
+            imageRepository.saveSpaceRenterPhotos(
+                context, spaceRenterId, testImagePath1, testImagePath2)
         val images = imageRepository.loadSpaceRenterPhotos(context, spaceRenterId, urls)
         assertNotNull(images)
         assertEquals(2, images.size)
@@ -302,7 +304,8 @@ class ImageRepositoryTests : FirestoreTests() {
         assertEquals(0, images.size) // Since we deleted cache but provided no URLs to re-download
         // Note: With URL loading, if we give no URLs, it returns empty list.
         // We probably want to test that it re-downloads if we give valid URLs.
-        // But since we didn't capture URLs from saveShopPhotos above (wait, we can capture them or stub them)
+        // But since we didn't capture URLs from saveShopPhotos above (wait, we can capture them or
+        // stub them)
         // Wait, saveShopPhotos returns the URLs.
       }
     }
@@ -380,7 +383,7 @@ class ImageRepositoryTests : FirestoreTests() {
 
         imageRepository.deleteShopPhotos(context, shopId, *urls.toTypedArray())
         assertTrue("Shop cache files removed", cacheDir.listFiles().isNullOrEmpty())
-        
+
         // Loading deleted photos should fail with RemoteStorageException
         val result = runCatching { imageRepository.loadShopPhotos(context, shopId, urls) }
         assertTrue("Should throw exception when loading deleted photos", result.isFailure)
@@ -420,7 +423,9 @@ class ImageRepositoryTests : FirestoreTests() {
         assertTrue("Space renter cache files removed", cacheDir.listFiles().isNullOrEmpty())
 
         // Loading deleted photos should fail with RemoteStorageException
-        val result = runCatching { imageRepository.loadSpaceRenterPhotos(context, spaceRenterId, urls) }
+        val result = runCatching {
+          imageRepository.loadSpaceRenterPhotos(context, spaceRenterId, urls)
+        }
         assertTrue("Should throw exception when loading deleted photos", result.isFailure)
         assertTrue(result.exceptionOrNull() is RemoteStorageException)
       }
@@ -517,8 +522,9 @@ class ImageRepositoryTests : FirestoreTests() {
       val shopId = "test_shop_multi"
 
       runTest {
-        val urls = imageRepository.saveShopPhotos(
-            context, shopId, testImagePath1, testImagePath2, testImagePath3)
+        val urls =
+            imageRepository.saveShopPhotos(
+                context, shopId, testImagePath1, testImagePath2, testImagePath3)
         val images = imageRepository.loadShopPhotos(context, shopId, urls)
         assertEquals(3, images.size)
       }
@@ -876,7 +882,8 @@ class ImageRepositoryTests : FirestoreTests() {
 
       runTest {
         val images =
-            imageRepository.loadDiscussionPhotoMessages(context, nonExistentDiscussionId, 0) // Discussion still uses count?
+            imageRepository.loadDiscussionPhotoMessages(
+                context, nonExistentDiscussionId, 0) // Discussion still uses count?
         assertNotNull(images)
         assertTrue("Zero count should return empty list", images.isEmpty())
       }

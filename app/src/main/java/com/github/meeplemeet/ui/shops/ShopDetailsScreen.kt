@@ -40,7 +40,6 @@ import com.github.meeplemeet.ui.components.RequiredInfoSection
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
-import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
@@ -253,9 +252,9 @@ fun EditShopContent(
   // Initialize state with loaded shop data or default values
   var photoCollectionUrl by rememberSaveable(shop) { mutableStateOf(shop.photoCollectionUrl) }
 
-    LaunchedEffect(shop.photoCollectionUrl) {
-        photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
-    }
+  LaunchedEffect(shop.photoCollectionUrl) {
+    photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
+  }
   var shopName by rememberSaveable(shop) { mutableStateOf(shop.name) }
   var email by rememberSaveable(shop) { mutableStateOf(shop.email) }
   var addressText by rememberSaveable(shop) { mutableStateOf(shop.address.name) }
@@ -317,187 +316,186 @@ fun EditShopContent(
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                topBar = {
-                  CenterAlignedTopAppBar(
-                      title = {
-                        Text(
-                            EditShopUi.Strings.SCREEN_TITLE,
-                            modifier = Modifier.testTag(EditShopScreenTestTags.TITLE))
-                      },
-                      navigationIcon = {
-                        IconButton(
-                            onClick = onBack,
-                            enabled = !isSaving,
-                            modifier = Modifier.testTag(EditShopScreenTestTags.NAV_BACK)) {
-                              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          Scaffold(
+              topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                      Text(
+                          EditShopUi.Strings.SCREEN_TITLE,
+                          modifier = Modifier.testTag(EditShopScreenTestTags.TITLE))
+                    },
+                    navigationIcon = {
+                      IconButton(
+                          onClick = onBack,
+                          enabled = !isSaving,
+                          modifier = Modifier.testTag(EditShopScreenTestTags.NAV_BACK)) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                          }
+                    },
+                    actions = {
+                      IconButton(
+                          onClick = { showDeleteDialog = true },
+                          enabled = !isSaving,
+                          modifier = Modifier.testTag(EditShopScreenTestTags.DELETE_BUTTON)) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete shop")
+                          }
+                    },
+                    modifier = Modifier.testTag(EditShopScreenTestTags.TOPBAR))
+              },
+              snackbarHost = {
+                SnackbarHost(
+                    snackbarHost, modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
+              },
+              bottomBar = {
+                val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+                if (!(shouldHide && isInputFocused))
+                    ActionBar(
+                        onDiscard = { onDiscard() },
+                        onPrimary = {
+                          isSaving = true
+                          scope.launch {
+                            val addr = locationUi.selectedLocation ?: Location()
+                            val err =
+                                onSave(
+                                    shop,
+                                    shop.owner,
+                                    shopName,
+                                    email,
+                                    phone,
+                                    link,
+                                    addr,
+                                    week,
+                                    stock,
+                                    photoCollectionUrl)
+                            if (err == null) onSaved()
+                            else {
+                              isSaving = false
+                              snackbarHost.showSnackbar(err)
                             }
-                      },
-                      actions = {
-                        IconButton(
-                            onClick = { showDeleteDialog = true },
-                            enabled = !isSaving,
-                            modifier = Modifier.testTag(EditShopScreenTestTags.DELETE_BUTTON)) {
-                              Icon(Icons.Filled.Delete, contentDescription = "Delete shop")
-                            }
-                      },
-                      modifier = Modifier.testTag(EditShopScreenTestTags.TOPBAR))
-                },
-                snackbarHost = {
-                  SnackbarHost(
-                      snackbarHost, modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
-                },
-                bottomBar = {
-                  val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
-                  if (!(shouldHide && isInputFocused))
-                      ActionBar(
-                          onDiscard = { onDiscard() },
-                          onPrimary = {
-                            isSaving = true
-                            scope.launch {
-                              val addr = locationUi.selectedLocation ?: Location()
-                              val err =
-                                  onSave(
-                                      shop,
-                                      shop.owner,
-                                      shopName,
-                                      email,
-                                      phone,
-                                      link,
-                                      addr,
-                                      week,
-                                      stock,
-                                      photoCollectionUrl)
-                              if (err == null) onSaved()
-                              else {
-                                isSaving = false
-                                snackbarHost.showSnackbar(err)
-                              }
-                            }
-                          },
-                          enabled = isValid && !isSaving,
-                          primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-                },
-                modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
-                  LazyColumn(
-                      modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
-                      contentPadding =
-                          PaddingValues(
-                              horizontal = EditShopUi.Dimensions.contentHPadding,
-                              vertical = EditShopUi.Dimensions.contentVPadding)) {
-                    item {
-                      ImageCarousel(
-                          photoCollectionUrl = photoCollectionUrl,
-                          maxNumberOfImages = maxNumberOfImages,
-                          onStateChange = { newUrls ->
-                            photoCollectionUrl = newUrls
-                          },
-                          editable = true)
-                    }
-                    item {
-                      CollapsibleSection(
-                          title = EditShopUi.Strings.SECTION_REQUIRED,
-                          initiallyExpanded = true,
-                          content = {
-                            RequiredInfoSection(
-                                shop = shop,
-                                shopName = shopName,
-                                onShopName = { shopName = it },
-                                email = email,
-                                onEmail = { email = it },
-                                phone = phone,
-                                onPhone = { phone = it },
-                                link = link,
-                                onLink = { link = it },
-                                onPickLocation = { loc -> addressText = loc.name },
-                                viewModel = viewModel,
-                                owner = owner)
-                          },
-                          testTag = EditShopScreenTestTags.SECTION_REQUIRED)
-                    }
+                          }
+                        },
+                        enabled = isValid && !isSaving,
+                        primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
+              },
+              modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
+                LazyColumn(
+                    modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
+                    contentPadding =
+                        PaddingValues(
+                            horizontal = EditShopUi.Dimensions.contentHPadding,
+                            vertical = EditShopUi.Dimensions.contentVPadding)) {
+                      item {
+                        ImageCarousel(
+                            photoCollectionUrl = photoCollectionUrl,
+                            maxNumberOfImages = maxNumberOfImages,
+                            onStateChange = { newUrls -> photoCollectionUrl = newUrls },
+                            editable = true)
+                      }
+                      item {
+                        CollapsibleSection(
+                            title = EditShopUi.Strings.SECTION_REQUIRED,
+                            initiallyExpanded = true,
+                            content = {
+                              RequiredInfoSection(
+                                  shop = shop,
+                                  shopName = shopName,
+                                  onShopName = { shopName = it },
+                                  email = email,
+                                  onEmail = { email = it },
+                                  phone = phone,
+                                  onPhone = { phone = it },
+                                  link = link,
+                                  onLink = { link = it },
+                                  onPickLocation = { loc -> addressText = loc.name },
+                                  viewModel = viewModel,
+                                  owner = owner)
+                            },
+                            testTag = EditShopScreenTestTags.SECTION_REQUIRED)
+                      }
 
-                    item {
-                      Spacer(
-                          Modifier.height(EditShopUi.Dimensions.sectionSpace)
-                              .testTag(EditShopScreenTestTags.SPACER_AFTER_REQUIRED))
-                    }
+                      item {
+                        Spacer(
+                            Modifier.height(EditShopUi.Dimensions.sectionSpace)
+                                .testTag(EditShopScreenTestTags.SPACER_AFTER_REQUIRED))
+                      }
 
-                    item {
-                      CollapsibleSection(
-                          title = EditShopUi.Strings.SECTION_AVAILABILITY,
-                          initiallyExpanded = true,
-                          content = {
-                            AvailabilitySection(
-                                week = week,
-                                onEdit = { day ->
-                                  editingDay = day
-                                  showHoursDialog = true
-                                })
-                          },
-                          testTag = EditShopScreenTestTags.SECTION_AVAILABILITY)
-                    }
+                      item {
+                        CollapsibleSection(
+                            title = EditShopUi.Strings.SECTION_AVAILABILITY,
+                            initiallyExpanded = true,
+                            content = {
+                              AvailabilitySection(
+                                  week = week,
+                                  onEdit = { day ->
+                                    editingDay = day
+                                    showHoursDialog = true
+                                  })
+                            },
+                            testTag = EditShopScreenTestTags.SECTION_AVAILABILITY)
+                      }
 
-                    item {
-                      Spacer(
-                          Modifier.height(EditShopUi.Dimensions.sectionSpace)
-                              .testTag(EditShopScreenTestTags.SPACER_AFTER_AVAILABILITY))
-                    }
+                      item {
+                        Spacer(
+                            Modifier.height(EditShopUi.Dimensions.sectionSpace)
+                                .testTag(EditShopScreenTestTags.SPACER_AFTER_AVAILABILITY))
+                      }
 
-                    item {
-                      CollapsibleSection(
-                          title = EditShopUi.Strings.SECTION_GAMES,
-                          initiallyExpanded = true,
-                          header = {
-                            TextButton(
-                                onClick = {
-                                  onSetGameQuery("")
-                                  showGameDialog = true
-                                },
-                                modifier =
-                                    Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
-                                  Text(
-                                      EditShopUi.Strings.BTN_ADD_GAME,
-                                      modifier =
-                                          Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_LABEL))
-                                }
-                          },
-                          content = {
-                            GamesSection(
-                                stock = stock,
-                                onQuantityChange = { game, newQuantity ->
-                                  stock =
-                                      stock.map { (g, qty) ->
-                                        if (g.uid == game.uid) g to newQuantity else g to qty
-                                      }
-                                },
-                                onDelete = { gameToRemove ->
-                                  stock = stock.filterNot { it.first.uid == gameToRemove.uid }
-                                })
-                          },
-                          testTag = EditShopScreenTestTags.SECTION_GAMES)
-                    }
+                      item {
+                        CollapsibleSection(
+                            title = EditShopUi.Strings.SECTION_GAMES,
+                            initiallyExpanded = true,
+                            header = {
+                              TextButton(
+                                  onClick = {
+                                    onSetGameQuery("")
+                                    showGameDialog = true
+                                  },
+                                  modifier =
+                                      Modifier.testTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)) {
+                                    Icon(Icons.Filled.Add, contentDescription = null)
+                                    Spacer(Modifier.width(EditShopUi.Dimensions.betweenControls))
+                                    Text(
+                                        EditShopUi.Strings.BTN_ADD_GAME,
+                                        modifier =
+                                            Modifier.testTag(
+                                                EditShopScreenTestTags.GAMES_ADD_LABEL))
+                                  }
+                            },
+                            content = {
+                              GamesSection(
+                                  stock = stock,
+                                  onQuantityChange = { game, newQuantity ->
+                                    stock =
+                                        stock.map { (g, qty) ->
+                                          if (g.uid == game.uid) g to newQuantity else g to qty
+                                        }
+                                  },
+                                  onDelete = { gameToRemove ->
+                                    stock = stock.filterNot { it.first.uid == gameToRemove.uid }
+                                  })
+                            },
+                            testTag = EditShopScreenTestTags.SECTION_GAMES)
+                      }
 
-                    item {
-                      Spacer(
-                          Modifier.height(EditShopUi.Dimensions.bottomSpacer)
-                              .testTag(EditShopScreenTestTags.BOTTOM_SPACER))
+                      item {
+                        Spacer(
+                            Modifier.height(EditShopUi.Dimensions.bottomSpacer)
+                                .testTag(EditShopScreenTestTags.BOTTOM_SPACER))
+                      }
                     }
-                  }
-            }
+              }
+        }
+        if (isSaving) {
+          Box(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                      .clickable(enabled = true, onClick = {}),
+              contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+              }
+        }
       }
-      if (isSaving) {
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-                    .clickable(enabled = true, onClick = {}),
-            contentAlignment = Alignment.Center) {
-              CircularProgressIndicator()
-            }
-      }
-    }
 
   OpeningHoursEditor(
       show = showHoursDialog,

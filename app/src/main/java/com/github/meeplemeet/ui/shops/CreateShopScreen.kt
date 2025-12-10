@@ -23,7 +23,6 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
-import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
@@ -305,7 +304,8 @@ fun AddShopContent(
                       val addr = locationUi.selectedLocation ?: Location()
                       scope.launch {
                         try {
-                          val shopId = onCreate(shopName, email, addr, week, stock, photoCollectionUrl)
+                          val shopId =
+                              onCreate(shopName, email, addr, week, stock, photoCollectionUrl)
                           onCreated(shopId)
                         } catch (e: IllegalArgumentException) {
                           snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
