@@ -1303,7 +1303,10 @@ fun CollapsibleSection(
             Modifier.fillMaxWidth()
                 .padding(top = Dimensions.Padding.medium)
                 .clickable { setExpanded(!isExpanded) }
-                .testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX),
+                .then(
+                    if (testTag != null) {
+                      Modifier.testTag(testTag + "_header")
+                    } else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
           Text(
               text = title,
