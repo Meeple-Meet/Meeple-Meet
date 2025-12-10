@@ -29,7 +29,6 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
@@ -502,7 +501,7 @@ class SessionComponentsTest : FirestoreTests() {
             displayFormatter = fmt,
             zoneId = zone,
             editable = true,
-            testTagDate = SessionTestTags.DATE_FIELD + "0")
+            testTagDate = ComponentsTestTags.DATE_FIELD + "0")
         // Non-editable date field
         DatePickerDockedField(
             value = LocalDate.of(2024, 12, 1),
@@ -541,7 +540,7 @@ class SessionComponentsTest : FirestoreTests() {
     }
 
     // Check time picker button exists
-    composeRule.onAllNodesWithTag(SessionTestTags.TIME_PICK_BUTTON).assertCountEquals(2)
+    composeRule.onAllNodesWithTag(ComponentsTestTags.TIME_PICK_BUTTON).assertCountEquals(2)
 
     // Check initial time is displayed
     composeRule.onNodeWithText("14:30").assertExists()
@@ -551,12 +550,12 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithText("19:45").assertExists()
 
     // Open time picker
-    composeRule.onAllNodesWithTag(SessionTestTags.TIME_PICK_BUTTON)[0].performClick()
+    composeRule.onAllNodesWithTag(ComponentsTestTags.TIME_PICK_BUTTON)[0].performClick()
     composeRule.onNodeWithTag(ComponentsTestTags.TIME_PICKER, useUnmergedTree = true).assertExists()
 
     // Click OK button to close
     composeRule
-        .onNodeWithTag(SessionTestTags.TIME_PICKER_OK_BUTTON, useUnmergedTree = true)
+        .onNodeWithTag(ComponentsTestTags.TIME_PICKER_OK_BUTTON, useUnmergedTree = true)
         .performClick()
   }
 
@@ -575,7 +574,7 @@ class SessionComponentsTest : FirestoreTests() {
     }
 
     // Open picker
-    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICK_BUTTON).performClick()
     composeRule.waitForIdle()
 
     // Cancel button should exist and dismiss dialog
@@ -583,7 +582,7 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
 
     // Re-open and confirm
-    composeRule.onNodeWithTag(SessionTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICK_BUTTON).performClick()
     composeRule.waitForIdle()
 
     // Date picker should be visible
@@ -591,7 +590,7 @@ class SessionComponentsTest : FirestoreTests() {
 
     // OK button should exist
     composeRule
-        .onNodeWithTag(SessionTestTags.DATE_PICKER_OK_BUTTON, useUnmergedTree = true)
+        .onNodeWithTag(ComponentsTestTags.DATE_PICKER_OK_BUTTON, useUnmergedTree = true)
         .assertExists()
         .performClick()
 

@@ -27,6 +27,7 @@ import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
+import com.github.meeplemeet.ui.components.ComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
@@ -34,7 +35,6 @@ import com.github.meeplemeet.ui.discussions.DiscussionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.posts.CreatePostTestTags
 import com.github.meeplemeet.ui.posts.FeedsOverviewTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
@@ -468,25 +468,25 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
+        .onNodeWithTag(ComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
         .assertExists()
         .performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD, useUnmergedTree = true)
+        .onNodeWithTag(ComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
         .performTextInput("EPFL")
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntil(timeoutMillis = 10_000) {
       try {
-        composeTestRule.onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0").isDisplayed()
+        composeTestRule.onNodeWithTag(ComponentsTestTags.LOCATION_FIELD_ITEM + ":0").isDisplayed()
       } catch (_: Exception) {
         false
       }
     }
 
     composeTestRule
-        .onNodeWithTag(SessionTestTags.LOCATION_FIELD_ITEM + ":0")
+        .onNodeWithTag(ComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
         .assertExists()
         .performClick()
 

@@ -25,7 +25,6 @@ import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.components.SpaceRenterComponentsTestTags as Tags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -258,6 +257,6 @@ class SpaceRenterComponentsTest : FirestoreTests() {
     compose.fieldInputUnder(ShopFormTestTags.FIELD_LINK).assertTextEquals("https://x.y")
 
     // Location field exists
-    compose.onTag(SessionTestTags.LOCATION_FIELD).assertExists().assertIsDisplayed()
+    compose.onTag(ComponentsTestTags.LOCATION_FIELD).assertExists().assertIsDisplayed()
   }
 }

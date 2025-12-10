@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -22,13 +23,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
@@ -56,6 +60,8 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -74,16 +80,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
@@ -96,14 +106,15 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_PICKER_BUTTON
-import com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_PICKER_DIALOG
+import com.github.meeplemeet.ui.sessions.SessionDefaults
 import com.github.meeplemeet.ui.sessions.isDateTimeInPast
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.appShapes
+import com.google.firebase.Timestamp
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -130,7 +141,24 @@ object ComponentsTestTags {
   const val SESSION_LOCATION_SEARCH_ITEM = "comp_session_location_search_item"
 
   fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
+
+  const val LOCATION_PICKER_DIALOG = "location_picker_dialog"
+  const val LOCATION_PICKER_BUTTON = "location_picker_button"
+  const val TITLE = "session_title"
+  const val DATE_FIELD = "date_field"
+  const val TIME_FIELD = "time_field"
+  const val LOCATION_FIELD = "location_field"
+  const val LOCATION_FIELD_ITEM = "location_field_item"
+  const val DATE_PICKER_OK_BUTTON = "date_picker_ok_button"
+  const val DATE_PICK_BUTTON = "date_pick_button"
+  const val TIME_PICK_BUTTON = "time_pick_button"
+  const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
+
+  fun chipsTag(uid: String) = "chip${uid}"
+
+  fun removeParticipantTag(uid: String) = "remove:${uid}"
 }
+
 /** Common labels, placeholders, and button texts used across components. */
 private const val LABEL_DATE = "Date"
 private const val LABEL_TIME = "Time"
@@ -138,18 +166,30 @@ private const val TEXT_SELECT_LOCATION = "Select a location"
 private const val LABEL_LOCATION = "Location"
 private const val PLACEHOLDER_LOCATION = "Enter an address"
 private const val PLACEHOLDER_SEARCH_GAMES = "Search games"
-private const val PLACEHOLDER_SEARCH = "Search"
-private const val BUTTON_PICK = "Pick"
 private const val BUTTON_OK = "OK"
 private const val BUTTON_CANCEL = "Cancel"
 private const val TITLE_SELECT_TIME = "Select Time"
 private const val LABEL_GAME = "Game"
 private const val OUTLINE_DEFAULT_ALPHA = 0.5f
+const val MAX_TITLE_LENGTH: Int = 100
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
   Add,
   Remove
+}
+
+/**
+ * Helper function to convert a Firebase Timestamp to a LocalDate and LocalTime pair.
+ *
+ * @param timestamp The Firebase Timestamp to convert.
+ * @return Pair containing the corresponding LocalDate and LocalTime.
+ */
+fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
+  val instant = Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
+  val zone = ZoneId.systemDefault()
+  val dateTime = LocalDateTime.ofInstant(instant, zone)
+  return dateTime.toLocalDate() to dateTime.toLocalTime()
 }
 
 /* =======================================================================
@@ -212,11 +252,11 @@ fun LabeledTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = false,
     labelTextStyle: TextStyle = MaterialTheme.typography.bodySmall,
     labelTextColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    modifier: Modifier = Modifier,
     outlinedTextStyle: TextStyle = MaterialTheme.typography.bodySmall
 ) {
   Column {
@@ -311,7 +351,6 @@ fun IconTextField(
  * @param editable Whether the text field is editable or read-only.
  * @param leadingIcon Optional composable for the leading icon.
  * @param trailingIcon Optional composable for the trailing icon.
- * @param textStyle The style to be applied to the text inside the text field.
  * @param modifier Modifier to be applied to the OutlinedTextField.
  */
 @Composable
@@ -586,8 +625,8 @@ fun DatePickerDockedField(
     editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault(),
-    testTagPick: String = SessionTestTags.DATE_PICK_BUTTON,
-    testTagDate: String = SessionTestTags.DATE_FIELD
+    testTagPick: String = ComponentsTestTags.DATE_PICK_BUTTON,
+    testTagDate: String = ComponentsTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: LABEL_DATE
@@ -662,7 +701,7 @@ fun AppDatePickerDialog(
               selectedDayContainerColor = AppColors.neutral),
       confirmButton = {
         TextButton(
-            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON),
+            modifier = Modifier.testTag(ComponentsTestTags.DATE_PICKER_OK_BUTTON),
             onClick = {
               state.selectedDateMillis?.let { ms ->
                 onDateSelected(Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate())
@@ -718,7 +757,7 @@ fun TimePickerField(
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: LABEL_TIME
 
-  Box(modifier = Modifier.testTag(SessionTestTags.TIME_FIELD)) {
+  Box(modifier = Modifier.testTag(ComponentsTestTags.TIME_FIELD)) {
     IconTextFieldNew(
         value = text,
         onValueChange = { /* read-only; picker controls it */},
@@ -734,7 +773,7 @@ fun TimePickerField(
         modifier =
             Modifier.fillMaxWidth(1f)
                 .clickable { open = true }
-                .testTag(SessionTestTags.TIME_PICK_BUTTON))
+                .testTag(ComponentsTestTags.TIME_PICK_BUTTON))
   }
 
   if (open) {
@@ -773,7 +812,7 @@ fun TimePickerField(
                     modifier = Modifier.weight(1f)) {
                       TextButton(
                           modifier =
-                              Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON)
+                              Modifier.testTag(ComponentsTestTags.TIME_PICKER_OK_BUTTON)
                                   .fillMaxWidth(),
                           contentPadding = PaddingValues(vertical = Dimensions.Padding.medium),
                           onClick = {
@@ -898,8 +937,8 @@ fun SessionLocationSearchButton(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
-    buttonTestTag: String = LOCATION_PICKER_BUTTON,
-    dialogTestTag: String = LOCATION_PICKER_DIALOG
+    buttonTestTag: String = ComponentsTestTags.LOCATION_PICKER_BUTTON,
+    dialogTestTag: String = ComponentsTestTags.LOCATION_PICKER_DIALOG
 ) {
   var showDialog by rememberSaveable { mutableStateOf(false) }
   var selectedLocationLabel by rememberSaveable {
@@ -1238,4 +1277,216 @@ private fun GameSearchBar(
                       com.github.meeplemeet.ui.sessions.SessionCreationTestTags.GAME_SEARCH_ERROR))
     }
   }
+}
+
+/**
+ * Component used to display the participants in a scrollable vertical list. Each chip shows a
+ * participant name and optionally a remove button for admins.
+ *
+ * @param participants List of participants to display
+ * @param onRemove Callback fn used when an Admin/Owner removes a participant
+ * @param modifier Modifiers used for the component
+ * @param account The current user that's viewing the session details
+ * @param editable Whether the current user can edit (remove) participants
+ */
+@Composable
+fun UserChipsGrid(
+    participants: List<Account>,
+    onRemove: (Account) -> Unit,
+    modifier: Modifier = Modifier,
+    account: Account,
+    editable: Boolean = false,
+    onAdd: ((Account) -> Unit)? = null,
+    useCheckboxes: Boolean = false,
+    selectedParticipants: List<Account> = emptyList()
+) {
+
+  // Set up vertical scroll with a maximum height
+  val maxHeight = Dimensions.ContainerSize.mapHeight
+  val scrollState = rememberScrollState()
+
+  Column(
+      modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+        // Existing participant chips - now full width rectangles
+        participants.forEach { p ->
+          val isSelected = selectedParticipants.any { it.uid == p.uid }
+          // Don't show checkbox for the admin/creator when using checkboxes
+          val isAdmin = p.uid == account.uid
+          val showCheckboxForUser = useCheckboxes && !isAdmin
+
+          UserChip(
+              user = p,
+              modifier = Modifier.fillMaxWidth().testTag(ComponentsTestTags.chipsTag(p.uid)),
+              onRemove = { if (editable) onRemove(p) },
+              account = account,
+              showRemoveBTN = !useCheckboxes && editable,
+              showCheckbox = showCheckboxForUser,
+              isChecked = isSelected,
+              onCheckedChange =
+                  if (showCheckboxForUser && onAdd != null) {
+                    { checked ->
+                      if (checked) {
+                        onAdd(p)
+                      } else {
+                        onRemove(p)
+                      }
+                    }
+                  } else null)
+        }
+      }
+}
+
+/**
+ * Composable used for the individual UserChip - now a full-width rectangular item
+ *
+ * @param user User's account (needed for his name and handle)
+ * @param onRemove Callback fn used to remove the user
+ * @param modifier Modifiers to apply to this component
+ * @param showRemoveBTN Should only be visible to admins/owners
+ */
+@Composable
+fun UserChip(
+    user: Account,
+    account: Account,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+    showRemoveBTN: Boolean = false,
+    isChecked: Boolean = false,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    showCheckbox: Boolean = false
+) {
+  Surface(
+      modifier = modifier,
+      shape = appShapes.medium,
+      color = AppColors.primary,
+      tonalElevation = Dimensions.Elevation.minimal) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+              // Avatar and name
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+                  modifier = Modifier.weight(1f)) {
+                    // Avatar
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+                        modifier = Modifier.weight(1f)) {
+                          SessionParticipantAvatar(
+                              account = user,
+                              modifier = Modifier.size(Dimensions.AvatarSize.small),
+                          )
+
+                          Column {
+                            Text(
+                                text = user.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = AppColors.textIcons,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                text = "@${user.handle}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.textIconsFade,
+                            )
+                          }
+                        }
+                  }
+
+              // Checkbox or Remove button
+              if (showCheckbox && onCheckedChange != null) {
+                ParticipantSwitch(
+                    checked = isChecked,
+                    onCheckedChange = onCheckedChange,
+                    modifier = Modifier.testTag(ComponentsTestTags.removeParticipantTag(user.name)),
+                )
+              } else if (showRemoveBTN && account.handle != user.handle) {
+                IconButton(
+                    onClick = onRemove,
+                    modifier =
+                        Modifier.size(Dimensions.IconSize.large)
+                            .testTag(ComponentsTestTags.removeParticipantTag(user.name))) {
+                      Icon(
+                          imageVector = Icons.Default.Close,
+                          contentDescription = "Remove participant",
+                          tint = AppColors.negative)
+                    }
+              }
+            }
+      }
+}
+
+/**
+ * A switch component used to indicate participant inclusion.
+ *
+ * @param checked Whether the switch is on or off.
+ * @param onCheckedChange Callback when the switch state changes.
+ * @param modifier Modifier for the switch layout.
+ */
+@Composable
+private fun ParticipantSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  Switch(
+      checked = checked,
+      onCheckedChange = onCheckedChange,
+      modifier = modifier,
+      thumbContent = {
+        Icon(
+            imageVector = if (checked) Icons.Default.Check else Icons.Default.Close,
+            contentDescription = null,
+            modifier = Modifier.size(Dimensions.IconSize.small),
+            tint = AppColors.textIcons,
+        )
+      },
+      colors =
+          SwitchDefaults.colors(
+              checkedThumbColor = AppColors.neutral,
+              checkedTrackColor = AppColors.divider,
+              uncheckedThumbColor = AppColors.negative,
+              uncheckedTrackColor = AppColors.divider,
+              disabledCheckedThumbColor = AppColors.negative,
+              disabledUncheckedThumbColor = AppColors.negative,
+          ),
+  )
+}
+
+/**
+ * Composable function to display a participant's avatar.
+ *
+ * @param account The participant's account.
+ */
+@Composable
+fun SessionParticipantAvatar(account: Account, modifier: Modifier = Modifier) {
+  val initial =
+      remember(account.name) {
+        account.name.trim().firstOrNull()?.uppercase()
+            ?: SessionDefaults.USER_NAME_MISSING_AVATAR_PLACEHOLDER
+      }
+
+  val hasPhoto = !account.photoUrl.isNullOrBlank()
+
+  Box(
+      modifier = modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surface),
+      contentAlignment = Alignment.Center) {
+        if (hasPhoto) {
+          AsyncImage(
+              model = account.photoUrl,
+              contentDescription = "Profile picture of ${account.name}",
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize(),
+          )
+        } else {
+          Text(
+              text = initial,
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.tertiary)
+        }
+      }
 }
