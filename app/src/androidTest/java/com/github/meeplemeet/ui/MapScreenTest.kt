@@ -81,8 +81,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       GrantPermissionRule.grant(
           Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
-  @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
-  @get:Rule val ck = Checkpoint.Rule()
+  @get:Rule(order = 1) val composeRule = createAndroidComposeRule<ComponentActivity>()
+  @get:Rule(order = 0) val ck = Checkpoint.Rule()
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 120_000)
 
@@ -423,7 +423,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
 
-        composeRule.waitUntil(100000) {
+        composeRule.waitUntil(20000) {
           noClusterViewModel.getClusters().find {
             it.items.size == 1 && it.items[0].geoPin.uid == shop.id
           } != null
