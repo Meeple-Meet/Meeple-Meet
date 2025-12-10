@@ -579,8 +579,7 @@ class MainTabComposableTest : FirestoreTests() {
       assert(shopClickedId != null)
 
       // Check Space
-      compose.onNodeWithText("Test Space").assertExists().performClick()
-      assert(spaceClickedId != null)
+      compose.onNodeWithText("Test Space").assertDoesNotExist()
 
       compose.subPageBackButton().performClick()
       compose.waitForIdle()
