@@ -609,7 +609,7 @@ fun MapScreen(
               modifier =
                   Modifier.align(Alignment.TopStart)
                       .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium),
-              showCreateButton = account.shopOwner || account.spaceRenter,
+              showCreateButton = verified && (account.shopOwner || account.spaceRenter),
               onToggleFilters = { showFilterButtons = !showFilterButtons },
               onAddClick = {
                 when (account.shopOwner to account.spaceRenter) {

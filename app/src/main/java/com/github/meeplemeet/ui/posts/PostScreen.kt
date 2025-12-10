@@ -359,6 +359,7 @@ fun PostScreen(
           PostContent(
               post = currentPost,
               currentUser = account,
+              verified = verified,
               onDeletePost = {
                 scope.launch {
                   deleted = true
@@ -546,6 +547,7 @@ private fun ComposerBar(
 private fun PostContent(
     post: Post,
     currentUser: Account,
+    verified: Boolean,
     onDeletePost: () -> Unit,
     onEditPostBody: () -> Unit,
     onEditPostTitle: () -> Unit,
@@ -588,6 +590,7 @@ private fun PostContent(
           ThreadCard(
               root = root,
               currentUser = currentUser,
+              verified = verified,
               resolveUser = resolveUser,
               onReply = onReply,
               onDelete = onDeleteComment,
@@ -814,6 +817,7 @@ private fun PostHeader(post: Post, author: Account?) {
 private fun ThreadCard(
     root: Comment,
     currentUser: Account,
+    verified: Boolean,
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
@@ -840,6 +844,7 @@ private fun ThreadCard(
                 CommentItem(
                     comment = root,
                     author = resolveUser(root.authorId),
+                    verified = verified,
                     isMine = (root.authorId == currentUser.uid),
                     hasReplies = root.children.isNotEmpty(),
                     isExpanded = expanded,
@@ -858,6 +863,7 @@ private fun ThreadCard(
                         CommentsTree(
                             comments = root.children,
                             currentUser = currentUser,
+                            verified = verified,
                             resolveUser = resolveUser,
                             onReply = onReply,
                             onDelete = onDelete,
@@ -891,6 +897,7 @@ private fun ThreadCard(
 private fun CommentsTree(
     comments: List<Comment>,
     currentUser: Account,
+    verified: Boolean,
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
@@ -916,6 +923,7 @@ private fun CommentsTree(
               CommentItem(
                   comment = c,
                   author = resolveUser(c.authorId),
+                  verified = verified,
                   isMine = (c.authorId == currentUser.uid),
                   hasReplies = c.children.isNotEmpty(),
                   isExpanded = expanded,
@@ -937,6 +945,7 @@ private fun CommentsTree(
                           comments = c.children,
                           currentUser = currentUser,
                           resolveUser = resolveUser,
+                          verified = verified,
                           onReply = onReply,
                           onDelete = onDelete,
                           onReplyingStateChanged = onReplyingStateChanged,
@@ -958,6 +967,7 @@ private fun CommentsTree(
             CommentItem(
                 comment = c,
                 author = resolveUser(c.authorId),
+                verified = verified,
                 isMine = (c.authorId == currentUser.uid),
                 hasReplies = c.children.isNotEmpty(),
                 isExpanded = expanded,
@@ -974,6 +984,7 @@ private fun CommentsTree(
                     CommentsTree(
                         comments = c.children,
                         currentUser = currentUser,
+                        verified = verified,
                         resolveUser = resolveUser,
                         onReply = onReply,
                         onDelete = onDelete,
@@ -1039,6 +1050,7 @@ private fun CommentItem(
     comment: Comment,
     author: Account?,
     isMine: Boolean,
+    verified: Boolean,
     hasReplies: Boolean = false,
     isExpanded: Boolean = false,
     onReply: (String) -> Unit,
@@ -1093,17 +1105,18 @@ private fun CommentItem(
                       modifier = Modifier.size(Dimensions.IconSize.medium))
                 }
           }
-          IconButton(
-              onClick = { replying = !replying },
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.small)
-                      .testTag(PostTags.commentReplyToggle(comment.id))) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Reply,
-                    contentDescription = "Reply",
-                    tint = MessagingColors.secondaryText,
-                    modifier = Modifier.size(Dimensions.IconSize.medium))
-              }
+          if (verified)
+              IconButton(
+                  onClick = { replying = !replying },
+                  modifier =
+                      Modifier.size(Dimensions.AvatarSize.small)
+                          .testTag(PostTags.commentReplyToggle(comment.id))) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Reply,
+                        contentDescription = "Reply",
+                        tint = MessagingColors.secondaryText,
+                        modifier = Modifier.size(Dimensions.IconSize.medium))
+                  }
         }
 
     Spacer(Modifier.height(Dimensions.Spacing.medium))
