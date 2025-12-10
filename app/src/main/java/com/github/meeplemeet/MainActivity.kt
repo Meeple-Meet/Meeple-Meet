@@ -427,8 +427,7 @@ fun MeepleMeetApp(
                     signedOut = true
                   },
                   onDelete = {
-                    // Sign out the user before deleting his account, avoiding an infinite loading
-                    // screen
+                    // ViewModel handles Firebase Auth deletion with retry logic
                     FirebaseProvider.auth.signOut()
                   },
                   onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
