@@ -500,6 +500,15 @@ fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Un
   }
 }
 
+/**
+ * Handles the content of the manage businesses sub-page
+ *
+ * @param viewModel VM used by this screen
+ * @param account current user
+ * @param businesses pair of shops and space renters owned by the user
+ * @param onSpaceRenterClick callback upon clicking on a space renter card
+ * @param onShopClick callback upon clicking on a shop card
+ */
 @Composable
 fun ManageBusinessesPage(
     viewModel: ProfileScreenViewModel,
@@ -1803,6 +1812,13 @@ fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Un
   }
 }
 
+/**
+ * Generic business card used for both shops and space renters
+ *
+ * @param icon Icon to display on the left
+ * @param label Label to display
+ * @param onClick Callback upon clicking the card
+ */
 @Composable
 fun BusinessCard(icon: Int, label: String, onClick: () -> Unit) {
   Card(
@@ -1819,7 +1835,7 @@ fun BusinessCard(icon: Int, label: String, onClick: () -> Unit) {
               Icon(
                   painter = painterResource(id = icon),
                   contentDescription = null,
-                  tint = AppColors.textIconsFade,
+                  tint = AppColors.neutral,
                   modifier = Modifier.size(Dimensions.IconSize.xxLarge),
               )
 
@@ -1843,11 +1859,23 @@ fun BusinessCard(icon: Int, label: String, onClick: () -> Unit) {
       }
 }
 
+/**
+ * Composable for displaying a shop card
+ *
+ * @param shop The shop to display
+ * @param onClick Callback upon clicking the card
+ */
 @Composable
 fun ShopCard(shop: Shop, onClick: () -> Unit) {
   BusinessCard(icon = R.drawable.ic_storefront, label = shop.name, onClick = onClick)
 }
 
+/**
+ * Composable for displaying a space renter card
+ *
+ * @param spaceRenter The space renter to display
+ * @param onClick Callback upon clicking the card
+ */
 @Composable
 fun SpaceRenterCard(spaceRenter: SpaceRenter, onClick: () -> Unit) {
   BusinessCard(icon = R.drawable.ic_table, label = spaceRenter.name, onClick = onClick)
