@@ -35,7 +35,7 @@ class ProfileScreenViewModel(
 
   companion object {
     private const val EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE =
-        "Verification email sent to %s. After clicking the verification link, you will be logged out for security reasons. Please log back in with your new email."
+        "Verification email sent to %s. Please log back in with your new email for the changes to be effective."
   }
 
   private val _uiState = MutableStateFlow(AuthUIState())

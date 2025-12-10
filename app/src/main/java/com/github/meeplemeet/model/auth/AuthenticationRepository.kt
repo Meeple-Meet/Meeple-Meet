@@ -308,9 +308,10 @@ class AuthenticationRepository(
    * 5. Sends verification email to new address (Firebase Auth updates after verification)
    *
    * IMPORTANT SECURITY BEHAVIOR:
-   * - After clicking the verification link, Firebase will LOG OUT the user for security reasons
-   * - The user must log back in with their NEW email address
-   * - Email is NOT updated in Firestore immediately - must be synced via syncEmailToFirestore()
+   * - After clicking the verification link, the email changes in Firebase Auth
+   * - User remains logged in until auth.currentUser.reload() is called
+   * - When reload() is called (e.g., on Profile screen), Firebase invalidates the old token
+   * - This causes closing the app or signing out to be required to continue
    *
    * NOTE ON DUPLICATE EMAIL DETECTION:
    * - This method checks Firestore for duplicate emails before sending the verification email

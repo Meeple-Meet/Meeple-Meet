@@ -1232,8 +1232,7 @@ fun EmailSection(
                 },*/
                 modifier =
                     Modifier.weight(Dimensions.Weight.full)
-                        .testTag(PrivateInfoTestTags.EMAIL_INPUT),
-                enabled = false)
+                        .testTag(PrivateInfoTestTags.EMAIL_INPUT))
           }
 
       Row(modifier = Modifier.fillMaxWidth()) {
@@ -1405,7 +1404,8 @@ fun EmailSection(
           colors = ButtonDefaults.buttonColors()) {
             if (isLoading) {
               CircularProgressIndicator(
-                  modifier = Modifier.size(Dimensions.IconSize.standard), color = AppColors.textIcons)
+                  modifier = Modifier.size(Dimensions.IconSize.standard),
+                  color = AppColors.textIcons)
             } else {
               Text(text = MainTabUi.EmailSection.CHANGE_EMAIL_BUTTON_TEXT)
             }
