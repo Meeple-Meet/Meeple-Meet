@@ -7,7 +7,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
+const val IMAGE_EXTENSION = ".jpg"
 /**
  * Utility functions for caching user-selected images to local storage.
  *
@@ -53,7 +53,7 @@ object ImageFileUtils {
   suspend fun cacheUriToFile(context: Context, uri: Uri): String =
       withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
-        val file = File.createTempFile("gallery_", ".jpg", context.cacheDir)
+        val file = File.createTempFile("gallery_", IMAGE_EXTENSION, context.cacheDir)
         resolver.openInputStream(uri)?.use { input ->
           FileOutputStream(file).use { output -> input.copyTo(output) }
         }
@@ -87,7 +87,7 @@ object ImageFileUtils {
    */
   suspend fun saveBitmapToCache(context: Context, bitmap: Bitmap): String =
       withContext(Dispatchers.IO) {
-        val file = File.createTempFile("camera_", ".jpg", context.cacheDir)
+        val file = File.createTempFile("camera_", IMAGE_EXTENSION, context.cacheDir)
         FileOutputStream(file).use { output ->
           bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
         }
@@ -106,7 +106,7 @@ object ImageFileUtils {
    */
   suspend fun saveByteArrayToCache(context: Context, bytes: ByteArray): String =
       withContext(Dispatchers.IO) {
-        val file = File.createTempFile("bytes_", ".jpg", context.cacheDir)
+        val file = File.createTempFile("bytes_", IMAGE_EXTENSION, context.cacheDir)
         FileOutputStream(file).use { output -> output.write(bytes) }
         file.absolutePath
       }

@@ -25,6 +25,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+const val URL_PREFIX = "/o/"
+
 /**
  * Repository for managing image storage and retrieval across the application.
  *
@@ -114,8 +116,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
   private fun normalizePath(candidate: String, expectedPrefix: String): String {
     val path =
-        if (candidate.contains("/o/")) {
-          val encoded = candidate.substringAfter("/o/").substringBefore('?')
+        if (candidate.contains(URL_PREFIX)) {
+          val encoded = candidate.substringAfter(URL_PREFIX).substringBefore('?')
           URLDecoder.decode(encoded, "UTF-8")
         } else {
           candidate
@@ -811,8 +813,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
             .map { url ->
               async {
                 val path =
-                    if (url.contains("/o/")) {
-                      val encoded = url.substringAfter("/o/").substringBefore('?')
+                    if (url.contains(URL_PREFIX)) {
+                      val encoded = url.substringAfter(URL_PREFIX).substringBefore('?')
                       URLDecoder.decode(encoded, "UTF-8")
                     } else {
                       url
