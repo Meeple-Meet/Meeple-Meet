@@ -477,7 +477,7 @@ fun LabeledField(
     leadingIcon: @Composable (() -> Unit)? = null,
     scrollToStartOnFocusLost: Boolean = false,
 ) {
-  Box(modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
+  Box(modifier = modifier.fillMaxWidth()) {
     FocusableInputField(
         label = { Text(label) },
         value = value,
@@ -488,7 +488,7 @@ fun LabeledField(
         keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
         placeholder = { Text(placeholder) },
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT),
         scrollToStartOnFocusLost = scrollToStartOnFocusLost)
   }
 }
@@ -1303,7 +1303,10 @@ fun CollapsibleSection(
             Modifier.fillMaxWidth()
                 .padding(top = Dimensions.Padding.medium)
                 .clickable { setExpanded(!isExpanded) }
-                .testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX),
+                .then(
+                    if (testTag != null) {
+                      Modifier.testTag(testTag + "_header")
+                    } else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
           Text(
               text = title,
