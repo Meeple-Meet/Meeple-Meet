@@ -477,7 +477,7 @@ fun LabeledField(
     leadingIcon: @Composable (() -> Unit)? = null,
     scrollToStartOnFocusLost: Boolean = false,
 ) {
-  Box(modifier = modifier.fillMaxWidth()) {
+  Box(modifier = modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
     FocusableInputField(
         label = { Text(label) },
         value = value,
@@ -1303,10 +1303,7 @@ fun CollapsibleSection(
             Modifier.fillMaxWidth()
                 .padding(top = Dimensions.Padding.medium)
                 .clickable { setExpanded(!isExpanded) }
-                .then(
-                    if (testTag != null) {
-                      Modifier.testTag(testTag + "_header")
-                    } else Modifier),
+                .testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX),
         verticalAlignment = Alignment.CenterVertically) {
           Text(
               text = title,
