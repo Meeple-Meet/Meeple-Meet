@@ -29,6 +29,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.max
 
@@ -238,7 +239,10 @@ fun SpaceRenterRequiredInfoSection(
   Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL)) {
     LabeledField(
         leadingIcon = {
-          Icon(imageVector = Icons.Default.MailOutline, contentDescription = "phone icon")
+          Icon(
+              imageVector = Icons.Default.MailOutline,
+              contentDescription = "phone icon",
+              tint = AppColors.neutral)
         },
         label = ShopFormUi.Strings.EMAIL_LABEL,
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
@@ -259,7 +263,10 @@ fun SpaceRenterRequiredInfoSection(
     Box(Modifier.weight(1f).testTag(ShopFormTestTags.FIELD_PHONE)) {
       LabeledField(
           leadingIcon = {
-            Icon(imageVector = Icons.Default.Phone, contentDescription = "phone icon")
+            Icon(
+                imageVector = Icons.Default.Phone,
+                contentDescription = "phone icon",
+                tint = AppColors.neutral)
           },
           label = ShopFormUi.Strings.PHONE_LABEL,
           placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
@@ -275,7 +282,10 @@ fun SpaceRenterRequiredInfoSection(
     Box(Modifier.weight(1f).testTag(ShopFormTestTags.FIELD_LINK)) {
       LabeledField(
           leadingIcon = {
-            Icon(imageVector = Icons.Default.AddLink, contentDescription = "link icon")
+            Icon(
+                imageVector = Icons.Default.AddLink,
+                contentDescription = "link icon",
+                tint = AppColors.neutral)
           },
           label = ShopFormUi.Strings.LINK_LABEL,
           placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
