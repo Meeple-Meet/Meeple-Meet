@@ -416,7 +416,11 @@ class ShopComponentsTest : FirestoreTests() {
         // Stage 0: list, no delete
         0 ->
             GameListSection(
-                games = input, clickableGames = false, title = "Inventory", showButtons = true,)
+                games = input,
+                clickableGames = false,
+                title = "Inventory",
+                showButtons = true,
+            )
 
         // Stage 1: list, delete buttons enabled
         // PARENT OWNS THE LIST and mutates it when onDelete fires
@@ -450,10 +454,7 @@ class ShopComponentsTest : FirestoreTests() {
               }
               setter = { new -> source = new }
               GameListSection(
-                  games = source,
-                  clickableGames = false,
-                  title = "Inventory",
-                  showButtons = true)
+                  games = source, clickableGames = false, title = "Inventory", showButtons = true)
             }
       }
     }
