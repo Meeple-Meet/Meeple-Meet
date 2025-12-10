@@ -289,4 +289,53 @@ class AuthenticationRepository(
       createFailureResult("Logout", e)
     }
   }
+
+  /**
+   * Reauthenticates the current user with their email and password. This is required before
+   * sensitive operations like account deletion or password changes.
+   *
+   * @param password The user's current password
+   * @return Result indicating success or failure of the reauthentication
+   */
+  suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
+    return try {
+      val currentUser =
+          auth.currentUser
+              ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+
+      val email =
+          currentUser.email
+              ?: return Result.failure(IllegalStateException("No email associated with account"))
+
+      // Create credential with current email and provided password
+      val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, password)
+
+      // Attempt reauthentication
+      currentUser.reauthenticate(credential).await()
+      Result.success(Unit)
+    } catch (e: Exception) {
+      createFailureResult("Reauthentication", e)
+    }
+  }
+
+  /**
+   * Deletes the current user's Firebase Authentication account. This permanently removes the user
+   * from Firebase Auth. This operation requires recent authentication.
+   *
+   * @return Result indicating success or failure of the account deletion
+   */
+  suspend fun deleteAuthAccount(): Result<Unit> {
+    return try {
+      val currentUser =
+          auth.currentUser
+              ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+
+      currentUser.delete().await()
+      Result.success(Unit)
+    } catch (e: Exception) {
+      val errorMessage =
+          mapErrorMessage(e, "Failed to delete account. Please try again.")
+      Result.failure(IllegalStateException(errorMessage))
+    }
+  }
 }
