@@ -240,15 +240,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE).assertIsDisplayed()
     }
 
-    // TODO fix visibility assert
-    //    checkpoint("scaleBar_hidesAfterDelay") {
-    //      runBlocking {
-    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
-    //        delay(3500)
-    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
-    //      }
-    //    }
-
     checkpoint("scaleBar_showsCorrectMetricUnits") {
       composeRule.waitForIdle()
       composeRule.waitUntil { composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).isDisplayed() }
@@ -262,21 +253,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         distanceNode.assertTextContains("km", substring = true)
       }
     }
-
-    // TODO fix visibility assert
-    //    checkpoint("scaleBar_reappearsOnZoomChange") {
-    //      runBlocking {
-    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
-    //
-    //        delay(3500)
-    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
-    //
-    //        viewModel.updateZoomLevel(16f)
-    //        delay(100)
-    //
-    //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
-    //      }
-    //    }
 
     checkpoint("fab_hiddenForRegularUser") {
       currentAccountState.value = regularAccount
