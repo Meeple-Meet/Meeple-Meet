@@ -79,6 +79,7 @@ class MainActivityViewModel(
               val account = if (isOnline) liveAccount else loadedAccount
 
               if (account != null) {
+                // Filter out notifications sent by blocked users
                 val filtered =
                     account.notifications.filter {
                       account.relationships[it.senderId] != RelationshipStatus.BLOCKED
