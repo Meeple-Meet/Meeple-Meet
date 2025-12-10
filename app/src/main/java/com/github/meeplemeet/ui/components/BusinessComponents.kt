@@ -1386,3 +1386,36 @@ fun OpeningHoursEditor(
         })
   }
 }
+
+/**
+ * A composable function that displays an "Add" button with an icon and text.
+ *
+ * @param onClick A callback function that is invoked when the button is clicked.
+ * @param modifier An optional [Modifier] for styling the button.
+ * @param buttonText The text to display on the button.
+ * @param buttonTestTag The test tag for the button text.
+ * @param labelTestTag The test tag for the button label.
+ */
+@Composable
+fun AddButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    buttonText: String,
+    buttonTestTag: String,
+    labelTestTag: String,
+) {
+  Button(
+      shape = RoundedCornerShape(4.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = AppColors.secondary,
+              disabledContainerColor = AppColors.secondary,
+              contentColor = AppColors.focus,
+              disabledContentColor = AppColors.focus),
+      onClick = { onClick() },
+      modifier = modifier.testTag(buttonTestTag).fillMaxWidth()) {
+        Icon(Icons.Filled.Add, contentDescription = null)
+        Spacer(modifier.width(Dimensions.Padding.mediumSmall))
+        Text(buttonText, modifier = modifier.testTag(labelTestTag))
+      }
+}
