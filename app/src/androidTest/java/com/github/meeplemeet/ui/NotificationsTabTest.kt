@@ -24,10 +24,12 @@ import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.NotificationsTabTestTags
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
+import io.mockk.mockk
 import java.util.Date
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -42,6 +44,7 @@ class NotificationsTabTest : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
+  private lateinit var mockNavigation: NavigationActions
   private lateinit var viewModel: NotificationsViewModel
   private lateinit var navViewModel: NavigationViewModel
   private lateinit var currentUser: Account
@@ -206,6 +209,8 @@ class NotificationsTabTest : FirestoreTests() {
 
       // Update current user with notifications
       currentUser = currentUser.copy(notifications = notifications)
+
+      mockNavigation = mockk(relaxed = true)
     }
   }
 
@@ -213,7 +218,14 @@ class NotificationsTabTest : FirestoreTests() {
   fun smoke_all_notifications_tests() {
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme { NotificationsTab(account = currentUser, viewModel = viewModel, onBack = {}) }
+        AppTheme {
+          NotificationsTab(
+              account = currentUser,
+              viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
+              onBack = {})
+        }
       }
     }
 
@@ -383,7 +395,14 @@ class NotificationsTabTest : FirestoreTests() {
 
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme { NotificationsTab(account = emptyAccount, viewModel = viewModel, onBack = {}) }
+        AppTheme {
+          NotificationsTab(
+              account = emptyAccount,
+              viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
+              onBack = {})
+        }
       }
     }
 

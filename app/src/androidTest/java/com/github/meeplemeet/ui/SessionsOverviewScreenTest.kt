@@ -71,6 +71,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               viewModel = viewModel,
               navigation = nav,
               account = account,
+              verified = true,
               onSelectSession = { session -> capturedDiscussionId = session })
         }
       }

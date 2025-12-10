@@ -212,6 +212,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
                   fabClickCount++
                   lastFabClickType = type
                 },
+                verified = true,
                 onRedirect = { pin -> lastRedirect = pin.uid })
           }
         }
@@ -436,6 +437,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
                   fabClickCount++
                   lastFabClickType = type
                 },
+                verified = true,
                 onRedirect = { pin -> lastRedirect = pin.uid })
           }
         }
@@ -753,6 +755,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             MapScreen(
                 viewModel = singleClusterViewModel,
                 navigation = mockNavigation,
+                verified = true,
                 account = currentAccountState.value,
                 onFABCLick = { type ->
                   fabClickCount++

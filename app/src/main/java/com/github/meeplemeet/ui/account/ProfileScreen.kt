@@ -2,7 +2,6 @@ package com.github.meeplemeet.ui.account
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -17,7 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.UiBehaviorConfig
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 
@@ -37,6 +36,7 @@ fun ProfileScreen(
     navigation: NavigationActions,
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
+    verified: Boolean,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit,
     onFriendClick: () -> Unit,
@@ -51,24 +51,23 @@ fun ProfileScreen(
       bottomBar = {
         val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
         if (!(shouldHide && isInputFocused)) {
-          BottomNavigationMenu(
+          BottomBarWithVerification(
               currentScreen = MeepleMeetScreen.Profile,
-              onTabSelected = { screen -> navigation.navigateTo(screen) })
+              onTabSelected = { screen -> navigation.navigateTo(screen) },
+              verified = verified,
+              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
         }
       }) { innerPadding ->
-
         // New content here
-        Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentAlignment = Alignment.TopCenter) {
-              MainTab(
-                  viewModel = viewModel,
-                  account = account,
-                  onFriendsClick = onFriendClick,
-                  onNotificationClick = onNotificationClick,
-                  onSignOutOrDel = onSignOutOrDel,
-                  onDelete = onDelete,
-                  onInputFocusChanged = { isInputFocused = it })
-            }
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+          MainTab(
+              viewModel = viewModel,
+              account = account,
+              onFriendsClick = onFriendClick,
+              onNotificationClick = onNotificationClick,
+              onSignOutOrDel = onSignOutOrDel,
+              onDelete = onDelete,
+              onInputFocusChanged = { isInputFocused = it })
+        }
       }
 }

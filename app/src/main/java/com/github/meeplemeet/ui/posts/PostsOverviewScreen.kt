@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -67,8 +67,9 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostsOverviewScreen(
-    viewModel: PostOverviewViewModel = viewModel(),
+    verified: Boolean,
     navigation: NavigationActions,
+    viewModel: PostOverviewViewModel = viewModel(),
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
@@ -78,17 +79,18 @@ fun PostsOverviewScreen(
 
   Scaffold(
       floatingActionButton = {
-        FloatingActionButton(
-            onClick = onClickAddPost,
-            modifier = Modifier.testTag(FeedsOverviewTestTags.ADD_POST_BUTTON),
-            containerColor = MessagingColors.redditOrange,
-            contentColor = MessagingColors.messagingSurface,
-            shape = CircleShape) {
-              Icon(
-                  Icons.Default.Add,
-                  contentDescription = "Create",
-                  modifier = Modifier.size(Dimensions.IconSize.large))
-            }
+        if (verified)
+            FloatingActionButton(
+                onClick = onClickAddPost,
+                modifier = Modifier.testTag(FeedsOverviewTestTags.ADD_POST_BUTTON),
+                containerColor = MessagingColors.redditOrange,
+                contentColor = MessagingColors.messagingSurface,
+                shape = CircleShape) {
+                  Icon(
+                      Icons.Default.Add,
+                      contentDescription = "Create",
+                      modifier = Modifier.size(Dimensions.IconSize.large))
+                }
       },
       topBar = {
         CenterAlignedTopAppBar(
@@ -106,10 +108,12 @@ fun PostsOverviewScreen(
             })
       },
       bottomBar = {
-        BottomNavigationMenu(
+        BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.PostsOverview,
             modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
-            onTabSelected = { screen -> navigation.navigateTo(screen) })
+            onTabSelected = { screen -> navigation.navigateTo(screen) },
+            verified = verified,
+            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
       }) { innerPadding ->
         if (postsSorted.isEmpty()) {
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) { EmptyFeedListText() }

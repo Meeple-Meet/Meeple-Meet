@@ -10,9 +10,11 @@ import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.NotificationsTabTestTags
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -25,6 +27,7 @@ class NotificationsTabCrashTest : FirestoreTests() {
   private lateinit var viewModel: NotificationsViewModel
   private lateinit var navViewModel: NavigationViewModel
   private lateinit var currentUser: Account
+  private lateinit var mockNavigation: NavigationActions
 
   @Before
   fun setup() {
@@ -58,6 +61,7 @@ class NotificationsTabCrashTest : FirestoreTests() {
 
       // Refresh current user to get the notification
       currentUser = accountRepository.getAccount(currentUser.uid)
+      mockNavigation = mockk(relaxed = true)
     }
   }
 
@@ -74,6 +78,8 @@ class NotificationsTabCrashTest : FirestoreTests() {
           NotificationsTab(
               account = currentUser,
               viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
               onBack = {},
           )
         }

@@ -44,6 +44,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -66,7 +67,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -105,14 +106,15 @@ object SessionsOverviewScreenTestTags {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionsOverviewScreen(
-    viewModel: SessionOverviewViewModel = viewModel(),
+    account: Account,
+    verified: Boolean,
     navigation: NavigationActions,
-    account: Account?,
+    viewModel: SessionOverviewViewModel = viewModel(),
     onSelectSession: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
   val sessionMap by
-      viewModel.sessionMapFlow(account?.uid ?: "", context).collectAsState(initial = emptyMap())
+      viewModel.sessionMapFlow(account.uid, context).collectAsState(initial = emptyMap())
 
   /* --------------  NEW: toggle state  -------------- */
   var showHistory by remember { mutableStateOf(false) }
@@ -120,12 +122,12 @@ fun SessionsOverviewScreen(
   var archivedSessions by remember { mutableStateOf<List<Session>>(emptyList()) }
 
   // Refresh counter to force re-fetching when switching to history tab
-  var historyRefreshTrigger by remember { mutableStateOf(0) }
+  var historyRefreshTrigger by remember { mutableIntStateOf(0) }
 
   // Fetch archived sessions when history tab is active
   // Refresh whenever showHistory becomes true (by using historyRefreshTrigger)
   LaunchedEffect(showHistory, account, historyRefreshTrigger) {
-    if (showHistory && account != null) {
+    if (showHistory) {
       viewModel.getArchivedSessions(account.uid) { sessions -> archivedSessions = sessions }
     }
   }
@@ -174,9 +176,11 @@ fun SessionsOverviewScreen(
           }
         },
         bottomBar = {
-          BottomNavigationMenu(
+          BottomBarWithVerification(
               currentScreen = MeepleMeetScreen.SessionsOverview,
-              onTabSelected = { navigation.navigateTo(it) })
+              onTabSelected = { navigation.navigateTo(it) },
+              verified = verified,
+              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
         }) { innerPadding ->
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when {
@@ -205,7 +209,7 @@ fun SessionsOverviewScreen(
                               id = id,
                               session = session,
                               viewModel = viewModel,
-                              currentUserId = account?.uid ?: "",
+                              currentUserId = account.uid,
                               currentTime = currentTime,
                               modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
                               onClick = { onSelectSession(id) })
