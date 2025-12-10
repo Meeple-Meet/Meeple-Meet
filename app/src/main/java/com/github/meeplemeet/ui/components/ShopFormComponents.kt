@@ -256,8 +256,8 @@ fun RequiredInfoSection(
         owner,
         shop,
         viewModel,
-        inputFieldTestTag = ComponentsTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = ComponentsTestTags.LOCATION_FIELD_ITEM)
+        inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
   }
 }
 

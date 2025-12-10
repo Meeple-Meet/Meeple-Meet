@@ -257,6 +257,6 @@ class SpaceRenterComponentsTest : FirestoreTests() {
     compose.fieldInputUnder(ShopFormTestTags.FIELD_LINK).assertTextEquals("https://x.y")
 
     // Location field exists
-    compose.onTag(ComponentsTestTags.LOCATION_FIELD).assertExists().assertIsDisplayed()
+    compose.onTag(SessionComponentsTestTags.LOCATION_FIELD).assertExists().assertIsDisplayed()
   }
 }

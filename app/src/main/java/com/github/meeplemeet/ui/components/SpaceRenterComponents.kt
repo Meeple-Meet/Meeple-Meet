@@ -257,8 +257,8 @@ fun SpaceRenterRequiredInfoSection(
         spaceRenter = spaceRenter,
         viewModel = viewModel,
         enabled = online,
-        inputFieldTestTag = ComponentsTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = ComponentsTestTags.LOCATION_FIELD_ITEM)
+        inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
   }
 }
 

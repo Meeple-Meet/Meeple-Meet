@@ -120,7 +120,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** Extra test tags for components (kept separate to avoid breaking other tests). */
-object ComponentsTestTags {
+object SessionComponentsTestTags {
   const val UNDERLINED_LABEL = "comp_underlined_label"
   const val LABELED_LABEL = "comp_labeled_label"
   const val COUNT_BUBBLE_TEXT = "comp_count_bubble_text"
@@ -227,7 +227,7 @@ fun UnderlinedLabel(
 ) {
   Text(
       text = text,
-      modifier = Modifier.testTag(ComponentsTestTags.UNDERLINED_LABEL),
+      modifier = Modifier.testTag(SessionComponentsTestTags.UNDERLINED_LABEL),
       style = textStyle,
       color = textColor,
       textDecoration = TextDecoration.Underline,
@@ -264,7 +264,7 @@ fun LabeledTextField(
         label,
         style = labelTextStyle,
         color = labelTextColor,
-        modifier = Modifier.testTag(ComponentsTestTags.LABELED_LABEL))
+        modifier = Modifier.testTag(SessionComponentsTestTags.LABELED_LABEL))
     Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
     FocusableInputField(
         value = value,
@@ -424,7 +424,7 @@ fun CountBubble(
   Box(modifier = modifier) {
     Text(
         "$count",
-        modifier = Modifier.testTag(ComponentsTestTags.COUNT_BUBBLE_TEXT),
+        modifier = Modifier.testTag(SessionComponentsTestTags.COUNT_BUBBLE_TEXT),
         style = styleText,
         color = colorText)
   }
@@ -462,7 +462,7 @@ fun DiscretePillSlider(
           valueRange = range,
           steps = steps,
           colors = sliderColors,
-          modifier = Modifier.testTag(ComponentsTestTags.PILL_RANGE_SLIDER))
+          modifier = Modifier.testTag(SessionComponentsTestTags.PILL_RANGE_SLIDER))
     }
   }
 }
@@ -483,7 +483,8 @@ fun TopBarWithDivider(
   /** --- Top App Bar --- */
   Column {
     CenterAlignedTopAppBar(
-        modifier = Modifier.testTag(ComponentsTestTags.TOP_APP_BAR).background(AppColors.primary),
+        modifier =
+            Modifier.testTag(SessionComponentsTestTags.TOP_APP_BAR).background(AppColors.primary),
         navigationIcon = {
           IconButton(
               onClick = { onReturn() },
@@ -541,7 +542,7 @@ fun ParticipantChip(
         modifier =
             textModifier
                 .align(Alignment.Center)
-                .testTag(ComponentsTestTags.participantName(account.name)),
+                .testTag(SessionComponentsTestTags.participantName(account.name)),
         style = MaterialTheme.typography.labelSmall,
         color = textColor,
         textAlign = TextAlign.Center,
@@ -569,7 +570,7 @@ fun ParticipantChip(
               modifier =
                   Modifier.size(Dimensions.IconSize.standard)
                       .testTag(
-                          "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
+                          "${SessionComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
               colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
                 Icon(icon, contentDescription = null)
               }
@@ -625,8 +626,8 @@ fun DatePickerDockedField(
     editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault(),
-    testTagPick: String = ComponentsTestTags.DATE_PICK_BUTTON,
-    testTagDate: String = ComponentsTestTags.DATE_FIELD
+    testTagPick: String = SessionComponentsTestTags.DATE_PICK_BUTTON,
+    testTagDate: String = SessionComponentsTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: LABEL_DATE
@@ -701,7 +702,7 @@ fun AppDatePickerDialog(
               selectedDayContainerColor = AppColors.neutral),
       confirmButton = {
         TextButton(
-            modifier = Modifier.testTag(ComponentsTestTags.DATE_PICKER_OK_BUTTON),
+            modifier = Modifier.testTag(SessionComponentsTestTags.DATE_PICKER_OK_BUTTON),
             onClick = {
               state.selectedDateMillis?.let { ms ->
                 onDateSelected(Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate())
@@ -719,7 +720,7 @@ fun AppDatePickerDialog(
   ) {
     DatePicker(
         state = state,
-        modifier = Modifier.testTag(ComponentsTestTags.DATE_PICKER),
+        modifier = Modifier.testTag(SessionComponentsTestTags.DATE_PICKER),
         colors =
             DatePickerDefaults.colors(
                 todayContentColor = AppColors.textIcons,
@@ -757,7 +758,7 @@ fun TimePickerField(
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: LABEL_TIME
 
-  Box(modifier = Modifier.testTag(ComponentsTestTags.TIME_FIELD)) {
+  Box(modifier = Modifier.testTag(SessionComponentsTestTags.TIME_FIELD)) {
     IconTextFieldNew(
         value = text,
         onValueChange = { /* read-only; picker controls it */},
@@ -773,7 +774,7 @@ fun TimePickerField(
         modifier =
             Modifier.fillMaxWidth(1f)
                 .clickable { open = true }
-                .testTag(ComponentsTestTags.TIME_PICK_BUTTON))
+                .testTag(SessionComponentsTestTags.TIME_PICK_BUTTON))
   }
 
   if (open) {
@@ -812,7 +813,7 @@ fun TimePickerField(
                     modifier = Modifier.weight(1f)) {
                       TextButton(
                           modifier =
-                              Modifier.testTag(ComponentsTestTags.TIME_PICKER_OK_BUTTON)
+                              Modifier.testTag(SessionComponentsTestTags.TIME_PICKER_OK_BUTTON)
                                   .fillMaxWidth(),
                           contentPadding = PaddingValues(vertical = Dimensions.Padding.medium),
                           onClick = {
@@ -853,7 +854,7 @@ fun TimePickerField(
                 TimeInput(
                     state = state,
                     modifier =
-                        Modifier.testTag(ComponentsTestTags.TIME_PICKER)
+                        Modifier.testTag(SessionComponentsTestTags.TIME_PICKER)
                             .padding(
                                 horizontal = Dimensions.Padding.extraLarge,
                                 vertical = Dimensions.Padding.medium),
@@ -937,8 +938,8 @@ fun SessionLocationSearchButton(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
-    buttonTestTag: String = ComponentsTestTags.LOCATION_PICKER_BUTTON,
-    dialogTestTag: String = ComponentsTestTags.LOCATION_PICKER_DIALOG
+    buttonTestTag: String = SessionComponentsTestTags.LOCATION_PICKER_BUTTON,
+    dialogTestTag: String = SessionComponentsTestTags.LOCATION_PICKER_DIALOG
 ) {
   var showDialog by rememberSaveable { mutableStateOf(false) }
   var selectedLocationLabel by rememberSaveable {
@@ -1025,8 +1026,8 @@ fun SessionLocationSearchBar(
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
     onLocationSelected: (Location) -> Unit = {},
-    inputFieldTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT,
-    dropdownItemTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_ITEM
+    inputFieldTestTag: String = SessionComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT,
+    dropdownItemTestTag: String = SessionComponentsTestTags.SESSION_LOCATION_SEARCH_ITEM
 ) {
   LocationSearchBar(
       setLocation = { location ->
@@ -1158,8 +1159,8 @@ fun SessionGameSearchBar(
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
     initial: Game? = null,
-    inputFieldTestTag: String = ComponentsTestTags.SESSION_GAME_SEARCH_INPUT,
-    dropdownItemTestTag: String = ComponentsTestTags.SESSION_GAME_SEARCH_ITEM
+    inputFieldTestTag: String = SessionComponentsTestTags.SESSION_GAME_SEARCH_INPUT,
+    dropdownItemTestTag: String = SessionComponentsTestTags.SESSION_GAME_SEARCH_ITEM
 ) {
   GameSearchBar(
       setGame = { viewModel.setGame(account, discussion, it) },
@@ -1317,7 +1318,7 @@ fun UserChipsGrid(
 
           UserChip(
               user = p,
-              modifier = Modifier.fillMaxWidth().testTag(ComponentsTestTags.chipsTag(p.uid)),
+              modifier = Modifier.fillMaxWidth().testTag(SessionComponentsTestTags.chipsTag(p.uid)),
               onRemove = { if (editable) onRemove(p) },
               account = account,
               showRemoveBTN = !useCheckboxes && editable,
@@ -1401,14 +1402,15 @@ fun UserChip(
                 ParticipantSwitch(
                     checked = isChecked,
                     onCheckedChange = onCheckedChange,
-                    modifier = Modifier.testTag(ComponentsTestTags.removeParticipantTag(user.name)),
+                    modifier =
+                        Modifier.testTag(SessionComponentsTestTags.removeParticipantTag(user.name)),
                 )
               } else if (showRemoveBTN && account.handle != user.handle) {
                 IconButton(
                     onClick = onRemove,
                     modifier =
                         Modifier.size(Dimensions.IconSize.large)
-                            .testTag(ComponentsTestTags.removeParticipantTag(user.name))) {
+                            .testTag(SessionComponentsTestTags.removeParticipantTag(user.name))) {
                       Icon(
                           imageVector = Icons.Default.Close,
                           contentDescription = "Remove participant",

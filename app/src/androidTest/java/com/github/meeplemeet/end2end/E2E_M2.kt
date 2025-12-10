@@ -27,7 +27,7 @@ import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
-import com.github.meeplemeet.ui.components.ComponentsTestTags
+import com.github.meeplemeet.ui.components.SessionComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
@@ -468,25 +468,27 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(ComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
+        .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
         .assertExists()
         .performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(ComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
+        .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
         .performTextInput("EPFL")
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntil(timeoutMillis = 10_000) {
       try {
-        composeTestRule.onNodeWithTag(ComponentsTestTags.LOCATION_FIELD_ITEM + ":0").isDisplayed()
+        composeTestRule
+            .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
+            .isDisplayed()
       } catch (_: Exception) {
         false
       }
     }
 
     composeTestRule
-        .onNodeWithTag(ComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
+        .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
         .assertExists()
         .performClick()
 

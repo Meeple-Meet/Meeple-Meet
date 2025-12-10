@@ -237,7 +237,7 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithTag("section-default").assertExists()
     composeRule.onNodeWithTag("inside-default").assertExists()
     composeRule.onNodeWithTag("section-custom").assertExists()
-    composeRule.onNodeWithTag(ComponentsTestTags.UNDERLINED_LABEL).assertExists()
+    composeRule.onNodeWithTag(SessionComponentsTestTags.UNDERLINED_LABEL).assertExists()
     composeRule.onNodeWithText("CustomPad").assertExists()
 
     // Single-line
@@ -354,7 +354,7 @@ class SessionComponentsTest : FirestoreTests() {
     editableNode.assert(hasText("-ok", substring = true))
 
     // CountBubble checks
-    composeRule.onAllNodesWithTag(ComponentsTestTags.COUNT_BUBBLE_TEXT).assertCountEquals(3)
+    composeRule.onAllNodesWithTag(SessionComponentsTestTags.COUNT_BUBBLE_TEXT).assertCountEquals(3)
     composeRule.onAllNodesWithText("42").assertCountEquals(1)
     composeRule.onAllNodesWithText("0").assertCountEquals(1)
     composeRule.onAllNodesWithText("-1").assertCountEquals(1)
@@ -424,11 +424,12 @@ class SessionComponentsTest : FirestoreTests() {
     // Add chip must not expose Remove tag (and vice versa)
     composeRule
         .onAllNodesWithTag(
-            "${ComponentsTestTags.PARTICIPANT_ACTION}:Remove:$addName", useUnmergedTree = true)
+            "${SessionComponentsTestTags.PARTICIPANT_ACTION}:Remove:$addName",
+            useUnmergedTree = true)
         .assertCountEquals(0)
     composeRule
         .onAllNodesWithTag(
-            "${ComponentsTestTags.PARTICIPANT_ACTION}:Add:$remName", useUnmergedTree = true)
+            "${SessionComponentsTestTags.PARTICIPANT_ACTION}:Add:$remName", useUnmergedTree = true)
         .assertCountEquals(0)
 
     // Non-clickable text should not have a click action
@@ -437,17 +438,19 @@ class SessionComponentsTest : FirestoreTests() {
     // Click the action buttons
     composeRule
         .onNodeWithTag(
-            "${ComponentsTestTags.PARTICIPANT_ACTION}:Add:$addName", useUnmergedTree = true)
+            "${SessionComponentsTestTags.PARTICIPANT_ACTION}:Add:$addName", useUnmergedTree = true)
         .performClick()
     composeRule
         .onNodeWithTag(
-            "${ComponentsTestTags.PARTICIPANT_ACTION}:Remove:$remName", useUnmergedTree = true)
+            "${SessionComponentsTestTags.PARTICIPANT_ACTION}:Remove:$remName",
+            useUnmergedTree = true)
         .performClick()
 
     // Click the Add button on the identity chip
     composeRule
         .onNodeWithTag(
-            "${ComponentsTestTags.PARTICIPANT_ACTION}:Add:${identity.name}", useUnmergedTree = true)
+            "${SessionComponentsTestTags.PARTICIPANT_ACTION}:Add:${identity.name}",
+            useUnmergedTree = true)
         .performClick()
 
     composeRule.runOnIdle {
@@ -501,7 +504,7 @@ class SessionComponentsTest : FirestoreTests() {
             displayFormatter = fmt,
             zoneId = zone,
             editable = true,
-            testTagDate = ComponentsTestTags.DATE_FIELD + "0")
+            testTagDate = SessionComponentsTestTags.DATE_FIELD + "0")
         // Non-editable date field
         DatePickerDockedField(
             value = LocalDate.of(2024, 12, 1),
@@ -540,7 +543,7 @@ class SessionComponentsTest : FirestoreTests() {
     }
 
     // Check time picker button exists
-    composeRule.onAllNodesWithTag(ComponentsTestTags.TIME_PICK_BUTTON).assertCountEquals(2)
+    composeRule.onAllNodesWithTag(SessionComponentsTestTags.TIME_PICK_BUTTON).assertCountEquals(2)
 
     // Check initial time is displayed
     composeRule.onNodeWithText("14:30").assertExists()
@@ -550,12 +553,14 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithText("19:45").assertExists()
 
     // Open time picker
-    composeRule.onAllNodesWithTag(ComponentsTestTags.TIME_PICK_BUTTON)[0].performClick()
-    composeRule.onNodeWithTag(ComponentsTestTags.TIME_PICKER, useUnmergedTree = true).assertExists()
+    composeRule.onAllNodesWithTag(SessionComponentsTestTags.TIME_PICK_BUTTON)[0].performClick()
+    composeRule
+        .onNodeWithTag(SessionComponentsTestTags.TIME_PICKER, useUnmergedTree = true)
+        .assertExists()
 
     // Click OK button to close
     composeRule
-        .onNodeWithTag(ComponentsTestTags.TIME_PICKER_OK_BUTTON, useUnmergedTree = true)
+        .onNodeWithTag(SessionComponentsTestTags.TIME_PICKER_OK_BUTTON, useUnmergedTree = true)
         .performClick()
   }
 
@@ -574,7 +579,7 @@ class SessionComponentsTest : FirestoreTests() {
     }
 
     // Open picker
-    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.onNodeWithTag(SessionComponentsTestTags.DATE_PICK_BUTTON).performClick()
     composeRule.waitForIdle()
 
     // Cancel button should exist and dismiss dialog
@@ -582,15 +587,17 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onNodeWithTag("date-picker-cancel", useUnmergedTree = true).performClick()
 
     // Re-open and confirm
-    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICK_BUTTON).performClick()
+    composeRule.onNodeWithTag(SessionComponentsTestTags.DATE_PICK_BUTTON).performClick()
     composeRule.waitForIdle()
 
     // Date picker should be visible
-    composeRule.onNodeWithTag(ComponentsTestTags.DATE_PICKER, useUnmergedTree = true).assertExists()
+    composeRule
+        .onNodeWithTag(SessionComponentsTestTags.DATE_PICKER, useUnmergedTree = true)
+        .assertExists()
 
     // OK button should exist
     composeRule
-        .onNodeWithTag(ComponentsTestTags.DATE_PICKER_OK_BUTTON, useUnmergedTree = true)
+        .onNodeWithTag(SessionComponentsTestTags.DATE_PICKER_OK_BUTTON, useUnmergedTree = true)
         .assertExists()
         .performClick()
 
@@ -640,7 +647,7 @@ class SessionComponentsTest : FirestoreTests() {
 
     set { TopBarWithDivider(text = "Session Details", onReturn = { backPressed = true }) }
 
-    composeRule.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+    composeRule.onNodeWithTag(SessionComponentsTestTags.TOP_APP_BAR).assertExists()
     composeRule.onNodeWithText("Session Details").assertExists()
     composeRule
         .onNodeWithTag(com.github.meeplemeet.ui.navigation.NavigationTestTags.GO_BACK_BUTTON)
@@ -666,7 +673,7 @@ class SessionComponentsTest : FirestoreTests() {
           })
     }
 
-    composeRule.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+    composeRule.onNodeWithTag(SessionComponentsTestTags.TOP_APP_BAR).assertExists()
     composeRule.onNodeWithText("Edit Session").assertExists()
     composeRule.onNodeWithTag("trailing-icon-btn").assertExists().performClick()
 
@@ -689,14 +696,14 @@ class SessionComponentsTest : FirestoreTests() {
     set { SessionGameSearchBar(account, discussion, createSessionViewModel) }
 
     // Verify the input field exists with default test tag
-    composeRule.onNodeWithTag(ComponentsTestTags.SESSION_GAME_SEARCH_INPUT).assertExists()
+    composeRule.onNodeWithTag(SessionComponentsTestTags.SESSION_GAME_SEARCH_INPUT).assertExists()
 
     // Verify label exists
     composeRule.onNodeWithText("Game").assertExists()
 
     // Type into the search field
     composeRule
-        .onNodeWithTag(ComponentsTestTags.SESSION_GAME_SEARCH_INPUT)
+        .onNodeWithTag(SessionComponentsTestTags.SESSION_GAME_SEARCH_INPUT)
         .performTextInput("Catan")
 
     // Verify that the query was updated in the view model
@@ -773,14 +780,16 @@ class SessionComponentsTest : FirestoreTests() {
     set { SessionLocationSearchBar(account, discussion, createSessionViewModel) }
 
     // Verify the input field exists with default test tag
-    composeRule.onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT).assertExists()
+    composeRule
+        .onNodeWithTag(SessionComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
+        .assertExists()
 
     // Verify label exists
     composeRule.onNodeWithText("Location").assertExists()
 
     // Type into the search field
     composeRule
-        .onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
+        .onNodeWithTag(SessionComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
         .performTextInput("EPFL")
 
     // Verify that the query was updated in the view model
