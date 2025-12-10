@@ -3,7 +3,6 @@ package com.github.meeplemeet.model.map
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.map.MarkerPreview.*
-import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
@@ -29,7 +28,6 @@ class MarkerPreviewRepository(
     private val shopRepository: ShopRepository = RepositoryProvider.shops,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
     private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
-    private val gameRepository: GameRepository = RepositoryProvider.games
 ) {
 
   /**
@@ -70,11 +68,10 @@ class MarkerPreviewRepository(
             async {
               val session = discussionRepository.getDiscussion(pin.uid).session
               session?.let {
-                val gameName = gameRepository.getGameById(it.gameId).name
                 SessionMarkerPreview(
                     title = it.name,
                     address = it.location.name,
-                    game = gameName,
+                    game = it.gameName,
                     date = formatTimeStamp(it.date))
               }
             }
@@ -128,7 +125,7 @@ class MarkerPreviewRepository(
           SessionMarkerPreview(
               title = it.name,
               address = it.location.name,
-              game = gameRepository.getGameById(it.gameId).name,
+              game = it.gameName,
               date = formatTimeStamp(it.date))
         }
       }

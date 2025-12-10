@@ -501,16 +501,7 @@ fun SessionCard(
                 }
               }
 
-          val gameName by
-              produceState(
-                  key1 = session.gameId,
-                  initialValue = session.gameId // fallback: show id while loading
-                  ) {
-                    val name =
-                        if (session.gameId == LABEL_UNKNOWN_GAME) null
-                        else viewModel.getGameNameByGameId(session.gameId)
-                    value = name ?: "No game selected" // suspend call
-              }
+          val gameName = session.gameName.takeIf { it.isNotBlank() } ?: "No game selected"
 
           SessionOverCard(
               session = session,
