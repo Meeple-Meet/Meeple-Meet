@@ -115,7 +115,6 @@ object ShopFormTestTags {
   const val FIELD_LINK = "field_link"
 
   const val AVAILABILITY_LIST = "availability_list"
-  const val AVAILABILITY_DIVIDER_PREFIX = "availability_divider_"
 
   const val OPENING_HOURS_DIALOG_WRAPPER = "opening_hours_dialog_wrapper"
   const val GAME_STOCK_DIALOG_WRAPPER = "game_stock_dialog_wrapper"
@@ -131,6 +130,9 @@ object ShopFormUi {
     val sectionSpace = Dimensions.Padding.large
     val bottomSpacer = Dimensions.ContainerSize.bottomSpacer
     val betweenControls = Dimensions.Padding.mediumSmall
+    val thumbSize = 30.dp
+    val bubbleSize = 100.dp
+    val imageSize = 200.dp
   }
 
   object Strings {
@@ -153,10 +155,6 @@ object ShopFormUi {
     const val OPEN24_LABEL = "Open 24 hours"
 
     const val ERROR_EMAIL_MSG = "Enter a valid email address."
-
-    const val SECTION_REQUIRED = "Required Info"
-    const val SECTION_AVAILABILITY = "Availability"
-    const val SECTION_GAMES = "Games in stock"
   }
 
   val dayNames: List<String> by lazy {
@@ -410,15 +408,17 @@ fun RequiredInfoSection(
         modifier = Modifier.testTag(ShopFormTestTags.FIELD_SHOP))
   }
 
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS).padding(bottom = Dimensions.Padding.small)) {
-    ShopLocationSearchBar(
-        account = owner,
-        shop = shop,
-        enabled = online,
-        viewModel = viewModel,
-        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
-  }
+  Box(
+      Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)
+          .padding(bottom = Dimensions.Padding.medium)) {
+        ShopLocationSearchBar(
+            account = owner,
+            shop = shop,
+            enabled = online,
+            viewModel = viewModel,
+            inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+            dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+      }
 
   Box(modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.small)) {
     Text(text = "Contact Info", style = MaterialTheme.typography.titleMedium)
@@ -449,24 +449,21 @@ fun RequiredInfoSection(
   }
 
   Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-    Box(
-        Modifier
-            .weight(1f)
-            .padding(end = Dimensions.Padding.medium)) {
-          LabeledField(
-              label = ShopFormUi.Strings.PHONE_LABEL,
-              placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
-              value = shop.phone,
-              leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Call,
-                    tint = AppColors.neutral,
-                    contentDescription = null)
-              },
-              onValueChange = actions::onPhoneChange,
-              keyboardType = KeyboardType.Phone,
-              modifier = Modifier.testTag(ShopFormTestTags.FIELD_PHONE))
-        }
+    Box(Modifier.weight(1f).padding(end = Dimensions.Padding.medium)) {
+      LabeledField(
+          label = ShopFormUi.Strings.PHONE_LABEL,
+          placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
+          value = shop.phone,
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Call,
+                tint = AppColors.neutral,
+                contentDescription = null)
+          },
+          onValueChange = actions::onPhoneChange,
+          keyboardType = KeyboardType.Phone,
+          modifier = Modifier.testTag(ShopFormTestTags.FIELD_PHONE))
+    }
 
     Box(Modifier.weight(1f)) {
       LabeledField(
@@ -489,13 +486,11 @@ fun RequiredInfoSection(
 /**
  * Composable function representing the game stock picker dialog.
  *
- * @param show Boolean indicating whether to show the dialog.
- * @param stock List of pairs containing games and their quantities in stock.
- * @param state The actions to handle game picking.
- * @param gameQuery The current query string for searching games.
- * @param gameSuggestions List of game suggestions based on the current query.
- * @param isSearching Boolean indicating if a search operation is in progress.
- * @param qty The quantity of the picked game.
+ * @param owner Current user
+ * @param shop Shop to fetch data from
+ * @param viewModel VM used by this screen
+ * @param gameUIState Ui state of the game related components
+ * @param state Ui state
  */
 @Composable
 fun GameStockPicker(
@@ -546,9 +541,10 @@ fun GameStockImage(gameUIState: GameUIState) {
         model = game.imageURL,
         contentDescription = "Game image",
         modifier =
-            Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .padding(vertical = 6.dp),
+            Modifier.sizeIn(
+                    maxWidth = ShopFormUi.Dim.imageSize, maxHeight = ShopFormUi.Dim.imageSize)
+                .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                .padding(vertical = Dimensions.Padding.medium),
         contentScale = ContentScale.Fit)
   }
 }
@@ -558,8 +554,8 @@ fun GameStockImage(gameUIState: GameUIState) {
  *
  * @param value The current quantity value.
  * @param onValueChange A callback function that is invoked when the quantity value changes.
- * @param range The range of valid quantity values.
  * @param modifier The modifier to be applied to the quantity input.
+ * @param max The max value the slider can reach
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -580,15 +576,14 @@ fun GameAddUI(
           var bubbleWidth by remember { mutableStateOf(0f) }
 
           val density = LocalDensity.current
-          val thumbSize = 30.dp
-          val thumbDiameterPx = with(density) { thumbSize.toPx() }
+          val thumbDiameterPx = with(density) { ShopFormUi.Dim.thumbSize.toPx() }
           val thumbRadiusPx = thumbDiameterPx / 2f
 
           Box(
               modifier =
                   Modifier.weight(1f)
                       .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
-                      .height(100.dp)) {
+                      .height(ShopFormUi.Dim.bubbleSize)) {
                 Box(
                     modifier =
                         Modifier.onGloballyPositioned { coords ->
@@ -613,9 +608,9 @@ fun GameAddUI(
                       Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             modifier =
-                                Modifier.shadow(6.dp, CircleShape)
+                                Modifier.shadow(Dimensions.Elevation.extraHigh, CircleShape)
                                     .background(AppColors.focus, CircleShape)
-                                    .padding(10.dp)) {
+                                    .padding(Dimensions.Padding.extraMedium)) {
                               Text(
                                   text = value.toString(),
                                   color = AppColors.primary,
@@ -624,16 +619,20 @@ fun GameAddUI(
 
                         // Pointer triangle
                         val pathColor = AppColors.focus
-                        Canvas(modifier = Modifier.size(width = 16.dp, height = 10.dp)) {
-                          val path =
-                              Path().apply {
-                                moveTo(size.width / 2f, size.height)
-                                lineTo(0f, 0f)
-                                lineTo(size.width, 0f)
-                                close()
-                              }
-                          drawPath(path, pathColor)
-                        }
+                        Canvas(
+                            modifier =
+                                Modifier.size(
+                                    width = Dimensions.Padding.extraLarge,
+                                    height = Dimensions.Padding.extraMedium)) {
+                              val path =
+                                  Path().apply {
+                                    moveTo(size.width / 2f, size.height)
+                                    lineTo(0f, 0f)
+                                    lineTo(size.width, 0f)
+                                    close()
+                                  }
+                              drawPath(path, pathColor)
+                            }
                       }
                     }
 
@@ -653,8 +652,8 @@ fun GameAddUI(
                     thumb = {
                       Box(
                           modifier =
-                              Modifier.size(thumbSize)
-                                  .shadow(4.dp, CircleShape)
+                              Modifier.size(ShopFormUi.Dim.thumbSize)
+                                  .shadow(Dimensions.Elevation.high, CircleShape)
                                   .background(AppColors.focus, CircleShape))
                     })
               }
@@ -670,10 +669,15 @@ fun GameAddUI(
  * A composable function that displays a dialog for adding a game to stock with search and quantity
  * selection.
  *
+ * @param owner current user
+ * @param shop Current shop we're creating
+ * @param viewModel VM used by this screen
+ * @param gameUIState Current ui state of the game
  * @param onQueryChange A callback function that is invoked when the search query changes.
  * @param quantity The current quantity value.
  * @param onQuantityChange A callback function that is invoked when the quantity value changes.
  * @param existingIds A set of existing game IDs to prevent duplicates.
+ * @param ignoreId used to remove duplicate warning messages when editing the game item
  * @param onDismiss A callback function that is invoked when the dialog is dismissed.
  * @param onSave A callback function that is invoked when the save button is clicked.
  */
@@ -772,7 +776,7 @@ fun GameStockDialog(
  * @param modifier The modifier to be applied to the game list section.
  * @param clickableGames A boolean indicating whether the game items are clickable.
  * @param title An optional title for the game list section.
- * @param hasDeleteButton A boolean indicating whether the game items have delete buttons.
+ * @param showButtons boolean to distinguish user view from owner view
  * @param onClick A callback function that is invoked when a game item is clicked.
  * @param onDelete A callback function that is invoked when a game item is deleted.
  */
@@ -823,8 +827,9 @@ fun GameListSection(
  * @param modifier The modifier to be applied to the game item.
  * @param clickable A boolean indicating whether the game item is clickable.
  * @param onClick A callback function that is invoked when the game item is clicked.
- * @param hasDeleteButton A boolean indicating whether the game item has a delete button.
+ * @param onEdit A callback function that is invoked when the edit button is clicked.
  * @param onDelete A callback function that is invoked when the delete button is clicked.
+ * @param showButtons boolean to distinguish between viewer mode and editing mode
  */
 @Composable
 fun GameItem(
@@ -847,8 +852,6 @@ fun GameItem(
         Row(
             modifier = Modifier.padding(Dimensions.Padding.medium),
             verticalAlignment = Alignment.CenterVertically) {
-
-              // LEFT: Game image/icon
               Icon(
                   Icons.Filled.VideogameAsset,
                   contentDescription = null,
@@ -856,14 +859,12 @@ fun GameItem(
 
               Spacer(Modifier.width(Dimensions.Spacing.medium))
 
-              // CENTER: Game name
               Text(
                   text = game.name,
                   fontWeight = FontWeight.SemiBold,
                   modifier = Modifier.weight(1f),
                   textAlign = TextAlign.Center)
 
-              // RIGHT: Badge + Edit + Delete
               Column(
                   horizontalAlignment = Alignment.CenterHorizontally,
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
@@ -883,7 +884,6 @@ fun GameItem(
                       }
                     }
 
-                    // Edit button
                     if (showButtons) {
                       IconButton(
                           onClick = { onEdit(game) },
@@ -894,7 +894,6 @@ fun GameItem(
                           }
                     }
 
-                    // Delete button
                     if (showButtons) {
                       IconButton(
                           onClick = { onDelete(game) },
@@ -1048,12 +1047,12 @@ fun GameItemImage(
           else count.toString()
 
       Column(
-          modifier = Modifier.padding(top = 20.dp).align(Alignment.TopEnd),
+          modifier = Modifier.padding(top = Dimensions.Padding.xLarge).align(Alignment.TopEnd),
           horizontalAlignment = Alignment.End,
           verticalArrangement = Arrangement.SpaceEvenly) {
             Box(
                 modifier =
-                    Modifier.size(20.dp)
+                    Modifier.size(Dimensions.Padding.xLarge)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
                         .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
@@ -1061,6 +1060,7 @@ fun GameItemImage(
                   Text(
                       text = label,
                       style = MaterialTheme.typography.bodySmall,
+                      fontSize = Dimensions.TextSize.small,
                       color = MaterialTheme.colorScheme.onPrimary)
                 }
 
@@ -1068,7 +1068,7 @@ fun GameItemImage(
               IconButton(
                   onClick = { onDelete(game) },
                   modifier =
-                      Modifier.offset(x = 12.dp).padding(0.dp) // Shift icons to the right
+                      Modifier.offset(x = Dimensions.Padding.large)
                           .testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
                     Icon(
                         Icons.Default.DeleteOutline,
@@ -1079,8 +1079,8 @@ fun GameItemImage(
               IconButton(
                   onClick = { onEdit(game) },
                   modifier =
-                      Modifier.offset(x = 12.dp, y = (-10).dp)
-                          .padding(0.dp) // Shift icons to the right
+                      Modifier.offset(
+                              x = Dimensions.Padding.large, y = -Dimensions.Padding.extraMedium)
                           .testTag("${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
                     Icon(Icons.Default.Edit, contentDescription = null, tint = AppColors.textIcons)
                   }
@@ -1098,7 +1098,10 @@ fun GameItemImage(
  * @param modifier The [Modifier] to be applied to the section container
  * @param clickableGames A boolean indicating whether individual game cards are clickable
  * @param title The title text displayed above the grid (for example, "Discover Games")
+ * @param editable Used to distinguish between view and edit mode
  * @param onClick A callback function that is invoked when a game card is clicked
+ * @param onEdit A callback function that is invoked when the edit button is clicked
+ * @param onDelete A callback function that is invoked when the delete button is clicked
  */
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalFoundationApi::class)
