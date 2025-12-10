@@ -10,16 +10,19 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.R
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 /**
  * Represents the UI state for authentication screens.
@@ -61,6 +64,38 @@ open class AuthenticationViewModel(
 
   // Public read-only state flow that UI components can observe for state changes
   val uiState: StateFlow<AuthUIState> = _uiState
+
+  // Firebase auth state listener for observing email verification status
+  private val authStateListener =
+      FirebaseAuth.AuthStateListener { auth ->
+        viewModelScope.launch {
+          val user = auth.currentUser
+          if (user != null) {
+            // Reload user to get fresh email verification status
+            try {
+              user.reload().await()
+              _uiState.update { it.copy(isEmailVerified = user.isEmailVerified) }
+            } catch (_: Exception) {
+              // If reload fails, just use cached value
+              _uiState.update { it.copy(isEmailVerified = user.isEmailVerified) }
+            }
+          } else {
+            // No user signed in, reset email verification status
+            _uiState.update { it.copy(isEmailVerified = false) }
+          }
+        }
+      }
+
+  init {
+    // Set up auth state listener to observe email verification status changes
+    FirebaseProvider.auth.addAuthStateListener(authStateListener)
+  }
+
+  override fun onCleared() {
+    super.onCleared()
+    // Clean up auth state listener
+    FirebaseProvider.auth.removeAuthStateListener(authStateListener)
+  }
 
   /**
    * Clears any error message in the UI state. This is typically called when the user dismisses an
