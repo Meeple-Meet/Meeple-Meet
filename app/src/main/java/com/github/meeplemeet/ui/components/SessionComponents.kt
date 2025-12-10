@@ -1281,144 +1281,123 @@ private fun GameSearchBar(
 }
 
 /**
- * Component used to display the participants in a scrollable vertical list. Each chip shows a
- * participant name and optionally a remove button for admins.
+ * Component used to display participants in a scrollable vertical list.
  *
- * @param participants List of participants to display
- * @param onRemove Callback fn used when an Admin/Owner removes a participant
- * @param modifier Modifiers used for the component
- * @param account The current user that's viewing the session details
- * @param editable Whether the current user can edit (remove) participants
+ * @param participants All users to display.
+ * @param account The current user (used to avoid showing a switch for self).
+ * @param selectedParticipants The subset that is currently "in the session".
+ * @param onToggle Called whenever a switch is toggled. `checked == true` means add, `false` means
+ *   remove.
+ * @param editable When false, no switches are shown (read-only list).
+ * @param modifier Modifier for the whole grid.
  */
 @Composable
 fun UserChipsGrid(
     participants: List<Account>,
-    onRemove: (Account) -> Unit,
-    modifier: Modifier = Modifier,
     account: Account,
+    modifier: Modifier = Modifier,
+    selectedParticipants: List<Account> = emptyList(),
+    onToggle: (Account, Boolean) -> Unit,
     editable: Boolean = false,
-    onAdd: ((Account) -> Unit)? = null,
-    useCheckboxes: Boolean = false,
-    selectedParticipants: List<Account> = emptyList()
 ) {
-
-  // Set up vertical scroll with a maximum height
   val maxHeight = Dimensions.ContainerSize.mapHeight
   val scrollState = rememberScrollState()
+  val selectedIds = remember(selectedParticipants) { selectedParticipants.map { it.uid }.toSet() }
 
   Column(
       modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState),
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-        // Existing participant chips - now full width rectangles
-        participants.forEach { p ->
-          val isSelected = selectedParticipants.any { it.uid == p.uid }
-          // Don't show checkbox for the admin/creator when using checkboxes
-          val isAdmin = p.uid == account.uid
-          val showCheckboxForUser = useCheckboxes && !isAdmin
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+  ) {
+    participants.forEach { user ->
+      val isSelected = user.uid in selectedIds
+      val isAdmin = user.uid == account.uid
+      val canToggle = editable && !isAdmin
 
-          UserChip(
-              user = p,
-              modifier = Modifier.fillMaxWidth().testTag(SessionComponentsTestTags.chipsTag(p.uid)),
-              onRemove = { if (editable) onRemove(p) },
-              account = account,
-              showRemoveBTN = !useCheckboxes && editable,
-              showCheckbox = showCheckboxForUser,
-              isChecked = isSelected,
-              onCheckedChange =
-                  if (showCheckboxForUser && onAdd != null) {
-                    { checked ->
-                      if (checked) {
-                        onAdd(p)
-                      } else {
-                        onRemove(p)
-                      }
-                    }
-                  } else null)
-        }
-      }
+      val onCheckedChange: ((Boolean) -> Unit)? =
+          if (canToggle) {
+            { checked -> onToggle(user, checked) }
+          } else {
+            null
+          }
+
+      UserChip(
+          user = user,
+          isChecked = isSelected,
+          onCheckedChange = onCheckedChange,
+          modifier = Modifier.fillMaxWidth().testTag(SessionComponentsTestTags.chipsTag(user.uid)),
+      )
+    }
+  }
 }
 
 /**
- * Composable used for the individual UserChip - now a full-width rectangular item
+ * A chip representing a user with an optional switch to indicate inclusion.
  *
- * @param user User's account (needed for his name and handle)
- * @param onRemove Callback fn used to remove the user
- * @param modifier Modifiers to apply to this component
- * @param showRemoveBTN Should only be visible to admins/owners
+ * @param user The account of the user.
+ * @param isChecked Whether the user is included (switch state).
+ * @param onCheckedChange Callback when the switch state changes. If null, no switch is shown.
+ * @param modifier Modifier for the chip layout.
  */
 @Composable
 fun UserChip(
     user: Account,
-    account: Account,
-    onRemove: () -> Unit,
+    isChecked: Boolean,
     modifier: Modifier = Modifier,
-    showRemoveBTN: Boolean = false,
-    isChecked: Boolean = false,
     onCheckedChange: ((Boolean) -> Unit)? = null,
-    showCheckbox: Boolean = false
 ) {
   Surface(
       modifier = modifier,
       shape = appShapes.medium,
       color = AppColors.primary,
-      tonalElevation = Dimensions.Elevation.minimal) {
+      tonalElevation = Dimensions.Elevation.minimal,
+  ) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      // Avatar + text
+      Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+          modifier = Modifier.weight(1f),
+      ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-              // Avatar and name
-              Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-                  modifier = Modifier.weight(1f)) {
-                    // Avatar
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
-                        modifier = Modifier.weight(1f)) {
-                          SessionParticipantAvatar(
-                              account = user,
-                              modifier = Modifier.size(Dimensions.AvatarSize.small),
-                          )
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+            modifier = Modifier.weight(1f),
+        ) {
+          SessionParticipantAvatar(
+              account = user,
+              modifier = Modifier.size(Dimensions.AvatarSize.small),
+          )
 
-                          Column {
-                            Text(
-                                text = user.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = AppColors.textIcons,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            Text(
-                                text = "@${user.handle}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.textIconsFade,
-                            )
-                          }
-                        }
-                  }
-
-              // Checkbox or Remove button
-              if (showCheckbox && onCheckedChange != null) {
-                ParticipantSwitch(
-                    checked = isChecked,
-                    onCheckedChange = onCheckedChange,
-                    modifier =
-                        Modifier.testTag(SessionComponentsTestTags.removeParticipantTag(user.name)),
-                )
-              } else if (showRemoveBTN && account.handle != user.handle) {
-                IconButton(
-                    onClick = onRemove,
-                    modifier =
-                        Modifier.size(Dimensions.IconSize.large)
-                            .testTag(SessionComponentsTestTags.removeParticipantTag(user.name))) {
-                      Icon(
-                          imageVector = Icons.Default.Close,
-                          contentDescription = "Remove participant",
-                          tint = AppColors.negative)
-                    }
-              }
-            }
+          Column {
+            Text(
+                text = user.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.textIcons,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = "@${user.handle}",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textIconsFade,
+            )
+          }
+        }
       }
+
+      // Only show switch when we have a callback
+      if (onCheckedChange != null) {
+        ParticipantSwitch(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(SessionComponentsTestTags.removeParticipantTag(user.name)),
+        )
+      }
+    }
+  }
 }
 
 /**

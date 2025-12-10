@@ -520,11 +520,16 @@ fun ParticipantsSection(
 
         UserChipsGrid(
             participants = allCandidates,
-            onRemove = onRemove,
-            onAdd = onAdd,
             account = account,
+            selectedParticipants = selected,
             editable = true,
-            useCheckboxes = true,
-            selectedParticipants = selected)
+            onToggle = { user, checked ->
+              if (checked) {
+                onAdd(user)
+              } else {
+                onRemove(user)
+              }
+            },
+        )
       }
 }
