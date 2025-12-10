@@ -2,8 +2,8 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -15,7 +15,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -93,7 +92,8 @@ class EditShopViewModelTest : FirestoreTests() {
     val newName = "Updated Shop Name"
     val newPhone = "0987654321"
 
-    viewModel.updateShop(context = mockk(), shop = shop, requester = owner, name = newName, phone = newPhone)
+    viewModel.updateShop(
+        context = mockk(), shop = shop, requester = owner, name = newName, phone = newPhone)
 
     // Advance coroutines
     testDispatcher.scheduler.advanceUntilIdle()
@@ -142,47 +142,45 @@ class EditShopViewModelTest : FirestoreTests() {
 
     // Mock online status
     OfflineModeManager.setNetworkStatusForTesting(true)
-    
+
     // Mock saveShopPhotos to return a fake URL
     val localPath = "/storage/emulated/0/DCIM/Camera/IMG_2023.jpg"
-    val uploadedUrl = "https://firebasestorage.googleapis.com/v0/b/meeple-meet/o/shops%2Fshop1%2F123.webp"
-    
+    val uploadedUrl =
+        "https://firebasestorage.googleapis.com/v0/b/meeple-meet/o/shops%2Fshop1%2F123.webp"
+
     // Allow any arguments for saveShopPhotos
-    coEvery { imageRepository.saveShopPhotos(any(), any(), *anyVararg()) } returns listOf(uploadedUrl)
+    coEvery { imageRepository.saveShopPhotos(any(), any(), *anyVararg()) } returns
+        listOf(uploadedUrl)
 
     // Act
-    // We pass a list containing the local path. 
+    // We pass a list containing the local path.
     viewModel.updateShop(
-        context = mockk(), 
-        shop = initialShop, 
-        requester = owner, 
-        photoCollectionUrl = listOf(localPath)
-    )
+        context = mockk(),
+        shop = initialShop,
+        requester = owner,
+        photoCollectionUrl = listOf(localPath))
 
     // Advance coroutines
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Assert
     // Verify saveShopPhotos was called with the local path
-    coVerify { 
-        imageRepository.saveShopPhotos(any(), eq("shop1"), eq(localPath)) 
-    }
+    coVerify { imageRepository.saveShopPhotos(any(), eq("shop1"), eq(localPath)) }
 
     // Verify updateShop was called with the uploaded URL
-    coVerify { 
-        repository.updateShop(
-            id = eq("shop1"),
-            photoCollectionUrl = eq(listOf(uploadedUrl)),
-            // Verify other parameters are null or default as expected
-            ownerId = any(),
-            name = any(),
-            phone = any(),
-            email = any(),
-            website = any(),
-            address = any(),
-            openingHours = any(),
-            gameCollection = any()
-        )
+    coVerify {
+      repository.updateShop(
+          id = eq("shop1"),
+          photoCollectionUrl = eq(listOf(uploadedUrl)),
+          // Verify other parameters are null or default as expected
+          ownerId = any(),
+          name = any(),
+          phone = any(),
+          email = any(),
+          website = any(),
+          address = any(),
+          openingHours = any(),
+          gameCollection = any())
     }
   }
 
@@ -193,36 +191,37 @@ class EditShopViewModelTest : FirestoreTests() {
         Account(uid = "owner1", handle = "owner", name = "Owner", email = "owner@example.com")
     val initialShop =
         Shop(
-            id = "shop1", 
-            owner = owner, 
-            name = "Original Shop", 
-            phone = "123", 
-            email = "email@email.com", 
-            website = "ref.com", 
-            address = Location(0.0, 0.0, "Addr"), 
-            openingHours = emptyList(), 
+            id = "shop1",
+            owner = owner,
+            name = "Original Shop",
+            phone = "123",
+            email = "email@email.com",
+            website = "ref.com",
+            address = Location(0.0, 0.0, "Addr"),
+            openingHours = emptyList(),
             gameCollection = emptyList(),
-            photoCollectionUrl = emptyList()
-        )
+            photoCollectionUrl = emptyList())
 
     OfflineModeManager.setNetworkStatusForTesting(true)
-    
+
     // Mock saveShopPhotos to THROW
-    coEvery { imageRepository.saveShopPhotos(any(), any(), *anyVararg()) } throws Exception("Upload failed")
+    coEvery { imageRepository.saveShopPhotos(any(), any(), *anyVararg()) } throws
+        Exception("Upload failed")
 
     // Act
     viewModel.updateShop(
-        context = mockk(), 
-        shop = initialShop, 
-        requester = owner, 
-        photoCollectionUrl = listOf("/local/path")
-    )
+        context = mockk(),
+        shop = initialShop,
+        requester = owner,
+        photoCollectionUrl = listOf("/local/path"))
 
     // Advance coroutines
     testDispatcher.scheduler.advanceUntilIdle() // This should throw exception
 
     // Assert (if exception not thrown, test fails)
     // Verify repository update was NOT called
-    coVerify(exactly = 0) { repository.updateShop(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    coVerify(exactly = 0) {
+      repository.updateShop(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    }
   }
 }

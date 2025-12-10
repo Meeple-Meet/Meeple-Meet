@@ -34,7 +34,6 @@ import com.github.meeplemeet.ui.components.OpeningHoursEditor
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
-import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.theme.Dimensions
 
 /* ================================================================================================
@@ -224,9 +223,9 @@ fun EditShopContent(
   // Initialize state with loaded shop data or default values
   var photoCollectionUrl by rememberSaveable(shop) { mutableStateOf(shop.photoCollectionUrl) }
 
-    LaunchedEffect(shop.photoCollectionUrl) {
-        photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
-    }
+  LaunchedEffect(shop.photoCollectionUrl) {
+    photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
+  }
   var showDeleteDialog by remember { mutableStateOf(false) }
 
   LaunchedEffect(locationUi.locationQuery) {

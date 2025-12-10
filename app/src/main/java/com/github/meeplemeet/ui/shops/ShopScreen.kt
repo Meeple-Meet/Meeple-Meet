@@ -24,8 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.Shop
@@ -130,11 +130,12 @@ fun ShopScreen(
   // Reload shop data whenever the screen resumes (e.g. returning from Edit screen)
   // This ensures we always show the latest data including new photos.
   DisposableEffect(lifecycleOwner, shopId) {
-    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-      if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-        viewModel.getShop(shopId, context)
-      }
-    }
+    val observer =
+        androidx.lifecycle.LifecycleEventObserver { _, event ->
+          if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.getShop(shopId, context)
+          }
+        }
     lifecycleOwner.lifecycle.addObserver(observer)
     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
   }

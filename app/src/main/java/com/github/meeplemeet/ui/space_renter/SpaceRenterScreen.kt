@@ -144,11 +144,12 @@ fun SpaceRenterScreen(
   val currentState by rememberUpdatedState(spaceId)
 
   DisposableEffect(lifecycleOwner, currentState) {
-    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-      if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-        viewModel.getSpaceRenter(currentState, context)
-      }
-    }
+    val observer =
+        androidx.lifecycle.LifecycleEventObserver { _, event ->
+          if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.getSpaceRenter(currentState, context)
+          }
+        }
     lifecycleOwner.lifecycle.addObserver(observer)
     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
   }

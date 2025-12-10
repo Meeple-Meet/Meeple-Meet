@@ -65,7 +65,6 @@ class SpaceRenterViewModel(
 
     currentSpaceRenterId = id
 
-
     viewModelScope.launch {
       OfflineModeManager.loadSpaceRenter(id) { spaceRenter ->
         _spaceRenter.value = spaceRenter

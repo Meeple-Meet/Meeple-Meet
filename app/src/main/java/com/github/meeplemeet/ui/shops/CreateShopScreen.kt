@@ -23,6 +23,7 @@ import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar

@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.NonCancellable
@@ -70,7 +70,7 @@ class EditShopViewModel(
    * - Existing Firebase URLs (kept as-is)
    * - Local file paths (uploaded to Firebase) Old photos not in the new list will be deleted from
    *   Firebase.
-   *   
+   *
    *   This function automatically handles both online and offline modes through OfflineModeManager.
    *
    * @param context The Android context for image operations.
@@ -152,63 +152,63 @@ class EditShopViewModel(
 
   /** Handles online update by persisting to repository and updating cache. */
   private suspend fun handleOnlineUpdate(shop: Shop, params: ShopUpdateParams, context: Context) {
-      // Determine which photos are new and which should be deleted
-      val oldUrls = shop.photoCollectionUrl
-      val newLocalPaths = params.photoCollectionUrl ?: emptyList()
+    // Determine which photos are new and which should be deleted
+    val oldUrls = shop.photoCollectionUrl
+    val newLocalPaths = params.photoCollectionUrl ?: emptyList()
 
-      // Separate existing Firebase URLs from new local paths
-      val keptUrls =
-          newLocalPaths.filter { path ->
-            oldUrls.contains(path) && (path.startsWith("http://") || path.startsWith("https://"))
-          }
-      val localPathsToUpload =
-          newLocalPaths.filter { path -> !path.startsWith("http://") && !path.startsWith("https://") }
+    // Separate existing Firebase URLs from new local paths
+    val keptUrls =
+        newLocalPaths.filter { path ->
+          oldUrls.contains(path) && (path.startsWith("http://") || path.startsWith("https://"))
+        }
+    val localPathsToUpload =
+        newLocalPaths.filter { path -> !path.startsWith("http://") && !path.startsWith("https://") }
 
-      // Delete old photos that were removed (only Firebase URLs, not local paths)
-      val urlsToDelete =
-          oldUrls.filter { url ->
-            !newLocalPaths.contains(url) && (url.startsWith("http://") || url.startsWith("https://"))
-          }
-      if (urlsToDelete.isNotEmpty()) {
-          try {
-              withContext(NonCancellable) {
-                  imageRepository.deleteShopPhotos(context, shop.id, *urlsToDelete.toTypedArray())
-              }
-          } catch (e: Exception) {
-              Log.e("upload", "Failed to delete old shop photos for ${shop.id}: ${e.message}", e)
-          }
+    // Delete old photos that were removed (only Firebase URLs, not local paths)
+    val urlsToDelete =
+        oldUrls.filter { url ->
+          !newLocalPaths.contains(url) && (url.startsWith("http://") || url.startsWith("https://"))
+        }
+    if (urlsToDelete.isNotEmpty()) {
+      try {
+        withContext(NonCancellable) {
+          imageRepository.deleteShopPhotos(context, shop.id, *urlsToDelete.toTypedArray())
+        }
+      } catch (e: Exception) {
+        Log.e("upload", "Failed to delete old shop photos for ${shop.id}: ${e.message}", e)
       }
+    }
 
-      // Upload new local photos
-      val uploadedUrls =
-          if (localPathsToUpload.isNotEmpty()) {
-            try {
-              withContext(NonCancellable) {
-                imageRepository.saveShopPhotos(context, shop.id, *localPathsToUpload.toTypedArray())
-              }
-            } catch (e: Exception) {
-              Log.e("upload", "Image upload failed for shop ${shop.id}: ${e.message}", e)
-              throw e
+    // Upload new local photos
+    val uploadedUrls =
+        if (localPathsToUpload.isNotEmpty()) {
+          try {
+            withContext(NonCancellable) {
+              imageRepository.saveShopPhotos(context, shop.id, *localPathsToUpload.toTypedArray())
             }
-          } else {
-              emptyList()
+          } catch (e: Exception) {
+            Log.e("upload", "Image upload failed for shop ${shop.id}: ${e.message}", e)
+            throw e
           }
+        } else {
+          emptyList()
+        }
 
-      // Create a map of local paths to their uploaded URLs
-      val localToUploadedMap = localPathsToUpload.zip(uploadedUrls).toMap()
+    // Create a map of local paths to their uploaded URLs
+    val localToUploadedMap = localPathsToUpload.zip(uploadedUrls).toMap()
 
-      // Combine kept Firebase URLs with newly uploaded URLs (preserving order from newPaths)
-      val finalPhotoUrls =
-          newLocalPaths.mapNotNull { path ->
-            when {
-              // If it's a kept Firebase URL, use it as-is
-              keptUrls.contains(path) -> path
-              // If it's a local path that was uploaded, use the uploaded URL
-              localToUploadedMap.containsKey(path) -> localToUploadedMap[path]
-              // Otherwise skip it (shouldn't happen, but be safe)
-              else -> null
-            }
+    // Combine kept Firebase URLs with newly uploaded URLs (preserving order from newPaths)
+    val finalPhotoUrls =
+        newLocalPaths.mapNotNull { path ->
+          when {
+            // If it's a kept Firebase URL, use it as-is
+            keptUrls.contains(path) -> path
+            // If it's a local path that was uploaded, use the uploaded URL
+            localToUploadedMap.containsKey(path) -> localToUploadedMap[path]
+            // Otherwise skip it (shouldn't happen, but be safe)
+            else -> null
           }
+        }
 
     shopRepository.updateShop(
         shop.id,

@@ -76,79 +76,70 @@ class CreateSpaceRenterViewModel(
         throw IllegalArgumentException("An address is required to create a space renter")
 
     viewModelScope.launch {
-        val isOnline = OfflineModeManager.hasInternetConnection.value
+      val isOnline = OfflineModeManager.hasInternetConnection.value
 
-        if (isOnline) {
-            try {
-                val created =
-                    repository.createSpaceRenter(
-                        owner,
-                        name,
-                        phone,
-                        email,
-                        website,
-                        address,
-                        openingHours,
-                        spaces,
-                        emptyList()
-                    )
+      if (isOnline) {
+        try {
+          val created =
+              repository.createSpaceRenter(
+                  owner, name, phone, email, website, address, openingHours, spaces, emptyList())
 
-        val uploadedUrls =
-            if (photoCollectionUrl.isNotEmpty()) {
-              try {
-                // Upload photos to Firebase Storage and get download URLs
-                val urls =
-                    withContext(NonCancellable) {
-                      imageRepository.saveSpaceRenterPhotos(
-                          context, created.id, *photoCollectionUrl.toTypedArray())
-                    }
-                urls
-              } catch (e: Exception) {
-                throw Exception("Photo upload failed: ${e.message}", e)
+          val uploadedUrls =
+              if (photoCollectionUrl.isNotEmpty()) {
+                try {
+                  // Upload photos to Firebase Storage and get download URLs
+                  val urls =
+                      withContext(NonCancellable) {
+                        imageRepository.saveSpaceRenterPhotos(
+                            context, created.id, *photoCollectionUrl.toTypedArray())
+                      }
+                  urls
+                } catch (e: Exception) {
+                  throw Exception("Photo upload failed: ${e.message}", e)
+                }
+              } else {
+                emptyList<String>()
               }
-            } else {
-              emptyList<String>()
+          // Update the document with Firebase Storage download URLs
+          if (uploadedUrls.isNotEmpty()) {
+            try {
+              withContext(NonCancellable) {
+                repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+              }
+            } catch (e: Exception) {
+              throw Exception("Failed to save photo URLs: ${e.message}", e)
             }
-        // Update the document with Firebase Storage download URLs
-        if (uploadedUrls.isNotEmpty()) {
-          try {
-            withContext(NonCancellable) {
-              repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
-            }
-          } catch (e: Exception) {
-            throw Exception("Failed to save photo URLs: ${e.message}", e)
           }
+        } catch (e: Exception) {
+          throw Exception("Failed to create space renter: ${e.message}", e)
         }
-      } catch (e: Exception) {
-        throw Exception("Failed to create space renter: ${e.message}", e)
-      }
-    } else {
-            // OFFLINE: Queue for later creation
+      } else {
+        // OFFLINE: Queue for later creation
 
-            // Generate a temporary ID (you might need to adjust this based on your ID generation
-            // strategy)
-            val tempId = "temp_${System.currentTimeMillis()}_${owner.uid}"
+        // Generate a temporary ID (you might need to adjust this based on your ID generation
+        // strategy)
+        val tempId = "temp_${System.currentTimeMillis()}_${owner.uid}"
 
-            // Create the SpaceRenter object with temporary ID
-            val pendingRenter =
-                SpaceRenter(
-                    id = tempId,
-                    owner = owner,
-                    name = name,
-                    phone = phone,
-                    email = email,
-                    website = website,
-                    address = address,
-                    openingHours = openingHours,
-                    spaces = spaces,
-                    photoCollectionUrl = photoCollectionUrl)
+        // Create the SpaceRenter object with temporary ID
+        val pendingRenter =
+            SpaceRenter(
+                id = tempId,
+                owner = owner,
+                name = name,
+                phone = phone,
+                email = email,
+                website = website,
+                address = address,
+                openingHours = openingHours,
+                spaces = spaces,
+                photoCollectionUrl = photoCollectionUrl)
 
-            // Add to offline cache with pending creation marker
-            OfflineModeManager.addPendingSpaceRenter(pendingRenter)
+        // Add to offline cache with pending creation marker
+        OfflineModeManager.addPendingSpaceRenter(pendingRenter)
 
-            // Optional: Show a message to user that creation will happen when online
-            // You might want to expose a callback or LiveData for this
-        }
-        }
+        // Optional: Show a message to user that creation will happen when online
+        // You might want to expose a callback or LiveData for this
       }
     }
+  }
+}

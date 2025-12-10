@@ -528,7 +528,11 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
-  suspend fun loadShopPhotos(context: Context, shopId: String, urls: List<String>): List<ByteArray> {
+  suspend fun loadShopPhotos(
+      context: Context,
+      shopId: String,
+      urls: List<String>
+  ): List<ByteArray> {
     return loadImagesByUrls(context, urls)
   }
 
@@ -560,7 +564,11 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
-  suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, urls: List<String>): List<ByteArray> {
+  suspend fun loadSpaceRenterPhotos(
+      context: Context,
+      shopId: String,
+      urls: List<String>
+  ): List<ByteArray> {
     return loadImagesByUrls(context, urls)
   }
 
@@ -799,7 +807,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    */
   private suspend fun loadImagesByUrls(context: Context, urls: List<String>): List<ByteArray> =
       coroutineScope {
-        urls.map { url ->
+        urls
+            .map { url ->
               async {
                 val path =
                     if (url.contains("/o/")) {

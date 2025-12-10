@@ -36,8 +36,9 @@ class CreateShopViewModel(
    * - A valid address is provided
    *
    * Photos are uploaded to Firebase Storage after the shop is created, and the shop document is
-   * updated with the download URLs.
-   * The repository will automatically add the shop ID to the owner's businesses subcollection.
+   * updated with the download URLs. The repository will automatically add the shop ID to the
+   * owner's businesses subcollection.
+   *
    * @param context Android context for accessing cache directory.
    * @param owner The account that owns the shop.
    * @param name The name of the shop.
@@ -67,82 +68,80 @@ class CreateShopViewModel(
   ): Shop {
     if (name.isBlank()) throw IllegalArgumentException("Shop name cannot be blank")
 
-        val uniqueByDay = openingHours.distinctBy { it.day }
-        if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
+    val uniqueByDay = openingHours.distinctBy { it.day }
+    if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
 
-        if (address == Location())
-            throw IllegalArgumentException("An address is required to create a shop")
+    if (address == Location())
+        throw IllegalArgumentException("An address is required to create a shop")
 
-        viewModelScope.launch {
-            // Check internet connection status
-            val isOnline = OfflineModeManager.hasInternetConnection.value
+    viewModelScope.launch {
+      // Check internet connection status
+      val isOnline = OfflineModeManager.hasInternetConnection.value
 
-            if (isOnline) {
-                // ONLINE: Create immediately in Firestore
-                val created = shopRepo.createShop(
-                    owner,
-                    name,
-                    phone,
-                    email,
-                    website,
-                    address,
-                    openingHours,
-                    gameCollection,
-                    emptyList()
-                )
-                val uploadedUrls =
-                    if (photoCollectionUrl.isNotEmpty()) {
-                        try {
-                            // Upload photos to Firebase Storage and get download URLs
-                            val urls =
-                            withContext(NonCancellable) {
-                                imageRepository.saveShopPhotos(
-                                    context, created.id, *photoCollectionUrl.toTypedArray()
-                                )
-                            }
-                            urls
-                        } catch (e: Exception) {
-                            throw Exception("Photo upload failed: ${e.message}", e)
-                        }
-                    } else {
-                        emptyList()
+      if (isOnline) {
+        // ONLINE: Create immediately in Firestore
+        val created =
+            shopRepo.createShop(
+                owner,
+                name,
+                phone,
+                email,
+                website,
+                address,
+                openingHours,
+                gameCollection,
+                emptyList())
+        val uploadedUrls =
+            if (photoCollectionUrl.isNotEmpty()) {
+              try {
+                // Upload photos to Firebase Storage and get download URLs
+                val urls =
+                    withContext(NonCancellable) {
+                      imageRepository.saveShopPhotos(
+                          context, created.id, *photoCollectionUrl.toTypedArray())
                     }
-
-                // Update the document with Firebase Storage download URLs
-                if (uploadedUrls.isNotEmpty()) {
-                    try {
-                        withContext(NonCancellable) {
-                            shopRepo.updateShop(id = created.id, photoCollectionUrl = uploadedUrls)
-                        }
-                    } catch (e: Exception) {
-                        // Updating should not crash the app; log and continue.
-                        throw Exception("Failed to save photo URLs: ${e.message}", e)
-                    }
-                }
-                // Return the created shop with updated photo URLs
+                urls
+              } catch (e: Exception) {
+                throw Exception("Photo upload failed: ${e.message}", e)
+              }
             } else {
-                // OFFLINE: Queue for later creation
+              emptyList()
+            }
 
-                // Generate a temporary ID
-                val tempId = "temp_${System.currentTimeMillis()}_${owner.uid}"
+        // Update the document with Firebase Storage download URLs
+        if (uploadedUrls.isNotEmpty()) {
+          try {
+            withContext(NonCancellable) {
+              shopRepo.updateShop(id = created.id, photoCollectionUrl = uploadedUrls)
+            }
+          } catch (e: Exception) {
+            // Updating should not crash the app; log and continue.
+            throw Exception("Failed to save photo URLs: ${e.message}", e)
+          }
+        }
+        // Return the created shop with updated photo URLs
+      } else {
+        // OFFLINE: Queue for later creation
 
-                // Create the Shop object with temporary ID
-                val pendingShop =
-                    Shop(
-                        id = tempId,
-                        owner = owner,
-                        name = name,
-                        phone = phone,
-                        email = email,
-                        website = website,
-                        address = address,
-                        openingHours = openingHours,
-                        gameCollection = gameCollection,
-                        photoCollectionUrl = photoCollectionUrl
-                    )
+        // Generate a temporary ID
+        val tempId = "temp_${System.currentTimeMillis()}_${owner.uid}"
 
-                // Add to offline cache with pending creation marker
-                OfflineModeManager.addPendingShop(pendingShop)
+        // Create the Shop object with temporary ID
+        val pendingShop =
+            Shop(
+                id = tempId,
+                owner = owner,
+                name = name,
+                phone = phone,
+                email = email,
+                website = website,
+                address = address,
+                openingHours = openingHours,
+                gameCollection = gameCollection,
+                photoCollectionUrl = photoCollectionUrl)
+
+        // Add to offline cache with pending creation marker
+        OfflineModeManager.addPendingShop(pendingShop)
       }
     }
 
@@ -157,5 +156,5 @@ class CreateShopViewModel(
         address = address,
         openingHours = openingHours,
         gameCollection = gameCollection)
-      }
-    }
+  }
+}

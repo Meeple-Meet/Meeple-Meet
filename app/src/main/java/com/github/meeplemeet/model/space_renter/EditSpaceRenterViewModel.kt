@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import kotlinx.coroutines.NonCancellable
@@ -66,8 +66,8 @@ class EditSpaceRenterViewModel(
    * The photoCollectionUrl parameter can contain a mix of:
    * - Existing Firebase URLs (kept as-is)
    * - Local file paths (uploaded to Firebase) Old photos not in the new list will be deleted from
-   *   Firebase.
-   *   This function automatically handles both online and offline modes through OfflineModeManager.
+   *   Firebase. This function automatically handles both online and offline modes through
+   *   OfflineModeManager.
    *
    * @param context The Android context for image operations.
    * @param spaceRenter The space renter to update.
@@ -148,71 +148,69 @@ class EditSpaceRenterViewModel(
       params: SpaceRenterUpdateParams,
       context: Context
   ) {
-      // Determine which photos are new and which should be deleted
-      val oldUrls = spaceRenter.photoCollectionUrl
-      val newPaths = params.photoCollectionUrl ?: emptyList()
+    // Determine which photos are new and which should be deleted
+    val oldUrls = spaceRenter.photoCollectionUrl
+    val newPaths = params.photoCollectionUrl ?: emptyList()
 
-      // Separate existing Firebase URLs from new local paths
-      val keptUrls =
-          newPaths.filter { path ->
-              oldUrls.contains(path) && (path.startsWith("http://") || path.startsWith("https://"))
-          }
-      val localPathsToUpload =
-          newPaths.filter { path -> !path.startsWith("http://") && !path.startsWith("https://") }
+    // Separate existing Firebase URLs from new local paths
+    val keptUrls =
+        newPaths.filter { path ->
+          oldUrls.contains(path) && (path.startsWith("http://") || path.startsWith("https://"))
+        }
+    val localPathsToUpload =
+        newPaths.filter { path -> !path.startsWith("http://") && !path.startsWith("https://") }
 
-      // Delete old photos that were removed (only Firebase URLs, not local paths)
-      val urlsToDelete =
-          oldUrls.filter { url ->
-              !newPaths.contains(url) && (url.startsWith("http://") || url.startsWith("https://"))
-          }
-      if (urlsToDelete.isNotEmpty()) {
-          try {
-              withContext(NonCancellable) {
-                  imageRepository.deleteSpaceRenterPhotos(
-                      context, spaceRenter.id, *urlsToDelete.toTypedArray())
-              }
-          } catch (e: Exception) {
-              Log.e(
-                  "upload",
-                  "Failed to delete old space renter photos for ${spaceRenter.id}: ${e.message}",
-                  e)
-          }
+    // Delete old photos that were removed (only Firebase URLs, not local paths)
+    val urlsToDelete =
+        oldUrls.filter { url ->
+          !newPaths.contains(url) && (url.startsWith("http://") || url.startsWith("https://"))
+        }
+    if (urlsToDelete.isNotEmpty()) {
+      try {
+        withContext(NonCancellable) {
+          imageRepository.deleteSpaceRenterPhotos(
+              context, spaceRenter.id, *urlsToDelete.toTypedArray())
+        }
+      } catch (e: Exception) {
+        Log.e(
+            "upload",
+            "Failed to delete old space renter photos for ${spaceRenter.id}: ${e.message}",
+            e)
       }
+    }
 
-      // Upload new local photos
-      val uploadedUrls =
-          if (localPathsToUpload.isNotEmpty()) {
-              try {
-                  withContext(NonCancellable) {
-                      imageRepository.saveSpaceRenterPhotos(
-                          context, spaceRenter.id, *localPathsToUpload.toTypedArray())
-                  }
-              } catch (e: Exception) {
-                  Log.e(
-                      "upload",
-                      "Image upload failed for space renter ${spaceRenter.id}: ${e.message}",
-                      e)
-                  throw e
-              }
-          } else {
-              emptyList()
+    // Upload new local photos
+    val uploadedUrls =
+        if (localPathsToUpload.isNotEmpty()) {
+          try {
+            withContext(NonCancellable) {
+              imageRepository.saveSpaceRenterPhotos(
+                  context, spaceRenter.id, *localPathsToUpload.toTypedArray())
+            }
+          } catch (e: Exception) {
+            Log.e(
+                "upload", "Image upload failed for space renter ${spaceRenter.id}: ${e.message}", e)
+            throw e
           }
+        } else {
+          emptyList()
+        }
 
-      // Create a map of local paths to their uploaded URLs
-      val localToUploadedMap = localPathsToUpload.zip(uploadedUrls).toMap()
+    // Create a map of local paths to their uploaded URLs
+    val localToUploadedMap = localPathsToUpload.zip(uploadedUrls).toMap()
 
-      // Combine kept Firebase URLs with newly uploaded URLs (preserving order from newPaths)
-      val finalPhotoUrls =
-          newPaths.mapNotNull { path ->
-              when {
-                  // If it's a kept Firebase URL, use it as-is
-                  keptUrls.contains(path) -> path
-                  // If it's a local path that was uploaded, use the uploaded URL
-                  localToUploadedMap.containsKey(path) -> localToUploadedMap[path]
-                  // Otherwise skip it (shouldn't happen, but be safe)
-                  else -> null
-              }
+    // Combine kept Firebase URLs with newly uploaded URLs (preserving order from newPaths)
+    val finalPhotoUrls =
+        newPaths.mapNotNull { path ->
+          when {
+            // If it's a kept Firebase URL, use it as-is
+            keptUrls.contains(path) -> path
+            // If it's a local path that was uploaded, use the uploaded URL
+            localToUploadedMap.containsKey(path) -> localToUploadedMap[path]
+            // Otherwise skip it (shouldn't happen, but be safe)
+            else -> null
           }
+        }
     spaceRenterRepository.updateSpaceRenter(
         spaceRenter.id,
         params.owner?.uid,
