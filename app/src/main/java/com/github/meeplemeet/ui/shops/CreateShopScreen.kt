@@ -5,16 +5,12 @@ package com.github.meeplemeet.ui.shops
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
@@ -22,17 +18,16 @@ import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
+import com.github.meeplemeet.ui.components.AddButton
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.CreateShopFormState
 import com.github.meeplemeet.ui.components.EditableImageCarousel
 import com.github.meeplemeet.ui.components.GameImageListSection
-import com.github.meeplemeet.ui.components.GameItemImage
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
@@ -42,7 +37,7 @@ import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
-import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 
 /* ================================================================================================
  * Test tags
@@ -80,6 +75,7 @@ object CreateShopScreenTestTags {
   const val GAME_STOCK_DIALOG_WRAPPER = ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER
 
   const val BOTTOM_SPACER = "bottom_spacer"
+  const val OFFLINE_GAMES_MSG = "games_section_message_offline"
 }
 
 /* ================================================================================================
@@ -92,7 +88,6 @@ private object AddShopUi {
     val contentHPadding = ShopFormUi.Dim.contentHPadding
     val contentVPadding = ShopFormUi.Dim.contentVPadding
     val bottomSpacer = ShopFormUi.Dim.bottomSpacer
-    val betweenControls = ShopFormUi.Dim.betweenControls
   }
 
   object Strings {
@@ -102,21 +97,11 @@ private object AddShopUi {
 
     const val BTN_ADD_GAME = "Add game"
     const val EMPTY_GAMES = "No games selected yet."
-    const val ERROR_VALIDATION = "Validation error"
-    const val ERROR_CREATE = "Failed to create shop"
+    const val OFFLINE_GAMES_MSG = "Go online to be able to add games."
   }
 }
 
 const val IMAGE_COUNT = 10
-
-// Callback type for shop creation, kept explicit but readable.
-private typealias CreateShopHandler =
-    suspend (
-        name: String,
-        email: String,
-        address: Location,
-        week: List<OpeningHours>,
-        stock: List<Pair<Game, Int>>) -> String
 
 /* ================================================================================================
  * Screen
@@ -126,9 +111,9 @@ private typealias CreateShopHandler =
  * Composable function representing the Create Shop screen.
  *
  * @param owner The account of the shop owner.
- * @param onBack Callback function to be invoked when the back navigation is triggered.
- * @param onCreated Callback function to be invoked when the shop is successfully created, receives
- *   the shop ID.
+ * @param onBack Callback function to be invoked when the back navigation is triggered. the shop ID.
+ *     @param online Whether the user is online or offline
+ *     @param userLocation User's current location
  * @param viewModel The ViewModel managing the state and logic for creating a shop.
  */
 @Composable
@@ -166,14 +151,9 @@ fun CreateShopScreen(
  * Composable function representing the content of the Add Shop screen.
  *
  * @param onBack Callback function to be invoked when the back navigation is triggered.
- * @param onCreated Callback function to be invoked when the shop is successfully created, receives
- *   the shop ID.
- * @param onCreate Suspend function to handle the creation of a shop with provided details, returns
- *   shop ID.
  * @param gameUi The current game UI state.
  * @param locationUi The current location UI state.
- * @param onSetGameQuery Callback function to update the game search query.
- * @param onSetGame Callback function to set the selected game.
+ * @param online Whether the user is online or offline
  * @param initialStock Initial list of games and their quantities in stock.
  * @param viewModel The ViewModel managing the state and logic for creating a shop.
  * @param owner The account of the shop owner.
@@ -322,10 +302,15 @@ fun AddShopContent(
       owner = owner, shop = null, viewModel = viewModel, gameUIState = gameUi, state = state)
 }
 
-/* ================================================================================================
- * Sections
- * ================================================================================================ */
-
+/**
+ * Handles the input fields in the screen
+ *
+ * @param state Ui state
+ * @param viewModel VM used by this screen
+ * @param online whether the user is online or offline
+ * @param owner current user
+ * @param locationUi location state
+ */
 @Composable
 private fun ShopInfoSection(
     state: CreateShopFormState,
@@ -362,6 +347,11 @@ private fun ShopInfoSection(
       testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
 }
 
+/**
+ * Availability section of the shop
+ *
+ * @param state Ui state
+ */
 @Composable
 private fun ShopAvailabilitySection(state: CreateShopFormState) {
   CollapsibleSection(
@@ -378,6 +368,13 @@ private fun ShopAvailabilitySection(state: CreateShopFormState) {
       testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
 }
 
+/**
+ * Handles the entirety of the games section
+ *
+ * @param state Ui state
+ * @param online Whether the user is online or offline
+ * @param viewModel VM used by this screen
+ */
 @Composable
 private fun ShopGamesSection(
     state: CreateShopFormState,
@@ -389,26 +386,25 @@ private fun ShopGamesSection(
       initiallyExpanded = state.stock.isEmpty(),
       content = {
         if (online) {
-          Button(
-              shape = RoundedCornerShape(4.dp),
-              colors =
-                  ButtonDefaults.buttonColors(
-                      containerColor = AppColors.secondary,
-                      disabledContainerColor = AppColors.secondary,
-                      contentColor = AppColors.focus,
-                      disabledContentColor = AppColors.focus),
+          if (state.stock.isEmpty()) {
+            Text(
+                text = AddShopUi.Strings.EMPTY_GAMES,
+                modifier =
+                    Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT)
+                        .padding(bottom = Dimensions.Padding.small))
+          }
+          AddButton(
               onClick = {
                 state.onSetGameQuery("")
                 state.showGameDialog = true
               },
-              modifier =
-                  Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).fillMaxWidth()) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
-                Text(
-                    AddShopUi.Strings.BTN_ADD_GAME,
-                    modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_LABEL))
-              }
+              buttonText = AddShopUi.Strings.BTN_ADD_GAME,
+              buttonTestTag = CreateShopScreenTestTags.GAMES_ADD_BUTTON,
+              labelTestTag = CreateShopScreenTestTags.GAMES_ADD_LABEL)
+        } else {
+          Text(
+              AddShopUi.Strings.OFFLINE_GAMES_MSG,
+              modifier = Modifier.testTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG))
         }
 
         GameImageListSection(
@@ -427,46 +423,17 @@ private fun ShopGamesSection(
       testTag = CreateShopScreenTestTags.SECTION_GAMES)
 }
 
-/**
- * Composable function representing the games section of the Add Shop screen.
- *
- * @param stock List of pairs containing games and their quantities in stock.
- * @param onQuantityChange Callback function to handle updating quantity of a game in the stock
- *   list.
- * @param onDelete Callback function to handle deletion of a game from the stock list.
- */
-@Composable
-private fun GamesSection(
-    stock: List<Pair<Game, Int>>,
-    onQuantityChange: (Game, Int) -> Unit,
-    onDelete: (Game) -> Unit
-) {
-  if (stock.isNotEmpty()) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(AddShopUi.Dimensions.betweenControls),
-        contentPadding = PaddingValues(bottom = AddShopUi.Dimensions.contentVPadding),
-        modifier = Modifier.heightIn(max = 500.dp)) {
-          items(items = stock, key = { it.first.uid }) { (game, count) ->
-            GameItemImage(
-                game = game,
-                count = count,
-                editable = true,
-                clickable = false,
-            )
-          }
-        }
-  } else {
-    Text(
-        AddShopUi.Strings.EMPTY_GAMES,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT))
-  }
-}
-
 /* ================================================================================================
  * State Holder
  * ================================================================================================ */
 
+/**
+ * Used to keep the form's state up to date with the UI changes
+ *
+ * @param initialStock initial games selection
+ * @param onSetGameQuery callback upon searching a game
+ * @param onSetGame callback upon adding game
+ */
 @Composable
 fun rememberCreateShopFormState(
     initialStock: List<Pair<Game, Int>> = emptyList(),
