@@ -248,6 +248,7 @@ fun CreateSessionScreen(
                                     selectedGameId.ifBlank {
                                       form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME }
                                     },
+                                gameName = "Temp game name",
                                 date = toTimestamp(form.date, form.time),
                                 location = locationUi.selectedLocation ?: Location(),
                                 *form.participants.toTypedArray())

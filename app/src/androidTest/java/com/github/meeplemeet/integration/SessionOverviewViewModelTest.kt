@@ -63,7 +63,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val game = gameRepository.getGameById(existingGameId)
 
     sessionRepository.createSession(
-        discussion.uid, "Chess Night", game.uid, Timestamp.now(), testLocation, account.uid)
+        discussion.uid,
+        "Chess Night",
+        game.uid,
+        game.name,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
 
     delay(100) // wait for Firestore snapshot
 
@@ -83,7 +89,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val game = gameRepository.getGameById(existingGameId)
 
     sessionRepository.createSession(
-        discussion.uid, "Delete Me", game.uid, Timestamp.now(), testLocation, account.uid)
+        discussion.uid,
+        "Delete Me",
+        game.uid,
+        game.name,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
     delay(100)
     assertEquals(
         1,
@@ -124,6 +136,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussion.uid,
         "Archive Photo Session",
         game.uid,
+        game.name,
         Timestamp.now(),
         testLocation,
         account.uid)
@@ -147,6 +160,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussion.uid,
         "Find By Photo Session",
         game.uid,
+        game.name,
         Timestamp.now(),
         testLocation,
         account.uid)
@@ -176,7 +190,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Single Archive", "Test", account.uid)
     val game = gameRepository.getGameById(existingGameId)
     sessionRepository.createSession(
-        discussion.uid, "Single Session", game.uid, Timestamp.now(), testLocation, account.uid)
+        discussion.uid,
+        "Single Session",
+        game.uid,
+        game.name,
+        Timestamp.now(),
+        testLocation,
+        account.uid)
     val photoUrl = "https://example.com/single_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
     sessionRepository.archiveSession(discussion.uid, archivedId, photoUrl)
@@ -205,6 +225,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         discussion.uid,
         "ViewModel Find By Photo Session",
         game.uid,
+        game.name,
         Timestamp.now(),
         testLocation,
         account.uid)
@@ -249,7 +270,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
 
     sessionRepository.createSession(
-        discussion.uid, "Past Chess Night", game.uid, twentyFiveHoursAgo, testLocation, account.uid)
+        discussion.uid,
+        "Past Chess Night",
+        game.uid,
+        game.name,
+        twentyFiveHoursAgo,
+        testLocation,
+        account.uid)
 
     delay(1000)
 
@@ -269,7 +296,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val oneHourFromNow = Timestamp(System.currentTimeMillis() / 1000 + (1 * 60 * 60), 0)
 
     sessionRepository.createSession(
-        discussion.uid, "Future Chess Night", game.uid, oneHourFromNow, testLocation, account.uid)
+        discussion.uid,
+        "Future Chess Night",
+        game.uid,
+        game.name,
+        oneHourFromNow,
+        testLocation,
+        account.uid)
 
     delay(100)
 
@@ -303,7 +336,13 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val sessionDate = Timestamp(System.currentTimeMillis() / 1000 - (1 * 60 * 60), 0)
 
     sessionRepository.createSession(
-        discussion.uid, "Manual Archive Night", game.uid, sessionDate, testLocation, account.uid)
+        discussion.uid,
+        "Manual Archive Night",
+        game.uid,
+        game.name,
+        sessionDate,
+        testLocation,
+        account.uid)
 
     delay(100)
 
