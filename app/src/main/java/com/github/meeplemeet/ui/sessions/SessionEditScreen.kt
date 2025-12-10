@@ -81,8 +81,6 @@ import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.timestampToLocal
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.Elevation
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlinx.coroutines.launch
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -317,21 +315,14 @@ fun SessionEditScreen(
                     .testTag(SessionEditTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
               EditOrganisationSection(
-                  gameUi = gameUi,
-                  viewModel = viewModel,
                   account = account,
                   discussion = discussion,
                   form = form,
-                  date = form.date,
-                  time = form.time,
-                  onTitleChange = {
-                    if (it.length <= SessionEditNumbers.MAX_EDIT_TITLE_LENGTH) {
-                      form = form.copy(title = it)
-                    }
-                  },
-                  onDateChange = { form = form.copy(date = it) },
-                  onTimeChange = { form = form.copy(time = it) },
-                  onFocusChanged = { isInputFocused = it })
+                  gameUi = gameUi,
+                  viewModel = viewModel,
+                  onFormChange = { form = it },
+                  onFocusChanged = { isInputFocused = it },
+              )
 
               Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
 
@@ -426,98 +417,156 @@ private fun EmptySessionEditScreen(onBack: () -> Unit) {
 }
 
 /**
- * Section for editing organisation details: title, game, date, location
+ * Organisation section containing title, game, schedule, and location inputs.
  *
- * @param gameUi The current game UI state.
- * @param viewModel The session view model.
  * @param account The current user's account.
  * @param discussion The discussion containing the session.
  * @param form The current session form state.
- * @param date The currently selected date.
- * @param time The currently selected time.
- * @param onTitleChange Callback invoked when the title changes.
- * @param onDateChange Callback invoked when the date changes.
- * @param onTimeChange Callback invoked when the time changes.
+ * @param gameUi The current game UI state.
+ * @param viewModel The session view model.
+ * @param onFormChange Callback invoked when the form changes.
  * @param onFocusChanged Callback invoked when the focus state changes.
- * @param modifier Modifier to be applied to the section container.
  */
 @Composable
 private fun EditOrganisationSection(
-    gameUi: GameUIState,
-    viewModel: SessionEditViewModel,
     account: Account,
     discussion: Discussion,
     form: SessionForm,
-    date: LocalDate?,
-    time: LocalTime?,
-    onTitleChange: (String) -> Unit,
-    onDateChange: (LocalDate?) -> Unit,
-    onTimeChange: (LocalTime?) -> Unit,
+    gameUi: GameUIState,
+    viewModel: SessionEditViewModel,
+    onFormChange: (SessionForm) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
   SectionCard(
-      modifier
-          .testTag(SessionEditTestTags.ORG_SECTION)
+      Modifier.testTag(SessionEditTestTags.ORG_SECTION)
           .fillMaxWidth()
           .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large)) {
-        Text(
-            text = SessionEditStrings.INFO_SECTION_TEXT,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground)
-
-        Spacer(Modifier.height(Dimensions.Spacing.small))
-
-        FocusableInputField(
-            value = form.title,
-            onValueChange = onTitleChange,
-            label = { Text(text = SessionEditStrings.TITLE_TEXT) },
-            leadingIcon = {
-              Icon(
-                  imageVector = Icons.Default.Edit,
-                  contentDescription = SessionEditStrings.LABEL_EDIT_TITLE,
-                  tint = MaterialTheme.colorScheme.onBackground)
-            },
-            modifier =
-                Modifier.fillMaxWidth()
-                    .testTag(SessionCreationTestTags.FORM_TITLE_FIELD)
-                    .onFocusChanged { onFocusChanged(it.isFocused) },
+        EditTitleAndGameSection(
+            form = form,
+            gameUi = gameUi,
+            account = account,
+            discussion = discussion,
+            viewModel = viewModel,
+            onFormChange = onFormChange,
+            onFocusChanged = onFocusChanged,
         )
-
-        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
-
-        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          SessionGameSearchBar(
-              account = account,
-              discussion = discussion,
-              viewModel = viewModel,
-              initial = gameUi.fetchedGame)
-        }
 
         Spacer(Modifier.height(Dimensions.Spacing.xLarge))
 
-        Text(
-            text = SessionEditStrings.SCHEDULE_AND_LOCATION_TEXT,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground)
-
-        Spacer(Modifier.height(Dimensions.Spacing.small))
-
-        DateAndTimePicker(
-            date = date,
-            time = time,
-            onDateChange = onDateChange,
+        EditScheduleAndLocationSection(
+            form = form,
+            account = account,
+            discussion = discussion,
+            viewModel = viewModel,
+            onFormChange = onFormChange,
             onFocusChanged = onFocusChanged,
-            onTimeChange = onTimeChange,
         )
-
-        Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
-
-        Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          SessionLocationSearchButton(
-              account = account, discussion = discussion, viewModel = viewModel)
-        }
       }
+}
+
+/**
+ * Title and game selection section
+ *
+ * @param form The current session form state.
+ * @param gameUi The current game UI state.
+ * @param account The current user's account.
+ * @param discussion The discussion containing the session.
+ * @param viewModel The session view model.
+ * @param onFormChange Callback invoked when the form changes.
+ * @param onFocusChanged Callback invoked when the focus state changes.
+ */
+@Composable
+private fun EditTitleAndGameSection(
+    form: SessionForm,
+    gameUi: GameUIState,
+    account: Account,
+    discussion: Discussion,
+    viewModel: SessionEditViewModel,
+    onFormChange: (SessionForm) -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
+) {
+  Text(
+      text = SessionEditStrings.INFO_SECTION_TEXT,
+      style = MaterialTheme.typography.titleLarge,
+      color = MaterialTheme.colorScheme.onBackground)
+
+  Spacer(Modifier.height(Dimensions.Spacing.small))
+
+  FocusableInputField(
+      value = form.title,
+      onValueChange = { newTitle ->
+        if (newTitle.length <= SessionEditNumbers.MAX_EDIT_TITLE_LENGTH) {
+          onFormChange(form.copy(title = newTitle))
+        }
+      },
+      label = { Text(text = SessionEditStrings.TITLE_TEXT) },
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Edit,
+            contentDescription = SessionEditStrings.LABEL_EDIT_TITLE,
+            tint = MaterialTheme.colorScheme.onBackground)
+      },
+      modifier =
+          Modifier.fillMaxWidth().testTag(SessionCreationTestTags.FORM_TITLE_FIELD).onFocusChanged {
+            onFocusChanged(it.isFocused)
+          },
+  )
+
+  Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
+
+  Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+    SessionGameSearchBar(
+        account = account,
+        discussion = discussion,
+        viewModel = viewModel,
+        initial = gameUi.fetchedGame,
+    )
+  }
+}
+
+/**
+ * Schedule and location section
+ *
+ * @param form The current session form state.
+ * @param account The current user's account.
+ * @param discussion The discussion containing the session.
+ * @param viewModel The session view model.
+ * @param onFormChange Callback invoked when the form changes.
+ * @param onFocusChanged Callback invoked when the focus state changes.
+ */
+@Composable
+private fun EditScheduleAndLocationSection(
+    form: SessionForm,
+    account: Account,
+    discussion: Discussion,
+    viewModel: SessionEditViewModel,
+    onFormChange: (SessionForm) -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
+) {
+  Text(
+      text = SessionEditStrings.SCHEDULE_AND_LOCATION_TEXT,
+      style = MaterialTheme.typography.titleLarge,
+      color = MaterialTheme.colorScheme.onBackground)
+
+  Spacer(Modifier.height(Dimensions.Spacing.small))
+
+  DateAndTimePicker(
+      date = form.date,
+      time = form.time,
+      onDateChange = { newDate -> onFormChange(form.copy(date = newDate)) },
+      onFocusChanged = onFocusChanged,
+      onTimeChange = { newTime -> onFormChange(form.copy(time = newTime)) },
+  )
+
+  Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
+
+  Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+    SessionLocationSearchButton(
+        account = account,
+        discussion = discussion,
+        viewModel = viewModel,
+    )
+  }
 }
 
 /**
