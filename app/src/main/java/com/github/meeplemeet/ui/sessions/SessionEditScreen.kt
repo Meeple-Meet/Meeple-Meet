@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionEditViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.ui.FocusableInputField
@@ -135,6 +137,28 @@ object SessionEditStrings {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ *  Helpers
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/** State for managing participants in session edit screen */
+private data class SessionEditParticipantState(
+    val form: SessionForm,
+    val participantSearchQuery: String,
+    val suggestions: List<Account>,
+    val allDiscussionMembers: List<Account>,
+)
+
+/** Callbacks for session edit interactions */
+private data class SessionEditCallbacks(
+    val onFormChange: (SessionForm) -> Unit,
+    val onParticipantSearchQueryChange: (String) -> Unit,
+    val onClearQuery: () -> Unit,
+    val onAllDiscussionMembersChange: (List<Account>) -> Unit,
+    val onFocusChanged: (Boolean) -> Unit,
+)
+
+/* ─────────────────────────────────────────────────────────────────────────────
  *  Main screen
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -154,7 +178,7 @@ fun SessionEditScreen(
     viewModel: SessionEditViewModel = viewModel(key = discussion.uid),
     onBack: () -> Unit = {},
 ) {
-  val session = discussion.session
+  val session: Session? = discussion.session
 
   if (session == null) {
     EmptySessionEditScreen(onBack)
@@ -227,6 +251,23 @@ fun SessionEditScreen(
 
   val isPast = isDateTimeInPast(form.date, form.time)
   val canSave = form.title.isNotBlank() && form.date != null && form.time != null && !isPast
+
+  val participantState =
+      SessionEditParticipantState(
+          form = form,
+          participantSearchQuery = participantSearchQuery,
+          suggestions = suggestions,
+          allDiscussionMembers = allDiscussionMembers,
+      )
+
+  val callbacks =
+      SessionEditCallbacks(
+          onFormChange = { form = it },
+          onParticipantSearchQueryChange = { participantSearchQuery = it },
+          onClearQuery = { participantSearchQuery = "" },
+          onAllDiscussionMembersChange = { allDiscussionMembers = it },
+          onFocusChanged = { isInputFocused = it },
+      )
 
   Scaffold(
       modifier = Modifier.testTag(SessionEditTestTags.SCAFFOLD),
@@ -320,64 +361,16 @@ fun SessionEditScreen(
                   form = form,
                   gameUi = gameUi,
                   viewModel = viewModel,
-                  onFormChange = { form = it },
-                  onFocusChanged = { isInputFocused = it },
+                  onFormChange = callbacks.onFormChange,
+                  onFocusChanged = callbacks.onFocusChanged,
               )
 
-              Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
-
-              ParticipantSearchBar(
-                  query = participantSearchQuery,
-                  onQueryChange = { participantSearchQuery = it },
-                  onClearQuery = { participantSearchQuery = "" },
-                  onFocusChanged = { isInputFocused = it },
-                  modifier = Modifier.align(Alignment.CenterHorizontally),
-              )
-
-              val currentParticipantIds =
-                  remember(form.participants) { form.participants.map { it.uid }.toSet() }
-
-              if (suggestions.isNotEmpty() && trimmedQuery.isNotBlank()) {
-                Spacer(Modifier.height(Dimensions.Spacing.small))
-
-                ParticipantSearchDropdown(
-                    currentAccount = account,
-                    results = suggestions,
-                    existingParticipantIds = currentParticipantIds,
-                    onAddToSession = { user ->
-                      form =
-                          form.copy(participants = (form.participants + user).distinctBy { it.uid })
-                      allDiscussionMembers = (allDiscussionMembers + user).distinctBy { it.uid }
-                    },
-                    onClearFocus = {
-                      isInputFocused = false
-                      focusManager.clearFocus()
-                    },
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-              }
-
-              Spacer(Modifier.height(Dimensions.Spacing.medium))
-
-              ParticipantsSection(
+              SessionEditParticipantsBlock(
                   account = account,
-                  selected = form.participants,
-                  allCandidates = discussionMembersForList,
-                  minPlayers = gameUi.fetchedGame?.minPlayers ?: 0,
-                  maxPlayers = gameUi.fetchedGame?.maxPlayers ?: 0,
-                  onAdd = { toAdd ->
-                    form =
-                        form.copy(participants = (form.participants + toAdd).distinctBy { it.uid })
-                  },
-                  onRemove = { toRemove ->
-                    if (toRemove.uid != account.uid) {
-                      form =
-                          form.copy(
-                              participants = form.participants.filterNot { it.uid == toRemove.uid })
-                    }
-                  },
-                  mainSectionTitle = SessionEditStrings.LABEL_PARTICIPANTS,
-                  modifier = Modifier.testTag(SessionEditTestTags.PARTICIPANTS_SECTION),
+                  gameUi = gameUi,
+                  discussionMembersForList = discussionMembersForList,
+                  participantState = participantState,
+                  callbacks = callbacks,
               )
             }
       }
@@ -387,6 +380,93 @@ fun SessionEditScreen(
  *  Components
  * ─────────────────────────────────────────────────────────────────────────────
  */
+
+/**
+ * Participants management block including search bar and participants list.
+ *
+ * @param account The current user's account.
+ * @param gameUi The current game UI state.
+ * @param discussionMembersForList The list of discussion members for displaying in the participants
+ *   list.
+ * @param participantState The current participant state.
+ * @param callbacks The callbacks for handling participant interactions.
+ */
+@Composable
+private fun ColumnScope.SessionEditParticipantsBlock(
+    account: Account,
+    gameUi: GameUIState,
+    discussionMembersForList: List<Account>,
+    participantState: SessionEditParticipantState,
+    callbacks: SessionEditCallbacks,
+) {
+  val form = participantState.form
+  val participantSearchQuery = participantState.participantSearchQuery
+  val suggestions = participantState.suggestions
+  val allDiscussionMembers = participantState.allDiscussionMembers
+
+  Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
+
+  ParticipantSearchBar(
+      query = participantSearchQuery,
+      onQueryChange = callbacks.onParticipantSearchQueryChange,
+      onClearQuery = callbacks.onClearQuery,
+      onFocusChanged = callbacks.onFocusChanged,
+      modifier = Modifier.align(Alignment.CenterHorizontally),
+  )
+
+  val currentParticipantIds =
+      remember(form.participants) { form.participants.map { it.uid }.toSet() }
+
+  if (suggestions.isNotEmpty() && participantSearchQuery.trim().isNotBlank()) {
+    Spacer(Modifier.height(Dimensions.Spacing.small))
+
+    ParticipantSearchDropdown(
+        currentAccount = account,
+        results = suggestions,
+        existingParticipantIds = currentParticipantIds,
+        onAddToSession = { user ->
+          val updatedForm =
+              form.copy(
+                  participants = (form.participants + user).distinctBy { it.uid },
+              )
+          callbacks.onFormChange(updatedForm)
+
+          val updatedMembers = (allDiscussionMembers + user).distinctBy { it.uid }
+          callbacks.onAllDiscussionMembersChange(updatedMembers)
+        },
+        onClearFocus = { callbacks.onFocusChanged(false) },
+        modifier = Modifier.align(Alignment.CenterHorizontally),
+    )
+  }
+
+  Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+  ParticipantsSection(
+      account = account,
+      selected = form.participants,
+      allCandidates = discussionMembersForList,
+      minPlayers = gameUi.fetchedGame?.minPlayers ?: 0,
+      maxPlayers = gameUi.fetchedGame?.maxPlayers ?: 0,
+      onAdd = { toAdd ->
+        val updatedForm =
+            form.copy(
+                participants = (form.participants + toAdd).distinctBy { it.uid },
+            )
+        callbacks.onFormChange(updatedForm)
+      },
+      onRemove = { toRemove ->
+        if (toRemove.uid != account.uid) {
+          val updatedForm =
+              form.copy(
+                  participants = form.participants.filterNot { it.uid == toRemove.uid },
+              )
+          callbacks.onFormChange(updatedForm)
+        }
+      },
+      mainSectionTitle = SessionEditStrings.LABEL_PARTICIPANTS,
+      modifier = Modifier.testTag(SessionEditTestTags.PARTICIPANTS_SECTION),
+  )
+}
 
 /**
  * Screen displayed when there is no session to edit.
