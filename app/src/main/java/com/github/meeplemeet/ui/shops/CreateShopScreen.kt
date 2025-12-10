@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -126,13 +127,15 @@ fun CreateShopScreen(
 ) {
   val ui by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   AddShopContent(
       onBack = onBack,
       onCreated = onCreated,
-      onCreate = { name, email, address, week, stock ->
+      onCreate = { name, email, address, week, stock, photoUrls ->
         val shop =
             viewModel.createShop(
+                context = context,
                 owner = owner,
                 name = name,
                 phone = "",
@@ -140,7 +143,8 @@ fun CreateShopScreen(
                 website = "",
                 address = address,
                 openingHours = week,
-                gameCollection = stock)
+                gameCollection = stock,
+                photoCollectionUrl = photoUrls)
         shop.id
       },
       gameUi = ui,
@@ -184,7 +188,8 @@ fun AddShopContent(
             email: String,
             address: Location,
             week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> String,
+            stock: List<Pair<Game, Int>>,
+            photoUrls: List<String>) -> String,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     gameQuery: String,
@@ -199,8 +204,8 @@ fun AddShopContent(
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
+  var photoCollectionUrl by remember { mutableStateOf(emptyList<String>()) }
   var shopName by rememberSaveable { mutableStateOf("") }
-  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
   var email by rememberSaveable { mutableStateOf("") }
   var addressText by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -214,6 +219,15 @@ fun AddShopContent(
   var showGameDialog by remember { mutableStateOf(false) }
   var qty by rememberSaveable { mutableIntStateOf(1) }
   var stock by remember { mutableStateOf(initialStock) }
+
+  LaunchedEffect(locationUi.locationQuery) {
+    val sel = locationUi.selectedLocation
+    if (sel != null && locationUi.locationQuery != sel.name) {
+      val typed = locationUi.locationQuery
+      viewModel.clearLocationSearch()
+      if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
+    }
+  }
 
   val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
   val isValid by
@@ -239,6 +253,7 @@ fun AddShopContent(
     addressText = ""
     phone = ""
     link = ""
+    photoCollectionUrl = emptyList()
     week = emptyWeek()
     editingDay = null
     showHoursDialog = false
@@ -289,7 +304,8 @@ fun AddShopContent(
                       val addr = locationUi.selectedLocation ?: Location()
                       scope.launch {
                         try {
-                          val shopId = onCreate(shopName, email, addr, week, stock)
+                          val shopId =
+                              onCreate(shopName, email, addr, week, stock, photoCollectionUrl)
                           onCreated(shopId)
                         } catch (e: IllegalArgumentException) {
                           snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
@@ -312,20 +328,7 @@ fun AddShopContent(
                       ImageCarousel(
                           photoCollectionUrl = photoCollectionUrl,
                           maxNumberOfImages = maxNumberOfImages,
-                          onAdd = { path, index ->
-                            photoCollectionUrl =
-                                if (index < photoCollectionUrl.size &&
-                                    photoCollectionUrl[index].isNotEmpty()) {
-                                  photoCollectionUrl.mapIndexed { i, old ->
-                                    if (i == index) path else old
-                                  }
-                                } else {
-                                  photoCollectionUrl + path
-                                }
-                          },
-                          onRemove = { url ->
-                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                          },
+                          onStateChange = { photoCollectionUrl = it },
                           editable = true)
                     }
                     item {

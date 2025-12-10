@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -88,6 +89,7 @@ fun CreateSpaceRenterScreen(
     viewModel: CreateSpaceRenterViewModel = viewModel()
 ) {
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   // Set default location when offline
   LaunchedEffect(online, userLocation) {
@@ -103,6 +105,7 @@ fun CreateSpaceRenterScreen(
       onCreated = onCreated,
       onCreate = { renter ->
         viewModel.createSpaceRenter(
+            context = context,
             owner = owner,
             name = renter.name,
             phone = renter.phone,
@@ -134,7 +137,7 @@ internal fun AddSpaceRenterContent(
   val snackbarHost = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
-  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
+  var photoCollectionUrl by remember { mutableStateOf(emptyList<String>()) }
   var name by rememberSaveable { mutableStateOf("") }
   var email by rememberSaveable { mutableStateOf("") }
   var phone by rememberSaveable { mutableStateOf("") }
@@ -175,6 +178,7 @@ internal fun AddSpaceRenterContent(
     email = ""
     phone = ""
     link = ""
+    photoCollectionUrl = emptyList()
     viewModel.clearLocationSearch()
     week = emptyWeek()
     editingDay = null
@@ -204,7 +208,7 @@ internal fun AddSpaceRenterContent(
           address = locationUi.selectedLocation ?: Location(),
           openingHours = week,
           spaces = spaces,
-          photoCollectionUrl = emptyList())
+          photoCollectionUrl = photoCollectionUrl)
 
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }

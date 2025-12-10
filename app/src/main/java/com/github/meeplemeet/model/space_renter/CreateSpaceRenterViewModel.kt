@@ -5,10 +5,13 @@ package com.github.meeplemeet.model.space_renter
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for creating new space renters.
@@ -17,9 +20,11 @@ import kotlinx.coroutines.launch
  * all required fields are properly provided.
  *
  * @property repository The repository used for space renter operations.
+ * @property imageRepository The repository used for image operations.
  */
 class CreateSpaceRenterViewModel(
     private val repository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val imageRepository: ImageRepository = RepositoryProvider.images,
 ) : SpaceRenterSearchViewModel() {
   /**
    * Creates a new space renter, either immediately (online) or queued for sync (offline).
@@ -50,6 +55,7 @@ class CreateSpaceRenterViewModel(
    * @throws IllegalArgumentException if validation fails.
    */
   fun createSpaceRenter(
+      context: android.content.Context,
       owner: Account,
       name: String,
       phone: String = "",
@@ -70,13 +76,43 @@ class CreateSpaceRenterViewModel(
         throw IllegalArgumentException("An address is required to create a space renter")
 
     viewModelScope.launch {
-      // Check internet connection status
       val isOnline = OfflineModeManager.hasInternetConnection.value
 
       if (isOnline) {
-        // ONLINE: Create immediately in Firestore
-        repository.createSpaceRenter(
-            owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
+        try {
+          val created =
+              repository.createSpaceRenter(
+                  owner, name, phone, email, website, address, openingHours, spaces, emptyList())
+
+          val uploadedUrls =
+              if (photoCollectionUrl.isNotEmpty()) {
+                try {
+                  // Upload photos to Firebase Storage and get download URLs
+                  val urls =
+                      withContext(NonCancellable) {
+                        imageRepository.saveSpaceRenterPhotos(
+                            context, created.id, *photoCollectionUrl.toTypedArray())
+                      }
+                  urls
+                } catch (e: Exception) {
+                  throw Exception("Photo upload failed: ${e.message}", e)
+                }
+              } else {
+                emptyList<String>()
+              }
+          // Update the document with Firebase Storage download URLs
+          if (uploadedUrls.isNotEmpty()) {
+            try {
+              withContext(NonCancellable) {
+                repository.updateSpaceRenter(id = created.id, photoCollectionUrl = uploadedUrls)
+              }
+            } catch (e: Exception) {
+              throw Exception("Failed to save photo URLs: ${e.message}", e)
+            }
+          }
+        } catch (e: Exception) {
+          throw Exception("Failed to create space renter: ${e.message}", e)
+        }
       } else {
         // OFFLINE: Queue for later creation
 

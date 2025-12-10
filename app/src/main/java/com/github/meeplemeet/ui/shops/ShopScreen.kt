@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
@@ -114,8 +116,36 @@ fun ShopScreen(
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
-  // Trigger loading of shop data when shopId changes
-  LaunchedEffect(shopId) { viewModel.getShop(shopId) }
+  val images by viewModel.photos.collectAsStateWithLifecycle()
+
+  val context = LocalContext.current
+
+  // Holds the cached image file paths
+  val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
+
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+  // Reload shop data whenever the screen resumes (e.g. returning from Edit screen)
+  // This ensures we always show the latest data including new photos.
+  DisposableEffect(lifecycleOwner, shopId) {
+    val observer =
+        androidx.lifecycle.LifecycleEventObserver { _, event ->
+          if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.getShop(shopId, context)
+          }
+        }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
+
+  // Convert images to cached file paths
+  // Update whenever images change (which happens after reload)
+  LaunchedEffect(images) {
+    if (images.isNotEmpty()) {
+      val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
+      cachedImagePathsState.value = paths
+    }
+  }
 
   var popupGame by remember { mutableStateOf<Game?>(null) }
 
@@ -146,8 +176,7 @@ fun ShopScreen(
                     Modifier.padding(innerPadding)
                         .padding(Dimensions.Padding.extraLarge)
                         .fillMaxSize(),
-                onGameClick = { game -> popupGame = game },
-            )
+                onGameClick = { game -> popupGame = game })
           }
               ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -206,9 +235,7 @@ fun ShopDetails(
           if (photoCollectionUrl.isNotEmpty()) {
             ImageCarousel(
                 photoCollectionUrl = photoCollectionUrl,
-                maxNumberOfImages = shop.photoCollectionUrl.size,
-                onAdd = { _, _ -> },
-                onRemove = { _ -> },
+                maxNumberOfImages = photoCollectionUrl.size,
                 editable = false)
           }
         }
@@ -218,7 +245,7 @@ fun ShopDetails(
               name = shop.name,
               address = shop.address.name,
               email = shop.email,
-              phone = shop.email,
+              phone = shop.phone,
               website = shop.website)
         }
 
@@ -238,7 +265,6 @@ fun ShopDetails(
         }
       }
 }
-
 // -------------------- GAME ITEM --------------------
 
 /**

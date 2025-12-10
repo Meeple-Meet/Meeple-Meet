@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.shops
 
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +16,15 @@ import kotlinx.coroutines.launch
  * This ViewModel retrieves and exposes a shop through a [StateFlow] for UI observation.
  *
  * @property repository The repository used for shop operations.
+ * @property imageRepository The repository used for image operations.
  */
-class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.shops) :
-    ShopSearchViewModel() {
+class ShopViewModel(
+    private val repository: ShopRepository = RepositoryProvider.shops,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
+) : ShopSearchViewModel() {
   private val _shop = MutableStateFlow<Shop?>(null)
+  private val _photos = MutableStateFlow<List<ByteArray>>(emptyList())
+  val photos: StateFlow<List<ByteArray>> = _photos
 
   /**
    * StateFlow exposing the currently loaded shop.
@@ -47,20 +53,42 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
   }
 
   /**
-   * Retrieves a shop by its ID from Firestore.
+   * Retrieves a shop by its ID from Firestore and loads its photos.
    *
    * This operation is performed asynchronously in the viewModelScope. Upon successful retrieval,
-   * the shop is emitted through [shop].
+   * the shop is emitted through [shop] and photos are loaded and emitted through [photos].
    *
    * @param id The unique identifier of the shop to retrieve.
+   * @param context The Android context for image operations.
    * @throws IllegalArgumentException if the shop ID is blank.
    */
-  fun getShop(id: String) {
+  fun getShop(id: String, context: android.content.Context) {
     if (id.isBlank()) throw IllegalArgumentException("Shop ID cannot be blank")
 
     currentShopId = id
 
-    viewModelScope.launch { OfflineModeManager.loadShop(id) { shop -> _shop.value = shop } }
+    viewModelScope.launch {
+      OfflineModeManager.loadShop(id) { shop ->
+        _shop.value = shop
+        if (shop != null) {
+          loadPhotos(context, shop)
+        }
+      }
+    }
+  }
+
+  /**
+   * Loads photos for the given shop.
+   *
+   * @param context The Android context for image operations.
+   * @param shop The shop to load photos for.
+   */
+  fun loadPhotos(context: android.content.Context, shop: Shop) {
+    val urls = shop.photoCollectionUrl
+    viewModelScope.launch {
+      val images = imageRepository.loadShopPhotos(context = context, shopId = shop.id, urls = urls)
+      _photos.value = images
+    }
   }
 
   /**
@@ -73,5 +101,15 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
    */
   suspend fun getShopByOwnerId(ownerId: String): Shop? {
     return repository.getShopByOwnerId(ownerId)
+  }
+
+  /**
+   * Clears the cached shop and photo data.
+   *
+   * This resets both the shop state and photos state to their initial empty values.
+   */
+  fun clearCache() {
+    _shop.value = null
+    _photos.value = emptyList()
   }
 }
