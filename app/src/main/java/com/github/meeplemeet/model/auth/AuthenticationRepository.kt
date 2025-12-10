@@ -8,6 +8,7 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.tasks.await
@@ -40,15 +41,35 @@ class AuthenticationRepository(
 
     private val TOO_MANY_REQUESTS_KEYWORDS = listOf("too many requests")
 
+    private val EMAIL_IN_USE_KEYWORDS =
+        listOf(
+            "email address is already in use",
+            "email-already-in-use",
+            "already in use",
+            "email already exists",
+            "email is already registered"
+        )
+
+    private val REQUIRES_RECENT_LOGIN_KEYWORDS = listOf("requires recent login", "requires-recent-login")
+
     // User-friendly error messages
     private const val INVALID_CREDENTIALS_MSG = "Invalid email or password"
     private const val INVALID_EMAIL_MSG = "Invalid email format"
     private const val TOO_MANY_REQUESTS_MSG = "Too many failed attempts. Please try again later."
     private const val ERROR_NO_LOGGED_IN_USER = "No user is currently logged in."
+    private const val ERROR_NO_EMAIL_ADDRESS = "Current user has no email address."
     private const val EMAIL_VERIFICATION_FAILED_MSG =
         "Failed to send verification email. Please try again later."
     private const val DEFAULT_ERROR_MSG = "Unexpected error."
     private const val USER_INFO_ERROR_MSG = "Could not retrieve user information"
+    private const val EMAIL_IN_USE_MSG = "This email address is already in use by another account."
+    private const val EMAIL_SAME_AS_CURRENT_MSG = "New email is the same as current email."
+    private const val WRONG_PASSWORD_MSG = "The password you entered is incorrect."
+    private const val REAUTHENTICATION_REQUIRED_MSG = "Please re-authenticate to continue."
+
+    // Operation names for error reporting
+    private const val OPERATION_EMAIL_UPDATE = "Email update"
+    private const val OPERATION_EMAIL_SYNC = "Email synchronization"
   }
 
   /**
@@ -70,6 +91,8 @@ class AuthenticationRepository(
       INVALID_CREDENTIALS_KEYWORDS.any { errorMessage.contains(it) } -> INVALID_CREDENTIALS_MSG
       INVALID_EMAIL_KEYWORDS.any { errorMessage.contains(it) } -> INVALID_EMAIL_MSG
       TOO_MANY_REQUESTS_KEYWORDS.any { errorMessage.contains(it) } -> TOO_MANY_REQUESTS_MSG
+      EMAIL_IN_USE_KEYWORDS.any { errorMessage.contains(it) } -> EMAIL_IN_USE_MSG
+      REQUIRES_RECENT_LOGIN_KEYWORDS.any { errorMessage.contains(it) } -> REAUTHENTICATION_REQUIRED_MSG
       else -> exception.localizedMessage ?: defaultMessage
     }
   }
@@ -270,6 +293,111 @@ class AuthenticationRepository(
       }
     } catch (e: Exception) {
       createFailureResult(OPERATION_LOGIN, e)
+    }
+  }
+
+  /**
+   * Updates the user's email address in Firebase Authentication.
+   *
+   * This method performs the following steps:
+   * 1. Validates that a user is currently logged in and retrieves current email
+   * 2. Checks if the new email is different from the current one
+   * 3. Checks if the new email is already in use (via Firestore)
+   * 4. Reauthenticates the user with their current password
+   * 5. Sends verification email to new address (Firebase Auth updates after verification)
+   *
+   * IMPORTANT SECURITY BEHAVIOR:
+   * - After clicking the verification link, Firebase will LOG OUT the user for security reasons
+   * - The user must log back in with their NEW email address
+   * - Email is NOT updated in Firestore immediately - must be synced via syncEmailToFirestore()
+   *
+   * NOTE ON DUPLICATE EMAIL DETECTION:
+   * - This method checks Firestore for duplicate emails before sending the verification email
+   * - This prevents the common case where another account in your system uses the email
+   * - Firebase Auth will also check when the verification link is clicked
+   *
+   * @param newEmail The new email address to set for the user
+   * @param currentPassword The user's current password for reauthentication
+   * @return Result indicating success, or failure with a user-friendly error message
+   */
+  suspend fun updateEmail(newEmail: String, currentPassword: String): Result<Unit> {
+    return try {
+      // Step 1: Verify user is logged in
+      val currentUser = auth.currentUser
+          ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+
+      val currentEmail = currentUser.email
+          ?: return Result.failure(IllegalStateException(ERROR_NO_EMAIL_ADDRESS))
+
+      // Step 2: Check if the new email is different from the current one
+      if (newEmail == currentEmail) {
+        return Result.failure(IllegalStateException(EMAIL_SAME_AS_CURRENT_MSG))
+      }
+
+      // Step 3: Check if the new email is already in use in Firestore
+      val emailInUse = accountRepository.isEmailInUse(newEmail, currentUser.uid)
+      if (emailInUse) {
+        return Result.failure(IllegalStateException(EMAIL_IN_USE_MSG))
+      }
+
+      // Step 4: Reauthenticate the user with their current password
+      try {
+        val credential = EmailAuthProvider.getCredential(currentEmail, currentPassword)
+        currentUser.reauthenticate(credential).await()
+      } catch (_: Exception) {
+        // Reauthentication failed - likely wrong password
+        return Result.failure(IllegalStateException(WRONG_PASSWORD_MSG))
+      }
+
+      // Step 5: Send verification email and schedule email update
+      // Firebase requires verification before changing email for security
+      // The email in Firebase Auth will update after user clicks the verification link
+      try {
+        currentUser.verifyBeforeUpdateEmail(newEmail).await()
+      } catch (e: Exception) {
+        // Map Firebase exceptions to user-friendly messages
+        // This catches email-already-in-use, invalid format, and other Firebase errors
+        return createFailureResult(OPERATION_EMAIL_UPDATE, e)
+      }
+
+      Result.success(Unit)
+    } catch (e: Exception) {
+      createFailureResult(OPERATION_EMAIL_UPDATE, e)
+    }
+  }
+
+  /**
+   * Synchronizes the user's email from Firebase Auth to Firestore.
+   *
+   * This should be called when the user returns to the app to ensure that
+   * if they verified a new email address, it gets updated in Firestore.
+   *
+   * Only updates Firestore if the emails differ to avoid unnecessary writes.
+   *
+   * @return Result with the current email from Firebase Auth, or failure
+   */
+  suspend fun syncEmailToFirestore(): Result<String> {
+    return try {
+      val currentUser = auth.currentUser
+          ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+
+      val authEmail = currentUser.email
+          ?: return Result.failure(IllegalStateException(ERROR_NO_EMAIL_ADDRESS))
+
+      // Only update Firestore if the emails differ
+      try {
+        val account = accountRepository.getAccount(currentUser.uid)
+        if (account.email != authEmail) {
+          accountRepository.setAccountEmail(currentUser.uid, authEmail)
+        }
+      } catch (_: Exception) {
+        // If we can't check or update, still return success with the auth email
+        // The sync can be retried later
+      }
+
+      Result.success(authEmail)
+    } catch (e: Exception) {
+      createFailureResult(OPERATION_EMAIL_SYNC, e)
     }
   }
 

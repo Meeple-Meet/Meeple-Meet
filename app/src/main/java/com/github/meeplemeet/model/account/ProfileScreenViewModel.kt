@@ -32,10 +32,16 @@ class ProfileScreenViewModel(
     private val authRepository: AuthenticationRepository = RepositoryProvider.authentication
 ) : CreateAccountViewModel(handlesRepository) {
 
+  companion object {
+    private const val EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE =
+        "Verification email sent to %s. After clicking the verification link, you will be logged out for security reasons. Please log back in with your new email."
+  }
+
   private val _uiState = MutableStateFlow(AuthUIState())
 
   // Public read-only state flow that UI components can observe for state changes
   val uiState: StateFlow<AuthUIState> = _uiState
+
 
   /**
    * Changes the account profile picture
@@ -109,6 +115,63 @@ class ProfileScreenViewModel(
             }
           }
           .onFailure { error -> _uiState.update { it.copy(errorMsg = error.localizedMessage) } }
+    }
+  }
+
+  /**
+   * Changes the user's email address in Firebase Auth.
+   *
+   * This is a sensitive operation that requires:
+   * - User reauthentication with password
+   * - Email validation and duplicate checking
+   * - Updating Firebase Auth (NOT Firestore - Auth is the single source of truth)
+   * - Sending verification email to the new address
+   *
+   * Note: Email is NOT updated in Firestore. Firebase Auth is the single source of truth for email.
+   * The UI should always fetch email from Firebase.auth.currentUser?.email
+   *
+   * @param newEmail The new email address
+   * @param password The user's current password for reauthentication
+   */
+  fun changeEmail(newEmail: String, password: String) {
+    // Prevent concurrent operations
+    if (_uiState.value.isLoading) return
+
+    viewModelScope.launch {
+      // Step 1: Set loading state
+      _uiState.update { it.copy(isLoading = true, errorMsg = null, successMsg = null) }
+
+      // Step 2: Update Firebase Auth email (includes reauthentication & validation)
+      authRepository
+          .updateEmail(newEmail, password)
+          .onSuccess {
+            // Step 3: Update UI state - success with message
+            _uiState.update {
+              it.copy(
+                isLoading = false,
+                errorMsg = null,
+                successMsg = EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE.format(newEmail)
+              )
+            }
+          }
+          .onFailure { error ->
+            // Firebase Auth failed (wrong password, email in use, etc.)
+            _uiState.update { it.copy(isLoading = false, errorMsg = error.localizedMessage, successMsg = null) }
+          }
+    }
+  }
+
+  /**
+   * Synchronizes the email from Firebase Auth to Firestore.
+   *
+   * This should be called when navigating back to check if the user has verified
+   * their new email address, and if so, update it in Firestore.
+   */
+  fun syncEmail() {
+    viewModelScope.launch {
+      authRepository.syncEmailToFirestore()
+          .onSuccess { /* Email synced successfully, no need to show message */ }
+          .onFailure { /* Silently fail - this is a background sync */ }
     }
   }
 
