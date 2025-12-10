@@ -5,8 +5,6 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -20,6 +18,7 @@ import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.shops.AddShopContent
+import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
@@ -29,7 +28,6 @@ import kotlinx.coroutines.tasks.await
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +49,7 @@ class CreateShopScreenTest : FirestoreTests() {
 
   private val owner =
       Account(uid = "Marco", handle = "meeple", name = "Meeple", email = "marco@epfl.com")
+  private val location = Location(45.0, 6.33, "EPFL")
 
   /* ────────────────────────────── SETUP ──────────────────────────────────── */
 
@@ -68,8 +67,7 @@ class CreateShopScreenTest : FirestoreTests() {
                 maxPlayers = 4,
                 recommendedPlayers = 4,
                 averagePlayTime = 90,
-                genres = listOf("1", "2"))
-        )
+                genres = listOf("1", "2")))
         .await()
 
     db.collection(GAMES_COLLECTION_PATH)
@@ -83,8 +81,7 @@ class CreateShopScreenTest : FirestoreTests() {
                 maxPlayers = 5,
                 recommendedPlayers = 4,
                 averagePlayTime = 45,
-                genres = listOf("1"))
-        )
+                genres = listOf("1")))
         .await()
 
     db.collection(GAMES_COLLECTION_PATH)
@@ -98,8 +95,7 @@ class CreateShopScreenTest : FirestoreTests() {
                 maxPlayers = 5,
                 recommendedPlayers = 3,
                 averagePlayTime = 120,
-                genres = listOf("2", "3"))
-        )
+                genres = listOf("2", "3")))
         .await()
   }
 
@@ -184,7 +180,7 @@ class CreateShopScreenTest : FirestoreTests() {
       val targetX = left + (right - left) * fraction
       // Slider is aligned to BottomCenter, so we should touch near the bottom
       val targetY = top + (bottom - top) * 0.9f
-      
+
       down(Offset(center.x, targetY))
       moveTo(Offset(targetX, targetY))
       up()
@@ -194,10 +190,7 @@ class CreateShopScreenTest : FirestoreTests() {
 
   /** Add a game using the slider for quantity selection. */
   @OptIn(ExperimentalTestApi::class)
-  private fun addGameWithSlider(
-      gameName: String,
-      quantity: Int
-  ) {
+  private fun addGameWithSlider(gameName: String, quantity: Int) {
     ensureSectionExpanded(CreateShopScreenTestTags.SECTION_GAMES)
     scrollListToTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
     compose.onTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertExists().performClick()
@@ -210,7 +203,8 @@ class CreateShopScreenTest : FirestoreTests() {
         .performTextInput(gameName)
     compose.waitForIdle()
 
-    // Wait for first dropdown item to appear (using indexed test tag like ShopDetailsEditScreenTest)
+    // Wait for first dropdown item to appear (using indexed test tag like
+    // ShopDetailsEditScreenTest)
     val firstItemTag = "${ShopComponentsTestTags.GAME_SEARCH_ITEM}:0"
     compose.waitUntil(15_000) {
       compose
@@ -218,7 +212,7 @@ class CreateShopScreenTest : FirestoreTests() {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-    
+
     // Click the first dropdown item
     compose.onTag(firstItemTag).performClick()
     compose.waitForIdle()
@@ -369,16 +363,22 @@ class CreateShopScreenTest : FirestoreTests() {
         val gameUi by viewModel.gameUIState.collectAsState()
 
         when (s.intValue) {
-           // 0: Structure
+          // 0: Structure
           0 ->
-              AddShopContent(
-                  onBack = {},
-                  initialStock = emptyList(),
-                  viewModel = viewModel,
+              CreateShopScreen(
                   owner = owner,
+                  onBack = {},
                   online = true,
-                  gameUi = gameUi,
-                  locationUi = locationUi)
+                  userLocation = location,
+                  viewModel = viewModel)
+          //              AddShopContent(
+          //                  onBack = {},
+          //                  initialStock = emptyList(),
+          //                  viewModel = viewModel,
+          //                  owner = owner,
+          //                  online = true,
+          //                  gameUi = gameUi,
+          //                  locationUi = locationUi)
 
           // 1: Validation gating (disabled -> enabled after fields + hours)
           1 ->
@@ -476,28 +476,9 @@ class CreateShopScreenTest : FirestoreTests() {
       compose.waitForIdle()
       fillRequiredFields(viewModel, "Meeple", "meeple@shop.com", "42 Boardgame Ave")
       setAnyOpeningHoursViaDialog()
-        compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertExists()
+      compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertExists()
       compose.onTag(ShopComponentsTestTags.ACTION_CREATE).assertIsEnabled().performClick()
     }
-
-    // 3) Create error -> snackbar
-//    checkpoint("Create error -> snackbar") {
-//      compose.runOnUiThread { stage.intValue = 3 }
-//      compose.waitForIdle()
-//      fillRequiredFields(viewModel)
-//      setAnyOpeningHoursViaDialog()
-//      compose.onTag(ShopComponentsTestTags.ACTION_CREATE).performClick()
-//      compose.waitForIdle()
-//      compose.waitUntil(5_000) {
-//        compose
-//            .onAllNodes(hasText("Failed to create shop", substring = true), useUnmergedTree = true)
-//            .fetchSemanticsNodes()
-//            .isNotEmpty()
-//      }
-//      compose
-//          .onAllNodes(hasText("Failed to create shop", substring = true), useUnmergedTree = true)
-//          .assertCountEquals(1)
-//    }
 
     // 4) Optional fields don't gate
     checkpoint("Optional fields don't gate") {
@@ -553,10 +534,15 @@ class CreateShopScreenTest : FirestoreTests() {
       // Scroll to games section header first
       scrollListToTag(
           CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
-      
+
       // Uncollapse game section and scroll down
       ensureSectionExpanded(CreateShopScreenTestTags.SECTION_GAMES)
       scrollListToTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
+
+      compose
+          .onNodeWithTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT)
+          .assertExists()
+          .assertIsDisplayed()
 
       // Add Catan with quantity 57
       addGameWithSlider("Catan", 57)
@@ -565,6 +551,8 @@ class CreateShopScreenTest : FirestoreTests() {
       // Verify Catan was added and scroll to see it
       scrollListToTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
       compose.waitForIdle()
+
+      compose.onNodeWithTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT).assertDoesNotExist()
 
       // Add Carcassonne with quantity 8
       addGameWithSlider("Car", 8)
@@ -584,7 +572,10 @@ class CreateShopScreenTest : FirestoreTests() {
 
       // Wait for games to appear
       compose.waitUntil(10_000) {
-        compose.onAllNodesWithTag(catanTag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        compose
+            .onAllNodesWithTag(catanTag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
       }
 
       // Assert all 3 specific games are present
@@ -594,40 +585,50 @@ class CreateShopScreenTest : FirestoreTests() {
 
       // Delete Catan
       compose
-          .onNodeWithTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+          .onNodeWithTag(
+              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
           .assertExists()
           .performClick()
-      
+
       // Verify Catan is gone
       compose.waitForIdle()
       compose.onNodeWithTag(catanTag).assertDoesNotExist()
-      
+
       // Verify remaining games exist
       compose.waitUntil(5_000) {
-        compose.onAllNodesWithTag(carcassonneTag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() &&
-        compose.onAllNodesWithTag(terraformingTag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        compose
+            .onAllNodesWithTag(carcassonneTag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty() &&
+            compose
+                .onAllNodesWithTag(terraformingTag, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
       }
       compose.onNodeWithTag(carcassonneTag).assertExists()
       compose.onNodeWithTag(terraformingTag).assertExists()
 
       // Edit Terraforming Mars to quantity 59
       compose
-          .onNodeWithTag("${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_terraforming", useUnmergedTree = true)
+          .onNodeWithTag(
+              "${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_terraforming", useUnmergedTree = true)
           .assertExists()
           .performClick()
-      
+
       // Wait for dialog
       compose.waitForIdle()
       compose.waitUntil(5_000) {
         compose
-            .onAllNodes(hasTestTag(CreateShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER), useUnmergedTree = true)
+            .onAllNodes(
+                hasTestTag(CreateShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER),
+                useUnmergedTree = true)
             .fetchSemanticsNodes()
             .isNotEmpty()
       }
 
       // Set new quantity to 59
       setSliderValue(59)
-      
+
       // Save
       compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsEnabled().performClick()
       compose.onTag(CreateShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER).assertDoesNotExist()
@@ -636,7 +637,7 @@ class CreateShopScreenTest : FirestoreTests() {
       // Verify changes
       // Catan should still be gone
       compose.onNodeWithTag(catanTag).assertDoesNotExist()
-      
+
       // Carcassonne and Terraforming Mars should exist
       compose.onNodeWithTag(carcassonneTag).assertExists()
       compose.onNodeWithTag(terraformingTag).assertExists()
@@ -667,20 +668,21 @@ class CreateShopScreenTest : FirestoreTests() {
         val locationUi by viewModel.locationUIState.collectAsState()
         val gameUi by viewModel.gameUIState.collectAsState()
 
-          AddShopContent(
-              onBack = {},
-              initialStock = emptyList(),
-              viewModel = viewModel,
-              owner = owner,
-              online = false,
-              gameUi = gameUi,
-              locationUi = locationUi)
+        AddShopContent(
+            onBack = {},
+            initialStock = emptyList(),
+            viewModel = viewModel,
+            owner = owner,
+            online = false,
+            gameUi = gameUi,
+            locationUi = locationUi)
       }
     }
     // Verify Image Carousel is not editable (Add button missing)
     compose.onTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
 
     bringGamesHeaderIntoView()
+    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
 
     compose.onTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
