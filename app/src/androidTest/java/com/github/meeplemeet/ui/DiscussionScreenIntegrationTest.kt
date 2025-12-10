@@ -122,6 +122,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         DiscussionScreen(
             viewModel = viewModel,
             discussion = currentDiscussionState.value,
+            verified = true,
             account = currentUser,
             onBack = { backPressed = true })
       }

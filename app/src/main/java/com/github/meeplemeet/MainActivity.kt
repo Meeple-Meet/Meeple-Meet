@@ -323,6 +323,7 @@ fun MeepleMeetApp(
                   DiscussionScreen(
                       account!!,
                       discussion!!,
+                      uiState.isEmailVerified,
                       onBack = {
                         navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
                       },
@@ -335,7 +336,7 @@ fun MeepleMeetApp(
                             if (it.session != null) MeepleMeetScreen.SessionViewer
                             else MeepleMeetScreen.CreateSession)
                       },
-                  )
+                      onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
               else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
             } else LoadingScreen()
           }
@@ -402,7 +403,11 @@ fun MeepleMeetApp(
 
           composable(MeepleMeetScreen.Post.name) {
             PostScreen(
-                account = account!!, postId = postId, onBack = { navigationActions.goBack() })
+                account = account!!,
+                postId = postId,
+                verified = uiState.isEmailVerified,
+                onBack = { navigationActions.goBack() },
+                onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
           }
 
           composable(MeepleMeetScreen.CreatePost.name) {
