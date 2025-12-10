@@ -5,16 +5,13 @@ package com.github.meeplemeet.ui.space_renter
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.LocationUIState
@@ -25,7 +22,6 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
-import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
@@ -330,27 +326,11 @@ internal fun AddSpaceRenterContent(
                                   spaces = spaces.filterIndexed { i, _ -> i != idx }
                                 },
                             )
-                            Button(
-                                shape = RoundedCornerShape(4.dp),
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = AppColors.secondary,
-                                        disabledContainerColor = AppColors.secondary,
-                                        contentColor = AppColors.focus,
-                                        disabledContentColor = AppColors.focus),
+                            AddButton(
                                 onClick = { addSpace() },
-                                modifier =
-                                    Modifier.testTag(
-                                            CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)
-                                        .fillMaxWidth()) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(Dimensions.Padding.mediumSmall))
-                                  Text(
-                                      AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
-                                      modifier =
-                                          Modifier.testTag(
-                                              CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
-                                }
+                                buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                buttonTestTag = CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,
+                                labelTestTag = CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL)
                           },
                           testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
                     }
