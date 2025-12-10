@@ -1,4 +1,5 @@
 package com.github.meeplemeet.integration
+// AI was used for this file
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.utils.FirestoreTests
@@ -110,8 +111,7 @@ class EmailChangeIntegrationTest : FirestoreTests() {
     assertNotNull("Exception should be present", exception)
     assertTrue(
         "Error message should mention password",
-        exception?.message?.lowercase()?.contains("password") == true
-    )
+        exception?.message?.lowercase()?.contains("password") == true)
 
     // Verify email unchanged
     assertEquals("Email should remain unchanged", testEmail1, auth.currentUser?.email)
@@ -135,8 +135,7 @@ class EmailChangeIntegrationTest : FirestoreTests() {
     assertTrue(
         "Error message should mention email in use",
         exception?.message?.lowercase()?.contains("already in use") == true ||
-        exception?.message?.lowercase()?.contains("in use") == true
-    )
+            exception?.message?.lowercase()?.contains("in use") == true)
 
     // Verify email unchanged
     assertEquals("Email should remain unchanged", testEmail1, auth.currentUser?.email)
@@ -159,8 +158,7 @@ class EmailChangeIntegrationTest : FirestoreTests() {
     assertNotNull("Exception should be present", exception)
     assertTrue(
         "Error message should mention same email",
-        exception?.message?.lowercase()?.contains("same") == true
-    )
+        exception?.message?.lowercase()?.contains("same") == true)
   }
 
   @Test
@@ -180,8 +178,7 @@ class EmailChangeIntegrationTest : FirestoreTests() {
     assertTrue(
         "Error message should mention login or user",
         exception?.message?.lowercase()?.contains("logged in") == true ||
-        exception?.message?.lowercase()?.contains("user") == true
-    )
+            exception?.message?.lowercase()?.contains("user") == true)
   }
 
   @Test
@@ -297,8 +294,7 @@ class EmailChangeIntegrationTest : FirestoreTests() {
     assertTrue(
         "Error message should mention login or user",
         exception?.message?.lowercase()?.contains("logged in") == true ||
-        exception?.message?.lowercase()?.contains("user") == true
-    )
+            exception?.message?.lowercase()?.contains("user") == true)
   }
 
   @Test
@@ -333,4 +329,3 @@ class EmailChangeIntegrationTest : FirestoreTests() {
     assertEquals("Firestore should match Firebase Auth", testEmail1, accountAfter.email)
   }
 }
-

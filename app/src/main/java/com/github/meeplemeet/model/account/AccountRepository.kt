@@ -1,6 +1,7 @@
 package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
+// AI was used for this file
 
 import com.github.meeplemeet.model.AccountNotFoundException
 import com.github.meeplemeet.model.FirestoreRepository
@@ -343,10 +344,7 @@ class AccountRepository :
    */
   suspend fun isEmailInUse(email: String, currentUserId: String): Boolean {
     return try {
-      val result = collection
-          .whereEqualTo(Account::email.name, email)
-          .get()
-          .await()
+      val result = collection.whereEqualTo(Account::email.name, email).get().await()
 
       // Check if any documents exist with this email that aren't the current user
       result.documents.any { it.id != currentUserId }

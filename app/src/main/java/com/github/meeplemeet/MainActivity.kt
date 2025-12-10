@@ -1,4 +1,5 @@
 package com.github.meeplemeet
+// AI was used for this file
 
 import android.content.Context
 import android.os.Bundle

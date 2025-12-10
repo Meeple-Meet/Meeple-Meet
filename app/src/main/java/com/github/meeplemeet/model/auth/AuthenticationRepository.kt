@@ -47,10 +47,10 @@ class AuthenticationRepository(
             "email-already-in-use",
             "already in use",
             "email already exists",
-            "email is already registered"
-        )
+            "email is already registered")
 
-    private val REQUIRES_RECENT_LOGIN_KEYWORDS = listOf("requires recent login", "requires-recent-login")
+    private val REQUIRES_RECENT_LOGIN_KEYWORDS =
+        listOf("requires recent login", "requires-recent-login")
 
     // User-friendly error messages
     private const val INVALID_CREDENTIALS_MSG = "Invalid email or password"
@@ -92,7 +92,8 @@ class AuthenticationRepository(
       INVALID_EMAIL_KEYWORDS.any { errorMessage.contains(it) } -> INVALID_EMAIL_MSG
       TOO_MANY_REQUESTS_KEYWORDS.any { errorMessage.contains(it) } -> TOO_MANY_REQUESTS_MSG
       EMAIL_IN_USE_KEYWORDS.any { errorMessage.contains(it) } -> EMAIL_IN_USE_MSG
-      REQUIRES_RECENT_LOGIN_KEYWORDS.any { errorMessage.contains(it) } -> REAUTHENTICATION_REQUIRED_MSG
+      REQUIRES_RECENT_LOGIN_KEYWORDS.any { errorMessage.contains(it) } ->
+          REAUTHENTICATION_REQUIRED_MSG
       else -> exception.localizedMessage ?: defaultMessage
     }
   }
@@ -323,11 +324,11 @@ class AuthenticationRepository(
   suspend fun updateEmail(newEmail: String, currentPassword: String): Result<Unit> {
     return try {
       // Step 1: Verify user is logged in
-      val currentUser = auth.currentUser
-          ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+      val currentUser =
+          auth.currentUser ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
 
-      val currentEmail = currentUser.email
-          ?: return Result.failure(IllegalStateException(ERROR_NO_EMAIL_ADDRESS))
+      val currentEmail =
+          currentUser.email ?: return Result.failure(IllegalStateException(ERROR_NO_EMAIL_ADDRESS))
 
       // Step 2: Check if the new email is different from the current one
       if (newEmail == currentEmail) {
@@ -369,8 +370,8 @@ class AuthenticationRepository(
   /**
    * Synchronizes the user's email from Firebase Auth to Firestore.
    *
-   * This should be called when the user returns to the app to ensure that
-   * if they verified a new email address, it gets updated in Firestore.
+   * This should be called when the user returns to the app to ensure that if they verified a new
+   * email address, it gets updated in Firestore.
    *
    * Only updates Firestore if the emails differ to avoid unnecessary writes.
    *
@@ -378,11 +379,11 @@ class AuthenticationRepository(
    */
   suspend fun syncEmailToFirestore(): Result<String> {
     return try {
-      val currentUser = auth.currentUser
-          ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+      val currentUser =
+          auth.currentUser ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
 
-      val authEmail = currentUser.email
-          ?: return Result.failure(IllegalStateException(ERROR_NO_EMAIL_ADDRESS))
+      val authEmail =
+          currentUser.email ?: return Result.failure(IllegalStateException(ERROR_NO_EMAIL_ADDRESS))
 
       // Only update Firestore if the emails differ
       try {

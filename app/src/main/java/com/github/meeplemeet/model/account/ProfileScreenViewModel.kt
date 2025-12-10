@@ -1,6 +1,7 @@
 package com.github.meeplemeet.model.account
 
 // Claude Code generated the documentation
+// AI was used for this file
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
@@ -41,7 +42,6 @@ class ProfileScreenViewModel(
 
   // Public read-only state flow that UI components can observe for state changes
   val uiState: StateFlow<AuthUIState> = _uiState
-
 
   /**
    * Changes the account profile picture
@@ -148,15 +148,16 @@ class ProfileScreenViewModel(
             // Step 3: Update UI state - success with message
             _uiState.update {
               it.copy(
-                isLoading = false,
-                errorMsg = null,
-                successMsg = EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE.format(newEmail)
-              )
+                  isLoading = false,
+                  errorMsg = null,
+                  successMsg = EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE.format(newEmail))
             }
           }
           .onFailure { error ->
             // Firebase Auth failed (wrong password, email in use, etc.)
-            _uiState.update { it.copy(isLoading = false, errorMsg = error.localizedMessage, successMsg = null) }
+            _uiState.update {
+              it.copy(isLoading = false, errorMsg = error.localizedMessage, successMsg = null)
+            }
           }
     }
   }
@@ -164,14 +165,15 @@ class ProfileScreenViewModel(
   /**
    * Synchronizes the email from Firebase Auth to Firestore.
    *
-   * This should be called when navigating back to check if the user has verified
-   * their new email address, and if so, update it in Firestore.
+   * This should be called when navigating back to check if the user has verified their new email
+   * address, and if so, update it in Firestore.
    */
   fun syncEmail() {
     viewModelScope.launch {
-      authRepository.syncEmailToFirestore()
-          .onSuccess { /* Email synced successfully, no need to show message */ }
-          .onFailure { /* Silently fail - this is a background sync */ }
+      authRepository
+          .syncEmailToFirestore()
+          .onSuccess { /* Email synced successfully, no need to show message */}
+          .onFailure { /* Silently fail - this is a background sync */}
     }
   }
 

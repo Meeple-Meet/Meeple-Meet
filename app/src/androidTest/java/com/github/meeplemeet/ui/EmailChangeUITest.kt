@@ -1,4 +1,5 @@
 @file:Suppress("TestFunctionName")
+// AI was used for this file
 
 package com.github.meeplemeet.ui
 
@@ -26,8 +27,8 @@ import org.junit.Test
  * - Error message display
  * - UI component existence and interactions
  *
- * Note: These are UI-only tests. Integration tests for actual email change
- * functionality are in EmailChangeIntegrationTest.kt
+ * Note: These are UI-only tests. Integration tests for actual email change functionality are in
+ * EmailChangeIntegrationTest.kt
  */
 class EmailChangeUITest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
@@ -278,4 +279,3 @@ class EmailChangeUITest : FirestoreTests() {
     }
   }
 }
-

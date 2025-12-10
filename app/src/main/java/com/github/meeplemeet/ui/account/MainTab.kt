@@ -1,4 +1,5 @@
 package com.github.meeplemeet.ui.account
+// AI was used for this file
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -184,14 +185,14 @@ object NotificationsSectionTestTags {
 }
 
 object EmailSectionTestTags {
-    const val CHANGE_EMAIL_TITLE = "change_email_title"
-    const val NEW_EMAIL_INPUT = "new_email_input"
-    const val NEW_EMAIL_ERROR_LABEL = "new_email_error_label"
-    const val NEW_EMAIL_VALID_LABEL = "new_email_valid_label"
-    const val CONFIRM_EMAIL_INPUT = "confirm_email_input"
-    const val EMAILS_DONT_MATCH_LABEL = "emails_dont_match_label"
-    const val PASSWORD_INPUT = "password_input"
-    const val CHANGE_EMAIL_BUTTON = "change_email_button"
+  const val CHANGE_EMAIL_TITLE = "change_email_title"
+  const val NEW_EMAIL_INPUT = "new_email_input"
+  const val NEW_EMAIL_ERROR_LABEL = "new_email_error_label"
+  const val NEW_EMAIL_VALID_LABEL = "new_email_valid_label"
+  const val CONFIRM_EMAIL_INPUT = "confirm_email_input"
+  const val EMAILS_DONT_MATCH_LABEL = "emails_dont_match_label"
+  const val PASSWORD_INPUT = "password_input"
+  const val CHANGE_EMAIL_BUTTON = "change_email_button"
 }
 
 object PreferencesSectionTestTags {
@@ -292,16 +293,16 @@ object MainTabUi {
     const val OPT_NONE = "Accept notifications from no one."
   }
 
-    object EmailSection {
-        const val CHANGE_EMAIL_TITLE = "Change your email"
-        const val NEW_EMAIL_INPUT_FIELD = "New Email"
-        const val CONFIRM_EMAIL_INPUT_FIELD = "Confirm Email"
-        const val NEW_EMAIL_INVALID_MSG = "Invalid Email Format"
-        const val NEW_EMAIL_VALID_MSG = "Valid Email"
-        const val EMAILS_DONT_MATCH_MSG = "Emails do not match"
-        const val PASSWORD_INPUT_FIELD = "Password"
-        const val CHANGE_EMAIL_BUTTON_TEXT = "Change Email"
-    }
+  object EmailSection {
+    const val CHANGE_EMAIL_TITLE = "Change your email"
+    const val NEW_EMAIL_INPUT_FIELD = "New Email"
+    const val CONFIRM_EMAIL_INPUT_FIELD = "Confirm Email"
+    const val NEW_EMAIL_INVALID_MSG = "Invalid Email Format"
+    const val NEW_EMAIL_VALID_MSG = "Valid Email"
+    const val EMAILS_DONT_MATCH_MSG = "Emails do not match"
+    const val PASSWORD_INPUT_FIELD = "Password"
+    const val CHANGE_EMAIL_BUTTON_TEXT = "Change Email"
+  }
 
   object SettingRows {
     const val HEADER = "Settings"
@@ -408,15 +409,13 @@ fun MainTab(
           EmailSection(
               email = email,
               isVerified = isVerified,
-              onEmailChange = { /* Email field is disabled, this is not used */ },
+              onEmailChange = { /* Email field is disabled, this is not used */},
               onFocusChanged = { focused -> onInputFocusChanged(focused) },
               onSendVerification = {
                 viewModel.sendVerificationEmail()
                 viewModel.refreshEmailVerificationStatus()
               },
-              onChangeEmail = { newEmail, password ->
-                viewModel.changeEmail(newEmail, password)
-              },
+              onChangeEmail = { newEmail, password -> viewModel.changeEmail(newEmail, password) },
               isLoading = uiState.isLoading,
               errorMsg = uiState.errorMsg,
               successMsg = uiState.successMsg)
@@ -1179,7 +1178,8 @@ fun EmailSection(
   val newEmailError = showNewEmailErrors && newEmail.isNotBlank() && !isValidEmail(newEmail)
   val newEmailValid = showNewEmailErrors && newEmail.isNotBlank() && isValidEmail(newEmail)
   val emailsMatch = newEmail.isNotBlank() && confirmEmail.isNotBlank() && newEmail == confirmEmail
-  val emailsDontMatch = showConfirmEmailErrors && confirmEmail.isNotBlank() && newEmail != confirmEmail
+  val emailsDontMatch =
+      showConfirmEmailErrors && confirmEmail.isNotBlank() && newEmail != confirmEmail
   val isChangeEmailEnabled = password.isNotBlank() && newEmailValid && emailsMatch
 
   Box(modifier = Modifier.fillMaxWidth().testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
@@ -1265,145 +1265,145 @@ fun EmailSection(
             }
       }
 
-        Spacer(modifier = Modifier.height(Dimensions.Spacing.huge))
+      Spacer(modifier = Modifier.height(Dimensions.Spacing.huge))
 
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
-            thickness = Dimensions.DividerThickness.standard,
-            color = AppColors.textIcons.copy(alpha = 0.5f))
+      HorizontalDivider(
+          modifier = Modifier.fillMaxWidth(),
+          thickness = Dimensions.DividerThickness.standard,
+          color = AppColors.textIcons.copy(alpha = 0.5f))
 
-        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+      Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        Text(
-            text = MainTabUi.EmailSection.CHANGE_EMAIL_TITLE,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth().testTag(EmailSectionTestTags.CHANGE_EMAIL_TITLE))
+      Text(
+          text = MainTabUi.EmailSection.CHANGE_EMAIL_TITLE,
+          style = MaterialTheme.typography.titleMedium,
+          textAlign = TextAlign.Start,
+          modifier = Modifier.fillMaxWidth().testTag(EmailSectionTestTags.CHANGE_EMAIL_TITLE))
 
-        FocusableInputField(
-            label = { Text(text = MainTabUi.EmailSection.NEW_EMAIL_INPUT_FIELD) },
-            value = newEmail,
-            onValueChange = { new ->
-              newEmail = new
-              showNewEmailErrors = new.isNotBlank()
-            },
-            isError = newEmailError,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimensions.Padding.medium)
-                    .testTag(EmailSectionTestTags.NEW_EMAIL_INPUT),
-            singleLine = true)
+      FocusableInputField(
+          label = { Text(text = MainTabUi.EmailSection.NEW_EMAIL_INPUT_FIELD) },
+          value = newEmail,
+          onValueChange = { new ->
+            newEmail = new
+            showNewEmailErrors = new.isNotBlank()
+          },
+          isError = newEmailError,
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(top = Dimensions.Padding.medium)
+                  .testTag(EmailSectionTestTags.NEW_EMAIL_INPUT),
+          singleLine = true)
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small)) {
-          if (newEmailError) {
-            Text(
-                text = MainTabUi.EmailSection.NEW_EMAIL_INVALID_MSG,
-                color = AppColors.negative,
-                style = MaterialTheme.typography.bodySmall,
-                modifier =
-                    Modifier.padding(start = Dimensions.Padding.extraLarge)
-                        .testTag(EmailSectionTestTags.NEW_EMAIL_ERROR_LABEL))
-          } else if (newEmailValid) {
-            Text(
-                text = MainTabUi.EmailSection.NEW_EMAIL_VALID_MSG,
-                color = AppColors.affirmative,
-                style = MaterialTheme.typography.bodySmall,
-                modifier =
-                    Modifier.padding(start = Dimensions.Padding.extraLarge)
-                        .testTag(EmailSectionTestTags.NEW_EMAIL_VALID_LABEL))
-          }
-        }
-
-        FocusableInputField(
-            label = { Text(text = MainTabUi.EmailSection.CONFIRM_EMAIL_INPUT_FIELD) },
-            value = confirmEmail,
-            onValueChange = { new ->
-              confirmEmail = new
-              showConfirmEmailErrors = new.isNotBlank()
-            },
-            isError = emailsDontMatch,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimensions.Padding.medium)
-                    .testTag(EmailSectionTestTags.CONFIRM_EMAIL_INPUT),
-            singleLine = true)
-
-        Row(modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small)) {
-          if (emailsDontMatch) {
-            Text(
-                text = MainTabUi.EmailSection.EMAILS_DONT_MATCH_MSG,
-                color = AppColors.negative,
-                style = MaterialTheme.typography.bodySmall,
-                modifier =
-                    Modifier.padding(start = Dimensions.Padding.extraLarge)
-                        .testTag(EmailSectionTestTags.EMAILS_DONT_MATCH_LABEL))
-          }
-        }
-
-        FocusableInputField(
-            label = { Text(text = MainTabUi.EmailSection.PASSWORD_INPUT_FIELD) },
-            value = password,
-            onValueChange = { password = it },
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-              IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                Icon(
-                    imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                    contentDescription = if (passwordVisible) "Hide password" else "Show password")
-              }
-            },
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimensions.Padding.medium)
-                    .testTag(EmailSectionTestTags.PASSWORD_INPUT),
-            singleLine = true)
-
-        Button(
-            onClick = {
-              if (!isLoading) {
-                onChangeEmail(newEmail, password)
-                // Clear password after submission for security
-                password = ""
-              }
-            },
-            enabled = isChangeEmailEnabled && !isLoading,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimensions.Padding.medium)
-                    .testTag(EmailSectionTestTags.CHANGE_EMAIL_BUTTON),
-            shape = ButtonDefaults.shape,
-            colors = ButtonDefaults.buttonColors()) {
-              if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = AppColors.textIcons,
-                    strokeWidth = 2.dp)
-              } else {
-                Text(text = MainTabUi.EmailSection.CHANGE_EMAIL_BUTTON_TEXT)
-              }
-            }
-
-        // Show error message if email change fails
-        errorMsg?.let { error ->
+      Row(modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small)) {
+        if (newEmailError) {
           Text(
-              text = error,
+              text = MainTabUi.EmailSection.NEW_EMAIL_INVALID_MSG,
               color = AppColors.negative,
               style = MaterialTheme.typography.bodySmall,
               modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(top = Dimensions.Padding.small, start = Dimensions.Padding.medium))
-        }
-
-        // Show success message after successful email change
-        successMsg?.let { success ->
+                  Modifier.padding(start = Dimensions.Padding.extraLarge)
+                      .testTag(EmailSectionTestTags.NEW_EMAIL_ERROR_LABEL))
+        } else if (newEmailValid) {
           Text(
-              text = success,
+              text = MainTabUi.EmailSection.NEW_EMAIL_VALID_MSG,
               color = AppColors.affirmative,
               style = MaterialTheme.typography.bodySmall,
               modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(top = Dimensions.Padding.small, start = Dimensions.Padding.medium))
+                  Modifier.padding(start = Dimensions.Padding.extraLarge)
+                      .testTag(EmailSectionTestTags.NEW_EMAIL_VALID_LABEL))
         }
+      }
+
+      FocusableInputField(
+          label = { Text(text = MainTabUi.EmailSection.CONFIRM_EMAIL_INPUT_FIELD) },
+          value = confirmEmail,
+          onValueChange = { new ->
+            confirmEmail = new
+            showConfirmEmailErrors = new.isNotBlank()
+          },
+          isError = emailsDontMatch,
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(top = Dimensions.Padding.medium)
+                  .testTag(EmailSectionTestTags.CONFIRM_EMAIL_INPUT),
+          singleLine = true)
+
+      Row(modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small)) {
+        if (emailsDontMatch) {
+          Text(
+              text = MainTabUi.EmailSection.EMAILS_DONT_MATCH_MSG,
+              color = AppColors.negative,
+              style = MaterialTheme.typography.bodySmall,
+              modifier =
+                  Modifier.padding(start = Dimensions.Padding.extraLarge)
+                      .testTag(EmailSectionTestTags.EMAILS_DONT_MATCH_LABEL))
+        }
+      }
+
+      FocusableInputField(
+          label = { Text(text = MainTabUi.EmailSection.PASSWORD_INPUT_FIELD) },
+          value = password,
+          onValueChange = { password = it },
+          visualTransformation =
+              if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+          trailingIcon = {
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+              Icon(
+                  imageVector =
+                      if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                  contentDescription = if (passwordVisible) "Hide password" else "Show password")
+            }
+          },
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(top = Dimensions.Padding.medium)
+                  .testTag(EmailSectionTestTags.PASSWORD_INPUT),
+          singleLine = true)
+
+      Button(
+          onClick = {
+            if (!isLoading) {
+              onChangeEmail(newEmail, password)
+              // Clear password after submission for security
+              password = ""
+            }
+          },
+          enabled = isChangeEmailEnabled && !isLoading,
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(top = Dimensions.Padding.medium)
+                  .testTag(EmailSectionTestTags.CHANGE_EMAIL_BUTTON),
+          shape = ButtonDefaults.shape,
+          colors = ButtonDefaults.buttonColors()) {
+            if (isLoading) {
+              CircularProgressIndicator(
+                  modifier = Modifier.size(20.dp), color = AppColors.textIcons, strokeWidth = 2.dp)
+            } else {
+              Text(text = MainTabUi.EmailSection.CHANGE_EMAIL_BUTTON_TEXT)
+            }
+          }
+
+      // Show error message if email change fails
+      errorMsg?.let { error ->
+        Text(
+            text = error,
+            color = AppColors.negative,
+            style = MaterialTheme.typography.bodySmall,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = Dimensions.Padding.small, start = Dimensions.Padding.medium))
+      }
+
+      // Show success message after successful email change
+      successMsg?.let { success ->
+        Text(
+            text = success,
+            color = AppColors.affirmative,
+            style = MaterialTheme.typography.bodySmall,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = Dimensions.Padding.small, start = Dimensions.Padding.medium))
+      }
     }
   }
 }

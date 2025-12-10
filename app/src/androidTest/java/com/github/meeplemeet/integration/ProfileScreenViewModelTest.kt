@@ -1,4 +1,5 @@
 package com.github.meeplemeet.integration
+// AI was used for this file
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
@@ -86,10 +87,7 @@ class ProfileScreenViewModelTest : FirestoreTests() {
 
     // Verify Firestore was synced back to Firebase Auth email
     val accountAfter = accountRepository.getAccount(testUserId!!)
-    assertTrue(
-        "Firestore should be synced to Firebase Auth email",
-        accountAfter.email == testEmail
-    )
+    assertTrue("Firestore should be synced to Firebase Auth email", accountAfter.email == testEmail)
   }
 
   @Test
@@ -102,15 +100,16 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     var capturedIsLoading: Boolean? = null
 
     // Start collecting UI state in background
-    val job = CoroutineScope(Dispatchers.Default).launch {
-      viewModel.uiState.collect { state ->
-        if (state.successMsg != null && !state.isLoading) {
-          capturedSuccessMsg = state.successMsg
-          capturedIsLoading = state.isLoading
-          latch.countDown()
+    val job =
+        CoroutineScope(Dispatchers.Default).launch {
+          viewModel.uiState.collect { state ->
+            if (state.successMsg != null && !state.isLoading) {
+              capturedSuccessMsg = state.successMsg
+              capturedIsLoading = state.isLoading
+              latch.countDown()
+            }
+          }
         }
-      }
-    }
 
     // Call changeEmail
     viewModel.changeEmail(newEmail, testPassword)
@@ -123,8 +122,7 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertNotNull("Success message should be set", capturedSuccessMsg)
     assertTrue(
         "Success message should mention verification",
-        capturedSuccessMsg?.contains("Verification") == true
-    )
+        capturedSuccessMsg?.contains("Verification") == true)
     assertTrue("Loading should be false after completion", capturedIsLoading == false)
   }
 
@@ -138,15 +136,16 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     var capturedIsLoading: Boolean? = null
 
     // Start collecting UI state in background
-    val job = CoroutineScope(Dispatchers.Default).launch {
-      viewModel.uiState.collect { state ->
-        if (state.errorMsg != null && !state.isLoading) {
-          capturedErrorMsg = state.errorMsg
-          capturedIsLoading = state.isLoading
-          latch.countDown()
+    val job =
+        CoroutineScope(Dispatchers.Default).launch {
+          viewModel.uiState.collect { state ->
+            if (state.errorMsg != null && !state.isLoading) {
+              capturedErrorMsg = state.errorMsg
+              capturedIsLoading = state.isLoading
+              latch.countDown()
+            }
+          }
         }
-      }
-    }
 
     // Call changeEmail with wrong password
     viewModel.changeEmail(newEmail, "WrongPassword123!")
@@ -159,8 +158,7 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertNotNull("Error message should be set", capturedErrorMsg)
     assertTrue(
         "Error message should mention password",
-        capturedErrorMsg?.lowercase()?.contains("password") == true
-    )
+        capturedErrorMsg?.lowercase()?.contains("password") == true)
     assertTrue("Loading should be false after error", capturedIsLoading == false)
   }
 
@@ -174,15 +172,16 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     var capturedErrorMsg: String? = null
 
     // Start collecting UI state in background
-    val job = CoroutineScope(Dispatchers.Default).launch {
-      viewModel.uiState.collect { state ->
-        if ((state.successMsg != null || state.errorMsg != null) && !state.isLoading) {
-          capturedSuccessMsg = state.successMsg
-          capturedErrorMsg = state.errorMsg
-          latch.countDown()
+    val job =
+        CoroutineScope(Dispatchers.Default).launch {
+          viewModel.uiState.collect { state ->
+            if ((state.successMsg != null || state.errorMsg != null) && !state.isLoading) {
+              capturedSuccessMsg = state.successMsg
+              capturedErrorMsg = state.errorMsg
+              latch.countDown()
+            }
+          }
         }
-      }
-    }
 
     // Start first operation
     viewModel.changeEmail(newEmail, testPassword)
@@ -199,4 +198,3 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertNotNull("Should have a result", capturedSuccessMsg ?: capturedErrorMsg)
   }
 }
-
