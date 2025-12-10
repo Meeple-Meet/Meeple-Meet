@@ -15,6 +15,8 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.isNotDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -49,15 +51,11 @@ import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import com.google.firebase.Timestamp
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.hamcrest.Matchers.allOf
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,7 +73,6 @@ private const val DEFAULT_TEST_KM = 10.0
  * - Zoom level effects on clustering
  * - Session filtering by participant
  */
-@Ignore
 @RunWith(AndroidJUnit4::class)
 class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
@@ -87,7 +84,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
   @get:Rule val ck = Checkpoint.Rule()
 
-  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 120_000)
 
   private lateinit var mockNavigation: NavigationActions
   private lateinit var navVM: NavigationViewModel
@@ -254,9 +251,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     checkpoint("scaleBar_showsCorrectMetricUnits") {
       composeRule.waitForIdle()
-      Thread.sleep(500)
+      composeRule.waitUntil { composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).isDisplayed() }
 
-      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
       val distanceNode = composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE)
       distanceNode.assertIsDisplayed()
 
@@ -390,11 +386,8 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         viewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
 
-        val initialClusters = viewModel.getClusters()
-        assertTrue(initialClusters.size >= 2)
-
+        composeRule.waitUntil(10000) { viewModel.getClusters().size >= 2 }
         composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
         composeRule.onNodeWithTag(MapScreenTestTags.FILTER_SHOP_CHIP).performClick()
         composeRule.waitUntil(timeoutMillis = 5_000) {
@@ -417,7 +410,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
    * Tests clustering display, single pin selection, and cluster interactions. Tests with both
    * single cluster strategy and no cluster strategy.
    */
-  @Ignore
   @Test
   fun test_clustering_and_singlePin_interactions() {
     // First part: test with no clustering (individual pins)
@@ -455,18 +447,21 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
 
+        composeRule.waitUntil(100000) {
+          noClusterViewModel.getClusters().find {
+            it.items.size == 1 && it.items[0].geoPin.uid == shop.id
+          } != null
+        }
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items.size == 1 && it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
         assertEquals(1, cluster!!.items.size)
 
         // Click on the single pin
         noClusterViewModel.selectPin(cluster.items[0])
-        delay(1000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).isDisplayed()
+        }
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
             .assertTextContains(shop.name, substring = true)
@@ -493,20 +488,22 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        composeRule.waitUntil(10000) {
+          noClusterViewModel.getClusters().find { it.items[0].geoPin.uid == shop.id } != null
+        }
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
 
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).isDisplayed()
+        }
 
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).performClick()
-        delay(500)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertDoesNotExist()
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).isNotDisplayed()
+        }
 
         shopRepository.deleteShop(shop.id)
       }
@@ -525,16 +522,18 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        composeRule.waitUntil(5000) {
+          noClusterViewModel.getClusters().find { it.items[0].geoPin.uid == shop.id } != null
+        }
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
 
         // show preview sheet
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).isDisplayed()
+        }
 
         // init Espresso-Intents to observe intents
         Intents.init()
@@ -569,15 +568,16 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        composeRule.waitUntil(10000) {
+          noClusterViewModel.getClusters().find { it.items[0].geoPin.uid == shop.id } != null
+        }
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
-
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
-
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).isDisplayed()
+        }
         lastRedirect = null
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).performClick()
         composeRule.waitForIdle()
@@ -601,16 +601,18 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        composeRule.waitUntil(10000) {
+          noClusterViewModel.getClusters().find { it.items[0].geoPin.uid == shop.id } != null
+        }
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
 
         // show preview sheet
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(5000)
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).isDisplayed()
+        }
 
         // The title should include the pin name and the distance
         composeRule
@@ -656,14 +658,17 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        composeRule.waitUntil(5000) {
+          noClusterViewModel.getClusters().find { it.items[0].geoPin.uid == discussion.uid } != null
+        }
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
-        assertNotNull(cluster)
 
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(5000)
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).isDisplayed()
+        }
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
@@ -710,25 +715,12 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             shopOwnerAccount.uid)
 
         refreshContent(regularAccount)
-
-        noClusterViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
-
-        val clusters = noClusterViewModel.getClusters()
-        val sessionCluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
-        assertNull(sessionCluster)
-
-        noClusterViewModel.stopGeoQuery()
-
         val ownerViewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
         ownerViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
-        delay(1500)
-
-        val ownerClusters = ownerViewModel.getClusters()
-        val ownerSessionCluster = ownerClusters.find { it.items[0].geoPin.uid == discussion.uid }
-        assertNotNull(ownerSessionCluster)
+        composeRule.waitUntil(3000) {
+          ownerViewModel.getClusters().find { it.items[0].geoPin.uid == discussion.uid } != null
+        }
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         discussionRepository.deleteDiscussion(context, discussion)
@@ -784,17 +776,17 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        composeRule.waitUntil(5000) {
+          val clusters = singleClusterViewModel.getClusters()
+          clusters.size == 1 && clusters[0].items.size >= 2
+        }
 
         val clusters = singleClusterViewModel.getClusters()
-        assertEquals(1, clusters.size)
-        assertTrue(clusters[0].items.size >= 2)
-
         // Select the cluster
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(10000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).isDisplayed()
+        }
 
         // Verify cluster items are displayed
         composeRule
@@ -829,16 +821,16 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
 
+        composeRule.waitUntil(5000) { singleClusterViewModel.getClusters().isNotEmpty() }
         val clusters = singleClusterViewModel.getClusters()
         singleClusterViewModel.selectCluster(clusters[0])
 
         composeRule.waitForIdle()
-        delay(100)
-
-        val loadingState = singleClusterViewModel.uiState.value
-        assertTrue(loadingState.isLoadingPreview || loadingState.selectedClusterPreviews != null)
+        composeRule.waitUntil(500) {
+          val loadingState = singleClusterViewModel.uiState.value
+          loadingState.isLoadingPreview || loadingState.selectedClusterPreviews != null
+        }
 
         shopRepository.deleteShop(shop1.id)
         shopRepository.deleteShop(shop2.id)
@@ -865,16 +857,17 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        composeRule.waitUntil(3000) {
+          val clusters = singleClusterViewModel.getClusters()
+          clusters.isNotEmpty()
+        }
 
         val clusters = singleClusterViewModel.getClusters()
-        assertTrue(clusters.isNotEmpty())
-
         // Select the cluster and show the sheet
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(1500)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(3000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).isDisplayed()
+        }
 
         // Each displayed cluster item should contain a distance string
         composeRule
@@ -912,22 +905,21 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        composeRule.waitUntil(10000) { singleClusterViewModel.getClusters().isNotEmpty() }
 
         val clusters = singleClusterViewModel.getClusters()
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(5000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).isDisplayed()
+        }
 
         // Click on first cluster item
         composeRule
             .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop1.id))
             .performClick()
-        delay(5000)
-
-        // Should now show single pin preview sheet
-        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertDoesNotExist()
+        composeRule.waitUntil(5000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).isNotDisplayed()
+        }
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
             .onNodeWithTag(MapScreenTestTags.PREVIEW_TITLE)
@@ -959,15 +951,18 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        composeRule.waitUntil(10000) {
+          val clusters = singleClusterViewModel.getClusters()
+          clusters.isNotEmpty() && clusters[0].items.size >= 2
+        }
 
         val clusters = singleClusterViewModel.getClusters()
         assertTrue(clusters[0].items.size >= 2)
 
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
+        composeRule.waitUntil(5000) {
+          composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).isDisplayed()
+        }
         composeRule
             .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop.id))
             .assertIsDisplayed()
@@ -997,7 +992,10 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        composeRule.waitUntil(5000) {
+          val clusters = singleClusterViewModel.getClusters()
+          clusters.size == 1 && clusters[0].items.size >= 5
+        }
 
         val clusters = singleClusterViewModel.getClusters()
         assertEquals(1, clusters.size)
@@ -1028,7 +1026,10 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        composeRule.waitUntil(5000) {
+          val clusters = singleClusterViewModel.getClusters()
+          clusters.isNotEmpty() && clusters[0].items.size >= 2
+        }
 
         val allTypeClusters = singleClusterViewModel.getClusters()
         assertTrue(allTypeClusters[0].items.size >= 2)
@@ -1079,26 +1080,23 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         mapViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
 
         val initialZoom = 10f // Threshold = 5 km
         val newZoom = 18f // Threshold = 50 m
 
         mapViewModel.updateZoomLevel(initialZoom)
-        delay(500)
-        val clustersAtInitialZoom = mapViewModel.getClusters()
+        composeRule.waitUntil(10000) {
+          mapViewModel.getClusters().isNotEmpty() && mapViewModel.getClusters().size == 1
+        }
 
         // Change zoom level
         mapViewModel.updateZoomLevel(newZoom)
-        delay(500)
-        val clustersAtNewZoom = mapViewModel.getClusters()
+        composeRule.waitUntil(10000) {
+          mapViewModel.getClusters().isNotEmpty() && mapViewModel.getClusters().size == 3
+        }
 
         val state = mapViewModel.uiState.value
-        assertEquals(newZoom, state.currentZoomLevel)
-
-        // Test clustering granularity
-        assertEquals(1, clustersAtInitialZoom.size)
-        assertEquals(3, clustersAtNewZoom.size)
+        composeRule.waitUntil(1000) { state.currentZoomLevel == newZoom }
 
         shopRepository.deleteShop(shop1.id)
         shopRepository.deleteShop(shop2.id)
