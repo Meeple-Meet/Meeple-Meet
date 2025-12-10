@@ -401,12 +401,13 @@ fun RequiredInfoSection(
     viewModel: ShopSearchViewModel,
     owner: Account
 ) {
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_SHOP).padding(bottom = Dimensions.Padding.small)) {
+  Box(Modifier.padding(bottom = Dimensions.Padding.small)) {
     LabeledField(
         label = ShopFormUi.Strings.SHOP_LABEL,
         placeholder = ShopFormUi.Strings.SHOP_PLACEHOLDER,
         value = shop.name,
-        onValueChange = actions::onNameChange)
+        onValueChange = actions::onNameChange,
+        modifier = Modifier.testTag(ShopFormTestTags.FIELD_SHOP))
   }
 
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS).padding(bottom = Dimensions.Padding.small)) {
@@ -423,7 +424,7 @@ fun RequiredInfoSection(
     Text(text = "Contact Info", style = MaterialTheme.typography.titleMedium)
   }
 
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL).padding(bottom = Dimensions.Padding.small)) {
+  Box(Modifier.padding(bottom = Dimensions.Padding.small)) {
     LabeledField(
         label = ShopFormUi.Strings.EMAIL_LABEL,
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
@@ -435,7 +436,8 @@ fun RequiredInfoSection(
         },
         value = shop.email,
         onValueChange = actions::onEmailChange,
-        keyboardType = KeyboardType.Email)
+        keyboardType = KeyboardType.Email,
+        modifier = Modifier.testTag(ShopFormTestTags.FIELD_EMAIL))
   }
 
   val showEmailError = shop.email.isNotEmpty() && !isValidEmail(shop.email)
@@ -448,7 +450,7 @@ fun RequiredInfoSection(
 
   Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
     Box(
-        Modifier.testTag(ShopFormTestTags.FIELD_PHONE)
+        Modifier
             .weight(1f)
             .padding(end = Dimensions.Padding.medium)) {
           LabeledField(
@@ -462,10 +464,11 @@ fun RequiredInfoSection(
                     contentDescription = null)
               },
               onValueChange = actions::onPhoneChange,
-              keyboardType = KeyboardType.Phone)
+              keyboardType = KeyboardType.Phone,
+              modifier = Modifier.testTag(ShopFormTestTags.FIELD_PHONE))
         }
 
-    Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK).weight(1f)) {
+    Box(Modifier.weight(1f)) {
       LabeledField(
           label = ShopFormUi.Strings.LINK_LABEL,
           placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
@@ -477,6 +480,7 @@ fun RequiredInfoSection(
                 contentDescription = null)
           },
           onValueChange = actions::onWebsiteChange,
+          modifier = Modifier.testTag(ShopFormTestTags.FIELD_LINK),
           keyboardType = KeyboardType.Uri)
     }
   }
@@ -1063,8 +1067,9 @@ fun GameItemImage(
             if (editable) {
               IconButton(
                   onClick = { onDelete(game) },
-                  modifier = Modifier.offset(x = 12.dp).padding(0.dp) // Shift icons to the right
-                  ) {
+                  modifier =
+                      Modifier.offset(x = 12.dp).padding(0.dp) // Shift icons to the right
+                          .testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
                     Icon(
                         Icons.Default.DeleteOutline,
                         contentDescription = null,
@@ -1076,7 +1081,7 @@ fun GameItemImage(
                   modifier =
                       Modifier.offset(x = 12.dp, y = (-10).dp)
                           .padding(0.dp) // Shift icons to the right
-                  ) {
+                          .testTag("${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
                     Icon(Icons.Default.Edit, contentDescription = null, tint = AppColors.textIcons)
                   }
             }

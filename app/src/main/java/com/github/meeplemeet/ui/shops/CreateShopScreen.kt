@@ -58,6 +58,7 @@ object CreateShopScreenTestTags {
   // Reuse shared section suffixes
   const val SECTION_HEADER_SUFFIX = ShopFormTestTags.SECTION_HEADER_SUFFIX
   const val SECTION_TOGGLE_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_SUFFIX
+  const val SECTION_TOGGLE_ICON_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_ICON_SUFFIX
   const val SECTION_CONTENT_SUFFIX = ShopFormTestTags.SECTION_CONTENT_SUFFIX
 
   const val SECTION_REQUIRED = "section_required"

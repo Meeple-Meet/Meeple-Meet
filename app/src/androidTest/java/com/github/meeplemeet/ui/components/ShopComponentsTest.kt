@@ -372,7 +372,7 @@ class ShopComponentsTest : FirestoreTests() {
             count = 1,
             clickable = true,
             onClick = { clicked++ },
-            hasDeleteButton = true,
+            showButtons = true,
             onDelete = { deleted = it })
       }
     }
@@ -416,7 +416,7 @@ class ShopComponentsTest : FirestoreTests() {
         // Stage 0: list, no delete
         0 ->
             GameListSection(
-                games = input, clickableGames = false, title = "Inventory", hasDeleteButton = false)
+                games = input, clickableGames = false, title = "Inventory", showButtons = true,)
 
         // Stage 1: list, delete buttons enabled
         // PARENT OWNS THE LIST and mutates it when onDelete fires
@@ -426,7 +426,7 @@ class ShopComponentsTest : FirestoreTests() {
               games = source,
               clickableGames = false,
               title = "Inventory",
-              hasDeleteButton = true,
+              showButtons = true,
               onDelete = { g ->
                 removed += g.uid
                 source = source.filterNot { it.first.uid == g.uid }
@@ -439,7 +439,7 @@ class ShopComponentsTest : FirestoreTests() {
                 games = listOf(Fx.game1 to 1, Fx.game3 to 2),
                 clickableGames = true,
                 title = null,
-                hasDeleteButton = false,
+                showButtons = true,
                 onClick = { clicks += it.uid })
 
         // Stage 3: parent-driven updates (resync)
@@ -453,7 +453,7 @@ class ShopComponentsTest : FirestoreTests() {
                   games = source,
                   clickableGames = false,
                   title = "Inventory",
-                  hasDeleteButton = false)
+                  showButtons = true)
             }
       }
     }

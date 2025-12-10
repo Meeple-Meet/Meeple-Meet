@@ -371,7 +371,7 @@ fun PhotoDialogBottomBar(
                   ButtonDefaults.buttonColors(
                       containerColor = AppColors.textIcons.copy(alpha = 0.2f),
                       contentColor = AppColors.textIconsFade),
-              modifier = Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
+              modifier = Modifier.weight(1f).testTag(CommonComponentsTestTags.PHOTO_DIALOG_CAMERA_BUTTON)) {
                 Icon(
                     imageVector = Icons.Default.PhotoCamera,
                     contentDescription = "Take Photo",
@@ -389,7 +389,7 @@ fun PhotoDialogBottomBar(
                   ButtonDefaults.buttonColors(
                       containerColor = AppColors.textIcons.copy(alpha = 0.2f),
                       contentColor = AppColors.textIconsFade),
-              modifier = Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
+              modifier = Modifier.weight(1f).testTag(CommonComponentsTestTags.PHOTO_DIALOG_GALLERY_BUTTON)) {
                 Icon(
                     imageVector = Icons.Default.Image,
                     contentDescription = "Choose from Gallery",
