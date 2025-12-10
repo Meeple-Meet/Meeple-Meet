@@ -1,12 +1,13 @@
-package com.github.meeplemeet.model.shops
+package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
-import io.mockk.every
+import com.github.meeplemeet.model.shops.EditShopViewModel
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.mockk
-import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,13 +16,12 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class EditShopViewModelTest {
+class EditShopViewModelTest : FirestoreTests() {
 
   private val testDispatcher = StandardTestDispatcher()
   private lateinit var viewModel: EditShopViewModel
@@ -31,14 +31,6 @@ class EditShopViewModelTest {
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     repository = mockk(relaxed = true)
-
-    // Mock RepositoryProvider to avoid Firebase initialization
-    mockkObject(RepositoryProvider)
-    every { RepositoryProvider.shops } returns repository
-    every { RepositoryProvider.games } returns mockk(relaxed = true)
-    every { RepositoryProvider.locations } returns mockk(relaxed = true)
-    every { RepositoryProvider.accounts } returns mockk(relaxed = true)
-    every { RepositoryProvider.images } returns mockk(relaxed = true)
 
     // Clear offline mode state
     OfflineModeManager.clearOfflineMode()
@@ -92,24 +84,24 @@ class EditShopViewModelTest {
     // Assert
     // 1. Verify ViewModel state updated
     val currentShop = viewModel.currentShop.value
-    assertNotNull(currentShop)
-    assertEquals(newName, currentShop?.name)
-    assertEquals(newPhone, currentShop?.phone)
+    Assert.assertNotNull(currentShop)
+    Assert.assertEquals(newName, currentShop?.name)
+    Assert.assertEquals(newPhone, currentShop?.phone)
 
     // 2. Verify OfflineModeManager cache updated
     val cachedShop = OfflineModeManager.offlineModeFlow.value.shops["shop1"]?.first
-    assertNotNull(cachedShop)
-    assertEquals(newName, cachedShop?.name)
-    assertEquals(newPhone, cachedShop?.phone)
+    Assert.assertNotNull(cachedShop)
+    Assert.assertEquals(newName, cachedShop?.name)
+    Assert.assertEquals(newPhone, cachedShop?.phone)
 
     // 3. Verify changes recorded
     val changes = OfflineModeManager.offlineModeFlow.value.shops["shop1"]?.second
-    assertNotNull(changes)
-    assertEquals(newName, changes?.get("name"))
-    assertEquals(newPhone, changes?.get("phone"))
+    Assert.assertNotNull(changes)
+    Assert.assertEquals(newName, changes?.get("name"))
+    Assert.assertEquals(newPhone, changes?.get("phone"))
 
     // Verify buildChangeMap logic (only changed fields are present)
-    assertEquals(null, changes?.get("email"))
-    assertEquals(null, changes?.get("website"))
+    Assert.assertEquals(null, changes?.get("email"))
+    Assert.assertEquals(null, changes?.get("website"))
   }
 }
