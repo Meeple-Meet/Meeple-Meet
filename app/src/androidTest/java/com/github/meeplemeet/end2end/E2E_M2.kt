@@ -64,7 +64,7 @@ class E2E_M2 : FirestoreTests() {
     try {
       withTimeout(timeoutMs) {
         while (!predicate()) {
-            continue
+          continue
         }
       }
     } catch (e: TimeoutCancellationException) {
