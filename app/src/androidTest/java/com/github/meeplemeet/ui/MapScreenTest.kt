@@ -215,8 +215,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       }
     }
 
-    Thread.sleep(500)
-
     checkpoint("mapScreen_initialDisplay_showsMapAndFilterButton") {
       composeRule.waitForIdle()
 
@@ -235,8 +233,9 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     checkpoint("scaleBar_displaysOnStart") {
       composeRule.waitForIdle()
-      Thread.sleep(500)
-      composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
+      composeRule.waitUntil(1000) {
+        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).isDisplayed()
+      }
       composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE).assertIsDisplayed()
     }
 

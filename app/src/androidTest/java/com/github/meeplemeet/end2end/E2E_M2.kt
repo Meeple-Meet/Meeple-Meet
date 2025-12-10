@@ -332,7 +332,9 @@ class E2E_M2 : FirestoreTests() {
         .performClick()
     composeTestRule.waitForIdle()
 
-    Thread.sleep(5000)
+    composeTestRule.waitUntil(3000) {
+      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).isDisplayed()
+    }
 
     composeTestRule
         .onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
@@ -1025,8 +1027,6 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertIsDisplayed()
     composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertIsDisplayed()
     composeTestRule.onNodeWithText("Love it!", useUnmergedTree = true).assertIsDisplayed()
-
-    Thread.sleep(5000)
   }
 
   /** Helper function to create a user through repositories */
