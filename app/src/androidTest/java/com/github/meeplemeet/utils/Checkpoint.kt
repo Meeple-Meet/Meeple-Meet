@@ -39,9 +39,6 @@ class Checkpoint {
 
     var attempt = 0
     var lastResult: Result<Unit>? = null
-
-    // Use a new executor for each checkpoint to ensure clean state and avoid queueing issues.
-    // We use newSingleThreadExecutor so we have a dedicated thread for this attempt.
     val executor = Executors.newSingleThreadExecutor()
 
     try {
@@ -51,30 +48,24 @@ class Checkpoint {
 
         lastResult = runCatching {
           try {
-            // Wait for the result with a hard timeout
             future.get(timeout, TimeUnit.MILLISECONDS)
             Unit
           } catch (e: TimeoutException) {
-            // If we timed out, try to interrupt the thread
             future.cancel(true)
             throw e
           } catch (e: ExecutionException) {
-            // If the block threw an exception (AssertionError, etc.), unwrap it
             throw e.cause ?: e
           }
         }
 
         if (lastResult.isSuccess) break
 
-        // If it was a TimeoutException, we caught it inside runCatching as a failure.
-        // We should check if the failure was due to TimeoutException and abort retries if so.
+        // Don't retry on timeout
         if (lastResult.exceptionOrNull() is TimeoutException) {
           break
         }
       }
     } finally {
-      // If the usage succeeded, use graceful shutdown to allow the thread to wrap up.
-      // If it failed (timeout/crash), force shutdown.
       if (lastResult?.isSuccess == true) {
         executor.shutdown()
       } else {
@@ -85,19 +76,15 @@ class Checkpoint {
     // Record the result
     report[name] = lastResult ?: Result.failure(RuntimeException("No execution attempted"))
 
-    // If it was a timeout, we should probably fail hard to stop the test from proceeding
-    // and colliding with future checkpoints (since the orphan thread might still be alive).
+    // Fail immediately on timeout or error
     val ex = lastResult?.exceptionOrNull()
     if (ex is TimeoutException) {
-      throw RuntimeException(
-          "Checkpoint '$name' timed out after ${timeout}ms. Aborting test to prevent recurring issues.",
-          ex)
+      throw RuntimeException("Checkpoint '$name' timed out after ${timeout}ms", ex)
     }
   }
 
   /** Call this once at the end of the test (automatic if you use the Rule). */
   fun assertAll() {
-
     val failures = report.filter { it.value.isFailure }
     println("Checkpoint summary: ${report.size - failures.size}/${report.size} OK")
 
@@ -113,7 +100,7 @@ class Checkpoint {
   /* JUnit-rule glue (optional but handy)                                   */
   /* ---------------------------------------------------------------------- */
   class Rule : TestWatcher() {
-    val ck = Checkpoint() // simple instance
+    val ck = Checkpoint()
 
     override fun starting(description: Description) {
       ck.currentDescription = description
