@@ -90,9 +90,9 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
-import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -428,7 +428,8 @@ fun MainTab(
         }
     ProfilePage.Businesses ->
         SubPageScaffold("Your Businesses", onBack = { currentPage = ProfilePage.Main }) {
-          ManageBusinessesPage(viewModel, account, online, businesses, onSpaceRenterClick, onShopClick)
+          ManageBusinessesPage(
+              viewModel, account, businesses, onSpaceRenterClick, onShopClick, online)
         }
     ProfilePage.Email ->
         SubPageScaffold("Email Settings", onBack = { currentPage = ProfilePage.Main }) {
