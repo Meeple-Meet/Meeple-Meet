@@ -103,14 +103,15 @@ class FriendsScreenViewModel(
    * @param other The account receiving the friend request
    */
   fun sendFriendRequest(account: Account, other: Account) {
-    if (sameOrBlocked(account, other) ||
-        account.relationships[other.uid] != null ||
-        other.relationships[account.uid] != null)
-        return
-
     scope.launch {
-      accountRepository.sendFriendRequest(account, other.uid)
-      accountRepository.sendFriendRequestNotification(other.uid, account)
+      val otherLoaded = accountRepository.getAccountWithRelationships(other.uid)
+      if (sameOrBlocked(account, otherLoaded) ||
+          account.relationships[otherLoaded.uid] != null ||
+          otherLoaded.relationships[account.uid] != null)
+          return@launch
+
+      accountRepository.sendFriendRequest(account, otherLoaded.uid)
+      accountRepository.sendFriendRequestNotification(otherLoaded.uid, account)
     }
   }
 

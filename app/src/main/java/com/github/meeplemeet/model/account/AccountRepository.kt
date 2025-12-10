@@ -232,6 +232,27 @@ class AccountRepository :
   }
 
   /**
+   * Retrieves an account with only its notifications subcollection (no previews or relationships).
+   *
+   * This is a lightweight alternative to [getAccount] that skips loading discussion previews and
+   * relationships data. Use this when you only need the account's basic information and
+   * notifications but want to avoid the overhead of fetching the full relationship graph.
+   *
+   * @param id The account ID to retrieve
+   * @return The Account object with populated notifications but empty previews and relationships
+   * @throws AccountNotFoundException if the account does not exist
+   */
+  suspend fun getAccountWithRelationships(id: String): Account {
+    val snapshot = collection.document(id).get().await()
+    val account = snapshot.toObject(AccountNoUid::class.java) ?: throw AccountNotFoundException()
+
+    val relationshipsSnap = relationships(id).get().await()
+    val relationships = extractRelationships(relationshipsSnap!!.documents)
+
+    return fromNoUid(id, account, relationships = relationships)
+  }
+
+  /**
    * Safely retrieves an account and its associated data by ID, returning null on failure.
    *
    * This is a safe wrapper around [getAccount] that catches any exceptions (including
