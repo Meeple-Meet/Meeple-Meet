@@ -17,9 +17,10 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.firebase.Timestamp
 import io.mockk.mockk
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -31,9 +32,6 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @get:Rule val ck = Checkpoint.Rule()
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
-
-  private fun checkpointSuspend(name: String, block: suspend () -> Unit) =
-      ck.ck(name) { runBlocking { block() } }
 
   private lateinit var vm: DiscussionViewModel
   private lateinit var nav: NavigationActions
@@ -76,30 +74,98 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
             photoUrl = null)
 
     // Create discussions using repository
+    // Use a fixed start time for deterministic testing
+    val baseTime = Timestamp.now()
+    var offset = 0L
+
+    // Helper to manually create discussion
+    suspend fun createManualDiscussion(
+        name: String,
+        description: String,
+        creatorId: String,
+        participants: List<String>
+    ): Discussion {
+      val ts = Timestamp(baseTime.seconds, baseTime.nanoseconds + (++offset).toInt())
+      // Manually create discussion with explicit timestamp
+      val discussion =
+          Discussion(
+              discussionRepository.newUUID(),
+              creatorId,
+              name,
+              description,
+              participants + creatorId,
+              listOf(creatorId),
+              ts,
+              null)
+
+      val batch = db.batch()
+      batch.set(
+          db.collection("discussions").document(discussion.uid),
+          com.github.meeplemeet.model.discussions.toNoUid(discussion))
+      (participants + creatorId).forEach { id ->
+        val ref =
+            db.collection("accounts").document(id).collection("previews").document(discussion.uid)
+        batch.set(ref, com.github.meeplemeet.model.discussions.DiscussionPreviewNoUid())
+      }
+      batch.commit().await()
+      return discussion
+    }
+
+    // Helper to manually send message
+    suspend fun sendManualMessage(discussion: Discussion, sender: Account, content: String) {
+      val ts = Timestamp(baseTime.seconds, baseTime.nanoseconds + (++offset).toInt())
+      val messageNoUid =
+          com.github.meeplemeet.model.discussions.MessageNoUid(sender.uid, content, ts)
+
+      val batch = db.batch()
+      // Add message to subcollection
+      val messageRef =
+          db.collection("discussions").document(discussion.uid).collection("messages").document()
+      batch.set(messageRef, messageNoUid)
+
+      // Update previews for all participants
+      discussion.participants.forEach { userId ->
+        val ref =
+            db.collection("accounts")
+                .document(userId)
+                .collection("previews")
+                .document(discussion.uid)
+        val unreadCountValue =
+            if (userId == sender.uid) 0 else com.google.firebase.firestore.FieldValue.increment(1)
+        batch.set(
+            ref,
+            mapOf(
+                "lastMessage" to content,
+                "lastMessageSender" to sender.uid,
+                "lastMessageAt" to ts,
+                "unreadCount" to unreadCountValue),
+            com.google.firebase.firestore.SetOptions.merge())
+      }
+      batch.commit().await()
+    }
+
+    // Create discussions manually
     d1 =
-        discussionRepository.createDiscussion(
+        createManualDiscussion(
             name = "Catan Crew",
             description = "",
             creatorId = me.uid,
             participants = listOf(bob.uid))
 
-    delay(50)
     d2 =
-        discussionRepository.createDiscussion(
+        createManualDiscussion(
             name = "Gloomhaven",
             description = "",
             creatorId = me.uid,
             participants = listOf(bob.uid))
 
-    delay(50)
     d3 =
-        discussionRepository.createDiscussion(
+        createManualDiscussion(
             name = "Weekend Plan", description = "", creatorId = me.uid, participants = emptyList())
 
-    // Send messages using repository to create previews
-    discussionRepository.sendMessageToDiscussion(d1, me, "Bring snacks")
-    delay(100)
-    discussionRepository.sendMessageToDiscussion(d2, bob, "Ready at 7?")
+    // Send messages manually
+    sendManualMessage(d1, me, "Bring snacks")
+    sendManualMessage(d2, bob, "Ready at 7?")
 
     // Fetch updated accounts and discussions from repository
     me = accountRepository.getAccount(me.uid)
