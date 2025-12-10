@@ -217,6 +217,7 @@ fun SpaceRenterRequiredInfoSection(
         value = nameValue,
         onValueChange = onSpaceName)
   }
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
   // Address
   Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
     SpaceRenterLocationSearchBar(
@@ -227,6 +228,7 @@ fun SpaceRenterRequiredInfoSection(
         inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
         dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
   }
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
   Text(
       text = SpaceRenterUi.Strings.CONTACT_INFO,
       style = MaterialTheme.typography.titleMedium,
@@ -251,6 +253,7 @@ fun SpaceRenterRequiredInfoSection(
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall)
   }
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
   Row {
     // Phone
     Box(Modifier.weight(1f).testTag(ShopFormTestTags.FIELD_PHONE)) {
