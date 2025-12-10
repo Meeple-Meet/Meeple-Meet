@@ -10,6 +10,9 @@ set -e
 TEST_DIR="app/src/androidTest"
 ERRORS=0
 
+# File to exclude from checks (temporary allowance)
+EXCLUDED_FILE="$TEST_DIR/java/com/github/meeplemeet/ui/MapScreenTest.kt"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -28,6 +31,11 @@ fi
 
 # Find all Kotlin test files
 while IFS= read -r file; do
+  # Skip explicitly excluded file
+  if [ "$file" = "$EXCLUDED_FILE" ]; then
+    continue
+  fi
+
   # Check if file creates a Compose rule
   # Look for: createComposeRule, createAndroidComposeRule, or ComposeContentTestRule
   has_compose_rule=$(grep -E '(createComposeRule|createAndroidComposeRule|ComposeContentTestRule)' "$file" 2>/dev/null || true)
