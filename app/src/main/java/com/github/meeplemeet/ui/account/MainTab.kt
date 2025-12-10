@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -188,6 +190,8 @@ object PreferencesSectionTestTags {
 object DeleteAccSectionTestTags {
   const val BUTTON = "delete_acc_button"
   const val POPUP = "delete_acc_popup"
+  const val PASSWORD_INPUT = "delete_acc_password_input"
+  const val ERROR_TEXT = "delete_acc_error_text"
   const val CONFIRM = "delete_acc_popup_confirm"
   const val CANCEL = "delete_acc_popup_cancel"
 }
@@ -208,6 +212,7 @@ object MainTabUi {
   val OFFSET_X = 4.dp
   val OFFSET_Y = (-4).dp
   const val MAX_NOTIF_COUNT = 9
+  const val DISABLED_ALPHA = 0.5f
 
   object Misc {
     const val DELETE_ACCOUNT = "Delete Account"
@@ -216,6 +221,10 @@ object MainTabUi {
         "Do you really want to delete your account? All data related to your account will be erased"
     const val DIALOG_CONFIRM = "Confirm"
     const val DIALOG_CANCEL = "Cancel"
+    const val DIALOG_PASSWORD_LABEL = "Password"
+    const val DIALOG_DELETING = "Deleting..."
+    const val DIALOG_HIDE_PASSWORD = "Hide password"
+    const val DIALOG_SHOW_PASSWORD = "Show password"
   }
 
   object PublicInfo {
@@ -473,7 +482,17 @@ fun MainTabContent(
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
   var showDelDialog by remember { mutableStateOf(false) }
+  var deleteErrorMessage by remember { mutableStateOf<String?>(null) }
+  val uiState by viewModel.uiState.collectAsState()
   val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
+
+  // Observe ViewModel signOut state and trigger navigation when sign out completes
+  LaunchedEffect(uiState.signedOut) {
+    if (uiState.signedOut) {
+      onSignOutOrDel()
+    }
+  }
 
   Column(
       modifier =
@@ -561,28 +580,51 @@ fun MainTabContent(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.padding(top = Dimensions.Padding.xxLarge)) {
-              Button(
-                  onClick = { showDelDialog = true },
-                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-                  elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
-                  modifier = Modifier.testTag(DeleteAccSectionTestTags.BUTTON),
-                  colors =
-                      ButtonColors(
-                          containerColor = AppColors.negative,
-                          disabledContainerColor = AppColors.negative,
-                          contentColor = AppColors.textIcons,
-                          disabledContentColor = AppColors.textIcons)) {
-                    Text(text = MainTabUi.Misc.DELETE_ACCOUNT)
-                  }
+              Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Button(
+                    onClick = {
+                      deleteErrorMessage = null
+                      showDelDialog = true
+                    },
+                    enabled = !uiState.isLoading,
+                    shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                    elevation = ButtonDefaults.buttonElevation(Dimensions.Elevation.medium),
+                    modifier = Modifier.testTag(DeleteAccSectionTestTags.BUTTON),
+                    colors =
+                        ButtonColors(
+                            containerColor = AppColors.negative,
+                            disabledContainerColor = AppColors.negative.copy(alpha = 0.5f),
+                            contentColor = AppColors.textIcons,
+                            disabledContentColor = AppColors.textIcons.copy(alpha = 0.5f))) {
+                      Text(text = MainTabUi.Misc.DELETE_ACCOUNT)
+                    }
+              }
 
               DeleteAccountDialog(
-                  showDelDialog,
-                  onCancel = { showDelDialog = false },
-                  onConfirm = {
+                  show = showDelDialog,
+                  errorMessage = deleteErrorMessage,
+                  isLoading = uiState.isLoading,
+                  onCancel = {
                     showDelDialog = false
-                    onSignOutOrDel()
-                    viewModel.deleteAccount(account)
-                    onDelete()
+                    deleteErrorMessage = null
+                  },
+                  onConfirm = { password ->
+                    deleteErrorMessage = null
+
+                    // Call ViewModel to handle the entire deletion flow
+                    viewModel.deleteAccountWithReauth(
+                        account = account,
+                        password = password,
+                        context = context,
+                        onSuccess = {
+                          showDelDialog = false
+                          onSignOutOrDel()
+                          onDelete()
+                        },
+                        onFailure = { error ->
+                          deleteErrorMessage = error
+                          // Keep dialog open on failure
+                        })
                   })
             }
       }
@@ -736,10 +778,7 @@ fun PublicInfoActions(
 
         // Logout Button
         Button(
-            onClick = {
-              onSignOut()
-              viewModel.signOut()
-            },
+            onClick = { viewModel.signOut() },
             modifier =
                 Modifier.width(MainTabUi.LOGOUT_BUTTON_W)
                     .height(MainTabUi.LOGOUT_BUTTON_H)
@@ -1499,33 +1538,86 @@ fun RadioOptionRow(
  *
  * @param show Whether this dialog is visible
  * @param onCancel callback upon cancellation of the operation
- * @param onConfirm callback upon confirmation
+ * @param onConfirm callback upon confirmation with the provided password
  */
 @Composable
-fun DeleteAccountDialog(show: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
+fun DeleteAccountDialog(
+    show: Boolean,
+    onCancel: () -> Unit,
+    onConfirm: (String) -> Unit,
+    errorMessage: String? = null,
+    isLoading: Boolean = false
+) {
+  var password by remember { mutableStateOf("") }
+  var passwordVisible by remember { mutableStateOf(false) }
+  val focusManager = LocalFocusManager.current
+
   if (show) {
     AlertDialog(
         containerColor = AppColors.primary,
         modifier = Modifier.testTag(DeleteAccSectionTestTags.POPUP),
-        onDismissRequest = onCancel,
+        onDismissRequest = { if (!isLoading) onCancel() },
         title = { Text(text = MainTabUi.Misc.DIALOG_TITLE) },
-        text = { Text(text = MainTabUi.Misc.DIALOG_DESC) },
+        text = {
+          Column {
+            Text(text = MainTabUi.Misc.DIALOG_DESC)
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge))
+
+            FocusableInputField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text(MainTabUi.Misc.DIALOG_PASSWORD_LABEL) },
+                visualTransformation =
+                    if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None
+                    else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                singleLine = true,
+                enabled = !isLoading,
+                trailingIcon = {
+                  IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription =
+                            if (passwordVisible) MainTabUi.Misc.DIALOG_HIDE_PASSWORD
+                            else MainTabUi.Misc.DIALOG_SHOW_PASSWORD
+                    )
+                  }
+                },
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .testTag(DeleteAccSectionTestTags.PASSWORD_INPUT))
+
+            errorMessage?.let { error ->
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+              Text(
+                  text = error,
+                  color = AppColors.negative,
+                  fontSize = Dimensions.TextSize.small,
+                  modifier = Modifier.testTag(DeleteAccSectionTestTags.ERROR_TEXT))
+            }
+          }
+        },
         confirmButton = {
           TextButton(
-              onClick = onConfirm,
+              onClick = {
+                focusManager.clearFocus()
+                onConfirm(password)
+                password = ""
+              },
+              enabled = password.isNotBlank() && !isLoading,
               modifier = Modifier.testTag(DeleteAccSectionTestTags.CONFIRM),
               colors =
                   ButtonColors(
                       containerColor = AppColors.negative,
-                      disabledContentColor = AppColors.negative,
+                      disabledContentColor = AppColors.textIcons.copy(alpha = MainTabUi.DISABLED_ALPHA),
                       contentColor = AppColors.textIcons,
-                      disabledContainerColor = AppColors.textIcons)) {
-                Text(MainTabUi.Misc.DIALOG_CONFIRM)
+                      disabledContainerColor = AppColors.negative.copy(alpha = MainTabUi.DISABLED_ALPHA))) {
+                Text(if (isLoading) MainTabUi.Misc.DIALOG_DELETING else MainTabUi.Misc.DIALOG_CONFIRM)
               }
         },
         dismissButton = {
           TextButton(
               onClick = onCancel,
+              enabled = !isLoading,
               modifier = Modifier.testTag(DeleteAccSectionTestTags.CANCEL),
               colors =
                   ButtonColors(
