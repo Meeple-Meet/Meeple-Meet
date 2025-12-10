@@ -392,6 +392,11 @@ internal fun EditSpaceRenterContent(
                                   spaces = spaces.filterIndexed { i, _ -> i != idx }
                                 },
                             )
+                            AddButton(
+                                onClick = { addSpace() },
+                                buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                buttonTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,
+                                labelTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL)
                           },
                           testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
                     }
