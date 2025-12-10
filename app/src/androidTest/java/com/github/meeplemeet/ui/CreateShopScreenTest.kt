@@ -20,7 +20,6 @@ import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.shops.AddShopContent
-import com.github.meeplemeet.ui.shops.CreateShopScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
@@ -52,7 +51,6 @@ class CreateShopScreenTest : FirestoreTests() {
 
   private val owner =
       Account(uid = "Marco", handle = "meeple", name = "Meeple", email = "marco@epfl.com")
-    private val location = Location(45.0, 6.33, "EPFL")
 
   /* ────────────────────────────── SETUP ──────────────────────────────────── */
 
@@ -373,21 +371,14 @@ class CreateShopScreenTest : FirestoreTests() {
         when (s.intValue) {
            // 0: Structure
           0 ->
-              CreateShopScreen(
-                  owner = owner,
+              AddShopContent(
                   onBack = {},
+                  initialStock = emptyList(),
+                  viewModel = viewModel,
+                  owner = owner,
                   online = true,
-                  userLocation = location,
-                  viewModel = viewModel
-              )
-//              AddShopContent(
-//                  onBack = {},
-//                  initialStock = emptyList(),
-//                  viewModel = viewModel,
-//                  owner = owner,
-//                  online = true,
-//                  gameUi = gameUi,
-//                  locationUi = locationUi)
+                  gameUi = gameUi,
+                  locationUi = locationUi)
 
           // 1: Validation gating (disabled -> enabled after fields + hours)
           1 ->
