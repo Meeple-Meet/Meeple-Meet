@@ -1405,7 +1405,7 @@ fun EmailSection(
           colors = ButtonDefaults.buttonColors()) {
             if (isLoading) {
               CircularProgressIndicator(
-                  modifier = Modifier.size(20.dp), color = AppColors.textIcons, strokeWidth = 2.dp)
+                  modifier = Modifier.size(Dimensions.IconSize.standard), color = AppColors.textIcons, strokeWidth = 2.dp)
             } else {
               Text(text = MainTabUi.EmailSection.CHANGE_EMAIL_BUTTON_TEXT)
             }
