@@ -67,7 +67,7 @@ class CreateDiscussionViewModel(
       // Send a join request to the rest
       participants
           .filterNot { participantsToAdd.contains(it) }
-          .forEach { accountRepository.sendJoinDiscussionNotification(it.uid, disc) }
+          .forEach { accountRepository.sendJoinDiscussionNotification(creator.uid, it.uid, disc) }
     }
   }
 }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
@@ -75,7 +76,17 @@ class MainActivityViewModel(
             accountDataFlow) { isOnline, liveAccount, loadedAccount ->
               // When online, prefer live Firestore data
               // When offline, use the loaded account from cache
-              if (isOnline) liveAccount else loadedAccount
+              val account = if (isOnline) liveAccount else loadedAccount
+
+              if (account != null) {
+                val filtered =
+                    account.notifications.filter {
+                      account.relationships[it.senderId] != RelationshipStatus.BLOCKED
+                    }
+                val toRemove = account.notifications.filterNot { filtered.contains(it) }
+                accountRepository.deleteNotifications(account.uid, toRemove.map { it.uid })
+                account.copy(notifications = filtered)
+              } else null
             }
         .stateIn(
             scope = viewModelScope,

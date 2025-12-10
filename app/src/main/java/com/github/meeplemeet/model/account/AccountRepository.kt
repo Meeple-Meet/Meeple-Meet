@@ -626,7 +626,7 @@ class AccountRepository :
    * @param sender The account that sent the friend request
    */
   suspend fun sendFriendRequestNotification(receiverId: String, sender: Account) {
-    sendNotification(receiverId, sender.uid, NotificationType.FRIEND_REQUEST)
+    sendNotification(receiverId, sender.uid, "", NotificationType.FRIEND_REQUEST)
   }
 
   /**
@@ -638,8 +638,12 @@ class AccountRepository :
    * @param receiverId The ID of the user receiving the notification
    * @param discussion The discussion the user is being invited to
    */
-  suspend fun sendJoinDiscussionNotification(receiverId: String, discussion: Discussion) {
-    sendNotification(receiverId, discussion.uid, NotificationType.JOIN_DISCUSSION)
+  suspend fun sendJoinDiscussionNotification(
+      senderId: String,
+      receiverId: String,
+      discussion: Discussion
+  ) {
+    sendNotification(receiverId, senderId, discussion.uid, NotificationType.JOIN_DISCUSSION)
   }
 
   /**
@@ -651,8 +655,12 @@ class AccountRepository :
    * @param receiverId The ID of the user receiving the notification
    * @param discussion The discussion whose session the user is being invited to
    */
-  suspend fun sendJoinSessionNotification(receiverId: String, discussion: Discussion) {
-    sendNotification(receiverId, discussion.uid, NotificationType.JOIN_SESSION)
+  suspend fun sendJoinSessionNotification(
+      senderId: String,
+      receiverId: String,
+      discussion: Discussion
+  ) {
+    sendNotification(receiverId, senderId, discussion.uid, NotificationType.JOIN_SESSION)
   }
 
   /**
@@ -698,25 +706,40 @@ class AccountRepository :
   }
 
   /**
+   * Deletes multiple notifications from a user's account.
+   *
+   * Removes multiple notification documents from the user's notifications subcollection.
+   *
+   * @param accountId The ID of the account that owns the notification
+   * @param notificationIds The IDs of the notifications to delete
+   */
+  suspend fun deleteNotifications(accountId: String, notificationIds: List<String>) {
+    val batch = db.batch()
+    notificationIds.forEach { batch.delete(notifications(accountId).document(it)) }
+    batch.commit().await()
+  }
+
+  /**
    * Internal helper method to create and store a notification in Firestore.
    *
    * Generates a unique notification ID and creates a notification document in the receiver's
    * notifications subcollection. The notification is stored using [NotificationNoUid] format.
    *
    * @param receiverId The ID of the user receiving the notification
-   * @param senderOrDiscussionId The ID of the sender (for friend requests) or discussion/session
-   *   (for invitations)
+   * @param senderId The ID of the sender
+   * @param discussionId The ID of the discussion/session
    * @param type The type of notification being sent
    */
   private suspend fun sendNotification(
       receiverId: String,
-      senderOrDiscussionId: String,
+      senderId: String,
+      discussionId: String,
       type: NotificationType,
   ) {
     val uid = notifications(receiverId).document().id
     notifications(receiverId)
         .document(uid)
-        .set(NotificationNoUid(senderOrDiscussionId = senderOrDiscussionId, type = type))
+        .set(NotificationNoUid(senderId = senderId, discussionId = discussionId, type = type))
         .await()
   }
 

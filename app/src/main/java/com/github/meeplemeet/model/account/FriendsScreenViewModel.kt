@@ -60,7 +60,7 @@ class FriendsScreenViewModel(
    */
   fun acceptFriendRequest(account: Account, notification: Notification) {
     val other: Account
-    runBlocking { other = accountRepository.getAccount(notification.senderOrDiscussionId) }
+    runBlocking { other = accountRepository.getAccount(notification.senderId) }
     val accountRels = account.relationships[other.uid]
     val otherRels = other.relationships[account.uid]
 

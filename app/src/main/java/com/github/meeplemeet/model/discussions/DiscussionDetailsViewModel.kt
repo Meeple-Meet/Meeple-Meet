@@ -126,7 +126,9 @@ class DiscussionDetailsViewModel(
           (user.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
               changeRequester.relationships[user.uid] == RelationshipStatus.FRIEND))
           discussionRepository.addUserToDiscussion(discussion.uid, user.uid)
-      else accountRepository.sendJoinDiscussionNotification(user.uid, discussion)
+      else
+          accountRepository.sendJoinDiscussionNotification(
+              changeRequester.uid, user.uid, discussion)
     }
   }
 
