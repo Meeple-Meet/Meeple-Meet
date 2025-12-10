@@ -177,8 +177,6 @@ fun AddShopContent(
   val hasOpeningHours by
       remember(state.week) { derivedStateOf { state.week.any { it.hours.isNotEmpty() } } }
 
-  val snackbarHostState = remember { SnackbarHostState() }
-
   // Sync addressText with locationUi.locationQuery when typing
   LaunchedEffect(locationUi.locationQuery) {
     val sel = locationUi.selectedLocation
@@ -199,7 +197,12 @@ fun AddShopContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        Scaffold(
+        ShopFormContent(
+            state = state,
+            viewModel = viewModel,
+            owner = owner,
+            online = online,
+            locationUi = locationUi,
             topBar = {
               CenterAlignedTopAppBar(
                   title = {
@@ -215,11 +218,6 @@ fun AddShopContent(
                         }
                   },
                   modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
-            },
-            snackbarHost = {
-              SnackbarHost(
-                  snackbarHostState,
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
             },
             bottomBar = {
               val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
@@ -252,43 +250,7 @@ fun AddShopContent(
                     },
                     enabled = isValid)
               }
-            },
-            modifier = Modifier.testTag(CreateShopScreenTestTags.SCAFFOLD)) { padding ->
-              LazyColumn(
-                  modifier = Modifier.padding(padding).testTag(CreateShopScreenTestTags.LIST),
-                  contentPadding =
-                      PaddingValues(
-                          horizontal = AddShopUi.Dimensions.contentHPadding,
-                          vertical = AddShopUi.Dimensions.contentVPadding)) {
-                    item {
-                      if (online) {
-                        EditableImageCarousel(
-                            photoCollectionUrl = state.photoCollectionUrl,
-                            spacesCount = IMAGE_COUNT,
-                            setPhotoCollectionUrl = { state.photoCollectionUrl = it })
-                      } else
-                          ImageCarousel(
-                              photoCollectionUrl = state.photoCollectionUrl,
-                              maxNumberOfImages = IMAGE_COUNT,
-                              editable = false)
-                    }
-                    item {
-                      ShopInfoSection(
-                          state = state,
-                          viewModel = viewModel,
-                          owner = owner,
-                          online = online,
-                          locationUi = locationUi)
-                    }
-                    item { ShopAvailabilitySection(state) }
-                    item { ShopGamesSection(state, online, viewModel) }
-                    item {
-                      Spacer(
-                          Modifier.height(AddShopUi.Dimensions.bottomSpacer)
-                              .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
-                    }
-                  }
-            }
+            })
       }
 
   OpeningHoursEditor(
@@ -303,18 +265,68 @@ fun AddShopContent(
 }
 
 /**
- * Handles the input fields in the screen
- *
- * @param state Ui state
- * @param viewModel VM used by this screen
- * @param online whether the user is online or offline
- * @param owner current user
- * @param locationUi location state
+ * Reusable content for Create and Edit shop screens.
  */
 @Composable
-private fun ShopInfoSection(
+fun ShopFormContent(
     state: CreateShopFormState,
-    viewModel: CreateShopViewModel,
+    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel,
+    owner: Account,
+    online: Boolean,
+    locationUi: LocationUIState,
+    topBar: @Composable () -> Unit,
+    bottomBar: @Composable () -> Unit,
+    scaffoldTestTag: String = CreateShopScreenTestTags.SCAFFOLD,
+    listTestTag: String = CreateShopScreenTestTags.LIST
+) {
+  Scaffold(
+      topBar = topBar,
+      bottomBar = bottomBar,
+      modifier = Modifier.testTag(scaffoldTestTag)) { padding ->
+        LazyColumn(
+            modifier = Modifier.padding(padding).testTag(listTestTag),
+            contentPadding =
+                PaddingValues(
+                    horizontal = AddShopUi.Dimensions.contentHPadding,
+                    vertical = AddShopUi.Dimensions.contentVPadding)) {
+              item {
+                if (online) {
+                  EditableImageCarousel(
+                      photoCollectionUrl = state.photoCollectionUrl,
+                      spacesCount = IMAGE_COUNT,
+                      setPhotoCollectionUrl = { state.photoCollectionUrl = it })
+                } else
+                    ImageCarousel(
+                        photoCollectionUrl = state.photoCollectionUrl,
+                        maxNumberOfImages = IMAGE_COUNT,
+                        editable = false)
+              }
+              item {
+                ShopInfoSection(
+                    state = state,
+                    viewModel = viewModel,
+                    owner = owner,
+                    online = online,
+                    locationUi = locationUi)
+              }
+              item { ShopAvailabilitySection(state) }
+              item { ShopGamesSection(state, online, viewModel) }
+              item {
+                Spacer(
+                    Modifier.height(AddShopUi.Dimensions.bottomSpacer)
+                        .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
+              }
+            }
+      }
+}
+
+/**
+ * Handles the input fields in the screen
+ */
+@Composable
+internal fun ShopInfoSection(
+    state: CreateShopFormState,
+    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel,
     online: Boolean,
     owner: Account,
     locationUi: LocationUIState
@@ -349,11 +361,9 @@ private fun ShopInfoSection(
 
 /**
  * Availability section of the shop
- *
- * @param state Ui state
  */
 @Composable
-private fun ShopAvailabilitySection(state: CreateShopFormState) {
+internal fun ShopAvailabilitySection(state: CreateShopFormState) {
   CollapsibleSection(
       title = AddShopUi.Strings.SECTION_AVAILABILITY,
       initiallyExpanded = false,
@@ -370,16 +380,12 @@ private fun ShopAvailabilitySection(state: CreateShopFormState) {
 
 /**
  * Handles the entirety of the games section
- *
- * @param state Ui state
- * @param online Whether the user is online or offline
- * @param viewModel VM used by this screen
  */
 @Composable
-private fun ShopGamesSection(
+internal fun ShopGamesSection(
     state: CreateShopFormState,
     online: Boolean,
-    viewModel: CreateShopViewModel
+    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel
 ) {
   CollapsibleSection(
       title = AddShopUi.Strings.SECTION_GAMES,
@@ -437,6 +443,7 @@ private fun ShopGamesSection(
 @Composable
 fun rememberCreateShopFormState(
     initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialShop: Shop? = null,
     onSetGameQuery: (String) -> Unit,
     onSetGame: (Game) -> Unit
 ): CreateShopFormState {
@@ -444,6 +451,7 @@ fun rememberCreateShopFormState(
     CreateShopFormState(
         initialStock = initialStock,
         initialWeek = emptyWeek(),
+        initialShop = initialShop,
         onSetGameQueryCallback = onSetGameQuery,
         onSetGameCallback = onSetGame)
   }

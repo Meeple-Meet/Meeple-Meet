@@ -540,6 +540,7 @@ fun ConfirmationDialog(
   if (show) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = AppColors.primary,
         title = {
           Text(
               title,
