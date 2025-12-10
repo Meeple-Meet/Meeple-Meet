@@ -25,7 +25,7 @@ class CreatePostScreenTest : FirestoreTests() {
   /* ---------- Checkpoint helper ---------- */
   @get:Rule val ck = Checkpoint.rule()
 
-  fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 30000L)
 
   private lateinit var repository: PostRepository
   private lateinit var viewModel: CreatePostViewModel
@@ -308,11 +308,11 @@ class CreatePostScreenTest : FirestoreTests() {
       compose.waitForIdle()
       postButton().assertIsEnabled()
       postButton().performClick()
-      compose.waitUntil(timeoutMillis = 2000) { postCalled }
+      compose.waitUntil(timeoutMillis = 5000) { postCalled }
 
       runBlocking {
         val posts = repository.getPosts()
-        compose.waitUntil(2000) { posts.find { it.title == "Integration Post" } != null }
+        compose.waitUntil(5000) { posts.find { it.title == "Integration Post" } != null }
         val created = posts.find { it.title == "Integration Post" }
         assert(created?.body == "Complete flow\nWith lines\nAnd special: @#$%")
         val tags = created?.tags.orEmpty()

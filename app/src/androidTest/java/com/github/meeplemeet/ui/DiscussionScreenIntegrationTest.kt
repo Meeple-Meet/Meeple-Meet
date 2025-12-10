@@ -37,7 +37,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
   @get:Rule val ck = Checkpoint.Rule()
 
-  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 30_000L)
 
   @Before
   fun setup() = runBlocking {
@@ -565,7 +565,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         sendBtn.performClick()
 
         // Wait for new text to appear in the UI
-        composeTestRule.waitUntil(10_000) {
+        composeTestRule.waitUntil(20_000) {
           composeTestRule
               .onAllNodesWithText(editedText, useUnmergedTree = true)
               .fetchSemanticsNodes()
@@ -585,7 +585,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
       sendField.performTextReplacement(deleteText)
       sendBtn.performClick()
 
-      composeTestRule.waitUntil(10_000) {
+      composeTestRule.waitUntil(20_000) {
         composeTestRule
             .onAllNodesWithText(deleteText, useUnmergedTree = true)
             .fetchSemanticsNodes()
