@@ -10,16 +10,12 @@ import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.model.shops.ShopRepository
-import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-const val TAG = "MainActivityViewModel"
 
 /**
  * Main view model for the application that provides real-time data flows for accounts and
@@ -35,23 +31,7 @@ const val TAG = "MainActivityViewModel"
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
-    private val shopRepository: ShopRepository = RepositoryProvider.shops,
 ) : AuthenticationViewModel() {
-
-  /**
-   * Signs out the current user and clears all cached flows.
-   *
-   * Overrides the parent signOut method to ensure that all Firestore listeners are removed when the
-   * user signs out.
-   */
-  override fun signOut() {
-    super.signOut()
-  }
-
-  // Holds cached [StateFlow]s of accounts keyed by account ID to avoid duplicate listeners.
-  private val accountFlows = mutableMapOf<String, StateFlow<Account?>>()
-
   /**
    * Returns a real-time flow of account data for the specified account ID.
    *
