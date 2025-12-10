@@ -29,7 +29,7 @@ class NavigationTest : FirestoreTests() {
   @get:Rule val composeTestRule = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
 
-  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 60_000L)
 
   private lateinit var navController: NavHostController
   private lateinit var navigationActions: NavigationActions
@@ -42,7 +42,6 @@ class NavigationTest : FirestoreTests() {
     // Ensure we're signed out for unauthenticated navigation tests
     try {
       FirebaseProvider.auth.signOut()
-      Thread.sleep(500) // Give time for auth state to propagate
     } catch (_: Exception) {
       // Ignore if no one is signed in
     }
@@ -170,7 +169,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
   @get:Rule val ck = Checkpoint.Rule()
 
-  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 60_000L)
 
   @Before
   fun setupAuthenticatedUser() {
@@ -178,7 +177,6 @@ class AuthenticatedNavigationTest : FirestoreTests() {
     try {
       FirebaseProvider.auth.signOut()
       composeTestRule.waitForIdle()
-      Thread.sleep(500) // Give time for auth state to propagate
     } catch (_: Exception) {
       // Ignore if no one is signed in
     }
@@ -192,6 +190,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
     composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
   }
 
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun allAuthenticatedNavigationChecksInOnePass() =
       with(composeTestRule) {
@@ -387,6 +386,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
           }
 
           checkpoint("createPostAndNavigateBack") {
+            composeTestRule.waitUntilAtLeastOneExists(hasTestTag(NavigationTestTags.DISCOVER_TAB))
             onNodeWithTag(NavigationTestTags.DISCOVER_TAB).performClick()
             waitForIdle()
 
@@ -445,8 +445,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
             onNodeWithTag("create_post_tag_search_icon").performClick()
             waitForIdle()
 
-            // Extra wait to ensure tag is added before posting
-            Thread.sleep(500)
+            waitUntil { onNodeWithTag("create_post_post_btn").isDisplayed() }
 
             onNodeWithTag("create_post_post_btn").performClick()
 
