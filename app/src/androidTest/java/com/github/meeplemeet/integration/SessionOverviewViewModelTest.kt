@@ -116,18 +116,6 @@ class SessionOverviewViewModelTest : FirestoreTests() {
   }
 
   @Test
-  fun getGameNameByGameId_returnsName_whenGameExists() = runBlocking {
-    val name = viewModel.getGameNameByGameId(existingGameId)
-    assertEquals("Chess", name)
-  }
-
-  @Test
-  fun getGameNameByGameId_returnsNull_whenGameMissing() = runBlocking {
-    val name = viewModel.getGameNameByGameId("nonexistent")
-    assertNull(name)
-  }
-
-  @Test
   fun getArchivedSessionPhotoUrls_returnsPhotoUrls() = runBlocking {
     // Archive a session with a photo URL
     val discussion = discussionRepository.createDiscussion("Archive Photo", "Test", account.uid)

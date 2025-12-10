@@ -88,8 +88,7 @@ class NotificationsTabTest : FirestoreTests() {
             accountRepository = accountRepository,
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
-            discussionRepository = discussionRepository,
-            gameRepository = gameRepository)
+            discussionRepository = discussionRepository)
     navViewModel = NavigationViewModel(accountRepository)
 
     runBlocking {
