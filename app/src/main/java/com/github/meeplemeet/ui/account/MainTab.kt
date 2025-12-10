@@ -1830,7 +1830,7 @@ fun BusinessCard(icon: Int, label: String, onClick: () -> Unit) {
         Row(
             modifier =
                 Modifier.padding(Dimensions.Padding.large)
-                    .fillMaxWidth(), // removed inner clickable — Card handles clicks
+                    .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically) {
               Icon(
                   painter = painterResource(id = icon),
