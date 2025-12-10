@@ -518,7 +518,7 @@ fun ManageBusinessesPage(
     onShopClick: (String) -> Unit,
     online: Boolean
 ) {
-  RolesSection(account = account, viewModel = viewModel, online)
+  RolesSection(account = account, viewModel = viewModel, businesses = businesses, online = online)
   Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
@@ -1539,7 +1539,12 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
+fun RolesSection(
+    account: Account,
+    viewModel: ProfileScreenViewModel,
+    businesses: Pair<List<Shop>, List<SpaceRenter>> = viewModel.businesses.collectAsState().value,
+    online: Boolean
+) {
 
   var expanded by remember { mutableStateOf(!hasNoRoles(account)) }
 
@@ -1574,8 +1579,14 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
             isChecked = isShopChecked,
             onCheckedChange = { checked ->
               if (!checked) {
-                pendingAction = RoleAction.ShopOff
-                showDialog = true
+                if (businesses.first.isNotEmpty()) {
+                  pendingAction = RoleAction.ShopOff
+                  showDialog = true
+                } else {
+                  isShopChecked = false
+                  viewModel.setAccountRole(
+                      account, isShopOwner = false, isSpaceRenter = isSpaceRented)
+                }
               } else {
                 isShopChecked = true
                 viewModel.setAccountRole(account, isShopOwner = true, isSpaceRenter = isSpaceRented)
@@ -1590,8 +1601,14 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
             isChecked = isSpaceRented,
             onCheckedChange = { checked ->
               if (!checked) {
-                pendingAction = RoleAction.SpaceOff
-                showDialog = true
+                if (businesses.second.isNotEmpty()) {
+                  pendingAction = RoleAction.SpaceOff
+                  showDialog = true
+                } else {
+                  isSpaceRented = false
+                  viewModel.setAccountRole(
+                      account, isShopOwner = isShopChecked, isSpaceRenter = false)
+                }
               } else {
                 isSpaceRented = true
                 viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = true)
@@ -1828,9 +1845,7 @@ fun BusinessCard(icon: Int, label: String, onClick: () -> Unit) {
               .testTag(PublicInfoTestTags.BUSINESS_CARD),
       colors = CardDefaults.cardColors(containerColor = AppColors.primary)) {
         Row(
-            modifier =
-                Modifier.padding(Dimensions.Padding.large)
-                    .fillMaxWidth(),
+            modifier = Modifier.padding(Dimensions.Padding.large).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically) {
               Icon(
                   painter = painterResource(id = icon),

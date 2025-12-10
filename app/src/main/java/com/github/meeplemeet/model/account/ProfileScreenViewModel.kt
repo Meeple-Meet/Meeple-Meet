@@ -236,7 +236,12 @@ class ProfileScreenViewModel(
   fun deleteAccountShops(account: Account) {
     viewModelScope.launch {
       val (shops, _) = RepositoryProvider.accounts.getBusinessIds(account.uid)
-      RepositoryProvider.shops.deleteShops(shops)
+      _businesses.update { it.copy(first = emptyList()) }
+      try {
+        RepositoryProvider.shops.deleteShops(shops)
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
     }
   }
 
@@ -248,7 +253,12 @@ class ProfileScreenViewModel(
   fun deleteAccountSpaceRenters(account: Account) {
     viewModelScope.launch {
       val (_, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
-      RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+      _businesses.update { it.copy(second = emptyList()) }
+      try {
+        RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
     }
   }
 
