@@ -251,19 +251,20 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
 class CreateShopFormState(
     initialStock: List<Pair<Game, Int>> = emptyList(),
     initialWeek: List<OpeningHours> = emptyWeek(),
+    initialShop: Shop? = null,
     private val onSetGameQueryCallback: (String) -> Unit,
     private val onSetGameCallback: (Game) -> Unit
 ) : ShopFormActions, GamePickerActions {
 
-  var shopName by mutableStateOf("")
-  var email by mutableStateOf("")
-  var phone by mutableStateOf("")
-  var website by mutableStateOf("")
-  var addressText by mutableStateOf("")
+  var shopName by mutableStateOf(initialShop?.name ?: "")
+  var email by mutableStateOf(initialShop?.email ?: "")
+  var phone by mutableStateOf(initialShop?.phone ?: "")
+  var website by mutableStateOf(initialShop?.website ?: "")
+  var addressText by mutableStateOf(initialShop?.address?.name ?: "")
 
-  var week by mutableStateOf(initialWeek)
-  var stock by mutableStateOf(initialStock)
-  var photoCollectionUrl by mutableStateOf(listOf<String>())
+  var week by mutableStateOf(if (initialShop != null) initialShop.openingHours else initialWeek)
+  var stock by mutableStateOf(if (initialShop != null) initialShop.gameCollection else initialStock)
+  var photoCollectionUrl by mutableStateOf(initialShop?.photoCollectionUrl ?: listOf())
 
   // Dialog & UI states
   var showHoursDialog by mutableStateOf(false)
@@ -404,7 +405,7 @@ fun RequiredInfoSection(
         label = ShopFormUi.Strings.SHOP_LABEL,
         placeholder = ShopFormUi.Strings.SHOP_PLACEHOLDER,
         value = shop.name,
-        onValueChange = actions::onNameChange,
+        onValueChange = { if (it.length <= 32) actions.onNameChange(it) },
         modifier = Modifier.testTag(ShopFormTestTags.FIELD_SHOP))
   }
 
@@ -435,7 +436,7 @@ fun RequiredInfoSection(
               contentDescription = null)
         },
         value = shop.email,
-        onValueChange = actions::onEmailChange,
+        onValueChange = { if (it.length <= 60) actions.onEmailChange(it)},
         keyboardType = KeyboardType.Email,
         modifier = Modifier.testTag(ShopFormTestTags.FIELD_EMAIL))
   }
@@ -460,7 +461,7 @@ fun RequiredInfoSection(
                 tint = AppColors.neutral,
                 contentDescription = null)
           },
-          onValueChange = actions::onPhoneChange,
+          onValueChange = { if (it.length <= 16) actions.onPhoneChange(it)},
           keyboardType = KeyboardType.Phone,
           modifier = Modifier.testTag(ShopFormTestTags.FIELD_PHONE))
     }
@@ -476,7 +477,7 @@ fun RequiredInfoSection(
                 tint = AppColors.neutral,
                 contentDescription = null)
           },
-          onValueChange = actions::onWebsiteChange,
+          onValueChange = { if (it.length <= 50) actions.onWebsiteChange(it)},
           modifier = Modifier.testTag(ShopFormTestTags.FIELD_LINK),
           keyboardType = KeyboardType.Uri)
     }
