@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +90,7 @@ fun CreateDiscussionScreen(
   var creationError by remember { mutableStateOf<String?>(null) }
   var isInputFocused by remember { mutableStateOf(false) }
   val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
 
   LaunchedEffect(searchQuery) {
     if (searchQuery.isBlank()) {
@@ -182,7 +184,7 @@ fun CreateDiscussionScreen(
                             "Bug: null Account in selection"
                           }
                           viewModel.createDiscussion(
-                              title, description, account, *clean.toTypedArray())
+                              context, title, description, account, *clean.toTypedArray())
                           isCreating = false
                           onCreate()
                         } catch (_: Exception) {

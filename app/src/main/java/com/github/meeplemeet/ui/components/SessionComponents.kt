@@ -997,6 +997,7 @@ fun SessionLocationSearchBar(
       setLocationQuery = { viewModel.setLocationQuery(account, discussion, it) },
       initial = discussion.session?.location ?: Location(),
       viewModel = viewModel,
+      enabled = true,
       inputFieldTestTag = inputFieldTestTag,
       dropdownItemTestTag = dropdownItemTestTag)
 }
@@ -1006,6 +1007,7 @@ fun ShopLocationSearchBar(
     account: Account,
     shop: Shop?,
     viewModel: ShopSearchViewModel,
+    enabled: Boolean = true,
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
 ) {
@@ -1020,10 +1022,11 @@ fun ShopLocationSearchBar(
         shop?.let { viewModel.setLocationQuery(shop, account, query) }
             ?: viewModel.setLocationQuery(query)
       },
-      shop?.address ?: Location(),
-      viewModel,
-      inputFieldTestTag,
-      dropdownItemTestTag)
+      initial = shop?.address ?: Location(),
+      viewModel = viewModel,
+      enabled = enabled,
+      inputFieldTestTag = inputFieldTestTag,
+      dropdownItemTestTag = dropdownItemTestTag)
 }
 
 @Composable
@@ -1031,6 +1034,7 @@ fun SpaceRenterLocationSearchBar(
     account: Account,
     spaceRenter: SpaceRenter?,
     viewModel: SpaceRenterSearchViewModel,
+    enabled: Boolean = true,
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
 ) {
@@ -1045,6 +1049,7 @@ fun SpaceRenterLocationSearchBar(
       },
       initial = spaceRenter?.address ?: Location(),
       viewModel = viewModel,
+      enabled = enabled,
       inputFieldTestTag = inputFieldTestTag,
       dropdownItemTestTag = dropdownItemTestTag)
 }
@@ -1056,6 +1061,7 @@ private fun LocationSearchBar(
     setLocationQuery: (String) -> Unit,
     initial: Location,
     viewModel: SearchViewModel,
+    enabled: Boolean = true,
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
 ) {
@@ -1071,6 +1077,7 @@ private fun LocationSearchBar(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         FocusableInputField(
             value = text,
+            enabled = enabled,
             onValueChange = {
               menuOpen = true
               text = it

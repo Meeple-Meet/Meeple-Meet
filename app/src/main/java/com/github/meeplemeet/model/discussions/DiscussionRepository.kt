@@ -159,6 +159,15 @@ class DiscussionRepository(
     throw DiscussionNotFoundException()
   }
 
+  /** Retrieve a discussion document by ID, but does not throw, returns null instead. */
+  suspend fun getDiscussionSafe(id: String): Discussion? {
+    return try {
+      getDiscussion(id)
+    } catch (_: Exception) {
+      null
+    }
+  }
+
   /** Update a discussion's name. */
   suspend fun setDiscussionName(id: String, name: String) {
     collection.document(id).update(Discussion::name.name, name).await()

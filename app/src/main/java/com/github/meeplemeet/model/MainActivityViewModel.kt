@@ -1,6 +1,7 @@
 // Docs generated with Claude Code.
 package com.github.meeplemeet.model
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
@@ -8,10 +9,17 @@ import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+const val TAG = "MainActivityViewModel"
 
 /**
  * Main view model for the application that provides real-time data flows for accounts and
@@ -27,6 +35,8 @@ import kotlinx.coroutines.flow.stateIn
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
+    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val shopRepository: ShopRepository = RepositoryProvider.shops,
 ) : AuthenticationViewModel() {
 
   /**
@@ -36,8 +46,6 @@ class MainActivityViewModel(
    * user signs out.
    */
   override fun signOut() {
-    discussionFlows.clear()
-    accountFlows.clear()
     super.signOut()
   }
 
@@ -47,54 +55,97 @@ class MainActivityViewModel(
   /**
    * Returns a real-time flow of account data for the specified account ID.
    *
-   * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
-   * flow emits updated account data whenever changes occur in Firestore, including the account's
-   * discussion previews.
+   * This method integrates both online and offline modes:
+   * - When online: Creates a Firestore listener that emits real-time updates and caches data
+   * - When offline: Loads account from the offline cache using OfflineModeManager
+   *
+   * The flow combines the internet connection state with the appropriate data source, automatically
+   * switching between online (Firestore) and offline (cached) data as connectivity changes.
+   *
+   * ## Caching Behavior
+   * - When online, accounts are loaded via OfflineModeManager which caches them
+   * - When offline, accounts are retrieved from OfflineModeManager cache
+   * - When transitioning from offline to online, the flow switches to live Firestore data
    *
    * @param accountId The ID of the account to observe
+   * @param context Android context for accessing offline storage (required for offline mode)
    * @return A [StateFlow] that emits the account or null if the account doesn't exist or ID is
    *   blank
    */
-  fun accountFlow(accountId: String): StateFlow<Account?> {
+  fun accountFlow(accountId: String, context: Context): StateFlow<Account?> {
     if (accountId.isBlank()) return MutableStateFlow(null)
-    return accountFlows.getOrPut(accountId) {
-      accountRepository
-          .listenAccount(accountId)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
-    }
-  }
 
-  // Holds cached [StateFlow]s of discussions keyed by discussion ID to avoid duplicate listeners.
-  private val discussionFlows = mutableMapOf<String, StateFlow<Discussion?>>()
+    // Create a flow that combines online/offline state with account data
+    val accountDataFlow = MutableStateFlow<Account?>(null)
+
+    // Listen to connectivity changes and load account accordingly
+    viewModelScope.launch {
+      OfflineModeManager.hasInternetConnection.collect {
+        // Always use OfflineModeManager.loadAccount - it handles both cache and fetch
+        OfflineModeManager.loadAccount(accountId, context, true) { account ->
+          accountDataFlow.value = account
+        }
+      }
+    }
+
+    // Combine connectivity state with account data and listen to Firestore when online
+    return combine(
+            OfflineModeManager.hasInternetConnection,
+            accountRepository.listenAccount(accountId),
+            accountDataFlow) { isOnline, liveAccount, loadedAccount ->
+              // When online, prefer live Firestore data
+              // When offline, use the loaded account from cache
+              if (isOnline) liveAccount else loadedAccount
+            }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+            initialValue = null)
+  }
 
   /**
    * Returns a real-time flow of discussion data for the specified discussion ID with automatic
-   * session archiving.
+   * session archiving and offline support.
    *
    * This method manages a cache of StateFlows to avoid creating duplicate Firestore listeners. The
    * flow emits updated discussion data whenever changes occur in Firestore, and automatically
-   * archives sessions that have passed (more than 24 hours after session time).
+   * archives sessions that have passed (more than 24 hours after session time). The flow
+   * automatically switches between online and offline modes:
+   * - **Online:** Emits real-time updates from Firestore
+   * - **Offline:** Emits data from the offline cache loaded via [OfflineModeManager]
+   *
+   * The discussion is automatically loaded into the offline cache when first accessed, enabling
+   * offline viewing later.
    *
    * @param discussionId The ID of the discussion to observe
    * @param context Android context for accessing cache directory during photo archiving
    * @return A [StateFlow] that emits the discussion or null if the discussion doesn't exist or ID
    *   is blank
    */
-  fun discussionFlow(
-      discussionId: String,
-      context: android.content.Context
-  ): StateFlow<Discussion?> {
+  fun discussionFlow(discussionId: String, context: Context): StateFlow<Discussion?> {
     if (discussionId.isBlank()) return MutableStateFlow(null)
-    return discussionFlows.getOrPut(discussionId) {
-      discussionRepository
-          .listenDiscussionWithAutoArchive(discussionId, context)
-          .stateIn(
-              scope = viewModelScope,
-              started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
-              initialValue = null)
-    }
+
+    // Combine online/offline state with live data and cached data
+    return combine(
+            OfflineModeManager.hasInternetConnection,
+            discussionRepository.listenDiscussionWithAutoArchive(discussionId, context),
+            OfflineModeManager.offlineModeFlow) { isOnline, liveDiscussion, offlineMode ->
+              if (isOnline) {
+                liveDiscussion
+              } else {
+                offlineMode.discussions[discussionId]?.first
+              }
+            }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
+            initialValue =
+                OfflineModeManager.offlineModeFlow.value.discussions[discussionId]?.first)
+  }
+  /**
+   * Syncs all pending offline data with Firestore. Call this function when connection is restored.
+   */
+  fun syncOfflineData() {
+    viewModelScope.launch { OfflineModeManager.syncAllPendingData() }
   }
 }

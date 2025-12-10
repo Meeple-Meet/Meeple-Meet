@@ -79,6 +79,8 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
+import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -302,13 +304,15 @@ data class NotificationSheetState(
  * @param account The current user
  * @param viewModel VM used by this screen
  * @param onBack callback upon click of the back button
+ * @param onNavigate callback upon navigation to another screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsTab(
     account: Account,
     viewModel: NotificationsViewModel = viewModel(),
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigate: (MeepleMeetScreen) -> Unit = {}
 ) {
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
@@ -371,6 +375,10 @@ fun NotificationsTab(
                     contentDescription = NotificationsTabUi.Header.BACK_ICON_DESCRIPTION)
               }
             })
+      },
+      bottomBar = {
+        BottomNavigationMenu(
+            currentScreen = MeepleMeetScreen.Profile, onTabSelected = { onNavigate(it) })
       }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
           FilterRow(
@@ -675,9 +683,9 @@ private fun NotificationRowContent(
   val context = LocalContext.current
 
   var avatarBytes by remember(notif.uid) { mutableStateOf<ByteArray?>(null) }
-  var friend by remember { mutableStateOf<Account?>(null) }
-  var discussionName by remember { mutableStateOf<String?>(null) }
-  var sessionName by remember { mutableStateOf<String?>(null) }
+  var friend by remember(notif.uid) { mutableStateOf<Account?>(null) }
+  var discussionName by remember(notif.uid) { mutableStateOf<String?>(null) }
+  var sessionName by remember(notif.uid) { mutableStateOf<String?>(null) }
 
   LaunchedEffect(notif.uid) {
     when (notif.type) {

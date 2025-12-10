@@ -2,7 +2,6 @@
 
 package com.github.meeplemeet.model.map
 
-import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
@@ -35,7 +34,7 @@ data class ClusterCache(val clusters: List<Cluster<GeoPinWithLocation>>, val ver
 
 /** Pending operations on the pin list, accumulated during the debounce window. */
 private sealed interface PinOperation {
-  data class Add(val pin: GeoPinWithLocation) : PinOperation
+  data class Add(val pin: GeoPinWithLocation, val preview: MarkerPreview?) : PinOperation
 
   data class Move(val documentId: String, val newLocation: GeoPoint) : PinOperation
 
@@ -54,6 +53,7 @@ private sealed interface PinOperation {
  */
 data class MapUIState(
     internal val allGeoPins: List<GeoPinWithLocation> = emptyList(),
+    val previews: Map<String, MarkerPreview> = emptyMap(),
     val activeFilters: Set<PinType> = PinType.entries.toSet(),
     val currentZoomLevel: Float = 14f,
     val errorMsg: String? = null,
@@ -176,21 +176,33 @@ class MapViewModel(
     _uiState.update { state ->
       // Use a mutable map for O(1) lookups by documentId
       val pinMap = state.allGeoPins.associateBy { it.geoPin.uid }.toMutableMap()
+      val previewMap = state.previews.toMutableMap()
 
       // Apply sequentially all pending operations
       operations.forEach { op ->
         when (op) {
-          is PinOperation.Add -> pinMap[op.pin.geoPin.uid] = op.pin
+          is PinOperation.Add -> {
+            pinMap[op.pin.geoPin.uid] = op.pin
+            if (op.preview != null) {
+              previewMap[op.pin.geoPin.uid] = op.preview
+            }
+          }
           is PinOperation.Move ->
               pinMap[op.documentId]?.let { old ->
                 pinMap[op.documentId] = old.copy(location = op.newLocation)
               }
-          is PinOperation.Remove -> pinMap.remove(op.documentId)
+          is PinOperation.Remove -> {
+            pinMap.remove(op.documentId)
+            previewMap.remove(op.documentId)
+          }
         }
       }
 
       // Only one state update, thus only one cache invalidation.
-      state.copy(allGeoPins = pinMap.values.toList(), cacheVersion = state.cacheVersion + 1)
+      state.copy(
+          allGeoPins = pinMap.values.toList(),
+          previews = previewMap,
+          cacheVersion = state.cacheVersion + 1)
     }
   }
 
@@ -239,7 +251,8 @@ class MapViewModel(
 
             /**
              * Called when a new document enters the queried radius. Fetches the full Firestore
-             * document, converts it into a [GeoPinWithLocation], and adds it to [uiState].
+             * document, converts it into a [GeoPinWithLocation], and adds it to [uiState]. Also
+             * loads the preview for the pin immediately.
              *
              * @param documentID The Firestore document ID.
              * @param location The geographic coordinates of the pin.
@@ -255,7 +268,16 @@ class MapViewModel(
                       return@launch
 
                   val pin = GeoPinWithLocation(fromNoUid(documentID, noUid), location)
-                  scheduleOperation(PinOperation.Add(pin))
+
+                  // Load preview immediately
+                  val preview =
+                      try {
+                        markerPreviewRepo.getMarkerPreview(pin.geoPin)
+                      } catch (_: Exception) {
+                        null // Preview loading failed, but still add the pin
+                      }
+
+                  scheduleOperation(PinOperation.Add(pin, preview))
                 } catch (e: Exception) {
                   _uiState.update {
                     it.copy(
@@ -364,30 +386,47 @@ class MapViewModel(
   }
 
   /**
-   * Selects a specific geo-pin and fetches its corresponding [MarkerPreview] for display in the UI.
-   * If fetching fails, updates the MapUIState errorMsg.
+   * Selects a specific geo-pin and displays its [MarkerPreview]. Uses cached preview if available,
+   * otherwise loads it on-demand. If fetching fails, updates the MapUIState errorMsg.
    *
    * @param pin The selected geo-pin.
    */
   fun selectPin(pin: GeoPinWithLocation) {
-    viewModelScope.launch {
-      _uiState.update { it.copy(isLoadingPreview = true, selectedPin = pin) }
-      try {
-        val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
-        _uiState.update {
-          it.copy(
-              selectedMarkerPreview = preview,
-              selectedPin = pin,
-              errorMsg = null,
-              isLoadingPreview = false)
-        }
-      } catch (e: Exception) {
-        _uiState.update {
-          it.copy(
-              selectedMarkerPreview = null,
-              selectedPin = null,
-              errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${e.message}",
-              isLoadingPreview = false)
+    val cachedPreview = _uiState.value.previews[pin.geoPin.uid]
+
+    if (cachedPreview != null) {
+      // Use cached preview immediately
+      _uiState.update {
+        it.copy(selectedMarkerPreview = cachedPreview, selectedPin = pin, errorMsg = null)
+      }
+    } else {
+      // Load preview on-demand
+      viewModelScope.launch {
+        _uiState.update { it.copy(isLoadingPreview = true, selectedPin = pin) }
+        try {
+          val preview = markerPreviewRepo.getMarkerPreview(pin.geoPin)
+          _uiState.update {
+            val updatedPreviews =
+                if (preview != null) {
+                  it.previews + (pin.geoPin.uid to preview)
+                } else {
+                  it.previews
+                }
+            it.copy(
+                selectedMarkerPreview = preview,
+                selectedPin = pin,
+                previews = updatedPreviews,
+                errorMsg = null,
+                isLoadingPreview = false)
+          }
+        } catch (e: Exception) {
+          _uiState.update {
+            it.copy(
+                selectedMarkerPreview = null,
+                selectedPin = null,
+                errorMsg = "Failed to fetch preview for ${pin.geoPin.uid}: ${e.message}",
+                isLoadingPreview = false)
+          }
         }
       }
     }
@@ -399,31 +438,49 @@ class MapViewModel(
   }
 
   /**
-   * Selects a cluster and loads previews for all its pins.
-   *
-   * On failure, an error message is exposed.
+   * Selects a cluster and displays previews for all its pins. Uses cached previews if all are
+   * available, otherwise loads missing ones using the optimized parallel loading.
    *
    * @param cluster The cluster whose pins should be previewed.
    */
   fun selectCluster(cluster: Cluster<GeoPinWithLocation>) {
     viewModelScope.launch {
-      _uiState.update { it.copy(isLoadingPreview = true) }
+      val state = _uiState.value
+      val pins = cluster.items
 
-      try {
-        val pins = cluster.items
-        val previews = markerPreviewRepo.getMarkerPreviews(pins.map { it.geoPin })
+      // Check which pins have cached previews
+      val cachedPreviews =
+          pins.mapNotNull { pin ->
+            state.previews[pin.geoPin.uid]?.let { preview -> pin to preview }
+          }
 
-        val paired = pins.zip(previews.filterNotNull())
+      if (cachedPreviews.size == pins.size) {
+        // All cached, use immediately
+        _uiState.update { it.copy(selectedClusterPreviews = cachedPreviews, errorMsg = null) }
+      } else {
+        // Some missing, reload all (to use parallel loading optimization)
+        _uiState.update { it.copy(isLoadingPreview = true) }
+        try {
+          val previews = markerPreviewRepo.getMarkerPreviews(pins.map { it.geoPin })
+          val paired = pins.zip(previews.filterNotNull())
 
-        _uiState.update {
-          it.copy(selectedClusterPreviews = paired, errorMsg = null, isLoadingPreview = false)
-        }
-      } catch (e: Exception) {
-        _uiState.update {
-          it.copy(
-              selectedClusterPreviews = null,
-              errorMsg = "Failed to load previews for cluster: ${e.message}",
-              isLoadingPreview = false)
+          // Update cache with newly loaded previews
+          val newPreviews = paired.associate { (pin, preview) -> pin.geoPin.uid to preview }
+
+          _uiState.update {
+            it.copy(
+                selectedClusterPreviews = paired,
+                previews = it.previews + newPreviews,
+                errorMsg = null,
+                isLoadingPreview = false)
+          }
+        } catch (e: Exception) {
+          _uiState.update {
+            it.copy(
+                selectedClusterPreviews = null,
+                errorMsg = "Failed to load previews for cluster: ${e.message}",
+                isLoadingPreview = false)
+          }
         }
       }
     }
@@ -461,12 +518,5 @@ class MapViewModel(
   override fun onCleared() {
     stopGeoQuery()
     super.onCleared()
-  }
-
-  // Access the filtered pins, for tests backward compatibility
-  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-  fun getFilteredPins(): List<GeoPinWithLocation> {
-    val state = _uiState.value
-    return state.allGeoPins.filter { it.geoPin.type in state.activeFilters }
   }
 }

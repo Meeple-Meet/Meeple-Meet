@@ -53,6 +53,9 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
   @Before
   fun setup() {
     runBlocking {
+      // Force online mode for tests
+      com.github.meeplemeet.model.offline.OfflineModeManager.setNetworkStatusForTesting(true)
+
       vm = EditSpaceRenterViewModel()
       owner =
           accountRepository.createAccount(
@@ -151,7 +154,9 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
             owner = owner,
             onBack = { backCalled = true },
             onUpdated = { updatedCalled = true },
-            viewModel = vm)
+            viewModel = vm,
+            online = true,
+        )
       }
     }
 
@@ -193,7 +198,6 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
       // Switch to valid renter for save test
       currentRenterState.value = validRenter
       compose.waitForIdle()
-
       // Make a change to enable the save button
       ensureSectionExpanded(EditSpaceRenterScreenTestTags.SECTION_REQUIRED)
 
@@ -205,6 +209,10 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
 
       // Save updates
       compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+      compose.waitForIdle()
+
+      // Give extra time for the callback to be invoked
+      Thread.sleep(500)
       compose.waitForIdle()
 
       assertTrue(updatedCalled)

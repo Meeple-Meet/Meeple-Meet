@@ -483,14 +483,8 @@ fun SessionCard(
 
           LaunchedEffect(session.participants) {
             names.clear()
-            session.participants.forEach { id ->
-              if (id.isBlank()) {
-                names += "Unknown"
-              } else {
-                viewModel.getOtherAccount(id) { acc ->
-                  names += acc.name // re-composition happens on each addition
-                }
-              }
+            viewModel.getAccounts(session.participants.toSet().toList(), context) {
+              it.forEach { account -> names += account?.name ?: "Unknown" }
             }
           }
           /* ----------------------------------------------------- */
