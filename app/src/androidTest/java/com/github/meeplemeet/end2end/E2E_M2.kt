@@ -39,7 +39,6 @@ import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
@@ -65,7 +64,7 @@ class E2E_M2 : FirestoreTests() {
     try {
       withTimeout(timeoutMs) {
         while (!predicate()) {
-          delay(intervalMs)
+            continue
         }
       }
     } catch (e: TimeoutCancellationException) {
