@@ -1408,7 +1408,7 @@ fun AddButton(
     labelTestTag: String,
 ) {
   Button(
-      shape = RoundedCornerShape(4.dp),
+      shape = RoundedCornerShape(Dimensions.CornerRadius.small),
       colors =
           ButtonDefaults.buttonColors(
               containerColor = AppColors.secondary,
