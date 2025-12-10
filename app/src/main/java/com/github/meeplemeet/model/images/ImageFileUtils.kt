@@ -7,6 +7,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
 const val IMAGE_EXTENSION = ".jpg"
 /**
  * Utility functions for caching user-selected images to local storage.
