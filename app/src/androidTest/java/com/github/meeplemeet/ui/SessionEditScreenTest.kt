@@ -101,6 +101,7 @@ class SessionEditScreenTest : FirestoreTests() {
         discussionId = discussion.uid,
         name = "Editable Session",
         gameId = "",
+        gameName = "",
         date = futureTimestamp,
         location = Location(name = "Meeple Café"),
         admin.uid,

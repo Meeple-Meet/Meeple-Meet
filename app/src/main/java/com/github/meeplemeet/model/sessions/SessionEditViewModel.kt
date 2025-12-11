@@ -56,16 +56,20 @@ class SessionEditViewModel(
    * @param discussion The discussion containing the session
    * @param name Optional new session name
    * @param gameId Optional new game ID
+   * @param gameName Optional new game name
    * @param date Optional new scheduled date and time
    * @param location Optional new location
    * @param participants Optional new list of participant IDs
    * @throws PermissionDeniedException if requester is not a discussion admin
+   * @throws IllegalArgumentException if if only one of {@code gameId} or {@code gameName} is
+   *   provided
    */
   fun updateSession(
       requester: Account,
       discussion: Discussion,
       name: String? = null,
       gameId: String? = null,
+      gameName: String? = null,
       date: Timestamp? = null,
       location: Location? = null,
       participants: List<String>? = null,
@@ -79,6 +83,7 @@ class SessionEditViewModel(
           discussionId = discussion.uid,
           name = name,
           gameId = gameId,
+          gameName = gameName,
           date = date,
           location = location,
           newParticipantList = participants,
