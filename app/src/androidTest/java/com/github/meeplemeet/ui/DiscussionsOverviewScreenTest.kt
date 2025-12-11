@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.navigation.LocalNavigationVM
@@ -269,6 +270,31 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
       // DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT
       compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
       compose.onNodeWithText("(No messages yet)").assertIsDisplayed()
+    }
+  }
+
+  @Test
+  fun blockedSender_hidesMessagePreview() = runBlocking {
+    // Block Bob
+    val meWithBlockedBob =
+        me.copy(relationships = me.relationships + (bob.uid to RelationshipStatus.BLOCKED))
+
+    compose.setContent {
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme { DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav) }
+      }
+    }
+
+    checkpoint("Blocked sender shows hidden message") {
+      compose.waitForIdle()
+      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+      compose.onNodeWithText("Hidden: blocked sender", substring = true).assertIsDisplayed()
+      compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertDoesNotExist()
+    }
+
+    checkpoint("Non-blocked messages still display") {
+      compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+      compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
     }
   }
 }
