@@ -1,4 +1,5 @@
 package com.github.meeplemeet
+// AI was used for this file
 
 import android.content.Context
 import android.os.Bundle
@@ -245,6 +246,17 @@ fun MeepleMeetApp(
   val navigationViewModel: NavigationViewModel = viewModel()
   LaunchedEffect(accountId) { navigationViewModel.startListening(accountId) }
 
+  // Sync email from Firebase Auth to Firestore when user logs in
+  // This is the optimal place to sync because:
+  // 1. User has just logged in (possibly with new email after verification)
+  // 2. Happens once per login session
+  // 3. Ensures Firestore is up-to-date with Firebase Auth before any screen is shown
+  LaunchedEffect(account) {
+    if (account != null) {
+      RepositoryProvider.authentication.syncEmailToFirestore()
+    }
+  }
+
   AppTheme(themeMode = account?.themeMode ?: ThemeMode.SYSTEM_DEFAULT) {
     Surface(modifier = Modifier.fillMaxSize()) {
       CompositionLocalProvider(LocalNavigationVM provides navigationViewModel) {
@@ -389,6 +401,7 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.PostsOverview.name) {
             PostsOverviewScreen(
                 navigation = navigationActions,
+                account = account!!,
                 onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
                 onSelectPost = {
                   postId = it.id
@@ -544,31 +557,32 @@ fun MeepleMeetApp(
             val pages =
                 listOf(
                     OnBoardPage(
-                        image = R.drawable.discussion_logo,
+                        image = R.drawable.onboarding_session_discussion,
                         title = "Welcome to MeepleMeet",
                         description = "Discover events and meet new people."),
                     OnBoardPage(
-                        image = R.drawable.discussion_logo,
-                        title = "Discussions",
-                        description = "Host your own gatherings easily."),
-                    OnBoardPage(
-                        image = R.drawable.discussion_logo,
-                        title = "Explore",
-                        description = "Find activities near you."),
+                        image = R.drawable.onboarding_session_discussion,
+                        title = "Create Sessions",
+                        description = "Use the discussion screen to create game sessions."),
                     OnBoardPage(
                         image = R.drawable.session_logo,
-                        title = "Sessions",
+                        title = "Game Sessions",
                         description = "Organize gaming meetups"),
                     OnBoardPage(
-                        image = R.drawable.discussion_logo,
-                        title = "Posts",
+                        image = R.drawable.onboarding_session_discussion,
+                        title = "Community Posts",
                         description = "Share with the community"),
+                    OnBoardPage(
+                        image = R.drawable.onboarding_session_discussion,
+                        title = "Explore Nearby",
+                        description = "Find activities near you."),
                     OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
             OnBoardingScreen(
                 pages = pages,
                 onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
                 onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
           }
+
           composable(MeepleMeetScreen.Friends.name) {
             account?.let { currentAccount ->
               FriendsScreen(

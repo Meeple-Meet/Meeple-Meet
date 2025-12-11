@@ -46,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.DiscussionsOverviewViewModel
@@ -163,6 +164,7 @@ fun DiscussionsOverviewScreen(
 
                   val senderId = preview.lastMessageSender
                   val isMe = (senderId == account.uid)
+                  val senderBlocked = account.relationships[senderId] == RelationshipStatus.BLOCKED
                   val senderName by
                       produceState(
                           key1 = senderId,
@@ -175,7 +177,8 @@ fun DiscussionsOverviewScreen(
                           }
 
                   val msgText = buildString {
-                    if (preview.lastMessage.isBlank()) {
+                    if (senderBlocked) append("Hidden: blocked sender")
+                    else if (preview.lastMessage.isBlank()) {
                       append(DiscussionCommons.NO_MESSAGES_DEFAULT_TEXT)
                     } else {
                       if (isMe) append("${DiscussionCommons.YOU_SENDER_NAME}: ")
@@ -244,7 +247,7 @@ private fun EmptyDiscussionsListText() {
  */
 @Composable
 @Preview(showBackground = true)
-public fun DiscussionCard(
+fun DiscussionCard(
     modifier: Modifier = Modifier,
     discussionName: String = "Hello",
     lastMsg: String = "Hello world",

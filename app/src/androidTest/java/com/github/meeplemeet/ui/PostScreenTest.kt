@@ -2,19 +2,18 @@
 // and user combinations instructions. Improvements were then added by hand.
 package com.github.meeplemeet.ui
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
@@ -25,7 +24,7 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -38,12 +37,9 @@ class PostScreenTest : FirestoreTests() {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   /* Canonical accounts for examples */
-  private val marco =
-      Account(uid = "u_marco", handle = "marco", name = "Marco", email = "marco@meeple.ch")
-  private val alex =
-      Account(uid = "u_alex", handle = "alex", name = "Alex", email = "alex@meeple.ch")
-  private val dany =
-      Account(uid = "u_dany", handle = "dany", name = "Dany", email = "dany@meeple.ch")
+  private lateinit var marco: Account
+  private lateinit var alex: Account
+  private lateinit var dany: Account
   private val ts = Timestamp(1_725_000_000, 0)
 
   private fun testComment(id: String, text: String, author: Account, vararg children: Comment) =
@@ -56,27 +52,10 @@ class PostScreenTest : FirestoreTests() {
 
   private lateinit var postByAlex: Post
   private lateinit var postByMarco: Post
-
-  /* Fake AccountViewModel */
-  private inner class FakeAccountViewModel : ViewModel(), AccountViewModel {
-    override val scope: CoroutineScope
-      get() = viewModelScope
-
-    private val accounts = mutableMapOf(marco.uid to marco, alex.uid to alex, dany.uid to dany)
-
-    override fun getAccount(id: String, context: Context, onResult: (Account?) -> Unit) {
-      if (id.isBlank()) return
-      accounts[id]?.let { onResult(it) }
-    }
-
-    fun addAccount(account: Account) {
-      accounts[account.uid] = account
-    }
-  }
+  private lateinit var postWithBlockedComments: Post
 
   /* ViewModels */
   private lateinit var postVM: PostViewModel
-  private lateinit var accountVM: FakeAccountViewModel
 
   /* Query helpers */
   private fun findNodeByTag(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true)
@@ -84,26 +63,16 @@ class PostScreenTest : FirestoreTests() {
   private fun findNodeByText() =
       compose.onNodeWithText(COMMENT_TEXT_ZONE_PLACEHOLDER, useUnmergedTree = true)
 
-  private fun settleAnimations() {
-    compose.mainClock.advanceTimeBy(700)
-    compose.waitForIdle()
-  }
-
-  private fun setContent(account: Account = marco, postId: String = "p1", onBack: () -> Unit = {}) {
-    compose.setContent {
-      AppTheme {
-        PostScreen(
-            account = account,
-            postId = postId,
-            postViewModel = postVM,
-            accountViewModel = accountVM,
-            onBack = onBack)
-      }
-    }
-  }
-
   @Before
-  fun setup() {
+  fun setup() = runBlocking {
+    // Use postRepository from FirestoreTests parent class
+    postVM = PostViewModel(postRepository)
+
+    // Create accounts in Firestore
+    marco = accountRepository.createAccount("u_marco", "Marco", "marco@meeple.ch", null)
+    alex = accountRepository.createAccount("u_alex", "Alex", "alex@meeple.ch", null)
+    dany = accountRepository.createAccount("u_dany", "Dany", "dany@meeple.ch", null)
+
     val c1_1_1 = testComment("c1_1_1", "Deep reply about Spirit Island combos", dany)
     val c1_1 = testComment("c1_1", "Marco: let's bring Slay the Spire IRL?", marco, c1_1_1)
     val c1_2 = testComment("c1_2", "Alex: Root needs 4, I'm in", alex)
@@ -121,9 +90,18 @@ class PostScreenTest : FirestoreTests() {
             comments = listOf(c1, c2))
     postByMarco = postByAlex.copy(id = "p2", authorId = marco.uid)
 
-    // Use postRepository from FirestoreTests parent class
-    postVM = PostViewModel(postRepository)
-    accountVM = FakeAccountViewModel()
+    // Create a post with comments from blocked users for testing
+    val blockedComment = testComment("c_blocked", "This should not be visible", dany)
+    val normalComment = testComment("c_normal", "This should be visible", alex)
+    postWithBlockedComments =
+        Post(
+            id = "p_blocked",
+            title = "Post with blocked user comments",
+            body = "Testing blocked user functionality",
+            timestamp = ts,
+            authorId = alex.uid,
+            tags = listOf("test"),
+            comments = listOf(blockedComment, normalComment))
   }
 
   @Test
@@ -137,7 +115,7 @@ class PostScreenTest : FirestoreTests() {
             account = marco,
             postId = postIdState.value,
             postViewModel = postVM,
-            accountViewModel = accountVM,
+            accountViewModel = postVM,
             onBack = { backCount++ })
       }
     }
@@ -226,6 +204,69 @@ class PostScreenTest : FirestoreTests() {
 
       // Counter should still show 0 (input rejected)
       compose.onNodeWithText("0").assertExists()
+    }
+  }
+
+  @Test
+  fun blocked_user_comments_are_hidden() = runBlocking {
+    // Create marco with dany blocked
+    val marcoWithBlockedDany =
+        marco.copy(relationships = mapOf(dany.uid to RelationshipStatus.BLOCKED).toMutableMap())
+
+    // Insert the test post with comments from dany and others
+    val createdPost =
+        postRepository.createPost(
+            postWithBlockedComments.title,
+            postWithBlockedComments.body,
+            postWithBlockedComments.authorId,
+            postWithBlockedComments.tags)
+    val postId = createdPost.id
+
+    // Add comments
+    postRepository.addComment(postId, "This should not be visible", dany.uid, postId)
+    val id = postRepository.addComment(postId, "This should be visible", alex.uid, postId)
+
+    compose.setContent {
+      AppTheme {
+        PostScreen(
+            account = marcoWithBlockedDany,
+            postId = postId,
+            postViewModel = postVM,
+            accountViewModel = postVM,
+            onBack = {})
+      }
+    }
+
+    // Wait for post content to load
+    compose.waitUntil(timeoutMillis = 5000) {
+      compose
+          .onAllNodesWithText(postWithBlockedComments.title, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Wait for comments to load - wait for any comment-related text to appear
+    compose.waitUntil(timeoutMillis = 5000) {
+      compose
+          .onAllNodesWithText(
+              "comment", substring = true, ignoreCase = true, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    checkpoint("blocked_user_comment_shows_placeholder_text") {
+      // Should show placeholder instead of actual comment
+      compose.onNodeWithText("Blocked User").assertExists()
+      compose.onNodeWithText("Comment from blocked user").assertExists()
+      compose.onNodeWithText("This should not be visible").assertDoesNotExist()
+    }
+
+    checkpoint("normal_user_shows_real_content") {
+      // Should show actual username and comment for non-blocked user
+      compose
+          .onNodeWithTag(PostTags.commentAuthor(id), useUnmergedTree = true)
+          .assertTextEquals(alex.name)
+      compose.onNodeWithText("This should be visible").assertExists()
     }
   }
 }

@@ -39,7 +39,6 @@ import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
@@ -65,7 +64,7 @@ class E2E_M2 : FirestoreTests() {
     try {
       withTimeout(timeoutMs) {
         while (!predicate()) {
-          delay(intervalMs)
+          continue
         }
       }
     } catch (e: TimeoutCancellationException) {
@@ -332,7 +331,9 @@ class E2E_M2 : FirestoreTests() {
         .performClick()
     composeTestRule.waitForIdle()
 
-    Thread.sleep(5000)
+    composeTestRule.waitUntil(3000) {
+      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).isDisplayed()
+    }
 
     composeTestRule
         .onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
@@ -1027,8 +1028,6 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertIsDisplayed()
     composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertIsDisplayed()
     composeTestRule.onNodeWithText("Love it!", useUnmergedTree = true).assertIsDisplayed()
-
-    Thread.sleep(5000)
   }
 
   /** Helper function to create a user through repositories */

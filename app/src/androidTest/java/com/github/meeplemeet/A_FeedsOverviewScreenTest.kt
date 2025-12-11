@@ -98,6 +98,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
           PostsOverviewScreen(
               viewModel = postVm,
               navigation = nav,
+              account = me,
               onClickAddPost = { fabClicked = true },
               onSelectPost = { clickedPost = it })
         }

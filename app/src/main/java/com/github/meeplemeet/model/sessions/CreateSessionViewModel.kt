@@ -93,7 +93,10 @@ open class CreateSessionViewModel(
       // Send a join request to the rest
       participants
           .filterNot { participantsToAdd.contains(it) }
-          .forEach { accountRepository.sendJoinSessionNotification(it.uid, discussion) }
+          .filterNot { it.uid == requester.uid }
+          .forEach {
+            accountRepository.sendJoinSessionNotification(requester.uid, it.uid, discussion)
+          }
     }
   }
 
