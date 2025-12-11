@@ -59,6 +59,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -379,7 +380,19 @@ fun MainTab(
   val offlineData by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   val businesses by viewModel.businesses.collectAsState()
-  LaunchedEffect(Unit) { viewModel.loadAccountBusinesses(account) }
+
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+  DisposableEffect(lifecycleOwner) {
+    val observer =
+        androidx.lifecycle.LifecycleEventObserver { _, event ->
+          if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.loadAccountBusinesses(account)
+          }
+        }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
   when (currentPage) {
     ProfilePage.Main ->
         MainTabContent(
