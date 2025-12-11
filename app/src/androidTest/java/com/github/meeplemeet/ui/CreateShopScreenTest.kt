@@ -363,7 +363,7 @@ class CreateShopScreenTest : FirestoreTests() {
         val gameUi by viewModel.gameUIState.collectAsState()
 
         when (s.intValue) {
-//          // 0: Structure
+          //          // 0: Structure
           0 ->
               CreateShopScreen(
                   owner = owner,
@@ -561,7 +561,7 @@ class CreateShopScreenTest : FirestoreTests() {
       val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
       val terraformingTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_terraforming"
 
-       // Wait for games to appear
+      // Wait for games to appear
       compose.waitUntil(10_000) {
         compose
             .onAllNodesWithTag(catanTag, useUnmergedTree = true)
@@ -569,7 +569,7 @@ class CreateShopScreenTest : FirestoreTests() {
             .isNotEmpty()
       }
 
-//       Assert all 3 specific games are present
+      //       Assert all 3 specific games are present
       compose.onNodeWithTag(catanTag).assertExists()
       compose.onNodeWithTag(carcassonneTag).assertExists()
       compose.onNodeWithTag(terraformingTag).assertExists()

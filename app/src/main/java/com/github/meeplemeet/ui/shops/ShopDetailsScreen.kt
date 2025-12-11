@@ -3,43 +3,32 @@ package com.github.meeplemeet.ui.shops
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.EditShopViewModel
-import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
-import com.github.meeplemeet.ui.components.AvailabilitySection
-import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.ConfirmationDialog
-import com.github.meeplemeet.ui.components.GamePickerActions
+import com.github.meeplemeet.ui.components.EditableImageCarousel
+import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
-import com.github.meeplemeet.ui.components.RequiredInfoSection
-import com.github.meeplemeet.ui.components.ShopFormActions
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
 import com.github.meeplemeet.ui.theme.Dimensions
-import com.github.meeplemeet.ui.components.CreateShopFormState
-import com.github.meeplemeet.ui.components.EditableImageCarousel
-import com.github.meeplemeet.ui.components.GameStockPicker
-import kotlinx.coroutines.launch
 
 /* ================================================================================================
  * Test tags
@@ -212,8 +201,7 @@ fun EditShopContent(
 
   // Sync addressText with locationUi.locationQuery when typing
   LaunchedEffect(locationUi.locationQuery) {
-    if (locationUi.locationQuery.isNotEmpty() &&
-        state.addressText != locationUi.locationQuery) {
+    if (locationUi.locationQuery.isNotEmpty() && state.addressText != locationUi.locationQuery) {
       state.addressText = locationUi.locationQuery
     }
   }
@@ -254,7 +242,8 @@ fun EditShopContent(
             },
             snackbarHost = {
               SnackbarHost(
-                  snackbarHostState, modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
+                  snackbarHostState,
+                  modifier = Modifier.testTag(EditShopScreenTestTags.SNACKBAR_HOST))
             },
             bottomBar = {
               val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
@@ -262,19 +251,19 @@ fun EditShopContent(
                   ActionBar(
                       onDiscard = onBack,
                       onPrimary = {
-                          viewModel.updateShop(
-                              shop = shop,
-                              requester = owner,
-                              owner = owner,
-                              name = state.shopName,
-                              phone = state.phone,
-                              email = state.email,
-                              website = state.website,
-                              address = locationUi.selectedLocation ?: Location(),
-                              openingHours = state.week,
-                              gameCollection = state.stock,
-                              photoCollectionUrl = state.photoCollectionUrl)
-                          onSaved()
+                        viewModel.updateShop(
+                            shop = shop,
+                            requester = owner,
+                            owner = owner,
+                            name = state.shopName,
+                            phone = state.phone,
+                            email = state.email,
+                            website = state.website,
+                            address = locationUi.selectedLocation ?: Location(),
+                            openingHours = state.week,
+                            gameCollection = state.stock,
+                            photoCollectionUrl = state.photoCollectionUrl)
+                        onSaved()
                       },
                       enabled = isValid,
                       primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
@@ -325,11 +314,7 @@ fun EditShopContent(
       onDismiss = { state.showHoursDialog = false })
 
   GameStockPicker(
-      owner = owner,
-      shop = shop,
-      viewModel = viewModel,
-      gameUIState = gameUi,
-      state = state)
+      owner = owner, shop = shop, viewModel = viewModel, gameUIState = gameUi, state = state)
 
   ConfirmationDialog(
       show = showDeleteDialog,

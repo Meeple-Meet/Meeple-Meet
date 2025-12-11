@@ -22,16 +22,13 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -62,7 +59,6 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.shops.ShopScreenDefaults
 import com.github.meeplemeet.ui.shops.ShopTestTags
@@ -437,7 +433,7 @@ fun RequiredInfoSection(
               contentDescription = null)
         },
         value = shop.email,
-        onValueChange = { if (it.length <= 60) actions.onEmailChange(it)},
+        onValueChange = { if (it.length <= 60) actions.onEmailChange(it) },
         keyboardType = KeyboardType.Email,
         modifier = Modifier.testTag(ShopFormTestTags.FIELD_EMAIL))
   }
@@ -462,7 +458,7 @@ fun RequiredInfoSection(
                 tint = AppColors.neutral,
                 contentDescription = null)
           },
-          onValueChange = { if (it.length <= 16) actions.onPhoneChange(it)},
+          onValueChange = { if (it.length <= 16) actions.onPhoneChange(it) },
           keyboardType = KeyboardType.Phone,
           modifier = Modifier.testTag(ShopFormTestTags.FIELD_PHONE))
     }
@@ -478,7 +474,7 @@ fun RequiredInfoSection(
                 tint = AppColors.neutral,
                 contentDescription = null)
           },
-          onValueChange = { if (it.length <= 50) actions.onWebsiteChange(it)},
+          onValueChange = { if (it.length <= 50) actions.onWebsiteChange(it) },
           modifier = Modifier.testTag(ShopFormTestTags.FIELD_LINK),
           keyboardType = KeyboardType.Uri)
     }
@@ -941,7 +937,7 @@ fun GameItemImage(
     onDelete: (Game) -> Unit = {},
     imageHeight: Dp? = null,
 ) {
-    Log.d("checkpoint testTag", "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+  Log.d("checkpoint testTag", "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
   Box(modifier = modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")) {
     Column(
         modifier =
@@ -1016,9 +1012,12 @@ fun GameItemImage(
                   }
 
               IconButton(
-                  onClick = { onEdit(game)
-                      Log.d("checkpoint testTag", "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")},
-
+                  onClick = {
+                    onEdit(game)
+                    Log.d(
+                        "checkpoint testTag",
+                        "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+                  },
                   modifier =
                       Modifier.offset(
                               x = Dimensions.Padding.large, y = -Dimensions.Padding.extraMedium)
