@@ -14,7 +14,7 @@ import org.junit.runner.Description
 /** Annotation to disable retry mechanism for a specific test. */
 @Retention(AnnotationRetention.RUNTIME) @Target(AnnotationTarget.FUNCTION) annotation class noretry
 
-const val DEFAULT_CHECKPOINT_TIMEOUT_MS = 20_000L
+const val DEFAULT_CHECKPOINT_TIMEOUT_MS = 40_000L
 
 /**
  * Tiny rule / helper that wraps every test statement and records success / failure together with

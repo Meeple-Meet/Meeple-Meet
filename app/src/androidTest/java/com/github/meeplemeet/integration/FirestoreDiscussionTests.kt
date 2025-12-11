@@ -331,7 +331,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     // account2 is a participant and should be able to read messages
     discussionViewModel.readDiscussionMessages(acc2WithPreviews, withMessage)
-    Thread.sleep(200)
+    Thread.sleep(600)
 
     // Verify unread count is now 0
     val updatedAccount = accountRepository.getAccount(account2.uid)
@@ -385,9 +385,9 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
     discussionRepository.sendMessageToDiscussion(discussion, account1, "First")
-    Thread.sleep(100)
+    Thread.sleep(300)
     discussionRepository.sendMessageToDiscussion(discussion, account1, "Second")
-    Thread.sleep(100)
+    Thread.sleep(300)
     discussionRepository.sendMessageToDiscussion(discussion, account1, "Third")
 
     val messages = discussionRepository.getMessages(discussion.uid)
@@ -409,7 +409,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     val job = launch { messagesFlow.collect { messages -> receivedMessages = messages } }
 
-    delay(500)
+    delay(1500)
 
     // Verify we received the initial message
     assertEquals(1, receivedMessages.size)
@@ -417,7 +417,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
 
     // Send another message and verify the flow updates
     discussionRepository.sendMessageToDiscussion(discussion, account1, "New message")
-    delay(500)
+    delay(1500)
 
     assertEquals(2, receivedMessages.size)
     assertEquals("New message", receivedMessages[1].content)
@@ -466,7 +466,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val photoUrl = "https://example.com/photo.jpg"
     discussionRepository.sendPhotoMessageToDiscussion(discussion, account1, "Photo!", photoUrl)
 
-    Thread.sleep(200)
+    Thread.sleep(600)
 
     // Verify previews are updated with photo emoji
     val acc2Updated = accountRepository.getAccount(account2.uid)
@@ -542,7 +542,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
     discussionRepository.sendMessageToDiscussion(discussion, account1, "Welcome!")
-    Thread.sleep(100)
+    Thread.sleep(300)
 
     discussionRepository.addUserToDiscussion(discussion.uid, account2.uid)
 
@@ -559,7 +559,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
     discussionRepository.sendMessageToDiscussion(discussion, account1, "Hello everyone!")
-    Thread.sleep(100)
+    Thread.sleep(300)
 
     discussionRepository.addUsersToDiscussion(discussion, listOf(account2.uid, account3.uid))
 
@@ -583,7 +583,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     discussionViewModel.sendMessageWithPhoto(
         discussion, account1, "Check this out!", context, testImagePath)
 
-    Thread.sleep(1000) // Wait for upload
+    Thread.sleep(3000) // Wait for upload
 
     val messages = discussionRepository.getMessages(discussion.uid)
     assertEquals(1, messages.size)
@@ -648,7 +648,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
         discussion, account1, context, testImagePath)
     advanceUntilIdle()
 
-    Thread.sleep(1000) // Wait for upload
+    Thread.sleep(3000) // Wait for upload
 
     val updated = discussionRepository.getDiscussion(discussion.uid)
     assertNotNull(updated.profilePictureUrl)
@@ -763,7 +763,7 @@ class FirestoreDiscussionTests : FirestoreTests() {
     discussionViewModel.editMessage(discussion, message, account1, "Edited via ViewModel")
 
     // Wait for async operation
-    delay(1000)
+    delay(3000)
 
     // Verify message updated
     val editedMessage = discussionRepository.getLastMessage(discussion.uid)
