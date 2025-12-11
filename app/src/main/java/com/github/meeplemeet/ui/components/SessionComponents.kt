@@ -101,7 +101,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.SearchViewModel
-import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
@@ -1197,7 +1197,7 @@ fun SessionGameSearchBar(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
-    initial: Game? = null,
+    initial: GameSearchResult? = null,
     inputFieldTestTag: String = SessionComponentsTestTags.SESSION_GAME_SEARCH_INPUT,
     dropdownItemTestTag: String = SessionComponentsTestTags.SESSION_GAME_SEARCH_ITEM
 ) {
@@ -1227,7 +1227,7 @@ fun ShopGameSearchBar(
     account: Account,
     shop: Shop?,
     viewModel: ShopSearchViewModel,
-    initial: Game? = null,
+    initial: GameSearchResult? = null,
     existing: Set<String> = emptySet(),
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
@@ -1262,10 +1262,10 @@ fun ShopGameSearchBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameSearchBar(
-    setGame: (Game) -> Unit,
+    setGame: (GameSearchResult) -> Unit,
     setGameQuery: (String) -> Unit,
     viewModel: SearchViewModel,
-    initial: Game? = null,
+    initial: GameSearchResult? = null,
     existing: Set<String> = emptySet(),
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
@@ -1309,15 +1309,15 @@ private fun GameSearchBar(
               onDismissRequest = { menuOpen = false },
               modifier = Modifier.background(AppColors.primary)) {
                 results.gameSuggestions
-                    .filterNot { existing.contains(it.uid) }
+                    .filterNot { existing.contains(it.id) }
                     .take(Dimensions.Numbers.searchResultLimit)
-                    .forEachIndexed { i, game ->
+                    .forEachIndexed { i, searchResult ->
                       DropdownMenuItem(
-                          text = { Text(game.name) },
+                          text = { Text(searchResult.name) },
                           onClick = {
                             menuOpen = false
-                            text = game.name
-                            setGame(game)
+                            text = searchResult.name
+                            setGame(searchResult)
                           },
                           modifier =
                               Modifier.testTag("$dropdownItemTestTag:$i")
