@@ -169,7 +169,7 @@ class NotificationsTabTest : FirestoreTests() {
       discussionNotification =
           Notification(
               uid = "n2",
-              senderId = discussion.uid,
+              discussionId = discussion.uid,
               receiverId = currentUser.uid,
               read = true,
               type = NotificationType.JOIN_DISCUSSION,
