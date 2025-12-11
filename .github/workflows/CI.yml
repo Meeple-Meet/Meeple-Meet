@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -71,9 +71,21 @@ jobs:
           chmod +x ./scripts/check-repeated-strings.sh
           ./scripts/check-repeated-strings.sh
 
+  compose-delays-check:
+    name: Compose Delays Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check for delay/Thread.sleep in Compose tests
+        run: |
+          chmod +x ./scripts/check-compose-delays.sh
+          ./scripts/check-compose-delays.sh
+
   assemble-lint:
     name: Assemble and Lint
-    needs: [format-check, magic-number-check, repeated-strings-check]
+    needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -86,7 +98,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Decode secrets
         env:
@@ -128,7 +140,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    needs: [format-check, magic-number-check, repeated-strings-check]
+    needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -141,7 +153,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -224,7 +236,7 @@ jobs:
 
   android-tests:
     name: Android Instrumentation Tests
-    needs: [format-check, magic-number-check, repeated-strings-check]
+    needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check]
     runs-on: ${{ github.event.pull_request.draft && 'ubuntu-latest' || 'blacksmith-4vcpu-ubuntu-2404' }}
     steps:
       - name: Checkout
@@ -243,7 +255,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -326,7 +338,7 @@ jobs:
 
   compile-debug-classes:
     name: Compile Debug Classes
-    needs: [format-check, magic-number-check, repeated-strings-check]
+    needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -339,7 +351,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -382,7 +394,7 @@ jobs:
 
   coverage-report:
     name: Coverage Report
-    needs: [format-check, magic-number-check, repeated-strings-check, unit-tests, android-tests, compile-debug-classes, assemble-lint]
+    needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check, unit-tests, android-tests, compile-debug-classes, assemble-lint]
     runs-on: ubuntu-latest
     outputs:
       coverage: ${{ steps.coverage.outputs.percentage }}
@@ -397,7 +409,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
