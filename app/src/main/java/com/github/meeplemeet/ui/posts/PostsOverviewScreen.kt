@@ -15,14 +15,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +40,7 @@ import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import java.text.SimpleDateFormat
@@ -44,6 +49,8 @@ import java.util.*
 object FeedsOverviewTestTags {
   const val ADD_POST_BUTTON = "AddPostButton"
   const val POST_CARD_PREFIX = "Post/"
+  const val SEARCH_TEXT_FIELD = "PostSearchTextField"
+  const val SEARCH_CLEAR = "PostSearchClear"
 }
 
 object PostOverviewScreenUi {
@@ -79,7 +86,21 @@ fun PostsOverviewScreen(
 ) {
   val context = LocalContext.current
   val posts by viewModel.posts.collectAsState()
-  val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
+
+  var searchQuery by rememberSaveable { mutableStateOf("") }
+
+  val postsSorted =
+      remember(posts, searchQuery) {
+        val sorted = posts.sortedByDescending { it.timestamp }
+
+        // Filter by search query
+        if (searchQuery.isBlank()) {
+          sorted
+        } else {
+          val query = searchQuery.trim().lowercase()
+          sorted.filter { post -> post.title.lowercase().contains(query) }
+        }
+      }
 
   Scaffold(
       floatingActionButton = {
@@ -97,19 +118,25 @@ fun PostsOverviewScreen(
                 }
       },
       topBar = {
-        CenterAlignedTopAppBar(
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface),
-            title = {
-              Text(
-                  text = MeepleMeetScreen.PostsOverview.title,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontSize = Dimensions.TextSize.largeHeading,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-            })
+        Column(Modifier.fillMaxWidth()) {
+          CenterAlignedTopAppBar(
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface),
+              title = {
+                Text(
+                    text = MeepleMeetScreen.PostsOverview.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = Dimensions.TextSize.largeHeading,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+              })
+          PostSearchBar(
+              query = searchQuery,
+              onQueryChange = { searchQuery = it },
+              onClearQuery = { searchQuery = "" })
+        }
       },
       bottomBar = {
         BottomBarWithVerification(
@@ -325,4 +352,66 @@ public fun FeedCard(
     HorizontalDivider(
         color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
+}
+
+/**
+ * Composable function for the post search bar.
+ *
+ * @param query The current search query.
+ * @param onQueryChange Callback when the search query changes.
+ * @param onClearQuery Callback to clear the search query.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PostSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearQuery: () -> Unit
+) {
+  TextField(
+      value = query,
+      onValueChange = onQueryChange,
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimensions.ContainerSize.timeFieldHeight)
+              .testTag(FeedsOverviewTestTags.SEARCH_TEXT_FIELD),
+      placeholder = {
+        Text(
+            "Search posts...",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+      },
+      singleLine = true,
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search",
+        )
+      },
+      trailingIcon = {
+        if (query.isNotEmpty()) {
+          IconButton(
+              onClick = onClearQuery,
+              modifier = Modifier.testTag(FeedsOverviewTestTags.SEARCH_CLEAR),
+          ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Clear search",
+            )
+          }
+        }
+      },
+      textStyle = MaterialTheme.typography.bodyMedium,
+      colors =
+          TextFieldDefaults.colors(
+              focusedTextColor = AppColors.textIcons,
+              unfocusedTextColor = AppColors.textIcons,
+              focusedContainerColor = AppColors.divider,
+              unfocusedContainerColor = AppColors.divider,
+              disabledContainerColor = AppColors.divider,
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent,
+          ),
+  )
 }

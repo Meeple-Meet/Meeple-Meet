@@ -29,16 +29,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,10 +56,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -91,6 +98,8 @@ object SessionsOverviewScreenTestTags {
   const val TEST_TAG_ARCHIVE_BUTTON = "archiveButton"
   const val TEST_TAG_NEXT_SESSIONS = "nextSessionsToggle"
   const val TEST_TAG_HISTORY = "historyToggle"
+  const val SEARCH_TEXT_FIELD = "SessionSearchTextField"
+  const val SEARCH_CLEAR = "SessionSearchClear"
 }
 /**
  * Main screen that lists gaming sessions for the logged-in user.
@@ -155,6 +164,8 @@ fun SessionsOverviewScreen(
     onDispose { timer.cancel() }
   }
 
+  var searchQuery by rememberSaveable { mutableStateOf("") }
+
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
@@ -173,6 +184,10 @@ fun SessionsOverviewScreen(
                 showHistory = showHistory,
                 onNext = { showHistory = false },
                 onHistory = { showHistory = true })
+            SessionSearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onClearQuery = { searchQuery = "" })
           }
         },
         bottomBar = {
@@ -185,10 +200,22 @@ fun SessionsOverviewScreen(
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when {
               showHistory -> {
-                if (archivedSessions.isEmpty()) {
+                val filteredArchived =
+                    remember(archivedSessions, searchQuery) {
+                      if (searchQuery.isBlank()) {
+                        archivedSessions
+                      } else {
+                        val query = searchQuery.trim().lowercase()
+                        archivedSessions.filter { session ->
+                          session.name.lowercase().contains(query)
+                        }
+                      }
+                    }
+
+                if (filteredArchived.isEmpty()) {
                   EmptySessionsListText(isHistory = true)
                 } else {
-                  HistoryGrid(sessions = archivedSessions, onSessionClick = { popupSession = it })
+                  HistoryGrid(sessions = filteredArchived, onSessionClick = { popupSession = it })
                 }
               }
               sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
@@ -197,14 +224,26 @@ fun SessionsOverviewScreen(
                 val activeSessions =
                     sessionMap.toList().sortedBy { (_, session) -> session.date.toDate().time }
 
-                if (activeSessions.isEmpty()) {
+                val filteredActive =
+                    remember(activeSessions, searchQuery) {
+                      if (searchQuery.isBlank()) {
+                        activeSessions
+                      } else {
+                        val query = searchQuery.trim().lowercase()
+                        activeSessions.filter { (_, session) ->
+                          session.name.lowercase().contains(query)
+                        }
+                      }
+                    }
+
+                if (filteredActive.isEmpty()) {
                   EmptySessionsListText(isHistory = false)
                 } else {
                   /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
                   LazyColumn(
                       modifier = Modifier.fillMaxSize(),
                       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                        items(activeSessions, key = { it.first }) { (id, session) ->
+                        items(filteredActive, key = { it.first }) { (id, session) ->
                           SessionCard(
                               id = id,
                               session = session,
@@ -711,4 +750,66 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
  */
 private fun getSessionPicture(session: Session): String? {
   return session.photoUrl?.takeIf { it.isNotBlank() }
+}
+
+/**
+ * Composable function for the session search bar.
+ *
+ * @param query The current search query.
+ * @param onQueryChange Callback when the search query changes.
+ * @param onClearQuery Callback to clear the search query.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SessionSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearQuery: () -> Unit
+) {
+  TextField(
+      value = query,
+      onValueChange = onQueryChange,
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimensions.ContainerSize.timeFieldHeight)
+              .testTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD),
+      placeholder = {
+        Text(
+            "Search sessions...",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+      },
+      singleLine = true,
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search",
+        )
+      },
+      trailingIcon = {
+        if (query.isNotEmpty()) {
+          IconButton(
+              onClick = onClearQuery,
+              modifier = Modifier.testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR),
+          ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Clear search",
+            )
+          }
+        }
+      },
+      textStyle = MaterialTheme.typography.bodyMedium,
+      colors =
+          TextFieldDefaults.colors(
+              focusedTextColor = AppColors.textIcons,
+              unfocusedTextColor = AppColors.textIcons,
+              focusedContainerColor = AppColors.secondary,
+              unfocusedContainerColor = AppColors.secondary,
+              disabledContainerColor = AppColors.secondary,
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent,
+          ),
+  )
 }

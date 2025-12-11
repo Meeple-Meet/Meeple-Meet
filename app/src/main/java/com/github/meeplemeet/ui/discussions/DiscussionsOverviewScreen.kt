@@ -22,22 +22,31 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +84,8 @@ private const val MAX_LINE = 1
 
 object DiscussionOverviewTestTags {
   const val ADD_DISCUSSION_BUTTON = "Add Discussion"
+  const val SEARCH_TEXT_FIELD = "DiscussionSearchTextField"
+  const val SEARCH_CLEAR = "DiscussionSearchClear"
 }
 
 /* ================================================================
@@ -102,12 +113,27 @@ fun DiscussionsOverviewScreen(
   val context = LocalContext.current
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
   val offline by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
+
+  var searchQuery by rememberSaveable { mutableStateOf("") }
+
   val discussionPreviewsSorted =
-      remember(account.previews, online, offline.discussions) {
+      remember(account.previews, online, offline.discussions, searchQuery) {
         val previews =
             if (online) account.previews
             else account.previews.filter { offline.discussions.contains(it.value.uid) }
-        previews.values.sortedByDescending { it.lastMessageAt.toDate() }
+        val sorted = previews.values.sortedByDescending { it.lastMessageAt.toDate() }
+
+        // Filter by search query
+        if (searchQuery.isBlank()) {
+          sorted
+        } else {
+          val query = searchQuery.trim().lowercase()
+          sorted.filter { preview ->
+            val discussion = offline.discussions[preview.uid]?.first
+            val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
+            discussionName.lowercase().contains(query)
+          }
+        }
       }
 
   LaunchedEffect(account.previews) { viewModel.validatePreviews(account) }
@@ -134,16 +160,22 @@ fun DiscussionsOverviewScreen(
                 }
       },
       topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  text = MeepleMeetScreen.DiscussionsOverview.title,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontSize = Dimensions.TextSize.heading,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.onPrimary,
-                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-            })
+        Column(Modifier.fillMaxWidth()) {
+          CenterAlignedTopAppBar(
+              title = {
+                Text(
+                    text = MeepleMeetScreen.DiscussionsOverview.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = Dimensions.TextSize.heading,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+              })
+          DiscussionSearchBar(
+              query = searchQuery,
+              onQueryChange = { searchQuery = it },
+              onClearQuery = { searchQuery = "" })
+        }
       },
       bottomBar = {
         BottomBarWithVerification(
@@ -369,4 +401,66 @@ fun RelativeTimestampText(timestamp: Timestamp, modifier: Modifier) {
       style = MaterialTheme.typography.labelSmall,
       fontSize = Dimensions.TextSize.medium,
       modifier = modifier)
+}
+
+/**
+ * Composable function for the discussion search bar.
+ *
+ * @param query The current search query.
+ * @param onQueryChange Callback when the search query changes.
+ * @param onClearQuery Callback to clear the search query.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DiscussionSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearQuery: () -> Unit
+) {
+  TextField(
+      value = query,
+      onValueChange = onQueryChange,
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimensions.ContainerSize.timeFieldHeight)
+              .testTag(DiscussionOverviewTestTags.SEARCH_TEXT_FIELD),
+      placeholder = {
+        Text(
+            "Search discussions...",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+      },
+      singleLine = true,
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search",
+        )
+      },
+      trailingIcon = {
+        if (query.isNotEmpty()) {
+          IconButton(
+              onClick = onClearQuery,
+              modifier = Modifier.testTag(DiscussionOverviewTestTags.SEARCH_CLEAR),
+          ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Clear search",
+            )
+          }
+        }
+      },
+      textStyle = MaterialTheme.typography.bodyMedium,
+      colors =
+          TextFieldDefaults.colors(
+              focusedTextColor = AppColors.textIcons,
+              unfocusedTextColor = AppColors.textIcons,
+              focusedContainerColor = AppColors.divider,
+              unfocusedContainerColor = AppColors.divider,
+              disabledContainerColor = AppColors.divider,
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent,
+          ),
+  )
 }
