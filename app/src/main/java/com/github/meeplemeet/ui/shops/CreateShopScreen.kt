@@ -19,6 +19,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
@@ -316,11 +317,22 @@ fun ShopFormContent(
   }
 }
 
-/** Handles the input fields in the screen */
+/**
+ * Section that renders basic shop info input fields.
+ *
+ * This composable builds a temporary draft Shop object from the current form state and delegates
+ * rendering to the shared RequiredInfoSection component.
+ *
+ * @param state Form state containing name, contact info, opening hours and stock.
+ * @param viewModel ViewModel used for search/autocomplete and other actions.
+ * @param online Whether the device is online (affects some field behavior).
+ * @param owner Account that will own the shop being created/edited.
+ * @param locationUi Current location UI state used to provide the selected address.
+ */
 @Composable
 internal fun ShopInfoSection(
     state: CreateShopFormState,
-    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel,
+    viewModel: ShopSearchViewModel,
     online: Boolean,
     owner: Account,
     locationUi: LocationUIState
@@ -353,7 +365,14 @@ internal fun ShopInfoSection(
       testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
 }
 
-/** Availability section of the shop */
+/**
+ * Section that exposes the shop availability editor.
+ *
+ * Wraps the shared AvailabilitySection composable and routes edit actions to the form state so the
+ * opening hours dialog can be shown and the selected day edited.
+ *
+ * @param state Form state that holds the `week` (opening hours) and dialog flags.
+ */
 @Composable
 internal fun ShopAvailabilitySection(state: CreateShopFormState) {
   CollapsibleSection(
@@ -370,12 +389,21 @@ internal fun ShopAvailabilitySection(state: CreateShopFormState) {
       testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
 }
 
-/** Handles the entirety of the games section */
+/**
+ * Section that renders the shop's games list and related actions.
+ *
+ * Shows a "Add game" button and an offline message when appropriate, and hosts the
+ * GameImageListSection which lists current stock with edit/delete handlers.
+ *
+ * @param state Form state holding the current `stock` of games and dialog flags.
+ * @param online Whether the device is online; controls add/edit availability.
+ * @param viewModel ViewModel used to set the selected game for editing/search.
+ */
 @Composable
 internal fun ShopGamesSection(
     state: CreateShopFormState,
     online: Boolean,
-    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel
+    viewModel: ShopSearchViewModel
 ) {
   CollapsibleSection(
       title = AddShopUi.Strings.SECTION_GAMES,
@@ -425,11 +453,16 @@ internal fun ShopGamesSection(
  * ================================================================================================ */
 
 /**
- * Used to keep the form's state up to date with the UI changes
+ * Creates and remembers the form state used by the Create/Edit shop screens.
  *
- * @param initialStock initial games selection
- * @param onSetGameQuery callback upon searching a game
- * @param onSetGame callback upon adding game
+ * This helper wraps `CreateShopFormState` construction in `remember` so the state instance survives
+ * recompositions. Provides callbacks used by nested components.
+ *
+ * @param initialStock Initial selection of games and quantities.
+ * @param initialShop Optional initial shop to edit; null for create flows.
+ * @param onSetGameQuery Callback invoked when the user types a game search query.
+ * @param onSetGame Callback invoked when a game is selected to be added to the form.
+ * @return A remembered [CreateShopFormState] instance.
  */
 @Composable
 fun rememberCreateShopFormState(
