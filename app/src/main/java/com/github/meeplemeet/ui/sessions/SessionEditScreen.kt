@@ -327,6 +327,7 @@ fun SessionEditScreen(
                                     discussion = discussion,
                                     name = updated.title,
                                     gameId = finalGameId,
+                                    gameName = "Temp game name (edit)",
                                     date = toTimestamp(updated.date, updated.time),
                                     location = locationUi.selectedLocation ?: session.location,
                                     participants = finalParticipantIds,

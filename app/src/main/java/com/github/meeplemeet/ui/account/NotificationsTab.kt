@@ -915,33 +915,31 @@ fun NotificationSheet(
 
               val session = disc.session
               if (session != null) {
-                viewModel.getGame(session.gameId) { game ->
-                  val dateTime =
-                      session.date
-                          .toDate()
-                          .toInstant()
-                          .atZone(ZoneId.systemDefault())
-                          .toLocalDateTime()
+                val dateTime =
+                    session.date
+                        .toDate()
+                        .toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime()
 
-                  val dateLabel =
-                      dateTime.format(
-                          DateTimeFormatter.ofPattern(
-                              NotificationsTabUi.NotificationSheet.Content.SESSION_DATE_PATTERN))
-                  val timeLabel =
-                      dateTime.format(
-                          DateTimeFormatter.ofPattern(
-                              NotificationsTabUi.NotificationSheet.Content.SESSION_TIME_PATTERN))
+                val dateLabel =
+                    dateTime.format(
+                        DateTimeFormatter.ofPattern(
+                            NotificationsTabUi.NotificationSheet.Content.SESSION_DATE_PATTERN))
+                val timeLabel =
+                    dateTime.format(
+                        DateTimeFormatter.ofPattern(
+                            NotificationsTabUi.NotificationSheet.Content.SESSION_TIME_PATTERN))
 
-                  loadedData =
-                      NotificationPopupData.Session(
-                          title = session.name,
-                          participants = session.participants.size,
-                          dateLabel = dateLabel,
-                          description =
-                              NotificationsTabUi.NotificationSheet.Content.sessionDescription(
-                                  game.name, timeLabel, session.location.name),
-                          icon = avatar)
-                }
+                loadedData =
+                    NotificationPopupData.Session(
+                        title = session.name,
+                        participants = session.participants.size,
+                        dateLabel = dateLabel,
+                        description =
+                            NotificationsTabUi.NotificationSheet.Content.sessionDescription(
+                                session.gameName, timeLabel, session.location.name),
+                        icon = avatar)
               }
             })
       }

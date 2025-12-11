@@ -91,8 +91,7 @@ class NotificationsTabTest : FirestoreTests() {
             accountRepository = accountRepository,
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
-            discussionRepository = discussionRepository,
-            gameRepository = gameRepository)
+            discussionRepository = discussionRepository)
     navViewModel = NavigationViewModel(accountRepository)
 
     runBlocking {
@@ -139,6 +138,7 @@ class NotificationsTabTest : FirestoreTests() {
                   sessionDiscussion.uid,
                   "Catan Session",
                   gameId,
+                  game.name,
                   Timestamp(Date(System.currentTimeMillis() + 86400000)),
                   location = Location(0.0, 0.0, "Game Store"),
                   participants = arrayOf(otherUser.uid))

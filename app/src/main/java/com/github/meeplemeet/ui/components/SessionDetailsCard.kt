@@ -23,7 +23,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
-import com.github.meeplemeet.ui.sessions.LABEL_UNKNOWN_GAME
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.SimpleDateFormat
@@ -60,13 +59,7 @@ fun SessionDetailsCard(
     }
   }
 
-  val gameName by
-      produceState(key1 = session.gameId, initialValue = session.gameId) {
-        val resolved =
-            if (session.gameId == LABEL_UNKNOWN_GAME) null
-            else viewModel.getGameNameByGameId(session.gameId)
-        value = resolved ?: "No game selected"
-      }
+  val gameName = session.gameName.takeIf { it.isNotBlank() } ?: "No game selected"
 
   Box(
       modifier =

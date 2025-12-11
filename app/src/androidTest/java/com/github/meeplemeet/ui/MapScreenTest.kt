@@ -623,6 +623,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             discussion.uid,
             "Session Preview Test",
             testGame.uid,
+            testGame.name,
             Timestamp.now(),
             testLocation,
             regularAccount.uid)
@@ -680,6 +681,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             discussion.uid,
             "Private Session",
             testGame.uid,
+            testGame.name,
             Timestamp.now(),
             testLocation,
             shopOwnerAccount.uid)

@@ -92,7 +92,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val game = gameRepository.getGameById(testGameId)
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
           sessionRepository.createSession(
-              discussion.uid, "Chess Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Chess Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
           compose.waitUntil { emptyText().isNotDisplayed() }
           sessionCard(discussion.uid).assertIsDisplayed()
         }
@@ -106,7 +112,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val game = gameRepository.getGameById(testGameId)
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
           sessionRepository.createSession(
-              discussion.uid, "Tap Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Tap Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
           compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
           sessionCard(discussion.uid).performClick()
           assertEquals(discussion.uid, capturedDiscussionId)
@@ -121,7 +133,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val game = gameRepository.getGameById(testGameId)
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 10000000))
           sessionRepository.createSession(
-              discussion.uid, "Vanish Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Vanish Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
           compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
 
           sessionRepository.deleteSession(discussion.uid)
@@ -142,7 +160,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               discussionRepository.createDiscussion("Past Session", "Old times", account.uid)
           val game = gameRepository.getGameById(testGameId)
           sessionRepository.createSession(
-              discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
+              discussion.uid,
+              "Past Night",
+              game.uid,
+              game.name,
+              pastDate,
+              testLocation,
+              account.uid)
 
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
           compose.waitUntil(4000) { compose.onNodeWithText("Past Night").isDisplayed() }
@@ -171,7 +195,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
 
           val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - (90 * 60 * 1000L)))
           sessionRepository.createSession(
-              discussion.uid, "Archive Night", game.uid, pastDate, testLocation, account.uid)
+              discussion.uid,
+              "Archive Night",
+              game.uid,
+              game.name,
+              pastDate,
+              testLocation,
+              account.uid)
 
           compose.waitUntil(2000) {
             compose.onNodeWithText("Automatically archives in", substring = true).isDisplayed()
@@ -229,6 +259,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               discussion.uid,
               "User Night",
               game.uid,
+              game.name,
               withinTwoHours,
               testLocation,
               otherUid,
@@ -252,7 +283,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val futureDate =
               Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
           sessionRepository.createSession(
-              discussion.uid, "Future Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Future Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
 
           compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
 

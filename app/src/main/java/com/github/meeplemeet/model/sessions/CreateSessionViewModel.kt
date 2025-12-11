@@ -64,6 +64,7 @@ open class CreateSessionViewModel(
       discussion: Discussion,
       name: String,
       gameId: String,
+      gameName: String,
       date: Timestamp,
       location: Location,
       vararg participants: Account
@@ -85,6 +86,7 @@ open class CreateSessionViewModel(
           discussion.uid,
           name,
           gameId,
+          gameName,
           date,
           location,
           requester.uid,
