@@ -1,4 +1,5 @@
 package com.github.meeplemeet
+// AI was used for this file
 
 import android.content.Context
 import android.os.Bundle
@@ -244,6 +245,17 @@ fun MeepleMeetApp(
 
   val navigationViewModel: NavigationViewModel = viewModel()
   LaunchedEffect(accountId) { navigationViewModel.startListening(accountId) }
+
+  // Sync email from Firebase Auth to Firestore when user logs in
+  // This is the optimal place to sync because:
+  // 1. User has just logged in (possibly with new email after verification)
+  // 2. Happens once per login session
+  // 3. Ensures Firestore is up-to-date with Firebase Auth before any screen is shown
+  LaunchedEffect(account) {
+    if (account != null) {
+      RepositoryProvider.authentication.syncEmailToFirestore()
+    }
+  }
 
   AppTheme(themeMode = account?.themeMode ?: ThemeMode.SYSTEM_DEFAULT) {
     Surface(modifier = Modifier.fillMaxSize()) {
