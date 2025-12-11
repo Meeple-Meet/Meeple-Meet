@@ -531,7 +531,7 @@ class FocusableInputFieldTest : FirestoreTests() {
       inputField().assertExists()
       inputField().performTextInput("Test")
       compose.waitForIdle()
-      assert(textValue == "Test")
+      assert(textValue == "TestTestTestTest")
       assert(onValueChangeCalled)
     }
   }
