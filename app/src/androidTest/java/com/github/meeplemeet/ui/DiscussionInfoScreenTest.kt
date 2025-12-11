@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -265,7 +266,10 @@ class DiscussionSettingScreenTest : FirestoreTests() {
 
           // Verify both options are displayed
           compose.onNodeWithTag("profile_picture_camera_option").assertIsDisplayed()
+            Log.d("I have arrived", "here")
+
           compose.onNodeWithTag("profile_picture_gallery_option").assertIsDisplayed()
+            Log.d("I have arrived", "but not here")
         }
       }
     }

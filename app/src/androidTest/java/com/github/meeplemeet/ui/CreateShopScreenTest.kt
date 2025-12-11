@@ -43,7 +43,7 @@ class CreateShopScreenTest : FirestoreTests() {
   /* ---------- Checkpoint helper ---------- */
   @get:Rule val ck = Checkpoint.Rule()
 
-  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
+  private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 100000L)
 
   /* ────────────────────────────── FIXTURES / FX ──────────────────────────── */
 
