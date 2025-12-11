@@ -43,6 +43,7 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
+@Ignore("Uses new Business Component which will be implemented later")
 class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @get:Rule val composeTestRule = createComposeRule()

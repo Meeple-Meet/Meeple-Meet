@@ -8,7 +8,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
@@ -26,6 +29,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.sessions.SessionTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.max
 
@@ -70,6 +74,7 @@ private object SpaceRenterUi {
     const val labelPlaces = "Places"
     const val labelPrices = "Price"
     const val emptySpacesText = "No spaces added yet."
+    const val CONTACT_INFO = "Contact Info"
   }
 }
 
@@ -213,10 +218,32 @@ fun SpaceRenterRequiredInfoSection(
         value = nameValue,
         onValueChange = onSpaceName)
   }
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+  // Address
+  Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
+    SpaceRenterLocationSearchBar(
+        account = owner,
+        spaceRenter = spaceRenter,
+        viewModel = viewModel,
+        enabled = online,
+        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+  }
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+  Text(
+      text = SpaceRenterUi.Strings.CONTACT_INFO,
+      style = MaterialTheme.typography.titleMedium,
+  )
 
   // Email
   Box(Modifier.testTag(ShopFormTestTags.FIELD_EMAIL)) {
     LabeledField(
+        leadingIcon = {
+          Icon(
+              imageVector = Icons.Default.MailOutline,
+              contentDescription = "phone icon",
+              tint = AppColors.neutral)
+        },
         label = ShopFormUi.Strings.EMAIL_LABEL,
         placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
         value = emailValue,
@@ -230,36 +257,43 @@ fun SpaceRenterRequiredInfoSection(
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall)
   }
+  Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+  Row {
+    // Phone
+    Box(Modifier.weight(1f).testTag(ShopFormTestTags.FIELD_PHONE)) {
+      LabeledField(
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Phone,
+                contentDescription = "phone icon",
+                tint = AppColors.neutral)
+          },
+          label = ShopFormUi.Strings.PHONE_LABEL,
+          placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
+          value = phoneValue,
+          onValueChange = onPhone,
+          keyboardType = KeyboardType.Phone,
+          scrollToStartOnFocusLost = true)
+    }
 
-  // Phone
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_PHONE)) {
-    LabeledField(
-        label = ShopFormUi.Strings.PHONE_LABEL,
-        placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
-        value = phoneValue,
-        onValueChange = onPhone,
-        keyboardType = KeyboardType.Phone)
-  }
+    Spacer(Modifier.width(Dimensions.Spacing.medium))
 
-  // Link / Website
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_LINK)) {
-    LabeledField(
-        label = ShopFormUi.Strings.LINK_LABEL,
-        placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
-        value = linkValue,
-        onValueChange = onLink,
-        keyboardType = KeyboardType.Uri)
-  }
-
-  // Address
-  Box(Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)) {
-    SpaceRenterLocationSearchBar(
-        account = owner,
-        spaceRenter = spaceRenter,
-        viewModel = viewModel,
-        enabled = online,
-        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+    // Link / Website
+    Box(Modifier.weight(1f).testTag(ShopFormTestTags.FIELD_LINK)) {
+      LabeledField(
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.AddLink,
+                contentDescription = "link icon",
+                tint = AppColors.neutral)
+          },
+          label = ShopFormUi.Strings.LINK_LABEL,
+          placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
+          value = linkValue,
+          onValueChange = onLink,
+          keyboardType = KeyboardType.Uri,
+          scrollToStartOnFocusLost = true)
+    }
   }
 }
 

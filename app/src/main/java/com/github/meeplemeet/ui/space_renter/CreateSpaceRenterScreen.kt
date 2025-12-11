@@ -22,6 +22,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -325,10 +326,14 @@ internal fun AddSpaceRenterContent(
                                   spaces = spaces.filterIndexed { i, _ -> i != idx }
                                 },
                             )
+                            AddButton(
+                                onClick = { addSpace() },
+                                buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                buttonTestTag = CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,
+                                labelTestTag = CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL)
                           },
                           testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
                     }
-
                     item {
                       Spacer(
                           Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)

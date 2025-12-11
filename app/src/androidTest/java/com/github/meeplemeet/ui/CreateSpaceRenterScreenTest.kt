@@ -50,7 +50,7 @@ class CreateSpaceRenterScreenTest : FirestoreTests() {
 
   /** Expand a collapsible section only if its content isn't currently in the tree. */
   private fun ensureSectionExpanded(sectionBaseTag: String) {
-    val toggleTag = sectionBaseTag + ShopFormTestTags.SECTION_TOGGLE_SUFFIX
+    val toggleTag = sectionBaseTag + ShopFormTestTags.SECTION_HEADER_SUFFIX
     val contentTag = sectionBaseTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX
 
     scrollListToTag(toggleTag)
