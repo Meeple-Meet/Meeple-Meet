@@ -32,7 +32,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@Ignore("Uses new Business Component which will be implemented later")
 @RunWith(AndroidJUnit4::class)
 class CreateShopScreenTest : FirestoreTests() {
 
