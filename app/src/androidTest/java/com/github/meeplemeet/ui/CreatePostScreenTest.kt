@@ -19,7 +19,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
 
-@Ignore("Will be fixed in another commit")
+@Ignore("Will be fixed in another PR")
 @RunWith(AndroidJUnit4::class)
 class CreatePostScreenTest : FirestoreTests() {
 

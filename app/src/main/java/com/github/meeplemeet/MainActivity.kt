@@ -571,46 +571,46 @@ fun MeepleMeetApp(
           }
         }
 
-          // OnBoarding Screen
-          composable(MeepleMeetScreen.OnBoarding.name) {
-            val pages =
-                listOf(
-                    OnBoardPage(
-                        image = R.drawable.onboarding_session_discussion,
-                        title = "Welcome to MeepleMeet",
-                        description = "Discover events and meet new people."),
-                    OnBoardPage(
-                        image = R.drawable.onboarding_session_discussion,
-                        title = "Create Sessions",
-                        description = "Use the discussion screen to create game sessions."),
-                    OnBoardPage(
-                        image = R.drawable.session_logo,
-                        title = "Game Sessions",
-                        description = "Organize gaming meetups"),
-                    OnBoardPage(
-                        image = R.drawable.onboarding_session_discussion,
-                        title = "Community Posts",
-                        description = "Share with the community"),
-                    OnBoardPage(
-                        image = R.drawable.onboarding_session_discussion,
-                        title = "Explore Nearby",
-                        description = "Find activities near you."),
-                    OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
-            OnBoardingScreen(
-                pages = pages,
-                onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
-                onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
-          }
+        // OnBoarding Screen
+        composable(MeepleMeetScreen.OnBoarding.name) {
+          val pages =
+              listOf(
+                  OnBoardPage(
+                      image = R.drawable.onboarding_session_discussion,
+                      title = "Welcome to MeepleMeet",
+                      description = "Discover events and meet new people."),
+                  OnBoardPage(
+                      image = R.drawable.onboarding_session_discussion,
+                      title = "Create Sessions",
+                      description = "Use the discussion screen to create game sessions."),
+                  OnBoardPage(
+                      image = R.drawable.session_logo,
+                      title = "Game Sessions",
+                      description = "Organize gaming meetups"),
+                  OnBoardPage(
+                      image = R.drawable.onboarding_session_discussion,
+                      title = "Community Posts",
+                      description = "Share with the community"),
+                  OnBoardPage(
+                      image = R.drawable.onboarding_session_discussion,
+                      title = "Explore Nearby",
+                      description = "Find activities near you."),
+                  OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
+          OnBoardingScreen(
+              pages = pages,
+              onSkip = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+              onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
+        }
 
-          composable(MeepleMeetScreen.Friends.name) {
-            account?.let { currentAccount ->
-              FriendsScreen(
-                  account = currentAccount,
-                  onBack = { navigationActions.goBack() },
-                  unreadCount = viewModel.unreadCount.value,
-                  onNavigate = { navigationActions.navigateTo(it) })
-            } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          }
+        composable(MeepleMeetScreen.Friends.name) {
+          account?.let { currentAccount ->
+            FriendsScreen(
+                account = currentAccount,
+                onBack = { navigationActions.goBack() },
+                unreadCount = viewModel.unreadCount.value,
+                onNavigate = { navigationActions.navigateTo(it) })
+          } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+        }
 
         composable(MeepleMeetScreen.SessionViewer.name) {
           if (discussion == null) {
